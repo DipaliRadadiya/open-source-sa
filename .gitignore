@@ -1,0 +1,20 @@
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+*.pem
+
+# --- env / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- scaffolding leftovers (never commit) ---
+.cache/
+.config/
+.local/
+.npm/
+
+# Mono-repo root. backend/ and frontend/ carry their own .gitignore.

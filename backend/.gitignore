@@ -1,0 +1,36 @@
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+*.pem
+
+# --- env / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- scaffolding leftovers (never commit) ---
+.cache/
+.config/
+.local/
+.npm/
+
+# --- Laravel ---
+/vendor/
+/node_modules/
+/public/build/
+/public/hot
+/public/storage
+/storage/*.key
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+/bootstrap/cache/*
+.env.backup
+.phpunit.result.cache
+auth.json
+Homestead.json
+Homestead.yaml

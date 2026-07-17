@@ -1,0 +1,31 @@
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+*.pem
+
+# --- env / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- scaffolding leftovers (never commit) ---
+.cache/
+.config/
+.local/
+.npm/
+
+# --- Next.js ---
+/node_modules/
+/.next/
+/out/
+/build/
+/.turbo/
+/coverage/
+.vercel
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+.pnpm-debug.log*
