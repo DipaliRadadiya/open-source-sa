@@ -84,6 +84,17 @@ return [
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
+    'version' => env('APP_VERSION', '1.0.0'),
+
+    // Only locales with actual translation files under lang/ are advertised
+    // here — the frontend uses this to build its language switcher, so it
+    // must not offer locales that would silently fall back to English. Add
+    // a locale here only once lang/<code>/ exists (activity, auth, user,
+    // validation) and is key-complete vs lang/en/.
+    'available_locales' => ['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'],
+
+    'token_expiration_days' => env('TOKEN_EXPIRATION_DAYS', 10),
+
     /*
     |--------------------------------------------------------------------------
     | Encryption Key

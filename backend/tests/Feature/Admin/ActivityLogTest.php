@@ -1,0 +1,173 @@
+<?php
+
+use App\Models\User;
+
+it('logs the first-admin registration', function () {
+    $this->postJson('/api/auth/register', [
+        'name' => 'First Admin', 'username' => 'firstadmin',
+        'password' => 'Password123', 'password_confirmation' => 'Password123',
+    ]);
+
+    $admin = User::firstWhere('username', 'firstadmin');
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log');
+
+    $response->assertOk()
+        ->assertJsonPath('activity_log.0.type', 'user')
+        ->assertJsonPath('activity_log.0.action', 'user.registered')
+        ->assertJsonPath('activity_log.0.description', 'Registered as the first administrator');
+});
+
+it('logs login events', function () {
+    $user = User::factory()->admin()->create(['username' => 'jdoe', 'password' => bcrypt('Password123')]);
+    $this->postJson('/api/auth/login', ['username' => 'jdoe', 'password' => 'Password123']);
+
+    $token = $user->createToken('test')->plainTextToken;
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log');
+
+    $response->assertOk()->assertJsonFragment(['action' => 'user.logged_in']);
+});
+
+it('logs admin creating a user, attributed to the admin not the new user', function () {
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/admin/users', [
+            'name' => 'New User', 'username' => 'newuser',
+            'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
+        ]);
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log');
+
+    $response->assertOk()
+        ->assertJsonPath('activity_log.0.action', 'user.created')
+        ->assertJsonPath('activity_log.0.description', 'Created user newuser (user)')
+        ->assertJsonPath('activity_log.0.user.username', $admin->username);
+});
+
+it('translates descriptions based on the viewing admin locale, not the actor locale', function () {
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/admin/users', [
+            'name' => 'New User', 'username' => 'newuser',
+            'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
+        ]);
+
+    $response = $this->withHeaders(['Authorization' => "Bearer {$token}", 'Accept-Language' => 'es'])
+        ->getJson('/api/admin/activity-log');
+
+    $response->assertOk()
+        ->assertJsonPath('activity_log.0.description', 'Creó el usuario newuser (user)');
+});
+
+it('denies non-admins from viewing the activity log', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log')
+        ->assertForbidden();
+});
+
+it('filters the activity log by user', function () {
+    $admin = User::factory()->admin()->create();
+    $other = User::factory()->create(['username' => 'other', 'password' => bcrypt('Password123')]);
+    $adminToken = $admin->createToken('test')->plainTextToken;
+
+    $this->postJson('/api/auth/login', ['username' => 'other', 'password' => 'Password123']);
+
+    $response = $this->withHeader('Authorization', "Bearer {$adminToken}")
+        ->getJson('/api/admin/activity-log?filter[user_id]='.$other->id);
+
+    expect($response->json('activity_log'))->not->toBeEmpty();
+    foreach ($response->json('activity_log') as $entry) {
+        expect($entry['user']['id'])->toBe($other->id);
+    }
+});
+
+it('filters the activity log by action', function () {
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/admin/users', [
+            'name' => 'New User', 'username' => 'newuser',
+            'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
+        ]);
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log?filter[action]=user.created');
+
+    expect($response->json('activity_log'))->not->toBeEmpty();
+    foreach ($response->json('activity_log') as $entry) {
+        expect($entry['action'])->toBe('user.created');
+    }
+});
+
+it('searches the activity log by acting username', function () {
+    $admin = User::factory()->admin()->create(['username' => 'searchableadmin']);
+    $other = User::factory()->admin()->create(['username' => 'unrelatedadmin']);
+    $adminToken = $admin->createToken('test')->plainTextToken;
+    $otherToken = $other->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$adminToken}")->postJson('/api/admin/users', [
+        'name' => 'A', 'username' => 'usera', 'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
+    ]);
+    $this->withHeader('Authorization', "Bearer {$otherToken}")->postJson('/api/admin/users', [
+        'name' => 'B', 'username' => 'userb', 'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
+    ]);
+
+    $response = $this->withHeader('Authorization', "Bearer {$adminToken}")
+        ->getJson('/api/admin/activity-log?search=searchableadmin');
+
+    expect($response->json('activity_log'))->not->toBeEmpty();
+    foreach ($response->json('activity_log') as $entry) {
+        expect($entry['user']['username'])->toBe('searchableadmin');
+    }
+});
+
+it('filters the activity log by type', function () {
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+    $role = \App\Models\Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->deleteJson("/api/admin/roles/{$role->id}");
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log?filter[type]=role');
+
+    expect($response->json('activity_log'))->not->toBeEmpty();
+    foreach ($response->json('activity_log') as $entry) {
+        expect($entry['type'])->toBe('role');
+    }
+});
+
+it('returns the known distinct types and actions for filter dropdowns', function () {
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log/filters');
+
+    $response->assertOk()
+        ->assertJsonPath('types', ['role', 'user'])
+        ->assertJsonCount(12, 'actions');
+    expect($response->json('actions'))->toContain('user.registered', 'role.created');
+});
+
+it('denies a regular user from viewing activity-log filter options', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log/filters')
+        ->assertForbidden();
+});

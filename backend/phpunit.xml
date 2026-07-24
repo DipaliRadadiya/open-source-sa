@@ -29,6 +29,12 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- Tests run on the localhost host; the real .env pins SESSION_DOMAIN
+             to the deployed parent domain, which wouldn't match here and
+             would break cookie-session auth assertions. -->
+        <env name="SESSION_DOMAIN" value="null"/>
+        <env name="FRONTEND_URL" value=""/>
+        <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
