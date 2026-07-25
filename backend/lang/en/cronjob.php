@@ -13,4 +13,14 @@ return [
         'monthly' => 'Monthly (1st)',
         'custom' => 'Custom',
     ],
+    'commands' => [
+        'laravel' => 'Laravel Scheduler',
+        'wordpress' => 'WordPress Cron',
+        'moodle' => 'Moodle Cron',
+        'joomla' => 'Joomla Scheduler',
+        'nextcloud' => 'Nextcloud Cron',
+        'craftcms' => 'Craft CMS Queue',
+        'php_script' => 'PHP script',
+        'custom' => 'Custom',
+    ],
 ];

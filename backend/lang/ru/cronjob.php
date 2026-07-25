@@ -13,4 +13,14 @@ return [
         'monthly' => 'Ежемесячно (1-е число)',
         'custom' => 'Пользовательское',
     ],
+    'commands' => [
+        'laravel' => 'Планировщик Laravel',
+        'wordpress' => 'Cron WordPress',
+        'moodle' => 'Cron Moodle',
+        'joomla' => 'Планировщик Joomla',
+        'nextcloud' => 'Cron Nextcloud',
+        'craftcms' => 'Очередь Craft CMS',
+        'php_script' => 'PHP-скрипт',
+        'custom' => 'Пользовательский',
+    ],
 ];

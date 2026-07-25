@@ -13,4 +13,14 @@ return [
         'monthly' => '毎月（1日）',
         'custom' => 'カスタム',
     ],
+    'commands' => [
+        'laravel' => 'Laravel スケジューラ',
+        'wordpress' => 'WordPress Cron',
+        'moodle' => 'Moodle Cron',
+        'joomla' => 'Joomla スケジューラ',
+        'nextcloud' => 'Nextcloud Cron',
+        'craftcms' => 'Craft CMS キュー',
+        'php_script' => 'PHP スクリプト',
+        'custom' => 'カスタム',
+    ],
 ];

@@ -10,6 +10,7 @@ use App\Http\Requests\Server\Cronjob\StoreCronjobRequest;
 use App\Http\Requests\Server\Cronjob\UpdateCronjobRequest;
 use App\Http\Resources\CronjobResource;
 use App\Models\Cronjob;
+use App\Support\CronCommandPresets;
 use App\Support\CronSchedulePresets;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,6 +55,17 @@ class CronjobController extends Controller
     {
         return response()->json([
             'presets' => CronSchedulePresets::all(),
+        ]);
+    }
+
+    /**
+     * Framework command presets — click to fill the command (+ schedule).
+     * `{path}` is a placeholder the frontend swaps for the app directory.
+     */
+    public function commandPresets(): JsonResponse
+    {
+        return response()->json([
+            'presets' => CronCommandPresets::all(),
         ]);
     }
 

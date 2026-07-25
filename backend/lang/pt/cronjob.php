@@ -13,4 +13,14 @@ return [
         'monthly' => 'Mensalmente (dia 1)',
         'custom' => 'Personalizado',
     ],
+    'commands' => [
+        'laravel' => 'Agendador do Laravel',
+        'wordpress' => 'Cron do WordPress',
+        'moodle' => 'Cron do Moodle',
+        'joomla' => 'Agendador do Joomla',
+        'nextcloud' => 'Cron do Nextcloud',
+        'craftcms' => 'Fila do Craft CMS',
+        'php_script' => 'Script PHP',
+        'custom' => 'Personalizado',
+    ],
 ];

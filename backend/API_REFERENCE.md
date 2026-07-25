@@ -200,6 +200,9 @@ Requires `cronjob` permission (`view` to read, `manage` to mutate). Each job run
 **`GET /api/cronjobs/schedule-presets`** — schedule presets for the frontend dropdown (single source of truth, localized labels).
 - Response: `{"presets": [{key, label, expression}, …]}` — `custom` has `expression: null` (UI shows a raw field). Keys: `every_minute, every_5_minutes, every_15_minutes, every_30_minutes, hourly, twice_daily, daily, weekly, monthly, custom`.
 
+**`GET /api/cronjobs/command-presets`** — framework command shortcuts. One click fills the `command` (and a recommended `expression`).
+- Response: `{"presets": [{key, label, command, expression}, …]}` — `command` contains a `{path}` placeholder the frontend swaps for the selected app's directory; `custom` has `command: null` + `expression: null`. Keys: `laravel, wordpress, moodle, joomla, nextcloud, craftcms, php_script, custom` (Laravel included for custom-PHP/Laravel apps). Localized labels. (Interim source; moves onto SiteType definitions when the Application feature lands.)
+
 **`GET /api/cronjobs`** — list (paginated)
 - Query: `filter[system_user_id]`, `filter[username]`, `filter[active]` (bool), `per_page` (10|20|50|100).
 - Response: `{"cronjobs": [{id, name, slug, username, system_user: {id, username}|null, command, expression, active, created_at, created_at_human}], "meta": {...}}` — `slug` is the stable identifier (also the cron.d filename key).

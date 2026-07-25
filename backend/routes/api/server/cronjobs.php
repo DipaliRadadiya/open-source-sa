@@ -6,8 +6,9 @@ use Illuminate\Support\Facades\Route;
 // Cron jobs (server panel). View gated by `cronjob` (view), mutations by
 // `cronjob` (manage). Materialised as one file per job under /etc/cron.d.
 
-// Static route first so it isn't captured by the {cronjob} binding below.
+// Static routes first so they aren't captured by the {cronjob} binding below.
 Route::get('/cronjobs/schedule-presets', [CronjobController::class, 'schedulePresets'])->middleware('permission:cronjob');
+Route::get('/cronjobs/command-presets', [CronjobController::class, 'commandPresets'])->middleware('permission:cronjob');
 
 Route::get('/cronjobs', [CronjobController::class, 'index'])->middleware('permission:cronjob');
 Route::post('/cronjobs', [CronjobController::class, 'store'])->middleware('permission:cronjob,manage');

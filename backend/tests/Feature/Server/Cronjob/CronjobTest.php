@@ -241,6 +241,31 @@ it('returns schedule presets for the dropdown', function () {
     expect(collect($presets)->pluck('key'))->toContain('hourly', 'daily', 'weekly', 'monthly');
 });
 
+it('returns framework command presets for the dropdown', function () {
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/cronjobs/command-presets');
+
+    $response->assertOk()
+        ->assertJsonPath('presets.0.key', 'laravel')
+        ->assertJsonPath('presets.0.command', 'php {path}/artisan schedule:run')
+        ->assertJsonPath('presets.0.expression', '* * * * *');
+
+    $presets = $response->json('presets');
+    expect(collect($presets)->pluck('key'))->toContain('wordpress', 'moodle', 'joomla', 'nextcloud', 'craftcms', 'php_script');
+    // custom is last with null command + expression (raw fields in the UI)
+    expect(end($presets))->toMatchArray(['key' => 'custom', 'command' => null, 'expression' => null]);
+});
+
+it('localizes command preset labels', function () {
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/cronjobs/command-presets')
+        ->assertJsonPath('presets.0.label', 'Laravel Scheduler');
+
+    $this->withHeaders(['Authorization' => "Bearer {$this->token}", 'Accept-Language' => 'es'])
+        ->getJson('/api/cronjobs/command-presets')
+        ->assertJsonPath('presets.0.label', 'Programador de Laravel');
+});
+
 it('localizes preset labels', function () {
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->getJson('/api/cronjobs/schedule-presets')

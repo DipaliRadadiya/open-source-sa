@@ -13,4 +13,14 @@ return [
         'monthly' => 'मासिक (पहली तारीख)',
         'custom' => 'कस्टम',
     ],
+    'commands' => [
+        'laravel' => 'Laravel शेड्यूलर',
+        'wordpress' => 'WordPress क्रॉन',
+        'moodle' => 'Moodle क्रॉन',
+        'joomla' => 'Joomla शेड्यूलर',
+        'nextcloud' => 'Nextcloud क्रॉन',
+        'craftcms' => 'Craft CMS क्यू',
+        'php_script' => 'PHP स्क्रिप्ट',
+        'custom' => 'कस्टम',
+    ],
 ];
