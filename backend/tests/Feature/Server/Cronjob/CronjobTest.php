@@ -377,3 +377,19 @@ it('cascade-deletes cron jobs when their system user is deleted', function () {
 
     expect(Cronjob::find($job->id))->toBeNull();
 });
+
+it('removes the cron.d files when the owning system user is deleted via the API', function () {
+    Process::fake();
+    $job = Cronjob::create([
+        'name' => 'Owned job', 'slug' => 'owned-job', 'username' => 'deploy',
+        'system_user_id' => $this->su->id, 'command' => 'echo hi', 'expression' => '* * * * *',
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson("/api/system-users/{$this->su->id}")
+        ->assertNoContent();
+
+    // both the file and the row are gone
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/owned-job']);
+    expect(Cronjob::find($job->id))->toBeNull();
+});

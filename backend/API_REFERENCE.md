@@ -169,6 +169,7 @@ Requires `system_user` permission (`view` to read, `manage` to mutate). No updat
 
 **`DELETE /api/system-users/{systemUser}`** — delete (runs `userdel -r`)
 - **`422`** if it still owns ≥1 application (can't orphan apps).
+- Its **cron jobs are also deleted** — each `/etc/cron.d` file is removed and the rows dropped (they'd otherwise point at a deleted user).
 - Response `204`
 
 **`PUT /api/system-users/{systemUser}/password`** — set/change OS password (runs `chpasswd`)
