@@ -195,30 +195,104 @@ The system_user object also includes `sudo` (bool), `ssh_access` (bool), and `pa
 **`DELETE /api/system-users/{systemUser}/ssh-keys/{sshKey}`** → `204`. Rewrites `authorized_keys`.
 
 ### Cron jobs
-Requires `cronjob` permission (`view` to read, `manage` to mutate). Each job runs **as an OS user** — a panel System User **or** a default/unmanaged account (`root`, `www-data`, …). Materialised as **one file per job** under `/etc/cron.d`, named `<slug>` where `slug` is a stable, unique identifier derived from the name (in the filename for easy identification; **migration-safe** — it travels with the row, unlike the auto-increment id). A rename regenerates the slug and relocates the file. 6-field format with the run-as user column; non-destructive (we never touch a user's personal crontab). Only `active` jobs are written to disk.
+Requires the `cronjob` permission (`view` to read, `manage` to mutate). All routes are under `auth:sanctum`. Each job runs **as an OS user** — a panel System User **or** a default/unmanaged account (`root`, `www-data`, …). Behind the scenes a job is one file under `/etc/cron.d/<slug>` (non-destructive; only `active` jobs are on disk) — the frontend never deals with files, only the JSON below.
 
-**`GET /api/cronjobs/schedule-presets`** — schedule presets for the frontend dropdown (single source of truth, localized labels).
-- Response: `{"presets": [{key, label, expression}, …]}` — `custom` has `expression: null` (UI shows a raw field). Keys: `every_minute, every_5_minutes, every_15_minutes, every_30_minutes, hourly, twice_daily, daily, weekly, monthly, custom`.
+#### The cron job object
+Every single/`cronjob` and list/`cronjobs[]` entry has this exact shape:
+```json
+{
+  "id": 12,
+  "name": "Nightly backup",
+  "slug": "nightly-backup",
+  "username": "deploy",
+  "system_user": { "id": 3, "username": "deploy" },
+  "command": "php /home/deploy/myapp/artisan schedule:run",
+  "expression": "0 0 * * *",
+  "active": true,
+  "created_at": "25-07-2026 18:05:10",
+  "created_at_human": "2 minutes ago"
+}
+```
+- `slug` — stable, unique, auto-derived from `name`; safe to use as a React key / URL segment (survives data migration, unlike `id`).
+- `system_user` — `{id, username}` when the run-as user is a panel System User, else **`null`** (a default OS user like `root`/`www-data`). `username` is always present regardless.
 
-**`GET /api/cronjobs/command-presets`** — framework command shortcuts. One click fills the `command` (and a recommended `expression`).
-- Response: `{"presets": [{key, label, command, expression}, …], "placeholder": "{path}"}`. Keys: `laravel, wordpress, moodle, joomla, nextcloud, craftcms, php_script, custom` (Laravel included for custom-PHP/Laravel apps). `custom` has `command: null` + `expression: null`. Localized labels. (Interim source; moves onto SiteType definitions when the Application feature lands.)
-- **The `{path}` placeholder** (its exact token is returned as `placeholder`): a preset `command` such as `php {path}/artisan schedule:run` is a **template**. `{path}` stands for the **absolute directory of the application/site the job runs in** on the server — e.g. `/home/deploy/myapp` (typically the site's project root / document-root parent). The **frontend must substitute `{path}`** with that real directory before calling `POST /cronjobs` — usually taken from the selected application (or a path the user enters). Example: `php {path}/artisan schedule:run` → `php /home/deploy/myapp/artisan schedule:run`.
-- **Guard:** `POST`/`PUT` **reject** (`422` on `command`) any command that still contains an unresolved `{path}` — so a literal placeholder can never be written into cron. Resolve it client-side first.
+#### List — `GET /api/cronjobs`
+- Query params (all optional): `filter[system_user_id]` (int), `filter[username]` (string, exact), `filter[active]` (`true`/`false`), `per_page` (`10`|`20`|`50`|`100`, default `10`), `page` (int).
+- `200`:
+```json
+{
+  "cronjobs": [ /* cron job objects */ ],
+  "meta": { "current_page": 1, "per_page": 10, "total": 3, "last_page": 1 }
+}
+```
 
-**`GET /api/cronjobs`** — list (paginated)
-- Query: `filter[system_user_id]`, `filter[username]`, `filter[active]` (bool), `per_page` (10|20|50|100).
-- Response: `{"cronjobs": [{id, name, slug, username, system_user: {id, username}|null, command, expression, active, created_at, created_at_human}], "meta": {...}}` — `slug` is the stable identifier (also the cron.d filename key).
+#### Show — `GET /api/cronjobs/{id}`
+- `200`: `{ "cronjob": { /* cron job object */ } }`
 
-**`GET /api/cronjobs/{cronjob}`** → `{"cronjob": {...}}`
+#### Create — `POST /api/cronjobs`
+Request body:
+```json
+{
+  "name": "Nightly backup",
+  "system_user_id": 3,          // OR "username": "www-data" — one is required
+  "command": "php /home/deploy/myapp/artisan schedule:run",
+  "expression": "0 0 * * *",
+  "active": true                 // optional, default true
+}
+```
+Field rules (all validation errors are `422` with `{ "message": "...", "errors": { "<field>": ["..."] } }`):
+| Field | Rules |
+|---|---|
+| `name` | required · unique · no line breaks · not a reserved system name (`php`, `certbot`, …) |
+| `system_user_id` | required **without** `username`; must exist in `system_users` |
+| `username` | required **without** `system_user_id`; Linux name `^[a-z_][a-z0-9_-]{0,31}$`; **must exist on the server** (checked via `getent passwd`) |
+| `command` | required · max 1000 · no line breaks · must **not** contain an unresolved `{path}` |
+| `expression` | required · valid 5-field cron (or a macro like `@daily`) |
+| `active` | optional boolean |
+- `201`: `{ "cronjob": { /* cron job object */ } }`
+- On a failed server write (rare): `500` `{ "message": "...", "reference": "<uuid>" }` — nothing is persisted (DB rolled back).
 
-**`POST /api/cronjobs`** — create (writes a `/etc/cron.d/{slug}` file when active; `slug` auto-generated from `name`, unique)
-- Body: `name` (required, **unique** — duplicate → `422`; no line breaks; not a reserved system cron name like `php`/`certbot` → `422`), **either** `system_user_id` (a panel System User) **or** `username` (any OS user; `required_without:system_user_id`, linux-name rules), `command` (required, max 1000, **no line breaks**, must not contain an unresolved `{path}` → `422`), `expression` (required, valid cron — else `422`), `active` (optional bool, default true).
-- The target user must **exist on the server** (`getent passwd`) → else `422` on `username`.
-- Response `201`: `{"cronjob": {...}}`.
+#### Update — `PUT /api/cronjobs/{id}`
+- Body: any of `name`, `command`, `expression`, `active` (same rules as create; `sometimes`). The **run-as user is fixed** — to change it, delete and recreate.
+- `200`: `{ "cronjob": { /* cron job object */ } }`
 
-**`PUT /api/cronjobs/{cronjob}`** — update `name` / `command` / `expression` / `active` (run-as user is fixed at create — delete + recreate to change it). Rewrites or removes the cron.d file accordingly. Response `200`: `{"cronjob": {...}}`.
+#### Delete — `DELETE /api/cronjobs/{id}`
+- `204` (no body). Also removes the cron.d file.
 
-**`DELETE /api/cronjobs/{cronjob}`** → `204`. Removes the cron.d file. (Deleting the owning System User cascade-deletes its cron jobs.)
+---
+
+#### Building the create form (shortcuts)
+
+**1. Schedule dropdown** — `GET /api/cronjobs/schedule-presets`
+```json
+{ "presets": [
+  { "key": "every_minute", "label": "Every minute", "expression": "* * * * *" },
+  { "key": "hourly",       "label": "Hourly",       "expression": "0 * * * *" },
+  { "key": "daily",        "label": "Daily (midnight)", "expression": "0 0 * * *" },
+  { "key": "custom",       "label": "Custom",        "expression": null }
+] }
+```
+Render each as an option; on select, set the form's `expression` to `preset.expression`. `custom` → `expression: null` → show a free-text cron field. Labels are localized to the request's `Accept-Language`.
+
+**2. Framework command dropdown** — `GET /api/cronjobs/command-presets`
+```json
+{
+  "placeholder": "{path}",
+  "presets": [
+    { "key": "laravel",   "label": "Laravel Scheduler", "command": "php {path}/artisan schedule:run", "expression": "* * * * *" },
+    { "key": "wordpress", "label": "WordPress Cron",     "command": "php {path}/wp-cron.php",          "expression": "*/5 * * * *" },
+    { "key": "custom",    "label": "Custom",             "command": null,                              "expression": null }
+  ]
+}
+```
+On select, set the form's `command` to `preset.command` **and** `expression` to `preset.expression`. Keys: `laravel, wordpress, moodle, joomla, nextcloud, craftcms, php_script, custom`.
+
+**3. Resolve `{path}` before submitting.** Preset commands are templates containing the `placeholder` token (`{path}`). Replace it with the **absolute directory of the app/site** the job runs in (e.g. `/home/deploy/myapp`):
+```js
+const command = preset.command.replaceAll(res.placeholder, app.path);
+// "php {path}/artisan schedule:run" → "php /home/deploy/myapp/artisan schedule:run"
+```
+Get that directory from the app the user picks (or a path field they type). **Do not submit a command still containing `{path}`** — the API rejects it with `422` on `command`. (Server-side app selection that auto-fills the path will arrive with the Application feature.)
 
 On any OS-op failure → `500 {message, reference}` and the DB change is rolled back (no DB↔disk drift).
 
