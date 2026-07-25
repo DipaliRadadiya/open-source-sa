@@ -194,6 +194,29 @@ The system_user object also includes `sudo` (bool), `ssh_access` (bool), and `pa
 - Response `201`: `{"ssh_key": {id, name, fingerprint, ...}}`. Rewrites the user's `authorized_keys`.
 **`DELETE /api/system-users/{systemUser}/ssh-keys/{sshKey}`** → `204`. Rewrites `authorized_keys`.
 
+### Cron jobs
+Requires `cronjob` permission (`view` to read, `manage` to mutate). Each job runs **as an OS user** — a panel System User **or** a default/unmanaged account (`root`, `www-data`, …). Materialised as **one file per job** under `/etc/cron.d` (6-field format with the run-as user column); non-destructive (we never touch a user's personal crontab). Only `active` jobs are written to disk.
+
+**`GET /api/cronjobs/schedule-presets`** — schedule presets for the frontend dropdown (single source of truth, localized labels).
+- Response: `{"presets": [{key, label, expression}, …]}` — `custom` has `expression: null` (UI shows a raw field). Keys: `every_minute, every_5_minutes, every_15_minutes, every_30_minutes, hourly, twice_daily, daily, weekly, monthly, custom`.
+
+**`GET /api/cronjobs`** — list (paginated)
+- Query: `filter[system_user_id]`, `filter[username]`, `filter[active]` (bool), `per_page` (10|20|50|100).
+- Response: `{"cronjobs": [{id, name, username, system_user: {id, username}|null, command, expression, active, created_at, created_at_human}], "meta": {...}}`.
+
+**`GET /api/cronjobs/{cronjob}`** → `{"cronjob": {...}}`
+
+**`POST /api/cronjobs`** — create (writes a `/etc/cron.d/sv-oss-cronjob-{id}` file when active)
+- Body: `name` (required), **either** `system_user_id` (a panel System User) **or** `username` (any OS user; `required_without:system_user_id`, linux-name rules), `command` (required, max 1000), `expression` (required, valid cron — else `422`), `active` (optional bool, default true).
+- The target user must **exist on the server** (`getent passwd`) → else `422` on `username`.
+- Response `201`: `{"cronjob": {...}}`.
+
+**`PUT /api/cronjobs/{cronjob}`** — update `name` / `command` / `expression` / `active` (run-as user is fixed at create — delete + recreate to change it). Rewrites or removes the cron.d file accordingly. Response `200`: `{"cronjob": {...}}`.
+
+**`DELETE /api/cronjobs/{cronjob}`** → `204`. Removes the cron.d file. (Deleting the owning System User cascade-deletes its cron jobs.)
+
+On any OS-op failure → `500 {message, reference}` and the DB change is rolled back (no DB↔disk drift).
+
 ---
 
 ## Enums / fixed values
@@ -206,5 +229,5 @@ The system_user object also includes `sudo` (bool), `ssh_access` (bool), and `pa
 ## Known activity-log `type`/`action` values (for filtering)
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
-- `types`: `role`, `system_user`, `user`
+- `types`: `cronjob`, `role`, `system_user`, `user`
 - `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`

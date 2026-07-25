@@ -146,7 +146,7 @@ it('returns the known distinct types and actions for filter dropdowns', function
         ->getJson('/api/admin/activity-log/filters');
 
     $response->assertOk()
-        ->assertJsonPath('types', ['role', 'system_user', 'user'])
+        ->assertJsonPath('types', ['cronjob', 'role', 'system_user', 'user'])
         ->assertJsonCount(22, 'actions.all'); // all distinct verbs (deduped across types)
     // `all` = every verb; per-type keys are scoped to that type's verbs.
     expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed', 'ssh_enabled');

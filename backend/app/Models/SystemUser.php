@@ -29,4 +29,9 @@ class SystemUser extends Model
     {
         return $this->hasMany(SshKey::class);
     }
+
+    public function cronjobs(): HasMany
+    {
+        return $this->hasMany(Cronjob::class);
+    }
 }

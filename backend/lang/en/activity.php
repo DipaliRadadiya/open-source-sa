@@ -28,4 +28,8 @@ return [
     'system_user.shell_changed' => 'Changed the shell of system user :username to :shell',
     'system_user.ssh_enabled' => 'Enabled SSH access for system user :username',
     'system_user.ssh_disabled' => 'Disabled SSH access for system user :username',
+    'cronjob.created' => 'Created cron job :name',
+    'cronjob.updated' => 'Updated cron job :name',
+    'cronjob.deleted' => 'Deleted cron job :name',
+    'cronjob.create_failed' => 'Failed to create cron job :name',
 ];

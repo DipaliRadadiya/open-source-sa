@@ -28,4 +28,8 @@ return [
     'system_user.shell_changed' => 'システムユーザー :username のシェルを :shell に変更しました',
     'system_user.ssh_enabled' => 'システムユーザー :username のSSHアクセスを有効にしました',
     'system_user.ssh_disabled' => 'システムユーザー :username のSSHアクセスを無効にしました',
+    'cronjob.created' => 'cronジョブ :name を作成しました',
+    'cronjob.updated' => 'cronジョブ :name を更新しました',
+    'cronjob.deleted' => 'cronジョブ :name を削除しました',
+    'cronjob.create_failed' => 'cronジョブ :name の作成に失敗しました',
 ];
