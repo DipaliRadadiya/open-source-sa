@@ -1,5 +1,7 @@
 # ServerAvatar OSS Backend — API Reference
 
+> 🔗 **Live version:** <https://sv-oss.167-233-229-184.nip.io/docs/api-reference> (always current — bookmark it). Raw markdown: `/docs/api-reference.md`
+
 Base URL: `https://sv-oss.167-233-229-184.nip.io/api`
 Auth: `Authorization: Bearer <token>` header (returned by register/login), or cookie-session for stateful frontend domains (`SANCTUM_STATEFUL_DOMAINS`). Admin-only routes additionally require `is_admin: true`.
 RBAC: `is_admin` (bool) gates the admin area only. Feature permissions are **pure role-based** — a user's effective permissions are the deduped OR-union across ALL their assigned roles + any direct grants (no admin bypass). Every user has **≥1 role**. The first registered user is `is_admin` + the protected **Administrator** role (holds every permission, `is_system`, cannot be deleted/renamed/edited).
