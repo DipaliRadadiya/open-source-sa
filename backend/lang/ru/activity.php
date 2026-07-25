@@ -5,7 +5,7 @@ return [
     'user.logged_in' => 'Выполнен вход',
     'user.password_changed' => 'Изменил свой пароль',
     'user.password_reset_by_admin' => 'Пароль сброшен администратором для :username',
-    'user.created' => 'Создан пользователь :username (:role)',
+    'user.created' => 'Создан пользователь :username',
     'user.permissions_updated' => 'Обновлены разрешения для :username',
     'user.role_assigned' => 'Обновлено назначение роли для :username',
     'user.impersonation_started' => 'Начал действовать от имени :username',

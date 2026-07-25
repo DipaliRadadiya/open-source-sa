@@ -5,7 +5,7 @@ return [
     'user.logged_in' => 'लॉग इन किया',
     'user.password_changed' => 'अपना पासवर्ड बदला',
     'user.password_reset_by_admin' => ':username के लिए एक व्यवस्थापक द्वारा पासवर्ड रीसेट किया गया',
-    'user.created' => 'उपयोगकर्ता :username (:role) बनाया',
+    'user.created' => 'उपयोगकर्ता :username बनाया',
     'user.permissions_updated' => ':username के लिए अनुमतियाँ अपडेट कीं',
     'user.role_assigned' => ':username के लिए भूमिका असाइनमेंट अपडेट किया',
     'user.impersonation_started' => ':username का प्रतिरूपण शुरू किया',

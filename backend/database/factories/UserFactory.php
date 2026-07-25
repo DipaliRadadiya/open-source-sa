@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Enums\UserRole;
 use App\Models\User;
+use App\Services\AdministratorRole;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -19,8 +19,6 @@ class UserFactory extends Factory
     protected static ?string $password;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
@@ -29,18 +27,23 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'username' => fake()->unique()->userName(),
             'password' => static::$password ??= Hash::make('password'),
-            'role' => UserRole::User,
+            'is_admin' => false,
             'remember_token' => Str::random(10),
         ];
     }
 
     /**
-     * Indicate that the user is an administrator.
+     * Administrator: `is_admin` + the protected Administrator role attached
+     * (mirrors real first-admin registration). Its permissions are present
+     * only if the PermissionSeeder has run in the test.
      */
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Admin,
-        ]);
+            'is_admin' => true,
+        ])->afterCreating(function (User $user) {
+            $role = app(AdministratorRole::class)->ensure();
+            $user->roles()->syncWithoutDetaching([$role->id]);
+        });
     }
 }

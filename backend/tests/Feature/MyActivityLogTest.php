@@ -25,10 +25,8 @@ it('omits the redundant user field from own-activity entries', function () {
     $user = User::factory()->admin()->create();
     $token = $user->createToken('test')->plainTextToken;
 
-    $this->withHeader('Authorization', "Bearer {$token}")->postJson('/api/admin/users', [
-        'name' => 'New User', 'username' => 'newuser',
-        'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
-    ]);
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/admin/users', userPayload(['username' => 'newuser']));
 
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/activity-log');

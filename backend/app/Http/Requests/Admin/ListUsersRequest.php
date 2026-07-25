@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Enums\UserRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -21,7 +20,7 @@ class ListUsersRequest extends FormRequest
         return [
             'search' => ['sometimes', 'string', 'max:255'],
             'filter' => ['sometimes', 'array'],
-            'filter.role' => ['sometimes', Rule::enum(UserRole::class)],
+            'filter.is_admin' => ['sometimes', 'boolean'],
             'per_page' => ['sometimes', Rule::in([10, 20, 50, 100])],
         ];
     }

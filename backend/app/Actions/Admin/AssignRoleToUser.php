@@ -9,13 +9,16 @@ class AssignRoleToUser
 {
     public function __construct(private ActivityLogger $activityLogger) {}
 
-    public function execute(User $target, ?int $roleId): void
+    /**
+     * Sync the user's assigned roles (many-to-many). The FormRequest
+     * enforces >= 1 role, so a user is never left role-less.
+     *
+     * @param  array<int, int>  $roleIds
+     */
+    public function execute(User $target, array $roleIds): void
     {
-        $target->update(['role_id' => $roleId]);
+        $target->roles()->sync($roleIds);
 
-        $this->activityLogger->log('user.role_assigned', $target, [
-            'username' => $target->username,
-            'role_id' => $roleId,
-        ]);
+        $this->activityLogger->log('user.role_assigned', $target, ['username' => $target->username]);
     }
 }

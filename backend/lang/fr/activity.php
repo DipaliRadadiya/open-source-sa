@@ -5,7 +5,7 @@ return [
     'user.logged_in' => 'Connecté',
     'user.password_changed' => 'A modifié son propre mot de passe',
     'user.password_reset_by_admin' => 'Mot de passe réinitialisé par un administrateur pour :username',
-    'user.created' => 'Utilisateur :username (:role) créé',
+    'user.created' => 'Utilisateur :username créé',
     'user.permissions_updated' => 'Autorisations mises à jour pour :username',
     'user.role_assigned' => 'Attribution de rôle mise à jour pour :username',
     'user.impersonation_started' => 'A commencé à usurper :username',

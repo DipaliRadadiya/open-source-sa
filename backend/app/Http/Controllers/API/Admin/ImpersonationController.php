@@ -33,7 +33,7 @@ class ImpersonationController extends Controller
         $result = $action->execute($request->user(), $user);
 
         return response()->json([
-            'user' => UserResource::make($result['user'])->resolve(),
+            'user' => UserResource::make($result['user']->load('roles:id,name'))->resolve(),
             'token' => $result['token'],
             'impersonated_by' => [
                 'id' => $request->user()->id,

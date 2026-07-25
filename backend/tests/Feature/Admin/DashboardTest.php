@@ -7,20 +7,18 @@ it('lets an admin view dashboard stats', function () {
     User::factory()->count(2)->create();
     $token = $admin->createToken('test')->plainTextToken;
 
-    $this->withHeader('Authorization', "Bearer {$token}")->postJson('/api/admin/users', [
-        'name' => 'New User', 'username' => 'newuser',
-        'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
-    ]);
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/admin/users', userPayload(['username' => 'newuser']));
 
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/admin/dashboard');
 
     $response->assertOk()
         ->assertJsonPath('dashboard.users.total', 4)
-        ->assertJsonPath('dashboard.users.admin', 1)
-        ->assertJsonPath('dashboard.users.user', 3)
-        ->assertJsonPath('dashboard.roles.total', 0);
+        ->assertJsonPath('dashboard.users.admins', 1)
+        ->assertJsonPath('dashboard.users.non_admins', 3);
 
+    expect($response->json('dashboard.roles.total'))->toBeGreaterThan(0);
     expect($response->json('dashboard.activity.today'))->toBeGreaterThan(0);
 });
 

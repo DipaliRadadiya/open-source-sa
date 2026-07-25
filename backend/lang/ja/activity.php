@@ -5,7 +5,7 @@ return [
     'user.logged_in' => 'ログインしました',
     'user.password_changed' => '自分のパスワードを変更しました',
     'user.password_reset_by_admin' => ':username のパスワードを管理者がリセットしました',
-    'user.created' => 'ユーザー :username (:role) を作成しました',
+    'user.created' => 'ユーザー :username を作成しました',
     'user.permissions_updated' => ':username の権限を更新しました',
     'user.role_assigned' => ':username のロール割り当てを更新しました',
     'user.impersonation_started' => ':username へのなりすましを開始しました',

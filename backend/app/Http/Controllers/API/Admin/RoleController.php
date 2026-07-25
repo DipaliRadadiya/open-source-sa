@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\StoreRoleRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
 use App\Models\Role;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class RoleController extends Controller
 {
@@ -31,6 +32,8 @@ class RoleController extends Controller
 
     public function update(UpdateRoleRequest $request, Role $role, UpdateRole $action): JsonResponse
     {
+        $this->guardSystemRole($role);
+
         $role = $action->execute($role, $request->validated());
 
         return response()->json(['role' => $this->format($role->load('permissions'))]);
@@ -38,9 +41,24 @@ class RoleController extends Controller
 
     public function destroy(Role $role, DeleteRole $action): JsonResponse
     {
+        $this->guardSystemRole($role);
+
         $action->execute($role);
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * System roles (e.g. Administrator) are managed by the seeder only —
+     * they can't be renamed, permission-edited, or deleted via the API.
+     */
+    private function guardSystemRole(Role $role): void
+    {
+        if ($role->is_system) {
+            throw ValidationException::withMessages([
+                'role' => [__('role.system_immutable')],
+            ]);
+        }
     }
 
     /**
@@ -52,6 +70,7 @@ class RoleController extends Controller
             'id' => $role->id,
             'name' => $role->name,
             'slug' => $role->slug,
+            'is_system' => $role->is_system,
             'description' => $role->description,
             'permissions' => $role->permissions->map(fn ($permission) => [
                 'level' => $permission->level,

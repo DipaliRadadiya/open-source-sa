@@ -17,8 +17,9 @@ class AssignRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // null is allowed — unassigns the user's role.
-            'role_id' => ['nullable', 'integer', 'exists:roles,id'],
+            // Every user must keep at least one role — no unassign-all.
+            'role_ids' => ['required', 'array', 'min:1'],
+            'role_ids.*' => ['integer', 'exists:roles,id'],
         ];
     }
 }

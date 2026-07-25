@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Permission;
+use App\Services\AdministratorRole;
 use Illuminate\Database\Seeder;
 
 class PermissionSeeder extends Seeder
@@ -36,5 +37,10 @@ class PermissionSeeder extends Seeder
                 ]
             );
         }
+
+        // Create/refresh the protected Administrator role holding ALL
+        // permissions. Idempotent — re-running (every deploy) re-syncs so
+        // new permissions are automatically added to it.
+        app(AdministratorRole::class)->ensure();
     }
 }

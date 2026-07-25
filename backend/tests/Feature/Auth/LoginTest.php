@@ -12,7 +12,7 @@ it('logs in with correct username and password', function () {
 
     $response->assertOk()
         ->assertJsonPath('user.username', 'jdoe')
-        ->assertJsonStructure(['user' => ['id', 'name', 'username', 'role'], 'token']);
+        ->assertJsonStructure(['user' => ['id', 'name', 'username', 'is_admin'], 'token']);
 });
 
 it('rejects login with wrong password', function () {

@@ -37,17 +37,14 @@ it('logs admin creating a user, attributed to the admin not the new user', funct
     $token = $admin->createToken('test')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->postJson('/api/admin/users', [
-            'name' => 'New User', 'username' => 'newuser',
-            'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
-        ]);
+        ->postJson('/api/admin/users', userPayload(['username' => 'newuser']));
 
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/admin/activity-log');
 
     $response->assertOk()
         ->assertJsonPath('activity_log.0.action', 'user.created')
-        ->assertJsonPath('activity_log.0.description', 'Created user newuser (user)')
+        ->assertJsonPath('activity_log.0.description', 'Created user newuser')
         ->assertJsonPath('activity_log.0.user.username', $admin->username);
 });
 
@@ -56,16 +53,13 @@ it('translates descriptions based on the viewing admin locale, not the actor loc
     $token = $admin->createToken('test')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->postJson('/api/admin/users', [
-            'name' => 'New User', 'username' => 'newuser',
-            'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
-        ]);
+        ->postJson('/api/admin/users', userPayload(['username' => 'newuser']));
 
     $response = $this->withHeaders(['Authorization' => "Bearer {$token}", 'Accept-Language' => 'es'])
         ->getJson('/api/admin/activity-log');
 
     $response->assertOk()
-        ->assertJsonPath('activity_log.0.description', 'Creó el usuario newuser (user)');
+        ->assertJsonPath('activity_log.0.description', 'Creó el usuario newuser');
 });
 
 it('denies non-admins from viewing the activity log', function () {
@@ -98,10 +92,7 @@ it('filters the activity log by action', function () {
     $token = $admin->createToken('test')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->postJson('/api/admin/users', [
-            'name' => 'New User', 'username' => 'newuser',
-            'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
-        ]);
+        ->postJson('/api/admin/users', userPayload(['username' => 'newuser']));
 
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/admin/activity-log?filter[action]=user.created');
@@ -118,12 +109,8 @@ it('searches the activity log by acting username', function () {
     $adminToken = $admin->createToken('test')->plainTextToken;
     $otherToken = $other->createToken('test')->plainTextToken;
 
-    $this->withHeader('Authorization', "Bearer {$adminToken}")->postJson('/api/admin/users', [
-        'name' => 'A', 'username' => 'usera', 'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
-    ]);
-    $this->withHeader('Authorization', "Bearer {$otherToken}")->postJson('/api/admin/users', [
-        'name' => 'B', 'username' => 'userb', 'password' => 'Password123', 'password_confirmation' => 'Password123', 'role' => 'user',
-    ]);
+    $this->withHeader('Authorization', "Bearer {$adminToken}")->postJson('/api/admin/users', userPayload(['name' => 'A', 'username' => 'usera']));
+    $this->withHeader('Authorization', "Bearer {$otherToken}")->postJson('/api/admin/users', userPayload(['name' => 'B', 'username' => 'userb']));
 
     $response = $this->withHeader('Authorization', "Bearer {$adminToken}")
         ->getJson('/api/admin/activity-log?search=searchableadmin');

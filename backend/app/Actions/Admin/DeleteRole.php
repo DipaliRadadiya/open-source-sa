@@ -13,8 +13,8 @@ class DeleteRole
     {
         $name = $role->name;
 
-        // users.role_id is nullOnDelete() at the DB level — assigned users
-        // simply lose the role assignment, not deleted themselves.
+        // role_user pivot rows cascadeOnDelete — assigned users simply lose
+        // this role. (System roles are blocked from deletion upstream.)
         $role->delete();
 
         $this->activityLogger->log('role.deleted', null, ['name' => $name]);

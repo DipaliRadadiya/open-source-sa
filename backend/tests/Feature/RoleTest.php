@@ -3,6 +3,7 @@
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\AdministratorRole;
 use Database\Seeders\PermissionSeeder;
 
 it('lets an admin create a role with permissions', function () {
@@ -66,11 +67,11 @@ it('lets an admin update a role and its permissions', function () {
     expect($role->fresh()->permissions()->count())->toBe(1);
 });
 
-it('lets an admin delete a role and unassigns it from users', function () {
+it('lets an admin delete a role and detaches it from users', function () {
     $admin = User::factory()->admin()->create();
     $target = User::factory()->create();
     $role = Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
-    $target->update(['role_id' => $role->id]);
+    $target->roles()->attach($role);
     $token = $admin->createToken('test')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
@@ -78,43 +79,59 @@ it('lets an admin delete a role and unassigns it from users', function () {
         ->assertNoContent();
 
     expect(Role::find($role->id))->toBeNull();
-    expect($target->fresh()->role_id)->toBeNull();
+    expect($target->fresh()->roles()->where('roles.id', $role->id)->exists())->toBeFalse();
 });
 
-it('lets an admin assign a role to a user', function () {
+it('lets an admin assign roles to a user', function () {
     $admin = User::factory()->admin()->create();
     $target = User::factory()->create();
-    $role = Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
+    $roleA = Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
+    $roleB = Role::create(['name' => 'Ops', 'slug' => 'ops']);
     $token = $admin->createToken('test')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->putJson("/api/admin/users/{$target->id}/role", ['role_id' => $role->id])
+        ->putJson("/api/admin/users/{$target->id}/roles", ['role_ids' => [$roleA->id, $roleB->id]])
         ->assertNoContent();
 
-    expect($target->fresh()->role_id)->toBe($role->id);
+    expect($target->fresh()->roles()->pluck('roles.id')->sort()->values()->all())
+        ->toBe([$roleA->id, $roleB->id]);
 });
 
-it('grants a user permission access via their assigned role, not just direct grants', function () {
+it('rejects assigning zero roles (every user keeps at least one)', function () {
+    $admin = User::factory()->admin()->create();
+    $target = User::factory()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->putJson("/api/admin/users/{$target->id}/roles", ['role_ids' => []])
+        ->assertUnprocessable();
+});
+
+it('grants permission via any assigned role, deduped and OR-merged across roles', function () {
     $this->seed(PermissionSeeder::class);
     $target = User::factory()->create();
-    $role = Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
     $dashboard = Permission::firstWhere('name', 'dashboard');
-    $role->permissions()->attach($dashboard->id, ['view' => true, 'manage' => false]);
-    $target->update(['role_id' => $role->id]);
+
+    $viewOnly = Role::create(['name' => 'Viewer', 'slug' => 'viewer']);
+    $viewOnly->permissions()->attach($dashboard->id, ['view' => true, 'manage' => false]);
+    $manager = Role::create(['name' => 'Manager', 'slug' => 'manager']);
+    $manager->permissions()->attach($dashboard->id, ['view' => true, 'manage' => true]);
+
+    // Two roles grant the same permission — the stronger (manage) wins, deduped.
+    $target->roles()->sync([$viewOnly->id, $manager->id]);
 
     expect($target->fresh()->canView('dashboard'))->toBeTrue();
-    expect($target->fresh()->canManage('dashboard'))->toBeFalse();
+    expect($target->fresh()->canManage('dashboard'))->toBeTrue();
 });
 
-it('unassigns a role when role_id is sent as null', function () {
+it('protects the Administrator system role from deletion', function () {
     $admin = User::factory()->admin()->create();
-    $role = Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
-    $target = User::factory()->create(['role_id' => $role->id]);
     $token = $admin->createToken('test')->plainTextToken;
+    $adminRole = app(AdministratorRole::class)->ensure();
 
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->putJson("/api/admin/users/{$target->id}/role", ['role_id' => null])
-        ->assertNoContent();
+        ->deleteJson("/api/admin/roles/{$adminRole->id}")
+        ->assertUnprocessable();
 
-    expect($target->fresh()->role_id)->toBeNull();
+    expect(Role::find($adminRole->id))->not->toBeNull();
 });

@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 
 it('allows an admin to list users', function () {
     $admin = User::factory()->admin()->create();
@@ -28,13 +29,7 @@ it('allows an admin to create a user', function () {
     $token = $admin->createToken('test')->plainTextToken;
 
     $response = $this->withHeader('Authorization', "Bearer {$token}")
-        ->postJson('/api/admin/users', [
-            'name' => 'New User',
-            'username' => 'newuser',
-            'password' => 'Password123',
-            'password_confirmation' => 'Password123',
-            'role' => 'user',
-        ]);
+        ->postJson('/api/admin/users', userPayload(['username' => 'newuser']));
 
     $response->assertCreated()->assertJsonPath('user.username', 'newuser');
     expect(User::where('username', 'newuser')->exists())->toBeTrue();
@@ -45,16 +40,24 @@ it('denies a regular user from creating a user', function () {
     $token = $user->createToken('test')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->postJson('/api/admin/users', [
-            'name' => 'New User',
-            'username' => 'newuser',
-            'password' => 'Password123',
-            'password_confirmation' => 'Password123',
-            'role' => 'user',
-        ])
+        ->postJson('/api/admin/users', userPayload(['username' => 'newuser']))
         ->assertForbidden();
 
     expect(User::where('username', 'newuser')->exists())->toBeFalse();
+});
+
+it('requires is_admin and at least one role when creating a user', function () {
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/admin/users', [
+            'name' => 'New User', 'username' => 'newuser',
+            'password' => 'Password123', 'password_confirmation' => 'Password123',
+            'role_ids' => [],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['is_admin', 'role_ids']);
 });
 
 it('allows an admin to reset another user\'s password', function () {
@@ -94,14 +97,14 @@ it('allows an admin to update a user', function () {
         ->putJson("/api/admin/users/{$target->id}", [
             'name' => 'New Name',
             'username' => 'newname',
-            'role' => 'admin',
+            'is_admin' => true,
         ]);
 
     $response->assertOk()->assertJsonPath('user.username', 'newname');
     expect($target->fresh())
         ->name->toBe('New Name')
         ->username->toBe('newname')
-        ->role->toBe(\App\Enums\UserRole::Admin);
+        ->is_admin->toBeTrue();
 });
 
 it('denies a regular user from updating a user', function () {
@@ -113,7 +116,7 @@ it('denies a regular user from updating a user', function () {
         ->putJson("/api/admin/users/{$target->id}", [
             'name' => 'New Name',
             'username' => 'newname',
-            'role' => 'user',
+            'is_admin' => false,
         ])
         ->assertForbidden();
 });
@@ -164,24 +167,24 @@ it('lets an admin search users by name or username', function () {
         ->assertJsonPath('users.0.username', 'janecooper');
 });
 
-it('lets an admin filter users by role', function () {
+it('lets an admin filter users by is_admin', function () {
     $admin = User::factory()->admin()->create();
-    User::factory()->count(2)->create(['role' => \App\Enums\UserRole::User]);
+    User::factory()->count(2)->create(['is_admin' => false]);
     $token = $admin->createToken('test')->plainTextToken;
 
     $response = $this->withHeader('Authorization', "Bearer {$token}")
-        ->getJson('/api/admin/users?filter[role]=admin');
+        ->getJson('/api/admin/users?filter[is_admin]=1');
 
     $response->assertOk()->assertJsonCount(1, 'users')
         ->assertJsonPath('users.0.username', $admin->username);
 });
 
-it('rejects an invalid role filter on the users list', function () {
+it('rejects a non-boolean is_admin filter on the users list', function () {
     $admin = User::factory()->admin()->create();
     $token = $admin->createToken('test')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->getJson('/api/admin/users?filter[role]=superadmin')
+        ->getJson('/api/admin/users?filter[is_admin]=maybe')
         ->assertUnprocessable();
 });
 
@@ -204,5 +207,5 @@ it('revokes a deleted user\'s tokens', function () {
         ->deleteJson("/api/admin/users/{$target->id}")
         ->assertNoContent();
 
-    expect(\Laravel\Sanctum\PersonalAccessToken::where('tokenable_id', $target->id)->count())->toBe(0);
+    expect(PersonalAccessToken::where('tokenable_id', $target->id)->count())->toBe(0);
 });

@@ -21,7 +21,7 @@ class UserController extends Controller
 {
     public function index(ListUsersRequest $request): JsonResponse
     {
-        $query = User::query()->latest();
+        $query = User::query()->with('roles:id,name')->latest();
 
         if ($search = $request->string('search')->trim()->value()) {
             $query->where(function ($q) use ($search) {
@@ -30,8 +30,8 @@ class UserController extends Controller
             });
         }
 
-        if ($role = $request->input('filter.role')) {
-            $query->where('role', $role);
+        if ($request->has('filter.is_admin')) {
+            $query->where('is_admin', $request->boolean('filter.is_admin'));
         }
 
         $perPage = (int) $request->input('per_page', 15);
@@ -53,7 +53,7 @@ class UserController extends Controller
         $user = $action->execute($request->validated());
 
         return response()->json([
-            'user' => UserResource::make($user)->resolve(),
+            'user' => UserResource::make($user->load('roles:id,name'))->resolve(),
         ], 201);
     }
 
@@ -62,7 +62,7 @@ class UserController extends Controller
         $user = $action->execute($user, $request->validated());
 
         return response()->json([
-            'user' => UserResource::make($user)->resolve(),
+            'user' => UserResource::make($user->load('roles:id,name'))->resolve(),
         ]);
     }
 

@@ -1,9 +1,9 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Models\User;
+use App\Services\AdministratorRole;
 
-it('registers the first user as admin when no users exist', function () {
+it('registers the first user as admin with the Administrator role', function () {
     $response = $this->postJson('/api/auth/register', [
         'name' => 'First User',
         'username' => 'firstadmin',
@@ -13,10 +13,13 @@ it('registers the first user as admin when no users exist', function () {
 
     $response->assertCreated()
         ->assertJsonPath('user.username', 'firstadmin')
-        ->assertJsonPath('user.role', 'admin')
-        ->assertJsonStructure(['user' => ['id', 'name', 'username', 'role'], 'token']);
+        ->assertJsonPath('user.is_admin', true)
+        ->assertJsonStructure(['user' => ['id', 'name', 'username', 'is_admin', 'roles'], 'token']);
 
-    expect(User::first()->role)->toBe(UserRole::Admin);
+    $user = User::first();
+    expect($user->is_admin)->toBeTrue();
+    // gets the protected Administrator role (>= 1 role invariant)
+    expect($user->roles()->where('slug', AdministratorRole::SLUG)->exists())->toBeTrue();
 });
 
 it('rejects registration once a user already exists', function () {

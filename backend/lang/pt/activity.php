@@ -5,7 +5,7 @@ return [
     'user.logged_in' => 'Sessão iniciada',
     'user.password_changed' => 'Alterou a própria senha',
     'user.password_reset_by_admin' => 'Senha redefinida por um administrador para :username',
-    'user.created' => 'Usuário :username (:role) criado',
+    'user.created' => 'Usuário :username criado',
     'user.permissions_updated' => 'Permissões atualizadas para :username',
     'user.role_assigned' => 'Atribuição de função atualizada para :username',
     'user.impersonation_started' => 'Começou a personificar :username',

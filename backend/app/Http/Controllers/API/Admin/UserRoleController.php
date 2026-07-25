@@ -12,7 +12,7 @@ class UserRoleController extends Controller
 {
     public function update(AssignRoleRequest $request, User $user, AssignRoleToUser $action): JsonResponse
     {
-        $action->execute($user, $request->validated('role_id'));
+        $action->execute($user, $request->validated('role_ids'));
 
         return response()->json(null, 204);
     }

@@ -15,13 +15,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Permissions + Administrator role first, so the dev admin below
+        // gets a complete Administrator role.
+        $this->call(PermissionSeeder::class);
 
         User::factory()->admin()->create([
             'name' => 'Test Admin',
             'username' => 'admin',
         ]);
-
-        $this->call(PermissionSeeder::class);
     }
 }

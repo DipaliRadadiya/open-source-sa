@@ -26,6 +26,10 @@ class PermissionController extends Controller
     }
 
     /**
+     * Pure role-based (no admin bypass): effective grant per permission is
+     * the deduped OR-union across the user's direct grants and ALL assigned
+     * roles. A permission is included only if view or manage is granted.
+     *
      * @return array<int, array<string, mixed>>
      */
     private function visiblePermissions(User $user, ?string $level): array
@@ -38,23 +42,25 @@ class PermissionController extends Controller
 
         $permissions = $query->get();
 
-        // Effective grant = direct grant OR role grant (union), admin bypasses both.
-        $directGrants = $user->isAdmin() ? [] : $user->permissions()->get()->keyBy('id');
-        $roleGrants = (! $user->isAdmin() && $user->role_id)
-            ? $user->assignedRole->permissions()->get()->keyBy('id')
-            : collect();
+        // Build effective {view, manage} per permission id, merged across
+        // direct grants + every role the user holds (dedup by OR).
+        $effective = [];
+        $merge = function ($grants) use (&$effective) {
+            foreach ($grants as $grant) {
+                $current = $effective[$grant->id] ?? ['view' => false, 'manage' => false];
+                $effective[$grant->id] = [
+                    'view' => $current['view'] || (bool) $grant->pivot->view || (bool) $grant->pivot->manage,
+                    'manage' => $current['manage'] || (bool) $grant->pivot->manage,
+                ];
+            }
+        };
+
+        $merge($user->permissions()->get());
+        $user->roles()->with('permissions')->get()->each(fn ($role) => $merge($role->permissions));
 
         return $permissions
-            ->map(function (Permission $permission) use ($user, $directGrants, $roleGrants) {
-                if ($user->isAdmin()) {
-                    $view = true;
-                    $manage = true;
-                } else {
-                    $direct = $directGrants->get($permission->id);
-                    $viaRole = $roleGrants->get($permission->id);
-                    $view = (bool) ($direct?->pivot->view ?? false) || (bool) ($viaRole?->pivot->view ?? false);
-                    $manage = (bool) ($direct?->pivot->manage ?? false) || (bool) ($viaRole?->pivot->manage ?? false);
-                }
+            ->map(function (Permission $permission) use ($effective) {
+                $grant = $effective[$permission->id] ?? ['view' => false, 'manage' => false];
 
                 return [
                     'level' => $permission->level,
@@ -63,7 +69,7 @@ class PermissionController extends Controller
                     'title' => $permission->title,
                     'icon' => $permission->icon,
                     'url' => $permission->url,
-                    'permissions' => ['view' => $view, 'manage' => $manage],
+                    'permissions' => ['view' => $grant['view'], 'manage' => $grant['manage']],
                 ];
             })
             ->filter(fn (array $item) => $item['permissions']['view'] || $item['permissions']['manage'])

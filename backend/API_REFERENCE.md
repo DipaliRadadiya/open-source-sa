@@ -1,7 +1,8 @@
 # ServerAvatar OSS Backend — API Reference
 
 Base URL: `https://sv-oss.167-233-229-184.nip.io/api`
-Auth: `Authorization: Bearer <token>` header (returned by register/login), or cookie-session for stateful frontend domains (`SANCTUM_STATEFUL_DOMAINS`). Admin-only routes additionally require the user's `role` to be `admin`.
+Auth: `Authorization: Bearer <token>` header (returned by register/login), or cookie-session for stateful frontend domains (`SANCTUM_STATEFUL_DOMAINS`). Admin-only routes additionally require `is_admin: true`.
+RBAC: `is_admin` (bool) gates the admin area only. Feature permissions are **pure role-based** — a user's effective permissions are the deduped OR-union across ALL their assigned roles + any direct grants (no admin bypass). Every user has **≥1 role**. The first registered user is `is_admin` + the protected **Administrator** role (holds every permission, `is_system`, cannot be deleted/renamed/edited).
 Errors: standard Laravel shape — `422` validation → `{"message": "...", "errors": {"field": ["..."]}}`; `401` unauthenticated; `403` forbidden (e.g. non-admin, or registration closed — note `403` has no `errors` key, only `message`); `429` rate-limited.
 Envelope: every success response is wrapped under a **resource-named key** — singular for one record (`user`, `role`, `branding`, `basic_info`, `dashboard`), plural for lists (`users`, `roles`, `activity_log`, `permissions`), each paired with `meta` when paginated. There is no generic `data` wrapper.
 Dates: all timestamps are `"DD-MM-YYYY HH:mm:ss"` strings, paired with a `_human` relative-time sibling (e.g. `"created_at": "24-07-2026 10:02:33"`, `"created_at_human": "2 minutes ago"`) — not ISO 8601.
@@ -24,7 +25,7 @@ White-label branding info.
 Bootstrap-only — creates the **first** admin. Fails once any user exists (`registration_open` in `/basic-info` tells you when this is closed).
 - Body: `name` (string, required), `username` (string, required, alpha_dash, unique), `password` (string, required, confirmed, min 10 + mixed case + numbers), `password_confirmation` (string, required, must match `password`)
 - Rate limit: 5/min per username+IP
-- Response `201`: `{"user": {id, name, username, role, created_at, created_at_human}, "token": string}` — also sets a session cookie if the request came from a stateful domain. Registration-closed returns `403` (`{"message": ...}`, no `errors`).
+- Response `201`: `{"user": {id, name, username, is_admin, roles: [{id, name}], created_at, created_at_human}, "token": string}` — also sets a session cookie if the request came from a stateful domain. Registration-closed returns `403` (`{"message": ...}`, no `errors`).
 
 ### `POST /auth/login`
 - Body: `username` (string, required), `password` (string, required)
@@ -39,7 +40,7 @@ Bootstrap-only — creates the **first** admin. Fails once any user exists (`reg
 Revokes the current token (or session, if cookie-authenticated). No body. Response `204`.
 
 ### `GET /auth/me`
-Current user, plus impersonation state. Response: `{"user": {id, name, username, role, created_at, created_at_human}, "impersonated_by": {id, username}|null}` — `impersonated_by` is non-null only during an impersonated session (show a banner); otherwise `null`.
+Current user, plus impersonation state. Response: `{"user": {id, name, username, is_admin, roles: [{id, name}], created_at, created_at_human}, "impersonated_by": {id, username}|null}` — `impersonated_by` is non-null only during an impersonated session (show a banner); otherwise `null`.
 
 ### `PUT /auth/password`
 Self password change. Also revokes all existing tokens and issues a new one (so the caller must re-store the returned token).
@@ -55,7 +56,7 @@ The caller's **own** activity history only (not admin-wide — see `/admin/activ
 - Response: `{"activity_log": [{id, action, description, created_at, created_at_human}], "meta": {...}}`
 
 ### `GET /permissions`
-Permission items the caller can see (admin sees all with full access; regular users see only what they've been granted, directly or via their assigned Role).
+Permission items the caller can see — the **deduped OR-union** across all their assigned roles + direct grants (each permission appears once; `manage`/`view` are true if any source grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
 - Query: `level` (string, optional — filters to one permission level, e.g. `server`)
 - Response: `{"permissions": [{level, sub_level, name, title, icon, url, permissions: {view, manage}}]}`
 
@@ -66,25 +67,25 @@ Same as above but `level` is **required** (used for a targeted single-level chec
 
 ---
 
-## Admin only (`role: admin`, plus `Authorization: Bearer <token>`)
+## Admin only (`is_admin: true`, plus `Authorization: Bearer <token>`)
 
 ### `GET /admin/dashboard`
 Aggregate stats. No params.
-- Response: `{"dashboard": {"users": {total, admin, user}, "roles": {total}, "activity": {today, total}}}`
+- Response: `{"dashboard": {"users": {total, admins, non_admins}, "roles": {total}, "activity": {today, total}}}`
 
 ### Users — `GET|POST /admin/users`, `PUT|DELETE /admin/users/{user}`
 
 **`GET /admin/users`** — list/search/filter
-- Query: `search` (string, optional — matches `name` or `username`), `filter[role]` (`admin`|`user`, optional), `per_page` (10|20|50|100)
-- Response: `{"users": [{id, name, username, role, created_at, created_at_human}], "meta": {...}}`
+- Query: `search` (string, optional — matches `name` or `username`), `filter[is_admin]` (bool, optional), `per_page` (10|20|50|100)
+- Response: `{"users": [{id, name, username, is_admin, roles: [{id, name}], created_at, created_at_human}], "meta": {...}}`
 
 **`POST /admin/users`** — create
-- Body: `name` (required), `username` (required, alpha_dash, unique), `password` + `password_confirmation` (required, min 10 + mixed case + numbers), `role` (required, `admin`|`user`)
-- Response `201`: `{"user": {id, name, username, role, created_at, created_at_human}}`
+- Body: `name` (required), `username` (required, alpha_dash, unique), `password` + `password_confirmation` (required, min 10 + mixed case + numbers), `is_admin` (bool, required), `role_ids` (array, **required, min 1** — each must exist in `roles`; every user must have ≥1 role)
+- Response `201`: `{"user": {id, name, username, is_admin, roles: [{id, name}], created_at, created_at_human}}`
 
 **`PUT /admin/users/{user}`** — edit
 - Path: `user` = user ID
-- Body: `name` (required), `username` (required, alpha_dash, unique ignoring self), `role` (required, `admin`|`user`)
+- Body: `name` (required), `username` (required, alpha_dash, unique ignoring self), `is_admin` (bool, required). (Roles are managed via `.../roles` below.)
 - Response `200`: same shape as create
 
 **`DELETE /admin/users/{user}`** — delete
@@ -110,29 +111,29 @@ Direct permission grants for a user (in addition to whatever their assigned Role
 - Unknown `(level, name)` pairs are silently skipped (not an error).
 - Response `204`
 
-### `PUT /admin/users/{user}/role`
-Assigns (or unassigns, via `null`) a named Role to a user.
+### `PUT /admin/users/{user}/roles`
+Syncs the user's assigned roles (many-to-many).
 - Path: `user` = user ID
-- Body: `role_id` (integer, nullable — `null` unassigns, or must `exist` in `roles`)
+- Body: `role_ids` (array, **required, min 1** — each must exist in `roles`; a user can hold multiple roles and can never be left with zero)
 - Response `204`
 
 ### Roles — `GET|POST /admin/roles`, `PUT|DELETE /admin/roles/{role}`
 
 **`GET /admin/roles`** — list (not paginated, returns all)
-- Response: `{"roles": [{id, name, slug, description, permissions: [...], created_at, created_at_human}]}`
+- Response: `{"roles": [{id, name, slug, is_system, description, permissions: [...], created_at, created_at_human}]}` — `is_system: true` marks protected roles (e.g. Administrator).
 
 **`POST /admin/roles`** — create
 - Body: `name` (required, string, max 255 — duplicates checked case-insensitively via normalized slug), `description` (nullable, string, max 1000), `permissions` (array, optional) — each item: `level`, `name`, `view`, `manage` (all required if `permissions` sent)
-- Response `201`: `{"role": {id, name, slug, description, permissions: [{level, name, title, permissions: {view, manage}}], created_at, created_at_human}}`
+- Response `201`: `{"role": {id, name, slug, is_system, description, permissions: [{level, name, title, permissions: {view, manage}}], created_at, created_at_human}}`
 
 **`PUT /admin/roles/{role}`** — update
 - Path: `role` = role ID
 - Body: same as create (name uniqueness ignores this role itself)
-- Response `200`: same shape as create
+- Response `200`: same shape as create. **`422`** if the role is `is_system` (protected — Administrator can't be modified).
 
 **`DELETE /admin/roles/{role}`** — delete
 - Path: `role` = role ID
-- Any users with this role assigned have `role_id` nulled (not deleted).
+- Users holding this role simply have it detached (not deleted). **`422`** if the role is `is_system` (Administrator can't be deleted).
 - Response `204`
 
 ### `GET /admin/activity-log`

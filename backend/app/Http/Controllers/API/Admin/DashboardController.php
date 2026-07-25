@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API\Admin;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Role;
@@ -18,8 +17,8 @@ class DashboardController extends Controller
             'dashboard' => [
                 'users' => [
                     'total' => User::query()->count(),
-                    'admin' => User::query()->where('role', UserRole::Admin)->count(),
-                    'user' => User::query()->where('role', UserRole::User)->count(),
+                    'admins' => User::query()->where('is_admin', true)->count(),
+                    'non_admins' => User::query()->where('is_admin', false)->count(),
                 ],
                 'roles' => [
                     'total' => Role::query()->count(),

@@ -1,8 +1,24 @@
 <?php
 
 use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+
+it('creates the Administrator system role with every permission, idempotently', function () {
+    $this->seed(PermissionSeeder::class);
+    $this->seed(PermissionSeeder::class); // re-run: must not duplicate
+
+    $admin = Role::where('slug', 'administrator')->get();
+    expect($admin)->toHaveCount(1);
+    expect($admin->first()->is_system)->toBeTrue();
+    // holds all 12 permissions, view+manage
+    expect($admin->first()->permissions()->count())->toBe(12);
+    foreach ($admin->first()->permissions as $permission) {
+        expect((bool) $permission->pivot->view)->toBeTrue();
+        expect((bool) $permission->pivot->manage)->toBeTrue();
+    }
+});
 
 it('seeds the 12 server-level permission items in order', function () {
     $this->seed(PermissionSeeder::class);
