@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\API\Server\SystemUser\ChangeShellController;
+use App\Http\Controllers\API\Server\SystemUser\SetPasswordController;
 use App\Http\Controllers\API\Server\SystemUser\SshKeyController;
+use App\Http\Controllers\API\Server\SystemUser\ToggleSudoController;
 use App\Http\Controllers\API\Server\SystemUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +13,11 @@ Route::get('/system-users', [SystemUserController::class, 'index'])->middleware(
 Route::post('/system-users', [SystemUserController::class, 'store'])->middleware('permission:system_user,manage');
 Route::get('/system-users/{systemUser}', [SystemUserController::class, 'show'])->middleware('permission:system_user');
 Route::delete('/system-users/{systemUser}', [SystemUserController::class, 'destroy'])->middleware('permission:system_user,manage');
+
+// Per-user settings (single-action operations).
+Route::put('/system-users/{systemUser}/password', SetPasswordController::class)->middleware('permission:system_user,manage');
+Route::put('/system-users/{systemUser}/sudo', ToggleSudoController::class)->middleware('permission:system_user,manage');
+Route::put('/system-users/{systemUser}/shell', ChangeShellController::class)->middleware('permission:system_user,manage');
 
 // SSH keys — nested sub-resource of a system user.
 Route::get('/system-users/{systemUser}/ssh-keys', [SshKeyController::class, 'index'])->middleware('permission:system_user');

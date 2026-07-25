@@ -21,4 +21,9 @@ return [
     'system_user.delete_failed' => 'Failed to delete system user :username',
     'system_user.ssh_key_added' => 'Added SSH key :key to system user :username',
     'system_user.ssh_key_removed' => 'Removed SSH key :key from system user :username',
+    'system_user.password_set' => 'Set the password for system user :username',
+    'system_user.password_failed' => 'Failed to set the password for system user :username',
+    'system_user.sudo_enabled' => 'Granted sudo to system user :username',
+    'system_user.sudo_disabled' => 'Revoked sudo from system user :username',
+    'system_user.shell_changed' => 'Changed the shell of system user :username to :shell',
 ];

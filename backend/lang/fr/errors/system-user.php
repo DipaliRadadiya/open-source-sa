@@ -7,4 +7,7 @@ return [
     'reserved_username' => "Ce nom d'utilisateur est réservé et ne peut pas être utilisé.",
     'duplicate_public_key' => 'Cette clé SSH a déjà été ajoutée.',
     'invalid_public_key' => "La valeur fournie n'est pas une clé publique SSH valide.",
+    'password_failed' => "Échec de la définition du mot de passe de l'utilisateur système.",
+    'sudo_failed' => "Échec de la mise à jour de l'accès sudo de l'utilisateur système.",
+    'shell_failed' => "Échec du changement de shell de l'utilisateur système.",
 ];

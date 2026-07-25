@@ -6,9 +6,19 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['username', 'home_path', 'shell'])]
+#[Fillable(['username', 'home_path', 'shell', 'sudo'])]
 class SystemUser extends Model
 {
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'sudo' => 'boolean',
+        ];
+    }
+
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);

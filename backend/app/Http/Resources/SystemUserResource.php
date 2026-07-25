@@ -17,6 +17,7 @@ class SystemUserResource extends JsonResource
             'username' => $this->username,
             'home_path' => $this->home_path,
             'shell' => $this->shell,
+            'sudo' => (bool) $this->sudo,
             // Index eager-loads only id+name; show eager-loads full detail.
             'applications' => $this->whenLoaded('applications', fn () => $this->applications->map(fn ($app) => array_filter([
                 'id' => $app->id,

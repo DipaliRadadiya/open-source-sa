@@ -21,4 +21,9 @@ return [
     'system_user.delete_failed' => "Échec de la suppression de l'utilisateur système :username",
     'system_user.ssh_key_added' => "Clé SSH :key ajoutée à l'utilisateur système :username",
     'system_user.ssh_key_removed' => "Clé SSH :key supprimée de l'utilisateur système :username",
+    'system_user.password_set' => "A défini le mot de passe de l'utilisateur système :username",
+    'system_user.password_failed' => "Échec de la définition du mot de passe de l'utilisateur système :username",
+    'system_user.sudo_enabled' => "A accordé sudo à l'utilisateur système :username",
+    'system_user.sudo_disabled' => "A révoqué sudo de l'utilisateur système :username",
+    'system_user.shell_changed' => "A changé le shell de l'utilisateur système :username en :shell",
 ];

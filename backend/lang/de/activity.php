@@ -21,4 +21,9 @@ return [
     'system_user.delete_failed' => 'Systembenutzer :username konnte nicht gelöscht werden',
     'system_user.ssh_key_added' => 'SSH-Schlüssel :key zum Systembenutzer :username hinzugefügt',
     'system_user.ssh_key_removed' => 'SSH-Schlüssel :key vom Systembenutzer :username entfernt',
+    'system_user.password_set' => 'Passwort für Systembenutzer :username gesetzt',
+    'system_user.password_failed' => 'Passwort für Systembenutzer :username konnte nicht gesetzt werden',
+    'system_user.sudo_enabled' => 'Sudo an Systembenutzer :username gewährt',
+    'system_user.sudo_disabled' => 'Sudo von Systembenutzer :username entzogen',
+    'system_user.shell_changed' => 'Shell des Systembenutzers :username auf :shell geändert',
 ];

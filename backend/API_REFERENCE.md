@@ -168,6 +168,17 @@ Requires `system_user` permission (`view` to read, `manage` to mutate). No updat
 - **`422`** if it still owns ≥1 application (can't orphan apps).
 - Response `204`
 
+**`PUT /api/system-users/{systemUser}/password`** — set/change OS password (runs `chpasswd`)
+- Body: `password` (required, min 10 + mixed case + numbers). Response `204`.
+
+**`PUT /api/system-users/{systemUser}/sudo`** — grant/revoke sudo (`usermod -aG sudo` / `gpasswd -d`)
+- Body: `sudo` (bool, required). Response `200`: `{"system_user": {...updated...}}`.
+
+**`PUT /api/system-users/{systemUser}/shell`** — change login shell (`usermod -s`)
+- Body: `shell` (required, one of `/bin/bash`, `/bin/sh`, `/usr/bin/zsh`, `/usr/sbin/nologin`, `/bin/false`). Response `200`: `{"system_user": {...updated...}}`.
+
+The system_user object now also includes `sudo` (bool).
+
 ### SSH keys — nested sub-resource of a system user
 **`GET /api/system-users/{systemUser}/ssh-keys`** → `{"ssh_keys": [{id, name, fingerprint, created_at, created_at_human}]}`
 **`POST /api/system-users/{systemUser}/ssh-keys`** — add

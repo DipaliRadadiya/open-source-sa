@@ -20,8 +20,11 @@ class ServerOps
     /**
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
+     * @param  string|null  $input  Data piped to the command's stdin (e.g. for
+     *                              `chpasswd`). Never logged — keep secrets here,
+     *                              not in the command array.
      */
-    public function run(array $command, array $context = [], int $timeout = 60): ServerOpsResult
+    public function run(array $command, array $context = [], int $timeout = 60, ?string $input = null): ServerOpsResult
     {
         $reference = (string) Str::uuid();
         $startedAt = microtime(true);
@@ -32,7 +35,11 @@ class ServerOps
         $result = null;
 
         try {
-            $result = Process::timeout($timeout)->run($command);
+            $pending = Process::timeout($timeout);
+            if ($input !== null) {
+                $pending = $pending->input($input);
+            }
+            $result = $pending->run($command);
             $ok = $result->successful();
             $exitCode = $result->exitCode();
             $stderr = $result->errorOutput();

@@ -7,4 +7,7 @@ return [
     'reserved_username' => 'This username is reserved and cannot be used.',
     'duplicate_public_key' => 'This SSH key has already been added.',
     'invalid_public_key' => 'The provided value is not a valid SSH public key.',
+    'password_failed' => 'Failed to set the system user password.',
+    'sudo_failed' => 'Failed to update sudo access for the system user.',
+    'shell_failed' => 'Failed to change the system user shell.',
 ];

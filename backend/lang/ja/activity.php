@@ -21,4 +21,9 @@ return [
     'system_user.delete_failed' => 'システムユーザー :username の削除に失敗しました',
     'system_user.ssh_key_added' => 'システムユーザー :username にSSHキー :key を追加しました',
     'system_user.ssh_key_removed' => 'システムユーザー :username からSSHキー :key を削除しました',
+    'system_user.password_set' => 'システムユーザー :username のパスワードを設定しました',
+    'system_user.password_failed' => 'システムユーザー :username のパスワード設定に失敗しました',
+    'system_user.sudo_enabled' => 'システムユーザー :username にsudoを付与しました',
+    'system_user.sudo_disabled' => 'システムユーザー :username からsudoを取り消しました',
+    'system_user.shell_changed' => 'システムユーザー :username のシェルを :shell に変更しました',
 ];

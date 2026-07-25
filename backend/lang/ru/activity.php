@@ -21,4 +21,9 @@ return [
     'system_user.delete_failed' => 'Не удалось удалить системного пользователя :username',
     'system_user.ssh_key_added' => 'Ключ SSH :key добавлен системному пользователю :username',
     'system_user.ssh_key_removed' => 'Ключ SSH :key удалён у системного пользователя :username',
+    'system_user.password_set' => 'Установлен пароль системного пользователя :username',
+    'system_user.password_failed' => 'Не удалось установить пароль системного пользователя :username',
+    'system_user.sudo_enabled' => 'Предоставлен sudo системному пользователю :username',
+    'system_user.sudo_disabled' => 'Отозван sudo у системного пользователя :username',
+    'system_user.shell_changed' => 'Изменена оболочка системного пользователя :username на :shell',
 ];
