@@ -15,4 +15,10 @@ return [
     'role.created' => 'भूमिका :name बनाई',
     'role.updated' => 'भूमिका :name अपडेट की',
     'role.deleted' => 'भूमिका :name हटाई',
+    'system_user.created' => 'सिस्टम उपयोगकर्ता :username बनाया',
+    'system_user.deleted' => 'सिस्टम उपयोगकर्ता :username हटाया',
+    'system_user.create_failed' => 'सिस्टम उपयोगकर्ता :username बनाने में विफल',
+    'system_user.delete_failed' => 'सिस्टम उपयोगकर्ता :username हटाने में विफल',
+    'system_user.ssh_key_added' => 'सिस्टम उपयोगकर्ता :username में SSH कुंजी :key जोड़ी',
+    'system_user.ssh_key_removed' => 'सिस्टम उपयोगकर्ता :username से SSH कुंजी :key हटाई',
 ];

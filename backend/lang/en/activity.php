@@ -15,4 +15,10 @@ return [
     'role.created' => 'Created role :name',
     'role.updated' => 'Updated role :name',
     'role.deleted' => 'Deleted role :name',
+    'system_user.created' => 'Created system user :username',
+    'system_user.deleted' => 'Deleted system user :username',
+    'system_user.create_failed' => 'Failed to create system user :username',
+    'system_user.delete_failed' => 'Failed to delete system user :username',
+    'system_user.ssh_key_added' => 'Added SSH key :key to system user :username',
+    'system_user.ssh_key_removed' => 'Removed SSH key :key from system user :username',
 ];

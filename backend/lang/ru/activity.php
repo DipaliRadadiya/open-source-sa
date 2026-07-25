@@ -15,4 +15,10 @@ return [
     'role.created' => 'Создана роль :name',
     'role.updated' => 'Обновлена роль :name',
     'role.deleted' => 'Удалена роль :name',
+    'system_user.created' => 'Создан системный пользователь :username',
+    'system_user.deleted' => 'Удалён системный пользователь :username',
+    'system_user.create_failed' => 'Не удалось создать системного пользователя :username',
+    'system_user.delete_failed' => 'Не удалось удалить системного пользователя :username',
+    'system_user.ssh_key_added' => 'Ключ SSH :key добавлен системному пользователю :username',
+    'system_user.ssh_key_removed' => 'Ключ SSH :key удалён у системного пользователя :username',
 ];

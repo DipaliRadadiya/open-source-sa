@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // SANCTUM_STATEFUL_DOMAINS, alongside Bearer token auth (both work).
         $middleware->statefulApi();
         $middleware->api(prepend: ['throttle:api'], append: [SetLocale::class]);
+        $middleware->alias(['permission' => CheckPermission::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

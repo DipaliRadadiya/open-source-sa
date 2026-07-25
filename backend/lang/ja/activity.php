@@ -15,4 +15,10 @@ return [
     'role.created' => 'ロール :name を作成しました',
     'role.updated' => 'ロール :name を更新しました',
     'role.deleted' => 'ロール :name を削除しました',
+    'system_user.created' => 'システムユーザー :username を作成しました',
+    'system_user.deleted' => 'システムユーザー :username を削除しました',
+    'system_user.create_failed' => 'システムユーザー :username の作成に失敗しました',
+    'system_user.delete_failed' => 'システムユーザー :username の削除に失敗しました',
+    'system_user.ssh_key_added' => 'システムユーザー :username にSSHキー :key を追加しました',
+    'system_user.ssh_key_removed' => 'システムユーザー :username からSSHキー :key を削除しました',
 ];

@@ -25,3 +25,12 @@ Route::middleware(['auth:sanctum', 'can:access-admin'])
             require $adminRoutes;
         }
     });
+
+// Server-panel routes: authenticated; each route additionally gates on its
+// own feature permission via the `permission:<name>[,manage]` middleware.
+Route::middleware('auth:sanctum')
+    ->group(function (): void {
+        foreach (glob(__DIR__.'/api/server/*.php') as $serverRoutes) {
+            require $serverRoutes;
+        }
+    });

@@ -65,6 +65,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Structured log of every server operation (command, exit code,
+        // stdout/stderr, duration, actor) for debugging the panel.
+        'server-ops' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/server-ops.log'),
+            'level' => 'debug',
+            'replace_placeholders' => true,
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),

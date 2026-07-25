@@ -15,4 +15,10 @@ return [
     'role.created' => 'Rolle :name erstellt',
     'role.updated' => 'Rolle :name aktualisiert',
     'role.deleted' => 'Rolle :name gelöscht',
+    'system_user.created' => 'Systembenutzer :username erstellt',
+    'system_user.deleted' => 'Systembenutzer :username gelöscht',
+    'system_user.create_failed' => 'Systembenutzer :username konnte nicht erstellt werden',
+    'system_user.delete_failed' => 'Systembenutzer :username konnte nicht gelöscht werden',
+    'system_user.ssh_key_added' => 'SSH-Schlüssel :key zum Systembenutzer :username hinzugefügt',
+    'system_user.ssh_key_removed' => 'SSH-Schlüssel :key vom Systembenutzer :username entfernt',
 ];

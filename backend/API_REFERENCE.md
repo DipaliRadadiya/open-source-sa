@@ -147,9 +147,39 @@ Distinct `type`/`action` values, for populating a frontend filter dropdown. Sour
 
 ---
 
+## Server Panel (`Authorization: Bearer <token>`; each route gated by its feature permission)
+
+Server-panel routes are **permission-gated** (pure role-based) — the caller needs the feature's `view`/`manage` grant via a role (admins have it through the Administrator role). Missing permission → `403`. Server operations that fail return **`500` with `{"message": "<translated>", "reference": "<uuid>"}`** — the reference correlates with the server-ops log; raw stderr never reaches the client.
+
+### System Users — the Linux OS accounts that own/run sites
+Requires `system_user` permission (`view` to read, `manage` to mutate). No update endpoint (username is fixed — delete + recreate).
+
+**`GET /api/system-users`** — list
+- Response: `{"system_users": [{id, username, home_path, shell, applications: [{id, name}], created_at, created_at_human}]}` — `applications` is **minimal (id + name)** on the list.
+
+**`GET /api/system-users/{systemUser}`** — detail
+- Response: `{"system_user": {id, username, home_path, shell, applications: [{id, name, domain, site_type, php_version, status}], created_at, created_at_human}}` — **full** applications on detail.
+
+**`POST /api/system-users`** — create (runs `useradd`)
+- Body: `username` (required — Linux rules `^[a-z_][a-z0-9_-]{0,31}$`, not a reserved system name, unique), `public_key` (optional — a valid SSH public key added as the initial authorized key)
+- Response `201`: `{"system_user": {...}}`
+
+**`DELETE /api/system-users/{systemUser}`** — delete (runs `userdel -r`)
+- **`422`** if it still owns ≥1 application (can't orphan apps).
+- Response `204`
+
+### SSH keys — nested sub-resource of a system user
+**`GET /api/system-users/{systemUser}/ssh-keys`** → `{"ssh_keys": [{id, name, fingerprint, created_at, created_at_human}]}`
+**`POST /api/system-users/{systemUser}/ssh-keys`** — add
+- Body: `name` (required), `public_key` (required, valid SSH key; duplicate of an existing key → `422`)
+- Response `201`: `{"ssh_key": {id, name, fingerprint, ...}}`. Rewrites the user's `authorized_keys`.
+**`DELETE /api/system-users/{systemUser}/ssh-keys/{sshKey}`** → `204`. Rewrites `authorized_keys`.
+
+---
+
 ## Enums / fixed values
 
-- `role` (on `User`): `"admin"` | `"user"`
+- `is_admin` (on `User`): boolean.
 - Permission `level` (seeded so far): `"server"` — 12 items: `dashboard`, `application`, `database`, `system_user`, `firewall`, `cronjob`, `fail2ban`, `logs`, `service`, `setting`, `disk_cleaner`, `activity_log`
 
 ---

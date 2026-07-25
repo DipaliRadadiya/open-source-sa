@@ -15,4 +15,10 @@ return [
     'role.created' => 'Função :name criada',
     'role.updated' => 'Função :name atualizada',
     'role.deleted' => 'Função :name excluída',
+    'system_user.created' => 'Usuário do sistema :username criado',
+    'system_user.deleted' => 'Usuário do sistema :username excluído',
+    'system_user.create_failed' => 'Falha ao criar o usuário do sistema :username',
+    'system_user.delete_failed' => 'Falha ao excluir o usuário do sistema :username',
+    'system_user.ssh_key_added' => 'Chave SSH :key adicionada ao usuário do sistema :username',
+    'system_user.ssh_key_removed' => 'Chave SSH :key removida do usuário do sistema :username',
 ];

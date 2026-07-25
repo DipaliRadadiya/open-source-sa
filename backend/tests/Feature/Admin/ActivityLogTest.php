@@ -146,9 +146,9 @@ it('returns the known distinct types and actions for filter dropdowns', function
         ->getJson('/api/admin/activity-log/filters');
 
     $response->assertOk()
-        ->assertJsonPath('types', ['role', 'user'])
-        ->assertJsonCount(14, 'actions');
-    expect($response->json('actions'))->toContain('user.registered', 'role.created', 'user.impersonation_started');
+        ->assertJsonPath('types', ['role', 'system_user', 'user'])
+        ->assertJsonCount(20, 'actions');
+    expect($response->json('actions'))->toContain('user.registered', 'role.created', 'user.impersonation_started', 'system_user.created');
 });
 
 it('denies a regular user from viewing activity-log filter options', function () {
