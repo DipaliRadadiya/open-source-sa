@@ -82,6 +82,60 @@ it('generates a unique slug when two distinct names slug to the same value', fun
     expect($second->json('cronjob.slug'))->toBe('backup-2');
 });
 
+it('rejects a command containing a newline (cron-line injection)', function () {
+    Process::fake();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', [
+            'name' => 'Injected',
+            'username' => 'deploy',
+            'command' => "echo hi\n* * * * * root rm -rf /",
+            'expression' => '* * * * *',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('command');
+});
+
+it('rejects a name containing a newline', function () {
+    Process::fake();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', [
+            'name' => "Job\n* * * * * root evil",
+            'username' => 'deploy',
+            'command' => 'echo hi',
+            'expression' => '* * * * *',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('name');
+});
+
+it('rejects a name that would clobber a system cron.d file', function () {
+    Process::fake();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', [
+            'name' => 'php',
+            'username' => 'deploy',
+            'command' => 'echo hi',
+            'expression' => '* * * * *',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('name');
+});
+
+it('sets the cron.d file mode to 0644 after writing', function () {
+    Process::fake();
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', [
+            'name' => 'Mode job', 'username' => 'deploy', 'command' => 'echo hi', 'expression' => '* * * * *',
+        ]);
+    $response->assertCreated();
+
+    Process::assertRan(fn ($p) => $p->command === ['chmod', '0644', '/etc/cron.d/mode-job']);
+});
+
 it('rejects a non-existent OS user', function () {
     Process::fake(fn ($process) => $process->command[0] === 'getent'
         ? Process::result(output: '', errorOutput: '', exitCode: 2)

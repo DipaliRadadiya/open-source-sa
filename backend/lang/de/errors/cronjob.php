@@ -5,4 +5,6 @@ return [
     'invalid_expression' => 'Der Zeitplan ist kein gültiger Cron-Ausdruck.',
     'invalid_user' => 'Der ausgewählte Benutzer existiert nicht auf dem Server.',
     'unresolved_placeholder' => 'Der Befehl enthält noch den Platzhalter {path} — ersetzen Sie ihn durch das Anwendungsverzeichnis.',
+    'no_newline' => 'Dieser Wert darf keine Zeilenumbrüche enthalten.',
+    'reserved_name' => 'Dieser Name ist reserviert und kann nicht verwendet werden.',
 ];

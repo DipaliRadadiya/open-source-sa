@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Server\Cronjob;
 
+use App\Rules\NotReservedCronFile;
+use App\Rules\SingleLine;
 use App\Rules\ValidCronExpression;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,8 +21,8 @@ class UpdateCronjobRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('cronjobs', 'name')->ignore($this->route('cronjob'))],
-            'command' => ['sometimes', 'required', 'string', 'max:1000', 'not_regex:/\{path\}/'],
+            'name' => ['sometimes', 'required', 'string', 'max:255', new SingleLine, new NotReservedCronFile, Rule::unique('cronjobs', 'name')->ignore($this->route('cronjob'))],
+            'command' => ['sometimes', 'required', 'string', 'max:1000', new SingleLine, 'not_regex:/\{path\}/'],
             'expression' => ['sometimes', 'required', 'string', new ValidCronExpression],
             'active' => ['sometimes', 'boolean'],
         ];

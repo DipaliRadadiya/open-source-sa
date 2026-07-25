@@ -5,4 +5,6 @@ return [
     'invalid_expression' => 'La programación no es una expresión cron válida.',
     'invalid_user' => 'El usuario seleccionado no existe en el servidor.',
     'unresolved_placeholder' => 'El comando aún contiene el marcador {path}; reemplázalo por el directorio de la aplicación.',
+    'no_newline' => 'Este valor no puede contener saltos de línea.',
+    'reserved_name' => 'Este nombre está reservado y no se puede usar.',
 ];

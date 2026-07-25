@@ -5,4 +5,6 @@ return [
     'invalid_expression' => 'O agendamento não é uma expressão cron válida.',
     'invalid_user' => 'O usuário selecionado não existe no servidor.',
     'unresolved_placeholder' => 'O comando ainda contém o marcador {path} — substitua-o pelo diretório da aplicação.',
+    'no_newline' => 'Este valor não pode conter quebras de linha.',
+    'reserved_name' => 'Este nome é reservado e não pode ser usado.',
 ];

@@ -58,14 +58,27 @@ class CrontabManager
     }
 
     /**
-     * Write (or overwrite) the job's cron.d file via a privileged process.
+     * Write (or overwrite) the job's cron.d file via a privileged process, then
+     * enforce mode 0644 — cron silently ignores cron.d files that are writable
+     * by group or others.
      */
     public function write(Cronjob $cronjob): ServerOpsResult
     {
-        return $this->serverOps->run(
-            ['tee', $this->path($cronjob)],
+        $path = $this->path($cronjob);
+
+        $result = $this->serverOps->run(
+            ['tee', $path],
             ['feature' => 'cronjob', 'op' => 'write', 'cronjob' => $cronjob->id],
             input: $this->render($cronjob),
+        );
+
+        if ($result->failed()) {
+            return $result;
+        }
+
+        return $this->serverOps->run(
+            ['chmod', '0644', $path],
+            ['feature' => 'cronjob', 'op' => 'chmod', 'cronjob' => $cronjob->id],
         );
     }
 
