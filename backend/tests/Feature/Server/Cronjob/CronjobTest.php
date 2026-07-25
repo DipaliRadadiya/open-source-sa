@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ActivityLog;
 use App\Models\Cronjob;
 use App\Models\Permission;
 use App\Models\SystemUser;
@@ -392,4 +393,8 @@ it('removes the cron.d files when the owning system user is deleted via the API'
     // both the file and the row are gone
     Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/owned-job']);
     expect(Cronjob::find($job->id))->toBeNull();
+
+    // the deletion is recorded with how many cron jobs went with the user
+    $log = ActivityLog::where('type', 'system_user')->where('action', 'deleted')->latest('id')->first();
+    expect($log->properties['cronjobs_removed'])->toBe(1);
 });

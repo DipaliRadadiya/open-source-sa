@@ -38,14 +38,20 @@ class DeleteSystemUser
                 throw new SystemUserDeleteFailedException($result->reference);
             }
 
-            $this->activityLogger->log('system_user.deleted', $systemUser, ['username' => $systemUser->username]);
-
             // Remove each cron job's /etc/cron.d file before the DB cascade drops
             // the rows — otherwise the files would be orphaned and would point at
             // a now-deleted OS user.
-            foreach ($systemUser->cronjobs as $cronjob) {
+            $cronjobs = $systemUser->cronjobs;
+
+            foreach ($cronjobs as $cronjob) {
                 $this->crontab->remove($cronjob);
             }
+
+            // Record how many cron jobs went with the user (audit breadcrumb).
+            $this->activityLogger->log('system_user.deleted', $systemUser, [
+                'username' => $systemUser->username,
+                'cronjobs_removed' => $cronjobs->count(),
+            ]);
 
             $systemUser->delete();
         });
