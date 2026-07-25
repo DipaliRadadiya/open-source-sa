@@ -21,8 +21,13 @@ class UpdateCronjob
     public function execute(Cronjob $cronjob, array $data): Cronjob
     {
         return DB::transaction(function () use ($cronjob, $data) {
-            // Path is derived from the name, so a rename relocates the file.
+            // Path is derived from the slug, so a rename (new slug) relocates
+            // the file. Regenerate the slug when the name changes.
             $oldPath = $this->crontab->path($cronjob);
+
+            if (isset($data['name']) && $data['name'] !== $cronjob->name) {
+                $data['slug'] = Cronjob::uniqueSlug($data['name'], $cronjob->id);
+            }
 
             $cronjob->update($data);
 

@@ -34,6 +34,7 @@ class CreateCronjob
         return DB::transaction(function () use ($data, $systemUser, $username) {
             $cronjob = Cronjob::create([
                 'name' => $data['name'],
+                'slug' => Cronjob::uniqueSlug($data['name']),
                 'username' => $username,
                 'system_user_id' => $systemUser?->id,
                 'command' => $data['command'],

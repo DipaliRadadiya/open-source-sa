@@ -31,11 +31,11 @@ it('creates a cron job for a panel system user, writing a cron.d file', function
         ->assertJsonPath('cronjob.system_user.id', $this->su->id)
         ->assertJsonPath('cronjob.active', true);
 
-    $id = $response->json('cronjob.id');
+    expect($response->json('cronjob.slug'))->toBe('nightly-backup');
 
-    Process::assertRan(function ($process) use ($id) {
-        // filename carries a slug of the name for easy identification
-        return $process->command === ['tee', "/etc/cron.d/sv-oss-nightly-backup-{$id}"]
+    Process::assertRan(function ($process) {
+        // filename is the stable name-slug (migration-safe, no id)
+        return $process->command === ['tee', '/etc/cron.d/sv-oss-nightly-backup']
             && str_contains($process->input, '0 0 * * * deploy /home/deploy/backup.sh');
     });
 });
@@ -57,6 +57,18 @@ it('creates a cron job for a default/unmanaged OS user by username', function ()
 
     Process::assertRan(fn ($p) => $p->command[0] === 'tee'
         && str_contains($p->input, '*/5 * * * * www-data php /var/www/app/artisan cache:clear'));
+});
+
+it('generates a unique slug when two jobs share a name', function () {
+    Process::fake();
+
+    $first = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', ['name' => 'Backup', 'username' => 'deploy', 'command' => 'a', 'expression' => '* * * * *']);
+    $second = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', ['name' => 'Backup', 'username' => 'deploy', 'command' => 'b', 'expression' => '* * * * *']);
+
+    expect($first->json('cronjob.slug'))->toBe('backup');
+    expect($second->json('cronjob.slug'))->toBe('backup-2');
 });
 
 it('rejects a non-existent OS user', function () {
@@ -107,7 +119,7 @@ it('does not write a file when the job is created inactive', function () {
 it('removes the cron.d file when a job is disabled via update', function () {
     Process::fake();
     $job = Cronjob::create([
-        'name' => 'Job', 'username' => 'deploy', 'command' => 'echo hi',
+        'name' => 'Job', 'slug' => 'job', 'username' => 'deploy', 'command' => 'echo hi',
         'expression' => '* * * * *', 'active' => true,
     ]);
 
@@ -116,13 +128,13 @@ it('removes the cron.d file when a job is disabled via update', function () {
         ->assertOk()
         ->assertJsonPath('cronjob.active', false);
 
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', "/etc/cron.d/sv-oss-job-{$job->id}"]);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/sv-oss-job']);
 });
 
 it('rewrites the cron.d file when the schedule changes', function () {
     Process::fake();
     $job = Cronjob::create([
-        'name' => 'Job', 'username' => 'deploy', 'command' => 'echo hi',
+        'name' => 'Job', 'slug' => 'job', 'username' => 'deploy', 'command' => 'echo hi',
         'expression' => '* * * * *', 'active' => true,
     ]);
 
@@ -138,7 +150,7 @@ it('rewrites the cron.d file when the schedule changes', function () {
 it('deletes a cron job and removes its file', function () {
     Process::fake();
     $job = Cronjob::create([
-        'name' => 'Job', 'username' => 'deploy', 'command' => 'echo hi',
+        'name' => 'Job', 'slug' => 'job', 'username' => 'deploy', 'command' => 'echo hi',
         'expression' => '* * * * *', 'active' => true,
     ]);
 
@@ -147,24 +159,25 @@ it('deletes a cron job and removes its file', function () {
         ->assertNoContent();
 
     expect(Cronjob::find($job->id))->toBeNull();
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', "/etc/cron.d/sv-oss-job-{$job->id}"]);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/sv-oss-job']);
 });
 
 it('relocates the cron.d file when the job is renamed', function () {
     Process::fake();
     $job = Cronjob::create([
-        'name' => 'Old name', 'username' => 'deploy', 'command' => 'echo hi',
+        'name' => 'Old name', 'slug' => 'old-name', 'username' => 'deploy', 'command' => 'echo hi',
         'expression' => '* * * * *', 'active' => true,
     ]);
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->putJson("/api/cronjobs/{$job->id}", ['name' => 'New name'])
         ->assertOk()
-        ->assertJsonPath('cronjob.name', 'New name');
+        ->assertJsonPath('cronjob.name', 'New name')
+        ->assertJsonPath('cronjob.slug', 'new-name');
 
-    // old-named file removed, new-named file written
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', "/etc/cron.d/sv-oss-old-name-{$job->id}"]);
-    Process::assertRan(fn ($p) => $p->command === ['tee', "/etc/cron.d/sv-oss-new-name-{$job->id}"]);
+    // old-slug file removed, new-slug file written
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/sv-oss-old-name']);
+    Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/sv-oss-new-name']);
 });
 
 it('returns a translated error with reference and rolls back when the write fails', function () {
@@ -187,8 +200,8 @@ it('returns a translated error with reference and rolls back when the write fail
 
 it('filters the list by system_user_id and active', function () {
     Process::fake();
-    Cronjob::create(['name' => 'A', 'username' => 'deploy', 'system_user_id' => $this->su->id, 'command' => 'a', 'expression' => '* * * * *', 'active' => true]);
-    Cronjob::create(['name' => 'B', 'username' => 'root', 'command' => 'b', 'expression' => '* * * * *', 'active' => false]);
+    Cronjob::create(['name' => 'A', 'slug' => 'a', 'username' => 'deploy', 'system_user_id' => $this->su->id, 'command' => 'a', 'expression' => '* * * * *', 'active' => true]);
+    Cronjob::create(['name' => 'B', 'slug' => 'b', 'username' => 'root', 'command' => 'b', 'expression' => '* * * * *', 'active' => false]);
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->getJson('/api/cronjobs?filter[system_user_id]='.$this->su->id)
@@ -241,7 +254,7 @@ it('denies a viewer without manage from creating a cron job', function () {
 });
 
 it('cascade-deletes cron jobs when their system user is deleted', function () {
-    $job = Cronjob::create(['name' => 'A', 'username' => 'deploy', 'system_user_id' => $this->su->id, 'command' => 'a', 'expression' => '* * * * *']);
+    $job = Cronjob::create(['name' => 'A', 'slug' => 'a', 'username' => 'deploy', 'system_user_id' => $this->su->id, 'command' => 'a', 'expression' => '* * * * *']);
 
     $this->su->delete();
 

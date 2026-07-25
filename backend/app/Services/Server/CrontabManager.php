@@ -3,7 +3,6 @@
 namespace App\Services\Server;
 
 use App\Models\Cronjob;
-use Illuminate\Support\Str;
 
 /**
  * Manages cron jobs as one file per job under /etc/cron.d (the same convention
@@ -17,24 +16,22 @@ class CrontabManager
     public function __construct(private ServerOps $serverOps) {}
 
     /**
-     * Absolute path of the managed cron.d file for a job. The basename carries
-     * a slug of the job name (easy to identify with `ls`) plus the id for
-     * uniqueness, and is run-parts-safe ([a-z0-9-], no dots) or cron ignores it.
+     * Absolute path of the managed cron.d file for a job. The basename is the
+     * job's stored slug (easy to identify with `ls`, stable across data
+     * migration) and is run-parts-safe ([a-z0-9-], no dots) or cron ignores it.
      */
     public function path(Cronjob $cronjob): string
     {
-        return $this->pathFor($cronjob->name, $cronjob->id);
+        return $this->pathForSlug($cronjob->slug);
     }
 
     /**
-     * Build the cron.d path from an explicit name + id (used to locate the old
-     * file when a job is renamed).
+     * Build the cron.d path from an explicit slug (used to locate the old file
+     * when a job is renamed to a new slug).
      */
-    public function pathFor(string $name, int $id): string
+    public function pathForSlug(string $slug): string
     {
-        $slug = Str::slug($name) ?: 'cronjob';
-
-        return rtrim(config('server.cron_d'), '/')."/sv-oss-{$slug}-{$id}";
+        return rtrim(config('server.cron_d'), '/')."/sv-oss-{$slug}";
     }
 
     /**

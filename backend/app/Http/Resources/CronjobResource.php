@@ -15,6 +15,8 @@ class CronjobResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            // Stable, migration-safe identifier (also the cron.d filename key).
+            'slug' => $this->slug,
             'username' => $this->username,
             // Present only when the target is a panel-managed System User.
             'system_user' => $this->whenLoaded('systemUser', fn () => $this->systemUser ? [

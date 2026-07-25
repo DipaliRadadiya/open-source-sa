@@ -195,18 +195,18 @@ The system_user object also includes `sudo` (bool), `ssh_access` (bool), and `pa
 **`DELETE /api/system-users/{systemUser}/ssh-keys/{sshKey}`** → `204`. Rewrites `authorized_keys`.
 
 ### Cron jobs
-Requires `cronjob` permission (`view` to read, `manage` to mutate). Each job runs **as an OS user** — a panel System User **or** a default/unmanaged account (`root`, `www-data`, …). Materialised as **one file per job** under `/etc/cron.d`, named `sv-oss-<name-slug>-<id>` (the job name is in the filename for easy identification; a rename relocates the file). 6-field format with the run-as user column; non-destructive (we never touch a user's personal crontab). Only `active` jobs are written to disk.
+Requires `cronjob` permission (`view` to read, `manage` to mutate). Each job runs **as an OS user** — a panel System User **or** a default/unmanaged account (`root`, `www-data`, …). Materialised as **one file per job** under `/etc/cron.d`, named `sv-oss-<slug>` where `slug` is a stable, unique identifier derived from the name (in the filename for easy identification; **migration-safe** — it travels with the row, unlike the auto-increment id). A rename regenerates the slug and relocates the file. 6-field format with the run-as user column; non-destructive (we never touch a user's personal crontab). Only `active` jobs are written to disk.
 
 **`GET /api/cronjobs/schedule-presets`** — schedule presets for the frontend dropdown (single source of truth, localized labels).
 - Response: `{"presets": [{key, label, expression}, …]}` — `custom` has `expression: null` (UI shows a raw field). Keys: `every_minute, every_5_minutes, every_15_minutes, every_30_minutes, hourly, twice_daily, daily, weekly, monthly, custom`.
 
 **`GET /api/cronjobs`** — list (paginated)
 - Query: `filter[system_user_id]`, `filter[username]`, `filter[active]` (bool), `per_page` (10|20|50|100).
-- Response: `{"cronjobs": [{id, name, username, system_user: {id, username}|null, command, expression, active, created_at, created_at_human}], "meta": {...}}`.
+- Response: `{"cronjobs": [{id, name, slug, username, system_user: {id, username}|null, command, expression, active, created_at, created_at_human}], "meta": {...}}` — `slug` is the stable identifier (also the cron.d filename key).
 
 **`GET /api/cronjobs/{cronjob}`** → `{"cronjob": {...}}`
 
-**`POST /api/cronjobs`** — create (writes a `/etc/cron.d/sv-oss-{name-slug}-{id}` file when active)
+**`POST /api/cronjobs`** — create (writes a `/etc/cron.d/sv-oss-{slug}` file when active; `slug` auto-generated from `name`, unique)
 - Body: `name` (required), **either** `system_user_id` (a panel System User) **or** `username` (any OS user; `required_without:system_user_id`, linux-name rules), `command` (required, max 1000), `expression` (required, valid cron — else `422`), `active` (optional bool, default true).
 - The target user must **exist on the server** (`getent passwd`) → else `422` on `username`.
 - Response `201`: `{"cronjob": {...}}`.
