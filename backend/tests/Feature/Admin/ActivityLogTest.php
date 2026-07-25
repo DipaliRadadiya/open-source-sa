@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Role;
 use App\Models\User;
 
 it('logs the first-admin registration', function () {
@@ -136,7 +137,7 @@ it('searches the activity log by acting username', function () {
 it('filters the activity log by type', function () {
     $admin = User::factory()->admin()->create();
     $token = $admin->createToken('test')->plainTextToken;
-    $role = \App\Models\Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
+    $role = Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
 
     $this->withHeader('Authorization', "Bearer {$token}")
         ->deleteJson("/api/admin/roles/{$role->id}");
@@ -159,8 +160,8 @@ it('returns the known distinct types and actions for filter dropdowns', function
 
     $response->assertOk()
         ->assertJsonPath('types', ['role', 'user'])
-        ->assertJsonCount(12, 'actions');
-    expect($response->json('actions'))->toContain('user.registered', 'role.created');
+        ->assertJsonCount(14, 'actions');
+    expect($response->json('actions'))->toContain('user.registered', 'role.created', 'user.impersonation_started');
 });
 
 it('denies a regular user from viewing activity-log filter options', function () {

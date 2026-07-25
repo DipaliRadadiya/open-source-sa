@@ -39,12 +39,15 @@ Bootstrap-only — creates the **first** admin. Fails once any user exists (`reg
 Revokes the current token (or session, if cookie-authenticated). No body. Response `204`.
 
 ### `GET /auth/me`
-Current user. Response: `{"user": {id, name, username, role, created_at, created_at_human}}`
+Current user, plus impersonation state. Response: `{"user": {id, name, username, role, created_at, created_at_human}, "impersonated_by": {id, username}|null}` — `impersonated_by` is non-null only during an impersonated session (show a banner); otherwise `null`.
 
 ### `PUT /auth/password`
 Self password change. Also revokes all existing tokens and issues a new one (so the caller must re-store the returned token).
 - Body: `current_password` (string, required, must match), `password` (string, required, confirmed, min 10 + mixed case + numbers), `password_confirmation`
 - Response `200`: `{"token": string}`
+
+### `POST /auth/stop-impersonating`
+Ends an impersonated session — revokes the impersonation token (the admin's own token is untouched; the frontend switches back to it). Must be called with the impersonation token; a normal session returns `422`. Response `204`.
 
 ### `GET /activity-log`
 The caller's **own** activity history only (not admin-wide — see `/admin/activity-log` for that). No `user` field per entry — it's always the caller, so it's omitted as redundant (unlike the admin version below, which spans multiple users and needs it).
@@ -93,6 +96,12 @@ Aggregate stats. No params.
 - Path: `user` = user ID
 - Body: `password` + `password_confirmation` (required, min 10 + mixed case + numbers)
 - Response `204`
+
+### `POST /admin/users/{user}/impersonate`
+Admin "login as user" — issues a **1-hour** token that authenticates as the target user (the target's own permissions still gate everything). Blocked (`422`) for self and for admin→admin.
+- Path: `user` = user ID (must be a non-admin, not self)
+- Response `201`: `{"user": {...target...}, "token": string, "impersonated_by": {id, username}}`
+- Frontend: store this token and use it as the active session; `GET /auth/me` will report `impersonated_by` (show a banner); call `POST /auth/stop-impersonating` (with this token) to end and switch back to the admin's own token.
 
 ### `PUT /admin/users/{user}/permissions`
 Direct permission grants for a user (in addition to whatever their assigned Role grants — union of both).
@@ -148,4 +157,4 @@ Distinct `type`/`action` values, for populating a frontend filter dropdown. Sour
 
 Prefer `GET /admin/activity-log/filters` for these at runtime, but for reference:
 - `types`: `role`, `user`
-- `actions`: `user.registered`, `user.logged_in`, `user.password_changed`, `user.password_reset_by_admin`, `user.created`, `user.updated`, `user.deleted`, `user.permissions_updated`, `user.role_assigned`, `role.created`, `role.updated`, `role.deleted`
+- `actions`: `user.registered`, `user.logged_in`, `user.password_changed`, `user.password_reset_by_admin`, `user.created`, `user.updated`, `user.deleted`, `user.permissions_updated`, `user.role_assigned`, `user.impersonation_started`, `user.impersonation_stopped`, `role.created`, `role.updated`, `role.deleted`

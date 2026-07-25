@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Actions\Auth\AuthenticateUser;
 use App\Actions\Auth\ChangeUserPassword;
 use App\Actions\Auth\RegisterFirstAdmin;
+use App\Actions\Auth\StopImpersonating;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
@@ -92,7 +93,43 @@ class AuthController extends Controller
     {
         return response()->json([
             'user' => UserResource::make($request->user())->resolve(),
+            'impersonated_by' => $this->impersonator($request),
         ]);
+    }
+
+    public function stopImpersonating(Request $request, StopImpersonating $action): JsonResponse
+    {
+        $token = $request->user()->currentAccessToken();
+
+        if (! $token instanceof PersonalAccessToken || ! $token->impersonated_by) {
+            throw ValidationException::withMessages([
+                'token' => [__('auth.not_impersonating')],
+            ]);
+        }
+
+        $action->execute($request->user(), $token);
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * When the current request is an impersonated session, return the
+     * impersonating admin's {id, username} so the frontend can show a
+     * banner; otherwise null.
+     *
+     * @return array{id: int, username: string}|null
+     */
+    private function impersonator(Request $request): ?array
+    {
+        $token = $request->user()->currentAccessToken();
+
+        if (! $token instanceof PersonalAccessToken || ! $token->impersonated_by) {
+            return null;
+        }
+
+        $admin = User::find($token->impersonated_by);
+
+        return $admin ? ['id' => $admin->id, 'username' => $admin->username] : null;
     }
 
     public function updatePassword(UpdatePasswordRequest $request, ChangeUserPassword $action): JsonResponse

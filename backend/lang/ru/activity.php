@@ -8,6 +8,8 @@ return [
     'user.created' => 'Создан пользователь :username (:role)',
     'user.permissions_updated' => 'Обновлены разрешения для :username',
     'user.role_assigned' => 'Обновлено назначение роли для :username',
+    'user.impersonation_started' => 'Начал действовать от имени :username',
+    'user.impersonation_stopped' => 'Прекратил действовать от имени :username',
     'user.updated' => 'Обновлён пользователь :username',
     'user.deleted' => 'Удалён пользователь :username',
     'role.created' => 'Создана роль :name',

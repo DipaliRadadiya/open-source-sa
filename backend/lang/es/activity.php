@@ -8,6 +8,8 @@ return [
     'user.created' => 'Creó el usuario :username (:role)',
     'user.permissions_updated' => 'Actualizó los permisos de :username',
     'user.role_assigned' => 'Actualizó la asignación de rol de :username',
+    'user.impersonation_started' => 'Comenzó a suplantar a :username',
+    'user.impersonation_stopped' => 'Dejó de suplantar a :username',
     'user.updated' => 'Actualizó el usuario :username',
     'user.deleted' => 'Eliminó el usuario :username',
     'role.created' => 'Creó el rol :name',

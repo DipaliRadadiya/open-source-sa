@@ -8,6 +8,8 @@ return [
     'user.created' => 'Created user :username (:role)',
     'user.permissions_updated' => 'Updated permissions for :username',
     'user.role_assigned' => 'Updated role assignment for :username',
+    'user.impersonation_started' => 'Started impersonating :username',
+    'user.impersonation_stopped' => 'Stopped impersonating :username',
     'user.updated' => 'Updated user :username',
     'user.deleted' => 'Deleted user :username',
     'role.created' => 'Created role :name',

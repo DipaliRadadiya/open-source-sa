@@ -8,6 +8,8 @@ return [
     'user.created' => 'Usuário :username (:role) criado',
     'user.permissions_updated' => 'Permissões atualizadas para :username',
     'user.role_assigned' => 'Atribuição de função atualizada para :username',
+    'user.impersonation_started' => 'Começou a personificar :username',
+    'user.impersonation_stopped' => 'Parou de personificar :username',
     'user.updated' => 'Usuário :username atualizado',
     'user.deleted' => 'Usuário :username excluído',
     'role.created' => 'Função :name criada',

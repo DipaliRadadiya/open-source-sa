@@ -8,6 +8,8 @@ return [
     'user.created' => 'उपयोगकर्ता :username (:role) बनाया',
     'user.permissions_updated' => ':username के लिए अनुमतियाँ अपडेट कीं',
     'user.role_assigned' => ':username के लिए भूमिका असाइनमेंट अपडेट किया',
+    'user.impersonation_started' => ':username का प्रतिरूपण शुरू किया',
+    'user.impersonation_stopped' => ':username का प्रतिरूपण बंद किया',
     'user.updated' => 'उपयोगकर्ता :username अपडेट किया',
     'user.deleted' => 'उपयोगकर्ता :username हटाया',
     'role.created' => 'भूमिका :name बनाई',

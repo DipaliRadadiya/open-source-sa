@@ -8,6 +8,8 @@ return [
     'user.created' => 'Utilisateur :username (:role) créé',
     'user.permissions_updated' => 'Autorisations mises à jour pour :username',
     'user.role_assigned' => 'Attribution de rôle mise à jour pour :username',
+    'user.impersonation_started' => 'A commencé à usurper :username',
+    'user.impersonation_stopped' => "A cessé d'usurper :username",
     'user.updated' => 'Utilisateur :username mis à jour',
     'user.deleted' => 'Utilisateur :username supprimé',
     'role.created' => 'Rôle :name créé',
