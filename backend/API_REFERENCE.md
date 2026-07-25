@@ -207,7 +207,7 @@ Requires `cronjob` permission (`view` to read, `manage` to mutate). Each job run
 **`GET /api/cronjobs/{cronjob}`** → `{"cronjob": {...}}`
 
 **`POST /api/cronjobs`** — create (writes a `/etc/cron.d/{slug}` file when active; `slug` auto-generated from `name`, unique)
-- Body: `name` (required), **either** `system_user_id` (a panel System User) **or** `username` (any OS user; `required_without:system_user_id`, linux-name rules), `command` (required, max 1000), `expression` (required, valid cron — else `422`), `active` (optional bool, default true).
+- Body: `name` (required, **unique** — a duplicate name → `422`), **either** `system_user_id` (a panel System User) **or** `username` (any OS user; `required_without:system_user_id`, linux-name rules), `command` (required, max 1000), `expression` (required, valid cron — else `422`), `active` (optional bool, default true).
 - The target user must **exist on the server** (`getent passwd`) → else `422` on `username`.
 - Response `201`: `{"cronjob": {...}}`.
 

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\Cronjob;
 
 use App\Rules\ValidCronExpression;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCronjobRequest extends FormRequest
 {
@@ -18,7 +19,7 @@ class StoreCronjobRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', Rule::unique('cronjobs', 'name')],
             // Either target a panel System User, or a raw OS username (default/
             // unmanaged account). At least one must be present.
             'system_user_id' => ['nullable', 'exists:system_users,id'],

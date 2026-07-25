@@ -59,13 +59,24 @@ it('creates a cron job for a default/unmanaged OS user by username', function ()
         && str_contains($p->input, '*/5 * * * * www-data php /var/www/app/artisan cache:clear'));
 });
 
-it('generates a unique slug when two jobs share a name', function () {
+it('rejects a duplicate cron job name', function () {
+    Process::fake();
+    Cronjob::create(['name' => 'Backup', 'slug' => 'backup', 'username' => 'deploy', 'command' => 'a', 'expression' => '* * * * *']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', ['name' => 'Backup', 'username' => 'deploy', 'command' => 'b', 'expression' => '* * * * *'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('name');
+});
+
+it('generates a unique slug when two distinct names slug to the same value', function () {
     Process::fake();
 
+    // distinct names (allowed) that both slugify to "backup"
     $first = $this->withHeader('Authorization', "Bearer {$this->token}")
         ->postJson('/api/cronjobs', ['name' => 'Backup', 'username' => 'deploy', 'command' => 'a', 'expression' => '* * * * *']);
     $second = $this->withHeader('Authorization', "Bearer {$this->token}")
-        ->postJson('/api/cronjobs', ['name' => 'Backup', 'username' => 'deploy', 'command' => 'b', 'expression' => '* * * * *']);
+        ->postJson('/api/cronjobs', ['name' => 'Backup!', 'username' => 'deploy', 'command' => 'b', 'expression' => '* * * * *']);
 
     expect($first->json('cronjob.slug'))->toBe('backup');
     expect($second->json('cronjob.slug'))->toBe('backup-2');

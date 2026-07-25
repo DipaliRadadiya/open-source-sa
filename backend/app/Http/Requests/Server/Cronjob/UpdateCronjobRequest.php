@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\Cronjob;
 
 use App\Rules\ValidCronExpression;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateCronjobRequest extends FormRequest
 {
@@ -18,7 +19,7 @@ class UpdateCronjobRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'name' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('cronjobs', 'name')->ignore($this->route('cronjob'))],
             'command' => ['sometimes', 'required', 'string', 'max:1000'],
             'expression' => ['sometimes', 'required', 'string', new ValidCronExpression],
             'active' => ['sometimes', 'boolean'],
