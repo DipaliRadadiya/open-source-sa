@@ -17,7 +17,7 @@ it('logs the first-admin registration', function () {
 
     $response->assertOk()
         ->assertJsonPath('activity_log.0.type', 'user')
-        ->assertJsonPath('activity_log.0.action', 'user.registered')
+        ->assertJsonPath('activity_log.0.action', 'registered')
         ->assertJsonPath('activity_log.0.description', 'Registered as the first administrator');
 });
 
@@ -29,7 +29,7 @@ it('logs login events', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/admin/activity-log');
 
-    $response->assertOk()->assertJsonFragment(['action' => 'user.logged_in']);
+    $response->assertOk()->assertJsonFragment(['action' => 'logged_in']);
 });
 
 it('logs admin creating a user, attributed to the admin not the new user', function () {
@@ -43,7 +43,7 @@ it('logs admin creating a user, attributed to the admin not the new user', funct
         ->getJson('/api/admin/activity-log');
 
     $response->assertOk()
-        ->assertJsonPath('activity_log.0.action', 'user.created')
+        ->assertJsonPath('activity_log.0.action', 'created')
         ->assertJsonPath('activity_log.0.description', 'Created user newuser')
         ->assertJsonPath('activity_log.0.user.username', $admin->username);
 });
@@ -95,11 +95,11 @@ it('filters the activity log by action', function () {
         ->postJson('/api/admin/users', userPayload(['username' => 'newuser']));
 
     $response = $this->withHeader('Authorization', "Bearer {$token}")
-        ->getJson('/api/admin/activity-log?filter[action]=user.created');
+        ->getJson('/api/admin/activity-log?filter[action]=created');
 
     expect($response->json('activity_log'))->not->toBeEmpty();
     foreach ($response->json('activity_log') as $entry) {
-        expect($entry['action'])->toBe('user.created');
+        expect($entry['action'])->toBe('created');
     }
 });
 
@@ -147,8 +147,8 @@ it('returns the known distinct types and actions for filter dropdowns', function
 
     $response->assertOk()
         ->assertJsonPath('types', ['role', 'system_user', 'user'])
-        ->assertJsonCount(20, 'actions');
-    expect($response->json('actions'))->toContain('user.registered', 'role.created', 'user.impersonation_started', 'system_user.created');
+        ->assertJsonCount(15, 'actions'); // distinct verbs (created/updated/deleted deduped across types)
+    expect($response->json('actions'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added');
 });
 
 it('denies a regular user from viewing activity-log filter options', function () {

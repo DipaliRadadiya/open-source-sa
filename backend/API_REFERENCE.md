@@ -53,7 +53,7 @@ Ends an impersonated session — revokes the impersonation token (the admin's ow
 ### `GET /activity-log`
 The caller's **own** activity history only (not admin-wide — see `/admin/activity-log` for that). No `user` field per entry — it's always the caller, so it's omitted as redundant (unlike the admin version below, which spans multiple users and needs it).
 - Query: `per_page` (10|20|50|100, default 10)
-- Response: `{"activity_log": [{id, action, description, created_at, created_at_human}], "meta": {...}}`
+- Response: `{"activity_log": [{id, type, action, description, created_at, created_at_human}], "meta": {...}}` (`type` = entity, `action` = verb, `description` = composed sentence)
 
 ### `GET /permissions`
 Permission items the caller can see — the **deduped OR-union** across all their assigned roles + direct grants (each permission appears once; `manage`/`view` are true if any source grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
@@ -138,8 +138,8 @@ Syncs the user's assigned roles (many-to-many).
 
 ### `GET /admin/activity-log`
 Admin-wide activity — every user's actions, not just the caller's.
-- Query: `filter[user_id]` (integer, must exist), `filter[type]` (string, e.g. `user`|`role` — matches everything under that prefix), `filter[action]` (string, exact match, e.g. `user.created`), `search` (string — free-text on `action` or the acting user's `name`/`username`), `per_page` (10|20|50|100)
-- Response: `{"activity_log": [{id, type, action, description, user: {id, username}|null, created_at, created_at_human}], "meta": {...}}`
+- Query: `filter[user_id]` (integer, must exist), `filter[type]` (string, exact — the entity, e.g. `user`/`role`/`system_user`), `filter[action]` (string, exact — the verb, e.g. `created`/`deleted`/`ssh_key_added`), `search` (free-text on type/action/actor name/username), `per_page` (10|20|50|100). `type` and `action` are separate **indexed** columns.
+- Response: `{"activity_log": [{id, type, action, description, user: {id, username}|null, created_at, created_at_human}], "meta": {...}}` — `type` = entity (`system_user`), `action` = verb (`created`), `description` = the full human sentence composed from both in the viewer's locale.
 
 ### `GET /admin/activity-log/filters`
 Distinct `type`/`action` values, for populating a frontend filter dropdown. Sourced from the known translation keys (`lang/activity.php`), not a `DISTINCT` query on actual log rows — so it's fully populated even on a fresh install with zero activity yet.
@@ -186,6 +186,6 @@ Requires `system_user` permission (`view` to read, `manage` to mutate). No updat
 
 ## Known activity-log `type`/`action` values (for filtering)
 
-Prefer `GET /admin/activity-log/filters` for these at runtime, but for reference:
-- `types`: `role`, `user`
-- `actions`: `user.registered`, `user.logged_in`, `user.password_changed`, `user.password_reset_by_admin`, `user.created`, `user.updated`, `user.deleted`, `user.permissions_updated`, `user.role_assigned`, `user.impersonation_started`, `user.impersonation_stopped`, `role.created`, `role.updated`, `role.deleted`
+Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
+- `types`: `role`, `system_user`, `user`
+- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`

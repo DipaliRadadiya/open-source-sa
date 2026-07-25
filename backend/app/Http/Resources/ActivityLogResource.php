@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Str;
 
 class ActivityLogResource extends JsonResource
 {
@@ -15,9 +14,9 @@ class ActivityLogResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'type' => Str::before($this->action, '.'),
+            'type' => $this->type,
             'action' => $this->action,
-            'description' => __('activity.'.$this->action, $this->properties ?? []),
+            'description' => __('activity.'.$this->type.'.'.$this->action, $this->properties ?? []),
             'user' => $this->whenLoaded('user', fn () => $this->user ? [
                 'id' => $this->user->id,
                 'username' => $this->user->username,

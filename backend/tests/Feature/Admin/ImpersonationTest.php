@@ -131,6 +131,6 @@ it('logs impersonation start and stop, attributed to the admin', function () {
         ->getJson('/api/admin/activity-log?search='.$admin->username);
 
     $actions = collect($response->json('activity_log'))->pluck('action');
-    expect($actions)->toContain('user.impersonation_started');
-    expect($actions)->toContain('user.impersonation_stopped');
+    expect($actions)->toContain('impersonation_started');
+    expect($actions)->toContain('impersonation_stopped');
 });

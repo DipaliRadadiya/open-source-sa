@@ -21,8 +21,9 @@ class ActivityLogController extends Controller
      */
     public function filters(): JsonResponse
     {
-        $actions = collect(Lang::get('activity'))->keys()->sort()->values();
-        $types = $actions->map(fn (string $action) => Str::before($action, '.'))->unique()->sort()->values();
+        $keys = collect(Lang::get('activity'))->keys();
+        $types = $keys->map(fn (string $key) => Str::before($key, '.'))->unique()->sort()->values();
+        $actions = $keys->map(fn (string $key) => Str::after($key, '.'))->unique()->sort()->values();
 
         return response()->json([
             'types' => $types->all(),
@@ -38,17 +39,19 @@ class ActivityLogController extends Controller
             $query->where('user_id', $userId);
         }
 
+        // Both are now indexed exact-match columns.
         if ($action = $request->input('filter.action')) {
             $query->where('action', $action);
         }
 
         if ($type = $request->input('filter.type')) {
-            $query->where('action', 'like', $type.'.%');
+            $query->where('type', $type);
         }
 
         if ($search = $request->string('search')->trim()->value()) {
             $query->where(function ($q) use ($search) {
-                $q->where('action', 'like', "%{$search}%")
+                $q->where('type', 'like', "%{$search}%")
+                    ->orWhere('action', 'like', "%{$search}%")
                     ->orWhereHas('user', function ($q) use ($search) {
                         $q->where('name', 'like', "%{$search}%")
                             ->orWhere('username', 'like', "%{$search}%");
