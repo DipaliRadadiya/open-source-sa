@@ -35,7 +35,7 @@ it('creates a cron job for a panel system user, writing a cron.d file', function
 
     Process::assertRan(function ($process) {
         // filename is the stable name-slug (migration-safe, no id)
-        return $process->command === ['tee', '/etc/cron.d/sv-oss-nightly-backup']
+        return $process->command === ['tee', '/etc/cron.d/nightly-backup']
             && str_contains($process->input, '0 0 * * * deploy /home/deploy/backup.sh');
     });
 });
@@ -128,7 +128,7 @@ it('removes the cron.d file when a job is disabled via update', function () {
         ->assertOk()
         ->assertJsonPath('cronjob.active', false);
 
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/sv-oss-job']);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/job']);
 });
 
 it('rewrites the cron.d file when the schedule changes', function () {
@@ -159,7 +159,7 @@ it('deletes a cron job and removes its file', function () {
         ->assertNoContent();
 
     expect(Cronjob::find($job->id))->toBeNull();
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/sv-oss-job']);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/job']);
 });
 
 it('relocates the cron.d file when the job is renamed', function () {
@@ -176,8 +176,8 @@ it('relocates the cron.d file when the job is renamed', function () {
         ->assertJsonPath('cronjob.slug', 'new-name');
 
     // old-slug file removed, new-slug file written
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/sv-oss-old-name']);
-    Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/sv-oss-new-name']);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/old-name']);
+    Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/new-name']);
 });
 
 it('returns a translated error with reference and rolls back when the write fails', function () {

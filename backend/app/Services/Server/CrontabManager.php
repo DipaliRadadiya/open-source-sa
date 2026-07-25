@@ -27,11 +27,12 @@ class CrontabManager
 
     /**
      * Build the cron.d path from an explicit slug (used to locate the old file
-     * when a job is renamed to a new slug).
+     * when a job is renamed to a new slug). The basename is the bare slug —
+     * matching the existing cron.d convention.
      */
     public function pathForSlug(string $slug): string
     {
-        return rtrim(config('server.cron_d'), '/')."/sv-oss-{$slug}";
+        return rtrim(config('server.cron_d'), '/')."/{$slug}";
     }
 
     /**
