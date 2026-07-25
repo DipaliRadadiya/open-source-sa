@@ -147,10 +147,10 @@ it('returns the known distinct types and actions for filter dropdowns', function
 
     $response->assertOk()
         ->assertJsonPath('types', ['role', 'system_user', 'user'])
-        ->assertJsonCount(20, 'actions.all'); // all distinct verbs (deduped across types)
+        ->assertJsonCount(22, 'actions.all'); // all distinct verbs (deduped across types)
     // `all` = every verb; per-type keys are scoped to that type's verbs.
-    expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed');
-    expect($response->json('actions.system_user'))->toContain('created', 'ssh_key_added', 'password_set', 'sudo_enabled', 'shell_changed')->not->toContain('registered');
+    expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed', 'ssh_enabled');
+    expect($response->json('actions.system_user'))->toContain('created', 'ssh_key_added', 'password_set', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'ssh_disabled')->not->toContain('registered');
     expect($response->json('actions.role'))->toEqual(['created', 'deleted', 'updated']);
 });
 

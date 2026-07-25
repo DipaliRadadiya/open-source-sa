@@ -26,4 +26,6 @@ return [
     'system_user.sudo_enabled' => 'システムユーザー :username にsudoを付与しました',
     'system_user.sudo_disabled' => 'システムユーザー :username からsudoを取り消しました',
     'system_user.shell_changed' => 'システムユーザー :username のシェルを :shell に変更しました',
+    'system_user.ssh_enabled' => 'システムユーザー :username のSSHアクセスを有効にしました',
+    'system_user.ssh_disabled' => 'システムユーザー :username のSSHアクセスを無効にしました',
 ];

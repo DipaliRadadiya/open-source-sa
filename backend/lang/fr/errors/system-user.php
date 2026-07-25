@@ -10,4 +10,5 @@ return [
     'password_failed' => "Échec de la définition du mot de passe de l'utilisateur système.",
     'sudo_failed' => "Échec de la mise à jour de l'accès sudo de l'utilisateur système.",
     'shell_failed' => "Échec du changement de shell de l'utilisateur système.",
+    'ssh_failed' => "Échec de la mise à jour de l'accès SSH de l'utilisateur système.",
 ];

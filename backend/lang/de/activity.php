@@ -26,4 +26,6 @@ return [
     'system_user.sudo_enabled' => 'Sudo an Systembenutzer :username gewährt',
     'system_user.sudo_disabled' => 'Sudo von Systembenutzer :username entzogen',
     'system_user.shell_changed' => 'Shell des Systembenutzers :username auf :shell geändert',
+    'system_user.ssh_enabled' => 'SSH-Zugriff für Systembenutzer :username aktiviert',
+    'system_user.ssh_disabled' => 'SSH-Zugriff für Systembenutzer :username deaktiviert',
 ];

@@ -155,10 +155,11 @@ Server-panel routes are **permission-gated** (pure role-based) — the caller ne
 Requires `system_user` permission (`view` to read, `manage` to mutate). No update endpoint (username is fixed — delete + recreate).
 
 **`GET /api/system-users`** — list
-- Response: `{"system_users": [{id, username, home_path, shell, applications: [{id, name}], created_at, created_at_human}]}` — `applications` is **minimal (id + name)** on the list.
+- Response: `{"system_users": [{id, username, home_path, shell, sudo, ssh_access, password, applications: [{id, name}], created_at, created_at_human}]}` — `applications` is **minimal (id + name)** on the list.
 
 **`GET /api/system-users/{systemUser}`** — detail
-- Response: `{"system_user": {id, username, home_path, shell, applications: [{id, name, domain, site_type, php_version, status}], created_at, created_at_human}}` — **full** applications on detail.
+- Response: `{"system_user": {id, username, home_path, shell, sudo, ssh_access, password, applications: [{id, name, domain, site_type, php_version, status}], created_at, created_at_human}}` — **full** applications on detail.
+- `password` is the **plaintext OS password** (operator decision — stored so an admin can copy it for server login; `null` until one is set). `ssh_access` (bool) = whether the account is in the SSH allow-group.
 
 **`POST /api/system-users`** — create (runs `useradd`)
 - Body: `username` (required — Linux rules `^[a-z_][a-z0-9_-]{0,31}$`, not a reserved system name, unique), `public_key` (optional — a valid SSH public key added as the initial authorized key)
@@ -170,6 +171,7 @@ Requires `system_user` permission (`view` to read, `manage` to mutate). No updat
 
 **`PUT /api/system-users/{systemUser}/password`** — set/change OS password (runs `chpasswd`)
 - Body: `password` (required, min 10 + mixed case + numbers). Response `204`.
+- The password is piped to `chpasswd` stdin (never in the command/log) **and** stored plaintext on the row so it can be shown/copied later (operator decision).
 
 **`PUT /api/system-users/{systemUser}/sudo`** — grant/revoke sudo (`usermod -aG sudo` / `gpasswd -d`)
 - Body: `sudo` (bool, required). Response `200`: `{"system_user": {...updated...}}`.
@@ -177,7 +179,11 @@ Requires `system_user` permission (`view` to read, `manage` to mutate). No updat
 **`PUT /api/system-users/{systemUser}/shell`** — change login shell (`usermod -s`)
 - Body: `shell` (required, one of `/bin/bash`, `/bin/sh`, `/usr/bin/zsh`, `/usr/sbin/nologin`, `/bin/false`). Response `200`: `{"system_user": {...updated...}}`.
 
-The system_user object now also includes `sudo` (bool).
+**`PUT /api/system-users/{systemUser}/ssh`** — enable/disable SSH login (`usermod -aG ssh-users` / `gpasswd -d`)
+- Body: `ssh_access` (bool, required). Response `200`: `{"system_user": {...updated...}}`.
+- Toggles membership of the `ssh-users` group; only enforces login when `sshd_config` carries `AllowGroups ssh-users` (set by server provisioning).
+
+The system_user object also includes `sudo` (bool), `ssh_access` (bool), and `password` (plaintext, nullable).
 
 ### SSH keys — nested sub-resource of a system user
 **`GET /api/system-users/{systemUser}/ssh-keys`** → `{"ssh_keys": [{id, name, fingerprint, created_at, created_at_human}]}`
@@ -199,4 +205,4 @@ The system_user object now also includes `sudo` (bool).
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
 - `types`: `role`, `system_user`, `user`
-- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`
+- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`

@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\Server\SystemUser\ChangeShellController;
 use App\Http\Controllers\API\Server\SystemUser\SetPasswordController;
 use App\Http\Controllers\API\Server\SystemUser\SshKeyController;
+use App\Http\Controllers\API\Server\SystemUser\ToggleSshAccessController;
 use App\Http\Controllers\API\Server\SystemUser\ToggleSudoController;
 use App\Http\Controllers\API\Server\SystemUserController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,7 @@ Route::delete('/system-users/{systemUser}', [SystemUserController::class, 'destr
 Route::put('/system-users/{systemUser}/password', SetPasswordController::class)->middleware('permission:system_user,manage');
 Route::put('/system-users/{systemUser}/sudo', ToggleSudoController::class)->middleware('permission:system_user,manage');
 Route::put('/system-users/{systemUser}/shell', ChangeShellController::class)->middleware('permission:system_user,manage');
+Route::put('/system-users/{systemUser}/ssh', ToggleSshAccessController::class)->middleware('permission:system_user,manage');
 
 // SSH keys — nested sub-resource of a system user.
 Route::get('/system-users/{systemUser}/ssh-keys', [SshKeyController::class, 'index'])->middleware('permission:system_user');

@@ -26,4 +26,6 @@ return [
     'system_user.sudo_enabled' => 'सिस्टम उपयोगकर्ता :username को sudo दिया',
     'system_user.sudo_disabled' => 'सिस्टम उपयोगकर्ता :username से sudo हटाया',
     'system_user.shell_changed' => 'सिस्टम उपयोगकर्ता :username का शेल :shell में बदला',
+    'system_user.ssh_enabled' => 'सिस्टम उपयोगकर्ता :username के लिए SSH एक्सेस सक्षम किया',
+    'system_user.ssh_disabled' => 'सिस्टम उपयोगकर्ता :username के लिए SSH एक्सेस अक्षम किया',
 ];

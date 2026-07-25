@@ -10,4 +10,5 @@ return [
     'password_failed' => 'Falha ao definir a senha do usuário do sistema.',
     'sudo_failed' => 'Falha ao atualizar o acesso sudo do usuário do sistema.',
     'shell_failed' => 'Falha ao alterar o shell do usuário do sistema.',
+    'ssh_failed' => 'Falha ao atualizar o acesso SSH do usuário do sistema.',
 ];

@@ -10,4 +10,5 @@ return [
     'password_failed' => 'Das Passwort des Systembenutzers konnte nicht gesetzt werden.',
     'sudo_failed' => 'Der Sudo-Zugriff des Systembenutzers konnte nicht aktualisiert werden.',
     'shell_failed' => 'Die Shell des Systembenutzers konnte nicht geändert werden.',
+    'ssh_failed' => 'Der SSH-Zugriff des Systembenutzers konnte nicht aktualisiert werden.',
 ];

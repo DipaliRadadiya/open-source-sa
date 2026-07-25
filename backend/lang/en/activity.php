@@ -26,4 +26,6 @@ return [
     'system_user.sudo_enabled' => 'Granted sudo to system user :username',
     'system_user.sudo_disabled' => 'Revoked sudo from system user :username',
     'system_user.shell_changed' => 'Changed the shell of system user :username to :shell',
+    'system_user.ssh_enabled' => 'Enabled SSH access for system user :username',
+    'system_user.ssh_disabled' => 'Disabled SSH access for system user :username',
 ];

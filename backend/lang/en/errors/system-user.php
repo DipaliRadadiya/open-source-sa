@@ -10,4 +10,5 @@ return [
     'password_failed' => 'Failed to set the system user password.',
     'sudo_failed' => 'Failed to update sudo access for the system user.',
     'shell_failed' => 'Failed to change the system user shell.',
+    'ssh_failed' => 'Failed to update SSH access for the system user.',
 ];

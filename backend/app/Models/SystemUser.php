@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['username', 'home_path', 'shell', 'sudo'])]
+#[Fillable(['username', 'home_path', 'shell', 'sudo', 'password', 'ssh_access'])]
 class SystemUser extends Model
 {
     /**
@@ -16,6 +16,7 @@ class SystemUser extends Model
     {
         return [
             'sudo' => 'boolean',
+            'ssh_access' => 'boolean',
         ];
     }
 

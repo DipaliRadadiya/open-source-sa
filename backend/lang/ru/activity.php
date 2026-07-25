@@ -26,4 +26,6 @@ return [
     'system_user.sudo_enabled' => 'Предоставлен sudo системному пользователю :username',
     'system_user.sudo_disabled' => 'Отозван sudo у системного пользователя :username',
     'system_user.shell_changed' => 'Изменена оболочка системного пользователя :username на :shell',
+    'system_user.ssh_enabled' => 'Включён доступ SSH для системного пользователя :username',
+    'system_user.ssh_disabled' => 'Отключён доступ SSH для системного пользователя :username',
 ];

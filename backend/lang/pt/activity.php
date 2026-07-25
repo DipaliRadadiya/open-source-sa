@@ -26,4 +26,6 @@ return [
     'system_user.sudo_enabled' => 'Concedeu sudo ao usuário do sistema :username',
     'system_user.sudo_disabled' => 'Revogou sudo do usuário do sistema :username',
     'system_user.shell_changed' => 'Alterou o shell do usuário do sistema :username para :shell',
+    'system_user.ssh_enabled' => 'Habilitou o acesso SSH para o usuário do sistema :username',
+    'system_user.ssh_disabled' => 'Desabilitou o acesso SSH para o usuário do sistema :username',
 ];
