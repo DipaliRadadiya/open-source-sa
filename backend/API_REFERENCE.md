@@ -143,7 +143,7 @@ Admin-wide activity — every user's actions, not just the caller's.
 
 ### `GET /admin/activity-log/filters`
 Distinct `type`/`action` values, for populating a frontend filter dropdown. Sourced from the known translation keys (`lang/activity.php`), not a `DISTINCT` query on actual log rows — so it's fully populated even on a fresh install with zero activity yet.
-- Response: `{"types": string[], "actions": string[]}`
+- Response: `{"types": string[], "actions": {"all": string[], "<type>": string[], ...}}` — `actions.all` is every verb (use on initial load / "any type"); `actions.<type>` is scoped to that type's verbs (use for a dependent action dropdown once a type is picked). No client-side merging needed.
 
 ---
 

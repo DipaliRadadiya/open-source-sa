@@ -22,12 +22,20 @@ class ActivityLogController extends Controller
     public function filters(): JsonResponse
     {
         $keys = collect(Lang::get('activity'))->keys();
+
         $types = $keys->map(fn (string $key) => Str::before($key, '.'))->unique()->sort()->values();
-        $actions = $keys->map(fn (string $key) => Str::after($key, '.'))->unique()->sort()->values();
+
+        // actions grouped per type for dependent dropdowns, plus an `all`
+        // deduped list for the initial "any type" view (no frontend merge).
+        $perType = $keys
+            ->groupBy(fn (string $key) => Str::before($key, '.'))
+            ->map(fn ($group) => $group->map(fn (string $key) => Str::after($key, '.'))->unique()->sort()->values()->all());
+
+        $all = $keys->map(fn (string $key) => Str::after($key, '.'))->unique()->sort()->values()->all();
 
         return response()->json([
             'types' => $types->all(),
-            'actions' => $actions->all(),
+            'actions' => ['all' => $all] + $perType->all(),
         ]);
     }
 

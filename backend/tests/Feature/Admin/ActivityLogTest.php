@@ -147,8 +147,11 @@ it('returns the known distinct types and actions for filter dropdowns', function
 
     $response->assertOk()
         ->assertJsonPath('types', ['role', 'system_user', 'user'])
-        ->assertJsonCount(15, 'actions'); // distinct verbs (created/updated/deleted deduped across types)
-    expect($response->json('actions'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added');
+        ->assertJsonCount(15, 'actions.all'); // all distinct verbs (deduped across types)
+    // `all` = every verb; per-type keys are scoped to that type's verbs.
+    expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added');
+    expect($response->json('actions.system_user'))->toContain('created', 'ssh_key_added')->not->toContain('registered');
+    expect($response->json('actions.role'))->toEqual(['created', 'deleted', 'updated']);
 });
 
 it('denies a regular user from viewing activity-log filter options', function () {
