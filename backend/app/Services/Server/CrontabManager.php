@@ -3,6 +3,7 @@
 namespace App\Services\Server;
 
 use App\Models\Cronjob;
+use Illuminate\Support\Str;
 
 /**
  * Manages cron jobs as one file per job under /etc/cron.d (the same convention
@@ -16,12 +17,35 @@ class CrontabManager
     public function __construct(private ServerOps $serverOps) {}
 
     /**
-     * Absolute path of the managed cron.d file for a job. The basename is
-     * run-parts-safe ([A-Za-z0-9_-], no dots) or cron would ignore it.
+     * Absolute path of the managed cron.d file for a job. The basename carries
+     * a slug of the job name (easy to identify with `ls`) plus the id for
+     * uniqueness, and is run-parts-safe ([a-z0-9-], no dots) or cron ignores it.
      */
     public function path(Cronjob $cronjob): string
     {
-        return rtrim(config('server.cron_d'), '/').'/sv-oss-cronjob-'.$cronjob->id;
+        return $this->pathFor($cronjob->name, $cronjob->id);
+    }
+
+    /**
+     * Build the cron.d path from an explicit name + id (used to locate the old
+     * file when a job is renamed).
+     */
+    public function pathFor(string $name, int $id): string
+    {
+        $slug = Str::slug($name) ?: 'cronjob';
+
+        return rtrim(config('server.cron_d'), '/')."/sv-oss-{$slug}-{$id}";
+    }
+
+    /**
+     * Remove a specific cron.d file by path (idempotent — `rm -f`).
+     */
+    public function removePath(string $path): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['rm', '-f', $path],
+            ['feature' => 'cronjob', 'op' => 'remove_stale', 'path' => $path],
+        );
     }
 
     /**

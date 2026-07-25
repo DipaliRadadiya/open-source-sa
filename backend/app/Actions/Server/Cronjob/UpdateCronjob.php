@@ -21,7 +21,14 @@ class UpdateCronjob
     public function execute(Cronjob $cronjob, array $data): Cronjob
     {
         return DB::transaction(function () use ($cronjob, $data) {
+            // Path is derived from the name, so a rename relocates the file.
+            $oldPath = $this->crontab->path($cronjob);
+
             $cronjob->update($data);
+
+            if ($this->crontab->path($cronjob) !== $oldPath) {
+                $this->crontab->removePath($oldPath);
+            }
 
             // Re-materialise from the new state: active → (over)write the file,
             // inactive → remove it. A failed op aborts the transaction.

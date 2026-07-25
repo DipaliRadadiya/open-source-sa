@@ -34,7 +34,8 @@ it('creates a cron job for a panel system user, writing a cron.d file', function
     $id = $response->json('cronjob.id');
 
     Process::assertRan(function ($process) use ($id) {
-        return $process->command === ['tee', "/etc/cron.d/sv-oss-cronjob-{$id}"]
+        // filename carries a slug of the name for easy identification
+        return $process->command === ['tee', "/etc/cron.d/sv-oss-nightly-backup-{$id}"]
             && str_contains($process->input, '0 0 * * * deploy /home/deploy/backup.sh');
     });
 });
@@ -115,7 +116,7 @@ it('removes the cron.d file when a job is disabled via update', function () {
         ->assertOk()
         ->assertJsonPath('cronjob.active', false);
 
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', "/etc/cron.d/sv-oss-cronjob-{$job->id}"]);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', "/etc/cron.d/sv-oss-job-{$job->id}"]);
 });
 
 it('rewrites the cron.d file when the schedule changes', function () {
@@ -146,7 +147,24 @@ it('deletes a cron job and removes its file', function () {
         ->assertNoContent();
 
     expect(Cronjob::find($job->id))->toBeNull();
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', "/etc/cron.d/sv-oss-cronjob-{$job->id}"]);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', "/etc/cron.d/sv-oss-job-{$job->id}"]);
+});
+
+it('relocates the cron.d file when the job is renamed', function () {
+    Process::fake();
+    $job = Cronjob::create([
+        'name' => 'Old name', 'username' => 'deploy', 'command' => 'echo hi',
+        'expression' => '* * * * *', 'active' => true,
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$job->id}", ['name' => 'New name'])
+        ->assertOk()
+        ->assertJsonPath('cronjob.name', 'New name');
+
+    // old-named file removed, new-named file written
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', "/etc/cron.d/sv-oss-old-name-{$job->id}"]);
+    Process::assertRan(fn ($p) => $p->command === ['tee', "/etc/cron.d/sv-oss-new-name-{$job->id}"]);
 });
 
 it('returns a translated error with reference and rolls back when the write fails', function () {
