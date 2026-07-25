@@ -20,9 +20,19 @@ class UpdateCronjobRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('cronjobs', 'name')->ignore($this->route('cronjob'))],
-            'command' => ['sometimes', 'required', 'string', 'max:1000'],
+            'command' => ['sometimes', 'required', 'string', 'max:1000', 'not_regex:/\{path\}/'],
             'expression' => ['sometimes', 'required', 'string', new ValidCronExpression],
             'active' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'command.not_regex' => __('errors/cronjob.unresolved_placeholder'),
         ];
     }
 }

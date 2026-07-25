@@ -201,7 +201,9 @@ Requires `cronjob` permission (`view` to read, `manage` to mutate). Each job run
 - Response: `{"presets": [{key, label, expression}, …]}` — `custom` has `expression: null` (UI shows a raw field). Keys: `every_minute, every_5_minutes, every_15_minutes, every_30_minutes, hourly, twice_daily, daily, weekly, monthly, custom`.
 
 **`GET /api/cronjobs/command-presets`** — framework command shortcuts. One click fills the `command` (and a recommended `expression`).
-- Response: `{"presets": [{key, label, command, expression}, …]}` — `command` contains a `{path}` placeholder the frontend swaps for the selected app's directory; `custom` has `command: null` + `expression: null`. Keys: `laravel, wordpress, moodle, joomla, nextcloud, craftcms, php_script, custom` (Laravel included for custom-PHP/Laravel apps). Localized labels. (Interim source; moves onto SiteType definitions when the Application feature lands.)
+- Response: `{"presets": [{key, label, command, expression}, …], "placeholder": "{path}"}`. Keys: `laravel, wordpress, moodle, joomla, nextcloud, craftcms, php_script, custom` (Laravel included for custom-PHP/Laravel apps). `custom` has `command: null` + `expression: null`. Localized labels. (Interim source; moves onto SiteType definitions when the Application feature lands.)
+- **The `{path}` placeholder** (its exact token is returned as `placeholder`): a preset `command` such as `php {path}/artisan schedule:run` is a **template**. `{path}` stands for the **absolute directory of the application/site the job runs in** on the server — e.g. `/home/deploy/myapp` (typically the site's project root / document-root parent). The **frontend must substitute `{path}`** with that real directory before calling `POST /cronjobs` — usually taken from the selected application (or a path the user enters). Example: `php {path}/artisan schedule:run` → `php /home/deploy/myapp/artisan schedule:run`.
+- **Guard:** `POST`/`PUT` **reject** (`422` on `command`) any command that still contains an unresolved `{path}` — so a literal placeholder can never be written into cron. Resolve it client-side first.
 
 **`GET /api/cronjobs`** — list (paginated)
 - Query: `filter[system_user_id]`, `filter[username]`, `filter[active]` (bool), `per_page` (10|20|50|100).
@@ -210,7 +212,7 @@ Requires `cronjob` permission (`view` to read, `manage` to mutate). Each job run
 **`GET /api/cronjobs/{cronjob}`** → `{"cronjob": {...}}`
 
 **`POST /api/cronjobs`** — create (writes a `/etc/cron.d/{slug}` file when active; `slug` auto-generated from `name`, unique)
-- Body: `name` (required, **unique** — a duplicate name → `422`), **either** `system_user_id` (a panel System User) **or** `username` (any OS user; `required_without:system_user_id`, linux-name rules), `command` (required, max 1000), `expression` (required, valid cron — else `422`), `active` (optional bool, default true).
+- Body: `name` (required, **unique** — a duplicate name → `422`), **either** `system_user_id` (a panel System User) **or** `username` (any OS user; `required_without:system_user_id`, linux-name rules), `command` (required, max 1000, must not contain an unresolved `{path}` placeholder → `422`), `expression` (required, valid cron — else `422`), `active` (optional bool, default true).
 - The target user must **exist on the server** (`getent passwd`) → else `422` on `username`.
 - Response `201`: `{"cronjob": {...}}`.
 

@@ -15,6 +15,12 @@ namespace App\Support;
 class CronCommandPresets
 {
     /**
+     * The token in preset commands the frontend must replace with the target
+     * application's absolute directory before submitting.
+     */
+    public const PLACEHOLDER = '{path}';
+
+    /**
      * @var array<string, array{command: string|null, expression: string|null}>
      */
     public const PRESETS = [

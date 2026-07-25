@@ -250,10 +250,37 @@ it('returns framework command presets for the dropdown', function () {
         ->assertJsonPath('presets.0.command', 'php {path}/artisan schedule:run')
         ->assertJsonPath('presets.0.expression', '* * * * *');
 
+    // self-describing: the response tells the frontend which token to substitute
+    $response->assertJsonPath('placeholder', '{path}');
+
     $presets = $response->json('presets');
     expect(collect($presets)->pluck('key'))->toContain('wordpress', 'moodle', 'joomla', 'nextcloud', 'craftcms', 'php_script');
     // custom is last with null command + expression (raw fields in the UI)
     expect(end($presets))->toMatchArray(['key' => 'custom', 'command' => null, 'expression' => null]);
+});
+
+it('rejects a command with an unresolved {path} placeholder', function () {
+    Process::fake();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', [
+            'name' => 'Unresolved',
+            'username' => 'deploy',
+            'command' => 'php {path}/artisan schedule:run',
+            'expression' => '* * * * *',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('command');
+
+    // a resolved command is accepted
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', [
+            'name' => 'Resolved',
+            'username' => 'deploy',
+            'command' => 'php /home/deploy/app/artisan schedule:run',
+            'expression' => '* * * * *',
+        ])
+        ->assertCreated();
 });
 
 it('localizes command preset labels', function () {

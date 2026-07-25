@@ -66,6 +66,9 @@ class CronjobController extends Controller
     {
         return response()->json([
             'presets' => CronCommandPresets::all(),
+            // The token in preset commands the frontend must substitute with the
+            // target application's absolute directory before submitting.
+            'placeholder' => CronCommandPresets::PLACEHOLDER,
         ]);
     }
 

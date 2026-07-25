@@ -24,9 +24,19 @@ class StoreCronjobRequest extends FormRequest
             // unmanaged account). At least one must be present.
             'system_user_id' => ['nullable', 'exists:system_users,id'],
             'username' => ['required_without:system_user_id', 'nullable', 'string', 'regex:/^[a-z_][a-z0-9_-]{0,31}$/'],
-            'command' => ['required', 'string', 'max:1000'],
+            'command' => ['required', 'string', 'max:1000', 'not_regex:/\{path\}/'],
             'expression' => ['required', 'string', new ValidCronExpression],
             'active' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'command.not_regex' => __('errors/cronjob.unresolved_placeholder'),
         ];
     }
 }
