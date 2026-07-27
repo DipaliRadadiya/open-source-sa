@@ -333,6 +333,21 @@ Requires the `service` permission (`view` to read, `manage` to act). Manages **s
 - Response `200`: `{"service": { …refreshed service object… }}`.
 - `404` if the key is unknown or not installed; `422` if the action is blocked for a **protected** service (`stop`/`disable`) or the action is invalid; `500 {message, reference}` on systemctl failure.
 
+### Disk Cleaner
+Requires the `disk_cleaner` permission (`view` to preview, `manage` to clean). **Server-level** cleanup (app-level logs/caches come later). No DB — disk usage + estimates are read **live** (detect-don't-trust). **Preview-then-clean**: the client selects **category keys only**; the panel resolves paths server-side (never a client path). Categories are detect-gated — only those whose dependency exists are returned.
+
+**`GET /api/disk-cleaner`** — preview.
+- Response: `{ disk: {path,total,used,free,percent, *_human}, categories: [{key,label,description,group,method,paths,safe,available,reclaimable,reclaimable_human}] }`.
+  - `method`: `delete｜truncate｜command` — how it reclaims space (UI badge). `paths`: exactly what it touches (globs/dirs, or a friendly label for command-based ones) — show before the user confirms.
+  - `group`: `package｜logs｜temp`. `reclaimable`: bytes.
+- Phase-1 categories: `apt_cache`, `apt_orphans`, `journal`, `rotated_logs`, `service_logs` (truncates active service logs — kept, not deleted), `tmp`.
+
+**`POST /api/disk-cleaner/clean`** — clean the selected categories (synchronous).
+- Body: `categories` — non-empty array of keys ⊆ the available preview keys (whitelist; unknown/unavailable → `422`).
+- Response `200`: `{ disk: {…refreshed…}, cleaned: [{key,freed,freed_human}], freed_total, freed_total_human }`.
+- Writes a `disk_cleaner.cleaned` activity entry. `500 {message, reference}` on command failure.
+- **Safety:** targeted commands only (no `rm -rf`); active logs are **truncated, not deleted**; whitelisted keys, server-resolved paths.
+
 ---
 
 ## Enums / fixed values
@@ -345,5 +360,5 @@ Requires the `service` permission (`view` to read, `manage` to act). Manages **s
 ## Known activity-log `type`/`action` values (for filtering)
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
-- `types`: `cronjob`, `firewall`, `permission`, `role`, `service`, `system_user`, `user`
-- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`
+- `types`: `cronjob`, `disk_cleaner`, `firewall`, `permission`, `role`, `service`, `system_user`, `user`
+- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `cleaned`

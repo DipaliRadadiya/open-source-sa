@@ -43,4 +43,5 @@ return [
     'cronjob.updated' => 'क्रॉन जॉब :name अपडेट की',
     'cronjob.deleted' => 'क्रॉन जॉब :name हटाई',
     'cronjob.create_failed' => 'क्रॉन जॉब :name बनाने में विफल',
+    'disk_cleaner.cleaned' => 'डिस्क साफ़ की (:categories) — :freed मुक्त किया',
 ];

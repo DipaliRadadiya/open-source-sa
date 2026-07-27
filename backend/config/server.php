@@ -1,5 +1,12 @@
 <?php
 
+use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
+use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
+use App\Services\Server\DiskCleaner\Targets\JournalTarget;
+use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
+use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
+use App\Services\Server\DiskCleaner\Targets\TmpTarget;
+
 return [
 
     /*
@@ -84,5 +91,48 @@ return [
     'protected_services' => array_values(array_filter(explode(
         ',', (string) env('SERVER_PROTECTED_SERVICES', 'nginx,php8.4-fpm')
     ))),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Disk Cleaner
+    |--------------------------------------------------------------------------
+    |
+    | Server-level disk-cleanup. `disk_path` is the filesystem reported by df.
+    | `targets` are the pluggable CleanupTarget strategies (each detect-gated;
+    | only those whose dependency is present surface). Retention windows and
+    | the service-log glob set are config so they can be tuned per box.
+    |
+    */
+
+    'disk_path' => env('SERVER_DISK_PATH', '/'),
+
+    'disk_cleaner' => [
+        'journal_days' => (int) env('SERVER_DISK_JOURNAL_DAYS', 7),
+        'tmp_days' => (int) env('SERVER_DISK_TMP_DAYS', 7),
+
+        'targets' => [
+            AptCacheTarget::class,
+            AptOrphansTarget::class,
+            JournalTarget::class,
+            RotatedLogsTarget::class,
+            ServiceLogsTarget::class,
+            TmpTarget::class,
+        ],
+
+        // Active service log files truncated by `service_logs` (glob patterns;
+        // only existing files are touched). Covers our supported services.
+        'service_log_globs' => [
+            '/var/log/nginx/*.log',
+            '/var/log/apache2/*.log',
+            '/usr/local/lsws/logs/*.log',
+            '/var/log/mysql/*.log',
+            '/var/log/mongodb/*.log',
+            '/var/log/redis/*.log',
+            '/var/log/supervisor/*.log',
+            '/var/log/php*-fpm.log',
+            '/var/log/ufw.log',
+            '/var/log/fail2ban.log',
+        ],
+    ],
 
 ];
