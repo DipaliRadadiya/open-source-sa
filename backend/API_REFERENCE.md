@@ -116,6 +116,9 @@ Syncs the user's assigned roles (many-to-many).
 The **full** list of every permission (the menu of what *can* be granted) — use this to render the checkboxes in the role create/edit form. Distinct from `GET /permissions`, which returns only the **caller's own effective grants** (for the nav). Admin-only.
 - Response: `{"permissions": [{level, sub_level, name, title, icon, url}, …]}` — ordered by the catalog `order`; **no** `view`/`manage` state (that's per-role — overlay each role's own `permissions[]` from `GET /admin/roles` onto this list). Group client-side by `level`/`sub_level` for sections.
 
+**`POST /admin/permissions/sync`** — re-sync the permission catalog from code (runs the seeder) and re-sync the protected **Administrator** role. Idempotent; a UI shortcut for the deploy-time seed, handy after new permissions are added. Admin-only.
+- Response `200`: `{"permissions": [ …full catalog… ], "synced": <count>}`. Logged to the activity log as `permission.synced`.
+
 ### Roles — `GET|POST /admin/roles`, `PUT|DELETE /admin/roles/{role}`
 
 **`GET /admin/roles`** — list (not paginated, returns all)

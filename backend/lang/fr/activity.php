@@ -15,6 +15,7 @@ return [
     'role.created' => 'Rôle :name créé',
     'role.updated' => 'Rôle :name mis à jour',
     'role.deleted' => 'Rôle :name supprimé',
+    'permission.synced' => 'A synchronisé le catalogue des permissions (:count permissions)',
     'system_user.created' => 'Utilisateur système :username créé',
     'system_user.deleted' => 'Utilisateur système :username supprimé',
     'system_user.create_failed' => "Échec de la création de l'utilisateur système :username",

@@ -15,6 +15,7 @@ return [
     'role.created' => 'ロール :name を作成しました',
     'role.updated' => 'ロール :name を更新しました',
     'role.deleted' => 'ロール :name を削除しました',
+    'permission.synced' => '権限カタログを同期しました（:count 件の権限）',
     'system_user.created' => 'システムユーザー :username を作成しました',
     'system_user.deleted' => 'システムユーザー :username を削除しました',
     'system_user.create_failed' => 'システムユーザー :username の作成に失敗しました',

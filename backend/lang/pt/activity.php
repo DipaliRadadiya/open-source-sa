@@ -15,6 +15,7 @@ return [
     'role.created' => 'Função :name criada',
     'role.updated' => 'Função :name atualizada',
     'role.deleted' => 'Função :name excluída',
+    'permission.synced' => 'Sincronizou o catálogo de permissões (:count permissões)',
     'system_user.created' => 'Usuário do sistema :username criado',
     'system_user.deleted' => 'Usuário do sistema :username excluído',
     'system_user.create_failed' => 'Falha ao criar o usuário do sistema :username',

@@ -15,6 +15,7 @@ return [
     'role.created' => 'Rolle :name erstellt',
     'role.updated' => 'Rolle :name aktualisiert',
     'role.deleted' => 'Rolle :name gelöscht',
+    'permission.synced' => 'Berechtigungskatalog synchronisiert (:count Berechtigungen)',
     'system_user.created' => 'Systembenutzer :username erstellt',
     'system_user.deleted' => 'Systembenutzer :username gelöscht',
     'system_user.create_failed' => 'Systembenutzer :username konnte nicht erstellt werden',

@@ -15,6 +15,7 @@ return [
     'role.created' => 'भूमिका :name बनाई',
     'role.updated' => 'भूमिका :name अपडेट की',
     'role.deleted' => 'भूमिका :name हटाई',
+    'permission.synced' => 'अनुमति सूची सिंक की (:count अनुमतियाँ)',
     'system_user.created' => 'सिस्टम उपयोगकर्ता :username बनाया',
     'system_user.deleted' => 'सिस्टम उपयोगकर्ता :username हटाया',
     'system_user.create_failed' => 'सिस्टम उपयोगकर्ता :username बनाने में विफल',

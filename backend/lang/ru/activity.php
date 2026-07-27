@@ -15,6 +15,7 @@ return [
     'role.created' => 'Создана роль :name',
     'role.updated' => 'Обновлена роль :name',
     'role.deleted' => 'Удалена роль :name',
+    'permission.synced' => 'Синхронизирован каталог разрешений (:count разрешений)',
     'system_user.created' => 'Создан системный пользователь :username',
     'system_user.deleted' => 'Удалён системный пользователь :username',
     'system_user.create_failed' => 'Не удалось создать системного пользователя :username',
