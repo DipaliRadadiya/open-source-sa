@@ -43,4 +43,5 @@ return [
     'cronjob.updated' => 'Cronjob :name aktualisiert',
     'cronjob.deleted' => 'Cronjob :name gelöscht',
     'cronjob.create_failed' => 'Cronjob :name konnte nicht erstellt werden',
+    'log.downloaded' => 'Protokoll :log heruntergeladen',
 ];

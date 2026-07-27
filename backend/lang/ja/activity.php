@@ -43,4 +43,5 @@ return [
     'cronjob.updated' => 'cronジョブ :name を更新しました',
     'cronjob.deleted' => 'cronジョブ :name を削除しました',
     'cronjob.create_failed' => 'cronジョブ :name の作成に失敗しました',
+    'log.downloaded' => ':log ログをダウンロードしました',
 ];

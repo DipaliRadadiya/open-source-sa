@@ -43,4 +43,5 @@ return [
     'cronjob.updated' => 'Updated cron job :name',
     'cronjob.deleted' => 'Deleted cron job :name',
     'cronjob.create_failed' => 'Failed to create cron job :name',
+    'log.downloaded' => 'Downloaded the :log log',
 ];

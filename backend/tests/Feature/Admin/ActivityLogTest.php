@@ -146,10 +146,10 @@ it('returns the known distinct types and actions for filter dropdowns', function
         ->getJson('/api/admin/activity-log/filters');
 
     $response->assertOk()
-        ->assertJsonPath('types', ['cronjob', 'firewall', 'permission', 'role', 'service', 'system_user', 'user'])
-        ->assertJsonCount(31, 'actions.all'); // all distinct verbs (deduped across types)
+        ->assertJsonPath('types', ['cronjob', 'firewall', 'log', 'permission', 'role', 'service', 'system_user', 'user'])
+        ->assertJsonCount(32, 'actions.all'); // all distinct verbs (deduped across types)
     // `all` = every verb; per-type keys are scoped to that type's verbs.
-    expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed', 'ssh_enabled');
+    expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'downloaded');
     expect($response->json('actions.system_user'))->toContain('created', 'ssh_key_added', 'password_set', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'ssh_disabled')->not->toContain('registered');
     expect($response->json('actions.role'))->toEqual(['created', 'deleted', 'updated']);
 });

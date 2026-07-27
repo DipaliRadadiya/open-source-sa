@@ -43,4 +43,5 @@ return [
     'cronjob.updated' => 'A mis à jour la tâche cron :name',
     'cronjob.deleted' => 'A supprimé la tâche cron :name',
     'cronjob.create_failed' => 'Échec de la création de la tâche cron :name',
+    'log.downloaded' => 'A téléchargé le journal :log',
 ];

@@ -333,6 +333,24 @@ Requires the `service` permission (`view` to read, `manage` to act). Manages **s
 - Response `200`: `{"service": { …refreshed service object… }}`.
 - `404` if the key is unknown or not installed; `422` if the action is blocked for a **protected** service (`stop`/`disable`) or the action is invalid; `500 {message, reference}` on systemctl failure.
 
+### Logs
+Requires the `logs` permission (`view`). **Read-only.** No DB — the catalog is a fixed source registry (web server / database / system / security / daemon) + auto-detected **php-fpm** logs, filtered to files that **actually exist** on the box (detect-don't-trust). The client only ever references a source by its **`key`**; the panel resolves the real path server-side (no client paths → no traversal).
+
+**`GET /api/logs`** — detected log sources with metadata.
+- Response: `{"logs": [{key, label, group, size, modified, readable}, …]}`.
+  - `group`: `web | database | php | system | security | daemon` (for section headings).
+  - `size`: bytes; `modified`: `DD-MM-YYYY HH:mm:ss`.
+  - `readable: false` = the file exists but the panel process can't read it (needs a privileged read — Phase 2). Disable the open action in the UI.
+
+**`GET /api/logs/{key}`** — read one source. `{key}` = the source `key`.
+- Query (all optional): `lines` (last N lines, default `200`, max `5000`); `grep` (case-insensitive **literal** filter — returns the last N matching lines); `after` (byte **cursor** for incremental follow — poll with the previous response's `cursor` to fetch only newly-appended lines; rotation-safe).
+- Response `200`: `{"log": {key, label, group, lines: [string, …], cursor, truncated}}`.
+  - `cursor`: current byte size — pass back as `after` on the next poll for live-tail.
+  - `truncated: true` = there was more content than returned (older lines above the window / capped).
+- `404` if the key is unknown or the file doesn't exist; `403 {message}` if the file exists but isn't readable by the panel.
+
+**`GET /api/logs/{key}/download`** — stream the full file as a download (`{key}.log`). Records a `log.downloaded` activity entry. `404`/`403` as above.
+
 ---
 
 ## Enums / fixed values
@@ -345,5 +363,5 @@ Requires the `service` permission (`view` to read, `manage` to act). Manages **s
 ## Known activity-log `type`/`action` values (for filtering)
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
-- `types`: `cronjob`, `firewall`, `permission`, `role`, `service`, `system_user`, `user`
-- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`
+- `types`: `cronjob`, `firewall`, `log`, `permission`, `role`, `service`, `system_user`, `user`
+- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `downloaded`

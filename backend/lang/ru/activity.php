@@ -43,4 +43,5 @@ return [
     'cronjob.updated' => 'Обновлено задание cron :name',
     'cronjob.deleted' => 'Удалено задание cron :name',
     'cronjob.create_failed' => 'Не удалось создать задание cron :name',
+    'log.downloaded' => 'Скачал журнал :log',
 ];
