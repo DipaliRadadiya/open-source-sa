@@ -297,6 +297,28 @@ Get that directory from the app the user picks (or a path field they type). **Do
 
 On any OS-op failure → `500 {message, reference}` and the DB change is rolled back (no DB↔disk drift).
 
+### Firewall
+Requires the `firewall` permission (`view` to read, `manage` to mutate). Backed by **UFW**; the DB is the record, UFW the enforcement. Rules are **create/delete only** (edit = delete + re-add). Enabled/disabled is read **live** from `ufw status` (no stored flag).
+
+**`GET /api/firewall`** — status + rules.
+- Response: `{"enabled": bool, "default_policy": {"incoming": "deny", "outgoing": "allow"}, "rules": [ …rule objects… ]}`.
+- Rule object: `{id, port_from, port_to|null, protocol, action, source_ip|null, description|null, origin, protected, summary, created_at, created_at_human}`. `origin` = `user`|`default`|`db_user`; `protected: true` = system-seeded (UI shows a lock, can't delete while enabled). `summary` = localized plain-English row, e.g. `"Allow 443/tcp from Anywhere"`.
+
+**`GET /api/firewall/presets`** — common-service shortcuts for the dropdown.
+- Response: `{"presets": [{key, label, port, protocol}, …]}` — `custom` has `port: null` (UI shows raw fields). Keys: `ssh, http, https, mysql, postgresql, redis, ftp, smtp, dns, custom`. Localized labels.
+
+**`POST /api/firewall/rules`** — add a rule (applied to UFW immediately; takes effect when the firewall is on).
+- Body: `port_from` (required, 1–65534), `port_to` (optional, range end, ≥ `port_from`), `protocol` (required, `all`|`tcp`|`udp`), `action` (required, `allow`|`deny`), `source_ip` (optional — IPv4/IPv6 or **CIDR**; blank = anywhere), `description` (optional). Duplicate (same port/proto/action/source) → `422`.
+- Response `201`: `{"rule": { …rule object… }}` (`origin: "user"`).
+
+**`DELETE /api/firewall/rules/{firewallRule}`** → `204`. Removes it from UFW. A **protected** (`origin != user`) rule can't be deleted while the firewall is **enabled** → `422` (lockout guard).
+
+**`PUT /api/firewall/toggle`** — enable/disable UFW.
+- Body: `enabled` (bool). **Enabling first seeds default `allow` rules** (SSH + the configured web/panel ports: `22, 80, 443, …`) so the box is never locked out, then turns UFW on. **Disabling keeps** all rules (re-enable restores them).
+- Response `200`: `{"enabled": bool, "default_policy": {...}}`.
+
+OS-op failures → `500 {message, reference}`.
+
 ---
 
 ## Enums / fixed values
@@ -309,5 +331,5 @@ On any OS-op failure → `500 {message, reference}` and the DB change is rolled 
 ## Known activity-log `type`/`action` values (for filtering)
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
-- `types`: `cronjob`, `role`, `system_user`, `user`
+- `types`: `cronjob`, `firewall`, `permission`, `role`, `system_user`, `user`
 - `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`

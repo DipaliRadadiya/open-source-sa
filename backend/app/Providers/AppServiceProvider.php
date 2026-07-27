@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Contracts\Firewall;
 use App\Models\User;
+use App\Services\Server\Firewall\UfwFirewall;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -16,7 +18,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // The firewall engine — UFW today; swap the binding for firewalld later.
+        $this->app->bind(Firewall::class, UfwFirewall::class);
     }
 
     /**
