@@ -50,7 +50,7 @@ Self password change. Also revokes all existing tokens and issues a new one (so 
 - Response `200`: `{"token": string}`
 
 ### `POST /auth/stop-impersonating`
-Ends an impersonated session — revokes the impersonation token (the admin's own token is untouched; the frontend switches back to it). Must be called with the impersonation token; a normal session returns `422`. Response `204`.
+Ends an impersonated session — re-logs in the original admin on the cookie session and clears the impersonator marker. Called on the impersonated session; a normal (non-impersonation) session returns `422`. Response `204`.
 
 ### `GET /activity-log`
 The caller's **own** activity history only (not admin-wide — see `/admin/activity-log` for that). No `user` field per entry — it's always the caller, so it's omitted as redundant (unlike the admin version below, which spans multiple users and needs it).
@@ -101,10 +101,10 @@ Aggregate stats. No params.
 - Response `204`
 
 ### `POST /admin/users/{user}/impersonate`
-Admin "login as user" — issues a **1-hour** token that authenticates as the target user (the target's own permissions still gate everything). Blocked (`422`) for self and for admin→admin.
+Admin "login as user" — **session-based** (no token). Logs the target in on the current Sanctum **cookie session** and marks the impersonator in the session; the target's own permissions still gate everything. Blocked (`422`) for self and for admin→admin.
 - Path: `user` = user ID (must be a non-admin, not self)
-- Response `201`: `{"user": {...target...}, "token": string, "impersonated_by": {id, username}}`
-- Frontend: store this token and use it as the active session; `GET /auth/me` will report `impersonated_by` (show a banner); call `POST /auth/stop-impersonating` (with this token) to end and switch back to the admin's own token.
+- Response `201`: `{"user": {...target...}, "impersonated_by": {id, username}}` — **no token**.
+- Frontend: nothing to store — the cookie session now *is* the target. `GET /auth/me` reports `impersonated_by` (show a banner); call `POST /auth/stop-impersonating` to switch back to the admin.
 
 ### `PUT /admin/users/{user}/roles`
 Syncs the user's assigned roles (many-to-many).

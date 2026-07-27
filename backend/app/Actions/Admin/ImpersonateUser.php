@@ -4,25 +4,25 @@ namespace App\Actions\Admin;
 
 use App\Models\User;
 use App\Services\ActivityLogger;
+use Illuminate\Support\Facades\Auth;
 
 class ImpersonateUser
 {
     public function __construct(private ActivityLogger $activityLogger) {}
 
     /**
-     * Issue a short-lived (1h) token for the target user, tagged with the
-     * impersonating admin's id. The target's own permissions still gate what
-     * the resulting session can do — impersonation just borrows their identity.
-     *
-     * @return array{user: User, token: string}
+     * Start impersonating the target: log them in on the cookie session and
+     * remember the impersonating admin's id in the session. No token is issued
+     * — impersonation runs entirely in the session. The target's own
+     * permissions still gate what the session can do.
      */
-    public function execute(User $admin, User $target): array
+    public function execute(User $admin, User $target): void
     {
-        $newToken = $target->createToken('impersonation', ['*'], now()->addHour());
-        $newToken->accessToken->forceFill(['impersonated_by' => $admin->getKey()])->save();
+        // Log in on the session (web) guard — the SPA authenticates via the
+        // Sanctum stateful cookie session, which is backed by the web guard.
+        Auth::guard('web')->login($target);
+        session(['impersonator_id' => $admin->getKey()]);
 
         $this->activityLogger->log('user.impersonation_started', $target, ['username' => $target->username], actor: $admin);
-
-        return ['user' => $target, 'token' => $newToken->plainTextToken];
     }
 }

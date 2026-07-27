@@ -99,15 +99,19 @@ class AuthController extends Controller
 
     public function stopImpersonating(Request $request, StopImpersonating $action): JsonResponse
     {
-        $token = $request->user()->currentAccessToken();
+        $impersonatorId = session('impersonator_id');
 
-        if (! $token instanceof PersonalAccessToken || ! $token->impersonated_by) {
+        $admin = $impersonatorId ? User::find($impersonatorId) : null;
+
+        if (! $admin) {
+            session()->forget('impersonator_id');
+
             throw ValidationException::withMessages([
-                'token' => [__('auth.not_impersonating')],
+                'session' => [__('auth.not_impersonating')],
             ]);
         }
 
-        $action->execute($request->user(), $token);
+        $action->execute($request->user(), $admin);
 
         return response()->json(null, 204);
     }
@@ -121,13 +125,13 @@ class AuthController extends Controller
      */
     private function impersonator(Request $request): ?array
     {
-        $token = $request->user()->currentAccessToken();
+        $impersonatorId = session('impersonator_id');
 
-        if (! $token instanceof PersonalAccessToken || ! $token->impersonated_by) {
+        if (! $impersonatorId) {
             return null;
         }
 
-        $admin = User::find($token->impersonated_by);
+        $admin = User::find($impersonatorId);
 
         return $admin ? ['id' => $admin->id, 'username' => $admin->username] : null;
     }

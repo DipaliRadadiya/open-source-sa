@@ -18,7 +18,9 @@ class ImpersonationController extends Controller
      */
     public function __invoke(Request $request, User $user, ImpersonateUser $action): JsonResponse
     {
-        if ($user->id === $request->user()->id) {
+        $admin = $request->user();
+
+        if ($user->id === $admin->id) {
             throw ValidationException::withMessages([
                 'user' => [__('auth.cannot_impersonate_self')],
             ]);
@@ -30,14 +32,14 @@ class ImpersonationController extends Controller
             ]);
         }
 
-        $result = $action->execute($request->user(), $user);
+        // Session-based: logs the target in on the cookie session, no token.
+        $action->execute($admin, $user);
 
         return response()->json([
-            'user' => UserResource::make($result['user']->load('roles:id,name'))->resolve(),
-            'token' => $result['token'],
+            'user' => UserResource::make($user->load('roles:id,name'))->resolve(),
             'impersonated_by' => [
-                'id' => $request->user()->id,
-                'username' => $request->user()->username,
+                'id' => $admin->id,
+                'username' => $admin->username,
             ],
         ], 201);
     }
