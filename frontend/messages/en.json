@@ -1,0 +1,489 @@
+{
+  "app": {
+    "name": "ServerAvatar"
+  },
+  "common": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "clearSearch": "Clear search",
+    "logOut": "Log out",
+    "roleAdmin": "Administrator",
+    "roleUser": "Member",
+    "openUserMenu": "Open user menu",
+    "refresh": "Refresh",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
+  },
+  "systemUsers": {
+    "title": "System Users",
+    "subtitle": "Linux OS accounts that own and run your sites.",
+    "searchPlaceholder": "Search users…",
+    "clearSearch": "Clear search",
+    "columns": {
+      "username": "Username",
+      "home": "Home",
+      "shell": "Shell",
+      "access": "Access",
+      "applications": "Apps",
+      "created": "Created"
+    },
+    "sudo": "Sudo",
+    "ssh": "SSH",
+    "appsCount": "{count, plural, =0 {No apps} one {# app} other {# apps}}",
+    "empty": {
+      "title": "No system users yet",
+      "desc": "System users are the Linux accounts that own and run your applications.",
+      "filteredTitle": "No matching users",
+      "filteredDesc": "No system users match your search."
+    },
+    "addUser": "Add user",
+    "cancel": "Cancel",
+    "close": "Close",
+    "saving": "Saving…",
+    "noPassword": "No password",
+    "sudoConfirm": {
+      "title": "Grant root access?",
+      "description": "This adds {username} to the sudo group — they'll be able to run commands as root. You can revoke it anytime.",
+      "confirm": "Grant sudo"
+    },
+    "actions": {
+      "label": "Actions",
+      "view": "View details",
+      "setPassword": "Set password",
+      "delete": "Delete",
+      "deleteAppsHint": "This user owns applications and can't be deleted."
+    },
+    "toast": {
+      "created": "System user created.",
+      "deleted": "System user deleted.",
+      "passwordSet": "Password updated.",
+      "sudoOn": "Sudo access granted.",
+      "sudoOff": "Sudo access revoked.",
+      "sshOn": "SSH login enabled.",
+      "sshOff": "SSH login disabled.",
+      "shellChanged": "Login shell updated.",
+      "keyAdded": "SSH key added.",
+      "keyRemoved": "SSH key removed.",
+      "failed": "Something went wrong. Please try again."
+    },
+    "create": {
+      "title": "Add system user",
+      "subtitle": "Creates a Linux account on the server (runs useradd).",
+      "username": "Username",
+      "usernamePlaceholder": "e.g. deploy",
+      "publicKey": "Initial SSH public key",
+      "publicKeyHint": "Optional — added as the account's first authorized key.",
+      "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
+      "submit": "Create user"
+    },
+    "password": {
+      "open": "Password",
+      "title": "OS password",
+      "subtitle": "The server login password for {username}.",
+      "current": "Current password",
+      "setNew": "Set a new password",
+      "new": "New password",
+      "newPlaceholder": "At least 10 characters",
+      "confirm": "Confirm password",
+      "confirmPlaceholder": "Re-enter the new password",
+      "submit": "Save password"
+    },
+    "sshKeysAction": "SSH keys",
+    "apps": "Applications",
+    "delete": {
+      "title": "Delete system user?",
+      "description": "This permanently removes {username}, its home directory, and its cron jobs (runs userdel -r). This cannot be undone.",
+      "confirmLabel": "Type {username} to confirm",
+      "cancel": "Cancel",
+      "confirm": "Delete user",
+      "deleting": "Deleting…"
+    },
+    "access": {
+      "title": "Access",
+      "sudo": "Sudo access",
+      "sudoHint": "Allow running commands as root.",
+      "ssh": "SSH login",
+      "sshHint": "Allow signing in over SSH.",
+      "shell": "Login shell"
+    },
+    "appsSubtitle": "Applications this user owns and runs.",
+    "sshForm": {
+      "add": "Add SSH key",
+      "title": "SSH keys",
+      "subtitle": "Public keys allowed to sign in as {username}.",
+      "addHeading": "Add a key",
+      "name": "Label",
+      "namePlaceholder": "e.g. work-laptop",
+      "publicKey": "Public key",
+      "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
+      "submit": "Add key",
+      "remove": "Remove key",
+      "removeTitle": "Remove SSH key?",
+      "removeDescription": "This removes “{name}” from the user's authorized keys.",
+      "removeConfirm": "Remove"
+    },
+    "detail": {
+      "back": "System Users",
+      "overview": "Overview",
+      "homePath": "Home directory",
+      "shell": "Login shell",
+      "sudoAccess": "Sudo access",
+      "sshLogin": "SSH login",
+      "created": "Created",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "password": "OS password",
+      "passwordHint": "Used to sign in to the server as this user.",
+      "passwordNotSet": "Not set",
+      "reveal": "Reveal password",
+      "hide": "Hide password",
+      "copy": "Copy password",
+      "copied": "Password copied to clipboard.",
+      "applications": "Applications",
+      "noApplications": "This user doesn't own any applications.",
+      "sshKeys": "SSH keys",
+      "noSshKeys": "No SSH keys added yet.",
+      "fingerprint": "Fingerprint",
+      "addedOn": "Added {when}"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back, {name}.",
+    "account": "Account",
+    "accountDescription": "Your current session details.",
+    "name": "Name",
+    "username": "Username",
+    "accountType": "Account type",
+    "admin": "Admin",
+    "user": "User"
+  },
+  "admin": {
+    "switchToAdmin": "Admin Panel",
+    "exitToPanel": "Exit to Server Panel",
+    "breadcrumbRoot": "Admin",
+    "nav": {
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "roles": "Roles",
+      "activityLog": "Activity Log"
+    },
+    "dashboardTitle": "Admin Dashboard",
+    "dashboardSubtitle": "Overview of users, roles, and activity.",
+    "totalUsers": "Total users",
+    "usersBreakdown": "{admins} admin · {nonAdmins} non-admin",
+    "roles": "Roles",
+    "rolesHint": "Custom permission roles",
+    "activityToday": "Activity today",
+    "activityTodayHint": "Actions in the last 24 hours",
+    "activityTotal": "Total activity",
+    "activityTotalHint": "All recorded actions",
+    "usersPlaceholder": "User management is coming in the next phase.",
+    "rolesPlaceholder": "Role management is coming in a later phase.",
+    "activityPlaceholder": "The activity log is coming in a later phase."
+  },
+  "users": {
+    "title": "Users",
+    "subtitle": "Manage the people who can access this panel.",
+    "addUser": "Add user",
+    "searchPlaceholder": "Search name or username…",
+    "clearSearch": "Clear search",
+    "you": "You",
+    "empty": {
+      "title": "No users yet",
+      "desc": "Add your first team member to get started.",
+      "filteredTitle": "No matching users",
+      "filteredDesc": "Try a different search, or clear the filters.",
+      "clear": "Clear filters"
+    },
+    "filter": {
+      "allAccounts": "All accounts",
+      "admins": "Admins",
+      "nonAdmins": "Non-admins"
+    },
+    "roleBadge": {
+      "admin": "Admin",
+      "user": "User"
+    },
+    "columns": {
+      "name": "Name",
+      "username": "Username",
+      "accountType": "Account type",
+      "roles": "Roles",
+      "joined": "Joined"
+    },
+    "actions": {
+      "label": "Actions",
+      "edit": "Edit",
+      "resetPassword": "Reset password",
+      "delete": "Delete",
+      "deleteSelfHint": "You can't delete your own account.",
+      "impersonate": "Login as user",
+      "impersonateSelfHint": "You can’t log in as your own account.",
+      "impersonateAdminHint": "You can’t log in as another admin.",
+      "impersonateFailed": "Couldn’t start the session. Please try again."
+    },
+    "form": {
+      "createTitle": "Add user",
+      "createDescription": "Add a new person and set what they can access.",
+      "editTitle": "Edit user",
+      "editDescription": "Update this person's details and access.",
+      "sectionAccess": "Access",
+      "name": "Name",
+      "namePlaceholder": "Full name",
+      "username": "Username",
+      "usernamePlaceholder": "Unique username",
+      "password": "Password",
+      "passwordPlaceholder": "At least 10 characters",
+      "confirmPassword": "Confirm password",
+      "confirmPasswordPlaceholder": "Re-enter the password",
+      "roles": "Server panel roles",
+      "rolesHint": "What they can do in the server panel. Pick at least one — permissions combine.",
+      "noRoles": "No roles exist yet. Create a role first, then assign it here.",
+      "isAdmin": "Admin Panel access",
+      "isAdminHint": "Separate from roles — lets them manage users, roles, and settings.",
+      "isAdminToggle": "Allow access to the Admin Panel",
+      "submitCreate": "Add user",
+      "submitEdit": "Save changes",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "resetPassword": {
+      "title": "Reset password",
+      "description": "Set a new password for {name}.",
+      "newPassword": "New password",
+      "confirm": "Confirm password",
+      "submit": "Reset password"
+    },
+    "delete": {
+      "title": "Delete user?",
+      "description": "This permanently removes {name} and revokes their access. This cannot be undone.",
+      "confirm": "Delete",
+      "deleting": "Deleting…",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "created": "User created.",
+      "updated": "User updated.",
+      "deleted": "User deleted.",
+      "passwordReset": "Password reset.",
+      "deleteFailed": "Could not delete this user."
+    },
+    "impersonate": {
+      "title": "Login as this user?",
+      "description": "You’ll browse the panel as {name} with their permissions. A banner will let you switch back to your admin account anytime.",
+      "confirm": "Login as user",
+      "starting": "Starting…",
+      "cancel": "Cancel"
+    }
+  },
+  "roles": {
+    "sync": {
+      "button": "Sync permissions",
+      "hint": "Reloads the list of available permissions from the app. Run this after an update adds new permissions.",
+      "title": "Sync permission catalog?",
+      "description": "This reloads every available permission from the app (re-runs the seeder) and restores the Administrator role's full access. It doesn't change your other roles' choices. Safe to run anytime.",
+      "cancel": "Cancel",
+      "confirm": "Sync now",
+      "syncing": "Syncing…",
+      "success": "Synced {count} permissions.",
+      "failed": "Couldn't sync permissions."
+    },
+    "title": "Roles",
+    "subtitle": "Define permission roles and assign them to users.",
+    "addRole": "New role",
+    "system": "System",
+    "searchPlaceholder": "Search roles…",
+    "clearSearch": "Clear search",
+    "empty": {
+      "title": "No roles yet",
+      "desc": "Create a permission role to control what users can do.",
+      "filteredTitle": "No matching roles",
+      "filteredDesc": "Try a different search term.",
+      "clear": "Clear search"
+    },
+    "permissionCount": "{count, plural, one {# permission} other {# permissions}}",
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "permissions": "Permissions",
+      "created": "Created"
+    },
+    "actions": {
+      "label": "Actions",
+      "edit": "Edit",
+      "delete": "Delete",
+      "systemHint": "System roles are protected and can't be edited or deleted."
+    },
+    "form": {
+      "createTitle": "New role",
+      "createSubtitle": "Create a permission role and choose what it can access.",
+      "editTitle": "Edit role",
+      "editSubtitle": "Update this role's details and permissions.",
+      "details": "Details",
+      "name": "Name",
+      "namePlaceholder": "e.g. Developer",
+      "description": "Description",
+      "descriptionPlaceholder": "What is this role for? (optional)",
+      "permissions": "Permissions",
+      "permissionsHint": "Choose what this role can access in the panel.",
+      "permission": "Permission",
+      "enabledCount": "{count} of {total} enabled",
+      "view": "View",
+      "manage": "Manage",
+      "selectAll": "Select all",
+      "legendView": "Open and read this section.",
+      "legendManage": "Create, edit, and delete — includes View.",
+      "generalGroup": "General",
+      "noPermissions": "No permissions are available to assign.",
+      "noAccess": "No access",
+      "accessLabel": "Access",
+      "setAll": "Set all",
+      "legendIntro": "For each feature, pick how much this role can do:",
+      "legendLine": "View = read-only · Manage = full control (includes View) · leave both off for no access.",
+      "legendNoneText": "Can't see or use it.",
+      "legendViewText": "Can open and read, but not change anything.",
+      "legendManageText": "Full control — view, create, edit and delete.",
+      "levelDesc": {
+        "server": "What this role can do on the server itself.",
+        "application": "What this role can do inside each application."
+      },
+      "permDesc": {
+        "dashboard": "Server overview, stats and health.",
+        "application": "Sites and apps hosted on the server.",
+        "database": "Databases and database users.",
+        "system_user": "Linux system users and their access.",
+        "firewall": "Open or close ports and manage rules.",
+        "cronjob": "Scheduled tasks that run automatically.",
+        "fail2ban": "Blocks repeated failed login attempts.",
+        "logs": "Server and service log files.",
+        "service": "Start, stop and restart services.",
+        "setting": "Server configuration and preferences.",
+        "disk_cleaner": "Free up disk space by clearing junk.",
+        "activity_log": "Audit trail of actions on the server."
+      },
+      "unsavedTitle": "Discard unsaved changes?",
+      "unsavedDescription": "You've made changes to this role that haven't been saved. If you leave now, they'll be lost.",
+      "unsavedStay": "Keep editing",
+      "unsavedLeave": "Discard changes",
+      "submitCreate": "Create role",
+      "submitEdit": "Save changes",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "delete": {
+      "title": "Delete role?",
+      "description": "This deletes {name}. Users assigned this role will be unassigned (their accounts remain). This cannot be undone.",
+      "confirm": "Delete",
+      "deleting": "Deleting…",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "created": "Role created.",
+      "updated": "Role updated.",
+      "deleted": "Role deleted.",
+      "deleteFailed": "Could not delete this role."
+    }
+  },
+  "account": {
+    "title": "Account",
+    "subtitle": "Manage your profile, password, and activity.",
+    "profile": {
+      "title": "Profile",
+      "description": "Your account details.",
+      "name": "Name",
+      "username": "Username",
+      "accountType": "Account type",
+      "roleAdmin": "Admin",
+      "roleUser": "User",
+      "roles": "Roles"
+    },
+    "password": {
+      "title": "Change password",
+      "description": "Use a strong password you don't use anywhere else.",
+      "current": "Current password",
+      "new": "New password",
+      "newPlaceholder": "At least 10 characters",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "saving": "Saving…",
+      "success": "Password updated."
+    },
+    "activity": {
+      "title": "Your activity",
+      "description": "Details",
+      "when": "When",
+      "action": "Action",
+      "empty": "No activity yet."
+    }
+  },
+  "activity": {
+    "title": "Activity log",
+    "subtitle": "Every action taken across the panel.",
+    "searchPlaceholder": "Search action or user…",
+    "empty": {
+      "title": "No activity yet",
+      "desc": "Actions taken across the panel will show up here.",
+      "filteredTitle": "No matching activity",
+      "filteredDesc": "Try different filters or search terms.",
+      "clear": "Clear filters"
+    },
+    "system": "System",
+    "filter": {
+      "allTypes": "All types",
+      "allActions": "All actions"
+    },
+    "columns": {
+      "when": "When",
+      "user": "User",
+      "event": "Event",
+      "description": "Description"
+    }
+  },
+  "pagination": {
+    "perPage": "Per page",
+    "summary": "Page {page} of {of} · {total} total",
+    "total": "{total} total",
+    "pageAria": "Go to page {page}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginSubtitle": "Enter your credentials to access the panel.",
+    "registerTitle": "Create admin account",
+    "registerSubtitle": "Set up the administrator account for this panel.",
+    "noAccount": "Need to set up the panel?",
+    "registerLink": "Register",
+    "haveAccount": "Already have an account?",
+    "loginLink": "Sign in",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "Your full name",
+      "username": "Username",
+      "usernamePlaceholder": "Enter your username",
+      "chooseUsernamePlaceholder": "Choose a username",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "newPasswordPlaceholder": "At least 10 characters",
+      "confirmPassword": "Confirm password",
+      "confirmPasswordPlaceholder": "Re-enter your password"
+    },
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "createAccount": "Create account",
+    "creatingAccount": "Creating account…"
+  },
+  "impersonation": {
+    "banner": {
+      "viewingAs": "You’re viewing the panel as <strong>{name}</strong>",
+      "stop": "Back to my account",
+      "stopping": "Switching back…",
+      "failed": "Couldn’t switch back. Please try again.",
+      "returnHint": "· you’ll return to {admin}"
+    },
+    "menu": {
+      "back": "Back to my account"
+    }
+  }
+}

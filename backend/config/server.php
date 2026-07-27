@@ -200,4 +200,28 @@ return [
         'volatile-lru', 'volatile-lfu', 'volatile-random', 'volatile-ttl',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard / metrics
+    |--------------------------------------------------------------------------
+    |
+    | Server dashboard reads facts + live metrics cheaply from `/proc` (+ df).
+    | `sample_interval` is the short window (seconds) used to compute the rate
+    | for cumulative counters (CPU %, network) — two reads that far apart.
+    | `metrics.retention_hours` bounds the `server_metrics` table (the 5-min
+    | collector prunes anything older). All overridable so tests can point
+    | `proc_dir`/`os_release` at fixtures and set the interval to 0.
+    |
+    */
+
+    'proc_dir' => env('SERVER_PROC_DIR', '/proc'),
+
+    'os_release' => env('SERVER_OS_RELEASE', '/etc/os-release'),
+
+    'metrics' => [
+        'sample_interval' => (int) env('SERVER_METRICS_SAMPLE_INTERVAL', 1),
+        'retention_hours' => (int) env('SERVER_METRICS_RETENTION_HOURS', 24),
+        'processes_limit' => (int) env('SERVER_METRICS_PROCESSES_LIMIT', 25),
+    ],
+
 ];
