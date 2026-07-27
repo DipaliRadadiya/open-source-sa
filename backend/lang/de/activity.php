@@ -12,6 +12,7 @@ return [
     'user.impersonation_stopped' => 'Beendete das Ausgeben als :username',
     'user.updated' => 'Benutzer :username aktualisiert',
     'user.deleted' => 'Benutzer :username gelöscht',
+    'user.profile_updated' => 'Profil aktualisiert',
     'role.created' => 'Rolle :name erstellt',
     'role.updated' => 'Rolle :name aktualisiert',
     'role.deleted' => 'Rolle :name gelöscht',

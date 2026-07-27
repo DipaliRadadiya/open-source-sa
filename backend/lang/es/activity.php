@@ -12,6 +12,7 @@ return [
     'user.impersonation_stopped' => 'Dejó de suplantar a :username',
     'user.updated' => 'Actualizó el usuario :username',
     'user.deleted' => 'Eliminó el usuario :username',
+    'user.profile_updated' => 'Actualizó su perfil',
     'role.created' => 'Creó el rol :name',
     'role.updated' => 'Actualizó el rol :name',
     'role.deleted' => 'Eliminó el rol :name',

@@ -12,6 +12,7 @@ return [
     'user.impersonation_stopped' => ':username का प्रतिरूपण बंद किया',
     'user.updated' => 'उपयोगकर्ता :username अपडेट किया',
     'user.deleted' => 'उपयोगकर्ता :username हटाया',
+    'user.profile_updated' => 'अपनी प्रोफ़ाइल अपडेट की',
     'role.created' => 'भूमिका :name बनाई',
     'role.updated' => 'भूमिका :name अपडेट की',
     'role.deleted' => 'भूमिका :name हटाई',

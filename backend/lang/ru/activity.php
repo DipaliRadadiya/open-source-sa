@@ -12,6 +12,7 @@ return [
     'user.impersonation_stopped' => 'Прекратил действовать от имени :username',
     'user.updated' => 'Обновлён пользователь :username',
     'user.deleted' => 'Удалён пользователь :username',
+    'user.profile_updated' => 'Обновил свой профиль',
     'role.created' => 'Создана роль :name',
     'role.updated' => 'Обновлена роль :name',
     'role.deleted' => 'Удалена роль :name',

@@ -6,10 +6,12 @@ use App\Actions\Auth\AuthenticateUser;
 use App\Actions\Auth\ChangeUserPassword;
 use App\Actions\Auth\RegisterFirstAdmin;
 use App\Actions\Auth\StopImpersonating;
+use App\Actions\Auth\UpdateProfile;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\UpdatePasswordRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -134,6 +136,15 @@ class AuthController extends Controller
         $admin = User::find($impersonatorId);
 
         return $admin ? ['id' => $admin->id, 'username' => $admin->username] : null;
+    }
+
+    public function updateProfile(UpdateProfileRequest $request, UpdateProfile $action): JsonResponse
+    {
+        $user = $action->execute($request->user(), $request->validated());
+
+        return response()->json([
+            'user' => UserResource::make($user->load('roles:id,name'))->resolve(),
+        ]);
     }
 
     public function updatePassword(UpdatePasswordRequest $request, ChangeUserPassword $action): JsonResponse

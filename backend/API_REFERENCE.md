@@ -44,6 +44,12 @@ Revokes the current token (or session, if cookie-authenticated). No body. Respon
 ### `GET /auth/me`
 Current user, plus impersonation state. Response: `{"user": {id, name, username, is_admin, roles: [{id, name}], created_at, created_at_human}, "impersonated_by": {id, username}|null}` — `impersonated_by` is non-null only during an impersonated session (show a banner); otherwise `null`.
 
+### `PUT /auth/profile`
+Self-service profile update (own `name` + `username`).
+- Body: `name` (string, required, max 255), `username` (string, required, `alpha_dash`, max 255, unique — the caller's own current username is allowed).
+- Response `200`: `{"user": { …same shape as `/auth/me` user… }}`. Writes a `user.profile_updated` activity entry.
+- `422` on validation (e.g. username taken by another user); `401` if unauthenticated.
+
 ### `PUT /auth/password`
 Self password change. Also revokes all existing tokens and issues a new one (so the caller must re-store the returned token).
 - Body: `current_password` (string, required, must match), `password` (string, required, confirmed, min 10 + mixed case + numbers), `password_confirmation`
@@ -430,4 +436,4 @@ The schedule is a **DB profile** (single source of truth) run by the **Laravel s
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
 - `types`: `cronjob`, `disk_cleaner`, `firewall`, `log`, `permission`, `role`, `service`, `system_user`, `user`
-- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `downloaded`, `cleaned`, `schedule_updated`
+- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `downloaded`, `cleaned`, `schedule_updated`, `profile_updated`

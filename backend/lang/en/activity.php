@@ -12,6 +12,7 @@ return [
     'user.impersonation_stopped' => 'Stopped impersonating :username',
     'user.updated' => 'Updated user :username',
     'user.deleted' => 'Deleted user :username',
+    'user.profile_updated' => 'Updated their profile',
     'role.created' => 'Created role :name',
     'role.updated' => 'Updated role :name',
     'role.deleted' => 'Deleted role :name',

@@ -12,6 +12,7 @@ return [
     'user.impersonation_stopped' => "A cessé d'usurper :username",
     'user.updated' => 'Utilisateur :username mis à jour',
     'user.deleted' => 'Utilisateur :username supprimé',
+    'user.profile_updated' => 'A mis à jour son profil',
     'role.created' => 'Rôle :name créé',
     'role.updated' => 'Rôle :name mis à jour',
     'role.deleted' => 'Rôle :name supprimé',
