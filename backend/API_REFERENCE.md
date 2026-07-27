@@ -314,7 +314,7 @@ Requires the `firewall` permission (`view` to read, `manage` to mutate). Backed 
 **`DELETE /api/firewall/rules/{firewallRule}`** → `204`. Removes it from UFW. A **protected** (`origin != user`) rule can't be deleted while the firewall is **enabled** → `422` (lockout guard).
 
 **`PUT /api/firewall/toggle`** — enable/disable UFW.
-- Body: `enabled` (bool). **Enabling first seeds default `allow` rules** (SSH + the configured web/panel ports: `22, 80, 443, …`) so the box is never locked out, then turns UFW on. **Disabling keeps** all rules (re-enable restores them).
+- Body: `enabled` (bool). **Enabling** seeds default `allow` rules (SSH + the configured web/panel ports: `22, 80, 443, …`) so the box is never locked out, sets the secure **default policy** (`deny incoming` / `allow outgoing`), then turns UFW on. **Disabling keeps** all rules (re-enable restores them).
 - Response `200`: `{"enabled": bool, "default_policy": {...}}`.
 
 OS-op failures → `500 {message, reference}`.

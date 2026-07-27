@@ -52,8 +52,26 @@ class UfwFirewall implements Firewall
 
     public function enable(): ServerOpsResult
     {
+        // Enforce the secure default posture (deny incoming / allow outgoing)
+        // before turning UFW on — don't rely on the box's persisted default,
+        // which a prior `ufw default allow incoming` could have left insecure.
         // --force skips the interactive "proceed?" prompt.
-        return $this->serverOps->run(['ufw', '--force', 'enable'], ['feature' => 'firewall', 'op' => 'enable']);
+        $commands = [
+            ['ufw', 'default', 'deny', 'incoming'],
+            ['ufw', 'default', 'allow', 'outgoing'],
+            ['ufw', '--force', 'enable'],
+        ];
+
+        $result = null;
+        foreach ($commands as $command) {
+            $result = $this->serverOps->run($command, ['feature' => 'firewall', 'op' => 'enable']);
+
+            if ($result->failed()) {
+                return $result;
+            }
+        }
+
+        return $result;
     }
 
     public function disable(): ServerOpsResult

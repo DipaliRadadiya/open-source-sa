@@ -124,6 +124,9 @@ it('enables the firewall, seeding default rules first', function () {
     // SSH (22) + default web ports (80, 443) seeded as default-origin rules
     expect(FirewallRule::where('origin', 'default')->pluck('port_from')->sort()->values()->all())
         ->toBe([22, 80, 443]);
+    // secure default policy set, then enabled
+    Process::assertRan(fn ($p) => $p->command === ['ufw', 'default', 'deny', 'incoming']);
+    Process::assertRan(fn ($p) => $p->command === ['ufw', 'default', 'allow', 'outgoing']);
     Process::assertRan(fn ($p) => $p->command === ['ufw', '--force', 'enable']);
 });
 
