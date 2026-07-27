@@ -348,6 +348,20 @@ Requires the `disk_cleaner` permission (`view` to preview, `manage` to clean). *
 - Writes a `disk_cleaner.cleaned` activity entry. `500 {message, reference}` on command failure.
 - **Safety:** targeted commands only (no `rm -rf`); active logs are **truncated, not deleted**; whitelisted keys, server-resolved paths.
 
+#### Automatic cleaner (schedule) — Phase 2
+The schedule is a **DB profile** (single source of truth) run by the **Laravel scheduler** — there is **no cron file**, so it can never drift with the Cronjobs feature. Managed entirely here (not on the Cronjobs page).
+
+**`GET /api/disk-cleaner/schedule`** — the profile (defaults when none set). `{ schedule: {enabled, frequency, categories, threshold_percent, notify, last_run_at, last_run_at_human} }`.
+
+**`PUT /api/disk-cleaner/schedule`** (`manage`) — create/update the profile.
+- Body: `enabled` (bool), `frequency` (`hourly｜daily｜weekly｜monthly`), `categories` (array of **safe** category keys), `threshold_percent` (1–100 or null = always), `notify` (bool).
+- Runs unattended **safe-only** categories, **only when due AND** (if set) disk usage ≥ `threshold_percent`. Edit/disable takes effect on the next tick.
+- Response `200`: `{ schedule: {…} }`. Writes `disk_cleaner.schedule_updated`.
+
+**`DELETE /api/disk-cleaner/schedule`** (`manage`) — remove the schedule entirely → `204`.
+
+**`GET /api/disk-cleaner/runs`** — run history (manual + scheduled), newest first, paginated. `{ runs: [{id, trigger, categories, freed, freed_total, freed_total_human, status, disk_percent, created_at, created_at_human}], meta }`.
+
 ---
 
 ## Enums / fixed values
@@ -361,4 +375,4 @@ Requires the `disk_cleaner` permission (`view` to preview, `manage` to clean). *
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
 - `types`: `cronjob`, `disk_cleaner`, `firewall`, `permission`, `role`, `service`, `system_user`, `user`
-- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `cleaned`
+- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `cleaned`, `schedule_updated`

@@ -44,4 +44,5 @@ return [
     'cronjob.deleted' => 'A supprimé la tâche cron :name',
     'cronjob.create_failed' => 'Échec de la création de la tâche cron :name',
     'disk_cleaner.cleaned' => 'A nettoyé le disque (:categories) — :freed libéré',
+    'disk_cleaner.schedule_updated' => 'A mis à jour le nettoyage automatique du disque (:enabled)',
 ];

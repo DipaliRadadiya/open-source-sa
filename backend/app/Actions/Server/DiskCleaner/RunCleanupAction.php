@@ -3,6 +3,7 @@
 namespace App\Actions\Server\DiskCleaner;
 
 use App\Exceptions\Server\DiskCleaner\DiskCleanerException;
+use App\Models\DiskCleanerRun;
 use App\Services\ActivityLogger;
 use App\Services\Server\DiskCleaner\DiskCleaner;
 use App\Support\Bytes;
@@ -20,9 +21,11 @@ class RunCleanupAction
      * per-category freed bytes.
      *
      * @param  array<int, string>  $keys
+     * @param  string  $trigger  `manual` (default) or `scheduled` — recorded
+     *                           on the run-history row.
      * @return array<string, mixed>
      */
-    public function execute(array $keys): array
+    public function execute(array $keys, string $trigger = 'manual'): array
     {
         $cleaned = [];
         $freedTotal = 0;
@@ -53,13 +56,25 @@ class RunCleanupAction
             ];
         }
 
+        $disk = $this->cleaner->disk();
+
+        $run = DiskCleanerRun::create([
+            'trigger' => $trigger,
+            'categories' => $keys,
+            'freed' => collect($cleaned)->pluck('freed', 'key')->all(),
+            'freed_total' => $freedTotal,
+            'status' => 'completed',
+            'disk_percent' => $disk['percent'],
+        ]);
+
         $this->activityLogger->log('disk_cleaner.cleaned', null, [
             'categories' => implode(', ', $keys),
             'freed' => Bytes::human($freedTotal),
         ]);
 
         return [
-            'disk' => $this->cleaner->disk(),
+            'run_id' => $run->id,
+            'disk' => $disk,
             'cleaned' => $cleaned,
             'freed_total' => $freedTotal,
             'freed_total_human' => Bytes::human($freedTotal),

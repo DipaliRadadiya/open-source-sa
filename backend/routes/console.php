@@ -9,3 +9,8 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('sanctum:prune-expired --hours=24')->daily();
+
+// Automatic disk cleaner: the tick just wakes the command every minute; the
+// command self-gates on the DB schedule (enabled / due / threshold). No cron
+// file, so it can never drift with the user-managed Cronjobs feature.
+Schedule::command('disk-cleaner:run')->everyMinute()->withoutOverlapping();

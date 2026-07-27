@@ -44,4 +44,5 @@ return [
     'cronjob.deleted' => 'Eliminó la tarea cron :name',
     'cronjob.create_failed' => 'No se pudo crear la tarea cron :name',
     'disk_cleaner.cleaned' => 'Limpió el disco (:categories) — liberó :freed',
+    'disk_cleaner.schedule_updated' => 'Actualizó el limpiador de disco automático (:enabled)',
 ];
