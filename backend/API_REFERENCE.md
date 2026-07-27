@@ -119,6 +119,10 @@ Syncs the user's assigned roles (many-to-many).
 - Body: `role_ids` (array, **required, min 1** — each must exist in `roles`; a user can hold multiple roles and can never be left with zero)
 - Response `204`
 
+### `GET /admin/permissions` — permission catalog (for the role form)
+The **full** list of every permission (the menu of what *can* be granted) — use this to render the checkboxes in the role create/edit form. Distinct from `GET /permissions`, which returns only the **caller's own effective grants** (for the nav). Admin-only.
+- Response: `{"permissions": [{level, sub_level, name, title, icon, url}, …]}` — ordered by the catalog `order`; **no** `view`/`manage` state (that's per-role — overlay each role's own `permissions[]` from `GET /admin/roles` onto this list). Group client-side by `level`/`sub_level` for sections.
+
 ### Roles — `GET|POST /admin/roles`, `PUT|DELETE /admin/roles/{role}`
 
 **`GET /admin/roles`** — list (not paginated, returns all)
