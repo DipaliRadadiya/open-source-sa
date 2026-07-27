@@ -68,6 +68,8 @@ class DiskCleaner
             'key' => $target->key(),
             'label' => __("disk-cleaner.{$target->key()}.label"),
             'description' => __("disk-cleaner.{$target->key()}.description"),
+            // Plain-language note: what happens + what's kept when this runs.
+            'note' => __("disk-cleaner.{$target->key()}.note"),
             'group' => $target->group(),
             'method' => $target->method(),
             'paths' => $target->paths(),

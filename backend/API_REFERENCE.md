@@ -337,8 +337,9 @@ Requires the `service` permission (`view` to read, `manage` to act). Manages **s
 Requires the `disk_cleaner` permission (`view` to preview, `manage` to clean). **Server-level** cleanup (app-level logs/caches come later). No DB — disk usage + estimates are read **live** (detect-don't-trust). **Preview-then-clean**: the client selects **category keys only**; the panel resolves paths server-side (never a client path). Categories are detect-gated — only those whose dependency exists are returned.
 
 **`GET /api/disk-cleaner`** — preview.
-- Response: `{ disk: {path,total,used,free,percent, *_human}, categories: [{key,label,description,group,method,paths,safe,available,reclaimable,reclaimable_human}] }`.
+- Response: `{ disk: {path,total,used,free,percent, *_human}, categories: [{key,label,description,note,group,method,paths,safe,available,reclaimable,reclaimable_human}] }`.
   - `method`: `delete｜truncate｜command` — how it reclaims space (UI badge). `paths`: exactly what it touches (globs/dirs, or a friendly label for command-based ones) — show before the user confirms.
+  - `note`: a short, localized plain-language line explaining **what happens and what is kept** when this category runs (e.g. "Empties the current service log files … services keep writing, nothing is deleted"). Show it as an info/tooltip on each category.
   - `group`: `package｜logs｜temp`. `reclaimable`: bytes.
 - Phase-1 categories: `apt_cache`, `apt_orphans`, `journal`, `rotated_logs`, `service_logs` (truncates active service logs — kept, not deleted), `tmp`.
 

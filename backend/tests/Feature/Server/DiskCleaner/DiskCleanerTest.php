@@ -55,6 +55,7 @@ it('previews disk usage and available categories with paths', function () {
     expect($service)->not->toBeNull();
     expect($service['method'])->toBe('truncate');
     expect($service['group'])->toBe('logs');
+    expect($service['note'])->not->toBeEmpty();          // plain-language "what happens" note
     expect($service['reclaimable'])->toBe(6144);              // 4096 + 2048
     expect($service['paths'])->toContain($this->logDir.'/access.log');
 });
