@@ -13,6 +13,7 @@ return [
     'user.updated' => 'ユーザー :username を更新しました',
     'user.deleted' => 'ユーザー :username を削除しました',
     'user.profile_updated' => 'プロフィールを更新しました',
+    'setting.updated' => ':group の設定を更新しました',
     'role.created' => 'ロール :name を作成しました',
     'role.updated' => 'ロール :name を更新しました',
     'role.deleted' => 'ロール :name を削除しました',

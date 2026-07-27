@@ -423,6 +423,23 @@ The schedule is a **DB profile** (single source of truth) run by the **Laravel s
 
 **`GET /api/disk-cleaner/runs`** — run history (manual + scheduled), newest first, paginated. `{ runs: [{id, trigger, categories, freed, freed_total, freed_total_human, status, disk_percent, created_at, created_at_human}], meta }`.
 
+### Settings
+Requires the `setting` permission (`view` to read, `manage` to change). A server-config hub of **groups**; no DB — values are read **live** and changes are written to **managed non-destructive drop-ins** (the distro's own config is never touched → migration-safe). Groups are detect-gated (unavailable ones, e.g. Redis when not installed, are omitted).
+
+**`GET /api/settings`** — all available groups + current values.
+- `{ settings: { general:{timezone,ntp,hostname}, security:{port,permit_root_login,password_authentication}, updates:{security_updates_enabled,auto_reboot,reboot_time,reboot_required}, redis?:{maxmemory,maxmemory_policy,has_password} } }`.
+- `redis` omitted when redis-cli isn't installed. Passwords are never returned (`has_password` bool only).
+
+**`PUT /api/settings/general`** (`manage`) — `timezone` (valid tz id), `hostname`, `ntp` (bool). Applies via `timedatectl`/`hostnamectl`.
+
+**`PUT /api/settings/security`** (`manage`) — SSH: `port` (1–65535), `permit_root_login` (`yes｜no｜prohibit-password`), `password_authentication` (bool). Writes an `sshd_config.d` drop-in, runs **`sshd -t` before reload**, **opens the new port in the firewall first** (if enabled). `422` if disabling password auth with **no SSH key present** (lockout guard).
+
+**`PUT /api/settings/updates`** (`manage`) — `security_updates_enabled` (bool), `auto_reboot` (bool), `reboot_time` (`HH:MM` or `now`). Writes an `apt.conf.d` drop-in (unattended-upgrades).
+
+**`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET`+`REWRITE`. `404` if redis isn't installed.
+
+Each write returns `{ <group>: {…refreshed values…} }`, writes a `setting.updated` activity entry (`group` property), and returns `500 {message, reference}` on OS-command failure.
+
 ---
 
 ## Enums / fixed values
@@ -435,5 +452,5 @@ The schedule is a **DB profile** (single source of truth) run by the **Laravel s
 ## Known activity-log `type`/`action` values (for filtering)
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
-- `types`: `cronjob`, `disk_cleaner`, `firewall`, `log`, `permission`, `role`, `service`, `system_user`, `user`
+- `types`: `cronjob`, `disk_cleaner`, `firewall`, `log`, `permission`, `role`, `service`, `setting`, `system_user`, `user`
 - `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `downloaded`, `cleaned`, `schedule_updated`, `profile_updated`

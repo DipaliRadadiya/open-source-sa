@@ -13,6 +13,7 @@ return [
     'user.updated' => 'Usuário :username atualizado',
     'user.deleted' => 'Usuário :username excluído',
     'user.profile_updated' => 'Atualizou seu perfil',
+    'setting.updated' => 'Atualizou as configurações de :group',
     'role.created' => 'Função :name criada',
     'role.updated' => 'Função :name atualizada',
     'role.deleted' => 'Função :name excluída',

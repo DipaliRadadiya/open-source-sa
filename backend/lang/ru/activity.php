@@ -13,6 +13,7 @@ return [
     'user.updated' => 'Обновлён пользователь :username',
     'user.deleted' => 'Удалён пользователь :username',
     'user.profile_updated' => 'Обновил свой профиль',
+    'setting.updated' => 'Обновил настройки :group',
     'role.created' => 'Создана роль :name',
     'role.updated' => 'Обновлена роль :name',
     'role.deleted' => 'Удалена роль :name',

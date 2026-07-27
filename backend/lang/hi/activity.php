@@ -13,6 +13,7 @@ return [
     'user.updated' => 'उपयोगकर्ता :username अपडेट किया',
     'user.deleted' => 'उपयोगकर्ता :username हटाया',
     'user.profile_updated' => 'अपनी प्रोफ़ाइल अपडेट की',
+    'setting.updated' => ':group सेटिंग्स अपडेट कीं',
     'role.created' => 'भूमिका :name बनाई',
     'role.updated' => 'भूमिका :name अपडेट की',
     'role.deleted' => 'भूमिका :name हटाई',
