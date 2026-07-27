@@ -27,8 +27,8 @@ class PermissionController extends Controller
 
     /**
      * Pure role-based (no admin bypass): effective grant per permission is
-     * the deduped OR-union across the user's direct grants and ALL assigned
-     * roles. A permission is included only if view or manage is granted.
+     * the deduped OR-union across ALL the user's assigned roles. A permission
+     * is included only if view or manage is granted.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -55,7 +55,6 @@ class PermissionController extends Controller
             }
         };
 
-        $merge($user->permissions()->get());
         $user->roles()->with('permissions')->get()->each(fn ($role) => $merge($role->permissions));
 
         return $permissions

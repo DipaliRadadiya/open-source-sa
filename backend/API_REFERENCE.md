@@ -4,7 +4,7 @@
 
 Base URL: `https://sv-oss.167-233-229-184.nip.io/api`
 Auth: `Authorization: Bearer <token>` header (returned by register/login), or cookie-session for stateful frontend domains (`SANCTUM_STATEFUL_DOMAINS`). Admin-only routes additionally require `is_admin: true`.
-RBAC: `is_admin` (bool) gates the admin area only. Feature permissions are **pure role-based** — a user's effective permissions are the deduped OR-union across ALL their assigned roles + any direct grants (no admin bypass). Every user has **≥1 role**. The first registered user is `is_admin` + the protected **Administrator** role (holds every permission, `is_system`, cannot be deleted/renamed/edited).
+RBAC: `is_admin` (bool) gates the admin area only. Feature permissions are **pure role-based** — a user's effective permissions are the deduped OR-union across ALL their assigned roles (no direct per-user grants, no admin bypass). Every user has **≥1 role**. The first registered user is `is_admin` + the protected **Administrator** role (holds every permission, `is_system`, cannot be deleted/renamed/edited).
 Errors: standard Laravel shape — `422` validation → `{"message": "...", "errors": {"field": ["..."]}}`; `401` unauthenticated; `403` forbidden (e.g. non-admin, or registration closed — note `403` has no `errors` key, only `message`); `429` rate-limited.
 Envelope: every success response is wrapped under a **resource-named key** — singular for one record (`user`, `role`, `branding`, `basic_info`, `dashboard`), plural for lists (`users`, `roles`, `activity_log`, `permissions`), each paired with `meta` when paginated. There is no generic `data` wrapper.
 Dates: all timestamps are `"DD-MM-YYYY HH:mm:ss"` strings, paired with a `_human` relative-time sibling (e.g. `"created_at": "24-07-2026 10:02:33"`, `"created_at_human": "2 minutes ago"`) — not ISO 8601.
@@ -58,7 +58,7 @@ The caller's **own** activity history only (not admin-wide — see `/admin/activ
 - Response: `{"activity_log": [{id, type, action, description, created_at, created_at_human}], "meta": {...}}` (`type` = entity, `action` = verb, `description` = composed sentence)
 
 ### `GET /permissions`
-Permission items the caller can see — the **deduped OR-union** across all their assigned roles + direct grants (each permission appears once; `manage`/`view` are true if any source grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
+Permission items the caller can see — the **deduped OR-union** across all their assigned roles (each permission appears once; `manage`/`view` are true if any role grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
 - Query: `level` (string, optional — filters to one permission level, e.g. `server`)
 - Response: `{"permissions": [{level, sub_level, name, title, icon, url, permissions: {view, manage}}]}`
 
@@ -105,13 +105,6 @@ Admin "login as user" — issues a **1-hour** token that authenticates as the ta
 - Path: `user` = user ID (must be a non-admin, not self)
 - Response `201`: `{"user": {...target...}, "token": string, "impersonated_by": {id, username}}`
 - Frontend: store this token and use it as the active session; `GET /auth/me` will report `impersonated_by` (show a banner); call `POST /auth/stop-impersonating` (with this token) to end and switch back to the admin's own token.
-
-### `PUT /admin/users/{user}/permissions`
-Direct permission grants for a user (in addition to whatever their assigned Role grants — union of both).
-- Path: `user` = user ID
-- Body: `permissions` (array, required) — each item: `level` (string, required), `name` (string, required), `view` (bool, required), `manage` (bool, required — implies `view: true` even if `view: false` was sent)
-- Unknown `(level, name)` pairs are silently skipped (not an error).
-- Response `204`
 
 ### `PUT /admin/users/{user}/roles`
 Syncs the user's assigned roles (many-to-many).

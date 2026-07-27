@@ -14,8 +14,7 @@ use Illuminate\Support\Facades\Process;
 function systemUserManager(bool $manage = true): User
 {
     $user = User::factory()->create();
-    $permission = Permission::firstWhere('name', 'system_user');
-    $user->permissions()->attach($permission->id, ['view' => true, 'manage' => $manage]);
+    grantPermission($user, 'system_user', view: true, manage: $manage);
 
     return $user;
 }

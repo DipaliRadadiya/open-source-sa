@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /*
@@ -45,6 +48,25 @@ function userPayload(array $overrides = []): array
         'is_admin' => false,
         'role_ids' => [$role->id],
     ], $overrides);
+}
+
+/**
+ * Grant a permission to a user via a one-off role (permissions are role-based
+ * only — there are no direct per-user grants). Creates a role holding the
+ * given permission with the requested abilities and assigns it to the user.
+ */
+function grantPermission(User $user, string $permissionName, bool $view = true, bool $manage = false): void
+{
+    $permission = Permission::firstWhere('name', $permissionName);
+    $suffix = $permissionName.'-'.($manage ? 'm' : 'v').'-'.$user->id;
+
+    $role = Role::create([
+        'name' => 'Grant '.$suffix,
+        'slug' => Str::slug('grant-'.$suffix),
+    ]);
+    $role->permissions()->attach($permission->id, ['view' => $view || $manage, 'manage' => $manage]);
+
+    $user->roles()->syncWithoutDetaching([$role->id]);
 }
 
 /*

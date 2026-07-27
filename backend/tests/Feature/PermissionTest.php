@@ -48,8 +48,7 @@ it('shows an admin every permission with full view+manage access', function () {
 it('shows a regular user only the permissions they were granted', function () {
     $this->seed(PermissionSeeder::class);
     $user = User::factory()->create();
-    $dashboard = Permission::firstWhere('name', 'dashboard');
-    $user->permissions()->attach($dashboard->id, ['view' => true, 'manage' => false]);
+    grantPermission($user, 'dashboard', view: true, manage: false);
 
     $token = $user->createToken('test')->plainTextToken;
     $response = $this->withHeader('Authorization', "Bearer {$token}")
@@ -61,77 +60,30 @@ it('shows a regular user only the permissions they were granted', function () {
     $response->assertJsonPath('permissions.0.permissions.manage', false);
 });
 
-it('lets an admin assign permissions to a user', function () {
+it('automatically grants view when a role is given manage', function () {
     $this->seed(PermissionSeeder::class);
     $admin = User::factory()->admin()->create();
-    $target = User::factory()->create();
     $token = $admin->createToken('test')->plainTextToken;
 
+    // manage-implies-view is enforced by PermissionResolver on the role path.
     $response = $this->withHeader('Authorization', "Bearer {$token}")
-        ->putJson("/api/admin/users/{$target->id}/permissions", [
-            'permissions' => [
-                ['level' => 'server', 'name' => 'dashboard', 'view' => true, 'manage' => true],
-                ['level' => 'server', 'name' => 'firewall', 'view' => true, 'manage' => false],
-            ],
-        ]);
-
-    $response->assertNoContent();
-    expect($target->permissions()->count())->toBe(2);
-});
-
-it('does not assign a permission when the level does not match the name', function () {
-    $this->seed(PermissionSeeder::class);
-    $admin = User::factory()->admin()->create();
-    $target = User::factory()->create();
-    $token = $admin->createToken('test')->plainTextToken;
-
-    $this->withHeader('Authorization', "Bearer {$token}")
-        ->putJson("/api/admin/users/{$target->id}/permissions", [
-            'permissions' => [
-                ['level' => 'application', 'name' => 'dashboard', 'view' => true, 'manage' => true],
-            ],
-        ])
-        ->assertNoContent();
-
-    expect($target->permissions()->count())->toBe(0);
-});
-
-it('automatically grants view when manage is granted', function () {
-    $this->seed(PermissionSeeder::class);
-    $admin = User::factory()->admin()->create();
-    $target = User::factory()->create();
-    $token = $admin->createToken('test')->plainTextToken;
-
-    $this->withHeader('Authorization', "Bearer {$token}")
-        ->putJson("/api/admin/users/{$target->id}/permissions", [
+        ->postJson('/api/admin/roles', [
+            'name' => 'Firewall Manager',
             'permissions' => [
                 ['level' => 'server', 'name' => 'firewall', 'view' => false, 'manage' => true],
             ],
-        ])
-        ->assertNoContent();
+        ]);
 
-    $grant = $target->permissions()->first();
-    expect((bool) $grant->pivot->view)->toBeTrue();
-    expect((bool) $grant->pivot->manage)->toBeTrue();
+    $response->assertCreated();
+    $firewall = collect($response->json('role.permissions'))->firstWhere('name', 'firewall');
+    expect($firewall['permissions']['view'])->toBeTrue();
+    expect($firewall['permissions']['manage'])->toBeTrue();
 });
 
 it('leaves parent_id null for all seeded items for now', function () {
     $this->seed(PermissionSeeder::class);
 
     expect(Permission::whereNotNull('parent_id')->count())->toBe(0);
-});
-
-it('denies a regular user from assigning permissions', function () {
-    $this->seed(PermissionSeeder::class);
-    $user = User::factory()->create();
-    $target = User::factory()->create();
-    $token = $user->createToken('test')->plainTextToken;
-
-    $this->withHeader('Authorization', "Bearer {$token}")
-        ->putJson("/api/admin/users/{$target->id}/permissions", [
-            'permissions' => [['level' => 'server', 'name' => 'dashboard', 'view' => true, 'manage' => true]],
-        ])
-        ->assertForbidden();
 });
 
 it('filters the check endpoint by level', function () {

@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Permission;
 use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -124,8 +123,7 @@ it('returns a translated error with reference when the ssh op fails', function (
 
 it('denies a viewer (no manage permission) from toggling ssh access', function () {
     $viewer = User::factory()->create();
-    $perm = Permission::firstWhere('name', 'system_user');
-    $viewer->permissions()->attach($perm->id, ['view' => true, 'manage' => false]);
+    grantPermission($viewer, 'system_user', view: true, manage: false);
     $token = $viewer->createToken('t')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
@@ -146,8 +144,7 @@ it('returns a translated error with reference when a settings op fails', functio
 
 it('denies a viewer (no manage permission) from changing settings', function () {
     $viewer = User::factory()->create();
-    $perm = Permission::firstWhere('name', 'system_user');
-    $viewer->permissions()->attach($perm->id, ['view' => true, 'manage' => false]);
+    grantPermission($viewer, 'system_user', view: true, manage: false);
     $token = $viewer->createToken('t')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")

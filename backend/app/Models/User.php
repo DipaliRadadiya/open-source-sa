@@ -40,19 +40,8 @@ class User extends Authenticatable
     }
 
     /**
-     * Direct per-user permission grants (overrides on top of roles).
-     */
-    public function permissions(): BelongsToMany
-    {
-        return $this->belongsToMany(Permission::class)
-            ->withPivot(['view', 'manage'])
-            ->withTimestamps();
-    }
-
-    /**
      * Named Roles assigned to this user (many-to-many). Effective
-     * permissions are the deduped union across all of them plus any direct
-     * grants.
+     * permissions are the deduped OR-union across all assigned roles.
      */
     public function roles(): BelongsToMany
     {
@@ -70,17 +59,12 @@ class User extends Authenticatable
     }
 
     /**
-     * Pure role-based resolution (no admin bypass): the ability is granted
-     * if ANY source — a direct grant or any assigned role — grants it.
-     * `manage` implies `view` is enforced upstream when grants are written.
+     * Pure role-based resolution (no admin bypass): the ability is granted if
+     * ANY assigned role grants it. `manage` implies `view` is enforced upstream
+     * when grants are written.
      */
     private function hasAbility(string $permissionName, string $ability): bool
     {
-        $direct = $this->permissions->firstWhere('name', $permissionName);
-        if ($direct && $direct->pivot->{$ability}) {
-            return true;
-        }
-
         foreach ($this->roles as $role) {
             $viaRole = $role->permissions->firstWhere('name', $permissionName);
             if ($viaRole && $viaRole->pivot->{$ability}) {

@@ -2,7 +2,6 @@
 
 use App\Models\ActivityLog;
 use App\Models\Cronjob;
-use App\Models\Permission;
 use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -360,8 +359,7 @@ it('localizes preset labels', function () {
 
 it('denies a viewer without manage from creating a cron job', function () {
     $viewer = User::factory()->create();
-    $perm = Permission::firstWhere('name', 'cronjob');
-    $viewer->permissions()->attach($perm->id, ['view' => true, 'manage' => false]);
+    grantPermission($viewer, 'cronjob', view: true, manage: false);
     $token = $viewer->createToken('t')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
