@@ -10,7 +10,13 @@ return new class extends Migration
     {
         Schema::create('cronjobs', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            // Unique, human-facing identifier (validation enforces at the API;
+            // the index guards races).
+            $table->string('name')->unique();
+            // Stable slug used for the /etc/cron.d filename (survives re-import,
+            // unlike the auto-increment id). Always set by the app on create;
+            // nullable at the DB level only.
+            $table->string('slug')->nullable()->unique();
             // The OS user the job runs as — canonical, always set. May be a
             // panel System User or a default/unmanaged account (root, www-data).
             $table->string('username')->index();
