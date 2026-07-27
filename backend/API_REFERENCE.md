@@ -319,6 +319,20 @@ Requires the `firewall` permission (`view` to read, `manage` to mutate). Backed 
 
 OS-op failures → `500 {message, reference}`.
 
+### Services
+Requires the `service` permission (`view` to read, `manage` to act). Manages **systemd** units — the catalog is derived from our supported type sets (web server / database / cache / worker) + auto-detected **php-fpm** versions; **only installed units are surfaced**. No DB — status is read **live** from systemctl (detect-don't-trust).
+
+**`GET /api/services`** — managed + installed services with live status.
+- Response: `{"services": [{key, label, unit, status, enabled, protected, actions}, …]}`.
+  - `status`: `active | inactive | failed`; `enabled`: bool (starts on boot).
+  - `protected: true` = the panel's own web server / php-fpm → can't be stopped/disabled (lock icon).
+  - `actions`: the allowed actions for *this* service (protected ones omit `stop`/`disable`) — render buttons directly from this.
+
+**`PUT /api/services/{service}`** — run an action. `{service}` = the `key`.
+- Body: `action` ∈ `start | stop | restart | reload | enable | disable`.
+- Response `200`: `{"service": { …refreshed service object… }}`.
+- `404` if the key is unknown or not installed; `422` if the action is blocked for a **protected** service (`stop`/`disable`) or the action is invalid; `500 {message, reference}` on systemctl failure.
+
 ---
 
 ## Enums / fixed values
@@ -331,5 +345,5 @@ OS-op failures → `500 {message, reference}`.
 ## Known activity-log `type`/`action` values (for filtering)
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
-- `types`: `cronjob`, `firewall`, `permission`, `role`, `system_user`, `user`
+- `types`: `cronjob`, `firewall`, `permission`, `role`, `service`, `system_user`, `user`
 - `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`

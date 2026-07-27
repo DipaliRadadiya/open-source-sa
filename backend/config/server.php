@@ -56,4 +56,33 @@ return [
         ',', (string) env('SERVER_DEFAULT_FIREWALL_PORTS', '80,443')
     ))),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Services
+    |--------------------------------------------------------------------------
+    |
+    | The systemd units the panel manages, derived from our supported type sets
+    | (web server / database / cache / worker). php-fpm units are detected at
+    | runtime from `php_dir`. Only installed units are surfaced. `protected`
+    | units (the panel's own web server + php-fpm) can't be stopped/disabled.
+    |
+    */
+
+    'php_dir' => env('SERVER_PHP_DIR', '/etc/php'),
+
+    'services' => [
+        ['key' => 'nginx', 'unit' => 'nginx', 'label' => 'Nginx'],
+        ['key' => 'apache', 'unit' => 'apache2', 'label' => 'Apache'],
+        ['key' => 'openlitespeed', 'unit' => 'lshttpd', 'label' => 'OpenLiteSpeed'],
+        ['key' => 'mysql', 'unit' => 'mysql', 'label' => 'MySQL'],
+        ['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB'],
+        ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB'],
+        ['key' => 'redis', 'unit' => 'redis-server', 'label' => 'Redis'],
+        ['key' => 'supervisor', 'unit' => 'supervisor', 'label' => 'Supervisor'],
+    ],
+
+    'protected_services' => array_values(array_filter(explode(
+        ',', (string) env('SERVER_PROTECTED_SERVICES', 'nginx,php8.4-fpm')
+    ))),
+
 ];
