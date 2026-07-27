@@ -423,6 +423,19 @@ The schedule is a **DB profile** (single source of truth) run by the **Laravel s
 
 **`GET /api/disk-cleaner/runs`** — run history (manual + scheduled), newest first, paginated. `{ runs: [{id, trigger, categories, freed, freed_total, freed_total_human, status, disk_percent, created_at, created_at_human}], meta }`.
 
+### Server Dashboard
+Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics are read cheaply from `/proc` (+ `df`) — no root, no storage; 24h history comes from a 5-min collector (`server_metrics`, pruned to 24h → bounded ~288 rows). Each concern is its own endpoint.
+
+**`GET /api/server/facts`** — info card (changes rarely). `{ facts: {hostname, os, kernel, arch, uptime:{seconds,human}, ip, cpu:{model,cores}, memory_total(+_human), disk_total(+_human), timezone, reboot_required, runtimes:{php,node,nginx,redis,mysql}} }` (runtime = version or `null` if absent).
+
+**`GET /api/server/metrics/live`** — current snapshot; **poll every ~2–5s** for the live gauges + the **Network in/out streaming chart**. `{ metrics: {cpu_percent, memory_percent, swap_percent, disk_percent, load_1, load_5, load_15, net_in, net_out, net_in_human, net_out_human} }` (net_* are bytes/sec).
+
+**`GET /api/server/metrics/history`** — 24h series for the **CPU / Memory / Disk / Load** charts. `{ metrics: [{sampled_at, cpu, memory, swap, disk, load_1, load_5, load_15, net_in, net_out}, …] }` (5-min cadence).
+
+**`GET /api/server/processes`** — server process table (top by CPU). `{ processes: [{pid, user, cpu, memory, command}, …] }`.
+
+*(Deferred — Phase 3, with the Databases feature: `GET /api/server/database/metrics/history` (query/QPS chart) + `GET /api/server/database/processes` (DB process table + kill-query), engine-detected.)*
+
 ---
 
 ## Enums / fixed values
