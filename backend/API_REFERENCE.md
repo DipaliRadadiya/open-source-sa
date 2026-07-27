@@ -427,10 +427,14 @@ The schedule is a **DB profile** (single source of truth) run by the **Laravel s
 Requires the `setting` permission (`view` to read, `manage` to change). A server-config hub of **groups**; no DB — values are read **live** and changes are written to **managed non-destructive drop-ins** (the distro's own config is never touched → migration-safe). Groups are detect-gated (unavailable ones, e.g. Redis when not installed, are omitted).
 
 **`GET /api/settings`** — all available groups + current values.
-- `{ settings: { general:{timezone,ntp,hostname}, security:{port,permit_root_login,password_authentication}, updates:{security_updates_enabled,auto_reboot,reboot_time,reboot_required}, redis?:{maxmemory,maxmemory_policy,has_password} } }`.
+- `{ settings: { general:{timezone,ntp,hostname}, swap:{enabled,path,size,size_human,used,used_human,free,free_human}, security:{port,permit_root_login,password_authentication}, updates:{security_updates_enabled,auto_reboot,reboot_time,reboot_required}, redis?:{maxmemory,maxmemory_policy,has_password} } }`.
 - `redis` omitted when redis-cli isn't installed. Passwords are never returned (`has_password` bool only).
 
 **`PUT /api/settings/general`** (`manage`) — `timezone` (valid tz id), `hostname`, `ntp` (bool). Applies via `timedatectl`/`hostnamectl`.
+
+**`PUT /api/settings/swap`** (`manage`) — manage a single **managed swap file**. `size_mb` (int, `0`–65536). `>0` creates/resizes idempotently (`swapoff` if active → `fallocate` → `chmod 600` → `mkswap` → `swapon` + a non-destructive `/etc/fstab` entry); `0` disables (swapoff + remove file + strip only our fstab line). Only the managed file is ever touched → migration-safe. Returns `{ swap: {…refreshed…} }`.
+
+**`POST /api/settings/reboot`** (`manage`) — schedule a server reboot. `delay_minutes` (int, optional, `0`–60; default `0` = now) → `shutdown -r now|+N`. Response **`202`**: `{ reboot: { scheduled: true, when: "now"|"+5" } }`. Writes a `setting.reboot_requested` activity entry. `500 {message, reference}` if the OS command fails.
 
 **`PUT /api/settings/security`** (`manage`) — SSH: `port` (1–65535), `permit_root_login` (`yes｜no｜prohibit-password`), `password_authentication` (bool). Writes an `sshd_config.d` drop-in, runs **`sshd -t` before reload**, **opens the new port in the firewall first** (if enabled). `422` if disabling password auth with **no SSH key present** (lockout guard).
 

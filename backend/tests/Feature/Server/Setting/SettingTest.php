@@ -15,12 +15,18 @@ beforeEach(function () {
     File::ensureDirectoryExists($this->dir);
     $this->redisCli = $this->dir.'/redis-cli';
     File::put($this->redisCli, '');
+    File::put($this->dir.'/meminfo', "SwapTotal:       2000000 kB\nSwapFree:        1500000 kB\n");
+    $this->swapFile = $this->dir.'/swapfile';
+    $this->fstab = $this->dir.'/fstab';
 
     config([
         'server.sshd_config_dir' => $this->dir,
         'server.unattended_upgrades_file' => $this->dir.'/99-panel-upgrades',
         'server.reboot_required_file' => $this->dir.'/reboot-required',
         'server.redis_cli' => $this->redisCli,
+        'server.proc_dir' => $this->dir,
+        'server.swap_file' => $this->swapFile,
+        'server.fstab' => $this->fstab,
     ]);
 });
 
@@ -74,7 +80,78 @@ it('reads all available setting groups', function () {
         ->assertJsonPath('settings.security.port', 22)
         ->assertJsonPath('settings.security.password_authentication', true)
         ->assertJsonPath('settings.updates.reboot_required', false)
-        ->assertJsonPath('settings.redis.has_password', false);
+        ->assertJsonPath('settings.redis.has_password', false)
+        ->assertJsonPath('settings.swap.enabled', true)   // 2000000 kB in the meminfo fixture
+        ->assertJsonPath('settings.swap.size', 2048000000)
+        ->assertJsonPath('settings.swap.path', $this->swapFile);
+});
+
+it('creates a swap file, activates it and adds an fstab entry', function () {
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/swap', ['size_mb' => 2048])->assertOk()
+        ->assertJsonPath('swap.path', $this->swapFile);
+
+    Process::assertRan(fn ($p) => $p->command === ['fallocate', '-l', '2048M', $this->swapFile]);
+    Process::assertRan(fn ($p) => $p->command === ['mkswap', $this->swapFile]);
+    Process::assertRan(fn ($p) => $p->command === ['swapon', $this->swapFile]);
+    expect(File::get($this->fstab))->toContain($this->swapFile.' none swap sw 0 0');
+    $this->assertDatabaseHas('activity_logs', ['type' => 'setting', 'action' => 'updated']);
+});
+
+it('disables swap and strips only its fstab line', function () {
+    fakeSettings();
+    File::put($this->fstab, "UUID=abc / ext4 defaults 0 1\n{$this->swapFile} none swap sw 0 0\n");
+    File::put($this->swapFile, 'x');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/swap', ['size_mb' => 0])->assertOk();
+
+    expect(File::exists($this->swapFile))->toBeFalse();
+    expect(File::get($this->fstab))
+        ->toContain('UUID=abc / ext4 defaults 0 1')
+        ->not->toContain($this->swapFile);
+});
+
+it('rejects a swap size over the configured ceiling', function () {
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/swap', ['size_mb' => 999999])
+        ->assertStatus(422)->assertJsonValidationErrorFor('size_mb');
+});
+
+it('schedules a server reboot and logs it', function () {
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/settings/reboot')->assertStatus(202)
+        ->assertJsonPath('reboot.scheduled', true)
+        ->assertJsonPath('reboot.when', 'now');
+
+    Process::assertRan(fn ($p) => $p->command === ['shutdown', '-r', 'now']);
+    $this->assertDatabaseHas('activity_logs', ['type' => 'setting', 'action' => 'reboot_requested']);
+});
+
+it('reboots with a grace delay when requested', function () {
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/settings/reboot', ['delay_minutes' => 5])->assertStatus(202)
+        ->assertJsonPath('reboot.when', '+5');
+
+    Process::assertRan(fn ($p) => $p->command === ['shutdown', '-r', '+5']);
+});
+
+it('denies reboot for a viewer without manage', function () {
+    fakeSettings();
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'setting', view: true, manage: false);
+    $token = $viewer->createToken('t')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/settings/reboot')->assertForbidden();
 });
 
 it('updates general settings and logs it', function () {

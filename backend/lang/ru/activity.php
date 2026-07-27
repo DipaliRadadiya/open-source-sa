@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'Удалён пользователь :username',
     'user.profile_updated' => 'Обновил свой профиль',
     'setting.updated' => 'Обновил настройки :group',
+    'setting.reboot_requested' => 'Запросил перезагрузку сервера (:when)',
     'role.created' => 'Создана роль :name',
     'role.updated' => 'Обновлена роль :name',
     'role.deleted' => 'Удалена роль :name',

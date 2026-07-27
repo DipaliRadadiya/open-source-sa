@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'Deleted user :username',
     'user.profile_updated' => 'Updated their profile',
     'setting.updated' => 'Updated :group settings',
+    'setting.reboot_requested' => 'Requested a server reboot (:when)',
     'role.created' => 'Created role :name',
     'role.updated' => 'Updated role :name',
     'role.deleted' => 'Deleted role :name',

@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'Usuário :username excluído',
     'user.profile_updated' => 'Atualizou seu perfil',
     'setting.updated' => 'Atualizou as configurações de :group',
+    'setting.reboot_requested' => 'Solicitou uma reinicialização do servidor (:when)',
     'role.created' => 'Função :name criada',
     'role.updated' => 'Função :name atualizada',
     'role.deleted' => 'Função :name excluída',

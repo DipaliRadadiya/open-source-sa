@@ -200,6 +200,14 @@ return [
         'volatile-lru', 'volatile-lfu', 'volatile-random', 'volatile-ttl',
     ],
 
+    // Swap: a single managed swap file. Only this file + its fstab line are
+    // ever touched (non-destructive → a migrated server keeps existing swap).
+    'swap_file' => env('SERVER_SWAP_FILE', '/swapfile'),
+
+    'swap_max_mb' => (int) env('SERVER_SWAP_MAX_MB', 65536), // 64 GB ceiling
+
+    'fstab' => env('SERVER_FSTAB', '/etc/fstab'),
+
     /*
     |--------------------------------------------------------------------------
     | Dashboard / metrics

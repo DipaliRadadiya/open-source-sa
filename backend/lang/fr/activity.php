@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'Utilisateur :username supprimé',
     'user.profile_updated' => 'A mis à jour son profil',
     'setting.updated' => 'A mis à jour les paramètres :group',
+    'setting.reboot_requested' => 'A demandé un redémarrage du serveur (:when)',
     'role.created' => 'Rôle :name créé',
     'role.updated' => 'Rôle :name mis à jour',
     'role.deleted' => 'Rôle :name supprimé',

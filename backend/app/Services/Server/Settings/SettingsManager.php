@@ -13,6 +13,7 @@ class SettingsManager
 {
     public function __construct(
         private GeneralSettings $general,
+        private SwapSettings $swap,
         private SecuritySettings $security,
         private UpdateSettings $updates,
         private RedisSettings $redis,
@@ -23,7 +24,7 @@ class SettingsManager
      */
     public function groups(): array
     {
-        return [$this->general, $this->security, $this->updates, $this->redis];
+        return [$this->general, $this->swap, $this->security, $this->updates, $this->redis];
     }
 
     public function find(string $key): ?SettingGroup
