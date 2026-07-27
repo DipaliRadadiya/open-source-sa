@@ -61,7 +61,7 @@ it('translates the registration-closed message for every advertised locale', fun
 
     $expected = [
         'de' => 'Die Registrierung ist geschlossen. Es existiert bereits ein Administrator; bitten Sie einen Administrator, Ihr Konto zu erstellen.',
-        'fr' => "Les inscriptions sont fermées. Un administrateur existe déjà ; demandez à un administrateur de créer votre compte.",
+        'fr' => 'Les inscriptions sont fermées. Un administrateur existe déjà ; demandez à un administrateur de créer votre compte.',
         'pt' => 'O registro está fechado. Já existe um administrador; peça a um administrador para criar a sua conta.',
         'ja' => '登録は締め切られています。すでに管理者が存在します。管理者にアカウントの作成を依頼してください。',
         'ru' => 'Регистрация закрыта. Администратор уже существует; попросите администратора создать вашу учётную запись.',
