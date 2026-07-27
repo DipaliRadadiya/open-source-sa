@@ -175,4 +175,29 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Settings
+    |--------------------------------------------------------------------------
+    |
+    | Paths + option sets for the server Settings feature. Changes are written
+    | to managed, NON-DESTRUCTIVE drop-ins (never the distro's own config), so
+    | a migrated server keeps its existing configuration. Overridable so tests
+    | can point them at writable temp paths.
+    |
+    */
+
+    'sshd_config_dir' => env('SERVER_SSHD_CONFIG_DIR', '/etc/ssh/sshd_config.d'),
+
+    'unattended_upgrades_file' => env('SERVER_UNATTENDED_UPGRADES', '/etc/apt/apt.conf.d/99-panel-upgrades'),
+
+    'reboot_required_file' => env('SERVER_REBOOT_REQUIRED', '/var/run/reboot-required'),
+
+    'redis_cli' => env('SERVER_REDIS_CLI', '/usr/bin/redis-cli'),
+
+    'redis_maxmemory_policies' => [
+        'noeviction', 'allkeys-lru', 'allkeys-lfu', 'allkeys-random',
+        'volatile-lru', 'volatile-lfu', 'volatile-random', 'volatile-ttl',
+    ],
+
 ];

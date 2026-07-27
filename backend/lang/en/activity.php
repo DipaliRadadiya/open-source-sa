@@ -13,6 +13,7 @@ return [
     'user.updated' => 'Updated user :username',
     'user.deleted' => 'Deleted user :username',
     'user.profile_updated' => 'Updated their profile',
+    'setting.updated' => 'Updated :group settings',
     'role.created' => 'Created role :name',
     'role.updated' => 'Updated role :name',
     'role.deleted' => 'Deleted role :name',
