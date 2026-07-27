@@ -351,6 +351,42 @@ Requires the `logs` permission (`view`). **Read-only.** No DB — the catalog is
 
 **`GET /api/logs/{key}/download`** — stream the full file as a download (`{key}.log`). Records a `log.downloaded` activity entry. `404`/`403` as above.
 
+#### Frontend implementation guide — Logs page (UX + how it maps to this API)
+> Researched against PatternFly's log-viewer guidelines, `open-log-viewer`, and common panel viewers (RunCloud/Forge). Everything below is buildable with **only the three endpoints above** — no extra backend work.
+
+**Layout (recommended): two-pane.**
+- **Left rail — source picker.** Render `GET /api/logs` grouped by `group` (headings: Web, Database, PHP, System, Security, Daemon). Each item shows `label`, a muted `size` (human-format the bytes client-side) and relative `modified`. If `readable === false`, show the item **disabled with a lock icon + tooltip** ("Needs elevated access") — don't let it open (the API returns `403`). This is the whole progressive-disclosure story: users see only sources that exist on *their* box.
+- **Right pane — viewer.** Monospace, dark canvas, **line numbers**, one line per array item from `log.lines`. Use a **virtualized list** (e.g. TanStack Virtual / react-window) — never render 5 000 `<div>`s directly; that's the #1 perf killer for log UIs.
+
+**Reading a source (initial load).** `GET /api/logs/{key}?lines=200` → render `log.lines`, stash `log.cursor`. If `log.truncated === true`, show a subtle top banner "Showing last 200 lines — [Load more]" ([Load more] just re-requests a bigger `lines`, e.g. 500 → 1000 → 5000-cap).
+
+**Live tail (poll cursor — no websocket needed).**
+```
+let cursor = res.log.cursor            // from the initial load
+setInterval(async () => {
+  if (!follow) return                  // "Live" toggle is OFF → skip
+  const r = await GET(`/api/logs/${key}?after=${cursor}`)
+  if (r.log.lines.length) append(r.log.lines)
+  cursor = r.log.cursor                // advance even if empty
+}, 3000)                               // 3–5s is plenty; make it the poll interval
+```
+- The backend is **rotation-safe**: if the file was rotated (size < cursor) it transparently returns a fresh tail — just replace the buffer when you detect `r.log.cursor < cursor`.
+- **"Live" toggle** (default ON for error/system logs, OFF for huge access logs). This is the standard tail on/off.
+
+**Smart-sticky auto-scroll (the single most important log-UX detail).** Auto-scroll to bottom **only while the user is already at the bottom**. The moment they scroll up, *stop* auto-scrolling (they're reading history) and show a **"↓ Jump to latest" pill**; clicking it (or scrolling back to the bottom) re-arms auto-scroll. Standard recipe: `isAtBottom = scrollHeight - clientHeight - scrollTop <= 10`.
+
+**Filter / search.** `?grep=<text>` = server-side **literal, case-insensitive** last-N-matching lines (cheap, scales to huge files — prefer it over client-side filtering). Debounce input ~300 ms. **Highlight** the matched substring in each rendered line. Show a **result count** ("42 matching lines") — key filtering-UX feedback. A client-side Ctrl/⌘+F "find in current view" is a nice complement for the already-loaded buffer.
+
+**Severity coloring (client-side, purely cosmetic).** Tokenize each line and tint by level so errors pop: `ERROR`/`CRITICAL`/`FATAL` → red, `WARN` → amber, `INFO` → default, `DEBUG`/`NOTICE` → muted. For **access logs**, colorize by HTTP status (2xx green, 3xx blue, 4xx amber, 5xx red). The API returns raw lines — all parsing is presentation-layer; keep a small per-group regex set.
+
+**Toolbar (top of viewer):** source label · **Live** toggle · lines selector (100/200/500/1000/5000) · search box (+ result count) · **Reload** · **Download** (`GET …/download` — browser handles the file) · **Wrap** (toggle line-wrap vs horizontal scroll) · **Clear view** (clears the *client* buffer only — Phase 1 has no server truncate).
+
+**States to handle:** empty file → "This log is empty."; `403` → inline "Not readable by the panel yet" (mirror the `readable` flag); `404` → "Log no longer available" (re-fetch catalog); network error mid-poll → pause tailing + retry badge, don't spam.
+
+**A11y / perf:** monospace font, line-height ~1.5, ≥14px; the scroll region is `role="log"` `aria-live="polite"` (only when following); throttle DOM appends to animation frames; cap the client buffer (e.g. last 10 000 lines) so long tailing sessions don't leak memory.
+
+**Field → UI cheat-sheet:** `group`→section headings · `label`→display name · `size`/`modified`→list metadata · `readable`→lock/disable · `lines`→viewport rows · `cursor`→pass back as `after` for tailing · `truncated`→"load more" banner.
+
 ---
 
 ## Enums / fixed values
