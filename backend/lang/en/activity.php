@@ -44,4 +44,6 @@ return [
     'cronjob.deleted' => 'Deleted cron job :name',
     'cronjob.create_failed' => 'Failed to create cron job :name',
     'log.downloaded' => 'Downloaded the :log log',
+    'disk_cleaner.cleaned' => 'Cleaned disk (:categories) — freed :freed',
+    'disk_cleaner.schedule_updated' => 'Updated the automatic disk cleaner (:enabled)',
 ];

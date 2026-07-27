@@ -387,6 +387,36 @@ setInterval(async () => {
 
 **Field → UI cheat-sheet:** `group`→section headings · `label`→display name · `size`/`modified`→list metadata · `readable`→lock/disable · `lines`→viewport rows · `cursor`→pass back as `after` for tailing · `truncated`→"load more" banner.
 
+### Disk Cleaner
+Requires the `disk_cleaner` permission (`view` to preview, `manage` to clean). **Server-level** cleanup (app-level logs/caches come later). No DB — disk usage + estimates are read **live** (detect-don't-trust). **Preview-then-clean**: the client selects **category keys only**; the panel resolves paths server-side (never a client path). Categories are detect-gated — only those whose dependency exists are returned.
+
+**`GET /api/disk-cleaner`** — preview.
+- Response: `{ disk: {path,total,used,free,percent, *_human}, categories: [{key,label,description,note,group,method,paths,safe,available,reclaimable,reclaimable_human}] }`.
+  - `method`: `delete｜truncate｜command` — how it reclaims space (UI badge). `paths`: exactly what it touches (globs/dirs, or a friendly label for command-based ones) — show before the user confirms.
+  - `note`: a short, localized plain-language line explaining **what happens and what is kept** when this category runs (e.g. "Empties the current service log files … services keep writing, nothing is deleted"). Show it as an info/tooltip on each category.
+  - `group`: `package｜logs｜temp`. `reclaimable`: bytes.
+- Phase-1 categories: `apt_cache`, `apt_orphans`, `journal`, `rotated_logs`, `service_logs` (truncates active service logs — kept, not deleted), `tmp`.
+
+**`POST /api/disk-cleaner/clean`** — clean the selected categories (synchronous).
+- Body: `categories` — non-empty array of keys ⊆ the available preview keys (whitelist; unknown/unavailable → `422`).
+- Response `200`: `{ disk: {…refreshed…}, cleaned: [{key,freed,freed_human}], freed_total, freed_total_human }`.
+- Writes a `disk_cleaner.cleaned` activity entry. `500 {message, reference}` on command failure.
+- **Safety:** targeted commands only (no `rm -rf`); active logs are **truncated, not deleted**; whitelisted keys, server-resolved paths.
+
+#### Automatic cleaner (schedule) — Phase 2
+The schedule is a **DB profile** (single source of truth) run by the **Laravel scheduler** — there is **no cron file**, so it can never drift with the Cronjobs feature. Managed entirely here (not on the Cronjobs page).
+
+**`GET /api/disk-cleaner/schedule`** — the profile (defaults when none set). `{ schedule: {enabled, frequency, categories, threshold_percent, notify, last_run_at, last_run_at_human} }`.
+
+**`PUT /api/disk-cleaner/schedule`** (`manage`) — create/update the profile.
+- Body: `enabled` (bool), `frequency` (`hourly｜daily｜weekly｜monthly`), `categories` (array of **safe** category keys), `threshold_percent` (1–100 or null = always), `notify` (bool).
+- Runs unattended **safe-only** categories, **only when due AND** (if set) disk usage ≥ `threshold_percent`. Edit/disable takes effect on the next tick.
+- Response `200`: `{ schedule: {…} }`. Writes `disk_cleaner.schedule_updated`.
+
+**`DELETE /api/disk-cleaner/schedule`** (`manage`) — remove the schedule entirely → `204`.
+
+**`GET /api/disk-cleaner/runs`** — run history (manual + scheduled), newest first, paginated. `{ runs: [{id, trigger, categories, freed, freed_total, freed_total_human, status, disk_percent, created_at, created_at_human}], meta }`.
+
 ---
 
 ## Enums / fixed values
@@ -399,5 +429,5 @@ setInterval(async () => {
 ## Known activity-log `type`/`action` values (for filtering)
 
 Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
-- `types`: `cronjob`, `firewall`, `log`, `permission`, `role`, `service`, `system_user`, `user`
-- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `downloaded`
+- `types`: `cronjob`, `disk_cleaner`, `firewall`, `log`, `permission`, `role`, `service`, `system_user`, `user`
+- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `downloaded`, `cleaned`, `schedule_updated`

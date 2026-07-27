@@ -44,4 +44,6 @@ return [
     'cronjob.deleted' => 'cronジョブ :name を削除しました',
     'cronjob.create_failed' => 'cronジョブ :name の作成に失敗しました',
     'log.downloaded' => ':log ログをダウンロードしました',
+    'disk_cleaner.cleaned' => 'ディスクをクリーンアップしました (:categories) — :freed 解放',
+    'disk_cleaner.schedule_updated' => '自動ディスククリーナーを更新しました (:enabled)',
 ];

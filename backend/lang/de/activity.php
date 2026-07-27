@@ -44,4 +44,6 @@ return [
     'cronjob.deleted' => 'Cronjob :name gelöscht',
     'cronjob.create_failed' => 'Cronjob :name konnte nicht erstellt werden',
     'log.downloaded' => 'Protokoll :log heruntergeladen',
+    'disk_cleaner.cleaned' => 'Festplatte bereinigt (:categories) — :freed freigegeben',
+    'disk_cleaner.schedule_updated' => 'Automatische Festplattenbereinigung aktualisiert (:enabled)',
 ];

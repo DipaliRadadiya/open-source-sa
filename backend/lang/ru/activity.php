@@ -44,4 +44,6 @@ return [
     'cronjob.deleted' => 'Удалено задание cron :name',
     'cronjob.create_failed' => 'Не удалось создать задание cron :name',
     'log.downloaded' => 'Скачал журнал :log',
+    'disk_cleaner.cleaned' => 'Очищен диск (:categories) — освобождено :freed',
+    'disk_cleaner.schedule_updated' => 'Обновлён автоматический очиститель диска (:enabled)',
 ];
