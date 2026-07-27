@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ServerMetricResource;
 use App\Models\ServerMetric;
 use App\Services\Server\Metrics\ServerMetrics;
-use App\Support\Bytes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Date;
 
@@ -21,17 +20,12 @@ class DashboardController extends Controller
     }
 
     /**
-     * Live metric snapshot — poll for live gauges + the network stream chart.
+     * Live metrics — each resource as total/used/free/percent (+ human) for the
+     * gauges, plus the network rate for the live stream chart. Poll this.
      */
     public function live(ServerMetrics $metrics): JsonResponse
     {
-        $snapshot = $metrics->snapshot();
-
-        return response()->json(['metrics' => [
-            ...$snapshot,
-            'net_in_human' => Bytes::human((int) $snapshot['net_in']).'/s',
-            'net_out_human' => Bytes::human((int) $snapshot['net_out']).'/s',
-        ]]);
+        return response()->json(['metrics' => $metrics->live()]);
     }
 
     /**

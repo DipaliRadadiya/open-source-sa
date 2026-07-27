@@ -71,17 +71,30 @@ it('returns server facts', function () {
         ->assertJsonPath('facts.runtimes.node', '20.11.0');
 });
 
-it('returns a live metric snapshot from /proc', function () {
+it('returns a live metric breakdown (total/used/free/percent) from /proc', function () {
     fakeDashboard();
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->getJson('/api/server/metrics/live')->assertOk()
-        ->assertJsonPath('metrics.memory_percent', 50)   // (8000000-4000000)/8000000
-        ->assertJsonPath('metrics.swap_percent', 25)     // (2000000-1500000)/2000000
-        ->assertJsonPath('metrics.disk_percent', 60)
-        ->assertJsonPath('metrics.load_1', 0.5)
-        ->assertJsonPath('metrics.load_15', 2)
-        ->assertJsonStructure(['metrics' => ['cpu_percent', 'net_in', 'net_out', 'net_in_human']]);
+        // memory: 8000000 kB total, 4000000 kB available → 50%, values in bytes
+        ->assertJsonPath('metrics.memory.total', 8192000000)
+        ->assertJsonPath('metrics.memory.used', 4096000000)
+        ->assertJsonPath('metrics.memory.free', 4096000000)
+        ->assertJsonPath('metrics.memory.percent', 50)
+        ->assertJsonPath('metrics.swap.percent', 25)
+        // disk from df -B1: total/used/free bytes + percent
+        ->assertJsonPath('metrics.disk.total', 100000000000)
+        ->assertJsonPath('metrics.disk.used', 60000000000)
+        ->assertJsonPath('metrics.disk.free', 40000000000)
+        ->assertJsonPath('metrics.disk.percent', 60)
+        ->assertJsonPath('metrics.cpu.cores', 2)
+        ->assertJsonPath('metrics.load.15', 2)
+        ->assertJsonStructure(['metrics' => [
+            'cpu' => ['percent', 'cores'],
+            'memory' => ['total', 'used', 'free', 'percent', 'used_human'],
+            'disk' => ['total', 'used', 'free', 'percent'],
+            'network' => ['in', 'out', 'in_human', 'out_human'],
+        ]]);
 });
 
 it('returns the server process table', function () {

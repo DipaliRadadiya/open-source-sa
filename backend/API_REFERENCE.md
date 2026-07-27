@@ -428,7 +428,17 @@ Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics ar
 
 **`GET /api/server/facts`** — info card (changes rarely). `{ facts: {hostname, os, kernel, arch, uptime:{seconds,human}, ip, cpu:{model,cores}, memory_total(+_human), disk_total(+_human), timezone, reboot_required, runtimes:{php,node,nginx,redis,mysql}} }` (runtime = version or `null` if absent).
 
-**`GET /api/server/metrics/live`** — current snapshot; **poll every ~2–5s** for the live gauges + the **Network in/out streaming chart**. `{ metrics: {cpu_percent, memory_percent, swap_percent, disk_percent, load_1, load_5, load_15, net_in, net_out, net_in_human, net_out_human} }` (net_* are bytes/sec).
+**`GET /api/server/metrics/live`** — current snapshot; **poll every ~2–5s** for the live gauges + the **Network in/out streaming chart**. Each resource is a full **total/used/free/percent** breakdown (bytes + `*_human`) so gauges can show "used of total, free":
+```
+{ "metrics": {
+  "cpu":    { "percent": 12.5, "cores": 2 },
+  "memory": { "total": 8192000000, "used": 4096000000, "free": 4096000000, "percent": 50, "total_human": "…", "used_human": "…", "free_human": "…" },
+  "swap":   { "total": …, "used": …, "free": …, "percent": 25, … },
+  "disk":   { "total": …, "used": …, "free": …, "percent": 60, … },
+  "load":   { "1": 0.5, "5": 1.2, "15": 2.0 },
+  "network":{ "in": 10240, "out": 5120, "in_human": "10 KB/s", "out_human": "5 KB/s" }   // bytes/sec
+} }
+```
 
 **`GET /api/server/metrics/history`** — 24h series for the **CPU / Memory / Disk / Load** charts. `{ metrics: [{sampled_at, cpu, memory, swap, disk, load_1, load_5, load_15, net_in, net_out}, …] }` (5-min cadence).
 

@@ -9,34 +9,68 @@ use App\Support\Bytes;
  * Reads server facts + live metrics cheaply from `/proc` (+ df / small probes).
  * Everything is world-readable, so this works without root (detect-don't-trust).
  * CPU % and network rate need two reads a short interval apart (cumulative
- * counters). The same `snapshot()` powers the live endpoint and the 5-min
- * collector.
+ * counters).
+ *
+ * `snapshot()` = the flat percent fields stored for the 24h charts (the 5-min
+ * collector). `live()` = a richer, UX-friendly breakdown (total/used/free +
+ * percent per resource) for the live gauges — computed on demand, never stored.
  */
 class ServerMetrics
 {
     public function __construct(private ServerOps $serverOps) {}
 
     /**
-     * Live metric snapshot (the 9 stored fields).
+     * Flat percent sample stored per 5-min tick (drives the CPU/Mem/Disk/Load
+     * history charts).
      *
      * @return array<string, int|float>
      */
     public function snapshot(): array
     {
+        $memory = $this->memoryUsage();
+        $swap = $this->swapUsage();
+        $disk = $this->diskUsage();
         [$load1, $load5, $load15] = $this->load();
-        [$memoryPercent, $swapPercent] = $this->memory();
         [$netIn, $netOut] = $this->network();
 
         return [
             'cpu_percent' => $this->cpuPercent(),
-            'memory_percent' => $memoryPercent,
-            'swap_percent' => $swapPercent,
-            'disk_percent' => $this->diskPercent(),
+            'memory_percent' => $memory['percent'],
+            'swap_percent' => $swap['percent'],
+            'disk_percent' => $disk['percent'],
             'load_1' => $load1,
             'load_5' => $load5,
             'load_15' => $load15,
             'net_in' => $netIn,
             'net_out' => $netOut,
+        ];
+    }
+
+    /**
+     * Live snapshot for the dashboard gauges — each resource as
+     * total / used / free / percent (+ human) so the UI can show a full
+     * breakdown, not just a percentage. Poll this for live gauges + the
+     * network stream chart.
+     *
+     * @return array<string, mixed>
+     */
+    public function live(): array
+    {
+        [$load1, $load5, $load15] = $this->load();
+        [$netIn, $netOut] = $this->network();
+
+        return [
+            'cpu' => ['percent' => $this->cpuPercent(), 'cores' => $this->cpuCores()],
+            'memory' => $this->withHuman($this->memoryUsage()),
+            'swap' => $this->withHuman($this->swapUsage()),
+            'disk' => $this->withHuman($this->diskUsage()),
+            'load' => ['1' => $load1, '5' => $load5, '15' => $load15],
+            'network' => [
+                'in' => $netIn,
+                'out' => $netOut,
+                'in_human' => Bytes::human($netIn).'/s',
+                'out_human' => Bytes::human($netOut).'/s',
+            ],
         ];
     }
 
@@ -47,8 +81,8 @@ class ServerMetrics
      */
     public function facts(): array
     {
-        $meminfo = $this->meminfo();
-        $ramTotal = ($meminfo['MemTotal'] ?? 0) * 1024;
+        $memory = $this->memoryUsage();
+        $disk = $this->diskUsage();
 
         return [
             'hostname' => $this->cmd(['hostname', '--fqdn']) ?: (string) gethostname(),
@@ -58,10 +92,10 @@ class ServerMetrics
             'uptime' => $this->uptime(),
             'ip' => $this->primaryIp(),
             'cpu' => ['model' => $this->cpuModel(), 'cores' => $this->cpuCores()],
-            'memory_total' => $ramTotal,
-            'memory_total_human' => Bytes::human((int) $ramTotal),
-            'disk_total' => $this->diskTotal(),
-            'disk_total_human' => Bytes::human($this->diskTotal()),
+            'memory_total' => $memory['total'],
+            'memory_total_human' => Bytes::human((int) $memory['total']),
+            'disk_total' => $disk['total'],
+            'disk_total_human' => Bytes::human((int) $disk['total']),
             'timezone' => $this->cmd(['timedatectl', 'show', '--property=Timezone', '--value']) ?: 'Etc/UTC',
             'reboot_required' => is_file((string) config('server.reboot_required_file', '/var/run/reboot-required')),
             'runtimes' => $this->runtimes(),
@@ -103,7 +137,76 @@ class ServerMetrics
         return $processes;
     }
 
-    // ---- metric helpers ----
+    // ---- usage breakdowns (total / used / free / percent) ----
+
+    /**
+     * @return array{total: int, used: int, free: int, percent: float}
+     */
+    private function memoryUsage(): array
+    {
+        $m = $this->meminfo();
+        $total = ($m['MemTotal'] ?? 0) * 1024;
+        $available = ($m['MemAvailable'] ?? 0) * 1024;
+
+        return $this->usage($total, max(0, $total - $available), $available);
+    }
+
+    /**
+     * @return array{total: int, used: int, free: int, percent: float}
+     */
+    private function swapUsage(): array
+    {
+        $m = $this->meminfo();
+        $total = ($m['SwapTotal'] ?? 0) * 1024;
+        $free = ($m['SwapFree'] ?? 0) * 1024;
+
+        return $this->usage($total, max(0, $total - $free), $free);
+    }
+
+    /**
+     * @return array{total: int, used: int, free: int, percent: float}
+     */
+    private function diskUsage(): array
+    {
+        $output = $this->serverOps->run(
+            ['df', '-B1', '-P', (string) config('server.disk_path', '/')],
+            ['feature' => 'dashboard', 'op' => 'disk'],
+        )->output();
+
+        $lines = array_values(array_filter(preg_split('/\r?\n/', trim($output)) ?: []));
+        $row = preg_split('/\s+/', trim((string) end($lines))) ?: [];
+
+        return $this->usage((int) ($row[1] ?? 0), (int) ($row[2] ?? 0), (int) ($row[3] ?? 0));
+    }
+
+    /**
+     * @return array{total: int, used: int, free: int, percent: float}
+     */
+    private function usage(int $total, int $used, int $free): array
+    {
+        return [
+            'total' => $total,
+            'used' => $used,
+            'free' => $free,
+            'percent' => $total > 0 ? round($used / $total * 100, 2) : 0.0,
+        ];
+    }
+
+    /**
+     * @param  array{total: int, used: int, free: int, percent: float}  $usage
+     * @return array<string, int|float|string>
+     */
+    private function withHuman(array $usage): array
+    {
+        return [
+            ...$usage,
+            'total_human' => Bytes::human($usage['total']),
+            'used_human' => Bytes::human($usage['used']),
+            'free_human' => Bytes::human($usage['free']),
+        ];
+    }
+
+    // ---- rate/instant metric helpers ----
 
     /**
      * @return array{0: float, 1: float, 2: float}
@@ -113,23 +216,6 @@ class ServerMetrics
         $parts = preg_split('/\s+/', trim($this->proc('loadavg')));
 
         return [(float) ($parts[0] ?? 0), (float) ($parts[1] ?? 0), (float) ($parts[2] ?? 0)];
-    }
-
-    /**
-     * @return array{0: float, 1: float}
-     */
-    private function memory(): array
-    {
-        $m = $this->meminfo();
-        $memTotal = $m['MemTotal'] ?? 0;
-        $memAvail = $m['MemAvailable'] ?? 0;
-        $swapTotal = $m['SwapTotal'] ?? 0;
-        $swapFree = $m['SwapFree'] ?? 0;
-
-        return [
-            $memTotal > 0 ? round(($memTotal - $memAvail) / $memTotal * 100, 2) : 0.0,
-            $swapTotal > 0 ? round(($swapTotal - $swapFree) / $swapTotal * 100, 2) : 0.0,
-        ];
     }
 
     private function cpuPercent(): float
@@ -197,29 +283,6 @@ class ServerMetrics
         return [$rx, $tx];
     }
 
-    private function diskPercent(): float
-    {
-        return (float) rtrim($this->dfField(4), '%');
-    }
-
-    private function diskTotal(): int
-    {
-        return (int) $this->dfField(1); // -B1 → bytes
-    }
-
-    private function dfField(int $index): string
-    {
-        $output = $this->serverOps->run(
-            ['df', '-B1', '-P', (string) config('server.disk_path', '/')],
-            ['feature' => 'dashboard', 'op' => 'disk'],
-        )->output();
-
-        $lines = array_values(array_filter(preg_split('/\r?\n/', trim($output)) ?: []));
-        $row = preg_split('/\s+/', trim((string) end($lines))) ?: [];
-
-        return (string) ($row[$index] ?? '0');
-    }
-
     // ---- facts helpers ----
 
     private function osName(): string
@@ -277,6 +340,9 @@ class ServerMetrics
         ];
     }
 
+    /**
+     * @param  array<int, string>  $command
+     */
     private function version(array $command): ?string
     {
         $result = $this->serverOps->run($command, ['feature' => 'dashboard', 'op' => 'runtime']);
@@ -294,6 +360,9 @@ class ServerMetrics
 
     // ---- low-level ----
 
+    /**
+     * @return array<string, int>
+     */
     private function meminfo(): array
     {
         $info = [];
@@ -313,6 +382,9 @@ class ServerMetrics
         return is_file($path) ? (string) @file_get_contents($path) : '';
     }
 
+    /**
+     * @param  array<int, string>  $command
+     */
     private function cmd(array $command): string
     {
         return trim($this->serverOps->run($command, ['feature' => 'dashboard', 'op' => 'fact'])->output());
