@@ -203,6 +203,28 @@ class SqlEngine implements DatabaseEngine
         $this->maintain($database, 'REPAIR');
     }
 
+    public function dump(string $database, string $path): void
+    {
+        $client = (string) config("server.databases.engines.{$this->connection->engine}.dump_client", 'mysqldump');
+        $authFile = $this->writeAuthFile();
+
+        try {
+            // `--result-file` writes straight to disk (no stdout buffering) and
+            // the creds live in the 0600 auth file — nothing sensitive on argv.
+            $result = $this->serverOps->run(
+                [$client, '--defaults-extra-file='.$authFile, '--single-transaction', '--quick',
+                    '--routines', '--triggers', '--result-file='.$path, $database],
+                ['feature' => 'database', 'engine' => $this->connection->engine, 'op' => 'export'],
+                600,
+            );
+            if ($result->failed()) {
+                throw new DatabaseOperationException($result->reference);
+            }
+        } finally {
+            @unlink($authFile);
+        }
+    }
+
     private function maintain(string $database, string $verb): void
     {
         $names = array_map(fn (array $t) => $this->ident($t['name']), $this->tables($database));

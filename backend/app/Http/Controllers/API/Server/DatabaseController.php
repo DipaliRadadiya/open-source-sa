@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Database\AdoptDatabases;
 use App\Actions\Server\Database\CreateDatabase;
 use App\Actions\Server\Database\DeleteDatabase;
+use App\Actions\Server\Database\ExportDatabase;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
 use App\Http\Requests\Server\Database\StoreDatabaseRequest;
@@ -14,6 +15,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DatabaseController extends Controller
 {
@@ -104,5 +106,30 @@ class DatabaseController extends Controller
         $log->log('database.repaired', $database, ['name' => $database->name]);
 
         return response()->json(['database' => DatabaseResource::make($database)->resolve()]);
+    }
+
+    /**
+     * Export (dump) a database — read-only, non-destructive.
+     */
+    public function export(Database $database, ExportDatabase $action): JsonResponse
+    {
+        $export = $action->execute($database);
+        $export['download_url'] = url('/api/databases/exports/'.$export['file']);
+
+        return response()->json(['export' => $export], 201);
+    }
+
+    /**
+     * Stream a previously-created export for download. Filename is strictly
+     * validated + resolved inside the exports dir (no path traversal).
+     */
+    public function download(string $file): BinaryFileResponse
+    {
+        abort_unless(preg_match('/^[A-Za-z0-9._-]+$/', $file) === 1, 404);
+
+        $path = rtrim((string) config('server.databases.export_dir'), '/').'/'.basename($file);
+        abort_unless(is_file($path), 404);
+
+        return response()->download($path);
     }
 }

@@ -202,6 +202,33 @@ class MongoEngine implements DatabaseEngine
         // MongoDB has no REPAIR TABLE equivalent — no-op.
     }
 
+    public function dump(string $database, string $path): void
+    {
+        $client = (string) config('server.databases.engines.mongodb.dump_client', 'mongodump');
+        // mongodump can't read a defaults-file — put the password in a 0600
+        // YAML config (`--config`), everything else on argv is non-secret.
+        $dir = rtrim((string) config('server.databases.auth_file_dir', sys_get_temp_dir()), '/');
+        $configFile = $dir.'/db-'.bin2hex(random_bytes(8)).'.yaml';
+        file_put_contents($configFile, 'password: '.json_encode((string) $this->connection->password)."\n");
+        @chmod($configFile, 0600);
+
+        try {
+            $result = $this->serverOps->run([
+                $client, '--config='.$configFile,
+                '--host='.($this->connection->host ?: '127.0.0.1'),
+                '--port='.(int) ($this->connection->port ?: 27017),
+                '--username='.(string) $this->connection->username,
+                '--authenticationDatabase='.(string) (($this->connection->options['authSource'] ?? null) ?: 'admin'),
+                '--db='.$database, '--archive='.$path, '--gzip',
+            ], ['feature' => 'database', 'engine' => 'mongodb', 'op' => 'export'], 600);
+            if ($result->failed()) {
+                throw new DatabaseOperationException($result->reference);
+            }
+        } finally {
+            @unlink($configFile);
+        }
+    }
+
     private function must(string $script): void
     {
         $result = $this->run($script);

@@ -26,6 +26,7 @@ return [
     'database.process_killed' => ':engine-Prozess :process beendet',
     'database.optimized' => 'Datenbank :name optimiert',
     'database.repaired' => 'Datenbank :name repariert',
+    'database.exported' => 'Datenbank :name exportiert',
     'role.created' => 'Rolle :name erstellt',
     'role.updated' => 'Rolle :name aktualisiert',
     'role.deleted' => 'Rolle :name gelöscht',

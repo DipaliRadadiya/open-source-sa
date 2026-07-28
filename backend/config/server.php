@@ -249,9 +249,9 @@ return [
 
     'databases' => [
         'engines' => [
-            'mysql' => ['driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
-            'mariadb' => ['driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
-            'mongodb' => ['driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'default_port' => 27017, 'default_socket' => null],
+            'mysql' => ['driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
+            'mariadb' => ['driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
+            'mongodb' => ['driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'default_port' => 27017, 'default_socket' => null],
         ],
 
         // Never created/dropped/altered by the panel (deny-by-default guard).
@@ -274,6 +274,9 @@ return [
         // 0600 temp auth files (--defaults-extra-file) are written here so a DB
         // password is never passed on argv (visible in `ps`).
         'auth_file_dir' => env('SERVER_DB_AUTH_DIR', sys_get_temp_dir()),
+
+        // Where database exports (dumps) are written + streamed from.
+        'export_dir' => env('SERVER_DB_EXPORT_DIR', storage_path('app/db-exports')),
     ],
 
 ];

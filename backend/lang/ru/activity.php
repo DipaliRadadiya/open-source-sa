@@ -26,6 +26,7 @@ return [
     'database.process_killed' => 'Завершил процесс :process (:engine)',
     'database.optimized' => 'Оптимизировал базу данных :name',
     'database.repaired' => 'Восстановил базу данных :name',
+    'database.exported' => 'Экспортировал базу данных :name',
     'role.created' => 'Создана роль :name',
     'role.updated' => 'Обновлена роль :name',
     'role.deleted' => 'Удалена роль :name',

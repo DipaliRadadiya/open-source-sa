@@ -26,6 +26,7 @@ return [
     'database.process_killed' => 'A arrêté le processus :process de :engine',
     'database.optimized' => 'A optimisé la base de données :name',
     'database.repaired' => 'A réparé la base de données :name',
+    'database.exported' => 'A exporté la base de données :name',
     'role.created' => 'Rôle :name créé',
     'role.updated' => 'Rôle :name mis à jour',
     'role.deleted' => 'Rôle :name supprimé',

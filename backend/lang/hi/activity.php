@@ -26,6 +26,7 @@ return [
     'database.process_killed' => ':engine प्रोसेस :process समाप्त किया',
     'database.optimized' => ':name डेटाबेस ऑप्टिमाइज़ किया',
     'database.repaired' => ':name डेटाबेस मरम्मत किया',
+    'database.exported' => ':name डेटाबेस एक्सपोर्ट किया',
     'role.created' => 'भूमिका :name बनाई',
     'role.updated' => 'भूमिका :name अपडेट की',
     'role.deleted' => 'भूमिका :name हटाई',
