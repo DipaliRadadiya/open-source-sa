@@ -6,6 +6,7 @@ use App\Models\DbMetric;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 beforeEach(function () {
@@ -308,4 +309,45 @@ it('samples db metrics into the table and prunes old rows', function () {
     expect(DbMetric::where('engine', 'mysql')->where('queries', 1000)->exists())->toBeTrue();
 
     Carbon::setTestNow();
+});
+
+// ---- P2b: export (safe, read-only) ----
+
+it('exports a database and streams the download', function () {
+    $dir = sys_get_temp_dir().'/sv-oss-exp-'.uniqid();
+    config(['server.databases.export_dir' => $dir]);
+
+    Process::fake(function ($process) {
+        $cmd = $process->command;
+        if (in_array($cmd[0] ?? '', ['mysqldump', 'mariadb-dump'], true)) {
+            foreach ($cmd as $arg) {
+                if (str_starts_with($arg, '--result-file=')) {
+                    $out = substr($arg, 14);
+                    @mkdir(dirname($out), 0700, true);
+                    file_put_contents($out, "-- dump\nCREATE TABLE t (id INT);\n");
+                }
+            }
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    $res = test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/export")->assertStatus(201);
+    $file = $res->json('export.file');
+    expect($res->json('export.size_bytes'))->toBeGreaterThan(0);
+    expect($res->json('export.download_url'))->toContain('/api/databases/exports/'.$file);
+    test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'exported']);
+
+    test()->withHeaders(dbAuth())->get("/api/databases/exports/{$file}")->assertOk();
+
+    File::deleteDirectory($dir);
+});
+
+it('404s a missing or traversal export filename', function () {
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->getJson('/api/databases/exports/nope-does-not-exist.sql')->assertNotFound();
+    test()->withHeaders(dbAuth())->getJson('/api/databases/exports/..%2f..%2fetc%2fpasswd')->assertNotFound();
 });

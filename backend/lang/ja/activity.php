@@ -26,6 +26,7 @@ return [
     'database.process_killed' => ':engine のプロセス :process を終了しました',
     'database.optimized' => ':name データベースを最適化しました',
     'database.repaired' => ':name データベースを修復しました',
+    'database.exported' => ':name データベースをエクスポートしました',
     'role.created' => 'ロール :name を作成しました',
     'role.updated' => 'ロール :name を更新しました',
     'role.deleted' => 'ロール :name を削除しました',

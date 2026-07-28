@@ -26,6 +26,10 @@ Route::delete('/databases/processes/{id}', [DatabaseMonitorController::class, 'k
 Route::get('/databases/status/{engine}', [DatabaseMonitorController::class, 'status'])->middleware('permission:database');
 Route::get('/databases/metrics/history', [DatabaseMonitorController::class, 'history'])->middleware('permission:database');
 
+// Export download (static; strict filename, resolved inside the exports dir).
+Route::get('/databases/exports/{file}', [DatabaseController::class, 'download'])
+    ->where('file', '[A-Za-z0-9._-]+')->middleware('permission:database');
+
 // Databases.
 Route::get('/databases', [DatabaseController::class, 'index'])->middleware('permission:database');
 Route::post('/databases', [DatabaseController::class, 'store'])->middleware('permission:database,manage');
@@ -36,6 +40,7 @@ Route::delete('/databases/{database}', [DatabaseController::class, 'destroy'])->
 Route::get('/databases/{database}/tables', [DatabaseController::class, 'tables'])->middleware('permission:database');
 Route::post('/databases/{database}/optimize', [DatabaseController::class, 'optimize'])->middleware('permission:database,manage');
 Route::post('/databases/{database}/repair', [DatabaseController::class, 'repair'])->middleware('permission:database,manage');
+Route::post('/databases/{database}/export', [DatabaseController::class, 'export'])->middleware('permission:database');
 
 // Database users (nested — a user belongs to one database).
 Route::middleware('permission:database')->group(function () {

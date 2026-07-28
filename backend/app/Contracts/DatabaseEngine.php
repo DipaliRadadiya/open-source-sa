@@ -83,4 +83,7 @@ interface DatabaseEngine
 
     /** Repair tables (SQL REPAIR TABLE). No-op where unsupported. */
     public function repair(string $database): void;
+
+    /** Export the database to $path (mysqldump `--result-file` / mongodump `--archive`). Read-only. */
+    public function dump(string $database, string $path): void;
 }

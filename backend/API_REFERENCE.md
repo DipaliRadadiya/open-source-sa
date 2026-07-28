@@ -504,7 +504,11 @@ Requires the `database` permission (`view` to read, `manage` to mutate). **3 eng
 - **`GET /api/databases/{database}/tables`** — structure peek: `{ tables: [{name, rows, size_bytes}] }` (no data browsing — that's phpMyAdmin).
 - **`POST /api/databases/{database}/optimize`** / **`/repair`** (`manage`) — `OPTIMIZE`/`REPAIR TABLE` across the DB's tables (SQL; no-op on Mongo). `{ database: {…} }`.
 
-*(Remaining P2: dump/restore. P3: engine install-on-demand, app auto-DB + env-wiring, rename-database, phpMyAdmin signon SSO.)*
+**Export (dump) — read-only, safe:**
+- **`POST /api/databases/{database}/export`** — dumps the DB (`mysqldump --single-transaction` / `mongodump --archive --gzip`) to a managed exports dir. `201 { export: {file, size_bytes, created_at, download_url} }`. Source DB untouched; activity `database.exported`.
+- **`GET /api/databases/exports/{file}`** — streams a previously-created export for download. Filename strict-validated + resolved inside the exports dir (no traversal).
+
+*(Remaining P2: **import/restore** — deferred (writes data → will ship with existing-target-only + backup-before + confirm). P3: engine install-on-demand, app auto-DB + env-wiring, rename-database, phpMyAdmin signon SSO.)*
 
 ---
 
