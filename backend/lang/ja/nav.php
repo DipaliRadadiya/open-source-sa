@@ -13,4 +13,6 @@ return [
     'setting' => '設定',
     'disk_cleaner' => 'ディスククリーナー',
     'activity_log' => 'アクティビティログ',
+    'git' => 'Git',
+    'storage' => 'ストレージ',
 ];

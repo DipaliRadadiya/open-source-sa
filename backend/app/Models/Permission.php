@@ -22,6 +22,18 @@ class Permission extends Model
         return trans()->has($key) ? __($key) : (string) $this->title;
     }
 
+    /**
+     * Sidebar section header for this permission's sub-level, in the caller's
+     * locale. Same fallback contract as localizedTitle(): an unknown sub-level
+     * still renders (title-cased) instead of returning an empty header.
+     */
+    public function localizedSubLevel(): string
+    {
+        $key = 'nav_group.'.$this->sub_level;
+
+        return trans()->has($key) ? __($key) : ucfirst((string) $this->sub_level);
+    }
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class)

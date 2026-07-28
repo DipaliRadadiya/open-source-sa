@@ -64,6 +64,7 @@ class PermissionController extends Controller
                 return [
                     'level' => $permission->level,
                     'sub_level' => $permission->sub_level,
+                    'sub_level_title' => $permission->localizedSubLevel(),
                     'name' => $permission->name,
                     'title' => $permission->localizedTitle(),
                     'icon' => $permission->icon,

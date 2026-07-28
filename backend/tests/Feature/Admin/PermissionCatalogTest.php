@@ -18,10 +18,10 @@ it('returns the full permission catalog to an admin', function () {
 
     $response->assertOk()
         ->assertJsonCount(Permission::count(), 'permissions')
-        ->assertJsonStructure(['permissions' => [['level', 'sub_level', 'name', 'title', 'icon', 'url']]]);
+        ->assertJsonStructure(['permissions' => [['level', 'sub_level', 'sub_level_title', 'name', 'title', 'icon', 'url']]]);
 
     $names = collect($response->json('permissions'))->pluck('name');
-    expect($names)->toContain('system_user', 'cronjob');
+    expect($names)->toContain('system_user', 'cronjob', 'git', 'storage');
     // catalog is metadata only — no per-permission grant state
     expect($response->json('permissions.0'))->not->toHaveKey('permissions');
 });
@@ -38,13 +38,13 @@ it('re-syncs the permission catalog for an admin', function () {
         ->postJson('/api/admin/permissions/sync');
 
     $response->assertOk()
-        ->assertJsonPath('synced', 12)
-        ->assertJsonCount(12, 'permissions');
-    expect(Permission::count())->toBe(12);
+        ->assertJsonPath('synced', 14)
+        ->assertJsonCount(14, 'permissions');
+    expect(Permission::count())->toBe(14);
 
     // audit entry recorded
     $log = ActivityLog::where('type', 'permission')->where('action', 'synced')->latest('id')->first();
-    expect($log->properties['count'])->toBe(12);
+    expect($log->properties['count'])->toBe(14);
 });
 
 it('denies a non-admin from syncing permissions', function () {

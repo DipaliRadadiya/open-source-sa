@@ -13,4 +13,6 @@ return [
     'setting' => 'Einstellungen',
     'disk_cleaner' => 'Datenträgerbereinigung',
     'activity_log' => 'Aktivitätsprotokoll',
+    'git' => 'Git',
+    'storage' => 'Speicher',
 ];
