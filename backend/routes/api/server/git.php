@@ -18,6 +18,11 @@ Route::get('/integrations/git/providers', [GitAccountController::class, 'provide
 Route::get('/integrations/git/accounts', [GitAccountController::class, 'index'])
     ->middleware('permission:git');
 
+// Live token health. Separate from the index on purpose: the index is a cheap
+// DB read the app-create wizard also uses, and must not wait on providers.
+Route::get('/integrations/git/accounts/status', [GitAccountController::class, 'status'])
+    ->middleware(['permission:git', 'throttle:30,1']);
+
 Route::post('/integrations/git/accounts', [GitAccountController::class, 'store'])
     ->middleware(['permission:git,manage', 'throttle:20,1']);
 

@@ -284,6 +284,145 @@ it('records the connection in the activity log', function () {
         ->assertJsonPath('activity_log.0.action', 'connected');
 });
 
+it('reports live token status per account without persisting anything', function () {
+    connectGithub(['label' => 'Alive']);
+    connectGithub(['label' => 'Revoked', 'token' => 'ghp_dead']);
+
+    Http::fake([
+        'api.github.com/user' => Http::sequence()
+            ->push(['login' => 'octocat'], 200, ['github-authentication-token-expiration' => '2026-08-12 00:00:00 UTC'])
+            ->push(['message' => 'Bad credentials'], 401),
+    ]);
+
+    $response = $this->withHeaders(asAdmin())->getJson('/api/integrations/git/accounts/status');
+
+    $response->assertOk();
+    $statuses = collect($response->json('statuses'))->keyBy('label');
+
+    expect($statuses['Alive']['status'])->toBe('valid');
+    expect($statuses['Alive']['status_title'])->toBe('Connected');
+    expect($statuses['Alive']['expires_at'])->toBe('12-08-2026 00:00:00');
+    expect($statuses['Alive']['expires_in_days'])->toBeGreaterThan(0);
+
+    expect($statuses['Revoked']['status'])->toBe('invalid');
+    expect($statuses['Revoked']['expires_at'])->toBeNull();
+
+    // Nothing about the verdict is written back to the row.
+    expect(GitAccount::whereNotNull('last_verified_at')->count())->toBe(2); // unchanged from creation
+});
+
+it('reports unknown rather than invalid when the provider is unreachable', function () {
+    connectGithub();
+
+    Http::fake(['api.github.com/*' => Http::response(['message' => 'oops'], 500)]);
+
+    $response = $this->withHeaders(asAdmin())->getJson('/api/integrations/git/accounts/status');
+
+    $response->assertOk();
+    // A provider outage must not accuse a healthy token.
+    $response->assertJsonPath('statuses.0.status', 'unknown');
+    $response->assertJsonPath('statuses.0.status_title', 'Could not check');
+});
+
+it('keeps one dead account from breaking the other rows', function () {
+    connectGithub(['label' => 'AAA GitHub']);
+    GitAccount::create([
+        'provider' => 'bitbucket',
+        'label' => 'BBB Bitbucket',
+        'identifier' => 'acme',
+        'workspace' => 'acme',
+        'token' => 'atl_token',
+        'last_verified_at' => now(),
+    ]);
+
+    Http::fake([
+        'api.github.com/user' => Http::response(['login' => 'octocat'], 200),
+        'api.bitbucket.org/*' => Http::response(['error' => 'revoked'], 401),
+    ]);
+
+    $response = $this->withHeaders(asAdmin())->getJson('/api/integrations/git/accounts/status');
+
+    $response->assertOk()->assertJsonCount(2, 'statuses');
+    $response->assertJsonPath('statuses.0.status', 'valid');
+    $response->assertJsonPath('statuses.1.status', 'invalid');
+    // Bitbucket never exposes an expiry — null means "none", not "lookup failed".
+    $response->assertJsonPath('statuses.1.expires_at', null);
+});
+
+it('reads the gitlab token expiry from the self endpoint', function () {
+    GitAccount::create([
+        'provider' => 'gitlab',
+        'label' => 'GitLab',
+        'identifier' => 'dev',
+        'token' => 'glpat_x',
+        'last_verified_at' => now(),
+    ]);
+
+    Http::fake([
+        'gitlab.com/api/v4/personal_access_tokens/self' => Http::response([
+            'active' => true, 'revoked' => false, 'expires_at' => '2026-09-01',
+        ], 200),
+    ]);
+
+    $response = $this->withHeaders(asAdmin())->getJson('/api/integrations/git/accounts/status');
+
+    $response->assertOk();
+    $response->assertJsonPath('statuses.0.status', 'valid');
+    $response->assertJsonPath('statuses.0.expires_at', '01-09-2026 00:00:00');
+});
+
+it('treats a revoked gitlab token as invalid even when the api describes it', function () {
+    GitAccount::create([
+        'provider' => 'gitlab',
+        'label' => 'GitLab',
+        'identifier' => 'dev',
+        'token' => 'glpat_x',
+        'last_verified_at' => now(),
+    ]);
+
+    Http::fake([
+        'gitlab.com/api/v4/personal_access_tokens/self' => Http::response([
+            'active' => false, 'revoked' => true, 'expires_at' => '2026-09-01',
+        ], 200),
+    ]);
+
+    $this->withHeaders(asAdmin())->getJson('/api/integrations/git/accounts/status')
+        ->assertOk()
+        ->assertJsonPath('statuses.0.status', 'invalid');
+});
+
+it('falls back to the user endpoint when a gitlab token lacks read_api scope', function () {
+    GitAccount::create([
+        'provider' => 'gitlab',
+        'label' => 'GitLab',
+        'identifier' => 'dev',
+        'token' => 'glpat_repo_only',
+        'last_verified_at' => now(),
+    ]);
+
+    Http::fake([
+        // read_repository-only tokens are refused here — that says nothing
+        // about the token's health.
+        'gitlab.com/api/v4/personal_access_tokens/self' => Http::response(['message' => '403 Forbidden'], 403),
+        'gitlab.com/api/v4/user' => Http::response(['username' => 'dev'], 200),
+    ]);
+
+    $response = $this->withHeaders(asAdmin())->getJson('/api/integrations/git/accounts/status');
+
+    $response->assertOk();
+    $response->assertJsonPath('statuses.0.status', 'valid');
+    $response->assertJsonPath('statuses.0.expires_at', null);
+});
+
+it('denies the status endpoint without the git permission', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('t')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/integrations/git/accounts/status')
+        ->assertForbidden();
+});
+
 it('denies a user without the git permission', function () {
     $user = User::factory()->create();
     $token = $user->createToken('t')->plainTextToken;

@@ -12,6 +12,15 @@ return [
         'bitbucket' => 'Bitbucket',
     ],
 
+    // Live token health. `unknown` deliberately reads as "we could not
+    // check", never as "broken" — the provider was unreachable, not the
+    // credential rejected.
+    'status' => [
+        'valid' => 'Connected',
+        'invalid' => 'Token invalid',
+        'unknown' => 'Could not check',
+    ],
+
     'fields' => [
         'token' => 'Access token',
         'host' => 'Self-hosted URL',

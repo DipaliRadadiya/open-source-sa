@@ -7,6 +7,12 @@ return [
         'bitbucket' => 'Bitbucket',
     ],
 
+    'status' => [
+        'valid' => 'Conectado',
+        'invalid' => 'Token inválido',
+        'unknown' => 'Não foi possível verificar',
+    ],
+
     'fields' => [
         'token' => 'Token de acesso',
         'host' => 'URL auto-hospedada',

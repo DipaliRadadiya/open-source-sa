@@ -7,6 +7,7 @@ use App\Exceptions\Server\GitProviderException;
 use App\Models\GitAccount;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -72,6 +73,48 @@ abstract class AbstractGitProvider implements GitProvider
         }
 
         return $response;
+    }
+
+    /**
+     * Make a request for a *status* check, where failure is information
+     * rather than an error.
+     *
+     * Distinguishes the two failures that must not look alike in the UI: a
+     * rejected credential (the user must act) versus a provider we could not
+     * reach (nobody should act — a five-second outage must not paint every
+     * account red).
+     *
+     * @param  callable(PendingRequest): Response  $call
+     * @return array{status: 'valid'|'invalid'|'unknown', response: ?Response}
+     */
+    protected function probe(GitAccount $account, callable $call): array
+    {
+        try {
+            return ['status' => 'valid', 'response' => $this->send($account, $call)];
+        } catch (GitProviderException $e) {
+            return [
+                'status' => $e->kind === GitProviderException::INVALID_CREDENTIALS ? 'invalid' : 'unknown',
+                'response' => null,
+            ];
+        }
+    }
+
+    /**
+     * Parse a provider-supplied expiry into a date, tolerating whatever
+     * format it uses. An unparseable value is simply "no expiry known" — it
+     * must never turn a healthy account into an error.
+     */
+    protected function parseExpiry(?string $value): ?Carbon
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**

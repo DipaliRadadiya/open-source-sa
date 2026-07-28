@@ -34,6 +34,41 @@ class GitAccountController extends Controller
         ]);
     }
 
+    /**
+     * Live token health, one row per connected account.
+     *
+     * Deliberately separate from index(): index is a cheap database read that
+     * other screens (the app-create wizard) also use, and it must not inherit
+     * a third party's latency. The page loads both in parallel and fills the
+     * badges in when this answers.
+     *
+     * Nothing here is cached or stored — a token can be revoked at the
+     * provider at any moment, so a persisted verdict would lie.
+     */
+    public function status(GitProviderManager $manager): JsonResponse
+    {
+        $statuses = GitAccount::query()->orderBy('label')->get()
+            ->map(function (GitAccount $account) use ($manager) {
+                $result = $manager->driver($account->provider)->status($account);
+                $expiresAt = $result['expires_at'];
+
+                return [
+                    'id' => $account->id,
+                    'label' => $account->label,
+                    'provider' => $account->provider,
+                    'provider_title' => __("git.providers.{$account->provider}"),
+                    'status' => $result['status'],
+                    'status_title' => __("git.status.{$result['status']}"),
+                    'expires_at' => $expiresAt?->format('d-m-Y H:i:s'),
+                    'expires_in_days' => $expiresAt ? now()->startOfDay()->diffInDays($expiresAt->startOfDay(), false) : null,
+                    'checked_at' => now()->format('d-m-Y H:i:s'),
+                ];
+            })
+            ->all();
+
+        return response()->json(['statuses' => $statuses]);
+    }
+
     public function store(StoreGitAccountRequest $request, ConnectGitAccount $action): JsonResponse
     {
         $account = $action->execute($request->validated());
