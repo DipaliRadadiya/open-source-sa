@@ -60,13 +60,21 @@ Ends an impersonated session — re-logs in the original admin on the cookie ses
 
 ### `GET /activity-log`
 The caller's **own** activity history only (not admin-wide — see `/admin/activity-log` for that). No `user` field per entry — it's always the caller, so it's omitted as redundant (unlike the admin version below, which spans multiple users and needs it).
-- Query: `per_page` (10|20|50|100, default 10)
+- Query: `filter[type]` (exact), `filter[action]` (exact), `search` (free-text over `type` + `action`), `per_page` (10|20|50|100, default 10)
 - Response: `{"activity_log": [{id, type, action, description, created_at, created_at_human}], "meta": {...}}` (`type` = entity, `action` = verb, `description` = composed sentence)
+- **No `filter[user_id]`** — the endpoint is always scoped to the caller, so there is no user to choose. The self-scope is applied before any filter; no filter combination can surface another user's rows. `search` also does **not** match actor names here (every row is the caller) — unlike the admin version.
+
+### `GET /activity-log/filters`
+Dropdown options for the caller's own history. **Same response shape as `/admin/activity-log/filters`**, so the frontend can reuse one filter component with a different base URL.
+- Response: `{"types": [...], "actions": {"all": [...], "<type>": [...]}}` — `actions.all` for the "any type" view, `actions.<type>` for a dependent dropdown.
+- **Difference from the admin version:** these options come from the caller's **own rows** (DISTINCT), not from the full catalog in `lang/activity.php`. A user who has never touched a database is not offered a `database` filter that would match nothing. Admin lists everything that *can* exist; a personal history lists what actually happened.
+- **A user with no activity gets `{"types": [], "actions": {"all": []}}`** — hide/disable the dropdowns rather than rendering an empty select.
 
 ### `GET /permissions`
 Permission items the caller can see — the **deduped OR-union** across all their assigned roles (each permission appears once; `manage`/`view` are true if any role grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
 - Query: `level` (string, optional — filters to one permission level, e.g. `server`)
-- Response: `{"permissions": [{level, sub_level, name, title, icon, url, permissions: {view, manage}}]}`
+- Response: `{"permissions": [{level, sub_level, sub_level_title, name, title, icon, url, permissions: {view, manage}}]}`
+- **Sidebar grouping:** group the items by `sub_level` and render `sub_level_title` as the section header (already localized — do **not** hardcode it). Current values: `server` → "Server", `integration` → "Integrations". A group is a **label only**: no route, no permission of its own. Show a group only when at least one item inside it came back, otherwise a limited role sees an empty header.
 - **`title` is localized** to the request locale (send `Accept-Language: <code>`) — the sidebar label comes back already translated (8 locales). `name` is the stable machine key; use it if you'd rather translate client-side. A permission with no translation yet falls back to its English title. (Same for `/permissions/check` and `/admin/permissions`.)
 
 ### `GET /permissions/check`
@@ -121,7 +129,7 @@ Syncs the user's assigned roles (many-to-many).
 
 ### `GET /admin/permissions` — permission catalog (for the role form)
 The **full** list of every permission (the menu of what *can* be granted) — use this to render the checkboxes in the role create/edit form. Distinct from `GET /permissions`, which returns only the **caller's own effective grants** (for the nav). Admin-only.
-- Response: `{"permissions": [{level, sub_level, name, title, icon, url}, …]}` — ordered by the catalog `order`; **no** `view`/`manage` state (that's per-role — overlay each role's own `permissions[]` from `GET /admin/roles` onto this list). Group client-side by `level`/`sub_level` for sections.
+- Response: `{"permissions": [{level, sub_level, sub_level_title, name, title, icon, url}, …]}` — ordered by the catalog `order`; **no** `view`/`manage` state (that's per-role — overlay each role's own `permissions[]` from `GET /admin/roles` onto this list). Group client-side by `level`/`sub_level` for sections.
 
 **`POST /admin/permissions/sync`** — re-sync the permission catalog from code (runs the seeder) and re-sync the protected **Administrator** role. Idempotent; a UI shortcut for the deploy-time seed, handy after new permissions are added. Admin-only.
 - Response `200`: `{"permissions": [ …full catalog… ], "synced": <count>}`. Logged to the activity log as `permission.synced`.
@@ -502,7 +510,7 @@ Requires the `database` permission (`view` to read, `manage` to mutate). **3 eng
 - **`GET /api/databases/status/{engine}`** — health: `{ status: {connections, max_connections, threads_running, queries, slow_queries, uptime_seconds} }` (mongo returns nulls for SQL-only fields).
 - **`GET /api/databases/metrics/history?engine=`** — 24h **Query Monitor** series: `{ metrics: [{sampled_at, qps, connections, threads_running}] }` (QPS = delta of the cumulative counter; 5-min `db:sample-metrics` collector, pruned to 24h).
 - **`GET /api/databases/{database}/tables`** — structure peek: `{ tables: [{name, rows, size_bytes}] }` (no data browsing — that's phpMyAdmin).
-- **`POST /api/databases/{database}/optimize`** / **`/repair`** (`manage`) — `OPTIMIZE`/`REPAIR TABLE` across the DB's tables (SQL; no-op on Mongo). `{ database: {…} }`.
+- **`POST /api/databases/{database}/optimize`** and **`POST /api/databases/{database}/repair`** (`manage`) — `OPTIMIZE`/`REPAIR TABLE` across the DB's tables (SQL; no-op on Mongo). `{ database: {…} }`.
 
 **Export (dump) — read-only, safe:**
 - **`POST /api/databases/{database}/export`** — dumps the DB (`mysqldump --single-transaction` / `mongodump --archive --gzip`) to a managed exports dir. `201 { export: {file, size_bytes, created_at, download_url} }`. Source DB untouched; activity `database.exported`.
@@ -510,17 +518,60 @@ Requires the `database` permission (`view` to read, `manage` to mutate). **3 eng
 
 *(Remaining P2: **import/restore** — deferred (writes data → will ship with existing-target-only + backup-before + confirm). P3: engine install-on-demand, app auto-DB + env-wiring, rename-database, phpMyAdmin signon SSO.)*
 
+### Git integrations (Integrations → Git)
+
+Requires the `git` permission (`view` to read, `manage` to mutate). Connected git provider accounts, managed **centrally and before any application exists** — the app-create wizard later just picks a connected account → repo → branch. This feature is panel-only: it stores a credential and reads repositories/branches. No cloning, no provisioning, no filesystem writes (those land with Applications).
+
+**The token is write-only.** It is encrypted at rest and never returned by any endpoint — not even masked. To change it, send a new one via `PUT` (rotation).
+
+**`GET /api/integrations/git/providers`** — the connect-form schema. Render the form from this rather than hardcoding per-provider fields; they genuinely differ.
+- Response: `{ providers: [{name, title, token_help, fields: [{name, label, required, type}]}] }` — all strings already localized.
+- Current field sets: **github** → `token` · **gitlab** → `token`, `host` (optional, self-hosted) · **bitbucket** → `workspace` (required), `token`.
+
+**`GET /api/integrations/git/accounts`** — the connected accounts. Cheap DB read, no outbound calls — safe to use for a wizard dropdown.
+- Response: `{ git_accounts: [{id, provider, provider_title, label, identifier, host, workspace, scopes, last_verified_at(+_human), created_at(+_human)}] }`
+- `identifier` is what the provider calls the account — username for GitHub/GitLab, **workspace slug for Bitbucket**. It is fetched from the provider during verification, never typed by the user.
+
+**`POST /api/integrations/git/accounts`** (`manage`) — connect. `{provider, label (unique), token, host? (gitlab only), workspace? (bitbucket, required)}`.
+- The credential is **verified against the provider before anything is written** — a bad token returns `422` and stores nothing.
+- `201 { git_account: {…} }`.
+- `host` (self-hosted GitLab) must be `https://` and may not point at loopback or the cloud metadata range; private LAN addresses are allowed.
+
+**`PUT /api/integrations/git/accounts/{account}`** (`manage`) — rename and/or rotate. Any of `label`, `token`, `host`, `workspace`. A changed credential is re-verified first, so a **rejected rotation leaves the previous working token intact**. `{ git_account: {…} }`.
+
+**`POST /api/integrations/git/accounts/{account}/test`** (`manage`) — re-verify now; refreshes `identifier`, `scopes` and `last_verified_at`. `{ git_account: {…} }`.
+
+**`DELETE /api/integrations/git/accounts/{account}`** (`manage`) — disconnect. `{ deleted: true }`.
+
+**`GET /api/integrations/git/accounts/status`** — **live** token health for **all** connected accounts, one row each (not per-account — to check a single one, use its `test` endpoint). Nothing is cached or stored: a token can be revoked at the provider at any moment, so a persisted verdict would lie.
+- Response: `{ statuses: [{id, label, provider, provider_title, status, status_title, expires_at, expires_in_days, checked_at}] }`
+- `status` is one of **`valid`** (provider accepted it) · **`invalid`** (rejected — the user must act) · **`unknown`** (provider unreachable/timed out — **nobody should act**; do not render this as an error, a brief provider outage must not accuse a healthy token).
+- Each row is independent: one dead account never breaks the others.
+- **Call this in parallel with the accounts list, not instead of it.** The list paints instantly from the DB; the badges resolve when this answers. Deliberately kept out of the index so a wizard dropdown never waits on providers.
+- `expires_at` availability differs by provider and this is not a bug: **GitLab** reports it (from `/personal_access_tokens/self`; a `read_repository`-only token falls back to a validity-only check with no expiry) · **GitHub** reports it when the token has one · **Bitbucket** Access Tokens have no expiry at all, so `null` means *there is none*, not *lookup failed*.
+
+**`GET /api/integrations/git/accounts/{account}/repositories`** — `?search=&page=` → `{ repositories: [{full_name, name, private, default_branch, url}], meta: {page, has_more} }`. Only allow-listed fields are mapped out of the provider payload.
+
+**`GET /api/integrations/git/accounts/{account}/branches`** — `?repository=owner/repo` (required) → `{ branches: [{name, protected}] }`.
+
+**Bitbucket note for the UI:** Bitbucket uses **scoped Access Tokens** (workspace / project / repository level), not personal access tokens, and they authenticate *as the token* rather than as a user. A **repository-scoped token connects successfully and lists only that one repository** — that is the access the user granted, not an error. Say so in the UI rather than making it look like a failed fetch.
+
+*(Deferred to Applications: `git clone`, deploy keys, webhook auto-deploy.)*
+
 ---
 
 ## Enums / fixed values
 
 - `is_admin` (on `User`): boolean.
-- Permission `level` (seeded so far): `"server"` — 12 items: `dashboard`, `application`, `database`, `system_user`, `firewall`, `cronjob`, `fail2ban`, `logs`, `service`, `setting`, `disk_cleaner`, `activity_log`
+- Permission `level` (seeded so far): `"server"` — 14 items: `dashboard`, `application`, `database`, `system_user`, `firewall`, `cronjob`, `fail2ban`, `logs`, `service`, `setting`, `disk_cleaner`, `activity_log`, `git`, `storage`
+- Permission `sub_level` (sidebar section): `"server"` (the first 12) · `"integration"` (`git`, `storage`). Render the header from `sub_level_title`, never from this raw value.
+- Git provider (`GitAccount.provider`): `github | gitlab | bitbucket`
+- Git token status: `valid | invalid | unknown`
 
 ---
 
 ## Known activity-log `type`/`action` values (for filtering)
 
-Prefer `GET /admin/activity-log/filters` for these at runtime (returns `{types: [...], actions: [...]}`), but for reference — `type` and `action` are separate values:
-- `types`: `cronjob`, `disk_cleaner`, `firewall`, `log`, `permission`, `role`, `service`, `setting`, `system_user`, `user`
-- `actions` (verbs, deduped across types): `registered`, `logged_in`, `password_changed`, `password_reset_by_admin`, `created`, `updated`, `deleted`, `permissions_updated`, `role_assigned`, `impersonation_started`, `impersonation_stopped`, `create_failed`, `delete_failed`, `ssh_key_added`, `ssh_key_removed`, `password_set`, `password_failed`, `sudo_enabled`, `sudo_disabled`, `shell_changed`, `ssh_enabled`, `ssh_disabled`, `downloaded`, `cleaned`, `schedule_updated`, `profile_updated`
+Fetch these at runtime rather than hardcoding them — `GET /admin/activity-log/filters` (admin-wide, every value the system can record) or `GET /activity-log/filters` (the caller's own values only). Both return `{types: [...], actions: {all: [...], <type>: [...]}}`. For reference — `type` and `action` are separate values:
+- `types` (12): `cronjob`, `database`, `disk_cleaner`, `firewall`, `git_account`, `log`, `permission`, `role`, `service`, `setting`, `system_user`, `user`
+- `actions` (48 verbs, deduped across types): `cleaned`, `connected`, `connection_updated`, `create_failed`, `created`, `delete_failed`, `deleted`, `disabled`, `disconnected`, `downloaded`, `enabled`, `exported`, `impersonation_started`, `impersonation_stopped`, `imported`, `logged_in`, `optimized`, `password_changed`, `password_failed`, `password_reset`, `password_reset_by_admin`, `password_set`, `permissions_updated`, `process_killed`, `profile_updated`, `reboot_requested`, `registered`, `reloaded`, `repaired`, `restarted`, `role_assigned`, `rule_added`, `rule_removed`, `schedule_updated`, `shell_changed`, `ssh_disabled`, `ssh_enabled`, `ssh_key_added`, `ssh_key_removed`, `started`, `stopped`, `sudo_disabled`, `sudo_enabled`, `synced`, `updated`, `user_created`, `user_deleted`, `user_updated`
