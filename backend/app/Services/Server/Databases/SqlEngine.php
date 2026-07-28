@@ -109,6 +109,132 @@ class SqlEngine implements DatabaseEngine
         );
     }
 
+    public function renameUser(string $username, string $host, string $newUsername, string $newHost, string $password, string $database): void
+    {
+        $this->must(
+            "RENAME USER '".$this->esc($username)."'@'".$this->esc($host)."' "
+            ."TO '".$this->esc($newUsername)."'@'".$this->esc($newHost)."'; FLUSH PRIVILEGES;"
+        );
+    }
+
+    public function processes(): array
+    {
+        $result = $this->run('SHOW FULL PROCESSLIST;');
+        if ($result->failed()) {
+            return [];
+        }
+
+        $processes = [];
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            // Batch mode = tab-separated: Id User Host db Command Time State Info
+            $c = explode("\t", $line);
+            $processes[] = [
+                'id' => $c[0] ?? '',
+                'user' => $c[1] ?? '',
+                'host' => $c[2] ?? '',
+                'db' => ($c[3] ?? '') === 'NULL' ? null : ($c[3] ?? null),
+                'command' => $c[4] ?? '',
+                'time' => (int) ($c[5] ?? 0),
+                'state' => $c[6] ?? '',
+                'query' => ($c[7] ?? '') === 'NULL' ? null : ($c[7] ?? null),
+            ];
+        }
+
+        return $processes;
+    }
+
+    public function killProcess(string $id): void
+    {
+        $this->must('KILL '.(int) $id.';');
+    }
+
+    public function status(): array
+    {
+        $vars = $this->statusMap('SHOW GLOBAL STATUS;');
+        $maxConn = $this->statusMap("SHOW GLOBAL VARIABLES LIKE 'max_connections';");
+
+        return [
+            'connections' => (int) ($vars['Threads_connected'] ?? 0),
+            'max_connections' => (int) ($maxConn['max_connections'] ?? 0),
+            'threads_running' => (int) ($vars['Threads_running'] ?? 0),
+            'queries' => (int) ($vars['Queries'] ?? 0),
+            'slow_queries' => (int) ($vars['Slow_queries'] ?? 0),
+            'uptime_seconds' => (int) ($vars['Uptime'] ?? 0),
+        ];
+    }
+
+    public function tables(string $database): array
+    {
+        $result = $this->run(
+            'SELECT table_name, COALESCE(table_rows,0), COALESCE(data_length+index_length,0) '
+            ."FROM information_schema.tables WHERE table_schema = '".$this->esc($database)."' ORDER BY table_name;"
+        );
+        if ($result->failed()) {
+            return [];
+        }
+
+        $tables = [];
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $c = explode("\t", $line);
+            $tables[] = ['name' => $c[0] ?? '', 'rows' => (int) ($c[1] ?? 0), 'size_bytes' => (int) ($c[2] ?? 0)];
+        }
+
+        return $tables;
+    }
+
+    public function queryCount(): int
+    {
+        return (int) ($this->statusMap('SHOW GLOBAL STATUS;')['Queries'] ?? 0);
+    }
+
+    public function optimize(string $database): void
+    {
+        $this->maintain($database, 'OPTIMIZE');
+    }
+
+    public function repair(string $database): void
+    {
+        $this->maintain($database, 'REPAIR');
+    }
+
+    private function maintain(string $database, string $verb): void
+    {
+        $names = array_map(fn (array $t) => $this->ident($t['name']), $this->tables($database));
+        if ($names === []) {
+            return;
+        }
+        $this->must("USE {$this->ident($database)}; {$verb} TABLE ".implode(', ', $names).';');
+    }
+
+    /**
+     * Parse a two-column `SHOW … STATUS/VARIABLES` result into a name=>value map.
+     *
+     * @return array<string, string>
+     */
+    private function statusMap(string $sql): array
+    {
+        $result = $this->run($sql);
+        if ($result->failed()) {
+            return [];
+        }
+
+        $map = [];
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            $c = explode("\t", $line, 2);
+            if (count($c) === 2) {
+                $map[$c[0]] = $c[1];
+            }
+        }
+
+        return $map;
+    }
+
     private function must(string $sql): void
     {
         $result = $this->run($sql);

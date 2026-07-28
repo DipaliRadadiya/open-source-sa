@@ -2,8 +2,10 @@
 
 use App\Models\Database;
 use App\Models\DatabaseUser;
+use App\Models\DbMetric;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Process;
 
 beforeEach(function () {
@@ -25,9 +27,13 @@ function fakeDb(): void
             return match (true) {
                 str_contains($sql, 'VERSION()') => Process::result(output: '8.0.36'),
                 str_contains($sql, 'SHOW DATABASES') => Process::result(output: "app_db\nother_db\ninformation_schema\nmysql\n"),
+                str_contains($sql, 'SHOW FULL PROCESSLIST') => Process::result(output: "12\troot\tlocalhost\tshop\tQuery\t3\texecuting\tSELECT 1\n"),
+                str_contains($sql, "LIKE 'max_connections'") => Process::result(output: "max_connections\t151"),
+                str_contains($sql, 'SHOW GLOBAL STATUS') => Process::result(output: "Threads_connected\t5\nThreads_running\t1\nQueries\t1000\nSlow_queries\t2\nUptime\t3600"),
+                str_contains($sql, 'SELECT table_name') => Process::result(output: "users\t42\t8192\nposts\t10\t4096"),
                 str_contains($sql, 'SELECT COALESCE') => Process::result(output: '1048576'),
                 str_contains($sql, 'SELECT 1') => Process::result(output: '1'),
-                default => Process::result(exitCode: 0), // CREATE/DROP/ALTER/GRANT
+                default => Process::result(exitCode: 0), // CREATE/DROP/ALTER/GRANT/RENAME/OPTIMIZE/REPAIR/KILL
             };
         }
         if ($bin === 'mongosh') {
@@ -206,4 +212,100 @@ it('denies a viewer without manage from creating a database', function () {
     test()->withHeaders(['Authorization' => "Bearer {$token}"])
         ->postJson('/api/databases', ['name' => 'shop', 'engine' => 'mysql'])
         ->assertForbidden();
+});
+
+// ---- P2: edit user, monitoring, maintenance ----
+
+it('renames a database user and can change host + password in one call', function () {
+    fakeDb();
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+    $user = $db->users()->create(['username' => 'old_u', 'password' => 'oldpw', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+    test()->withHeaders(dbAuth())->patchJson("/api/databases/{$db->id}/users/{$user->id}", [
+        'username' => 'new_u', 'connection_preference' => 'remote', 'host' => '10.0.0.9', 'password' => 'BrandNewPass55',
+    ])->assertOk()
+        ->assertJsonPath('user.username', 'new_u')
+        ->assertJsonPath('user.host', '10.0.0.9');
+
+    Process::assertRan(fn ($p) => str_contains((string) ($p->input ?? ''), "RENAME USER 'old_u'@'localhost' TO 'new_u'@'10.0.0.9'"));
+    $fresh = $user->fresh();
+    expect($fresh->connection_preference)->toBe('remote');
+    expect($fresh->password)->toBe('BrandNewPass55');
+    test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'user_updated']);
+});
+
+it('lists database processes for an engine', function () {
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->getJson('/api/databases/processes?engine=mysql')->assertOk()
+        ->assertJsonPath('processes.0.id', '12')
+        ->assertJsonPath('processes.0.command', 'Query')
+        ->assertJsonPath('processes.0.time', 3);
+});
+
+it('kills a database process (guarded) and logs it', function () {
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->deleteJson('/api/databases/processes/12?engine=mysql')->assertNoContent();
+
+    Process::assertRan(fn ($p) => str_contains((string) ($p->input ?? ''), 'KILL 12'));
+    test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'process_killed']);
+});
+
+it('returns an engine health status', function () {
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->getJson('/api/databases/status/mysql')->assertOk()
+        ->assertJsonPath('status.connections', 5)
+        ->assertJsonPath('status.max_connections', 151)
+        ->assertJsonPath('status.queries', 1000)
+        ->assertJsonPath('status.slow_queries', 2)
+        ->assertJsonPath('status.uptime_seconds', 3600);
+});
+
+it('lists tables in a database with rows and size', function () {
+    fakeDb();
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    test()->withHeaders(dbAuth())->getJson("/api/databases/{$db->id}/tables")->assertOk()
+        ->assertJsonPath('tables.0.name', 'users')
+        ->assertJsonPath('tables.0.rows', 42)
+        ->assertJsonPath('tables.0.size_bytes', 8192);
+});
+
+it('optimizes a database and logs it', function () {
+    fakeDb();
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/optimize")->assertOk();
+
+    Process::assertRan(fn ($p) => str_contains((string) ($p->input ?? ''), 'OPTIMIZE TABLE'));
+    test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'optimized']);
+});
+
+it('returns the QPS history from db_metrics', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-28 12:00:00'));
+    DbMetric::create(['engine' => 'mysql', 'queries' => 1000, 'connections' => 3, 'threads_running' => 1, 'sampled_at' => Carbon::parse('2026-07-28 11:50:00')]);
+    DbMetric::create(['engine' => 'mysql', 'queries' => 4000, 'connections' => 4, 'threads_running' => 2, 'sampled_at' => Carbon::parse('2026-07-28 11:55:00')]); // +3000 over 300s = 10 qps
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->getJson('/api/databases/metrics/history?engine=mysql')->assertOk()
+        ->assertJsonPath('metrics.0.qps', 0)   // first sample: no delta
+        ->assertJsonPath('metrics.1.qps', 10); // 3000/300s
+
+    Carbon::setTestNow();
+});
+
+it('samples db metrics into the table and prunes old rows', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-28 12:00:00'));
+    DbMetric::create(['engine' => 'mysql', 'queries' => 1, 'connections' => 1, 'threads_running' => 0, 'sampled_at' => Carbon::parse('2026-07-26 12:00:00')]); // >24h old
+    fakeDb();
+
+    test()->artisan('db:sample-metrics')->assertExitCode(0);
+
+    // old row pruned; fresh rows added for the reachable engines (mysql+mariadb via fake).
+    expect(DbMetric::where('sampled_at', '<', Carbon::parse('2026-07-27 12:00:00'))->count())->toBe(0);
+    expect(DbMetric::where('engine', 'mysql')->where('queries', 1000)->exists())->toBeTrue();
+
+    Carbon::setTestNow();
 });

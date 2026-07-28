@@ -494,7 +494,17 @@ Requires the `database` permission (`view` to read, `manage` to mutate). **3 eng
 - **`GET /api/databases/untracked?engine=`** → `{ untracked: [name, …] }` (server DBs not yet tracked, system schemas excluded).
 - **`POST /api/databases/adopt`** (`manage`) — `{engine, names: [...]}` brings existing server DBs under management (never drops). `201 { databases: [...] }`.
 
-*(P2 next: dump/restore, processes/kill, QPS chart, repair/optimize, health stats, tables listing.)*
+**Edit a user (P2)** — **`PATCH /api/databases/{database}/users/{user}`** (`manage`) — any of `username`, `connection_preference`+`host` (remote toggle), `password`. SQL uses `RENAME USER` (grants preserved); Mongo drops+recreates with the password; firewall re-synced. `{ user: {…} }`.
+
+**Monitoring + maintenance (P2):**
+- **`GET /api/databases/processes?engine=`** — live process/op list: `{ processes: [{id, user, host, db, command, time, state, query}] }`.
+- **`DELETE /api/databases/processes/{id}?engine=`** (`manage`) — kill a process/op (`KILL` / `killOp`). `204`.
+- **`GET /api/databases/status/{engine}`** — health: `{ status: {connections, max_connections, threads_running, queries, slow_queries, uptime_seconds} }` (mongo returns nulls for SQL-only fields).
+- **`GET /api/databases/metrics/history?engine=`** — 24h **Query Monitor** series: `{ metrics: [{sampled_at, qps, connections, threads_running}] }` (QPS = delta of the cumulative counter; 5-min `db:sample-metrics` collector, pruned to 24h).
+- **`GET /api/databases/{database}/tables`** — structure peek: `{ tables: [{name, rows, size_bytes}] }` (no data browsing — that's phpMyAdmin).
+- **`POST /api/databases/{database}/optimize`** / **`/repair`** (`manage`) — `OPTIMIZE`/`REPAIR TABLE` across the DB's tables (SQL; no-op on Mongo). `{ database: {…} }`.
+
+*(Remaining P2: dump/restore. P3: engine install-on-demand, app auto-DB + env-wiring, rename-database, phpMyAdmin signon SSO.)*
 
 ---
 

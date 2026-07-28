@@ -14,6 +14,9 @@ Schedule::command('sanctum:prune-expired --hours=24')->daily();
 // 24h charts; the command prunes rows past the retention window (bounded table).
 Schedule::command('server:sample-metrics')->everyFiveMinutes()->withoutOverlapping();
 
+// Per-engine DB metrics for the Query Monitor chart (same bounded-table model).
+Schedule::command('db:sample-metrics')->everyFiveMinutes()->withoutOverlapping();
+
 // Automatic disk cleaner: the tick just wakes the command every minute; the
 // command self-gates on the DB schedule (enabled / due / threshold). No cron
 // file, so it can never drift with the user-managed Cronjobs feature.

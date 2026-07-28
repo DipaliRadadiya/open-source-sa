@@ -97,6 +97,111 @@ class MongoEngine implements DatabaseEngine
         );
     }
 
+    public function renameUser(string $username, string $host, string $newUsername, string $newHost, string $password, string $database): void
+    {
+        // Mongo has no RENAME — drop the old user and recreate with the same password.
+        $this->dropUser($username, $host, $database);
+        $this->createUser($newUsername, $newHost, $password, $database);
+    }
+
+    public function processes(): array
+    {
+        $result = $this->run(
+            'db.adminCommand({ currentOp: 1 }).inprog.forEach(o => print(['
+            .'o.opid, (o.client||""), (o.ns||""), (o.op||""), (o.secs_running||0), (o.desc||"")].join("\t")));'
+        );
+        if ($result->failed()) {
+            return [];
+        }
+
+        $processes = [];
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $c = explode("\t", $line);
+            $processes[] = [
+                'id' => $c[0] ?? '',
+                'user' => $c[5] ?? '',
+                'host' => $c[1] ?? '',
+                'db' => $c[2] ?? null,
+                'command' => $c[3] ?? '',
+                'time' => (int) ($c[4] ?? 0),
+                'state' => '',
+                'query' => null,
+            ];
+        }
+
+        return $processes;
+    }
+
+    public function killProcess(string $id): void
+    {
+        $this->must('db.adminCommand({ killOp: 1, op: '.(int) $id.' });');
+    }
+
+    public function status(): array
+    {
+        $result = $this->run(
+            'const s = db.serverStatus(); const o = s.opcounters || {}; '
+            .'print([s.connections.current, (s.connections.available||0), s.uptime, '
+            .'((o.insert||0)+(o.query||0)+(o.update||0)+(o.delete||0)+(o.command||0))].join("\t"));'
+        );
+        $c = $result->ok ? explode("\t", trim($result->output())) : [];
+
+        return [
+            'connections' => (int) ($c[0] ?? 0),
+            'max_connections' => (int) ($c[1] ?? 0),
+            'threads_running' => null,
+            'queries' => (int) ($c[3] ?? 0),
+            'slow_queries' => null,
+            'uptime_seconds' => (int) ($c[2] ?? 0),
+        ];
+    }
+
+    public function tables(string $database): array
+    {
+        $result = $this->run(
+            'const d = db.getSiblingDB('.$this->js($database).'); '
+            .'d.getCollectionNames().forEach(n => { const st = d.getCollection(n).stats(); '
+            .'print([n, (st.count||0), (st.size||0)].join("\t")); });'
+        );
+        if ($result->failed()) {
+            return [];
+        }
+
+        $tables = [];
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $c = explode("\t", $line);
+            $tables[] = ['name' => $c[0] ?? '', 'rows' => (int) ($c[1] ?? 0), 'size_bytes' => (int) ($c[2] ?? 0)];
+        }
+
+        return $tables;
+    }
+
+    public function queryCount(): int
+    {
+        $result = $this->run(
+            'const o = db.serverStatus().opcounters || {}; '
+            .'print((o.insert||0)+(o.query||0)+(o.update||0)+(o.delete||0)+(o.command||0));'
+        );
+
+        return $result->ok ? (int) trim($result->output()) : 0;
+    }
+
+    public function optimize(string $database): void
+    {
+        // MongoDB has no OPTIMIZE TABLE equivalent — no-op.
+    }
+
+    public function repair(string $database): void
+    {
+        // MongoDB has no REPAIR TABLE equivalent — no-op.
+    }
+
     private function must(string $script): void
     {
         $result = $this->run($script);
