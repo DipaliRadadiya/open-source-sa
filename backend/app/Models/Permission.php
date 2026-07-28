@@ -9,6 +9,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Permission extends Model
 {
+    /**
+     * Sidebar/nav label in the caller's locale (resolved by SetLocale from
+     * Accept-Language). Falls back to the DB `title` (English) when a `nav`
+     * translation key doesn't exist yet — so a newly-seeded permission still
+     * renders a label.
+     */
+    public function localizedTitle(): string
+    {
+        $key = 'nav.'.$this->name;
+
+        return trans()->has($key) ? __($key) : (string) $this->title;
+    }
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class)

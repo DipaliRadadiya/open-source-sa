@@ -67,6 +67,7 @@ The caller's **own** activity history only (not admin-wide — see `/admin/activ
 Permission items the caller can see — the **deduped OR-union** across all their assigned roles (each permission appears once; `manage`/`view` are true if any role grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
 - Query: `level` (string, optional — filters to one permission level, e.g. `server`)
 - Response: `{"permissions": [{level, sub_level, name, title, icon, url, permissions: {view, manage}}]}`
+- **`title` is localized** to the request locale (send `Accept-Language: <code>`) — the sidebar label comes back already translated (8 locales). `name` is the stable machine key; use it if you'd rather translate client-side. A permission with no translation yet falls back to its English title. (Same for `/permissions/check` and `/admin/permissions`.)
 
 ### `GET /permissions/check`
 Same as above but `level` is **required** (used for a targeted single-level check).
@@ -466,6 +467,34 @@ Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics ar
 **`GET /api/server/processes`** — server process table (top by CPU). `{ processes: [{pid, user, cpu, memory, command}, …] }`.
 
 *(Deferred — Phase 3, with the Databases feature: `GET /api/server/database/metrics/history` (query/QPS chart) + `GET /api/server/database/processes` (DB process table + kill-query), engine-detected.)*
+
+### Databases (P1)
+Requires the `database` permission (`view` to read, `manage` to mutate). **3 engines** — `mysql | mariadb | mongodb` — via a `DatabaseEngine` strategy (SqlEngine covers mysql+mariadb, MongoEngine its own). Every op runs locally through the engine client with the admin creds in a 0600 auth file + statements over stdin (never a password on argv). A **DB user belongs to exactly one database** (nested resource). Identifiers are strict-regex validated (DDL can't be parameterised). Passwords are encrypted at rest but returned so you can build the connection string. `500 {message, reference}` on an engine failure.
+
+**`GET /api/databases/engines`** — capability list: `{ engines: [{engine, driver, running, version, charsets}] }` (`running` = reachable with the configured connection).
+
+**Admin connection** (per engine, config lives in the DB, not `.env`):
+- **`GET /api/databases/connections`** → `{ connections: [{engine, driver, connection_type, host, port, socket, username, has_password, options}] }` (password never returned).
+- **`PUT /api/databases/connections/{engine}`** (`manage`) — `connection_type` (`tcp|socket`), then `host`+`port` (tcp) or `socket` (socket), `username`, `password`, `options`, optional `test` (bool). → `{ <engine>: {…, reachable?} }`.
+- **`POST /api/databases/connections/{engine}/test`** (`manage`) → `{ reachable: bool }`.
+
+**Databases:**
+- **`GET /api/databases`** → `{ databases: [{id, name, engine, driver, charset, collation, application_id, size_bytes, size_human, users_count, created_at(+_human)}] }`.
+- **`POST /api/databases`** (`manage`) — `{name (regex ^[A-Za-z0-9_]{1,63}$, not a system schema), engine, charset?, collation? (must match charset), application_id?, create_user?: {username, password?, connection_preference, host?}}`. `201 { database: {…, users:[…]} }`. Omit `create_user` to add credentials later.
+- **`GET /api/databases/{database}`** → `{ database: {…, users:[…]} }`.
+- **`DELETE /api/databases/{database}`** (`manage`) — drops the DB + cascades its users (no orphans). `204`.
+
+**Database users** (nested — belong to one database):
+- **`GET /api/databases/{database}/users`** → `{ users: [{id, database_id, username, password, connection_preference, host, connection_string, created_at(+_human)}] }`.
+- **`POST /api/databases/{database}/users`** (`manage`) — `{username, password? (auto-generated if omitted), connection_preference: localhost|remote|anywhere, host? (IPv4/CIDR, required when remote)}`. `remote`/`anywhere` opens the engine port in the firewall. `201 { user: {…} }`.
+- **`PUT /api/databases/{database}/users/{user}/password`** (`manage`) — `{password}`. Engine `ALTER USER` then updates the stored credential. `{ user: {…} }`.
+- **`DELETE /api/databases/{database}/users/{user}`** (`manage`) → `204`.
+
+**Brownfield reconcile:**
+- **`GET /api/databases/untracked?engine=`** → `{ untracked: [name, …] }` (server DBs not yet tracked, system schemas excluded).
+- **`POST /api/databases/adopt`** (`manage`) — `{engine, names: [...]}` brings existing server DBs under management (never drops). `201 { databases: [...] }`.
+
+*(P2 next: dump/restore, processes/kill, QPS chart, repair/optimize, health stats, tables listing.)*
 
 ---
 
