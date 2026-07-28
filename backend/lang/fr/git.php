@@ -1,0 +1,21 @@
+<?php
+
+return [
+    'providers' => [
+        'github' => 'GitHub',
+        'gitlab' => 'GitLab',
+        'bitbucket' => 'Bitbucket',
+    ],
+
+    'fields' => [
+        'token' => 'Jeton d\'accès',
+        'host' => 'URL auto-hébergée',
+        'workspace' => 'Espace de travail',
+    ],
+
+    'token_help' => [
+        'github' => 'Un jeton d\'accès personnel avec la portée « repo ».',
+        'gitlab' => 'Un jeton d\'accès personnel avec les portées « read_repository » et « read_api ». Laissez l\'URL vide pour gitlab.com.',
+        'bitbucket' => 'Un jeton d\'accès à portée limitée (espace de travail, projet ou dépôt). Un jeton limité à un dépôt n\'affichera que ce dépôt.',
+    ],
+];

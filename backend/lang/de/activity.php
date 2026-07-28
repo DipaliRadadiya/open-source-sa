@@ -61,4 +61,7 @@ return [
     'log.downloaded' => 'Protokoll :log heruntergeladen',
     'disk_cleaner.cleaned' => 'Festplatte bereinigt (:categories) — :freed freigegeben',
     'disk_cleaner.schedule_updated' => 'Automatische Festplattenbereinigung aktualisiert (:enabled)',
+    'git_account.connected' => ':provider-Konto :label verbunden',
+    'git_account.updated' => ':provider-Konto :label aktualisiert',
+    'git_account.disconnected' => ':provider-Konto :label getrennt',
 ];
