@@ -232,4 +232,48 @@ return [
         'processes_limit' => (int) env('SERVER_METRICS_PROCESSES_LIMIT', 25),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Databases
+    |--------------------------------------------------------------------------
+    |
+    | The Databases feature manages MySQL / MariaDB / MongoDB via a
+    | DatabaseEngine strategy. The per-engine admin connection lives in the
+    | `database_connections` table (NOT here) — this file only holds the
+    | static engine capabilities, client binaries, protected system objects,
+    | and the charset/collation whitelist (identifiers can't be parameterised
+    | in DDL, so the whitelist IS the injection guard). Client names + the
+    | auth-file dir are overridable so tests can fake the Process calls.
+    |
+    */
+
+    'databases' => [
+        'engines' => [
+            'mysql' => ['driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
+            'mariadb' => ['driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
+            'mongodb' => ['driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'default_port' => 27017, 'default_socket' => null],
+        ],
+
+        // Never created/dropped/altered by the panel (deny-by-default guard).
+        'system_schemas' => [
+            'sql' => ['information_schema', 'mysql', 'performance_schema', 'sys'],
+            'mongo' => ['admin', 'config', 'local'],
+        ],
+        'system_users' => ['root', 'mysql.sys', 'mysql.session', 'mysql.infoschema', 'debian-sys-maint', 'mariadb.sys'],
+
+        // Whitelist for validation — charset => allowed collations.
+        'charsets' => [
+            'utf8mb4' => ['utf8mb4_unicode_ci', 'utf8mb4_general_ci', 'utf8mb4_0900_ai_ci', 'utf8mb4_bin'],
+            'utf8mb3' => ['utf8mb3_general_ci', 'utf8mb3_unicode_ci'],
+            'latin1' => ['latin1_swedish_ci', 'latin1_general_ci'],
+            'ascii' => ['ascii_general_ci'],
+        ],
+        'default_charset' => 'utf8mb4',
+        'default_collation' => 'utf8mb4_unicode_ci',
+
+        // 0600 temp auth files (--defaults-extra-file) are written here so a DB
+        // password is never passed on argv (visible in `ps`).
+        'auth_file_dir' => env('SERVER_DB_AUTH_DIR', sys_get_temp_dir()),
+    ],
+
 ];
