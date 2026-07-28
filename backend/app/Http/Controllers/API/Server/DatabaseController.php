@@ -10,6 +10,7 @@ use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
 use App\Http\Requests\Server\Database\StoreDatabaseRequest;
 use App\Http\Resources\DatabaseResource;
 use App\Models\Database;
+use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -77,5 +78,31 @@ class DatabaseController extends Controller
         return response()->json([
             'databases' => DatabaseResource::collection($databases)->resolve(),
         ], 201);
+    }
+
+    /**
+     * Tables/collections in a database (structure peek, no data browsing).
+     */
+    public function tables(Database $database, DatabaseManager $manager): JsonResponse
+    {
+        return response()->json([
+            'tables' => $manager->engine($database->engine)->tables($database->name),
+        ]);
+    }
+
+    public function optimize(Database $database, DatabaseManager $manager, ActivityLogger $log): JsonResponse
+    {
+        $manager->engine($database->engine)->optimize($database->name);
+        $log->log('database.optimized', $database, ['name' => $database->name]);
+
+        return response()->json(['database' => DatabaseResource::make($database)->resolve()]);
+    }
+
+    public function repair(Database $database, DatabaseManager $manager, ActivityLogger $log): JsonResponse
+    {
+        $manager->engine($database->engine)->repair($database->name);
+        $log->log('database.repaired', $database, ['name' => $database->name]);
+
+        return response()->json(['database' => DatabaseResource::make($database)->resolve()]);
     }
 }

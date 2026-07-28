@@ -5,9 +5,11 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Database\ChangeDatabaseUserPassword;
 use App\Actions\Server\Database\CreateDatabaseUser;
 use App\Actions\Server\Database\DeleteDatabaseUser;
+use App\Actions\Server\Database\EditDatabaseUser;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\StoreDatabaseUserRequest;
 use App\Http\Requests\Server\Database\UpdateDatabaseUserPasswordRequest;
+use App\Http\Requests\Server\Database\UpdateDatabaseUserRequest;
 use App\Http\Resources\DatabaseUserResource;
 use App\Models\Database;
 use App\Models\DatabaseUser;
@@ -29,6 +31,15 @@ class DatabaseUserController extends Controller
         return response()->json([
             'user' => DatabaseUserResource::make($user->load('database'))->resolve(),
         ], 201);
+    }
+
+    public function update(UpdateDatabaseUserRequest $request, Database $database, DatabaseUser $user, EditDatabaseUser $action): JsonResponse
+    {
+        $action->execute($user, $request->validated());
+
+        return response()->json([
+            'user' => DatabaseUserResource::make($user->load('database'))->resolve(),
+        ]);
     }
 
     public function updatePassword(

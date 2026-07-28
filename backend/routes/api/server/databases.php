@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Server\DatabaseConnectionController;
 use App\Http\Controllers\API\Server\DatabaseController;
+use App\Http\Controllers\API\Server\DatabaseMonitorController;
 use App\Http\Controllers\API\Server\DatabaseUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,11 +20,22 @@ Route::post('/databases/connections/{engine}/test', [DatabaseConnectionControlle
 Route::get('/databases/untracked', [DatabaseController::class, 'untracked'])->middleware('permission:database');
 Route::post('/databases/adopt', [DatabaseController::class, 'adopt'])->middleware('permission:database,manage');
 
+// P2 monitoring (static routes before the {database} binding).
+Route::get('/databases/processes', [DatabaseMonitorController::class, 'processes'])->middleware('permission:database');
+Route::delete('/databases/processes/{id}', [DatabaseMonitorController::class, 'killProcess'])->middleware('permission:database,manage');
+Route::get('/databases/status/{engine}', [DatabaseMonitorController::class, 'status'])->middleware('permission:database');
+Route::get('/databases/metrics/history', [DatabaseMonitorController::class, 'history'])->middleware('permission:database');
+
 // Databases.
 Route::get('/databases', [DatabaseController::class, 'index'])->middleware('permission:database');
 Route::post('/databases', [DatabaseController::class, 'store'])->middleware('permission:database,manage');
 Route::get('/databases/{database}', [DatabaseController::class, 'show'])->middleware('permission:database');
 Route::delete('/databases/{database}', [DatabaseController::class, 'destroy'])->middleware('permission:database,manage');
+
+// P2 per-database: table listing + maintenance.
+Route::get('/databases/{database}/tables', [DatabaseController::class, 'tables'])->middleware('permission:database');
+Route::post('/databases/{database}/optimize', [DatabaseController::class, 'optimize'])->middleware('permission:database,manage');
+Route::post('/databases/{database}/repair', [DatabaseController::class, 'repair'])->middleware('permission:database,manage');
 
 // Database users (nested — a user belongs to one database).
 Route::middleware('permission:database')->group(function () {
@@ -31,6 +43,7 @@ Route::middleware('permission:database')->group(function () {
 });
 Route::middleware('permission:database,manage')->scopeBindings()->group(function () {
     Route::post('/databases/{database}/users', [DatabaseUserController::class, 'store']);
+    Route::patch('/databases/{database}/users/{user}', [DatabaseUserController::class, 'update']);
     Route::put('/databases/{database}/users/{user}/password', [DatabaseUserController::class, 'updatePassword']);
     Route::delete('/databases/{database}/users/{user}', [DatabaseUserController::class, 'destroy']);
 });

@@ -43,4 +43,44 @@ interface DatabaseEngine
     public function dropUser(string $username, string $host, string $database): void;
 
     public function setPassword(string $username, string $host, string $password, string $database): void;
+
+    /**
+     * Rename/rehost a user. SQL uses RENAME USER (preserves grants, ignores
+     * $password); Mongo (no rename) drops + recreates with $password.
+     */
+    public function renameUser(string $username, string $host, string $newUsername, string $newHost, string $password, string $database): void;
+
+    // ---- P2: monitoring + maintenance ----
+
+    /**
+     * Live server processes / operations.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function processes(): array;
+
+    public function killProcess(string $id): void;
+
+    /**
+     * Health snapshot (connections, uptime, query/op counters, …).
+     *
+     * @return array<string, int|string|null>
+     */
+    public function status(): array;
+
+    /**
+     * Tables/collections in a database with row count + size.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function tables(string $database): array;
+
+    /** Cumulative query/op counter for the QPS collector. */
+    public function queryCount(): int;
+
+    /** Reclaim space / rebuild (SQL OPTIMIZE TABLE). No-op where unsupported. */
+    public function optimize(string $database): void;
+
+    /** Repair tables (SQL REPAIR TABLE). No-op where unsupported. */
+    public function repair(string $database): void;
 }
