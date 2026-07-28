@@ -65,7 +65,7 @@ class PermissionController extends Controller
                     'level' => $permission->level,
                     'sub_level' => $permission->sub_level,
                     'name' => $permission->name,
-                    'title' => $permission->title,
+                    'title' => $permission->localizedTitle(),
                     'icon' => $permission->icon,
                     'url' => $permission->url,
                     'permissions' => ['view' => $grant['view'], 'manage' => $grant['manage']],

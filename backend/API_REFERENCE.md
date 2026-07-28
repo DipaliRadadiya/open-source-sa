@@ -67,6 +67,7 @@ The caller's **own** activity history only (not admin-wide — see `/admin/activ
 Permission items the caller can see — the **deduped OR-union** across all their assigned roles (each permission appears once; `manage`/`view` are true if any role grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
 - Query: `level` (string, optional — filters to one permission level, e.g. `server`)
 - Response: `{"permissions": [{level, sub_level, name, title, icon, url, permissions: {view, manage}}]}`
+- **`title` is localized** to the request locale (send `Accept-Language: <code>`) — the sidebar label comes back already translated (8 locales). `name` is the stable machine key; use it if you'd rather translate client-side. A permission with no translation yet falls back to its English title. (Same for `/permissions/check` and `/admin/permissions`.)
 
 ### `GET /permissions/check`
 Same as above but `level` is **required** (used for a targeted single-level check).

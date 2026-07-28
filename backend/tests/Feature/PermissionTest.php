@@ -105,3 +105,37 @@ it('requires a level on the check endpoint', function () {
         ->getJson('/api/permissions/check')
         ->assertUnprocessable();
 });
+
+it('localizes the nav title from Accept-Language (nav endpoint)', function () {
+    $this->seed(PermissionSeeder::class);
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    // English (default)
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/permissions?level=server')
+        ->assertOk()
+        ->assertJsonFragment(['name' => 'database', 'title' => 'Database']);
+
+    // Spanish via Accept-Language
+    $this->withHeaders(['Authorization' => "Bearer {$token}", 'Accept-Language' => 'es'])
+        ->getJson('/api/permissions?level=server')
+        ->assertOk()
+        ->assertJsonFragment(['name' => 'database', 'title' => 'Base de datos'])
+        ->assertJsonFragment(['name' => 'disk_cleaner', 'title' => 'Limpiador de disco']);
+});
+
+it('localizes the admin catalog title and falls back to the DB title when no nav key exists', function () {
+    $this->seed(PermissionSeeder::class);
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    // A permission with no matching nav.* key falls back to its stored title.
+    Permission::forceCreate(['level' => 'server', 'sub_level' => 'server', 'name' => 'widget', 'title' => 'Widget', 'icon' => 'x', 'url' => '/widget', 'order' => 99]);
+
+    $this->withHeaders(['Authorization' => "Bearer {$token}", 'Accept-Language' => 'ja'])
+        ->getJson('/api/admin/permissions')
+        ->assertOk()
+        ->assertJsonFragment(['name' => 'database', 'title' => 'データベース']) // translated
+        ->assertJsonFragment(['name' => 'widget', 'title' => 'Widget']);        // fallback
+});
