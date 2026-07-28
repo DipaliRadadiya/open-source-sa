@@ -23,13 +23,20 @@ class PermissionSeeder extends Seeder
             ['name' => 'setting', 'title' => 'Setting', 'icon' => 'settings', 'url' => '/settings', 'order' => 10],
             ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 11],
             ['name' => 'activity_log', 'title' => 'Activity Log', 'icon' => 'history', 'url' => '/activity-log', 'order' => 12],
+
+            // Integrations — externally-connected accounts/credentials the
+            // features consume (git accounts for app deploys, storage
+            // destinations for backups). Same `server` level, grouped under
+            // their own sub-level so the sidebar renders them as a section.
+            ['name' => 'git', 'title' => 'Git', 'icon' => 'git-branch', 'url' => '/integrations/git', 'order' => 13, 'sub_level' => 'integration'],
+            ['name' => 'storage', 'title' => 'Storage', 'icon' => 'hard-drive', 'url' => '/integrations/storage', 'order' => 14, 'sub_level' => 'integration'],
         ];
 
         foreach ($items as $item) {
             Permission::updateOrCreate(
                 ['name' => $item['name'], 'level' => 'server'],
                 [
-                    'sub_level' => 'server',
+                    'sub_level' => $item['sub_level'] ?? 'server',
                     'title' => $item['title'],
                     'icon' => $item['icon'],
                     'url' => $item['url'],

@@ -20,6 +20,7 @@ class PermissionResource extends JsonResource
         return [
             'level' => $this->level,
             'sub_level' => $this->sub_level,
+            'sub_level_title' => $this->localizedSubLevel(),
             'name' => $this->name,
             'title' => $this->localizedTitle(),
             'icon' => $this->icon,

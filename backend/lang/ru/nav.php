@@ -13,4 +13,6 @@ return [
     'setting' => 'Настройки',
     'disk_cleaner' => 'Очистка диска',
     'activity_log' => 'Журнал активности',
+    'git' => 'Git',
+    'storage' => 'Хранилище',
 ];

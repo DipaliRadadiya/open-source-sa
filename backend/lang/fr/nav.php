@@ -13,4 +13,6 @@ return [
     'setting' => 'Paramètres',
     'disk_cleaner' => 'Nettoyeur de disque',
     'activity_log' => 'Journal d\'activité',
+    'git' => 'Git',
+    'storage' => 'Stockage',
 ];
