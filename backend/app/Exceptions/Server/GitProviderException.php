@@ -19,7 +19,15 @@ use Illuminate\Http\Request;
  */
 class GitProviderException extends Exception
 {
+    public const INVALID_CREDENTIALS = 'invalid_credentials';
+
+    public const UNREACHABLE = 'unreachable';
+
+    public const UNSUPPORTED_PROVIDER = 'unsupported_provider';
+
     private function __construct(
+        /** Which failure this is, so a caller can react without matching on status codes. */
+        public readonly string $kind,
         private readonly string $messageKey,
         private readonly int $status,
         public readonly ?string $reference = null,
@@ -31,17 +39,17 @@ class GitProviderException extends Exception
 
     public static function invalidCredentials(string $provider): self
     {
-        return new self('errors/git.invalid_credentials', 422, replace: ['provider' => $provider]);
+        return new self(self::INVALID_CREDENTIALS, 'errors/git.invalid_credentials', 422, replace: ['provider' => $provider]);
     }
 
     public static function unreachable(string $provider, string $reference): self
     {
-        return new self('errors/git.provider_unreachable', 502, $reference, ['provider' => $provider]);
+        return new self(self::UNREACHABLE, 'errors/git.provider_unreachable', 502, $reference, ['provider' => $provider]);
     }
 
     public static function unsupportedProvider(string $provider): self
     {
-        return new self('errors/git.unsupported_provider', 422, replace: ['provider' => $provider]);
+        return new self(self::UNSUPPORTED_PROVIDER, 'errors/git.unsupported_provider', 422, replace: ['provider' => $provider]);
     }
 
     public function render(Request $request): JsonResponse

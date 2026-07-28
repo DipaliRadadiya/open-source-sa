@@ -3,6 +3,7 @@
 namespace App\Contracts;
 
 use App\Models\GitAccount;
+use Illuminate\Support\Carbon;
 
 /**
  * A git hosting provider the panel can connect to with a token. Adding a
@@ -26,6 +27,18 @@ interface GitProvider
      * @return array{identifier: string, scopes: array<int, string>}
      */
     public function verify(GitAccount $account): array;
+
+    /**
+     * Live health of the stored credential, asked of the provider right now —
+     * nothing is cached or persisted, because a token can be revoked at the
+     * provider at any moment.
+     *
+     * Never throws: a dead token is an answer, not an error. `expires_at` is
+     * null wherever the provider does not expose one (always, for Bitbucket).
+     *
+     * @return array{status: 'valid'|'invalid'|'unknown', expires_at: ?Carbon}
+     */
+    public function status(GitAccount $account): array;
 
     /**
      * Repositories the credential can reach.

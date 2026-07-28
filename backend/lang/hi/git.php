@@ -7,6 +7,12 @@ return [
         'bitbucket' => 'Bitbucket',
     ],
 
+    'status' => [
+        'valid' => 'कनेक्टेड',
+        'invalid' => 'टोकन अमान्य',
+        'unknown' => 'जाँच नहीं हो सकी',
+    ],
+
     'fields' => [
         'token' => 'एक्सेस टोकन',
         'host' => 'सेल्फ-होस्टेड URL',

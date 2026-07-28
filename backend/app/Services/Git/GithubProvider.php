@@ -31,6 +31,23 @@ class GithubProvider extends AbstractGitProvider
         ];
     }
 
+    /**
+     * GitHub reports a token's expiry in a response header, but only for
+     * tokens that have one — classic tokens set to "no expiration" and some
+     * fine-grained tokens send nothing, which is not a problem.
+     */
+    public function status(GitAccount $account): array
+    {
+        $probe = $this->probe($account, fn ($client) => $client->get('/user'));
+
+        return [
+            'status' => $probe['status'],
+            'expires_at' => $probe['response'] === null
+                ? null
+                : $this->parseExpiry($probe['response']->header('github-authentication-token-expiration')),
+        ];
+    }
+
     public function repositories(GitAccount $account, ?string $search, int $page): array
     {
         $response = $this->send($account, fn ($client) => $client->get('/user/repos', [

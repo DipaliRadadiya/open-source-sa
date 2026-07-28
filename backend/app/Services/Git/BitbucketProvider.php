@@ -36,6 +36,21 @@ class BitbucketProvider extends AbstractGitProvider
         ];
     }
 
+    /**
+     * Bitbucket Access Tokens have no expiry and no introspection endpoint —
+     * they live until revoked. So the only honest answer is reachable or not;
+     * `expires_at` is always null here, and the UI should say "no expiry"
+     * rather than imply we failed to look it up.
+     */
+    public function status(GitAccount $account): array
+    {
+        $probe = $this->probe($account, fn ($client) => $client->get("/2.0/repositories/{$account->workspace}", [
+            'pagelen' => 1,
+        ]));
+
+        return ['status' => $probe['status'], 'expires_at' => null];
+    }
+
     public function repositories(GitAccount $account, ?string $search, int $page): array
     {
         $query = [

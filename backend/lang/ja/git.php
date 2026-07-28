@@ -7,6 +7,12 @@ return [
         'bitbucket' => 'Bitbucket',
     ],
 
+    'status' => [
+        'valid' => '接続済み',
+        'invalid' => 'トークンが無効',
+        'unknown' => '確認できません',
+    ],
+
     'fields' => [
         'token' => 'アクセストークン',
         'host' => 'セルフホストURL',
