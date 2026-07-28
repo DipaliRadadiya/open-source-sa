@@ -11,6 +11,39 @@ use Illuminate\Http\JsonResponse;
 class ActivityLogController extends Controller
 {
     /**
+     * Filter options for the caller's own history.
+     *
+     * Unlike the admin equivalent — which lists every action the system can
+     * ever record, sourced from lang/activity.php — this is built from the
+     * caller's actual rows. On a personal history an option that is
+     * guaranteed to match nothing (a user who has never touched databases
+     * seeing a "database" filter) is worse than a short list.
+     *
+     * Shape matches the admin endpoint so the frontend reuses one component.
+     */
+    public function filters(ListMyActivityLogRequest $request): JsonResponse
+    {
+        $pairs = ActivityLog::query()
+            ->where('user_id', $request->user()->id)
+            ->select('type', 'action')
+            ->distinct()
+            ->get();
+
+        $types = $pairs->pluck('type')->unique()->sort()->values();
+
+        $perType = $pairs
+            ->groupBy('type')
+            ->map(fn ($group) => $group->pluck('action')->unique()->sort()->values()->all());
+
+        $all = $pairs->pluck('action')->unique()->sort()->values()->all();
+
+        return response()->json([
+            'types' => $types->all(),
+            'actions' => ['all' => $all] + $perType->all(),
+        ]);
+    }
+
+    /**
      * A user's own activity history — unlike the admin activity log
      * (Admin\ActivityLogController), this only ever shows the
      * authenticated user's own entries, never anyone else's, so the
@@ -20,12 +53,32 @@ class ActivityLogController extends Controller
      */
     public function index(ListMyActivityLogRequest $request): JsonResponse
     {
-        $perPage = (int) $request->input('per_page', 10);
-
-        $paginator = ActivityLog::query()
+        // The self-scope is applied first and unconditionally — no filter
+        // combination can widen it to another user's rows.
+        $query = ActivityLog::query()
             ->where('user_id', $request->user()->id)
-            ->latest('created_at')
-            ->paginate($perPage);
+            ->latest('created_at');
+
+        // Exact matches on the indexed columns, same as the admin log.
+        if ($type = $request->input('filter.type')) {
+            $query->where('type', $type);
+        }
+
+        if ($action = $request->input('filter.action')) {
+            $query->where('action', $action);
+        }
+
+        // Free-text over type + action only. Unlike the admin log there is no
+        // actor to search — every row here belongs to the caller.
+        if ($search = $request->string('search')->trim()->value()) {
+            $query->where(function ($q) use ($search) {
+                $q->where('type', 'like', "%{$search}%")
+                    ->orWhere('action', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        $paginator = $query->paginate($perPage);
 
         return response()->json([
             'activity_log' => ActivityLogResource::collection($paginator->items()),
