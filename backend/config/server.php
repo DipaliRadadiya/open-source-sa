@@ -1,5 +1,8 @@
 <?php
 
+use App\Services\Git\BitbucketProvider;
+use App\Services\Git\GithubProvider;
+use App\Services\Git\GitlabProvider;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
 use App\Services\Server\DiskCleaner\Targets\JournalTarget;
@@ -277,6 +280,55 @@ return [
 
         // Where database exports (dumps) are written + streamed from.
         'export_dir' => env('SERVER_DB_EXPORT_DIR', storage_path('app/db-exports')),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Git provider integrations
+    |--------------------------------------------------------------------------
+    |
+    | Connected accounts used to reach private repositories. `fields` is the
+    | connect-form schema the API hands the frontend, because the providers
+    | genuinely differ: GitLab can point at a self-hosted host, and Bitbucket
+    | addresses everything through a workspace (its scoped Access Tokens
+    | authenticate as the token, not as a user).
+    |
+    | Outbound calls are bounded — a provider being slow must never hold a
+    | request open.
+    |
+    */
+
+    'git' => [
+        'connect_timeout' => 3,
+        'timeout' => 5,
+        'max_redirects' => 3,
+        'per_page' => 30,
+
+        'providers' => [
+            'github' => [
+                'driver' => GithubProvider::class,
+                'api' => 'https://api.github.com',
+                'fields' => [
+                    'token' => ['required' => true, 'type' => 'password'],
+                ],
+            ],
+            'gitlab' => [
+                'driver' => GitlabProvider::class,
+                'api' => 'https://gitlab.com',
+                'fields' => [
+                    'token' => ['required' => true, 'type' => 'password'],
+                    'host' => ['required' => false, 'type' => 'url'],
+                ],
+            ],
+            'bitbucket' => [
+                'driver' => BitbucketProvider::class,
+                'api' => 'https://api.bitbucket.org',
+                'fields' => [
+                    'workspace' => ['required' => true, 'type' => 'text'],
+                    'token' => ['required' => true, 'type' => 'password'],
+                ],
+            ],
+        ],
     ],
 
 ];

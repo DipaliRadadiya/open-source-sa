@@ -61,4 +61,7 @@ return [
     'log.downloaded' => 'Descargó el registro :log',
     'disk_cleaner.cleaned' => 'Limpió el disco (:categories) — liberó :freed',
     'disk_cleaner.schedule_updated' => 'Actualizó el limpiador de disco automático (:enabled)',
+    'git_account.connected' => 'Conectó la cuenta de :provider :label',
+    'git_account.updated' => 'Actualizó la cuenta de :provider :label',
+    'git_account.disconnected' => 'Desconectó la cuenta de :provider :label',
 ];

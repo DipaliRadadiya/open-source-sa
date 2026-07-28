@@ -61,4 +61,7 @@ return [
     'log.downloaded' => ':log लॉग डाउनलोड किया',
     'disk_cleaner.cleaned' => 'डिस्क साफ़ की (:categories) — :freed मुक्त किया',
     'disk_cleaner.schedule_updated' => 'स्वचालित डिस्क क्लीनर अपडेट किया (:enabled)',
+    'git_account.connected' => ':provider खाता :label जोड़ा',
+    'git_account.updated' => ':provider खाता :label अपडेट किया',
+    'git_account.disconnected' => ':provider खाता :label हटाया',
 ];

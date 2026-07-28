@@ -61,4 +61,7 @@ return [
     'log.downloaded' => ':log ログをダウンロードしました',
     'disk_cleaner.cleaned' => 'ディスクをクリーンアップしました (:categories) — :freed 解放',
     'disk_cleaner.schedule_updated' => '自動ディスククリーナーを更新しました (:enabled)',
+    'git_account.connected' => ':provider アカウント :label を接続しました',
+    'git_account.updated' => ':provider アカウント :label を更新しました',
+    'git_account.disconnected' => ':provider アカウント :label を切断しました',
 ];

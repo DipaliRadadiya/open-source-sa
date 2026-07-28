@@ -61,4 +61,7 @@ return [
     'log.downloaded' => 'A téléchargé le journal :log',
     'disk_cleaner.cleaned' => 'A nettoyé le disque (:categories) — :freed libéré',
     'disk_cleaner.schedule_updated' => 'A mis à jour le nettoyage automatique du disque (:enabled)',
+    'git_account.connected' => 'A connecté le compte :provider :label',
+    'git_account.updated' => 'A mis à jour le compte :provider :label',
+    'git_account.disconnected' => 'A déconnecté le compte :provider :label',
 ];

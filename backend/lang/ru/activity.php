@@ -61,4 +61,7 @@ return [
     'log.downloaded' => 'Скачал журнал :log',
     'disk_cleaner.cleaned' => 'Очищен диск (:categories) — освобождено :freed',
     'disk_cleaner.schedule_updated' => 'Обновлён автоматический очиститель диска (:enabled)',
+    'git_account.connected' => 'Подключён аккаунт :provider :label',
+    'git_account.updated' => 'Обновлён аккаунт :provider :label',
+    'git_account.disconnected' => 'Отключён аккаунт :provider :label',
 ];
