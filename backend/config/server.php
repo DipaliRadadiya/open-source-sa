@@ -180,6 +180,64 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | fail2ban
+    |--------------------------------------------------------------------------
+    |
+    | Brute-force containment. Config goes to a drop-in under `jail.d`, never
+    | to `jail.local` — a server migrated from another panel probably owns
+    | that file, and ours has no business overwriting it.
+    |
+    | The ban action is left to fail2ban's default rather than set to `ufw`.
+    | Routing bans through UFW would mean the Firewall screen's on/off switch
+    | silently disables every ban, with nothing on this screen to say so; two
+    | features that each claim to be protecting the server should not have one
+    | quietly turning the other off.
+    |
+    */
+
+    'fail2ban' => [
+        'client' => env('SERVER_FAIL2BAN_CLIENT', 'fail2ban-client'),
+        'jail_d' => env('SERVER_FAIL2BAN_JAIL_D', '/etc/fail2ban/jail.d'),
+        'drop_in' => env('SERVER_FAIL2BAN_DROP_IN', 'panel.local'),
+
+        'defaults' => [
+            'bantime' => (int) env('SERVER_FAIL2BAN_BANTIME', 3600),
+            'findtime' => (int) env('SERVER_FAIL2BAN_FINDTIME', 600),
+            'maxretry' => (int) env('SERVER_FAIL2BAN_MAXRETRY', 5),
+        ],
+
+        // The jails the panel manages. `sshd` guards the way into the server
+        // and is the reason to run fail2ban at all; `recidive` watches
+        // fail2ban's own log and gives repeat offenders a much longer ban.
+        // Per-application jails (a WordPress login, say) belong with the
+        // application, whose log path only exists once the app does.
+        'jails' => [
+            [
+                'name' => 'sshd',
+                'label' => 'SSH',
+                // Enabling this one can lock the operator out of their own
+                // server, so the API requires an explicit acknowledgement.
+                'lockout_risk' => true,
+                'options' => ['mode' => 'aggressive'],
+            ],
+            [
+                'name' => 'recidive',
+                'label' => 'Repeat offenders',
+                'lockout_risk' => false,
+                'options' => [
+                    'logpath' => '/var/log/fail2ban.log',
+                    'bantime' => 604800,  // a week
+                    'findtime' => 86400,
+                    'maxretry' => 3,
+                ],
+            ],
+        ],
+
+        'bantime_max' => (int) env('SERVER_FAIL2BAN_BANTIME_MAX', 31536000), // a year
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Firewall
     |--------------------------------------------------------------------------
     |
@@ -301,6 +359,7 @@ return [
         ['key' => 'auth', 'label' => 'System — Auth', 'group' => 'system', 'path' => '/var/log/auth.log'],
         // Security / daemons
         ['key' => 'ufw', 'label' => 'Firewall — UFW', 'group' => 'security', 'path' => '/var/log/ufw.log'],
+        // Also what the `recidive` jail reads to find repeat offenders.
         ['key' => 'fail2ban', 'label' => 'Fail2ban', 'group' => 'security', 'path' => '/var/log/fail2ban.log'],
         ['key' => 'supervisor', 'label' => 'Supervisor', 'group' => 'daemon', 'path' => '/var/log/supervisor/supervisord.log'],
     ],
