@@ -30,6 +30,7 @@ return [
     'fail2ban.settings_updated' => 'fail2ban の設定を更新しました (有効な jail: :jails)',
     'fail2ban.ip_banned' => ':jail で :ip をブロックしました',
     'fail2ban.ip_unbanned' => ':jail から :ip のブロックを解除しました',
+    'fail2ban.all_unbanned' => 'すべての IP アドレスのブロックを解除しました (:count)',
     'server.process_killed' => 'プロセス :pid (:command) を SIG:signal で停止しました',
     'database.optimized' => ':name データベースを最適化しました',
     'database.repaired' => ':name データベースを修復しました',

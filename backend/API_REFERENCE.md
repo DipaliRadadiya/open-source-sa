@@ -359,18 +359,27 @@ Watches logs for repeated failures and bans the source IP. Permission `fail2ban`
   "installed": true, "running": true, "version": "1.0.2",
   "your_ip": "203.0.113.5",
   "settings": {"bantime": 3600, "findtime": 600, "maxretry": 5, "ignore_ips": ["203.0.113.5"]},
-  "jails": [{"name": "sshd", "label": "SSH", "lockout_risk": true, "enabled": true, "banned": ["198.51.100.9"]}],
-  "banned": [{"ip": "198.51.100.9", "jail": "sshd"}]
+  "jails": [{"name": "sshd", "label": "SSH", "lockout_risk": true, "enabled": true,
+             "banned": ["198.51.100.9"],
+             "stats": {"currently_failed": 3, "total_failed": 1847,
+                       "currently_banned": 2, "total_banned": 42}}],
+  "banned": [{"ip": "198.51.100.9", "jail": "sshd",
+              "banned_at": "2026-07-29 11:00:00", "expires_at": "2026-07-29 12:00:00",
+              "seconds_left": 1800}],
+  "bantime_presets": [{"key": "1h", "seconds": 3600, "label": "1 hour"}, …]
 }}
 ```
 - **`installed: false` is a normal state, not an error** — a fresh server has no fail2ban. `settings` is `null` and the lists are empty; render the install prompt, not an error.
 - **`your_ip`** is the caller's own address. Offer it as a one-click addition to `ignore_ips` — this is what stops an operator banning themselves.
 - `lockout_risk: true` marks a jail that can lock the operator out (i.e. `sshd`). Show the warning on that one.
+- `stats` — **`currently_failed` is the headline number**: it means an attack is in progress *right now*, where the totals only say one happened at some point. `null` for a jail that isn't enabled.
+- Each banned row carries **`expires_at` / `seconds_left`**, so the table can read "52 minutes left" rather than listing bare addresses with no way to tell whether to wait or unban. All three timing fields are **`null`** when the installed fail2ban is too old to report them, and when the ban is permanent — show "Permanent" for a null expiry on a live ban.
+- `bantime_presets` — offer these instead of asking for seconds. `seconds: -1` is a permanent ban. Same backend-driven pattern as the cron schedule presets.
 
 **`POST /api/fail2ban/install`** (`manage`) → `202`. Queued (apt is slow). **Nothing is enabled by the install** — a freshly installed fail2ban that started banning immediately would be a surprise. Poll `GET /api/fail2ban` until `installed` flips. `422` if already installed.
 
 **`PUT /api/fail2ban`** (`manage`) — settings, ignore list and jail toggles together.
-- Body: `bantime` (≥60s), `findtime` (≥30s), `maxretry` (≥2 — one failure is a typo), `ignore_ips[]` (IP or CIDR), `jails: {name: bool}`, `acknowledged` (bool).
+- Body: `bantime` (≥60s, or **`-1` for permanent**), `findtime` (≥30s), `maxretry` (≥2 — one failure is a typo), `ignore_ips[]` (IP or CIDR), `jails: {name: bool}`, `acknowledged` (bool).
 - **One endpoint, not three**, because the values live in one file that is rewritten whole. For the same reason **a jail you omit keeps its current state** rather than switching off.
 - **`422` `errors/fail2ban.lockout_risk`** when enabling a `lockout_risk` jail unless *either* the caller's IP is in `ignore_ips` *or* `acknowledged: true`. Show a confirm dialog offering to add `your_ip`.
 - Loopback is always ignored and is not returned in `ignore_ips` — the user didn't add it and can't remove it.
@@ -378,9 +387,13 @@ Watches logs for repeated failures and bans the source IP. Permission `fail2ban`
 
 **`POST /api/fail2ban/bans`** (`manage`) — ban by hand. Body: `ip` (a single address, not a range), `jail`. `422` if the IP is on the ignore list (the ban would be dropped at the next reload).
 
+**`DELETE /api/fail2ban/bans`** (`manage`) — release **every** ban. For the case this exists to serve — an office or VPN range banned by mistake — unbanning rows one at a time is not what the moment calls for. `404` when nothing is banned. → `{"unbanned": {"ips": [...]}}`
+
 **`DELETE /api/fail2ban/bans/{ip}`** (`manage`) — release an address. Without `?jail=`, from **every** jail holding it. `404` if it isn't banned anywhere — refresh the list rather than showing success.
 
-The fail2ban log is in the Logs feature as `fail2ban`.
+The fail2ban log is in the Logs feature as `fail2ban`, and the service itself is on the **Services** screen (so it can be restarted without SSH).
+
+**The SSH jail follows the SSH port.** This panel can move SSH off 22; fail2ban's own default (`port = ssh`) would then ban a port nobody uses while reporting the server as protected. The port written into the jail is read from the same drop-in the Settings feature writes, so the two cannot drift apart.
 
 OS-op failures → `500 {message, reference}`.
 

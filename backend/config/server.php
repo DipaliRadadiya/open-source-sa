@@ -218,7 +218,11 @@ return [
                 // Enabling this one can lock the operator out of their own
                 // server, so the API requires an explicit acknowledgement.
                 'lockout_risk' => true,
-                'options' => ['mode' => 'aggressive'],
+                // `{ssh_port}` is replaced with the port SSH is really on.
+                // Left as fail2ban's default it would resolve to 22, so on a
+                // server whose SSH was moved — via this very panel — the ban
+                // would land on a port nobody uses.
+                'options' => ['mode' => 'aggressive', 'port' => '{ssh_port}'],
             ],
             [
                 'name' => 'recidive',
@@ -231,6 +235,19 @@ return [
                     'maxretry' => 3,
                 ],
             ],
+        ],
+
+        // Ban-time presets, so the form offers "1 hour" rather than 3600.
+        // Backend-driven for the same reason the cron schedule presets are:
+        // the frontend should not be maintaining its own copy of a list that
+        // has to agree with what the API accepts. `-1` is fail2ban's
+        // permanent ban.
+        'bantime_presets' => [
+            ['key' => '10m', 'seconds' => 600],
+            ['key' => '1h', 'seconds' => 3600],
+            ['key' => '1d', 'seconds' => 86400],
+            ['key' => '1w', 'seconds' => 604800],
+            ['key' => 'permanent', 'seconds' => -1],
         ],
 
         'bantime_max' => (int) env('SERVER_FAIL2BAN_BANTIME_MAX', 31536000), // a year
@@ -291,6 +308,7 @@ return [
         ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB'],
         ['key' => 'redis', 'unit' => 'redis-server', 'label' => 'Redis'],
         ['key' => 'supervisor', 'unit' => 'supervisor', 'label' => 'Supervisor'],
+        ['key' => 'fail2ban', 'unit' => 'fail2ban', 'label' => 'Fail2ban'],
     ],
 
     'protected_services' => array_values(array_filter(explode(
@@ -308,6 +326,7 @@ return [
 
     'service_logs' => [
         'nginx' => ['nginx_error', 'nginx_access'],
+        'fail2ban' => ['fail2ban'],
         'apache' => ['apache_error', 'apache_access'],
         'openlitespeed' => ['openlitespeed_error'],
         'mysql' => ['mysql_error', 'mysql_slow'],

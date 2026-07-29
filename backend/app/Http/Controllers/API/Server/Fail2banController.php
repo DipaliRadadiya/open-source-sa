@@ -34,6 +34,13 @@ class Fail2banController extends Controller
                 'settings' => $installed ? $fail2ban->settings() : null,
                 'jails' => $installed ? $fail2ban->jails() : [],
                 'banned' => $installed ? $fail2ban->banned() : [],
+                // Offered by the API so the form can present "1 hour" instead
+                // of 3600, without the frontend maintaining its own copy of a
+                // list that has to agree with what this endpoint accepts.
+                'bantime_presets' => array_map(fn (array $preset) => [
+                    ...$preset,
+                    'label' => __("fail2ban.bantime.{$preset['key']}"),
+                ], (array) config('server.fail2ban.bantime_presets', [])),
             ],
         ]);
     }
@@ -122,6 +129,26 @@ class Fail2banController extends Controller
         $log->log('fail2ban.ip_unbanned', null, ['ip' => $ip, 'jail' => implode(', ', $released)]);
 
         return response()->json(['unbanned' => ['ip' => $ip, 'jails' => $released]]);
+    }
+
+    /**
+     * Release every banned address (manage).
+     *
+     * The case this exists for is an office or VPN range banned by mistake,
+     * where the operator is locked out and clicking eleven rows individually
+     * is not what the moment calls for.
+     */
+    public function unbanAll(Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
+    {
+        $released = $fail2ban->unbanAll();
+
+        if ($released === []) {
+            throw Fail2banException::notBanned();
+        }
+
+        $log->log('fail2ban.all_unbanned', null, ['count' => count($released)]);
+
+        return response()->json(['unbanned' => ['ips' => $released]]);
     }
 
     /**

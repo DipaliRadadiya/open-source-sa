@@ -30,6 +30,7 @@ return [
     'fail2ban.settings_updated' => 'A mis à jour les réglages fail2ban (prisons actives : :jails)',
     'fail2ban.ip_banned' => 'A banni :ip dans :jail',
     'fail2ban.ip_unbanned' => 'A débanni :ip de :jail',
+    'fail2ban.all_unbanned' => 'A débanni toutes les adresses IP (:count)',
     'server.process_killed' => 'A arrêté le processus :pid (:command) avec SIG:signal',
     'database.optimized' => 'A optimisé la base de données :name',
     'database.repaired' => 'A réparé la base de données :name',

@@ -30,6 +30,7 @@ return [
     'fail2ban.settings_updated' => 'Обновил настройки fail2ban (активные правила: :jails)',
     'fail2ban.ip_banned' => 'Заблокировал :ip в :jail',
     'fail2ban.ip_unbanned' => 'Разблокировал :ip в :jail',
+    'fail2ban.all_unbanned' => 'Разблокировал все IP-адреса (:count)',
     'server.process_killed' => 'Остановлен процесс :pid (:command) сигналом SIG:signal',
     'database.optimized' => 'Оптимизировал базу данных :name',
     'database.repaired' => 'Восстановил базу данных :name',

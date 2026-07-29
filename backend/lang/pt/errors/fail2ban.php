@@ -9,4 +9,5 @@ return [
     'lockout_risk' => 'Ativar a prisão SSH pode impedi-lo de aceder a este servidor. Adicione o seu endereço IP à lista de exceções ou confirme que aceita o risco.',
     'ip_ignored' => 'Esse endereço IP está na lista de exceções, pelo que o bloqueio não se manteria.',
     'operation_failed' => 'A operação do fail2ban falhou.',
+    'bantime_too_short' => 'O tempo de bloqueio deve ser de pelo menos 60 segundos, ou -1 para um bloqueio permanente.',
 ];

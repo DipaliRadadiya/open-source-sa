@@ -30,6 +30,7 @@ return [
     'fail2ban.settings_updated' => 'fail2ban-Einstellungen aktualisiert (aktive Jails: :jails)',
     'fail2ban.ip_banned' => ':ip in :jail gesperrt',
     'fail2ban.ip_unbanned' => ':ip in :jail entsperrt',
+    'fail2ban.all_unbanned' => 'Alle IP-Adressen entsperrt (:count)',
     'server.process_killed' => 'Prozess :pid (:command) mit SIG:signal beendet',
     'database.optimized' => 'Datenbank :name optimiert',
     'database.repaired' => 'Datenbank :name repariert',
