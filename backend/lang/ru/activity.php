@@ -24,6 +24,7 @@ return [
     'database.connection_updated' => 'Обновил настройки подключения :engine',
     'database.user_updated' => 'Обновил пользователя базы данных :username в :database',
     'database.process_killed' => 'Завершил процесс :process (:engine)',
+    'server.process_killed' => 'Остановлен процесс :pid (:command) сигналом SIG:signal',
     'database.optimized' => 'Оптимизировал базу данных :name',
     'database.repaired' => 'Восстановил базу данных :name',
     'database.exported' => 'Экспортировал базу данных :name',

@@ -24,6 +24,7 @@ return [
     'database.connection_updated' => 'Verbindungseinstellungen für :engine aktualisiert',
     'database.user_updated' => 'Datenbankbenutzer :username in :database aktualisiert',
     'database.process_killed' => ':engine-Prozess :process beendet',
+    'server.process_killed' => 'Prozess :pid (:command) mit SIG:signal beendet',
     'database.optimized' => 'Datenbank :name optimiert',
     'database.repaired' => 'Datenbank :name repariert',
     'database.exported' => 'Datenbank :name exportiert',

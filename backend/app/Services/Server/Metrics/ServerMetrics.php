@@ -4,19 +4,26 @@ namespace App\Services\Server\Metrics;
 
 use App\Services\Server\ServerOps;
 use App\Support\Bytes;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Reads server facts + live metrics cheaply from `/proc` (+ df / small probes).
  * Everything is world-readable, so this works without root (detect-don't-trust).
- * CPU % and network rate need two reads a short interval apart (cumulative
- * counters).
  *
- * `snapshot()` = the flat percent fields stored for the 24h charts (the 5-min
- * collector). `live()` = a richer, UX-friendly breakdown (total/used/free +
- * percent per resource) for the live gauges — computed on demand, never stored.
+ * CPU, network and disk I/O are cumulative counters, so each needs two
+ * readings to become a rate — and where the second reading comes from differs
+ * by caller. `snapshot()` (the 5-min background collector) takes its own by
+ * waiting; `live()` (polled by the dashboard) measures against the previous
+ * poll's reading, because a request that sleeps holds a php-fpm worker while
+ * it does nothing.
  */
 class ServerMetrics
 {
+    /** Where the previous poll's counter readings are kept. */
+    private const COUNTER_CACHE_KEY = 'server-metrics:counters';
+
+    private const COUNTER_CACHE_TTL = 600;
+
     public function __construct(private ServerOps $serverOps) {}
 
     /**
@@ -31,21 +38,23 @@ class ServerMetrics
         $swap = $this->swapUsage();
         $disk = $this->diskUsage();
         [$load1, $load5, $load15] = $this->load();
-        [$netIn, $netOut] = $this->network();
-        $io = $this->diskIo();
+
+        // The collector runs in the background, so it can afford to measure
+        // its own window and produce a sample that stands on its own.
+        $rates = $this->ratesBySampling();
 
         return [
-            'cpu_percent' => $this->cpuPercent(),
+            'cpu_percent' => $rates['cpu_percent'],
             'memory_percent' => $memory['percent'],
             'swap_percent' => $swap['percent'],
             'disk_percent' => $disk['percent'],
             'load_1' => $load1,
             'load_5' => $load5,
             'load_15' => $load15,
-            'net_in' => $netIn,
-            'net_out' => $netOut,
-            'disk_read' => $io['read'],
-            'disk_write' => $io['write'],
+            'net_in' => $rates['net_in'],
+            'net_out' => $rates['net_out'],
+            'disk_read' => $rates['disk_read'],
+            'disk_write' => $rates['disk_write'],
         ];
     }
 
@@ -60,11 +69,14 @@ class ServerMetrics
     public function live(): array
     {
         [$load1, $load5, $load15] = $this->load();
-        [$netIn, $netOut] = $this->network();
-        $io = $this->diskIo();
+
+        // Measured against the previous poll — this endpoint must not sleep.
+        $rates = $this->ratesFromPreviousRead();
+        $netIn = $rates['net_in'];
+        $netOut = $rates['net_out'];
 
         return [
-            'cpu' => ['percent' => $this->cpuPercent(), 'cores' => $this->cpuCores()],
+            'cpu' => ['percent' => $rates['cpu_percent'], 'cores' => $this->cpuCores()],
             'memory' => $this->withHuman($this->memoryUsage()),
             'swap' => $this->withHuman($this->swapUsage()),
             'disk' => $this->withHuman($this->diskUsage()),
@@ -79,12 +91,12 @@ class ServerMetrics
             // usually means operations per second, not megabytes, and both
             // come off the same counters.
             'disk_io' => [
-                'read' => $io['read'],
-                'write' => $io['write'],
-                'read_human' => Bytes::human($io['read']).'/s',
-                'write_human' => Bytes::human($io['write']).'/s',
-                'read_ops' => $io['read_ops'],
-                'write_ops' => $io['write_ops'],
+                'read' => $rates['disk_read'],
+                'write' => $rates['disk_write'],
+                'read_human' => Bytes::human((int) $rates['disk_read']).'/s',
+                'write_human' => Bytes::human((int) $rates['disk_write']).'/s',
+                'read_ops' => $rates['disk_read_ops'],
+                'write_ops' => $rates['disk_write_ops'],
             ],
         ];
     }
@@ -233,16 +245,106 @@ class ServerMetrics
         return [(float) ($parts[0] ?? 0), (float) ($parts[1] ?? 0), (float) ($parts[2] ?? 0)];
     }
 
-    private function cpuPercent(): float
+    /**
+     * Every cumulative counter this class turns into a rate, read together.
+     *
+     * Read as one set so a rate window can be shared. Reading them separately
+     * is what made a live poll cost one sleep per metric.
+     *
+     * @return array<string, int>
+     */
+    private function counters(): array
     {
-        [$total1, $idle1] = $this->cpuTimes();
+        [$cpuTotal, $cpuIdle] = $this->cpuTimes();
+        [$netIn, $netOut] = $this->netTotals();
+        $disk = $this->diskTotals();
+
+        return [
+            'cpu_total' => $cpuTotal,
+            'cpu_idle' => $cpuIdle,
+            'net_in' => $netIn,
+            'net_out' => $netOut,
+            'disk_read' => $disk['read'],
+            'disk_write' => $disk['write'],
+            'disk_read_ops' => $disk['read_ops'],
+            'disk_write_ops' => $disk['write_ops'],
+        ];
+    }
+
+    /**
+     * Rates measured over a sleep — one self-contained sample, for the
+     * background collector where waiting a second costs nothing.
+     *
+     * @return array<string, int|float>
+     */
+    private function ratesBySampling(): array
+    {
+        $before = $this->counters();
+        $started = microtime(true);
         $this->tick();
-        [$total2, $idle2] = $this->cpuTimes();
+        $after = $this->counters();
 
-        $totalDelta = $total2 - $total1;
-        $idleDelta = $idle2 - $idle1;
+        return $this->rates($before, $after, max(0.001, microtime(true) - $started));
+    }
 
-        return $totalDelta > 0 ? round(max(0, $totalDelta - $idleDelta) / $totalDelta * 100, 2) : 0.0;
+    /**
+     * Rates measured against the previous request's reading.
+     *
+     * The live endpoint is polled on a timer, so the gap between two polls is
+     * already a measurement window — using it means the request never sleeps.
+     * Sleeping per metric held a php-fpm worker for a second per counter,
+     * which a few open dashboards would turn into an outage.
+     *
+     * The first poll has nothing to compare against and reports zero.
+     *
+     * @return array<string, int|float>
+     */
+    private function ratesFromPreviousRead(): array
+    {
+        $now = microtime(true);
+        $current = $this->counters();
+        $previous = Cache::get(self::COUNTER_CACHE_KEY);
+
+        Cache::put(self::COUNTER_CACHE_KEY, ['counters' => $current, 'at' => $now], self::COUNTER_CACHE_TTL);
+
+        if (! is_array($previous)) {
+            return $this->rates($current, $current, 1.0);
+        }
+
+        $elapsed = $now - (float) $previous['at'];
+        $window = (int) config('server.metrics.rate_window', 120);
+
+        // Too close together to measure, or so far apart that the average
+        // describes a window nobody is watching any more.
+        if ($elapsed < 0.2 || $elapsed > $window) {
+            return $this->rates($current, $current, 1.0);
+        }
+
+        return $this->rates($previous['counters'], $current, $elapsed);
+    }
+
+    /**
+     * @param  array<string, int>  $before
+     * @param  array<string, int>  $after
+     * @return array<string, int|float>
+     */
+    private function rates(array $before, array $after, float $seconds): array
+    {
+        $delta = fn (string $key) => max(0, ($after[$key] ?? 0) - ($before[$key] ?? 0));
+        $perSecond = fn (string $key) => (int) round($delta($key) / $seconds);
+
+        $cpuTotal = $delta('cpu_total');
+        $cpuIdle = $delta('cpu_idle');
+
+        return [
+            'cpu_percent' => $cpuTotal > 0 ? round(max(0, $cpuTotal - $cpuIdle) / $cpuTotal * 100, 2) : 0.0,
+            'net_in' => $perSecond('net_in'),
+            'net_out' => $perSecond('net_out'),
+            'disk_read' => $perSecond('disk_read'),
+            'disk_write' => $perSecond('disk_write'),
+            'disk_read_ops' => $perSecond('disk_read_ops'),
+            'disk_write_ops' => $perSecond('disk_write_ops'),
+        ];
     }
 
     /**
@@ -259,27 +361,6 @@ class ServerMetrics
         }
 
         return [0, 0];
-    }
-
-    /**
-     * Disk throughput and IOPS, as a rate.
-     *
-     * @return array{read: int, write: int, read_ops: int, write_ops: int}
-     */
-    private function diskIo(): array
-    {
-        $first = $this->diskTotals();
-        $this->tick();
-        $second = $this->diskTotals();
-
-        $seconds = max(1, (int) config('server.metrics.sample_interval', 1));
-
-        return [
-            'read' => (int) max(0, intdiv($second['read'] - $first['read'], $seconds)),
-            'write' => (int) max(0, intdiv($second['write'] - $first['write'], $seconds)),
-            'read_ops' => (int) max(0, intdiv($second['read_ops'] - $first['read_ops'], $seconds)),
-            'write_ops' => (int) max(0, intdiv($second['write_ops'] - $first['write_ops'], $seconds)),
-        ];
     }
 
     /**
@@ -330,20 +411,6 @@ class ServerMetrics
         // /sys/block holds whole devices only — partitions live beneath them,
         // so this is what separates sda from sda1.
         return is_dir(rtrim((string) config('server.sys_block', '/sys/block'), '/')."/{$device}");
-    }
-
-    /**
-     * @return array{0: int, 1: int}
-     */
-    private function network(): array
-    {
-        [$rx1, $tx1] = $this->netTotals();
-        $this->tick();
-        [$rx2, $tx2] = $this->netTotals();
-
-        $seconds = max(1, (int) config('server.metrics.sample_interval', 1));
-
-        return [(int) max(0, intdiv($rx2 - $rx1, $seconds)), (int) max(0, intdiv($tx2 - $tx1, $seconds))];
     }
 
     /**

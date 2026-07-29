@@ -514,6 +514,7 @@ Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics ar
 } }
 ```
 
+- **Polling.** This endpoint returns in ~10 ms and never blocks. `cpu.percent`, `network` and `disk_io` are rates **measured against your previous poll**, so poll it on a timer (2–5 s) and the numbers describe the interval you just watched. **The first poll after a gap returns `0` for those fields** — there is nothing to measure against yet. Show `—` or a flat line for one tick; do not treat it as an idle server.
 - `disk_io` — disk throughput **and IOPS**, both as a rate. Throughput answers "is the disk saturated", `read_ops`/`write_ops` answer "is it thrashing" — on a database server the second is usually the real question, and a disk can be at 100% busy while moving very few megabytes.
   - Counted over **whole physical disks only**. `/proc/diskstats` lists partitions and loop devices alongside their parent disk, so a naive sum reports the same traffic two or three times.
   - Like `network`, this is a **rate between two reads**, not a running total — a quiet disk reads `0`, and the number never grows just because the server has been up longer.
@@ -521,6 +522,15 @@ Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics ar
 **`GET /api/server/metrics/history`** — 24h series for the **CPU / Memory / Disk / Load / Network / Disk I/O** charts. `{ metrics: [{sampled_at, cpu, memory, swap, disk, load_1, load_5, load_15, net_in, net_out, disk_read, disk_write}, …] }` (5-min cadence). `disk_read`/`disk_write` are bytes/second, same units as the network pair; IOPS is live-only and not stored.
 
 **`GET /api/server/processes`** — server process table (top by CPU). `{ processes: [{pid, user, cpu, memory, command}, …] }`.
+
+**`DELETE /api/server/processes/{pid}`** (`dashboard` **manage**) — stop a process.
+- Body: optional `signal`, one of **`TERM`** (default) or `KILL`. TERM asks the process to shut down and lets it flush and close files; KILL gives it no chance to, which is why it is not the default. Offer it as a second click ("Force stop"), not the first.
+- Response `200`: `{"process": {pid, command, user, signal}}` — read at kill time, so it reflects what was actually stopped.
+- **`404`** — the PID is no longer running. Refresh the table; do **not** show this as success. PIDs are recycled, so a stale row may now point at a different process entirely.
+- **`422`** — refused. PID 1, kernel threads, the panel's own PHP, and processes belonging to protected services (nginx, php-fpm) cannot be stopped here. Show the returned `message`; these are permanent refusals, not retryable.
+- **`500 {message, reference}`** — the signal failed (usually permissions).
+- Logged to the activity trail as `server.process_killed` with the pid, command and signal.
+- Confirm before calling. Stopping the wrong process can take a site or a database down, and there is no undo.
 
 *(Deferred — Phase 3, with the Databases feature: `GET /api/server/database/metrics/history` (query/QPS chart) + `GET /api/server/database/processes` (DB process table + kill-query), engine-detected.)*
 

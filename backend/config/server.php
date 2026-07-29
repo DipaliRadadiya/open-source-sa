@@ -412,6 +412,10 @@ return [
 
     'metrics' => [
         'sample_interval' => (int) env('SERVER_METRICS_SAMPLE_INTERVAL', 1),
+        // Oldest previous poll still worth measuring against on the live
+        // endpoint; past this the average describes a window nobody is
+        // watching, so it reports zero instead.
+        'rate_window' => (int) env('SERVER_METRICS_RATE_WINDOW', 120),
         // Device names counted for disk I/O. Restricted to real disk types so
         // loop devices (mounted files) and device-mapper nodes — whose traffic
         // is already counted on the disk underneath — are left out.

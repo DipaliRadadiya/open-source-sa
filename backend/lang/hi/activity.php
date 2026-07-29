@@ -24,6 +24,7 @@ return [
     'database.connection_updated' => ':engine कनेक्शन सेटिंग्स अपडेट कीं',
     'database.user_updated' => ':database पर डेटाबेस उपयोगकर्ता :username अपडेट किया',
     'database.process_killed' => ':engine प्रोसेस :process समाप्त किया',
+    'server.process_killed' => 'प्रक्रिया :pid (:command) को SIG:signal से रोका',
     'database.optimized' => ':name डेटाबेस ऑप्टिमाइज़ किया',
     'database.repaired' => ':name डेटाबेस मरम्मत किया',
     'database.exported' => ':name डेटाबेस एक्सपोर्ट किया',
