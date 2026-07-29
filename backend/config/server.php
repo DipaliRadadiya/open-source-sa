@@ -13,6 +13,8 @@ use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\TmpTarget;
+use App\Services\Server\WebServers\ApacheDriver;
+use App\Services\Server\WebServers\NginxDriver;
 
 return [
 
@@ -88,6 +90,27 @@ return [
     | here — no frontend change.
     |
     */
+
+    /*
+    | Web servers the panel can write config for. A server running something
+    | not listed here is refused rather than guessed at — a config we invented
+    | would fail its own test at best, and take every site down at worst.
+    | OpenLiteSpeed is absent deliberately: its config format is unlike the
+    | others and deserves its own implementation, not a near-miss.
+    */
+
+    'web_server_drivers' => [
+        'nginx' => [
+            'driver' => NginxDriver::class,
+            'sites_dir' => env('SERVER_NGINX_SITES_DIR', '/etc/nginx/sites-enabled'),
+        ],
+        'apache' => [
+            'driver' => ApacheDriver::class,
+            'sites_dir' => env('SERVER_APACHE_SITES_DIR', '/etc/apache2/sites-enabled'),
+        ],
+    ],
+
+    'default_php_version' => env('SERVER_DEFAULT_PHP_VERSION', '8.4'),
 
     'site_types' => [
         WordPressSiteType::class,

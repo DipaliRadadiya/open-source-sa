@@ -67,4 +67,6 @@ return [
     'application.created' => 'एप्लिकेशन :name (:site_type) बनाया',
     'application.updated' => 'एप्लिकेशन :name अपडेट किया',
     'application.deleted' => 'एप्लिकेशन :name (:site_type) हटाया',
+    'application.provisioned' => 'एप्लिकेशन :name सर्वर पर सेट किया',
+    'application.provision_failed' => 'एप्लिकेशन :name सेट करने में विफल (चरण: :step)',
 ];

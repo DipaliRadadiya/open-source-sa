@@ -48,6 +48,13 @@ return new class extends Migration
             // Type-specific answers, shaped by the site type's field schema.
             $table->json('settings')->nullable();
 
+            // Provisioning progress: the steps completed so far (so the UI can
+            // show which stage it reached), which step broke, and the
+            // server-ops log reference for that failure.
+            $table->json('steps')->nullable();
+            $table->string('failed_step')->nullable();
+            $table->string('reference')->nullable();
+
             $table->timestamps();
 
             $table->index('status');

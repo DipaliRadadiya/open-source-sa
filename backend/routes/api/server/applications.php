@@ -20,4 +20,5 @@ Route::get('/applications', [ApplicationController::class, 'index'])->middleware
 Route::post('/applications', [ApplicationController::class, 'store'])->middleware('permission:application,manage');
 Route::get('/applications/{application}', [ApplicationController::class, 'show'])->middleware('permission:application');
 Route::put('/applications/{application}', [ApplicationController::class, 'update'])->middleware('permission:application,manage');
+Route::post('/applications/{application}/provision', [ApplicationController::class, 'provision'])->middleware('permission:application,manage');
 Route::delete('/applications/{application}', [ApplicationController::class, 'destroy'])->middleware('permission:application,manage');

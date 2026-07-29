@@ -3,6 +3,7 @@
 namespace App\Actions\Server\Application;
 
 use App\Enums\ApplicationStatus;
+use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Applications\SiteTypeManager;
@@ -54,6 +55,10 @@ class CreateApplication
             'name' => $application->name,
             'site_type' => $application->site_type,
         ]);
+
+        // Provisioning is long enough that the request must not wait for it;
+        // the client polls the application's status.
+        ProvisionApplication::dispatch($application->id);
 
         return $application->fresh(['systemUser']);
     }

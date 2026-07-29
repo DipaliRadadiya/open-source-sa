@@ -46,6 +46,14 @@ class ApplicationResource extends JsonResource
 
             'settings' => $this->settings ?? [],
 
+            // Provisioning progress, so the UI can show which stage it reached
+            // instead of a bare spinner.
+            'steps' => $this->steps ?? [],
+            'failed_step' => $this->failed_step,
+            // Quote this to support; the technical detail is in the server-ops
+            // log under the same id, never in the response.
+            'reference' => $this->reference,
+
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
         ];

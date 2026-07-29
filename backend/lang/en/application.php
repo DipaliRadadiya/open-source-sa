@@ -57,4 +57,14 @@ return [
         'repository_url' => 'A public repository — no account needed. Must be an https:// address.',
         'build_command' => 'Run after the code is fetched, e.g. composer install --no-dev',
     ],
+
+    'steps' => [
+        'create_directory' => 'Creating the directory',
+        'set_ownership' => 'Setting ownership',
+        'placeholder' => 'Adding a placeholder page',
+        'write_config' => 'Writing the site config',
+        'test_config' => 'Testing the config',
+        'reload' => 'Reloading the web server',
+        'worker' => 'The background worker stopped',
+    ],
 ];
