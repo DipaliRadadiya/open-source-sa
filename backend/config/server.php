@@ -1,12 +1,14 @@
 <?php
 
 use App\Services\Applications\Types\GitSiteType;
+use App\Services\Applications\Types\PhpMyAdminSiteType;
 use App\Services\Applications\Types\PhpSiteType;
 use App\Services\Applications\Types\StaticSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
+use App\Services\Server\Applications\Installers\PhpMyAdminInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
@@ -153,6 +155,14 @@ return [
             'wp_cli' => env('SERVER_WP_CLI', '/usr/local/bin/wp'),
             'wp_cli_url' => 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar',
         ],
+
+        'phpmyadmin' => [
+            'driver' => PhpMyAdminInstaller::class,
+            // Redirects to the current release; both hops are https, which the
+            // download step requires.
+            'download_url' => env('SERVER_PHPMYADMIN_URL', 'https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.gz'),
+            'db_host' => env('SERVER_PHPMYADMIN_DB_HOST', '127.0.0.1'),
+        ],
     ],
 
     'git_credential_dir' => env('SERVER_GIT_CREDENTIAL_DIR', sys_get_temp_dir()),
@@ -161,6 +171,7 @@ return [
 
     'site_types' => [
         WordPressSiteType::class,
+        PhpMyAdminSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,
         StaticSiteType::class,

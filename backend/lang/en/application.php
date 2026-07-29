@@ -8,6 +8,7 @@
 return [
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Blog and website builder'],
+        'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Manage your databases in the browser'],
         'git' => ['title' => 'From Git repo', 'tagline' => 'Deploy your own code from GitHub, GitLab or Bitbucket'],
         'php' => ['title' => 'Blank PHP site', 'tagline' => 'An empty site — upload your own files'],
         'static' => ['title' => 'Static site', 'tagline' => 'Plain HTML, CSS and JavaScript'],

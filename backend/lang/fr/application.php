@@ -3,6 +3,7 @@
 return [
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Créateur de blogs et de sites web'],
+        'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Gérez vos bases de données dans le navigateur'],
         'git' => ['title' => 'Depuis un dépôt Git', 'tagline' => 'Déployez votre propre code depuis GitHub, GitLab ou Bitbucket'],
         'php' => ['title' => 'Site PHP vide', 'tagline' => 'Un site vide — téléversez vos propres fichiers'],
         'static' => ['title' => 'Site statique', 'tagline' => 'HTML, CSS et JavaScript simples'],
