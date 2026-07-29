@@ -5,4 +5,5 @@ return [
     'no_web_server' => 'no detected web server',
     'provision_failed' => 'Setting up the site failed at the ":step" step.',
     'not_a_git_application' => 'The application is not a git deployment, so there is nothing to fetch.',
+    'no_database_engine' => 'No database engine is available. Install and configure MySQL or MariaDB before creating this application.',
 ];

@@ -59,6 +59,12 @@ return [
     ],
 
     'steps' => [
+        'create_database' => 'Creating the database',
+        'download' => 'Downloading the application',
+        'extract' => 'Unpacking the files',
+        'configure' => 'Writing the configuration',
+        'install_cli' => 'Installing the setup tool',
+        'install_app' => 'Running the installer',
         'clone' => 'Cloning the repository',
         'fetch' => 'Fetching the latest code',
         'checkout' => 'Checking out the branch',

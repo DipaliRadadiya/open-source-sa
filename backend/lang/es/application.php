@@ -54,6 +54,12 @@ return [
     ],
 
     'steps' => [
+        'create_database' => 'Creando la base de datos',
+        'download' => 'Descargando la aplicación',
+        'extract' => 'Descomprimiendo los archivos',
+        'configure' => 'Escribiendo la configuración',
+        'install_cli' => 'Instalando la herramienta de instalación',
+        'install_app' => 'Ejecutando el instalador',
         'clone' => 'Clonando el repositorio',
         'fetch' => 'Descargando el código más reciente',
         'checkout' => 'Cambiando a la rama',

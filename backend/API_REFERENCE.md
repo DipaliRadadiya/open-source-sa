@@ -570,13 +570,29 @@ Requires the `application` permission (`view` to read, `manage` to mutate).
 | `active` | serving | the domain loads |
 | `failed` | stopped at `failed_step` | show the step + a **Retry** button |
 
-- `steps` — the steps completed in order. Provisioning: `create_directory`, `set_ownership`, `placeholder`, `write_config`, `test_config`, `reload`. Deploy: `clone` (or `fetch` + `checkout`), `set_ownership`, `build`. Localized labels are in the `application.steps.*` translations.
+- `steps` — the steps completed in order. Provisioning: `create_directory`, `set_ownership`, `placeholder`, `write_config`, `test_config`, `reload`. **One-click apps then continue:** `create_database`, `download`, `extract`, `configure`, `install_cli` (only when the setup tool is missing), `install_app`. Deploy: `clone` (or `fetch` + `checkout`), `set_ownership`, `build`. Localized labels are in the `application.steps.*` translations.
 - `failed_step` — which one broke (`worker` means the background process itself died).
 - `reference` — quote this to support. **The raw server error is deliberately not in the response**; it's in the server-ops log under this id.
 
 **The config is always tested before any reload, and a failed test removes the config we just wrote.** A broken vhost that reached a reload would take every other site on the server down — so one site's bad config can never cost the whole box.
 
 A server running a web server the panel can't configure (currently anything other than nginx or apache) is **refused with a 422** rather than guessed at.
+
+#### One-click applications
+
+A site type with `needs_database: true` (currently **WordPress**) is installed automatically once its site is serving:
+
+1. **A database and a dedicated user are created** — named from the domain, with a generated password. Linked to the app via `databases.application_id`, so `GET /api/databases` shows it.
+2. The application is **downloaded over https**, unpacked in a temp directory, then moved into the web root.
+3. Its config file is written **`0640`, owned by the site user** — it holds live database credentials.
+4. The application's own setup runs **as the site user**, never as the panel.
+
+- The **admin password the user typed is never a command-line argument** — it goes in over stdin. Anything on a command line is visible in `ps` to every user on the machine.
+- **Each install gets its own security keys.** If the upstream key service is unreachable, locally generated randomness is used — never a shared fallback set.
+- If **no database engine is available**, the install fails at `create_database` **before anything is downloaded**, with `errors/application.no_database_engine`. Nothing is left half-written.
+- **Deleting the application does not drop its database.** That has to be done from the Databases screen — losing data as a side effect of removing a record isn't acceptable.
+
+Site types with no installer (`git`, `php`, `static`) skip all of this; there is nothing to install for a site whose contents the user supplies.
 
 #### The application object
 ```json
