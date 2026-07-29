@@ -32,6 +32,7 @@ class ServerMetrics
         $disk = $this->diskUsage();
         [$load1, $load5, $load15] = $this->load();
         [$netIn, $netOut] = $this->network();
+        $io = $this->diskIo();
 
         return [
             'cpu_percent' => $this->cpuPercent(),
@@ -43,6 +44,8 @@ class ServerMetrics
             'load_15' => $load15,
             'net_in' => $netIn,
             'net_out' => $netOut,
+            'disk_read' => $io['read'],
+            'disk_write' => $io['write'],
         ];
     }
 
@@ -58,6 +61,7 @@ class ServerMetrics
     {
         [$load1, $load5, $load15] = $this->load();
         [$netIn, $netOut] = $this->network();
+        $io = $this->diskIo();
 
         return [
             'cpu' => ['percent' => $this->cpuPercent(), 'cores' => $this->cpuCores()],
@@ -70,6 +74,17 @@ class ServerMetrics
                 'out' => $netOut,
                 'in_human' => Bytes::human($netIn).'/s',
                 'out_human' => Bytes::human($netOut).'/s',
+            ],
+            // Throughput and IOPS: on a database server "the disk is slow"
+            // usually means operations per second, not megabytes, and both
+            // come off the same counters.
+            'disk_io' => [
+                'read' => $io['read'],
+                'write' => $io['write'],
+                'read_human' => Bytes::human($io['read']).'/s',
+                'write_human' => Bytes::human($io['write']).'/s',
+                'read_ops' => $io['read_ops'],
+                'write_ops' => $io['write_ops'],
             ],
         ];
     }
@@ -244,6 +259,77 @@ class ServerMetrics
         }
 
         return [0, 0];
+    }
+
+    /**
+     * Disk throughput and IOPS, as a rate.
+     *
+     * @return array{read: int, write: int, read_ops: int, write_ops: int}
+     */
+    private function diskIo(): array
+    {
+        $first = $this->diskTotals();
+        $this->tick();
+        $second = $this->diskTotals();
+
+        $seconds = max(1, (int) config('server.metrics.sample_interval', 1));
+
+        return [
+            'read' => (int) max(0, intdiv($second['read'] - $first['read'], $seconds)),
+            'write' => (int) max(0, intdiv($second['write'] - $first['write'], $seconds)),
+            'read_ops' => (int) max(0, intdiv($second['read_ops'] - $first['read_ops'], $seconds)),
+            'write_ops' => (int) max(0, intdiv($second['write_ops'] - $first['write_ops'], $seconds)),
+        ];
+    }
+
+    /**
+     * Cumulative disk counters, summed over whole physical disks only.
+     *
+     * /proc/diskstats lists partitions alongside their parent disk and loop
+     * devices alongside both, so summing every line counts the same traffic
+     * two or three times over. Only whole devices (present in /sys/block) of a
+     * real disk type are counted — which also skips the device-mapper nodes on
+     * an LVM box, whose I/O is already counted on the disk underneath.
+     *
+     * @return array{read: int, write: int, read_ops: int, write_ops: int}
+     */
+    private function diskTotals(): array
+    {
+        $totals = ['read' => 0, 'write' => 0, 'read_ops' => 0, 'write_ops' => 0];
+
+        foreach (preg_split('/\r?\n/', $this->proc('diskstats')) ?: [] as $line) {
+            $fields = preg_split('/\s+/', trim($line));
+
+            if ($fields === false || count($fields) < 10) {
+                continue;
+            }
+
+            if (! $this->isWholeDisk((string) $fields[2])) {
+                continue;
+            }
+
+            // Sectors in diskstats are always 512 bytes, regardless of the
+            // device's own sector size.
+            $totals['read_ops'] += (int) $fields[3];
+            $totals['read'] += (int) $fields[5] * 512;
+            $totals['write_ops'] += (int) $fields[7];
+            $totals['write'] += (int) $fields[9] * 512;
+        }
+
+        return $totals;
+    }
+
+    private function isWholeDisk(string $device): bool
+    {
+        $pattern = (string) config('server.metrics.disk_devices', '/^(sd|nvme|vd|xvd|hd|md)/');
+
+        if (preg_match($pattern, $device) !== 1) {
+            return false;
+        }
+
+        // /sys/block holds whole devices only — partitions live beneath them,
+        // so this is what separates sda from sda1.
+        return is_dir(rtrim((string) config('server.sys_block', '/sys/block'), '/')."/{$device}");
     }
 
     /**
