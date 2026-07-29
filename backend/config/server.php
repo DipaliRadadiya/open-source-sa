@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Applications\Types\GitSiteType;
+use App\Services\Applications\Types\NextcloudSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
 use App\Services\Applications\Types\PhpSiteType;
 use App\Services\Applications\Types\StaticSiteType;
@@ -8,6 +9,7 @@ use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
+use App\Services\Server\Applications\Installers\NextcloudInstaller;
 use App\Services\Server\Applications\Installers\PhpMyAdminInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
@@ -130,6 +132,10 @@ return [
 
     'default_php_version' => env('SERVER_DEFAULT_PHP_VERSION', '8.4'),
 
+    // How a version maps to its CLI binary, so an application's own tooling
+    // runs on the same PHP that will serve it.
+    'php_binary_pattern' => env('SERVER_PHP_BINARY_PATTERN', '/usr/bin/php{version}'),
+
     /*
     | Git deploys. The credential file is written 0600 and deleted as soon as
     | the command finishes — the token is never a command argument and never
@@ -156,6 +162,17 @@ return [
             'wp_cli_url' => 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar',
         ],
 
+        'nextcloud' => [
+            'driver' => NextcloudInstaller::class,
+            // Upstream publishes bzip2 and zip only — no gzip — which is why
+            // the shared extract step lets tar detect the compression.
+            'download_url' => env('SERVER_NEXTCLOUD_URL', 'https://download.nextcloud.com/server/releases/latest.tar.bz2'),
+            'database' => env('SERVER_NEXTCLOUD_DATABASE', 'mysql'),
+            // 280 MB to fetch and a schema to build afterwards. The shared
+            // default would time this out on any ordinary connection.
+            'timeout' => (int) env('SERVER_NEXTCLOUD_TIMEOUT', 1800),
+        ],
+
         'phpmyadmin' => [
             'driver' => PhpMyAdminInstaller::class,
             // Redirects to the current release; both hops are https, which the
@@ -171,6 +188,7 @@ return [
 
     'site_types' => [
         WordPressSiteType::class,
+        NextcloudSiteType::class,
         PhpMyAdminSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,

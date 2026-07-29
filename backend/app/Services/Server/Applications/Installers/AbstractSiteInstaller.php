@@ -31,6 +31,22 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     }
 
     /**
+     * How long this application's steps may take.
+     *
+     * Per-installer because the applications differ by an order of magnitude:
+     * WordPress is a 25 MB archive, Nextcloud a 280 MB one, and a timeout
+     * sized for the first turns the second into a guaranteed failure on any
+     * ordinary connection.
+     */
+    protected function timeout(): int
+    {
+        return (int) config(
+            "server.installers.{$this->siteType()}.timeout",
+            config('server.installer_timeout', 300),
+        );
+    }
+
+    /**
      * Download an archive over HTTPS and unpack it into the document root.
      *
      * Unpacked into a temp directory first, then moved — a half-downloaded or
@@ -51,12 +67,16 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         $this->run('download', [
             'curl', '--fail', '--location', '--silent', '--show-error',
             '--proto', '=https', '--proto-redir', '=https',
-            '--max-time', (string) config('server.installer_timeout', 300),
+            '--max-time', (string) $this->timeout(),
             '--output', $archive, $url,
         ], $application);
 
         $this->run('extract', ['mkdir', '-p', "{$work}/src"], $application);
-        $this->run('extract', ['tar', '-xzf', $archive, '-C', "{$work}/src", '--strip-components=1'], $application);
+        // `-xf` rather than `-xzf`: applications ship in whatever they ship
+        // in, and Nextcloud's only tarball is bzip2. tar detects the
+        // compression from the file itself, so the installer does not have to
+        // know or care.
+        $this->run('extract', ['tar', '-xf', $archive, '-C', "{$work}/src", '--strip-components=1'], $application);
 
         // Copy contents (not the directory) into the web root, overwriting so
         // a retry converges instead of nesting.
@@ -89,12 +109,12 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      *
      * @throws ProvisioningFailedException
      */
-    protected function runAsSiteUser(string $step, Application $application, array $command, ?string $input = null): void
+    protected function runAsSiteUser(string $step, Application $application, array $command, ?string $input = null, ?string $cwd = null): void
     {
         $this->run($step, array_merge(
             ['runuser', '-u', $application->systemUser->username, '--'],
             $command,
-        ), $application, $input);
+        ), $application, $input, $cwd);
     }
 
     /**
@@ -102,13 +122,14 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      *
      * @throws ProvisioningFailedException
      */
-    protected function run(string $step, array $command, Application $application, ?string $input = null): void
+    protected function run(string $step, array $command, Application $application, ?string $input = null, ?string $cwd = null): void
     {
         $result = $this->serverOps->run(
             $command,
             ['feature' => 'application', 'op' => "installer.{$step}", 'application' => $application->id],
-            timeout: (int) config('server.installer_timeout', 300),
+            timeout: $this->timeout(),
             input: $input,
+            cwd: $cwd,
         );
 
         if ($result->failed()) {

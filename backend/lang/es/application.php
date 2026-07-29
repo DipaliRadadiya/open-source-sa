@@ -4,6 +4,7 @@ return [
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Creador de blogs y sitios web'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Gestione sus bases de datos en el navegador'],
+        'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'Sincronización y uso compartido de archivos privados'],
         'git' => ['title' => 'Desde un repositorio Git', 'tagline' => 'Despliega tu propio código desde GitHub, GitLab o Bitbucket'],
         'php' => ['title' => 'Sitio PHP vacío', 'tagline' => 'Un sitio vacío: sube tus propios archivos'],
         'static' => ['title' => 'Sitio estático', 'tagline' => 'HTML, CSS y JavaScript simples'],

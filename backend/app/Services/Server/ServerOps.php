@@ -23,8 +23,12 @@ class ServerOps
      * @param  string|null  $input  Data piped to the command's stdin (e.g. for
      *                              `chpasswd`). Never logged — keep secrets here,
      *                              not in the command array.
+     * @param  string|null  $cwd  Working directory. Some tools refuse to run
+     *                            from anywhere else — Nextcloud's `occ install`
+     *                            fails outright unless it is run from its own
+     *                            root — and there is no shell here to `cd` in.
      */
-    public function run(array $command, array $context = [], int $timeout = 60, ?string $input = null): ServerOpsResult
+    public function run(array $command, array $context = [], int $timeout = 60, ?string $input = null, ?string $cwd = null): ServerOpsResult
     {
         $reference = (string) Str::uuid();
         $startedAt = microtime(true);
@@ -38,6 +42,9 @@ class ServerOps
             $pending = Process::timeout($timeout);
             if ($input !== null) {
                 $pending = $pending->input($input);
+            }
+            if ($cwd !== null) {
+                $pending = $pending->path($cwd);
             }
             $result = $pending->run($command);
             $ok = $result->successful();
