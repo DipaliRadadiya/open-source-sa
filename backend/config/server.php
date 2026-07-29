@@ -2,6 +2,7 @@
 
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
+use App\Services\Applications\Types\MoodleSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
 use App\Services\Applications\Types\PhpSiteType;
@@ -11,6 +12,7 @@ use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
 use App\Services\Server\Applications\Installers\JoomlaInstaller;
+use App\Services\Server\Applications\Installers\MoodleInstaller;
 use App\Services\Server\Applications\Installers\NextcloudInstaller;
 use App\Services\Server\Applications\Installers\PhpMyAdminInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
@@ -175,6 +177,15 @@ return [
             'timeout' => (int) env('SERVER_JOOMLA_TIMEOUT', 900),
         ],
 
+        'moodle' => [
+            'driver' => MoodleInstaller::class,
+            // The branch is part of the path, so a new major release means a
+            // new value here rather than a silent download of the old one.
+            'download_url' => env('SERVER_MOODLE_URL', 'https://packaging.moodle.org/stable500/moodle-latest-500.tgz'),
+            // 75 MB, then a schema of several hundred tables to build.
+            'timeout' => (int) env('SERVER_MOODLE_TIMEOUT', 1800),
+        ],
+
         'nextcloud' => [
             'driver' => NextcloudInstaller::class,
             // Upstream publishes bzip2 and zip only — no gzip — which is why
@@ -203,6 +214,7 @@ return [
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,
+        MoodleSiteType::class,
         PhpMyAdminSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,

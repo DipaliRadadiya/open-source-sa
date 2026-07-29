@@ -6,6 +6,7 @@ return [
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Faça a gestão das suas bases de dados no navegador'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'Sincronização e partilha de ficheiros privados'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'Sistema flexível de gestão de conteúdos'],
+        'moodle' => ['title' => 'Moodle', 'tagline' => 'Cursos e aprendizagem online'],
         'git' => ['title' => 'De um repositório Git', 'tagline' => 'Implante seu próprio código do GitHub, GitLab ou Bitbucket'],
         'php' => ['title' => 'Site PHP vazio', 'tagline' => 'Um site vazio — envie seus próprios arquivos'],
         'static' => ['title' => 'Site estático', 'tagline' => 'HTML, CSS e JavaScript simples'],
