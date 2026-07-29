@@ -23,6 +23,9 @@ class ServerMetricResource extends JsonResource
             'load_15' => (float) $this->load_15,
             'net_in' => (int) $this->net_in,
             'net_out' => (int) $this->net_out,
+            // Bytes/second, same units as the network pair beside them.
+            'disk_read' => (int) $this->disk_read,
+            'disk_write' => (int) $this->disk_write,
         ];
     }
 }

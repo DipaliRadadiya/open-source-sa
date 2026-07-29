@@ -507,11 +507,18 @@ Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics ar
   "swap":   { "total": …, "used": …, "free": …, "percent": 25, … },
   "disk":   { "total": …, "used": …, "free": …, "percent": 60, … },
   "load":   { "1": 0.5, "5": 1.2, "15": 2.0 },
-  "network":{ "in": 10240, "out": 5120, "in_human": "10 KB/s", "out_human": "5 KB/s" }   // bytes/sec
+  "network":{ "in": 10240, "out": 5120, "in_human": "10 KB/s", "out_human": "5 KB/s" },  // bytes/sec
+  "disk_io": { "read": 2097152, "write": 524288,                                          // bytes/sec
+               "read_human": "2 MB/s", "write_human": "512 KB/s",
+               "read_ops": 45, "write_ops": 12 }                                          // IOPS
 } }
 ```
 
-**`GET /api/server/metrics/history`** — 24h series for the **CPU / Memory / Disk / Load** charts. `{ metrics: [{sampled_at, cpu, memory, swap, disk, load_1, load_5, load_15, net_in, net_out}, …] }` (5-min cadence).
+- `disk_io` — disk throughput **and IOPS**, both as a rate. Throughput answers "is the disk saturated", `read_ops`/`write_ops` answer "is it thrashing" — on a database server the second is usually the real question, and a disk can be at 100% busy while moving very few megabytes.
+  - Counted over **whole physical disks only**. `/proc/diskstats` lists partitions and loop devices alongside their parent disk, so a naive sum reports the same traffic two or three times.
+  - Like `network`, this is a **rate between two reads**, not a running total — a quiet disk reads `0`, and the number never grows just because the server has been up longer.
+
+**`GET /api/server/metrics/history`** — 24h series for the **CPU / Memory / Disk / Load / Network / Disk I/O** charts. `{ metrics: [{sampled_at, cpu, memory, swap, disk, load_1, load_5, load_15, net_in, net_out, disk_read, disk_write}, …] }` (5-min cadence). `disk_read`/`disk_write` are bytes/second, same units as the network pair; IOPS is live-only and not stored.
 
 **`GET /api/server/processes`** — server process table (top by CPU). `{ processes: [{pid, user, cpu, memory, command}, …] }`.
 

@@ -406,8 +406,16 @@ return [
 
     'os_release' => env('SERVER_OS_RELEASE', '/etc/os-release'),
 
+    // Whole block devices live directly under here; partitions live beneath
+    // them. That distinction is what stops disk I/O being counted twice.
+    'sys_block' => env('SERVER_SYS_BLOCK', '/sys/block'),
+
     'metrics' => [
         'sample_interval' => (int) env('SERVER_METRICS_SAMPLE_INTERVAL', 1),
+        // Device names counted for disk I/O. Restricted to real disk types so
+        // loop devices (mounted files) and device-mapper nodes — whose traffic
+        // is already counted on the disk underneath — are left out.
+        'disk_devices' => env('SERVER_METRICS_DISK_DEVICES', '/^(sd|nvme|vd|xvd|hd|md)/'),
         'retention_hours' => (int) env('SERVER_METRICS_RETENTION_HOURS', 24),
         'processes_limit' => (int) env('SERVER_METRICS_PROCESSES_LIMIT', 25),
     ],

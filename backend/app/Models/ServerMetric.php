@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 #[Fillable([
     'cpu_percent', 'memory_percent', 'swap_percent', 'disk_percent',
-    'load_1', 'load_5', 'load_15', 'net_in', 'net_out', 'sampled_at',
+    'load_1', 'load_5', 'load_15', 'net_in', 'net_out', 'disk_read', 'disk_write', 'sampled_at',
 ])]
 class ServerMetric extends Model
 {
@@ -31,6 +31,8 @@ class ServerMetric extends Model
             'load_15' => 'float',
             'net_in' => 'integer',
             'net_out' => 'integer',
+            'disk_read' => 'integer',
+            'disk_write' => 'integer',
             'sampled_at' => 'datetime',
         ];
     }
