@@ -225,6 +225,37 @@ return [
     ))),
 
     /*
+    | Which log sources belong to which service, as keys into the `logs`
+    | registry below. This maps a service row to the existing Logs feature
+    | instead of giving services a second way to read a log — same reader,
+    | same permission, and the incremental cursor already there means the
+    | frontend can poll for a live view. php-fpm is derived per version.
+    | Keys pointing at a file that doesn't exist are dropped at request time.
+    */
+
+    'service_logs' => [
+        'nginx' => ['nginx_error', 'nginx_access'],
+        'apache' => ['apache_error', 'apache_access'],
+        'openlitespeed' => ['openlitespeed_error'],
+        'mysql' => ['mysql_error', 'mysql_slow'],
+        'mariadb' => ['mysql_error', 'mysql_slow'],
+        'mongodb' => ['mongodb'],
+        'redis' => ['redis'],
+        'supervisor' => ['supervisor'],
+    ],
+
+    /*
+    | Service usage sampling. CPU is a cumulative counter, so a percentage is
+    | measured between two reads (see ServiceUsage): `window` is the oldest
+    | previous sample still worth comparing against — beyond it the average
+    | describes a period nobody is watching — and `ttl` is how long a sample
+    | is kept at all.
+    */
+
+    'usage_sample_window' => (int) env('SERVER_USAGE_SAMPLE_WINDOW', 60),
+    'usage_sample_ttl' => (int) env('SERVER_USAGE_SAMPLE_TTL', 300),
+
+    /*
     |--------------------------------------------------------------------------
     | Logs
     |--------------------------------------------------------------------------
@@ -248,6 +279,8 @@ return [
         ['key' => 'mysql_error', 'label' => 'MySQL — Error', 'group' => 'database', 'path' => '/var/log/mysql/error.log'],
         ['key' => 'mysql_slow', 'label' => 'MySQL — Slow Query', 'group' => 'database', 'path' => '/var/log/mysql/mariadb-slow.log'],
         ['key' => 'mongodb', 'label' => 'MongoDB', 'group' => 'database', 'path' => '/var/log/mongodb/mongod.log'],
+        // Cache
+        ['key' => 'redis', 'label' => 'Redis', 'group' => 'cache', 'path' => '/var/log/redis/redis-server.log'],
         // System
         ['key' => 'syslog', 'label' => 'System — Syslog', 'group' => 'system', 'path' => '/var/log/syslog'],
         ['key' => 'auth', 'label' => 'System — Auth', 'group' => 'system', 'path' => '/var/log/auth.log'],
