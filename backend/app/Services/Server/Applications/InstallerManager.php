@@ -28,7 +28,16 @@ class InstallerManager
 
     public function installerFor(Application $application): ?SiteInstaller
     {
-        $class = config("server.installers.{$application->site_type}.driver");
+        return $this->installerForType((string) $application->site_type);
+    }
+
+    /**
+     * The installer for a site type, by name — so the catalog can say whether
+     * a card installs anything without inventing an Application to ask with.
+     */
+    public function installerForType(string $siteType): ?SiteInstaller
+    {
+        $class = config("server.installers.{$siteType}.driver");
 
         return $class === null ? null : app($class);
     }
