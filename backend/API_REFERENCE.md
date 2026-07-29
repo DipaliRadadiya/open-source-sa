@@ -228,16 +228,15 @@ Every single/`cronjob` and list/`cronjobs[]` entry has this exact shape:
   "timezone": "Asia/Kolkata",
   "next_run_at": "30-07-2026 03:00:00",
   "next_run_at_human": "in 12 hours",
-  "previous_run_at": "29-07-2026 03:00:00",
   "created_at": "25-07-2026 18:05:10",
   "created_at_human": "2 minutes ago"
 }
 ```
 - `slug` — stable, unique, auto-derived from `name`; safe to use as a React key / URL segment (survives data migration, unlike `id`).
 - `system_user` — `{id, username}` when the run-as user is a panel System User, else **`null`** (a default OS user like `root`/`www-data`). `username` is always present regardless.
-- `timezone` — the **server's** timezone. Cron interprets schedules against the OS clock, so `next_run_at`/`previous_run_at` are computed there, not in UTC. Show it next to the times so a user in another timezone isn't misled.
+- `timezone` — the **server's** timezone. Cron interprets schedules against the OS clock, so `next_run_at` is computed there, not in UTC. Show it next to the time so a user in another timezone isn't misled.
 - `next_run_at` — exact, computed from the expression. **`null` when `active` is false** (an inactive job has no next run).
-- `previous_run_at` — the previous **scheduled** time. ⚠️ **This is not "last run".** Linux cron keeps no record of actual executions: if the server was off, or the command crashed, this still returns a time. Label it *"Previous schedule"* — never *"Last run"*, and never show a success tick next to it. Real execution history (with exit code, duration and output) needs a command wrapper and is a separate, future feature.
+- **There is no "last run" field, by design.** Linux cron keeps no record of actual executions, so any value we could return would be a *scheduled* time that stays populated even when the job never ran (server off, command crashed) — it would be read as proof of execution and lie. Real run history (exit code, duration, output) requires wrapping each command in a runner and is a separate, future feature.
 
 #### List — `GET /api/cronjobs`
 - Query params (all optional): `filter[system_user_id]` (int), `filter[username]` (string, exact), `filter[active]` (`true`/`false`), `per_page` (`10`|`20`|`50`|`100`, default `10`), `page` (int).

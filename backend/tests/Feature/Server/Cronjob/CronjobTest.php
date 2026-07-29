@@ -425,7 +425,9 @@ it('reports the next scheduled run in the server timezone', function () {
 
     expect($row['timezone'])->toBe('UTC');
     expect($row['next_run_at'])->toBe('30-07-2026 03:00:00');
-    expect($row['previous_run_at'])->toBe('29-07-2026 03:00:00');
+    // The previous scheduled time is deliberately NOT exposed: cron records
+    // no execution history, so it would be read as "last run" and lie.
+    expect($row)->not->toHaveKey('previous_run_at');
 
     Carbon::setTestNow();
 });
@@ -468,5 +470,4 @@ it('returns no next run for an inactive job', function () {
 
     expect($row['next_run_at'])->toBeNull();
     expect($row['next_run_at_human'])->toBeNull();
-    expect($row['previous_run_at'])->toBeNull();
 });
