@@ -5,4 +5,5 @@ return [
     'no_web_server' => 'kein Webserver erkannt',
     'provision_failed' => 'Die Einrichtung der Website ist im Schritt „:step" fehlgeschlagen.',
     'not_a_git_application' => 'Diese Anwendung ist kein Git-Deployment — es gibt nichts abzurufen.',
+    'no_database_engine' => 'Keine Datenbank-Engine verfügbar. Installiere und konfiguriere MySQL oder MariaDB, bevor du diese Anwendung anlegst.',
 ];

@@ -25,6 +25,7 @@ class ApplicationProvisioner
     public function __construct(
         private ServerOps $serverOps,
         private WebServerManager $webServers,
+        private InstallerManager $installers,
     ) {}
 
     /**
@@ -101,7 +102,11 @@ class ApplicationProvisioner
         $this->step('reload', fn () => $driver->reload());
         $completed[] = 'reload';
 
-        return $completed;
+        // Marketplace apps install once the site is actually being served —
+        // WordPress writes its own URL into the database during setup, so it
+        // needs the vhost live first. Site types with no installer (git,
+        // blank PHP, static) return nothing here.
+        return array_merge($completed, $this->installers->install($application, $documentRoot));
     }
 
     /**

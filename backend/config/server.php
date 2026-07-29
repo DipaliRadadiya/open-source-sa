@@ -7,6 +7,7 @@ use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
+use App\Services\Server\Applications\Installers\WordPressInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
 use App\Services\Server\DiskCleaner\Targets\JournalTarget;
@@ -118,6 +119,26 @@ return [
     | reaches .git/config. Clones and builds are slow, so they get their own
     | generous timeouts rather than the 60s default.
     */
+
+    /*
+    | Marketplace installers. One entry per one-click app; a site type absent
+    | from this list simply has nothing to install (git, blank PHP, static).
+    | Downloads are https-only and unpacked in a temp dir before being moved
+    | into the web root, so a bad archive never lands on a live site.
+    */
+
+    'installer_work_dir' => env('SERVER_INSTALLER_WORK_DIR', sys_get_temp_dir()),
+    'installer_timeout' => (int) env('SERVER_INSTALLER_TIMEOUT', 300),
+
+    'installers' => [
+        'wordpress' => [
+            'driver' => WordPressInstaller::class,
+            'download_url' => env('SERVER_WORDPRESS_URL', 'https://wordpress.org/latest.tar.gz'),
+            'salt_url' => 'https://api.wordpress.org/secret-key/1.1/salt/',
+            'wp_cli' => env('SERVER_WP_CLI', '/usr/local/bin/wp'),
+            'wp_cli_url' => 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar',
+        ],
+    ],
 
     'git_credential_dir' => env('SERVER_GIT_CREDENTIAL_DIR', sys_get_temp_dir()),
     'git_timeout' => (int) env('SERVER_GIT_TIMEOUT', 300),

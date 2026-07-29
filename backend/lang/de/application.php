@@ -54,6 +54,12 @@ return [
     ],
 
     'steps' => [
+        'create_database' => 'Datenbank wird erstellt',
+        'download' => 'Anwendung wird heruntergeladen',
+        'extract' => 'Dateien werden entpackt',
+        'configure' => 'Konfiguration wird geschrieben',
+        'install_cli' => 'Setup-Werkzeug wird installiert',
+        'install_app' => 'Installer wird ausgeführt',
         'clone' => 'Repository wird geklont',
         'fetch' => 'Neuester Code wird geholt',
         'checkout' => 'Branch wird ausgecheckt',

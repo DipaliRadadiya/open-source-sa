@@ -54,6 +54,12 @@ return [
     ],
 
     'steps' => [
+        'create_database' => 'データベースを作成中',
+        'download' => 'アプリケーションをダウンロード中',
+        'extract' => 'ファイルを展開中',
+        'configure' => '設定を書き込み中',
+        'install_cli' => 'セットアップツールをインストール中',
+        'install_app' => 'インストーラーを実行中',
         'clone' => 'リポジトリをクローン中',
         'fetch' => '最新のコードを取得中',
         'checkout' => 'ブランチをチェックアウト中',
