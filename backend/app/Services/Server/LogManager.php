@@ -2,10 +2,14 @@
 
 namespace App\Services\Server;
 
+use App\Models\Cronjob;
+
 /**
- * Read-only access to server log files. No DB — the catalog is the configured
- * source registry plus per-version php-fpm logs detected from `php_dir`,
- * filtered at read time to files that actually exist (detect-don't-trust).
+ * Read-only access to server log files. The catalog is the configured source
+ * registry, plus per-version php-fpm logs detected from `php_dir`, plus one
+ * source per cron job (the only part that reads the DB — a cron log's label
+ * is its job's name, which only the DB knows). Everything is filtered at read
+ * time to files that actually exist (detect-don't-trust).
  *
  * Callers reference a source by its `key`; this class resolves the real path
  * from the registry — a client-supplied path is never read (no traversal).
@@ -116,7 +120,33 @@ class LogManager
      */
     private function catalog(): array
     {
-        return array_merge(config('server.logs', []), $this->phpFpmLogs());
+        return array_merge(config('server.logs', []), $this->phpFpmLogs(), $this->cronjobLogs());
+    }
+
+    /**
+     * One source per cron job that has captured output.
+     *
+     * Sourced from the cronjobs table rather than by globbing the log
+     * directory, so a source always maps to a job that exists — and the label
+     * is the job's name, not a filename the user has to decode.
+     *
+     * @return array<int, array{key: string, label: string, group: string, path: string}>
+     */
+    private function cronjobLogs(): array
+    {
+        $dir = rtrim((string) config('server.cronjob_log_dir', '/var/log/cronjobs'), '/');
+
+        return Cronjob::query()
+            ->whereNotNull('slug')
+            ->orderBy('name')
+            ->get(['name', 'slug'])
+            ->map(fn (Cronjob $cronjob) => [
+                'key' => "cronjob_{$cronjob->slug}",
+                'label' => "Cron — {$cronjob->name}",
+                'group' => 'cronjob',
+                'path' => "{$dir}/{$cronjob->slug}.log",
+            ])
+            ->all();
     }
 
     /**

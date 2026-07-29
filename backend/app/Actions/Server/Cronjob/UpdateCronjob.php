@@ -24,6 +24,7 @@ class UpdateCronjob
             // Path is derived from the slug, so a rename (new slug) relocates
             // the file. Regenerate the slug when the name changes.
             $oldPath = $this->crontab->path($cronjob);
+            $oldSlug = (string) $cronjob->slug;
 
             if (isset($data['name']) && $data['name'] !== $cronjob->name) {
                 $data['slug'] = Cronjob::uniqueSlug($data['name'], $cronjob->id);
@@ -33,6 +34,9 @@ class UpdateCronjob
 
             if ($this->crontab->path($cronjob) !== $oldPath) {
                 $this->crontab->removePath($oldPath);
+                // Carry the output history over to the new name rather than
+                // stranding it under the old one.
+                $this->crontab->moveLog($oldSlug, $cronjob);
             }
 
             // Re-materialise from the new state: active → (over)write the file,

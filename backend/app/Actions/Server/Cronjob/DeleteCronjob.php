@@ -28,6 +28,9 @@ class DeleteCronjob
                 throw new CronjobOperationException($result->reference);
             }
 
+            // The job is gone, so its output log has nothing left to describe.
+            $this->crontab->removeLog($cronjob);
+
             $cronjob->delete();
 
             $this->activityLogger->log('cronjob.deleted', $cronjob, ['name' => $name]);

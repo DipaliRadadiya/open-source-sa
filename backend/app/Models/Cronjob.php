@@ -71,4 +71,24 @@ class Cronjob extends Model
     {
         return $this->belongsTo(SystemUser::class);
     }
+
+    /**
+     * This job's key in the Logs feature, or null when no output has been
+     * captured yet.
+     *
+     * Gated on the file existing rather than on a stored flag: the log is
+     * created when the panel writes the job's cron.d entry, so its presence is
+     * the honest answer to "is there anything to show?" — and a job whose
+     * entry predates output capture correctly reports nothing.
+     */
+    public function logKey(): ?string
+    {
+        if ($this->slug === null) {
+            return null;
+        }
+
+        $dir = rtrim((string) config('server.cronjob_log_dir', '/var/log/cronjobs'), '/');
+
+        return is_file("{$dir}/{$this->slug}.log") ? "cronjob_{$this->slug}" : null;
+    }
 }

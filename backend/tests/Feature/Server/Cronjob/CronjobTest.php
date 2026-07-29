@@ -38,7 +38,7 @@ it('creates a cron job for a panel system user, writing a cron.d file', function
     Process::assertRan(function ($process) {
         // filename is the stable name-slug (migration-safe, no id)
         return $process->command === ['tee', '/etc/cron.d/nightly-backup']
-            && str_contains($process->input, '0 0 * * * deploy /home/deploy/backup.sh');
+            && str_contains($process->input, '0 0 * * * deploy ( /home/deploy/backup.sh )');
     });
 });
 
@@ -58,7 +58,7 @@ it('creates a cron job for a default/unmanaged OS user by username', function ()
         ->assertJsonPath('cronjob.system_user', null);
 
     Process::assertRan(fn ($p) => $p->command[0] === 'tee'
-        && str_contains($p->input, '*/5 * * * * www-data php /var/www/app/artisan cache:clear'));
+        && str_contains($p->input, '*/5 * * * * www-data ( php /var/www/app/artisan cache:clear )'));
 });
 
 it('rejects a duplicate cron job name', function () {
@@ -211,7 +211,7 @@ it('rewrites the cron.d file when the schedule changes', function () {
         ->assertJsonPath('cronjob.expression', '30 2 * * *');
 
     Process::assertRan(fn ($p) => $p->command[0] === 'tee'
-        && str_contains($p->input, '30 2 * * * deploy echo hi'));
+        && str_contains($p->input, '30 2 * * * deploy ( echo hi )'));
 });
 
 it('deletes a cron job and removes its file', function () {
