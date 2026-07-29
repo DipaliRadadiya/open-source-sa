@@ -344,11 +344,16 @@ OS-op failures → `500 {message, reference}`.
 Requires the `service` permission (`view` to read, `manage` to act). Manages **systemd** units — the catalog is derived from our supported type sets (web server / database / cache / worker) + auto-detected **php-fpm** versions; **only installed units are surfaced**. No DB — status is read **live** from systemctl (detect-don't-trust).
 
 **`GET /api/services`** — managed + installed services with live status.
-- Response: `{"services": [{key, label, unit, status, enabled, protected, actions, testable}, …]}`.
+- Response: `{"services": [{key, label, unit, status, enabled, protected, actions, testable, usage, log_keys}, …]}`.
   - `status`: `active | inactive | failed`; `enabled`: bool (starts on boot).
   - `protected: true` = the panel's own web server / php-fpm → can't be stopped/disabled (lock icon).
   - `actions`: the allowed actions for *this* service (protected ones omit `stop`/`disable`) — render buttons directly from this.
   - `testable`: whether this service can validate its own configuration. Show the **Test configuration** button only where this is true — a service with no meaningful test is not given an invented one.
+  - `usage`: `{memory_bytes, memory_human, memory_percent, cpu_percent, tasks}`, or **`null`** for a stopped service or one where systemd accounting is off. Individual fields can also be `null`. **Render a null as `—`, never as `0`** — it means "not measured", which is a different fact.
+    - Figures come from systemd's cgroup accounting, so a service's whole process tree is counted (a php-fpm master *and* all its workers).
+    - `memory_percent` is of total system RAM. `cpu_percent` is of one core, so a service saturating two cores reads `200`.
+    - **`cpu_percent` is null on the first read.** The underlying counter is cumulative since the service started, so a percentage needs two samples; each request stores one and the next measures against it. Poll `GET /services` on a timer (2–5s) and the value becomes "CPU used since the previous poll" — genuinely live. One `—` on first paint is expected.
+  - `log_keys`: this service's log sources, as keys into the **Logs** endpoints below (e.g. `["nginx_error", "nginx_access"]`). Open the log viewer with one of these; there is no separate service-log endpoint, and `GET /logs/{key}`'s `after` cursor gives you a live tail by polling. Only sources that exist on the box are listed, so the array is empty rather than a button that opens nothing. Reading still requires the `logs` permission.
 
 **`POST /api/services/{service}/config-test`** — validate the service's configuration. **Read-only: it never reloads.** Checking whether a change is safe is exactly what you do *before* applying it.
 - Response `200`: `{"config_test": {"ok": true|false, "output": "…"}}`

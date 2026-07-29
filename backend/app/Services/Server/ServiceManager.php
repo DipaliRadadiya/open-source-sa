@@ -16,7 +16,12 @@ class ServiceManager
      */
     public const ACTIONS = ['start', 'stop', 'restart', 'reload', 'enable', 'disable'];
 
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private ServiceUsage $usage,
+        private ConfigTester $tester,
+        private LogManager $logs,
+    ) {}
 
     /**
      * All managed + installed services, with live status.
@@ -71,8 +76,37 @@ class ServiceManager
             'actions' => $this->allowedActions($service['unit']),
             // Whether this service can validate its own configuration, so the
             // UI only offers the button where it means something.
-            'testable' => app(ConfigTester::class)->testable($service['key']),
+            'testable' => $this->tester->testable($service['key']),
+            // A stopped unit has no resources to report — see ServiceUsage.
+            'usage' => $state['status'] === 'active' ? $this->usage->build($service['unit'], $state['properties']) : null,
+            // This service's log files, as keys into the existing Logs feature
+            // rather than a second way to read a log. Only sources that exist
+            // on the box appear, so the button is never a dead end.
+            'log_keys' => $this->logKeys($service['key']),
         ];
+    }
+
+    /**
+     * The log sources belonging to a service, as `logs` registry keys.
+     *
+     * Returned so the frontend can open the log viewer straight from a service
+     * row. Reading them still goes through the Logs feature and its own
+     * permission — this exposes the association, not the content.
+     *
+     * @return array<int, string>
+     */
+    public function logKeys(string $key): array
+    {
+        // php8.4-fpm → php8.4_fpm, the key LogManager derives per version.
+        $candidates = preg_match('/^php(\d+\.\d+)-fpm$/', $key, $matches) === 1
+            ? ["php{$matches[1]}_fpm"]
+            : (array) config("server.service_logs.{$key}", []);
+
+        return array_values(array_filter(
+            $candidates,
+            fn (string $candidate) => ($source = $this->logs->find($candidate)) !== null
+                && $this->logs->describe($source) !== null,
+        ));
     }
 
     public function run(string $unit, string $action): ServerOpsResult
@@ -131,12 +165,17 @@ class ServiceManager
     }
 
     /**
-     * @return array{installed: bool, status: string, enabled: bool}
+     * State + usage counters in ONE systemctl call. The usage properties come
+     * from systemd's own cgroup accounting, which is why the whole service
+     * tree (a php-fpm master and all its workers) is counted correctly, and
+     * why adding them costs nothing — the call was already being made.
+     *
+     * @return array{installed: bool, status: string, enabled: bool, properties: array<string, string|null>}
      */
     private function inspect(string $unit): array
     {
         $output = $this->serverOps->run(
-            ['systemctl', 'show', $unit, '--property=LoadState,ActiveState,UnitFileState'],
+            ['systemctl', 'show', $unit, '--property=LoadState,ActiveState,UnitFileState,MemoryCurrent,CPUUsageNSec,TasksCurrent'],
             ['feature' => 'service', 'op' => 'inspect', 'unit' => $unit],
         )->output();
 
@@ -144,6 +183,11 @@ class ServiceManager
             'installed' => $this->property($output, 'LoadState') === 'loaded',
             'status' => $this->property($output, 'ActiveState') ?: 'inactive',
             'enabled' => $this->property($output, 'UnitFileState') === 'enabled',
+            'properties' => [
+                'MemoryCurrent' => $this->property($output, 'MemoryCurrent'),
+                'CPUUsageNSec' => $this->property($output, 'CPUUsageNSec'),
+                'TasksCurrent' => $this->property($output, 'TasksCurrent'),
+            ],
         ];
     }
 
