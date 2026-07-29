@@ -71,4 +71,5 @@ return [
     'application.provision_failed' => 'एप्लिकेशन :name सेट करने में विफल (चरण: :step)',
     'application.deployed' => 'एप्लिकेशन :name डिप्लॉय किया (:branch)',
     'application.deploy_failed' => 'एप्लिकेशन :name डिप्लॉय करने में विफल (चरण: :step)',
+    'php.ini_updated' => 'PHP :version की कॉन्फ़िगरेशन अपडेट की',
 ];

@@ -71,4 +71,5 @@ return [
     'application.provision_failed' => 'Einrichtung der Anwendung :name fehlgeschlagen (Schritt: :step)',
     'application.deployed' => 'Anwendung :name ausgerollt (:branch)',
     'application.deploy_failed' => 'Ausrollen der Anwendung :name fehlgeschlagen (Schritt: :step)',
+    'php.ini_updated' => 'Konfiguration von PHP :version aktualisiert',
 ];

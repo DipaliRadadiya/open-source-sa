@@ -71,4 +71,5 @@ return [
     'application.provision_failed' => 'アプリケーション :name の構築に失敗しました (:step)',
     'application.deployed' => 'アプリケーション :name をデプロイしました (:branch)',
     'application.deploy_failed' => 'アプリケーション :name のデプロイに失敗しました (:step)',
+    'php.ini_updated' => 'PHP :version の設定を更新しました',
 ];
