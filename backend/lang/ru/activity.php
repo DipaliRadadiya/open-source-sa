@@ -69,4 +69,6 @@ return [
     'application.deleted' => 'Удалено приложение :name (:site_type)',
     'application.provisioned' => 'Приложение :name настроено на сервере',
     'application.provision_failed' => 'Не удалось настроить приложение :name (шаг: :step)',
+    'application.deployed' => 'Приложение :name развёрнуто (:branch)',
+    'application.deploy_failed' => 'Не удалось развернуть приложение :name (шаг: :step)',
 ];

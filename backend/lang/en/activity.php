@@ -69,4 +69,6 @@ return [
     'application.deleted' => 'Deleted application :name (:site_type)',
     'application.provisioned' => 'Set up application :name on the server',
     'application.provision_failed' => 'Failed to set up application :name (step: :step)',
+    'application.deployed' => 'Deployed application :name (:branch)',
+    'application.deploy_failed' => 'Failed to deploy application :name (step: :step)',
 ];

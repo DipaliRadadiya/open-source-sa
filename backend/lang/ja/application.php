@@ -54,6 +54,11 @@ return [
     ],
 
     'steps' => [
+        'clone' => 'リポジトリをクローン中',
+        'fetch' => '最新のコードを取得中',
+        'checkout' => 'ブランチをチェックアウト中',
+        'build' => 'ビルドコマンドを実行中',
+        'write_credential' => 'gitアクセスを準備中',
         'create_directory' => 'ディレクトリを作成中',
         'set_ownership' => '所有者を設定中',
         'placeholder' => '仮ページを作成中',

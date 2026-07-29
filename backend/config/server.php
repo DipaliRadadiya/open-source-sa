@@ -112,6 +112,17 @@ return [
 
     'default_php_version' => env('SERVER_DEFAULT_PHP_VERSION', '8.4'),
 
+    /*
+    | Git deploys. The credential file is written 0600 and deleted as soon as
+    | the command finishes — the token is never a command argument and never
+    | reaches .git/config. Clones and builds are slow, so they get their own
+    | generous timeouts rather than the 60s default.
+    */
+
+    'git_credential_dir' => env('SERVER_GIT_CREDENTIAL_DIR', sys_get_temp_dir()),
+    'git_timeout' => (int) env('SERVER_GIT_TIMEOUT', 300),
+    'build_timeout' => (int) env('SERVER_BUILD_TIMEOUT', 600),
+
     'site_types' => [
         WordPressSiteType::class,
         GitSiteType::class,

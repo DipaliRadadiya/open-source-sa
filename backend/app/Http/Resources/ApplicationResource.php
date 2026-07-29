@@ -50,6 +50,11 @@ class ApplicationResource extends JsonResource
             // instead of a bare spinner.
             'steps' => $this->steps ?? [],
             'failed_step' => $this->failed_step,
+            // What is actually on disk right now — the only honest answer to
+            // "which version is running".
+            'last_commit' => $this->last_commit,
+            'last_deployed_at' => $this->last_deployed_at?->format('d-m-Y H:i:s'),
+            'last_deployed_at_human' => $this->last_deployed_at?->diffForHumans(),
             // Quote this to support; the technical detail is in the server-ops
             // log under the same id, never in the response.
             'reference' => $this->reference,

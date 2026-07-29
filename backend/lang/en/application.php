@@ -59,6 +59,11 @@ return [
     ],
 
     'steps' => [
+        'clone' => 'Cloning the repository',
+        'fetch' => 'Fetching the latest code',
+        'checkout' => 'Checking out the branch',
+        'build' => 'Running the build command',
+        'write_credential' => 'Preparing git access',
         'create_directory' => 'Creating the directory',
         'set_ownership' => 'Setting ownership',
         'placeholder' => 'Adding a placeholder page',

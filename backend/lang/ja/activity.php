@@ -69,4 +69,6 @@ return [
     'application.deleted' => 'アプリケーション :name (:site_type) を削除しました',
     'application.provisioned' => 'アプリケーション :name をサーバーに構築しました',
     'application.provision_failed' => 'アプリケーション :name の構築に失敗しました (:step)',
+    'application.deployed' => 'アプリケーション :name をデプロイしました (:branch)',
+    'application.deploy_failed' => 'アプリケーション :name のデプロイに失敗しました (:step)',
 ];

@@ -22,6 +22,13 @@ interface GitProvider
     public function key(): string;
 
     /**
+     * The username git must pair the token with over HTTPS. Each provider
+     * expects a different fixed value, and the wrong one fails authentication
+     * even with a perfectly good token.
+     */
+    public function credentialUsername(): string;
+
+    /**
      * Prove the credential works and return the account identity.
      *
      * @return array{identifier: string, scopes: array<int, string>}

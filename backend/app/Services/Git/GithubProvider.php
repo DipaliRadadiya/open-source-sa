@@ -16,6 +16,14 @@ class GithubProvider extends AbstractGitProvider
         return 'github';
     }
 
+    /**
+     * GitHub pairs a token with the literal `x-access-token` username.
+     */
+    public function credentialUsername(): string
+    {
+        return 'x-access-token';
+    }
+
     public function verify(GitAccount $account): array
     {
         $response = $this->send($account, fn ($client) => $client->get('/user'));

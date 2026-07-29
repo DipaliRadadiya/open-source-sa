@@ -54,6 +54,11 @@ return [
     ],
 
     'steps' => [
+        'clone' => 'Repository wird geklont',
+        'fetch' => 'Neuester Code wird geholt',
+        'checkout' => 'Branch wird ausgecheckt',
+        'build' => 'Build-Befehl wird ausgeführt',
+        'write_credential' => 'Git-Zugang wird vorbereitet',
         'create_directory' => 'Verzeichnis wird erstellt',
         'set_ownership' => 'Besitzrechte werden gesetzt',
         'placeholder' => 'Platzhalterseite wird angelegt',

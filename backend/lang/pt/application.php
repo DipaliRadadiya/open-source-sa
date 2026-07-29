@@ -54,6 +54,11 @@ return [
     ],
 
     'steps' => [
+        'clone' => 'Clonando o repositório',
+        'fetch' => 'Baixando o código mais recente',
+        'checkout' => 'Mudando para o branch',
+        'build' => 'Executando o comando de build',
+        'write_credential' => 'Preparando o acesso ao git',
         'create_directory' => 'Criando o diretório',
         'set_ownership' => 'Definindo o proprietário',
         'placeholder' => 'Adicionando uma página provisória',

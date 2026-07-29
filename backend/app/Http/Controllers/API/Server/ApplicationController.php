@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
 use App\Http\Resources\ApplicationResource;
+use App\Jobs\DeployApplication;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use Illuminate\Http\JsonResponse;
@@ -62,6 +63,23 @@ class ApplicationController extends Controller
         ProvisionApplication::dispatch($application->id);
 
         $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'reference' => null]);
+
+        return response()->json([
+            'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
+        ], 202);
+    }
+
+    /**
+     * Fetch the application's code from git.
+     *
+     * Only for git applications — there is nothing to pull for a one-click or
+     * blank site, and pretending otherwise would just fail confusingly.
+     */
+    public function deploy(Application $application): JsonResponse
+    {
+        abort_unless($application->site_type === 'git', 422, __('errors/application.not_a_git_application'));
+
+        DeployApplication::dispatch($application->id);
 
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),

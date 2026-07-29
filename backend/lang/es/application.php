@@ -54,6 +54,11 @@ return [
     ],
 
     'steps' => [
+        'clone' => 'Clonando el repositorio',
+        'fetch' => 'Descargando el código más reciente',
+        'checkout' => 'Cambiando a la rama',
+        'build' => 'Ejecutando el comando de compilación',
+        'write_credential' => 'Preparando el acceso a git',
         'create_directory' => 'Creando el directorio',
         'set_ownership' => 'Estableciendo la propiedad',
         'placeholder' => 'Añadiendo una página de marcador',

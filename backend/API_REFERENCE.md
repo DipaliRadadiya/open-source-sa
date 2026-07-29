@@ -553,6 +553,12 @@ Requires the `application` permission (`view` to read, `manage` to mutate).
 
 **`POST /api/applications/{application}/provision`** (`manage`) — retry after a failure. `202 { application: {…} }` with `status: "provisioning"`; the previous `failed_step`/`reference` are cleared. Provisioning is **never retried automatically** — repeating a server change the user hasn't seen the reason for is how half-applied state happens.
 
+**`POST /api/applications/{application}/deploy`** (`manage`) — fetch the code from git. `202 { application: {…} }`; poll as with provisioning. **Git applications only** — `422` for anything else, since there is nothing to pull.
+- First deploy clones; later deploys `fetch` + `reset --hard` to the branch, so the working tree matches the branch exactly. Local edits on a deploy target are not preserved — keeping them would silently break the next deploy instead.
+- `build_command` (if set) runs after the code is fetched, **as the site's own system user** — never as the panel.
+- On success: `last_commit` + `last_deployed_at` record what is actually on disk.
+- **A failed redeploy leaves a live site live.** The old code is still there and still served, so `status` stays `active` and only `failed_step`/`reference` are set. Show that as a deploy warning, not as an outage.
+
 **`DELETE /api/applications/{application}`** (`manage`) → `{ deleted: true }`. Also **removes the site config and reloads**, so the domain stops being served. The site's **files are kept** unless you pass `?remove_files=true` — deleting a panel record must not silently destroy someone's code. An application still at `pending` touches nothing on the server.
 
 #### Provisioning status
@@ -564,7 +570,7 @@ Requires the `application` permission (`view` to read, `manage` to mutate).
 | `active` | serving | the domain loads |
 | `failed` | stopped at `failed_step` | show the step + a **Retry** button |
 
-- `steps` — the steps completed in order: `create_directory`, `set_ownership`, `placeholder`, `write_config`, `test_config`, `reload`. Localized labels are in the `application.steps.*` translations.
+- `steps` — the steps completed in order. Provisioning: `create_directory`, `set_ownership`, `placeholder`, `write_config`, `test_config`, `reload`. Deploy: `clone` (or `fetch` + `checkout`), `set_ownership`, `build`. Localized labels are in the `application.steps.*` translations.
 - `failed_step` — which one broke (`worker` means the background process itself died).
 - `reference` — quote this to support. **The raw server error is deliberately not in the response**; it's in the server-ops log under this id.
 

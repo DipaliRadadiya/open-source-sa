@@ -69,4 +69,6 @@ return [
     'application.deleted' => 'एप्लिकेशन :name (:site_type) हटाया',
     'application.provisioned' => 'एप्लिकेशन :name सर्वर पर सेट किया',
     'application.provision_failed' => 'एप्लिकेशन :name सेट करने में विफल (चरण: :step)',
+    'application.deployed' => 'एप्लिकेशन :name डिप्लॉय किया (:branch)',
+    'application.deploy_failed' => 'एप्लिकेशन :name डिप्लॉय करने में विफल (चरण: :step)',
 ];
