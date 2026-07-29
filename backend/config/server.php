@@ -1,5 +1,9 @@
 <?php
 
+use App\Services\Applications\Types\GitSiteType;
+use App\Services\Applications\Types\PhpSiteType;
+use App\Services\Applications\Types\StaticSiteType;
+use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
@@ -53,6 +57,44 @@ return [
 
     'timezone_file' => env('SERVER_TIMEZONE_FILE', '/etc/timezone'),
     'localtime_link' => env('SERVER_LOCALTIME_LINK', '/etc/localtime'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Server capability detection
+    |--------------------------------------------------------------------------
+    |
+    | Fallback probes for when the installation script never ran (a server
+    | migrated in from another panel). Only one web server can own :80, so the
+    | first directory that exists wins. Overridable so tests can point at
+    | temp fixtures.
+    |
+    */
+
+    'web_servers' => [
+        'nginx' => ['/etc/nginx'],
+        'apache' => ['/etc/apache2', '/etc/httpd'],
+        'openlitespeed' => ['/usr/local/lsws'],
+    ],
+
+    'node_binary' => env('SERVER_NODE_BINARY', 'node'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Applications
+    |--------------------------------------------------------------------------
+    |
+    | The site-type catalog. Each class declares its own fields, so the create
+    | form is rendered from data and a new type costs one class and one line
+    | here — no frontend change.
+    |
+    */
+
+    'site_types' => [
+        WordPressSiteType::class,
+        GitSiteType::class,
+        PhpSiteType::class,
+        StaticSiteType::class,
+    ],
 
     /*
     |--------------------------------------------------------------------------

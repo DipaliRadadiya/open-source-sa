@@ -64,4 +64,7 @@ return [
     'git_account.connected' => ':provider-Konto :label verbunden',
     'git_account.updated' => ':provider-Konto :label aktualisiert',
     'git_account.disconnected' => ':provider-Konto :label getrennt',
+    'application.created' => 'Anwendung :name (:site_type) erstellt',
+    'application.updated' => 'Anwendung :name aktualisiert',
+    'application.deleted' => 'Anwendung :name (:site_type) gelöscht',
 ];

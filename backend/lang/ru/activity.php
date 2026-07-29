@@ -64,4 +64,7 @@ return [
     'git_account.connected' => 'Подключён аккаунт :provider :label',
     'git_account.updated' => 'Обновлён аккаунт :provider :label',
     'git_account.disconnected' => 'Отключён аккаунт :provider :label',
+    'application.created' => 'Создано приложение :name (:site_type)',
+    'application.updated' => 'Обновлено приложение :name',
+    'application.deleted' => 'Удалено приложение :name (:site_type)',
 ];

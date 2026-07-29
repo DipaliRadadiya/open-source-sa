@@ -524,6 +524,62 @@ Requires the `database` permission (`view` to read, `manage` to mutate). **3 eng
 
 *(Remaining P2: **import/restore** — deferred (writes data → will ship with existing-target-only + backup-before + confirm). P3: engine install-on-demand, app auto-DB + env-wiring, rename-database, phpMyAdmin signon SSO.)*
 
+### Applications (Phase 1 — catalog + record only)
+
+Requires the `application` permission (`view` to read, `manage` to mutate).
+
+> ⚠️ **Phase 1 does not touch the server.** No directory is created, no code is fetched, no vhost is written. A created application is a **record of intent** and stays at `status: "pending"`. Show it as *"Not deployed yet"* — never imply the site is reachable. Provisioning (P2) and git deploy (P3) come later.
+
+**`GET /api/site-types`** — the card grid. One entry per installable thing, each carrying its own field schema, so the frontend writes **one** generic form renderer and a new app type needs no frontend change.
+- Response: `{ site_types: [{name, title, tagline, icon, category, popular, method, serving_profile, needs_database, available, unavailable_reason, installable, fields[]}] }`
+- `method` (`one_click|git|custom`) is internal — **do not ask the user to choose a method.** Render one grid of real things; "From Git repo" and "Blank PHP site" are simply cards in it.
+- `available: false` means this server can't run that type (no PHP, no Node). **Grey the card and show `unavailable_reason` — don't hide it**, otherwise the user never learns the runtime is an option. `installable` names the runtime that would fix it (`php`/`node`); it is `null` until the runtime-install feature ships, at which point the card gains an install button with no frontend change.
+- Each **field**: `{name, label, type, required, advanced}` plus optionally `default`, `help`, `options`, `generate`, and the two keys that drive dependent dropdowns:
+  - **`source`** — which endpoint fills it: `git_accounts`, `git_repositories`, `git_branches`, `system_users`, `php_versions`
+  - **`depends_on`** — don't load until that field is chosen; clear this field when the parent changes
+- `advanced: true` fields belong behind an **Advanced** toggle, collapsed by default.
+
+**`GET /api/applications`** → `{ applications: [ …application objects… ] }`
+**`GET /api/applications/{application}`** → `{ application: {…} }`
+
+**`POST /api/applications`** (`manage`) — create the record. `201 { application: {…} }`, always `status: "pending"`.
+- Always: `site_type`, `name`, `domain`, `system_user_id`.
+- Then whatever the chosen type's schema declared. **Validation is generated from that same schema**, so WordPress rejects a missing `admin_email`, and keys the type never declared are ignored rather than stored.
+- `serving_profile` is derived from the type — not accepted from the client.
+- **Git — two paths, exactly one required:** `git_source: "account"` needs `git_account_id` + `repository`; `git_source: "public_url"` needs `repository_url` and **no account at all** (a public repo needs no credentials). Pasted URLs must be `https://` and may not point at loopback or the cloud metadata range.
+- `422` on a site type this server can't run — the record would describe something unprovisionable.
+
+**`PUT /api/applications/{application}`** (`manage`) — `name`, `domain`, `web_root`, `build_command`, `start_command`, `branch`, `settings`. `settings` **merges**, so a partial update doesn't wipe the other answers. The site type is not editable — a different type is a different application.
+
+**`DELETE /api/applications/{application}`** (`manage`) → `{ deleted: true }`. Removes the record only; nothing exists on disk in P1.
+
+#### The application object
+```json
+{
+  "id": 4, "name": "My shop", "domain": "shop.example.com",
+  "site_type": "git", "site_type_title": "From Git repo",
+  "serving_profile": "php",
+  "status": "pending", "status_title": "Not deployed yet", "deployed": false,
+  "system_user": { "id": 3, "username": "deploy" },
+  "php_version": "8.4", "node_version": null, "app_port": null,
+  "web_root": "/", "build_command": null, "start_command": null,
+  "git_account_id": 1, "repository": "octocat/hello",
+  "repository_url": null, "branch": "main",
+  "settings": {},
+  "created_at": "29-07-2026 08:10:00", "created_at_human": "2 minutes ago"
+}
+```
+- `deployed` is the honest flag — true only when `status` is `active`. In P1 it is always `false`.
+- `git_account_id: null` with a `repository_url` = a public repository, cloned without credentials.
+- `settings` holds the type-specific answers (WordPress admin email, table prefix, …), shaped by that type's field schema.
+
+*(Web server is **not** an application field — it belongs to the server, which owns port 80. Nor is the database engine: it follows from the app type. See `GET /api/server/capabilities` below.)*
+
+**`GET /api/server/capabilities`** — what this server is and can run. Written by the installation script; if the row is missing (a server migrated in from elsewhere) it is detected once and stored on first use.
+- Response: `{ capabilities: {stack, web_server, capabilities: {php, node}, source, verified_at} }`
+- `stack` (`lemp|lamp|ols|mern`) is how the box was **built**; `capabilities` is what it can run **now**. They legitimately differ — installing Node on a LEMP box adds the capability without changing how it was built — so **filter the UI on `capabilities`, never on `stack`.**
+- `web_server` is `nginx|apache|openlitespeed`. **`mern` is not a web server** — a MERN box runs nginx.
+
 ### Git integrations (Integrations → Git)
 
 Requires the `git` permission (`view` to read, `manage` to mutate). Connected git provider accounts, managed **centrally and before any application exists** — the app-create wizard later just picks a connected account → repo → branch. This feature is panel-only: it stores a credential and reads repositories/branches. No cloning, no provisioning, no filesystem writes (those land with Applications).

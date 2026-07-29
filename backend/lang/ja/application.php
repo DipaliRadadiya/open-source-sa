@@ -1,0 +1,55 @@
+<?php
+
+return [
+    'types' => [
+        'wordpress' => ['title' => 'WordPress', 'tagline' => 'ブログ・ウェブサイト作成'],
+        'git' => ['title' => 'Gitリポジトリから', 'tagline' => 'GitHub・GitLab・Bitbucket から自分のコードをデプロイ'],
+        'php' => ['title' => '空のPHPサイト', 'tagline' => '空のサイト — ファイルは自分でアップロード'],
+        'static' => ['title' => '静的サイト', 'tagline' => 'HTML・CSS・JavaScript のみ'],
+    ],
+
+    'status' => [
+        'pending' => '未デプロイ',
+        'provisioning' => 'セットアップ中…',
+        'active' => '稼働中',
+        'failed' => 'セットアップ失敗',
+    ],
+
+    'unavailable' => [
+        'php' => 'このサーバーには PHP がインストールされていません。',
+        'node' => 'このサーバーには Node.js がインストールされていません。',
+    ],
+
+    'git_source' => [
+        'account' => '連携済みアカウントから',
+        'public_url' => '公開リポジトリのURLを貼り付け',
+    ],
+
+    'fields' => [
+        'name' => '名前',
+        'domain' => 'ドメイン',
+        'system_user_id' => 'システムユーザー',
+        'php_version' => 'PHPバージョン',
+        'node_version' => 'Node.jsバージョン',
+        'app_port' => 'アプリのポート',
+        'web_root' => 'ウェブルート',
+        'build_command' => 'ビルドコマンド',
+        'start_command' => '起動コマンド',
+        'git_source' => 'ソース',
+        'git_account_id' => 'Gitアカウント',
+        'repository' => 'リポジトリ',
+        'repository_url' => 'リポジトリURL',
+        'branch' => 'ブランチ',
+        'site_title' => 'サイトタイトル',
+        'admin_user' => '管理者ユーザー名',
+        'admin_email' => '管理者メールアドレス',
+        'admin_password' => '管理者パスワード',
+        'site_language' => 'サイトの言語',
+        'table_prefix' => 'テーブル接頭辞',
+    ],
+
+    'help' => [
+        'repository_url' => '公開リポジトリ — アカウント不要。https:// のアドレスを指定してください。',
+        'build_command' => 'コード取得後に実行されます。例: composer install --no-dev',
+    ],
+];
