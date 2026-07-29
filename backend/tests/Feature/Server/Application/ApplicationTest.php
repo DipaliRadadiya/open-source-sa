@@ -91,7 +91,7 @@ it('greys out types this server cannot run, with a reason and what to install', 
     // PHP is missing, so WordPress is offered but not usable...
     expect($types['wordpress']['available'])->toBeFalse();
     expect($types['wordpress']['unavailable_reason'])->toBe('This server does not have PHP installed.');
-    expect($types['wordpress']['installable'])->toBe('php');
+    expect($types['wordpress']['installable_runtime'])->toBe('php');
 
     // ...and a type needing no runtime is always available.
     expect($types['static']['available'])->toBeTrue();
@@ -326,4 +326,21 @@ it('denies creating and deleting with view-only access', function () {
         ->deleteJson("/api/applications/{$app->id}")->assertForbidden();
 
     expect(Application::count())->toBe(1);
+});
+
+it('says which types actually install something', function () {
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")->getJson('/api/site-types');
+
+    $types = collect($response->json('site_types'))->keyBy('name');
+
+    // The grid has to tell "click and get WordPress" apart from "click and get
+    // an empty directory" — they are the same card otherwise.
+    expect($types['wordpress']['has_installer'])->toBeTrue()
+        ->and($types['git']['has_installer'])->toBeFalse()
+        ->and($types['php']['has_installer'])->toBeFalse()
+        ->and($types['static']['has_installer'])->toBeFalse();
+
+    // And `installable_runtime` answers a different question: what to install
+    // to make an unavailable card work. It is not about the app at all.
+    expect($types['wordpress']['installable_runtime'])->toBeNull();
 });
