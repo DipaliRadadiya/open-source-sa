@@ -69,4 +69,6 @@ return [
     'application.deleted' => 'Excluiu a aplicação :name (:site_type)',
     'application.provisioned' => 'Configurou a aplicação :name no servidor',
     'application.provision_failed' => 'Falha ao configurar a aplicação :name (etapa: :step)',
+    'application.deployed' => 'Implantou a aplicação :name (:branch)',
+    'application.deploy_failed' => 'Falha ao implantar a aplicação :name (etapa: :step)',
 ];

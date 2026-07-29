@@ -23,6 +23,14 @@ class BitbucketProvider extends AbstractGitProvider
         return 'bitbucket';
     }
 
+    /**
+     * Bitbucket Access Tokens authenticate as `x-token-auth`.
+     */
+    public function credentialUsername(): string
+    {
+        return 'x-token-auth';
+    }
+
     public function verify(GitAccount $account): array
     {
         // A cheap call that any scoped token can make within its workspace.

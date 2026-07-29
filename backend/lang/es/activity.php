@@ -69,4 +69,6 @@ return [
     'application.deleted' => 'Eliminó la aplicación :name (:site_type)',
     'application.provisioned' => 'Configuró la aplicación :name en el servidor',
     'application.provision_failed' => 'Error al configurar la aplicación :name (paso: :step)',
+    'application.deployed' => 'Desplegó la aplicación :name (:branch)',
+    'application.deploy_failed' => 'Error al desplegar la aplicación :name (paso: :step)',
 ];

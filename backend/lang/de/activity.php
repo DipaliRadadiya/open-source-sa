@@ -69,4 +69,6 @@ return [
     'application.deleted' => 'Anwendung :name (:site_type) gelöscht',
     'application.provisioned' => 'Anwendung :name auf dem Server eingerichtet',
     'application.provision_failed' => 'Einrichtung der Anwendung :name fehlgeschlagen (Schritt: :step)',
+    'application.deployed' => 'Anwendung :name ausgerollt (:branch)',
+    'application.deploy_failed' => 'Ausrollen der Anwendung :name fehlgeschlagen (Schritt: :step)',
 ];

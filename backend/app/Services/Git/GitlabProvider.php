@@ -16,6 +16,14 @@ class GitlabProvider extends AbstractGitProvider
         return 'gitlab';
     }
 
+    /**
+     * GitLab expects `oauth2` as the username for token auth.
+     */
+    public function credentialUsername(): string
+    {
+        return 'oauth2';
+    }
+
     public function verify(GitAccount $account): array
     {
         $response = $this->send($account, fn ($client) => $client->get('/api/v4/user'));

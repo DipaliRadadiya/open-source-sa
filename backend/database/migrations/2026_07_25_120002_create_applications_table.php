@@ -55,6 +55,11 @@ return new class extends Migration
             $table->string('failed_step')->nullable();
             $table->string('reference')->nullable();
 
+            // Last successful git deploy — the commit actually on disk, which
+            // is the only honest answer to "what is running right now".
+            $table->string('last_commit')->nullable();
+            $table->timestamp('last_deployed_at')->nullable();
+
             $table->timestamps();
 
             $table->index('status');
