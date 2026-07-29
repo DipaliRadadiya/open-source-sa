@@ -347,6 +347,41 @@ Requires the `firewall` permission (`view` to read, `manage` to mutate). Backed 
 - Body: `enabled` (bool). **Enabling** seeds default `allow` rules (SSH + the configured web/panel ports: `22, 80, 443, …`) so the box is never locked out, sets the secure **default policy** (`deny incoming` / `allow outgoing`), then turns UFW on. **Disabling keeps** all rules (re-enable restores them).
 - Response `200`: `{"enabled": bool, "default_policy": {...}}`.
 
+### fail2ban
+
+Watches logs for repeated failures and bans the source IP. Permission `fail2ban`; mutations need `manage`. No DB — live state comes from `fail2ban-client`, settings from a managed drop-in in `jail.d`.
+
+**Independent of the Firewall feature by design.** Bans are not routed through UFW, so toggling the firewall off does not silently disable every ban. The two screens each tell the truth about themselves.
+
+**`GET /api/fail2ban`** — everything the screen needs, in one call.
+```json
+{"fail2ban": {
+  "installed": true, "running": true, "version": "1.0.2",
+  "your_ip": "203.0.113.5",
+  "settings": {"bantime": 3600, "findtime": 600, "maxretry": 5, "ignore_ips": ["203.0.113.5"]},
+  "jails": [{"name": "sshd", "label": "SSH", "lockout_risk": true, "enabled": true, "banned": ["198.51.100.9"]}],
+  "banned": [{"ip": "198.51.100.9", "jail": "sshd"}]
+}}
+```
+- **`installed: false` is a normal state, not an error** — a fresh server has no fail2ban. `settings` is `null` and the lists are empty; render the install prompt, not an error.
+- **`your_ip`** is the caller's own address. Offer it as a one-click addition to `ignore_ips` — this is what stops an operator banning themselves.
+- `lockout_risk: true` marks a jail that can lock the operator out (i.e. `sshd`). Show the warning on that one.
+
+**`POST /api/fail2ban/install`** (`manage`) → `202`. Queued (apt is slow). **Nothing is enabled by the install** — a freshly installed fail2ban that started banning immediately would be a surprise. Poll `GET /api/fail2ban` until `installed` flips. `422` if already installed.
+
+**`PUT /api/fail2ban`** (`manage`) — settings, ignore list and jail toggles together.
+- Body: `bantime` (≥60s), `findtime` (≥30s), `maxretry` (≥2 — one failure is a typo), `ignore_ips[]` (IP or CIDR), `jails: {name: bool}`, `acknowledged` (bool).
+- **One endpoint, not three**, because the values live in one file that is rewritten whole. For the same reason **a jail you omit keeps its current state** rather than switching off.
+- **`422` `errors/fail2ban.lockout_risk`** when enabling a `lockout_risk` jail unless *either* the caller's IP is in `ignore_ips` *or* `acknowledged: true`. Show a confirm dialog offering to add `your_ip`.
+- Loopback is always ignored and is not returned in `ignore_ips` — the user didn't add it and can't remove it.
+- Applying **reloads** rather than restarts, so existing bans survive.
+
+**`POST /api/fail2ban/bans`** (`manage`) — ban by hand. Body: `ip` (a single address, not a range), `jail`. `422` if the IP is on the ignore list (the ban would be dropped at the next reload).
+
+**`DELETE /api/fail2ban/bans/{ip}`** (`manage`) — release an address. Without `?jail=`, from **every** jail holding it. `404` if it isn't banned anywhere — refresh the list rather than showing success.
+
+The fail2ban log is in the Logs feature as `fail2ban`.
+
 OS-op failures → `500 {message, reference}`.
 
 ### Services
