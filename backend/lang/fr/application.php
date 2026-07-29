@@ -52,4 +52,14 @@ return [
         'repository_url' => 'Un dépôt public — aucun compte requis. Doit être une adresse https://.',
         'build_command' => 'Exécutée après la récupération du code, ex. composer install --no-dev',
     ],
+
+    'steps' => [
+        'create_directory' => 'Création du répertoire',
+        'set_ownership' => 'Attribution des droits',
+        'placeholder' => 'Ajout d\'une page provisoire',
+        'write_config' => 'Écriture de la configuration du site',
+        'test_config' => 'Test de la configuration',
+        'reload' => 'Rechargement du serveur web',
+        'worker' => 'Le processus en arrière-plan s\'est arrêté',
+    ],
 ];

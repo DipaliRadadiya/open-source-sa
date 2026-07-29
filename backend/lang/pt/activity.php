@@ -67,4 +67,6 @@ return [
     'application.created' => 'Criou a aplicação :name (:site_type)',
     'application.updated' => 'Atualizou a aplicação :name',
     'application.deleted' => 'Excluiu a aplicação :name (:site_type)',
+    'application.provisioned' => 'Configurou a aplicação :name no servidor',
+    'application.provision_failed' => 'Falha ao configurar a aplicação :name (etapa: :step)',
 ];

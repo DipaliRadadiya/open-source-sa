@@ -52,4 +52,14 @@ return [
         'repository_url' => 'Ein öffentliches Repository — kein Konto nötig. Muss eine https://-Adresse sein.',
         'build_command' => 'Läuft nach dem Abrufen des Codes, z. B. composer install --no-dev',
     ],
+
+    'steps' => [
+        'create_directory' => 'Verzeichnis wird erstellt',
+        'set_ownership' => 'Besitzrechte werden gesetzt',
+        'placeholder' => 'Platzhalterseite wird angelegt',
+        'write_config' => 'Website-Konfiguration wird geschrieben',
+        'test_config' => 'Konfiguration wird geprüft',
+        'reload' => 'Webserver wird neu geladen',
+        'worker' => 'Der Hintergrundprozess wurde beendet',
+    ],
 ];

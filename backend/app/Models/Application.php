@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'php_version', 'node_version', 'app_port', 'web_root',
     'build_command', 'start_command',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
+    'steps', 'failed_step', 'reference',
 ])]
 class Application extends Model
 {
@@ -27,6 +28,7 @@ class Application extends Model
         return [
             'status' => ApplicationStatus::class,
             'settings' => 'array',
+            'steps' => 'array',
         ];
     }
 

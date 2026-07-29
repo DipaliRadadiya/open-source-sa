@@ -4,13 +4,17 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Application\CreateApplication;
 use App\Actions\Server\Application\DeleteApplication;
+use App\Actions\Server\Application\DeprovisionApplication;
 use App\Actions\Server\Application\UpdateApplication;
+use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
 use App\Http\Resources\ApplicationResource;
+use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
 {
@@ -48,8 +52,34 @@ class ApplicationController extends Controller
         ]);
     }
 
-    public function destroy(Application $application, DeleteApplication $action): JsonResponse
+    /**
+     * Retry provisioning after a failure. Explicit rather than automatic: the
+     * job does not retry itself, because repeating a server mutation the user
+     * has not seen the reason for is how half-applied state happens.
+     */
+    public function provision(Application $application): JsonResponse
     {
+        ProvisionApplication::dispatch($application->id);
+
+        $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'reference' => null]);
+
+        return response()->json([
+            'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
+        ], 202);
+    }
+
+    /**
+     * Removing an application also stops it being served. The site's files are
+     * kept unless `remove_files=true` is asked for explicitly — deleting a
+     * panel record must not silently destroy someone's code.
+     */
+    public function destroy(
+        Application $application,
+        Request $request,
+        DeprovisionApplication $deprovision,
+        DeleteApplication $action,
+    ): JsonResponse {
+        $deprovision->execute($application, $request->boolean('remove_files'));
         $action->execute($application);
 
         return response()->json(['deleted' => true]);

@@ -67,4 +67,6 @@ return [
     'application.created' => 'アプリケーション :name (:site_type) を作成しました',
     'application.updated' => 'アプリケーション :name を更新しました',
     'application.deleted' => 'アプリケーション :name (:site_type) を削除しました',
+    'application.provisioned' => 'アプリケーション :name をサーバーに構築しました',
+    'application.provision_failed' => 'アプリケーション :name の構築に失敗しました (:step)',
 ];

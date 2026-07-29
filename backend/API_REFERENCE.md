@@ -528,7 +528,7 @@ Requires the `database` permission (`view` to read, `manage` to mutate). **3 eng
 
 Requires the `application` permission (`view` to read, `manage` to mutate).
 
-> ⚠️ **Phase 1 does not touch the server.** No directory is created, no code is fetched, no vhost is written. A created application is a **record of intent** and stays at `status: "pending"`. Show it as *"Not deployed yet"* — never imply the site is reachable. Provisioning (P2) and git deploy (P3) come later.
+> **Phase 2 provisions the site.** Creating an application queues the work: directory → ownership → placeholder page → site config → **config test** → reload. The response returns before any of that has run, so **poll `GET /applications/{id}` and drive the UI from `status`**. Code is still not fetched — a new site serves a placeholder page until git deploy (P3) lands.
 
 **`GET /api/site-types`** — the card grid. One entry per installable thing, each carrying its own field schema, so the frontend writes **one** generic form renderer and a new app type needs no frontend change.
 - Response: `{ site_types: [{name, title, tagline, icon, category, popular, method, serving_profile, needs_database, available, unavailable_reason, installable, fields[]}] }`
@@ -542,7 +542,7 @@ Requires the `application` permission (`view` to read, `manage` to mutate).
 **`GET /api/applications`** → `{ applications: [ …application objects… ] }`
 **`GET /api/applications/{application}`** → `{ application: {…} }`
 
-**`POST /api/applications`** (`manage`) — create the record. `201 { application: {…} }`, always `status: "pending"`.
+**`POST /api/applications`** (`manage`) — create the record **and queue provisioning**. `201 { application: {…} }` returns immediately at `status: "pending"`; poll until `active` or `failed`.
 - Always: `site_type`, `name`, `domain`, `system_user_id`.
 - Then whatever the chosen type's schema declared. **Validation is generated from that same schema**, so WordPress rejects a missing `admin_email`, and keys the type never declared are ignored rather than stored.
 - `serving_profile` is derived from the type — not accepted from the client.
@@ -551,7 +551,26 @@ Requires the `application` permission (`view` to read, `manage` to mutate).
 
 **`PUT /api/applications/{application}`** (`manage`) — `name`, `domain`, `web_root`, `build_command`, `start_command`, `branch`, `settings`. `settings` **merges**, so a partial update doesn't wipe the other answers. The site type is not editable — a different type is a different application.
 
-**`DELETE /api/applications/{application}`** (`manage`) → `{ deleted: true }`. Removes the record only; nothing exists on disk in P1.
+**`POST /api/applications/{application}/provision`** (`manage`) — retry after a failure. `202 { application: {…} }` with `status: "provisioning"`; the previous `failed_step`/`reference` are cleared. Provisioning is **never retried automatically** — repeating a server change the user hasn't seen the reason for is how half-applied state happens.
+
+**`DELETE /api/applications/{application}`** (`manage`) → `{ deleted: true }`. Also **removes the site config and reloads**, so the domain stops being served. The site's **files are kept** unless you pass `?remove_files=true` — deleting a panel record must not silently destroy someone's code. An application still at `pending` touches nothing on the server.
+
+#### Provisioning status
+
+| `status` | Means | UI |
+|---|---|---|
+| `pending` | queued, nothing done yet | "Not deployed yet" |
+| `provisioning` | running | show `steps[]` as progress |
+| `active` | serving | the domain loads |
+| `failed` | stopped at `failed_step` | show the step + a **Retry** button |
+
+- `steps` — the steps completed in order: `create_directory`, `set_ownership`, `placeholder`, `write_config`, `test_config`, `reload`. Localized labels are in the `application.steps.*` translations.
+- `failed_step` — which one broke (`worker` means the background process itself died).
+- `reference` — quote this to support. **The raw server error is deliberately not in the response**; it's in the server-ops log under this id.
+
+**The config is always tested before any reload, and a failed test removes the config we just wrote.** A broken vhost that reached a reload would take every other site on the server down — so one site's bad config can never cost the whole box.
+
+A server running a web server the panel can't configure (currently anything other than nginx or apache) is **refused with a 422** rather than guessed at.
 
 #### The application object
 ```json

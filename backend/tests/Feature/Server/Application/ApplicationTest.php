@@ -7,12 +7,18 @@ use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
     $this->admin = User::factory()->admin()->create();
     $this->token = $this->admin->createToken('t')->plainTextToken;
     $this->su = SystemUser::create(['username' => 'deploy', 'home_path' => '/home/deploy', 'shell' => '/bin/bash', 'sudo' => false]);
+
+    // These cover the record and the catalog. Provisioning is dispatched on
+    // create and has its own test file; faking the queue keeps the two
+    // concerns from bleeding into each other.
+    Queue::fake();
 });
 
 /** A server that can run everything, so tests aren't at the mercy of the host. */
@@ -121,7 +127,8 @@ it('creates a git application from a connected account, left undeployed', functi
     $response->assertJsonPath('application.site_type', 'git');
     $response->assertJsonPath('application.repository', 'octocat/hello');
     $response->assertJsonPath('application.branch', 'main');
-    // P1 writes nothing to the server, so it must not look live.
+    // The response is returned before provisioning runs, and until it
+    // succeeds the app must never look live.
     $response->assertJsonPath('application.status', 'pending');
     $response->assertJsonPath('application.status_title', 'Not deployed yet');
     $response->assertJsonPath('application.deployed', false);

@@ -67,4 +67,6 @@ return [
     'application.created' => 'Создано приложение :name (:site_type)',
     'application.updated' => 'Обновлено приложение :name',
     'application.deleted' => 'Удалено приложение :name (:site_type)',
+    'application.provisioned' => 'Приложение :name настроено на сервере',
+    'application.provision_failed' => 'Не удалось настроить приложение :name (шаг: :step)',
 ];

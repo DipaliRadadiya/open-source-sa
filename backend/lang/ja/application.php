@@ -52,4 +52,14 @@ return [
         'repository_url' => '公開リポジトリ — アカウント不要。https:// のアドレスを指定してください。',
         'build_command' => 'コード取得後に実行されます。例: composer install --no-dev',
     ],
+
+    'steps' => [
+        'create_directory' => 'ディレクトリを作成中',
+        'set_ownership' => '所有者を設定中',
+        'placeholder' => '仮ページを作成中',
+        'write_config' => 'サイト設定を書き込み中',
+        'test_config' => '設定を検証中',
+        'reload' => 'ウェブサーバーを再読み込み中',
+        'worker' => 'バックグラウンド処理が停止しました',
+    ],
 ];
