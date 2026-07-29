@@ -7,9 +7,15 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Minimal stub for the (future) Application feature — enough to wire the
-     * SystemUser -> Application relationship, the delete-guard, and the
-     * nested response shapes. The full Application feature will extend this.
+     * A site the panel manages. One System User owns many applications.
+     *
+     * `settings` holds the answers to whatever fields the site type declared
+     * (WordPress admin email, table prefix, …) — those differ per type, so
+     * they are not columns. Anything the panel itself reasons about (runtime,
+     * web root, git source) is a real column.
+     *
+     * `status` starts at `pending`: the record exists but nothing has been
+     * written to the server yet.
      */
     public function up(): void
     {
@@ -19,9 +25,32 @@ return new class extends Migration
             $table->string('name');
             $table->string('domain')->nullable();
             $table->string('site_type');
+            // php | node | static | proxy — what the web server has to serve.
+            $table->string('serving_profile')->default('php');
+            $table->string('status')->default('pending');
+
+            // Runtime — only one applies, decided by the serving profile.
             $table->string('php_version')->nullable();
-            $table->string('status')->default('active');
+            $table->string('node_version')->nullable();
+            $table->unsignedInteger('app_port')->nullable();
+
+            $table->string('web_root')->default('/');
+            $table->string('build_command', 500)->nullable();
+            $table->string('start_command', 500)->nullable();
+
+            // Git source. Nullable account = a public repository, which needs
+            // no credentials at all.
+            $table->foreignId('git_account_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('repository')->nullable();
+            $table->string('repository_url')->nullable();
+            $table->string('branch')->nullable();
+
+            // Type-specific answers, shaped by the site type's field schema.
+            $table->json('settings')->nullable();
+
             $table->timestamps();
+
+            $table->index('status');
         });
     }
 

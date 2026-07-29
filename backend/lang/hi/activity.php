@@ -64,4 +64,7 @@ return [
     'git_account.connected' => ':provider खाता :label जोड़ा',
     'git_account.updated' => ':provider खाता :label अपडेट किया',
     'git_account.disconnected' => ':provider खाता :label हटाया',
+    'application.created' => 'एप्लिकेशन :name (:site_type) बनाया',
+    'application.updated' => 'एप्लिकेशन :name अपडेट किया',
+    'application.deleted' => 'एप्लिकेशन :name (:site_type) हटाया',
 ];

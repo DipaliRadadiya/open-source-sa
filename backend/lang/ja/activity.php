@@ -64,4 +64,7 @@ return [
     'git_account.connected' => ':provider アカウント :label を接続しました',
     'git_account.updated' => ':provider アカウント :label を更新しました',
     'git_account.disconnected' => ':provider アカウント :label を切断しました',
+    'application.created' => 'アプリケーション :name (:site_type) を作成しました',
+    'application.updated' => 'アプリケーション :name を更新しました',
+    'application.deleted' => 'アプリケーション :name (:site_type) を削除しました',
 ];

@@ -64,4 +64,7 @@ return [
     'git_account.connected' => 'Conectó la cuenta de :provider :label',
     'git_account.updated' => 'Actualizó la cuenta de :provider :label',
     'git_account.disconnected' => 'Desconectó la cuenta de :provider :label',
+    'application.created' => 'Creó la aplicación :name (:site_type)',
+    'application.updated' => 'Actualizó la aplicación :name',
+    'application.deleted' => 'Eliminó la aplicación :name (:site_type)',
 ];
