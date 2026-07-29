@@ -30,6 +30,11 @@ class CronjobResource extends JsonResource
             // Cron interprets schedules in the server's timezone, so these are
             // computed there — not in the app's timezone.
             'timezone' => ServerTimezone::get(),
+            // Key into the Logs endpoints for this job's captured output, or
+            // null until it has produced any. Cron discards a job's output by
+            // default, so jobs written before output capture existed have
+            // nothing to show until they are next saved.
+            'log_key' => $this->logKey(),
             'next_run_at' => $this->nextRunAt()?->format('d-m-Y H:i:s'),
             'next_run_at_human' => $this->nextRunAt()?->diffForHumans(),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),

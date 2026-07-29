@@ -46,6 +46,21 @@ return [
     'cron_d' => env('SERVER_CRON_D', '/etc/cron.d'),
 
     /*
+    | Cron writes a job's output nowhere useful by default — it mails it, and a
+    | server with no MTA discards it silently, so a failing job leaves no trace
+    | at all. Managed jobs therefore redirect into one file per job here.
+    |
+    | Capturing output without bounding it is a slow disk-fill: a job running
+    | every minute writes forever. The logrotate drop-in below is written
+    | alongside the first job and is not optional.
+    */
+
+    'cronjob_log_dir' => env('SERVER_CRONJOB_LOG_DIR', '/var/log/cronjobs'),
+    'cronjob_logrotate_file' => env('SERVER_CRONJOB_LOGROTATE', '/etc/logrotate.d/panel-cronjobs'),
+    'cronjob_log_keep_days' => (int) env('SERVER_CRONJOB_LOG_KEEP_DAYS', 14),
+    'cronjob_log_max_size' => env('SERVER_CRONJOB_LOG_MAX_SIZE', '10M'),
+
+    /*
     |--------------------------------------------------------------------------
     | Server timezone sources
     |--------------------------------------------------------------------------

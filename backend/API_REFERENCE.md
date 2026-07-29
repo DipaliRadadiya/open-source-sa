@@ -226,6 +226,7 @@ Every single/`cronjob` and list/`cronjobs[]` entry has this exact shape:
   "expression": "0 0 * * *",
   "active": true,
   "timezone": "Asia/Kolkata",
+  "log_key": "cronjob_nightly-backup",
   "next_run_at": "30-07-2026 03:00:00",
   "next_run_at_human": "in 12 hours",
   "created_at": "25-07-2026 18:05:10",
@@ -236,7 +237,15 @@ Every single/`cronjob` and list/`cronjobs[]` entry has this exact shape:
 - `system_user` — `{id, username}` when the run-as user is a panel System User, else **`null`** (a default OS user like `root`/`www-data`). `username` is always present regardless.
 - `timezone` — the **server's** timezone. Cron interprets schedules against the OS clock, so `next_run_at` is computed there, not in UTC. Show it next to the time so a user in another timezone isn't misled.
 - `next_run_at` — exact, computed from the expression. **`null` when `active` is false** (an inactive job has no next run).
-- **There is no "last run" field, by design.** Linux cron keeps no record of actual executions, so any value we could return would be a *scheduled* time that stays populated even when the job never ran (server off, command crashed) — it would be read as proof of execution and lie. Real run history (exit code, duration, output) requires wrapping each command in a runner and is a separate, future feature.
+- **There is no "last run" field, by design.** Linux cron keeps no record of actual executions, so any value we could return would be a *scheduled* time that stays populated even when the job never ran (server off, command crashed) — it would be read as proof of execution and lie. What the job *actually* did is in its log instead (below), which records real output and a real exit code.
+- `log_key` — key into the **Logs** endpoints for this job's captured output, or **`null`** when there is nothing to show yet. Open it with `GET /api/logs/{log_key}`, the same viewer and the same `after` polling cursor as every other log. Reading requires the `logs` permission.
+  - Cron mails a job's output by default, and a server with no MTA discards it — so managed jobs redirect into one file per job. Each run appends the command's output followed by a status line:
+    ```
+    --- exit=0 at 2026-07-29T03:00:01+00:00
+    ```
+    That line is what tells "printed nothing" apart from "failed immediately". A non-zero `exit=` is the job failing.
+  - `log_key` is `null` until the job has been written with output capture — a job created before this existed shows nothing until it is next saved. Show "no output captured yet" rather than an empty viewer.
+  - Logs rotate automatically (daily, size-capped, compressed). Renaming a job carries its history over; deactivating one keeps it; deleting the job deletes it.
 
 #### List — `GET /api/cronjobs`
 - Query params (all optional): `filter[system_user_id]` (int), `filter[username]` (string, exact), `filter[active]` (`true`/`false`), `per_page` (`10`|`20`|`50`|`100`, default `10`), `page` (int).
