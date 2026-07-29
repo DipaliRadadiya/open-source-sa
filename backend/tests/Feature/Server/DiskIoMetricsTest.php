@@ -4,6 +4,7 @@ use App\Models\ServerMetric;
 use App\Models\User;
 use App\Services\Server\Metrics\ServerMetrics;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
@@ -172,4 +173,49 @@ it('returns the new fields through the dashboard endpoints', function () {
         ->getJson('/api/server/metrics/history')
         ->assertOk()
         ->assertJsonStructure(['metrics' => [['disk_read', 'disk_write']]]);
+});
+
+it('does not sleep on the live endpoint, and measures against the previous poll', function () {
+    Process::fake(['*' => Process::result(output: '')]);
+    Cache::flush();
+
+    writeDiskstats(diskstatsLine('sda', 100, 2048, 50, 1024));
+
+    $started = microtime(true);
+    $first = app(ServerMetrics::class)->live();
+    $elapsed = microtime(true) - $started;
+
+    // Sleeping once per counter is what made this endpoint cost three
+    // seconds — enough that a few open dashboards exhaust the worker pool.
+    expect($elapsed)->toBeLessThan(0.5);
+
+    // Nothing to compare the first read against.
+    expect($first['disk_io']['read'])->toBe(0);
+
+    // Rewind the stored reading by ten seconds, then report 10 MB more read.
+    $sample = Cache::get('server-metrics:counters');
+    Cache::put('server-metrics:counters', ['counters' => $sample['counters'], 'at' => $sample['at'] - 10], 600);
+
+    writeDiskstats(diskstatsLine('sda', 100, 2048 + 20480, 50, 1024));
+
+    // 20480 sectors × 512 B = 10 MB over 10 s = 1 MB/s. Measured against the
+    // real clock, so the window is 10 s plus the milliseconds this test took.
+    expect(app(ServerMetrics::class)->live()['disk_io']['read'])
+        ->toEqualWithDelta(1_048_576, 5_000);
+});
+
+it('ignores a previous reading too old to describe anything current', function () {
+    Process::fake(['*' => Process::result(output: '')]);
+    Cache::flush();
+
+    writeDiskstats(diskstatsLine('sda', 100, 2048, 50, 1024));
+    app(ServerMetrics::class)->live();
+
+    // An hour-old reading would average across a window nobody is watching.
+    $sample = Cache::get('server-metrics:counters');
+    Cache::put('server-metrics:counters', ['counters' => $sample['counters'], 'at' => $sample['at'] - 3600], 600);
+
+    writeDiskstats(diskstatsLine('sda', 100, 2048 + 20480, 50, 1024));
+
+    expect(app(ServerMetrics::class)->live()['disk_io']['read'])->toBe(0);
 });

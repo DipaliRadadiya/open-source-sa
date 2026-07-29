@@ -24,6 +24,7 @@ return [
     'database.connection_updated' => ':engine の接続設定を更新しました',
     'database.user_updated' => ':database の データベースユーザー :username を更新しました',
     'database.process_killed' => ':engine のプロセス :process を終了しました',
+    'server.process_killed' => 'プロセス :pid (:command) を SIG:signal で停止しました',
     'database.optimized' => ':name データベースを最適化しました',
     'database.repaired' => ':name データベースを修復しました',
     'database.exported' => ':name データベースをエクスポートしました',

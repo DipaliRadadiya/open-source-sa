@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Process\KillProcessRequest;
 use App\Http\Resources\ServerMetricResource;
 use App\Models\ServerMetric;
+use App\Services\ActivityLogger;
 use App\Services\Server\Metrics\ServerMetrics;
+use App\Services\Server\ProcessKiller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Date;
 
@@ -34,6 +37,22 @@ class DashboardController extends Controller
     public function processes(ServerMetrics $metrics): JsonResponse
     {
         return response()->json(['processes' => $metrics->processes()]);
+    }
+
+    /**
+     * Stop a process (manage).
+     *
+     * The guards live in ProcessKiller — see there for what is refused and
+     * why. Logged to the activity trail with what was actually killed, read
+     * at kill time rather than taken from the request.
+     */
+    public function killProcess(KillProcessRequest $request, int $pid, ProcessKiller $killer, ActivityLogger $log): JsonResponse
+    {
+        $killed = $killer->kill($pid, (string) ($request->validated('signal') ?? 'TERM'));
+
+        $log->log('server.process_killed', null, $killed);
+
+        return response()->json(['process' => $killed]);
     }
 
     /**

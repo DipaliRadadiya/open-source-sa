@@ -24,6 +24,7 @@ return [
     'database.connection_updated' => 'A mis à jour les paramètres de connexion :engine',
     'database.user_updated' => 'A mis à jour l\'utilisateur de base de données :username sur :database',
     'database.process_killed' => 'A arrêté le processus :process de :engine',
+    'server.process_killed' => 'A arrêté le processus :pid (:command) avec SIG:signal',
     'database.optimized' => 'A optimisé la base de données :name',
     'database.repaired' => 'A réparé la base de données :name',
     'database.exported' => 'A exporté la base de données :name',

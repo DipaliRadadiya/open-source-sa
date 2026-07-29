@@ -10,3 +10,7 @@ Route::get('/server/facts', [DashboardController::class, 'facts'])->middleware('
 Route::get('/server/metrics/live', [DashboardController::class, 'live'])->middleware('permission:dashboard');
 Route::get('/server/metrics/history', [DashboardController::class, 'history'])->middleware('permission:dashboard');
 Route::get('/server/processes', [DashboardController::class, 'processes'])->middleware('permission:dashboard');
+// Stopping a process is the one write here — see ProcessKiller for the guards.
+Route::delete('/server/processes/{pid}', [DashboardController::class, 'killProcess'])
+    ->whereNumber('pid')
+    ->middleware('permission:dashboard,manage');
