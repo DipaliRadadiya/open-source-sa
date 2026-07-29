@@ -9,4 +9,5 @@ return [
     'lockout_risk' => 'Das Aktivieren des SSH-Jails kann Sie von diesem Server aussperren. Fügen Sie Ihre IP-Adresse zur Ausnahmeliste hinzu oder bestätigen Sie, dass Sie das Risiko akzeptieren.',
     'ip_ignored' => 'Diese IP-Adresse steht auf der Ausnahmeliste, eine Sperre würde daher nicht greifen.',
     'operation_failed' => 'Der fail2ban-Vorgang ist fehlgeschlagen.',
+    'bantime_too_short' => 'Die Sperrdauer muss mindestens 60 Sekunden betragen, oder -1 für eine dauerhafte Sperre.',
 ];

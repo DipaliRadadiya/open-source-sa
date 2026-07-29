@@ -10,4 +10,6 @@ Route::get('/fail2ban', [Fail2banController::class, 'index'])->middleware('permi
 Route::post('/fail2ban/install', [Fail2banController::class, 'install'])->middleware('permission:fail2ban,manage');
 Route::put('/fail2ban', [Fail2banController::class, 'update'])->middleware('permission:fail2ban,manage');
 Route::post('/fail2ban/bans', [Fail2banController::class, 'ban'])->middleware('permission:fail2ban,manage');
+// Static route before the {ip} binding.
+Route::delete('/fail2ban/bans', [Fail2banController::class, 'unbanAll'])->middleware('permission:fail2ban,manage');
 Route::delete('/fail2ban/bans/{ip}', [Fail2banController::class, 'unban'])->middleware('permission:fail2ban,manage');

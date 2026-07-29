@@ -18,10 +18,14 @@ class UpdateFail2banRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // A ban shorter than the window it is measured over bans nobody
-            // for any useful length of time, so the floor is a minute rather
-            // than zero.
-            'bantime' => ['required', 'integer', 'min:60', 'max:'.config('server.fail2ban.bantime_max')],
+            // `-1` is fail2ban's permanent ban; otherwise a minute is the
+            // floor, since a shorter ban expires before it inconveniences
+            // anyone and only looks like protection.
+            'bantime' => ['required', 'integer', 'max:'.config('server.fail2ban.bantime_max'), function ($attribute, $value, $fail) {
+                if ((int) $value !== -1 && (int) $value < 60) {
+                    $fail('errors/fail2ban.bantime_too_short')->translate();
+                }
+            }],
             'findtime' => ['required', 'integer', 'min:30', 'max:86400'],
             // One failure is a typo, not an attack.
             'maxretry' => ['required', 'integer', 'min:2', 'max:100'],

@@ -65,11 +65,41 @@ class Fail2banManager
     {
         $active = $this->activeJails();
 
-        return array_map(fn (array $jail) => [
-            ...$jail,
-            'enabled' => in_array($jail['name'], $active, true),
-            'banned' => $this->bannedIn($jail['name']),
-        ], (array) config('server.fail2ban.jails', []));
+        return array_map(function (array $jail) use ($active) {
+            $enabled = in_array($jail['name'], $active, true);
+
+            return [
+                ...$jail,
+                'enabled' => $enabled,
+                'banned' => $enabled ? $this->bannedIn($jail['name']) : [],
+                'stats' => $enabled ? $this->stats($jail['name']) : null,
+            ];
+        }, (array) config('server.fail2ban.jails', []));
+    }
+
+    /**
+     * A jail's counters.
+     *
+     * `currently_failed` is the one worth showing prominently: it means an
+     * attack is in progress right now, as opposed to the totals, which only
+     * say one happened at some point.
+     *
+     * @return array<string, int>
+     */
+    public function stats(string $jail): array
+    {
+        $output = $this->client(['status', $jail])->output();
+
+        $number = function (string $label) use ($output): int {
+            return preg_match('/'.preg_quote($label, '/').':\s*(\d+)/i', $output, $m) === 1 ? (int) $m[1] : 0;
+        };
+
+        return [
+            'currently_failed' => $number('Currently failed'),
+            'total_failed' => $number('Total failed'),
+            'currently_banned' => $number('Currently banned'),
+            'total_banned' => $number('Total banned'),
+        ];
     }
 
     /**
@@ -82,12 +112,82 @@ class Fail2banManager
         $banned = [];
 
         foreach ($this->activeJails() as $jail) {
+            $times = $this->banTimes($jail);
+
             foreach ($this->bannedIn($jail) as $ip) {
-                $banned[] = ['ip' => $ip, 'jail' => $jail];
+                $banned[] = [
+                    'ip' => $ip,
+                    'jail' => $jail,
+                    // A list of bare addresses doesn't tell you whether to
+                    // wait or to unban. Null when this fail2ban is too old to
+                    // report timings — better an absent field than a guess.
+                    ...($times[$ip] ?? ['banned_at' => null, 'expires_at' => null, 'seconds_left' => null]),
+                ];
             }
         }
 
         return $banned;
+    }
+
+    /**
+     * Ban and expiry times per IP for a jail.
+     *
+     * `--with-time` is not in every fail2ban, and an older one answers with
+     * plain addresses instead of failing — so a parse that finds no timestamps
+     * yields no timings rather than nonsense.
+     *
+     * @return array<string, array{banned_at: string, expires_at: string, seconds_left: int}>
+     */
+    private function banTimes(string $jail): array
+    {
+        $output = $this->client(['get', $jail, 'banip', '--with-time'])->output();
+        $now = time();
+        $times = [];
+
+        // 1.2.3.4 	2026-07-29 11:00:00 + 3600 = 2026-07-29 12:00:00
+        preg_match_all(
+            '/^\s*(\S+)\s+(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s*\+\s*(-?\d+)\s*=\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/m',
+            $output,
+            $matches,
+            PREG_SET_ORDER,
+        );
+
+        foreach ($matches as $match) {
+            $expires = strtotime($match[4]) ?: 0;
+
+            $times[$match[1]] = [
+                'banned_at' => $match[2],
+                // A negative bantime is fail2ban's permanent ban.
+                'expires_at' => (int) $match[3] < 0 ? null : $match[4],
+                'seconds_left' => (int) $match[3] < 0 ? null : max(0, $expires - $now),
+            ];
+        }
+
+        return $times;
+    }
+
+    /**
+     * Release every banned address.
+     *
+     * For the case this exists to serve — an office or a VPN range banned by
+     * mistake — unbanning eleven addresses one at a time is not the moment for
+     * careful clicking.
+     *
+     * @return array<int, string> the addresses released
+     */
+    public function unbanAll(): array
+    {
+        $released = [];
+
+        foreach ($this->activeJails() as $jail) {
+            foreach ($this->bannedIn($jail) as $ip) {
+                if ($this->client(['set', $jail, 'unbanip', $ip])->ok) {
+                    $released[] = $ip;
+                }
+            }
+        }
+
+        return array_values(array_unique($released));
     }
 
     /**
@@ -153,7 +253,7 @@ class Fail2banManager
             $body .= "\n[{$jail['name']}]\n"
                 .'enabled = '.(($enabled[$jail['name']] ?? false) ? 'true' : 'false')."\n";
 
-            foreach ((array) ($jail['options'] ?? []) as $key => $value) {
+            foreach ($this->jailOptions($jail) as $key => $value) {
                 $body .= "{$key} = {$value}\n";
             }
         }
@@ -169,6 +269,45 @@ class Fail2banManager
         }
 
         $this->reload();
+    }
+
+    /**
+     * A jail's options, with `{ssh_port}` resolved.
+     *
+     * The sshd jail defaults to `port = ssh`, which resolves to 22 — and this
+     * panel lets the user move SSH somewhere else. Left alone, fail2ban would
+     * detect the attack correctly (it reads the journal, not the socket) and
+     * then ban a port nobody is using, while the screen reported the server as
+     * protected. The port has to come from the same setting that moved it.
+     *
+     * @param  array<string, mixed>  $jail
+     * @return array<string, string>
+     */
+    private function jailOptions(array $jail): array
+    {
+        $port = (string) $this->sshPort();
+
+        return array_map(
+            fn ($value) => str_replace('{ssh_port}', $port, (string) $value),
+            (array) ($jail['options'] ?? []),
+        );
+    }
+
+    /**
+     * The port SSH is actually listening on, read from the managed drop-in the
+     * Settings feature writes — not from config, which only holds the default.
+     */
+    public function sshPort(): int
+    {
+        $dir = (string) config('server.sshd_config_dir', '/etc/ssh/sshd_config.d');
+
+        foreach (glob(rtrim($dir, '/').'/*.conf') ?: [] as $file) {
+            if (preg_match('/^\s*Port\s+(\d+)/mi', (string) @file_get_contents($file), $m) === 1) {
+                return (int) $m[1];
+            }
+        }
+
+        return (int) config('server.ssh_port', 22);
     }
 
     /**

@@ -205,8 +205,10 @@ it('lists who is banned, across every jail', function () {
 
     f2b('GET', '/api/fail2ban')
         ->assertOk()
-        ->assertJsonPath('fail2ban.banned.0', ['ip' => '203.0.113.5', 'jail' => 'sshd'])
-        ->assertJsonPath('fail2ban.banned.1', ['ip' => '198.51.100.9', 'jail' => 'recidive']);
+        ->assertJsonPath('fail2ban.banned.0.ip', '203.0.113.5')
+        ->assertJsonPath('fail2ban.banned.0.jail', 'sshd')
+        ->assertJsonPath('fail2ban.banned.1.ip', '198.51.100.9')
+        ->assertJsonPath('fail2ban.banned.1.jail', 'recidive');
 });
 
 it('unbans an address from every jail holding it', function () {
@@ -299,4 +301,160 @@ it('denies a user with no fail2ban permission at all', function () {
     $token = $user->createToken('t')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")->getJson('/api/fail2ban')->assertForbidden();
+});
+
+it('bans on the port SSH is actually listening on, not the default', function () {
+    fakeFail2ban(bans: []);
+
+    $sshd = sys_get_temp_dir().'/sv-oss-sshd-'.getmypid();
+    File::deleteDirectory($sshd);
+    File::makeDirectory($sshd, 0755, true);
+    File::put("{$sshd}/60-panel.conf", "Port 2222\nPermitRootLogin no\n");
+    config(['server.sshd_config_dir' => $sshd]);
+
+    f2b('PUT', '/api/fail2ban', [
+        'bantime' => 3600, 'findtime' => 600, 'maxretry' => 5,
+        'jails' => ['sshd' => true], 'acknowledged' => true,
+    ])->assertOk();
+
+    // fail2ban's own default is `port = ssh`, i.e. 22. On a server whose SSH
+    // this panel moved, that bans a port nobody is using while the screen
+    // says the server is protected.
+    expect(dropIn())->toContain('port = 2222')
+        ->and(dropIn())->not->toContain('port = ssh');
+
+    File::deleteDirectory($sshd);
+});
+
+it('falls back to the default SSH port when nothing has changed it', function () {
+    fakeFail2ban(bans: []);
+    config(['server.sshd_config_dir' => '/nonexistent-sshd-dir']);
+
+    f2b('PUT', '/api/fail2ban', [
+        'bantime' => 3600, 'findtime' => 600, 'maxretry' => 5,
+        'jails' => ['sshd' => true], 'acknowledged' => true,
+    ])->assertOk();
+
+    expect(dropIn())->toContain('port = 22');
+});
+
+it('reports how hard a jail is being hit right now', function () {
+    Process::fake(function ($process) {
+        $command = $process->command;
+
+        if ($command[0] === 'which') {
+            return Process::result(output: "/usr/bin/fail2ban-client\n");
+        }
+
+        return match (true) {
+            ($command[1] ?? '') === 'ping' => Process::result(output: 'pong'),
+            $command === ['fail2ban-client', 'status'] => Process::result(output: "|- Jail list:\tsshd\n"),
+            ($command[1] ?? '') === 'status' => Process::result(output: "Status for the jail: sshd\n|- Filter\n|  |- Currently failed:\t3\n|  `- Total failed:\t1847\n"
+                ."`- Actions\n   |- Currently banned:\t2\n   `- Total banned:\t42\n"),
+            default => Process::result(output: "['203.0.113.5']"),
+        };
+    });
+
+    // "Currently failed" is the number that says an attack is happening now,
+    // as opposed to the totals, which only say one happened at some point.
+    f2b('GET', '/api/fail2ban')
+        ->assertOk()
+        ->assertJsonPath('fail2ban.jails.0.stats.currently_failed', 3)
+        ->assertJsonPath('fail2ban.jails.0.stats.total_failed', 1847)
+        ->assertJsonPath('fail2ban.jails.0.stats.total_banned', 42);
+});
+
+it('says how long each ban has left to run', function () {
+    $expires = date('Y-m-d H:i:s', time() + 1800);
+    $started = date('Y-m-d H:i:s', time() - 1800);
+
+    Process::fake(function ($process) use ($started, $expires) {
+        $command = $process->command;
+
+        if ($command[0] === 'which') {
+            return Process::result(output: "/usr/bin/fail2ban-client\n");
+        }
+
+        return match (true) {
+            ($command[1] ?? '') === 'ping' => Process::result(output: 'pong'),
+            $command === ['fail2ban-client', 'status'] => Process::result(output: "|- Jail list:\tsshd\n"),
+            in_array('--with-time', $command, true) => Process::result(output: "203.0.113.5 \t{$started} + 3600 = {$expires}\n"),
+            ($command[1] ?? '') === 'get' => Process::result(output: "['203.0.113.5']"),
+            default => Process::result(output: ''),
+        };
+    });
+
+    // A list of bare addresses doesn't tell you whether to wait or to unban.
+    $ban = f2b('GET', '/api/fail2ban')->json('fail2ban.banned.0');
+
+    expect($ban['ip'])->toBe('203.0.113.5')
+        ->and($ban['expires_at'])->toBe($expires)
+        ->and($ban['seconds_left'])->toBeGreaterThan(1700)
+        ->and($ban['seconds_left'])->toBeLessThanOrEqual(1800);
+});
+
+it('leaves the timings out rather than guessing when fail2ban cannot report them', function () {
+    // An older fail2ban answers `--with-time` with plain addresses.
+    fakeFail2ban(bans: ['sshd' => ['203.0.113.5']]);
+
+    $ban = f2b('GET', '/api/fail2ban')->json('fail2ban.banned.0');
+
+    expect($ban['ip'])->toBe('203.0.113.5')
+        ->and($ban['expires_at'])->toBeNull()
+        ->and($ban['seconds_left'])->toBeNull();
+});
+
+it('releases every ban at once', function () {
+    $runs = fakeFail2ban(bans: ['sshd' => ['203.0.113.5', '198.51.100.9']]);
+
+    f2b('DELETE', '/api/fail2ban/bans')
+        ->assertOk()
+        ->assertJsonPath('unbanned.ips', ['203.0.113.5', '198.51.100.9']);
+
+    $commands = collect($runs)->pluck('command');
+    expect($commands)->toContain(['fail2ban-client', 'set', 'sshd', 'unbanip', '203.0.113.5'])
+        ->and($commands)->toContain(['fail2ban-client', 'set', 'sshd', 'unbanip', '198.51.100.9']);
+});
+
+it('reports unban-all when there is nothing banned', function () {
+    fakeFail2ban(bans: ['sshd' => []]);
+
+    f2b('DELETE', '/api/fail2ban/bans')->assertNotFound();
+});
+
+it('offers ban-time presets so the form need not ask for seconds', function () {
+    fakeFail2ban();
+
+    $presets = f2b('GET', '/api/fail2ban')->json('fail2ban.bantime_presets');
+
+    // Backend-driven for the same reason as the cron schedule presets: the
+    // frontend should not keep its own copy of a list that has to agree with
+    // what this endpoint accepts.
+    expect(collect($presets)->pluck('key')->all())->toBe(['10m', '1h', '1d', '1w', 'permanent'])
+        ->and(collect($presets)->firstWhere('key', '1h')['seconds'])->toBe(3600)
+        ->and(collect($presets)->firstWhere('key', '1h')['label'])->toBe('1 hour')
+        // fail2ban's permanent ban.
+        ->and(collect($presets)->firstWhere('key', 'permanent')['seconds'])->toBe(-1);
+});
+
+it('accepts a permanent ban time but not a uselessly short one', function () {
+    fakeFail2ban(bans: []);
+
+    f2b('PUT', '/api/fail2ban', ['bantime' => -1, 'findtime' => 600, 'maxretry' => 5])->assertOk();
+    expect(dropIn())->toContain('bantime = -1');
+
+    // Anything under a minute expires before it inconveniences anyone, and
+    // only looks like protection.
+    f2b('PUT', '/api/fail2ban', ['bantime' => 30, 'findtime' => 600, 'maxretry' => 5])
+        ->assertUnprocessable()->assertJsonValidationErrors('bantime');
+});
+
+it('denies unban-all to a view-only user', function () {
+    fakeFail2ban(bans: ['sshd' => ['203.0.113.5']]);
+    $user = User::factory()->create();
+    grantPermission($user, 'fail2ban', view: true, manage: false);
+    $token = $user->createToken('t')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->deleteJson('/api/fail2ban/bans')->assertForbidden();
 });

@@ -30,6 +30,7 @@ return [
     'fail2ban.settings_updated' => 'fail2ban सेटिंग्स अपडेट कीं (सक्रिय jail: :jails)',
     'fail2ban.ip_banned' => ':jail में :ip को अवरुद्ध किया',
     'fail2ban.ip_unbanned' => ':jail से :ip का अवरोध हटाया',
+    'fail2ban.all_unbanned' => 'सभी IP पते का अवरोध हटाया (:count)',
     'server.process_killed' => 'प्रक्रिया :pid (:command) को SIG:signal से रोका',
     'database.optimized' => ':name डेटाबेस ऑप्टिमाइज़ किया',
     'database.repaired' => ':name डेटाबेस मरम्मत किया',

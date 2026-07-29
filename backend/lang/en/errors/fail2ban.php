@@ -9,4 +9,5 @@ return [
     'lockout_risk' => 'Enabling the SSH jail can lock you out of this server. Add your IP address to the ignore list, or confirm that you accept the risk.',
     'ip_ignored' => 'That IP address is on the ignore list, so a ban would not hold.',
     'operation_failed' => 'The fail2ban operation failed.',
+    'bantime_too_short' => 'Ban time must be at least 60 seconds, or -1 for a permanent ban.',
 ];
