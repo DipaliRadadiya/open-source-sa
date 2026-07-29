@@ -344,15 +344,36 @@ OS-op failures → `500 {message, reference}`.
 Requires the `service` permission (`view` to read, `manage` to act). Manages **systemd** units — the catalog is derived from our supported type sets (web server / database / cache / worker) + auto-detected **php-fpm** versions; **only installed units are surfaced**. No DB — status is read **live** from systemctl (detect-don't-trust).
 
 **`GET /api/services`** — managed + installed services with live status.
-- Response: `{"services": [{key, label, unit, status, enabled, protected, actions}, …]}`.
+- Response: `{"services": [{key, label, unit, status, enabled, protected, actions, testable}, …]}`.
   - `status`: `active | inactive | failed`; `enabled`: bool (starts on boot).
   - `protected: true` = the panel's own web server / php-fpm → can't be stopped/disabled (lock icon).
   - `actions`: the allowed actions for *this* service (protected ones omit `stop`/`disable`) — render buttons directly from this.
+  - `testable`: whether this service can validate its own configuration. Show the **Test configuration** button only where this is true — a service with no meaningful test is not given an invented one.
+
+**`POST /api/services/{service}/config-test`** — validate the service's configuration. **Read-only: it never reloads.** Checking whether a change is safe is exactly what you do *before* applying it.
+- Response `200`: `{"config_test": {"ok": true|false, "output": "…"}}`
+- `output` is the tool's own message — it names the offending file and line. That describes the user's configuration, not panel internals, so it is returned in full and is the useful part of a failure.
+- Per service: nginx `nginx -t` · apache `apachectl configtest` · **`php{version}-fpm` validates itself**.
+- `404` unknown/not-installed service · `422` for a service with no configuration test.
 
 **`PUT /api/services/{service}`** — run an action. `{service}` = the `key`.
 - Body: `action` ∈ `start | stop | restart | reload | enable | disable`.
 - Response `200`: `{"service": { …refreshed service object… }}`.
 - `404` if the key is unknown or not installed; `422` if the action is blocked for a **protected** service (`stop`/`disable`) or the action is invalid; `500 {message, reference}` on systemctl failure.
+
+#### PHP versions and the FPM ini
+
+Same `service` permission — these belong to the Services screen.
+
+**`GET /api/php-versions`** → `{"php_versions": [{version, service, ini_path}, …]}`, newest first. Detected from the same directory the services list reads, so the two can never disagree about what is installed.
+
+**`GET /api/php-versions/{version}/ini`** → `{"php_ini": {version, path, contents}}` — the raw file, for the editor to load.
+
+**`PUT /api/php-versions/{version}/ini`** (`manage`) — replace it.
+- Body: `contents` (the whole file) and **`acknowledged: true`**. The acknowledgement is required: a raw ini edit can stop PHP-FPM starting, so it must not be reachable by an accidental request.
+- The sequence is **back up → write → `php-fpm{version} -t` → reload**. If PHP rejects the configuration, **the previous file is restored and nothing is reloaded** — `422` with `errors/php.invalid_ini`. A broken ini is worse than a broken vhost: FPM may refuse to start at all, taking every site on that version down with no obvious cause.
+- Only the edited version's unit is reloaded; other PHP versions are untouched.
+- `404` for a version that is not installed. The version is checked against the detected list before any path is built from it.
 
 ### Logs
 Requires the `logs` permission (`view`). **Read-only.** No DB — the catalog is a fixed source registry (web server / database / system / security / daemon) + auto-detected **php-fpm** logs, filtered to files that **actually exist** on the box (detect-don't-trust). The client only ever references a source by its **`key`**; the panel resolves the real path server-side (no client paths → no traversal).

@@ -155,7 +155,10 @@ it('denies a regular user from deleting a user', function () {
 });
 
 it('lets an admin search users by name or username', function () {
-    $admin = User::factory()->admin()->create();
+    // The admin is named explicitly: a random factory name can itself contain
+    // the search term (a "Janet" or a "jane_doe" username), which made this
+    // test fail roughly one run in a hundred.
+    $admin = User::factory()->admin()->create(['name' => 'Zed Admin', 'username' => 'zedadmin']);
     User::factory()->create(['name' => 'Jane Cooper', 'username' => 'janecooper']);
     User::factory()->create(['name' => 'John Smith', 'username' => 'johnsmith']);
     $token = $admin->createToken('test')->plainTextToken;

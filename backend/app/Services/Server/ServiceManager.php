@@ -69,6 +69,9 @@ class ServiceManager
             'enabled' => $state['enabled'],
             'protected' => $this->isProtected($service['unit']),
             'actions' => $this->allowedActions($service['unit']),
+            // Whether this service can validate its own configuration, so the
+            // UI only offers the button where it means something.
+            'testable' => app(ConfigTester::class)->testable($service['key']),
         ];
     }
 

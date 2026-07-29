@@ -193,6 +193,22 @@ return [
 
     'php_dir' => env('SERVER_PHP_DIR', '/etc/php'),
 
+    /*
+    | Per-service configuration tests. A service absent from this map has no
+    | meaningful test and is reported as not testable rather than being given
+    | a command that proves nothing. php-fpm is handled separately, since each
+    | installed version validates itself (`php-fpm8.4 -t`).
+    */
+
+    'php_fpm_binary' => env('SERVER_PHP_FPM_BINARY', '/usr/sbin/php-fpm'),
+    'php_ini_max_bytes' => (int) env('SERVER_PHP_INI_MAX_BYTES', 262144),
+
+    'config_tests' => [
+        'nginx' => ['nginx', '-t'],
+        'apache' => ['apachectl', 'configtest'],
+        'openlitespeed' => ['/usr/local/lsws/bin/lswsctrl', 'status'],
+    ],
+
     'services' => [
         ['key' => 'nginx', 'unit' => 'nginx', 'label' => 'Nginx'],
         ['key' => 'apache', 'unit' => 'apache2', 'label' => 'Apache'],

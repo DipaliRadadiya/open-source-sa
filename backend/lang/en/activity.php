@@ -71,4 +71,5 @@ return [
     'application.provision_failed' => 'Failed to set up application :name (step: :step)',
     'application.deployed' => 'Deployed application :name (:branch)',
     'application.deploy_failed' => 'Failed to deploy application :name (step: :step)',
+    'php.ini_updated' => 'Updated the PHP :version configuration',
 ];

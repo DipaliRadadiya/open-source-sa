@@ -71,4 +71,5 @@ return [
     'application.provision_failed' => 'Не удалось настроить приложение :name (шаг: :step)',
     'application.deployed' => 'Приложение :name развёрнуто (:branch)',
     'application.deploy_failed' => 'Не удалось развернуть приложение :name (шаг: :step)',
+    'php.ini_updated' => 'Обновлена конфигурация PHP :version',
 ];

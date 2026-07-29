@@ -71,4 +71,5 @@ return [
     'application.provision_failed' => 'Falha ao configurar a aplicação :name (etapa: :step)',
     'application.deployed' => 'Implantou a aplicação :name (:branch)',
     'application.deploy_failed' => 'Falha ao implantar a aplicação :name (etapa: :step)',
+    'php.ini_updated' => 'Atualizou a configuração do PHP :version',
 ];
