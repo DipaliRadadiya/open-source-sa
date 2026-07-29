@@ -5,6 +5,7 @@ return [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ब्लॉग और वेबसाइट बिल्डर'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ब्राउज़र में अपने डेटाबेस प्रबंधित करें'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'निजी फ़ाइल सिंक और साझाकरण'],
+        'joomla' => ['title' => 'Joomla', 'tagline' => 'लचीली सामग्री प्रबंधन प्रणाली'],
         'git' => ['title' => 'Git रिपॉज़िटरी से', 'tagline' => 'GitHub, GitLab या Bitbucket से अपना कोड तैनात करें'],
         'php' => ['title' => 'खाली PHP साइट', 'tagline' => 'खाली साइट — अपनी फ़ाइलें स्वयं अपलोड करें'],
         'static' => ['title' => 'स्टेटिक साइट', 'tagline' => 'केवल HTML, CSS और JavaScript'],

@@ -5,6 +5,7 @@ return [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Конструктор блогов и сайтов'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Управляйте базами данных в браузере'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'Приватная синхронизация и обмен файлами'],
+        'joomla' => ['title' => 'Joomla', 'tagline' => 'Гибкая система управления контентом'],
         'git' => ['title' => 'Из Git-репозитория', 'tagline' => 'Разверните свой код из GitHub, GitLab или Bitbucket'],
         'php' => ['title' => 'Пустой PHP-сайт', 'tagline' => 'Пустой сайт — загрузите свои файлы'],
         'static' => ['title' => 'Статический сайт', 'tagline' => 'Только HTML, CSS и JavaScript'],

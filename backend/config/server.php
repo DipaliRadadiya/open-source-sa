@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Applications\Types\GitSiteType;
+use App\Services\Applications\Types\JoomlaSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
 use App\Services\Applications\Types\PhpSiteType;
@@ -9,6 +10,7 @@ use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
+use App\Services\Server\Applications\Installers\JoomlaInstaller;
 use App\Services\Server\Applications\Installers\NextcloudInstaller;
 use App\Services\Server\Applications\Installers\PhpMyAdminInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
@@ -162,6 +164,17 @@ return [
             'wp_cli_url' => 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar',
         ],
 
+        'joomla' => [
+            // Joomla's downloads carry the version in the filename with no
+            // "latest" alias, so the installer asks which release is current
+            // rather than holding a URL that 404s at the next release.
+            'driver' => JoomlaInstaller::class,
+            'download_url' => env('SERVER_JOOMLA_URL', ''),
+            'releases_api' => env('SERVER_JOOMLA_RELEASES_API', 'https://api.github.com/repos/joomla/joomla-cms/releases/latest'),
+            'db_type' => env('SERVER_JOOMLA_DB_TYPE', 'mysqli'),
+            'timeout' => (int) env('SERVER_JOOMLA_TIMEOUT', 900),
+        ],
+
         'nextcloud' => [
             'driver' => NextcloudInstaller::class,
             // Upstream publishes bzip2 and zip only — no gzip — which is why
@@ -189,6 +202,7 @@ return [
     'site_types' => [
         WordPressSiteType::class,
         NextcloudSiteType::class,
+        JoomlaSiteType::class,
         PhpMyAdminSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,
