@@ -4,7 +4,9 @@ use App\Models\ActivityLog;
 use App\Models\Cronjob;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Support\ServerTimezone;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Process;
 
 beforeEach(function () {
@@ -395,4 +397,76 @@ it('removes the cron.d files when the owning system user is deleted via the API'
     // the deletion is recorded with how many cron jobs went with the user
     $log = ActivityLog::where('type', 'system_user')->where('action', 'deleted')->latest('id')->first();
     expect($log->properties['cronjobs_removed'])->toBe(1);
+});
+
+/** Point the timezone probe at a fixture so tests never depend on the host clock. */
+function fakeServerTimezone(string $timezone): void
+{
+    $path = sys_get_temp_dir().'/sv-oss-tz-'.getmypid();
+    file_put_contents($path, $timezone."\n");
+    config(['server.timezone_file' => $path]);
+    ServerTimezone::forget();
+}
+
+it('reports the next scheduled run in the server timezone', function () {
+    fakeServerTimezone('UTC');
+    Carbon::setTestNow(Carbon::parse('2026-07-29 09:15:00', 'UTC'));
+
+    $job = Cronjob::create([
+        'name' => 'Nightly', 'slug' => 'nightly', 'username' => 'deploy',
+        'command' => 'echo hi', 'expression' => '0 3 * * *', 'active' => true,
+    ]);
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/cronjobs');
+
+    $response->assertOk();
+    $row = collect($response->json('cronjobs'))->firstWhere('slug', 'nightly');
+
+    expect($row['timezone'])->toBe('UTC');
+    expect($row['next_run_at'])->toBe('30-07-2026 03:00:00');
+    expect($row['previous_run_at'])->toBe('29-07-2026 03:00:00');
+
+    Carbon::setTestNow();
+});
+
+it('shifts the next run when the server timezone is not UTC', function () {
+    // 03:00 in Kolkata is 21:30 UTC the previous day — the whole point of
+    // computing against the OS timezone rather than the app's.
+    fakeServerTimezone('Asia/Kolkata');
+    Carbon::setTestNow(Carbon::parse('2026-07-29 09:15:00', 'UTC'));
+
+    Cronjob::create([
+        'name' => 'Nightly', 'slug' => 'nightly', 'username' => 'deploy',
+        'command' => 'echo hi', 'expression' => '0 3 * * *', 'active' => true,
+    ]);
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/cronjobs');
+
+    $row = collect($response->json('cronjobs'))->firstWhere('slug', 'nightly');
+
+    expect($row['timezone'])->toBe('Asia/Kolkata');
+    // 14:45 IST now, so the next 03:00 IST is tomorrow morning, local time.
+    expect($row['next_run_at'])->toBe('30-07-2026 03:00:00');
+
+    Carbon::setTestNow();
+});
+
+it('returns no next run for an inactive job', function () {
+    fakeServerTimezone('UTC');
+
+    Cronjob::create([
+        'name' => 'Paused', 'slug' => 'paused', 'username' => 'deploy',
+        'command' => 'echo hi', 'expression' => '* * * * *', 'active' => false,
+    ]);
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/cronjobs');
+
+    $row = collect($response->json('cronjobs'))->firstWhere('slug', 'paused');
+
+    expect($row['next_run_at'])->toBeNull();
+    expect($row['next_run_at_human'])->toBeNull();
+    expect($row['previous_run_at'])->toBeNull();
 });

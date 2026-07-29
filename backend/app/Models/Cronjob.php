@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Support\ServerTimezone;
+use Cron\CronExpression;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 #[Fillable(['name', 'slug', 'username', 'system_user_id', 'command', 'expression', 'active'])]
@@ -40,6 +43,47 @@ class Cronjob extends Model
         }
 
         return $slug;
+    }
+
+    /**
+     * When cron will next run this job.
+     *
+     * Computed in the SERVER's timezone, not the app's — cron interprets
+     * schedules against the OS clock, so computing in UTC would be wrong by
+     * the offset. Null for an inactive job, because an inactive job has no
+     * next run.
+     */
+    public function nextRunAt(): ?Carbon
+    {
+        return $this->scheduledRun(next: true);
+    }
+
+    /**
+     * The previous time this job was *scheduled* to run.
+     *
+     * NOT "when it last ran" — cron records no such thing. If the server was
+     * off, or the command failed, this still returns a time. Present it as a
+     * schedule, never as proof of execution.
+     */
+    public function previousRunAt(): ?Carbon
+    {
+        return $this->scheduledRun(next: false);
+    }
+
+    private function scheduledRun(bool $next): ?Carbon
+    {
+        if (! $this->active || ! CronExpression::isValidExpression((string) $this->expression)) {
+            return null;
+        }
+
+        $timezone = ServerTimezone::get();
+        $expression = new CronExpression((string) $this->expression);
+
+        $date = $next
+            ? $expression->getNextRunDate('now', 0, false, $timezone)
+            : $expression->getPreviousRunDate('now', 0, false, $timezone);
+
+        return Carbon::instance($date)->setTimezone($timezone);
     }
 
     public function systemUser(): BelongsTo

@@ -40,6 +40,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Server timezone sources
+    |--------------------------------------------------------------------------
+    |
+    | Cron interprets schedules in the OS timezone, so "next run" must be
+    | computed there. Read from the filesystem rather than `timedatectl` —
+    | this is called once per row in a list response, and a process per row
+    | would make a cheap endpoint expensive. Overridable so tests can point
+    | at a fixture.
+    |
+    */
+
+    'timezone_file' => env('SERVER_TIMEZONE_FILE', '/etc/timezone'),
+    'localtime_link' => env('SERVER_LOCALTIME_LINK', '/etc/localtime'),
+
+    /*
+    |--------------------------------------------------------------------------
     | SSH port
     |--------------------------------------------------------------------------
     |
