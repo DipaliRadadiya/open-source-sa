@@ -82,13 +82,13 @@ Every timezone the panel accepts, grouped by region — for a picker.
 - Query: none
 - Response: `{"timezones": [{"region": "Asia", "zones": [{"value": "Asia/Kolkata", "label": "Kolkata", "offset": "+05:30", "offset_minutes": 330}]}]}`
 
-**419 zones across 11 regions**, regions sorted, zones sorted by label within each — render in the order received.
+**497 zones across 25 regions**, regions sorted, zones sorted by label within each — render in the order received.
 
 - **`value`** is the IANA identifier and the only thing to send back (to `PUT /api/settings/general`, and later to schedule fields). **`label`** is the city with underscores replaced (`America/New_York` → `New York`) — what people actually scan for.
 - **`offset` is the offset right now**, recomputed per request, so it stays right across DST rather than being frozen at deploy time. It costs under 10 ms for all 419, so there's no cache to go stale. Don't persist it; re-read the list rather than storing offsets.
 - **`offset_minutes`** is there so you can sort or filter by offset without parsing the string. Note the half- and quarter-hour zones are real and common: `Asia/Kolkata` is 330, `Asia/Kathmandu` 345 — don't assume whole hours.
 - **`UTC` is its own region** with a single zone. It has no region segment in its identifier, and it's the value a server is most likely already set to.
-- The list is **exactly** what `PUT /api/settings/general` validates against, and a test pins the two together. Don't source a timezone list from anywhere else — `timedatectl list-timezones` reports 497, and the extra 78 are deprecated aliases (`US/Eastern`, `Etc/GMT+5`) the API will reject.
+- The list comes from **the OS** (`timedatectl list-timezones`, 497 zones on this box), because the value is handed to `timedatectl set-timezone` — the OS decides what it accepts. `PUT /api/settings/general` validates against the same list, and a test pins the two together plus a third: **whatever `GET /api/settings` reports as the current timezone is always an accepted value.** That one exists because it wasn't: the list used to come from PHP, which omits the backward-compatible group, so `Etc/UTC` — what a fresh Debian box is set to — was shown by the form and rejected on save.
 - To preselect the visitor's own zone, match `value` against `Intl.DateTimeFormat().resolvedOptions().timeZone` — it returns an IANA identifier from the same vocabulary.
 
 ### `GET /permissions`
@@ -675,6 +675,8 @@ On this server that's **96 rows, 32 installed, 16 built-in**. Sorted installed-f
 **Nothing is ever purged.** A disabled extension costs a few megabytes; `apt purge php8.4-*` is how a server loses `php8.4-common` and every site with it. Re-enabling a disabled extension is instant — no download.
 
 **FPM is reloaded by the panel**, because `phpenmod` doesn't. It moves symlinks and stops there; without the reload the toggle flips in the UI and changes nothing until something else restarts FPM.
+
+**`PUT /api/settings/general`** applies **only the fields that changed**. The form submits all three every time, and they don't share a privilege level — running an untouched one can fail the whole request *after* an earlier one already took effect. Re-saving a form you didn't edit performs no OS command at all and cannot fail.
 
 **`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET`+`REWRITE`. `404` if redis isn't installed.
 

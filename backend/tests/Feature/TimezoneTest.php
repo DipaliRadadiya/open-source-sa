@@ -2,7 +2,9 @@
 
 use App\Http\Requests\Server\Setting\GeneralSettingsRequest;
 use App\Models\User;
+use App\Services\Server\Settings\SettingsManager;
 use App\Services\Timezones;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Validator;
 
 beforeEach(function () {
@@ -14,29 +16,54 @@ beforeEach(function () {
         ->getJson($uri);
 });
 
-it('offers only values the settings endpoint will accept', function () {
+it('accepts back every value it offers', function () {
     $offered = collect(app(Timezones::class)->grouped())
         ->flatMap(fn (array $group) => collect($group['zones'])->pluck('value'))
         ->values();
 
     $rules = (new GeneralSettingsRequest)->rules();
 
-    // `timedatectl list-timezones` reports 497 zones to PHP's 419 — the extra
-    // 78 are deprecated aliases the validator rejects. Offering one would give
-    // the user a choice the API refuses, with nothing on screen saying why.
-    // This test is what stops the two lists drifting apart later.
     $rejected = $offered->reject(
         fn (string $zone) => Validator::make(['timezone' => $zone], ['timezone' => $rules['timezone']])->passes()
     );
 
     expect($rejected->values()->all())->toBe([])
-        ->and($offered)->toHaveCount(count(DateTimeZone::listIdentifiers()));
+        ->and($offered)->not->toBeEmpty();
+});
+
+it('accepts the timezone the server is currently set to', function () {
+    // The bug this is here for: the form loaded showing Etc/UTC — the real
+    // setting on a fresh Debian box — and then refused to save it, because
+    // the validator used PHP's default identifier list, which omits the
+    // backward-compatible group Etc/* lives in. You could not submit the
+    // form without changing a field you had not come to change.
+    //
+    // The rule this encodes is general: whatever GET hands you must be
+    // something PUT will take back.
+    $current = app(SettingsManager::class)->find('general')->read()['timezone'];
+
+    expect(app(Timezones::class)->accepts($current))->toBeTrue(
+        "the server's own timezone ({$current}) is not an accepted value"
+    );
+
+    $rules = (new GeneralSettingsRequest)->rules();
+
+    expect(Validator::make(['timezone' => $current], ['timezone' => $rules['timezone']])->passes())->toBeTrue();
+});
+
+it('offers the backward-compatible names the OS actually uses', function () {
+    $values = collect(app(Timezones::class)->grouped())
+        ->flatMap(fn (array $group) => collect($group['zones'])->pluck('value'));
+
+    // PHP's default list has zero of these; the OS ships 35 and defaults to
+    // one of them.
+    expect($values)->toContain('Etc/UTC');
 });
 
 it('groups zones by region, with none empty', function () {
     $groups = collect(($this->get)('/api/timezones')->assertOk()->json('timezones'));
 
-    expect($groups->pluck('region')->all())->toContain('Africa', 'America', 'Asia', 'Europe', 'Pacific')
+    expect($groups->pluck('region')->all())->toContain('Africa', 'America', 'Asia', 'Etc', 'Europe', 'Pacific')
         // 419 in one flat list is not a picker anybody can use.
         ->and($groups->every(fn (array $g) => count($g['zones']) > 0))->toBeTrue()
         // Sorted, so the frontend renders them in the order it receives them.
@@ -107,4 +134,59 @@ it('is available to any signed-in user, with no feature permission', function ()
 
 it('is not open to the world', function () {
     $this->getJson('/api/timezones')->assertUnauthorized();
+});
+
+it('does not touch the OS for fields that did not change', function () {
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+
+        return match (true) {
+            in_array('--property=Timezone', $process->command, true) => Process::result(output: "Etc/UTC\n"),
+            in_array('--property=NTP', $process->command, true) => Process::result(output: "yes\n"),
+            in_array('--static', $process->command, true) => Process::result(output: "web-01\n"),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    app(SettingsManager::class)->find('general')->apply([
+        'timezone' => 'Asia/Kolkata',
+        'hostname' => 'web-01',      // unchanged
+        'ntp' => true,               // unchanged
+    ]);
+
+    $written = collect($runs)->filter(fn (array $c) => in_array('set-timezone', $c, true)
+        || in_array('set-hostname', $c, true)
+        || in_array('set-ntp', $c, true));
+
+    // Only the changed field. The form submits all three every time, and
+    // these commands do not share a privilege level — running an untouched
+    // one can fail the whole request, after an earlier one already took
+    // effect.
+    expect($written->values()->all())->toBe([['timedatectl', 'set-timezone', 'Asia/Kolkata']]);
+});
+
+it('writes nothing at all when nothing changed', function () {
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+
+        return match (true) {
+            in_array('--property=Timezone', $process->command, true) => Process::result(output: "Etc/UTC\n"),
+            in_array('--property=NTP', $process->command, true) => Process::result(output: "yes\n"),
+            in_array('--static', $process->command, true) => Process::result(output: "web-01\n"),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    app(SettingsManager::class)->find('general')->apply([
+        'timezone' => 'Etc/UTC',
+        'hostname' => 'web-01',
+        'ntp' => true,
+    ]);
+
+    // Saving a form you opened and did not edit must not be able to fail.
+    expect(collect($runs)->filter(fn (array $c) => str_contains(implode(' ', $c), 'set-'))->all())->toBe([]);
 });
