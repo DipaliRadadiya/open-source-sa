@@ -60,13 +60,17 @@ Ends an impersonated session — re-logs in the original admin on the cookie ses
 
 ### `GET /activity-log`
 The caller's **own** activity history only (not admin-wide — see `/admin/activity-log` for that). No `user` field per entry — it's always the caller, so it's omitted as redundant (unlike the admin version below, which spans multiple users and needs it).
-- Query: `filter[type]` (exact), `filter[action]` (exact), `search` (free-text over `type` + `action`), `per_page` (10|20|50|100, default 10)
-- Response: `{"activity_log": [{id, type, action, description, created_at, created_at_human}], "meta": {...}}` (`type` = entity, `action` = verb, `description` = composed sentence)
+- Query: `filter[scope]` (`account`|`server`), `filter[type]` (exact), `filter[action]` (exact), `search` (free-text over `type` + `action`), `per_page` (10|20|50|100, default 10)
+- Response: `{"activity_log": [{id, type, action, scope, description, created_at, created_at_human}], "meta": {...}}` (`type` = entity, `action` = verb, `description` = composed sentence)
+- **`scope`** answers one question per row: is this about the panel's people, or the machine? `account` = `user`, `role`, `permission` (logins, password changes, profile edits, impersonation, role grants). `server` = everything else (`cronjob`, `firewall`, `fail2ban`, `database`, `service`, `runtime`, `php`, `application`, `system_user`, `setting`, `disk_cleaner`, `git_account`, `log`, `server`).
+- **Suggested wiring:** Account page tab → `filter[scope]=account` (a login history is what people expect there). Server sidebar Activity Log → no scope filter, with a scope chip — nobody wants to check two screens to answer "what happened to my panel today".
+- `filter[scope]` **composes** with `filter[type]` and `search`; a contradiction (`scope=account&type=firewall`) correctly returns nothing. An unrecognised scope is a **`422`**, not an empty page — silently ignoring it looks like a broken filter, silently matching nothing looks like an empty history.
 - **No `filter[user_id]`** — the endpoint is always scoped to the caller, so there is no user to choose. The self-scope is applied before any filter; no filter combination can surface another user's rows. `search` also does **not** match actor names here (every row is the caller) — unlike the admin version.
 
 ### `GET /activity-log/filters`
 Dropdown options for the caller's own history. **Same response shape as `/admin/activity-log/filters`**, so the frontend can reuse one filter component with a different base URL.
-- Response: `{"types": [...], "actions": {"all": [...], "<type>": [...]}}` — `actions.all` for the "any type" view, `actions.<type>` for a dependent dropdown.
+- Response: `{"types": [...], "actions": {"all": [...], "<type>": [...]}, "scopes": [{"value": "account", "label": "Account"}]}` — `actions.all` for the "any type" view, `actions.<type>` for a dependent dropdown.
+- **`scopes[].label` is already localized** to the request locale (8 languages). Do **not** hardcode "Account"/"Server" — same rule as `sub_level_title` on `/permissions`. Here too, only the scopes the caller actually has rows in are offered.
 - **Difference from the admin version:** these options come from the caller's **own rows** (DISTINCT), not from the full catalog in `lang/activity.php`. A user who has never touched a database is not offered a `database` filter that would match nothing. Admin lists everything that *can* exist; a personal history lists what actually happened.
 - **A user with no activity gets `{"types": [], "actions": {"all": []}}`** — hide/disable the dropdowns rather than rendering an empty select.
 
@@ -155,12 +159,13 @@ The **full** list of every permission (the menu of what *can* be granted) — us
 
 ### `GET /admin/activity-log`
 Admin-wide activity — every user's actions, not just the caller's.
-- Query: `filter[user_id]` (integer, must exist), `filter[type]` (string, exact — the entity, e.g. `user`/`role`/`system_user`), `filter[action]` (string, exact — the verb, e.g. `created`/`deleted`/`ssh_key_added`), `search` (free-text on type/action/actor name/username), `per_page` (10|20|50|100). `type` and `action` are separate **indexed** columns.
-- Response: `{"activity_log": [{id, type, action, description, user: {id, username}|null, created_at, created_at_human}], "meta": {...}}` — `type` = entity (`system_user`), `action` = verb (`created`), `description` = the full human sentence composed from both in the viewer's locale.
+- Query: `filter[scope]` (`account`|`server` — see `/activity-log` above for the split), `filter[user_id]` (integer, must exist), `filter[type]` (string, exact — the entity, e.g. `user`/`role`/`system_user`), `filter[action]` (string, exact — the verb, e.g. `created`/`deleted`/`ssh_key_added`), `search` (free-text on type/action/actor name/username), `per_page` (10|20|50|100). `type` and `action` are separate **indexed** columns.
+- Response: `{"activity_log": [{id, type, action, scope, description, user: {id, username}|null, created_at, created_at_human}], "meta": {...}}` — `type` = entity (`system_user`), `action` = verb (`created`), `description` = the full human sentence composed from both in the viewer's locale.
 
 ### `GET /admin/activity-log/filters`
 Distinct `type`/`action` values, for populating a frontend filter dropdown. Sourced from the known translation keys (`lang/activity.php`), not a `DISTINCT` query on actual log rows — so it's fully populated even on a fresh install with zero activity yet.
-- Response: `{"types": string[], "actions": {"all": string[], "<type>": string[], ...}}` — `actions.all` is every verb (use on initial load / "any type"); `actions.<type>` is scoped to that type's verbs (use for a dependent action dropdown once a type is picked). No client-side merging needed.
+- Response: `{"types": string[], "actions": {"all": string[], "<type>": string[], ...}, "scopes": [{value, label}]}` — `actions.all` is every verb (use on initial load / "any type"); `actions.<type>` is scoped to that type's verbs (use for a dependent action dropdown once a type is picked). No client-side merging needed.
+- **`scopes` always lists both** here, unlike the personal version — the admin log is the whole catalog, so an option with no rows behind it today is still the right option to offer. Labels are localized; don't hardcode them.
 
 ---
 

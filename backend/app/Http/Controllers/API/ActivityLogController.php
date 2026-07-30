@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ListMyActivityLogRequest;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
+use App\Services\ActivityScopes;
 use Illuminate\Http\JsonResponse;
 
 class ActivityLogController extends Controller
@@ -21,7 +22,7 @@ class ActivityLogController extends Controller
      *
      * Shape matches the admin endpoint so the frontend reuses one component.
      */
-    public function filters(ListMyActivityLogRequest $request): JsonResponse
+    public function filters(ListMyActivityLogRequest $request, ActivityScopes $scopes): JsonResponse
     {
         $pairs = ActivityLog::query()
             ->where('user_id', $request->user()->id)
@@ -40,6 +41,11 @@ class ActivityLogController extends Controller
         return response()->json([
             'types' => $types->all(),
             'actions' => ['all' => $all] + $perType->all(),
+            // Only the scopes the caller actually has rows in — same reason
+            // `types` is built from their history rather than the catalog.
+            'scopes' => $scopes->options(
+                $types->map(fn (string $type) => $scopes->for($type))->filter()->unique()->all(),
+            ),
         ]);
     }
 
@@ -51,13 +57,19 @@ class ActivityLogController extends Controller
      * ActivityLogResource's whenLoaded('user', ...) drops the key when
      * it's not loaded).
      */
-    public function index(ListMyActivityLogRequest $request): JsonResponse
+    public function index(ListMyActivityLogRequest $request, ActivityScopes $scopes): JsonResponse
     {
         // The self-scope is applied first and unconditionally — no filter
         // combination can widen it to another user's rows.
         $query = ActivityLog::query()
             ->where('user_id', $request->user()->id)
             ->latest('created_at');
+
+        // A set of types rather than one — `type` is indexed, so this
+        // stays an index scan.
+        if ($scope = $request->input('filter.scope')) {
+            $query->whereIn('type', $scopes->types($scope));
+        }
 
         // Exact matches on the indexed columns, same as the admin log.
         if ($type = $request->input('filter.type')) {

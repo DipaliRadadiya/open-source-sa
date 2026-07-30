@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ListActivityLogRequest;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
+use App\Services\ActivityScopes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
@@ -19,7 +20,7 @@ class ActivityLogController extends Controller
      * activity_log table, so the dropdown is fully populated even on a
      * fresh install with no activity yet.
      */
-    public function filters(): JsonResponse
+    public function filters(ActivityScopes $scopes): JsonResponse
     {
         $keys = collect(Lang::get('activity'))->keys();
 
@@ -36,15 +37,22 @@ class ActivityLogController extends Controller
         return response()->json([
             'types' => $types->all(),
             'actions' => ['all' => $all] + $perType->all(),
+            // Both, always — the admin log is the whole catalog, so an option
+            // with no rows behind it today is still the right option to offer.
+            'scopes' => $scopes->options(),
         ]);
     }
 
-    public function index(ListActivityLogRequest $request): JsonResponse
+    public function index(ListActivityLogRequest $request, ActivityScopes $scopes): JsonResponse
     {
         $query = ActivityLog::query()->with('user')->latest('created_at');
 
         if ($userId = $request->input('filter.user_id')) {
             $query->where('user_id', $userId);
+        }
+
+        if ($scope = $request->input('filter.scope')) {
+            $query->whereIn('type', $scopes->types($scope));
         }
 
         // Both are now indexed exact-match columns.
