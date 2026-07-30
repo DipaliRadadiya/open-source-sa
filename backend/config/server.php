@@ -610,6 +610,17 @@ return [
             'installable_majors' => (int) env('SERVER_NODE_INSTALLABLE_MAJORS', 6),
             'install_timeout' => (int) env('SERVER_NODE_INSTALL_TIMEOUT', 900),
         ],
+
+        'php' => [
+            // A bare phpX.Y-fpm has no mysql, no curl, no mbstring — every
+            // application in the marketplace would fail on it. Installing a
+            // version means installing something usable.
+            'base_packages' => array_values(array_filter(explode(',', (string) env(
+                'SERVER_PHP_BASE_PACKAGES',
+                'fpm,cli,common,mysql,curl,mbstring,xml,zip,gd,intl,bcmath,soap'
+            )))),
+            'install_timeout' => (int) env('SERVER_PHP_INSTALL_TIMEOUT', 900),
+        ],
     ],
 
     'redis_maxmemory_policies' => [

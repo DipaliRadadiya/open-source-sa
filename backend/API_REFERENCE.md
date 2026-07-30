@@ -581,6 +581,35 @@ Under Settings, gated by the same `setting` permission. Node versions live here 
 
 **`POST /api/settings/node/versions/{version}/npm`** (`manage`) — updates npm inside that version, using that version's own npm.
 
+#### Runtimes → PHP
+
+Same section, same `setting` permission, same shape as Node — deliberately, so the frontend renders one component for both. The differences are all in the data, not the contract.
+
+`GET /api/settings` gains a `php` group:
+```json
+"php": {
+  "manager": "apt",                       // always "apt"
+  "default": "8.4",
+  "versions": [{"version": "8.4", "path": "/usr/bin/php8.4",
+                "is_default": true, "source": "apt",
+                "in_use_by_panel": true, "in_use_by": 3}],
+  "system": null,
+  "installable": ["8.3", "8.2", "8.1"]
+}
+```
+- **`manager`** is always `apt`, and **`system`** is always `null`. PHP needs no fnm equivalent: the distribution (with the Ondřej archive on Ubuntu) already packages every version side by side, at fixed paths, with an FPM unit each. There is no unmanaged install to report the way there is for Node.
+- **`default`** is what bare `php` resolves to, read from and written through `update-alternatives`. **Only the CLI moves** — a site keeps whatever version its FPM pool runs.
+- **`in_use_by_panel`** marks the version the panel itself runs on. **Hide the remove button on that row**; the API refuses it too, but a user who clicks it is asking to take the panel offline from inside the panel.
+- **`in_use_by`** is how many sites pin that version (`applications.php_version`).
+- **`installable`** is read from the package index (`apt-cache`), not hardcoded — a server with the Ondřej archive sees the full range, one without sees only what its distribution ships. Both are the truth for that server.
+- Versions come from the same source as the Services screen and the ini editor, so the three can never disagree about what exists.
+
+**`PUT /api/settings/php`** (`manage`) — `{"default": "8.4"}` via `update-alternatives --set`. `422` if the version isn't installed.
+
+**`POST /api/settings/php/versions`** (`manage`) — `{"version": "8.4"}` → `202`. Queued; apt takes minutes and holds a lock. **Idempotent**: already installed returns `200`. Two requests for the same version collapse into one job. Version must be `major.minor` — it becomes a package name and a path. Installs a **usable** PHP, not a bare interpreter: fpm, cli, common, mysql, curl, mbstring, xml, zip, gd, intl, bcmath, soap (configurable via `SERVER_PHP_BASE_PACKAGES`).
+
+**`DELETE /api/settings/php/versions/{version}`** (`manage`) → `204`. Three refusals, all `422`: **the version the panel runs on**, **a version a site pins** (the message names the sites), and **the current default**.
+
 **`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET`+`REWRITE`. `404` if redis isn't installed.
 
 Each write returns `{ <group>: {…refreshed values…} }`, writes a `setting.updated` activity entry (`group` property), and returns `500 {message, reference}` on OS-command failure.
