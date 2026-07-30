@@ -27,8 +27,17 @@ class ServerOps
      *                            from anywhere else — Nextcloud's `occ install`
      *                            fails outright unless it is run from its own
      *                            root — and there is no shell here to `cd` in.
+     * @param  array<string, string>  $env  Extra environment. apt will not run
+     *                                      unattended without
+     *                                      DEBIAN_FRONTEND, and a prompt with
+     *                                      nobody to answer it hangs until the
+     *                                      timeout. Note this is visible only
+     *                                      to the process owner, unlike a
+     *                                      command line — but it is still not
+     *                                      the place for secrets, since a
+     *                                      child process inherits it.
      */
-    public function run(array $command, array $context = [], int $timeout = 60, ?string $input = null, ?string $cwd = null): ServerOpsResult
+    public function run(array $command, array $context = [], int $timeout = 60, ?string $input = null, ?string $cwd = null, array $env = []): ServerOpsResult
     {
         $reference = (string) Str::uuid();
         $startedAt = microtime(true);
@@ -45,6 +54,9 @@ class ServerOps
             }
             if ($cwd !== null) {
                 $pending = $pending->path($cwd);
+            }
+            if ($env !== []) {
+                $pending = $pending->env($env);
             }
             $result = $pending->run($command);
             $ok = $result->successful();

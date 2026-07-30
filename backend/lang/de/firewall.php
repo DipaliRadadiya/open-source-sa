@@ -19,4 +19,9 @@ return [
         'dns' => 'DNS',
         'custom' => 'Benutzerdefinierter Port',
     ],
+
+    'risky' => [
+        'database' => ':engine ist eine Datenbank — aus dem Internet erreichbar, ist sie ein Zugang zu Ihren Daten.',
+        'service' => ':service sollte nicht aus dem Internet erreichbar sein.',
+    ],
 ];

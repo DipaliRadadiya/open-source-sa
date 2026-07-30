@@ -109,6 +109,9 @@ class InstallerManager
             'db_user' => $name,
             'db_password' => $password,
             'db_host' => '127.0.0.1',
+            // Which engine it actually is. Most applications treat MySQL and
+            // MariaDB as one thing; Moodle picks a different driver for each.
+            'engine' => $engine,
         ];
     }
 

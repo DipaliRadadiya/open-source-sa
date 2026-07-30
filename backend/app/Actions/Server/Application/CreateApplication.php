@@ -41,7 +41,9 @@ class CreateApplication
             'php_version' => $data['php_version'] ?? null,
             'node_version' => $data['node_version'] ?? null,
             'app_port' => $data['app_port'] ?? null,
-            'web_root' => $data['web_root'] ?? '/',
+            // The type's own default, not a bare '/': a framework
+            // application served from its root publishes its own source.
+            'web_root' => $data['web_root'] ?? $type?->defaultWebRoot() ?? '/',
             'build_command' => $data['build_command'] ?? null,
             'start_command' => $data['start_command'] ?? null,
             'git_account_id' => $data['git_account_id'] ?? null,

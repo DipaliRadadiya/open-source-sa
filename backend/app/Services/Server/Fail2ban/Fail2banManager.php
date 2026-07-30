@@ -5,6 +5,7 @@ namespace App\Services\Server\Fail2ban;
 use App\Exceptions\Server\Fail2ban\Fail2banException;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Support\SshPort;
 
 /**
  * fail2ban: watches logs for repeated failures and bans the source IP.
@@ -294,20 +295,12 @@ class Fail2banManager
     }
 
     /**
-     * The port SSH is actually listening on, read from the managed drop-in the
-     * Settings feature writes — not from config, which only holds the default.
+     * Shared with the firewall, which must never close this port, and with
+     * Settings, which changes it. One source, so they cannot disagree.
      */
     public function sshPort(): int
     {
-        $dir = (string) config('server.sshd_config_dir', '/etc/ssh/sshd_config.d');
-
-        foreach (glob(rtrim($dir, '/').'/*.conf') ?: [] as $file) {
-            if (preg_match('/^\s*Port\s+(\d+)/mi', (string) @file_get_contents($file), $m) === 1) {
-                return (int) $m[1];
-            }
-        }
-
-        return (int) config('server.ssh_port', 22);
+        return SshPort::current();
     }
 
     /**

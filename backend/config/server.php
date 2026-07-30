@@ -1,16 +1,30 @@
 <?php
 
+use App\Services\Applications\Types\AkauntingSiteType;
+use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\GitSiteType;
+use App\Services\Applications\Types\JoomlaSiteType;
+use App\Services\Applications\Types\MauticSiteType;
+use App\Services\Applications\Types\MoodleSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
 use App\Services\Applications\Types\PhpSiteType;
+use App\Services\Applications\Types\PrestaShopSiteType;
+use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
+use App\Services\Server\Applications\Installers\AkauntingInstaller;
+use App\Services\Server\Applications\Installers\CraftCmsInstaller;
+use App\Services\Server\Applications\Installers\JoomlaInstaller;
+use App\Services\Server\Applications\Installers\MauticInstaller;
+use App\Services\Server\Applications\Installers\MoodleInstaller;
 use App\Services\Server\Applications\Installers\NextcloudInstaller;
 use App\Services\Server\Applications\Installers\PhpMyAdminInstaller;
+use App\Services\Server\Applications\Installers\PrestaShopInstaller;
+use App\Services\Server\Applications\Installers\StatamicInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
@@ -136,6 +150,10 @@ return [
     // runs on the same PHP that will serve it.
     'php_binary_pattern' => env('SERVER_PHP_BINARY_PATTERN', '/usr/bin/php{version}'),
 
+    // Applications distributed through Composer are built rather than
+    // unpacked, so it has to be present for those cards to work.
+    'composer_binary' => env('SERVER_COMPOSER_BINARY', 'composer'),
+
     /*
     | Git deploys. The credential file is written 0600 and deleted as soon as
     | the command finishes — the token is never a command argument and never
@@ -160,6 +178,68 @@ return [
             'salt_url' => 'https://api.wordpress.org/secret-key/1.1/salt/',
             'wp_cli' => env('SERVER_WP_CLI', '/usr/local/bin/wp'),
             'wp_cli_url' => 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar',
+        ],
+
+        'joomla' => [
+            // Joomla's downloads carry the version in the filename with no
+            // "latest" alias, so the installer asks which release is current
+            // rather than holding a URL that 404s at the next release.
+            'driver' => JoomlaInstaller::class,
+            'download_url' => env('SERVER_JOOMLA_URL', ''),
+            'releases_api' => env('SERVER_JOOMLA_RELEASES_API', 'https://api.github.com/repos/joomla/joomla-cms/releases/latest'),
+            'db_type' => env('SERVER_JOOMLA_DB_TYPE', 'mysqli'),
+            'timeout' => (int) env('SERVER_JOOMLA_TIMEOUT', 900),
+        ],
+
+        'prestashop' => [
+            'driver' => PrestaShopInstaller::class,
+            // PrestaShop's own channel feed, not GitHub: their 9.x tags ship
+            // no package, and this feed is what their updater follows — so a
+            // new stable branch is picked up without a code change.
+            'download_url' => env('SERVER_PRESTASHOP_URL', ''),
+            'channel_feed' => env('SERVER_PRESTASHOP_FEED', 'https://api.prestashop.com/xml/channel.xml'),
+            'timeout' => (int) env('SERVER_PRESTASHOP_TIMEOUT', 1800),
+        ],
+
+        'statamic' => [
+            // Composer-built and flat-file: no archive, and no database.
+            'driver' => StatamicInstaller::class,
+            'timeout' => (int) env('SERVER_STATAMIC_TIMEOUT', 1800),
+        ],
+
+        'akaunting' => [
+            'driver' => AkauntingInstaller::class,
+            // Zip only, versioned filename — resolved rather than hardcoded.
+            'download_url' => env('SERVER_AKAUNTING_URL', ''),
+            'releases_api' => env('SERVER_AKAUNTING_RELEASES_API', 'https://api.github.com/repos/akaunting/akaunting/releases/latest'),
+            'timeout' => (int) env('SERVER_AKAUNTING_TIMEOUT', 1800),
+        ],
+
+        'craftcms' => [
+            // Distributed through Composer — there is no tarball, so this one
+            // builds the application rather than unpacking it.
+            'driver' => CraftCmsInstaller::class,
+            'timeout' => (int) env('SERVER_CRAFTCMS_TIMEOUT', 1800),
+        ],
+
+        'mautic' => [
+            'driver' => MauticInstaller::class,
+            // Mautic publishes zip only, and versioned — so the release is
+            // resolved, and the full package taken rather than the update
+            // package, which carries changed files alone.
+            'download_url' => env('SERVER_MAUTIC_URL', ''),
+            'releases_api' => env('SERVER_MAUTIC_RELEASES_API', 'https://api.github.com/repos/mautic/mautic/releases/latest'),
+            'config_dir' => env('SERVER_MAUTIC_CONFIG_DIR', 'config'),
+            'timeout' => (int) env('SERVER_MAUTIC_TIMEOUT', 1800),
+        ],
+
+        'moodle' => [
+            'driver' => MoodleInstaller::class,
+            // The branch is part of the path, so a new major release means a
+            // new value here rather than a silent download of the old one.
+            'download_url' => env('SERVER_MOODLE_URL', 'https://packaging.moodle.org/stable500/moodle-latest-500.tgz'),
+            // 75 MB, then a schema of several hundred tables to build.
+            'timeout' => (int) env('SERVER_MOODLE_TIMEOUT', 1800),
         ],
 
         'nextcloud' => [
@@ -189,6 +269,13 @@ return [
     'site_types' => [
         WordPressSiteType::class,
         NextcloudSiteType::class,
+        JoomlaSiteType::class,
+        MoodleSiteType::class,
+        MauticSiteType::class,
+        CraftCmsSiteType::class,
+        AkauntingSiteType::class,
+        StatamicSiteType::class,
+        PrestaShopSiteType::class,
         PhpMyAdminSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,
@@ -297,6 +384,21 @@ return [
     'default_firewall_ports' => array_map('intval', array_filter(explode(
         ',', (string) env('SERVER_DEFAULT_FIREWALL_PORTS', '80,443')
     ))),
+
+    'firewall' => [
+        // Ports worth a warning that aren't a database engine we manage —
+        // those are derived from what's installed. These are the ones that
+        // hand over the machine, or a large part of it, if reached from the
+        // internet.
+        'risky_ports' => [
+            6379 => 'Redis',
+            11211 => 'Memcached',
+            9200 => 'Elasticsearch',
+            5672 => 'RabbitMQ',
+            2375 => 'Docker',
+            25 => 'SMTP',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -481,6 +583,45 @@ return [
     'reboot_required_file' => env('SERVER_REBOOT_REQUIRED', '/var/run/reboot-required'),
 
     'redis_cli' => env('SERVER_REDIS_CLI', '/usr/bin/redis-cli'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Runtimes
+    |--------------------------------------------------------------------------
+    |
+    | Language versions the server can hold several of at once, shown under
+    | Settings. Node is managed with fnm rather than nvm because a systemd
+    | unit's ExecStart needs an absolute binary path and has no shell to
+    | source a profile in — fnm keeps every version at a fixed, readable path.
+    |
+    | Installed system-wide so one copy serves every site user.
+    |
+    */
+
+    'runtimes' => [
+        'node' => [
+            'binary' => env('SERVER_FNM_BINARY', '/usr/local/bin/fnm'),
+            'dir' => env('SERVER_FNM_DIR', '/opt/fnm'),
+            // Whatever Node was already on the box. Detected and reported so
+            // a migrated server keeps working; never modified.
+            'system_binary' => env('SERVER_NODE_BINARY', 'node'),
+            // Newest patch of this many majors, so the picker is a list
+            // somebody can read rather than every release ever made.
+            'installable_majors' => (int) env('SERVER_NODE_INSTALLABLE_MAJORS', 6),
+            'install_timeout' => (int) env('SERVER_NODE_INSTALL_TIMEOUT', 900),
+        ],
+
+        'php' => [
+            // A bare phpX.Y-fpm has no mysql, no curl, no mbstring — every
+            // application in the marketplace would fail on it. Installing a
+            // version means installing something usable.
+            'base_packages' => array_values(array_filter(explode(',', (string) env(
+                'SERVER_PHP_BASE_PACKAGES',
+                'fpm,cli,common,mysql,curl,mbstring,xml,zip,gd,intl,bcmath,soap'
+            )))),
+            'install_timeout' => (int) env('SERVER_PHP_INSTALL_TIMEOUT', 900),
+        ],
+    ],
 
     'redis_maxmemory_policies' => [
         'noeviction', 'allkeys-lru', 'allkeys-lfu', 'allkeys-random',

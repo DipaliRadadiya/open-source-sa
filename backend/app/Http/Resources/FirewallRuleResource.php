@@ -21,6 +21,8 @@ class FirewallRuleResource extends JsonResource
             'source_ip' => $this->source_ip,
             'description' => $this->description,
             'origin' => $this->origin,
+            // Off means kept but not applied — the rule is still here.
+            'enabled' => (bool) $this->enabled,
             // Non-`user` rules are system-seeded and protected from deletion.
             'protected' => $this->isProtected(),
             // Localized plain-English row, e.g. "Allow 443/tcp from Anywhere".

@@ -17,6 +17,8 @@ class SettingsManager
         private SecuritySettings $security,
         private UpdateSettings $updates,
         private RedisSettings $redis,
+        private NodeSettings $node,
+        private PhpSettings $php,
     ) {}
 
     /**
@@ -24,7 +26,7 @@ class SettingsManager
      */
     public function groups(): array
     {
-        return [$this->general, $this->swap, $this->security, $this->updates, $this->redis];
+        return [$this->general, $this->swap, $this->security, $this->updates, $this->redis, $this->node, $this->php];
     }
 
     public function find(string $key): ?SettingGroup

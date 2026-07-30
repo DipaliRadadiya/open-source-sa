@@ -330,7 +330,21 @@ On any OS-op failure → `500 {message, reference}` and the DB change is rolled 
 ### Firewall
 Requires the `firewall` permission (`view` to read, `manage` to mutate). Backed by **UFW**; the DB is the record, UFW the enforcement. Rules are **create/delete only** (edit = delete + re-add). Enabled/disabled is read **live** from `ufw status` (no stored flag).
 
-**`GET /api/firewall`** — status + rules.
+**`GET /api/firewall`** — status, rules, and the context needed to act on them.
+- `your_ip` — the caller's own address. Offer it as a one-click **"only my IP"** source; without it people leave a port open to everyone rather than go and look their address up.
+- `ssh_port` — the port SSH is really on, read here rather than from `/api/settings`. A firewall-only user calling Settings gets a `403` and would fall back to 22, and being wrong about the SSH port on this screen is how somebody locks themselves out.
+- `listening[]` — `{port, protocol, address, public, program}`, what is actually behind the rules.
+  - **`public`** is the field to lead with: bound to `0.0.0.0`/`::` a rule can expose it; bound to `127.0.0.1` no rule can. That distinction is most of the reason to show this.
+  - **`program` is `null` for most entries.** The kernel only names a socket's process to that process's owner, and the panel is unprivileged — it will populate once the panel runs with more privilege. It is deliberately **not** inferred from the port number: a wrong service name on a firewall screen is worse than none.
+  - A service bound to both IPv4 and IPv6 appears **once**.
+- `risky_ports[]` — `{port, label, reason, installed}`. Derived from the engines actually on this server rather than a list in the UI, so the warning is about this machine. `installed: false` still warrants a warning — the port could be opened before the engine arrives.
+
+**`PUT /api/firewall/rules/{firewallRule}`** (`manage`) — edit a rule, or switch it off.
+- Body: any of `port_from`, `port_to`, `protocol`, `action`, `source_ip`, `description`, `enabled`.
+- **`enabled: false` keeps the rule and removes it from UFW.** Testing whether a rule matters no longer means deleting it and hoping it gets retyped correctly — which, for a `deny` rule, means the thing it blocked is allowed in the meantime.
+- **A description-only change never touches UFW.** Fixing a typo in a label does not go near a live firewall rule.
+- When the rule itself changes, the **new one is added before the old is removed** — the other order leaves a window with neither in place, and a failed add would turn a `deny` into "allowed".
+- Every rule now carries **`enabled`** in the list response.
 - Response: `{"enabled": bool, "default_policy": {"incoming": "deny", "outgoing": "allow"}, "rules": [ …rule objects… ]}`.
 - Rule object: `{id, port_from, port_to|null, protocol, action, source_ip|null, description|null, origin, protected, summary, created_at, created_at_human}`. `origin` = `user`|`default`|`db_user`; `protected: true` = system-seeded (UI shows a lock, can't delete while enabled). `summary` = localized plain-English row, e.g. `"Allow 443/tcp from Anywhere"`.
 
@@ -538,6 +552,64 @@ Requires the `setting` permission (`view` to read, `manage` to change). A server
 
 **`PUT /api/settings/updates`** (`manage`) — `security_updates_enabled` (bool), `auto_reboot` (bool), `reboot_time` (`HH:MM` or `now`). Writes an `apt.conf.d` drop-in (unattended-upgrades).
 
+#### Runtimes → Node
+
+Under Settings, gated by the same `setting` permission. Node versions live here rather than on Services because Node is a binary, not a daemon — Services answers *what is running*, this answers *what is installed*.
+
+`GET /api/settings` gains a `node` group:
+```json
+"node": {
+  "manager": "fnm",                       // fnm | system | none
+  "default": "20.11.0",
+  "versions": [{"version": "20.11.0",
+                "path": "/opt/fnm/node-versions/v20.11.0/installation/bin/node",
+                "is_default": true, "source": "fnm", "in_use_by": 2}],
+  "system": {"version": "24.18.0", "path": "/usr/bin/node"},
+  "installable": ["22.11.0", "20.19.1", "18.20.4"]
+}
+```
+- **`system`** is a Node that was already on the machine — the distro package on a migrated server. It is reported so it can be used, and is **never modified**. `manager: "system"` means there is Node but no version manager; `"none"` means no Node at all. **Both are normal states, not errors** — render the install prompt.
+- **`path`** is the absolute binary. It is what gets written into a site's systemd unit, which is why versions are managed with fnm at all.
+- **`in_use_by`** is how many sites pin that version. Use it to disable the remove button before the API has to refuse.
+- **`installable`** is the newest patch of each recent major, not every release.
+
+**`PUT /api/settings/node`** (`manage`) — `{"default": "20.11.0"}`. Sets what bare `node` resolves to by moving `/usr/local/bin` symlinks. **Sites that pinned a version are unaffected** — they hold an absolute path. `422` if the version isn't installed.
+
+**`POST /api/settings/node/versions`** (`manage`) — `{"version": "20.11.0"}` → `202`. Queued; unpacking a runtime takes minutes. **Idempotent**: a version already installed returns `200`, not an error. Poll `GET /api/settings` until it appears. Two requests for the same version collapse into one job.
+
+**`DELETE /api/settings/node/versions/{version}`** (`manage`) → `204`. **`422` when a site pins it** (the message names the sites) **or when it is the default**. Show `in_use_by` so the user sees why before clicking.
+
+**`POST /api/settings/node/versions/{version}/npm`** (`manage`) — updates npm inside that version, using that version's own npm.
+
+#### Runtimes → PHP
+
+Same section, same `setting` permission, same shape as Node — deliberately, so the frontend renders one component for both. The differences are all in the data, not the contract.
+
+`GET /api/settings` gains a `php` group:
+```json
+"php": {
+  "manager": "apt",                       // always "apt"
+  "default": "8.4",
+  "versions": [{"version": "8.4", "path": "/usr/bin/php8.4",
+                "is_default": true, "source": "apt",
+                "in_use_by_panel": true, "in_use_by": 3}],
+  "system": null,
+  "installable": ["8.3", "8.2", "8.1"]
+}
+```
+- **`manager`** is always `apt`, and **`system`** is always `null`. PHP needs no fnm equivalent: the distribution (with the Ondřej archive on Ubuntu) already packages every version side by side, at fixed paths, with an FPM unit each. There is no unmanaged install to report the way there is for Node.
+- **`default`** is what bare `php` resolves to, read from and written through `update-alternatives`. **Only the CLI moves** — a site keeps whatever version its FPM pool runs.
+- **`in_use_by_panel`** marks the version the panel itself runs on. **Hide the remove button on that row**; the API refuses it too, but a user who clicks it is asking to take the panel offline from inside the panel.
+- **`in_use_by`** is how many sites pin that version (`applications.php_version`).
+- **`installable`** is read from the package index (`apt-cache`), not hardcoded — a server with the Ondřej archive sees the full range, one without sees only what its distribution ships. Both are the truth for that server.
+- Versions come from the same source as the Services screen and the ini editor, so the three can never disagree about what exists.
+
+**`PUT /api/settings/php`** (`manage`) — `{"default": "8.4"}` via `update-alternatives --set`. `422` if the version isn't installed.
+
+**`POST /api/settings/php/versions`** (`manage`) — `{"version": "8.4"}` → `202`. Queued; apt takes minutes and holds a lock. **Idempotent**: already installed returns `200`. Two requests for the same version collapse into one job. Version must be `major.minor` — it becomes a package name and a path. Installs a **usable** PHP, not a bare interpreter: fpm, cli, common, mysql, curl, mbstring, xml, zip, gd, intl, bcmath, soap (configurable via `SERVER_PHP_BASE_PACKAGES`).
+
+**`DELETE /api/settings/php/versions/{version}`** (`manage`) → `204`. Three refusals, all `422`: **the version the panel runs on**, **a version a site pins** (the message names the sites), and **the current default**.
+
 **`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET`+`REWRITE`. `404` if redis isn't installed.
 
 Each write returns `{ <group>: {…refreshed values…} }`, writes a `setting.updated` activity entry (`group` property), and returns `500 {message, reference}` on OS-command failure.
@@ -630,7 +702,13 @@ Requires the `application` permission (`view` to read, `manage` to mutate).
 
 > **Phase 2 provisions the site.** Creating an application queues the work: directory → ownership → placeholder page → site config → **config test** → reload. The response returns before any of that has run, so **poll `GET /applications/{id}` and drive the UI from `status`**. Code is still not fetched — a new site serves a placeholder page until git deploy (P3) lands.
 
-One-click types available today: **WordPress**, **Nextcloud**, **phpMyAdmin**. **Nextcloud** takes an admin user, email and password, and gets its own database. Its archive is ~280 MB, so provisioning takes noticeably longer than the others — the `steps[]` progress on `GET /api/applications/{id}` is the thing to show. phpMyAdmin takes no fields beyond the common ones and creates **no database** — it reads the ones already on the server, and each user signs in with their own database credentials.
+One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moodle**, **Mautic**, **Craft CMS**, **Akaunting**, **Statamic**, **PrestaShop**, **phpMyAdmin**.
+
+**Two of these need no database** — phpMyAdmin (it reads the ones already there) and **Statamic** (flat-file). `needs_database` on the card says which, so the create form can leave the database step out.
+
+**Installers keep secrets off the command line wherever the application allows it** — they go into a config file the application reads, or into a prompt answered on stdin. **Two cannot: Statamic and PrestaShop.** Their installers take the password as an argument and offer no alternative (PrestaShop's reads `$argv` and never touches stdin; Statamic's only prompt path throws when input is piped). For the seconds those commands run, the password is visible to a local user reading `ps`. Recorded here so it is a known exception rather than a surprise.
+
+**`web_root` defaults per type, not to `/`.** Craft CMS serves from `/web`; serving its root would publish the application's source and its `.env`. The `web_root` field carries the right default for the chosen card — send it back unchanged unless the user edits it, and if you omit it entirely the API applies the type's default rather than the site root. **Nextcloud** takes an admin user, email and password, and gets its own database. Its archive is ~280 MB, so provisioning takes noticeably longer than the others — the `steps[]` progress on `GET /api/applications/{id}` is the thing to show. phpMyAdmin takes no fields beyond the common ones and creates **no database** — it reads the ones already on the server, and each user signs in with their own database credentials.
 
 **`GET /api/site-types`** — the card grid. One entry per installable thing, each carrying its own field schema, so the frontend writes **one** generic form renderer and a new app type needs no frontend change.
 - Response: `{ site_types: [{name, title, tagline, icon, category, popular, method, serving_profile, needs_database, available, unavailable_reason, installable_runtime, has_installer, fields[]}] }`

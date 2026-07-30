@@ -38,6 +38,44 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      * sized for the first turns the second into a guaranteed failure on any
      * ordinary connection.
      */
+    /**
+     * How many leading path components to strip when unpacking.
+     *
+     * Most applications ship inside a single wrapping directory, so the
+     * default drops it. Joomla's full package does not — its entries start at
+     * `administrator/` — and stripping there would discard the top-level
+     * directories and scatter their contents across the web root.
+     */
+    protected function stripComponents(): int
+    {
+        return 1;
+    }
+
+    /**
+     * How this application's archive is packed.
+     *
+     * Applications ship in whatever they ship in: tarballs mostly, but Mautic
+     * publishes zip only. `unzip` has no equivalent of tar's
+     * `--strip-components`, so a zip that needs stripping would need more than
+     * a flag — none of ours do.
+     */
+    protected function archiveFormat(): string
+    {
+        return 'tar';
+    }
+
+    /**
+     * Where to fetch this application from.
+     *
+     * Overridable because not every project publishes a stable "latest" URL;
+     * some have to be asked which version is current before anything can be
+     * downloaded.
+     */
+    protected function downloadUrl(): string
+    {
+        return (string) config("server.installers.{$this->siteType()}.download_url");
+    }
+
     protected function timeout(): int
     {
         return (int) config(
@@ -54,8 +92,10 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      *
      * @throws ProvisioningFailedException
      */
-    protected function downloadAndExtract(Application $application, string $url, string $documentRoot): void
+    protected function downloadAndExtract(Application $application, ?string $url, string $documentRoot): void
     {
+        $url ??= $this->downloadUrl();
+
         $work = rtrim((string) config('server.installer_work_dir', sys_get_temp_dir()), '/')
             .'/install-'.Str::uuid();
         $archive = "{$work}/archive.tar.gz";
@@ -76,7 +116,13 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // in, and Nextcloud's only tarball is bzip2. tar detects the
         // compression from the file itself, so the installer does not have to
         // know or care.
-        $this->run('extract', ['tar', '-xf', $archive, '-C', "{$work}/src", '--strip-components=1'], $application);
+        $this->run('extract', $this->archiveFormat() === 'zip'
+            // -q so a 90 MB listing doesn't end up in the ops log.
+            ? ['unzip', '-q', $archive, '-d', "{$work}/src"]
+            : array_filter([
+                'tar', '-xf', $archive, '-C', "{$work}/src",
+                $this->stripComponents() > 0 ? '--strip-components='.$this->stripComponents() : null,
+            ]), $application);
 
         // Copy contents (not the directory) into the web root, overwriting so
         // a retry converges instead of nesting.

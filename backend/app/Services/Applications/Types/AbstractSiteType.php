@@ -47,12 +47,17 @@ abstract class AbstractSiteType implements SiteType
      *
      * @return array<int, array<string, mixed>>
      */
-    protected function phpFields(string $webRoot = '/'): array
+    protected function phpFields(): array
     {
         return [
             $this->field('php_version', 'select', extra: ['source' => 'php_versions', 'default' => '8.4']),
-            $this->field('web_root', 'text', advanced: true, extra: ['default' => $webRoot]),
+            $this->field('web_root', 'text', advanced: true, extra: ['default' => $this->defaultWebRoot()]),
         ];
+    }
+
+    public function defaultWebRoot(): string
+    {
+        return '/';
     }
 
     /**
