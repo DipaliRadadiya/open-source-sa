@@ -62,8 +62,13 @@ class JoomlaInstaller extends AbstractSiteInstaller
             '--admin-user='.($settings['admin_name'] ?? 'Administrator'),
             '--admin-username='.($settings['admin_user'] ?? 'admin'),
             '--admin-email='.($settings['admin_email'] ?? ''),
-            // mysqli covers both MySQL and MariaDB.
-            '--db-type='.(string) config('server.installers.joomla.db_type', 'mysqli'),
+            // mysqli covers both MySQL and MariaDB — the engine the site was
+            // actually given, not a configured default that could disagree
+            // with it.
+            // mysqli speaks to both SQL engines the panel supports, so there
+            // is nothing to branch on — a helper here would have had two
+            // identical arms.
+            '--db-type=mysqli',
             '--db-host='.(string) ($context['db_host'] ?? '127.0.0.1'),
             '--db-user='.(string) $context['db_user'],
             '--db-name='.(string) $context['database'],

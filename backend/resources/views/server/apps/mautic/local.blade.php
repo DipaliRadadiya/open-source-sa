@@ -9,7 +9,7 @@
 $parameters = [
     'db_driver' => 'pdo_mysql',
     'db_host' => '{{ $host }}',
-    'db_port' => '3306',
+    'db_port' => '{{ $port }}',
     'db_name' => '{{ $database }}',
     'db_user' => '{{ $username }}',
     'db_password' => '{{ $password }}',

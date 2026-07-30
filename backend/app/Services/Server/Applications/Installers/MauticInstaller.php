@@ -52,6 +52,7 @@ class MauticInstaller extends AbstractSiteInstaller
         // for on a command line.
         $this->writeSecretFile($application, "{$configDir}/local.php", View::make('server.apps.mautic.local', [
             'host' => $context['db_host'] ?? '127.0.0.1',
+            'port' => $context['db_port'] ?? 3306,
             'database' => $context['database'],
             'username' => $context['db_user'],
             'password' => $context['db_password'],
