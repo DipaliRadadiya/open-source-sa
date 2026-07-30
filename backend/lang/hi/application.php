@@ -7,6 +7,7 @@ return [
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'निजी फ़ाइल सिंक और साझाकरण'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'लचीली सामग्री प्रबंधन प्रणाली'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'ऑनलाइन पाठ्यक्रम और शिक्षण'],
+        'mautic' => ['title' => 'Mautic', 'tagline' => 'मार्केटिंग स्वचालन और अभियान'],
         'git' => ['title' => 'Git रिपॉज़िटरी से', 'tagline' => 'GitHub, GitLab या Bitbucket से अपना कोड तैनात करें'],
         'php' => ['title' => 'खाली PHP साइट', 'tagline' => 'खाली साइट — अपनी फ़ाइलें स्वयं अपलोड करें'],
         'static' => ['title' => 'स्टेटिक साइट', 'tagline' => 'केवल HTML, CSS और JavaScript'],

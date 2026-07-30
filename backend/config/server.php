@@ -2,6 +2,7 @@
 
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
+use App\Services\Applications\Types\MauticSiteType;
 use App\Services\Applications\Types\MoodleSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
@@ -12,6 +13,7 @@ use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
 use App\Services\Server\Applications\Installers\JoomlaInstaller;
+use App\Services\Server\Applications\Installers\MauticInstaller;
 use App\Services\Server\Applications\Installers\MoodleInstaller;
 use App\Services\Server\Applications\Installers\NextcloudInstaller;
 use App\Services\Server\Applications\Installers\PhpMyAdminInstaller;
@@ -177,6 +179,17 @@ return [
             'timeout' => (int) env('SERVER_JOOMLA_TIMEOUT', 900),
         ],
 
+        'mautic' => [
+            'driver' => MauticInstaller::class,
+            // Mautic publishes zip only, and versioned — so the release is
+            // resolved, and the full package taken rather than the update
+            // package, which carries changed files alone.
+            'download_url' => env('SERVER_MAUTIC_URL', ''),
+            'releases_api' => env('SERVER_MAUTIC_RELEASES_API', 'https://api.github.com/repos/mautic/mautic/releases/latest'),
+            'config_dir' => env('SERVER_MAUTIC_CONFIG_DIR', 'config'),
+            'timeout' => (int) env('SERVER_MAUTIC_TIMEOUT', 1800),
+        ],
+
         'moodle' => [
             'driver' => MoodleInstaller::class,
             // The branch is part of the path, so a new major release means a
@@ -215,6 +228,7 @@ return [
         NextcloudSiteType::class,
         JoomlaSiteType::class,
         MoodleSiteType::class,
+        MauticSiteType::class,
         PhpMyAdminSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,

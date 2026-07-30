@@ -7,6 +7,7 @@ return [
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'Приватная синхронизация и обмен файлами'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'Гибкая система управления контентом'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Онлайн-курсы и обучение'],
+        'mautic' => ['title' => 'Mautic', 'tagline' => 'Автоматизация маркетинга и кампании'],
         'git' => ['title' => 'Из Git-репозитория', 'tagline' => 'Разверните свой код из GitHub, GitLab или Bitbucket'],
         'php' => ['title' => 'Пустой PHP-сайт', 'tagline' => 'Пустой сайт — загрузите свои файлы'],
         'static' => ['title' => 'Статический сайт', 'tagline' => 'Только HTML, CSS и JavaScript'],
