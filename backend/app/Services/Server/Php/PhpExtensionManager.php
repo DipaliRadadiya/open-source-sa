@@ -104,20 +104,19 @@ class PhpExtensionManager
     }
 
     /**
-     * Turn an extension on in every SAPI, then reload FPM.
+     * Turn an extension on in every SAPI, then apply the change.
      *
-     * All SAPIs together, deliberately. Splitting cli from fpm lets a site
-     * work in a browser and fail in a cron deploy — the same code, the same
-     * server, a different answer, and nothing on screen explaining why.
+     * Which tool does that is the stack's business: `phpenmod` is Debian's and
+     * only understands `/etc/php`.
      */
     public function enable(string $version, string $name): void
     {
-        $this->toggle('/usr/sbin/phpenmod', $version, $name);
+        $this->toggle($version, $name, enable: true);
     }
 
     public function disable(string $version, string $name): void
     {
-        $this->toggle('/usr/sbin/phpdismod', $version, $name);
+        $this->toggle($version, $name, enable: false);
     }
 
     /**
@@ -166,13 +165,13 @@ class PhpExtensionManager
         return array_values(array_intersect($modules, $this->panelRequired()));
     }
 
-    private function toggle(string $binary, string $version, string $name): void
+    private function toggle(string $version, string $name, bool $enable): void
     {
         $this->assertVersion($version);
 
         $result = $this->serverOps->run(
-            [$binary, '-v', $version, '-s', 'ALL', $name],
-            ['feature' => 'php', 'op' => basename($binary), 'version' => $version, 'extension' => $name],
+            $this->stack->extensionToggleCommand($version, $name, $enable),
+            ['feature' => 'php', 'op' => $enable ? 'extension_enable' : 'extension_disable', 'version' => $version, 'extension' => $name],
         );
 
         if ($result->failed()) {

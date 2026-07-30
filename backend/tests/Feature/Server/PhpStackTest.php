@@ -98,6 +98,21 @@ describe('the FPM facts it now owns', function () {
             ->and($this->stack->versionForService('php7.4-fpm'))->toBeNull();
     });
 
+    it('falls back to PATH when the binary pattern is blank', function () {
+        config(['server.php_binary_pattern' => '']);
+
+        expect($this->stack->binaryPath('8.4'))->toBe('php');
+    });
+
+    it('toggles an extension across every SAPI with Debian own tools', function () {
+        // -s ALL, not per-SAPI: an extension on for the web and off for the
+        // CLI is a site that works in a browser and fails in a cron deploy.
+        expect($this->stack->extensionToggleCommand('8.4', 'redis', true))
+            ->toBe(['/usr/sbin/phpenmod', '-v', '8.4', '-s', 'ALL', 'redis'])
+            ->and($this->stack->extensionToggleCommand('8.4', 'redis', false))
+            ->toBe(['/usr/sbin/phpdismod', '-v', '8.4', '-s', 'ALL', 'redis']);
+    });
+
     it('validates a version with that version own binary', function () {
         expect($this->stack->configTestCommand('8.4'))->toBe(['/usr/sbin/php-fpm8.4', '-t']);
     });

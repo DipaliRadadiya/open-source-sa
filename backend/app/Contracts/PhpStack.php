@@ -51,6 +51,18 @@ interface PhpStack
     /** Apply a configuration change for a version. */
     public function reload(string $version): ServerOpsResult;
 
+    /**
+     * Switch an extension on or off across every SAPI.
+     *
+     * A command rather than a tool path: `phpenmod` is Debian's, it only knows
+     * about `/etc/php`, and on a stack whose ini tree lives elsewhere it would
+     * exit zero having changed nothing — a toggle that reports success and
+     * does nothing is worse than one that fails.
+     *
+     * @return array<int, string>
+     */
+    public function extensionToggleCommand(string $version, string $extension, bool $enable): array;
+
     /** Validate the configuration without changing anything. */
     public function configTest(string $version): ServerOpsResult;
 

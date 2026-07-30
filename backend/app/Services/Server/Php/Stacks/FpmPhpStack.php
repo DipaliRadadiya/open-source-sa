@@ -59,7 +59,12 @@ class FpmPhpStack implements PhpStack
 
     public function binaryPath(string $version): string
     {
-        return str_replace('{version}', $version, (string) config('server.php_binary_pattern', '/usr/bin/php{version}'));
+        $pattern = (string) config('server.php_binary_pattern', '/usr/bin/php{version}');
+
+        // A blank pattern means "whatever `php` resolves to on PATH". The
+        // Nextcloud installer carried this case on its own; it belongs here,
+        // because an empty pattern is just as blank for the other seven.
+        return $pattern === '' ? 'php' : str_replace('{version}', $version, $pattern);
     }
 
     public function serviceName(string $version): ?string
@@ -84,6 +89,22 @@ class FpmPhpStack implements PhpStack
             ['systemctl', 'reload', (string) $this->serviceName($version)],
             ['feature' => 'php', 'stack' => 'fpm', 'op' => 'reload', 'version' => $version],
         );
+    }
+
+    /**
+     * `-s ALL` deliberately: splitting cli from fpm lets a site work in a
+     * browser and fail in a cron deploy, with nothing on screen to explain it.
+     *
+     * @return array<int, string>
+     */
+    public function extensionToggleCommand(string $version, string $extension, bool $enable): array
+    {
+        $binary = (string) config(
+            'server.runtimes.php.'.($enable ? 'enmod_binary' : 'dismod_binary'),
+            $enable ? '/usr/sbin/phpenmod' : '/usr/sbin/phpdismod',
+        );
+
+        return [$binary, '-v', $version, '-s', 'ALL', $extension];
     }
 
     public function configTest(string $version): ServerOpsResult
