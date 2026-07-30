@@ -9,6 +9,8 @@ return [
         'moodle' => ['title' => 'Moodle', 'tagline' => 'ऑनलाइन पाठ्यक्रम और शिक्षण'],
         'mautic' => ['title' => 'Mautic', 'tagline' => 'मार्केटिंग स्वचालन और अभियान'],
         'craftcms' => ['title' => 'Craft CMS', 'tagline' => 'डेवलपर्स के लिए सामग्री प्रबंधन'],
+        'akaunting' => ['title' => 'Akaunting', 'tagline' => 'लेखांकन और चालान'],
+        'statamic' => ['title' => 'Statamic', 'tagline' => 'फ़ाइल-आधारित CMS — डेटाबेस की ज़रूरत नहीं'],
         'git' => ['title' => 'Git रिपॉज़िटरी से', 'tagline' => 'GitHub, GitLab या Bitbucket से अपना कोड तैनात करें'],
         'php' => ['title' => 'खाली PHP साइट', 'tagline' => 'खाली साइट — अपनी फ़ाइलें स्वयं अपलोड करें'],
         'static' => ['title' => 'स्टेटिक साइट', 'tagline' => 'केवल HTML, CSS और JavaScript'],

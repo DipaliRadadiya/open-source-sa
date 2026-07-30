@@ -9,6 +9,8 @@ return [
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Онлайн-курсы и обучение'],
         'mautic' => ['title' => 'Mautic', 'tagline' => 'Автоматизация маркетинга и кампании'],
         'craftcms' => ['title' => 'Craft CMS', 'tagline' => 'Управление контентом для разработчиков'],
+        'akaunting' => ['title' => 'Akaunting', 'tagline' => 'Бухгалтерия и счета'],
+        'statamic' => ['title' => 'Statamic', 'tagline' => 'CMS на файлах — без базы данных'],
         'git' => ['title' => 'Из Git-репозитория', 'tagline' => 'Разверните свой код из GitHub, GitLab или Bitbucket'],
         'php' => ['title' => 'Пустой PHP-сайт', 'tagline' => 'Пустой сайт — загрузите свои файлы'],
         'static' => ['title' => 'Статический сайт', 'tagline' => 'Только HTML, CSS и JavaScript'],

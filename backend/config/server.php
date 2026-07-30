@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Applications\Types\AkauntingSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
@@ -8,17 +9,20 @@ use App\Services\Applications\Types\MoodleSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
 use App\Services\Applications\Types\PhpSiteType;
+use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
+use App\Services\Server\Applications\Installers\AkauntingInstaller;
 use App\Services\Server\Applications\Installers\CraftCmsInstaller;
 use App\Services\Server\Applications\Installers\JoomlaInstaller;
 use App\Services\Server\Applications\Installers\MauticInstaller;
 use App\Services\Server\Applications\Installers\MoodleInstaller;
 use App\Services\Server\Applications\Installers\NextcloudInstaller;
 use App\Services\Server\Applications\Installers\PhpMyAdminInstaller;
+use App\Services\Server\Applications\Installers\StatamicInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
@@ -185,6 +189,20 @@ return [
             'timeout' => (int) env('SERVER_JOOMLA_TIMEOUT', 900),
         ],
 
+        'statamic' => [
+            // Composer-built and flat-file: no archive, and no database.
+            'driver' => StatamicInstaller::class,
+            'timeout' => (int) env('SERVER_STATAMIC_TIMEOUT', 1800),
+        ],
+
+        'akaunting' => [
+            'driver' => AkauntingInstaller::class,
+            // Zip only, versioned filename — resolved rather than hardcoded.
+            'download_url' => env('SERVER_AKAUNTING_URL', ''),
+            'releases_api' => env('SERVER_AKAUNTING_RELEASES_API', 'https://api.github.com/repos/akaunting/akaunting/releases/latest'),
+            'timeout' => (int) env('SERVER_AKAUNTING_TIMEOUT', 1800),
+        ],
+
         'craftcms' => [
             // Distributed through Composer — there is no tarball, so this one
             // builds the application rather than unpacking it.
@@ -243,6 +261,8 @@ return [
         MoodleSiteType::class,
         MauticSiteType::class,
         CraftCmsSiteType::class,
+        AkauntingSiteType::class,
+        StatamicSiteType::class,
         PhpMyAdminSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,

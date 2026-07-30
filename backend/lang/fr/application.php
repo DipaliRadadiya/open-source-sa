@@ -9,6 +9,8 @@ return [
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Cours et apprentissage en ligne'],
         'mautic' => ['title' => 'Mautic', 'tagline' => 'Automatisation marketing et campagnes'],
         'craftcms' => ['title' => 'Craft CMS', 'tagline' => 'Gestion de contenu pour développeurs'],
+        'akaunting' => ['title' => 'Akaunting', 'tagline' => 'Comptabilité et facturation'],
+        'statamic' => ['title' => 'Statamic', 'tagline' => 'CMS en fichiers plats — sans base de données'],
         'git' => ['title' => 'Depuis un dépôt Git', 'tagline' => 'Déployez votre propre code depuis GitHub, GitLab ou Bitbucket'],
         'php' => ['title' => 'Site PHP vide', 'tagline' => 'Un site vide — téléversez vos propres fichiers'],
         'static' => ['title' => 'Site statique', 'tagline' => 'HTML, CSS et JavaScript simples'],
