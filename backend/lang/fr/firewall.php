@@ -21,7 +21,7 @@ return [
     ],
 
     'risky' => [
-        'database' => ':engine est une base de données : accessible depuis internet, c'est une porte d'entrée vers vos données.',
+        'database' => ':engine est une base de données : accessible depuis internet, c\'est une porte d\'entrée vers vos données.',
         'service' => ':service ne devrait pas être accessible depuis internet.',
     ],
 ];

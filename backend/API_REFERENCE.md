@@ -610,6 +610,50 @@ Same section, same `setting` permission, same shape as Node — deliberately, so
 
 **`DELETE /api/settings/php/versions/{version}`** (`manage`) → `204`. Three refusals, all `422`: **the version the panel runs on**, **a version a site pins** (the message names the sites), and **the current default**.
 
+#### Runtimes → PHP → extensions
+
+Per version, on the same `setting` permission. **One toggle per extension**, not an install control and a separate enable control.
+
+**`GET /api/settings/php/versions/{version}/extensions`** (`view`)
+```json
+{
+  "extensions": [
+    {"name": "mysql", "package": "php8.4-mysql",
+     "modules": ["mysqli", "mysqlnd", "pdo_mysql"],
+     "installed": true, "enabled": true, "builtin": false,
+     "sapis": {"cli": true, "fpm": true}},
+    {"name": "xdebug", "package": "php8.4-xdebug", "modules": ["xdebug"],
+     "installed": false, "enabled": false, "builtin": false,
+     "sapis": {"cli": false, "fpm": false}},
+    {"name": "json", "package": null, "modules": ["json"],
+     "installed": true, "enabled": true, "builtin": true, "sapis": {}}
+  ],
+  "panel_required": ["curl", "mbstring", "..."]
+}
+```
+On this server that's **96 rows, 32 installed, 16 built-in**. Sorted installed-first, then alphabetically — expect to need a search box.
+
+- **A row is a package, not a module.** `php8.4-mysql` is one row providing three modules. Three checkboxes that must always move together is a trap, not a choice.
+- **`enabled`** is true only when *every* module the package provides is on in *every* SAPI. Half-enabled behaves like off — a site calling PDO still fails — so it reports as off.
+- **`sapis`** shows per-SAPI state so drift from a manual `phpdismod` is visible. It is **read-only**: the toggle always writes all SAPIs. Splitting them lets a site work in a browser and fail in a cron deploy, same code, same server, nothing on screen explaining why.
+- **`builtin: true`** is compiled into the binary — `json`, `pcre`, `openssl`, `session`. Listed so a search for them finds something; **render no control**, the API refuses with `422`.
+- **`panel_required`** is only non-empty for the version the panel itself runs on. **Disable those rows** — the API refuses too, but the user shouldn't get that far.
+
+**`PUT /api/settings/php/versions/{version}/extensions/{extension}`** (`manage`) — `{"enabled": true|false}`
+
+| | |
+|---|---|
+| on, already installed | `200 {extension: {…}}` — enabled in all SAPIs, FPM reloaded |
+| on, not installed | **`202`** — apt is queued; poll the catalog until `installed` flips |
+| off | `200 {extension: {…}}` — unlinked, FPM reloaded. **The package is never purged.** |
+| built-in | `422` |
+| in `panel_required`, on the panel's version | `422`, naming the modules |
+| not in this server's catalog | `404` |
+
+**Nothing is ever purged.** A disabled extension costs a few megabytes; `apt purge php8.4-*` is how a server loses `php8.4-common` and every site with it. Re-enabling a disabled extension is instant — no download.
+
+**FPM is reloaded by the panel**, because `phpenmod` doesn't. It moves symlinks and stops there; without the reload the toggle flips in the UI and changes nothing until something else restarts FPM.
+
 **`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET`+`REWRITE`. `404` if redis isn't installed.
 
 Each write returns `{ <group>: {…refreshed values…} }`, writes a `setting.updated` activity entry (`group` property), and returns `500 {message, reference}` on OS-command failure.

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Runtime\InstallNodeVersionRequest;
 use App\Http\Requests\Server\Runtime\NodeDefaultRequest;
 use App\Http\Requests\Server\Runtime\PhpDefaultRequest;
+use App\Http\Requests\Server\Runtime\PhpExtensionRequest;
 use App\Http\Requests\Server\Runtime\PhpVersionRequest;
 use App\Http\Requests\Server\Setting\GeneralSettingsRequest;
 use App\Http\Requests\Server\Setting\RebootServerRequest;
@@ -16,9 +17,11 @@ use App\Http\Requests\Server\Setting\SecuritySettingsRequest;
 use App\Http\Requests\Server\Setting\SwapSettingsRequest;
 use App\Http\Requests\Server\Setting\UpdateSettingsRequest;
 use App\Jobs\InstallNodeVersion;
+use App\Jobs\InstallPhpExtension;
 use App\Jobs\InstallPhpVersion;
 use App\Models\Application;
 use App\Services\ActivityLogger;
+use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\ServerOps;
@@ -96,13 +99,13 @@ class SettingController extends Controller
         // Idempotent: asking for a version that is already here is a no-op
         // rather than an error, since the outcome the caller wanted is true.
         if ($node->installed($version)) {
-            return response()->json(['message' => __('runtime.already_installed', ['version' => $version])], 200);
+            return response()->json(['message' => __('runtime.already_installed', ['runtime' => 'Node', 'version' => $version])], 200);
         }
 
         InstallNodeVersion::dispatch($version);
         $log->log('runtime.node_install_started', null, ['version' => $version]);
 
-        return response()->json(['message' => __('runtime.install_started', ['version' => $version])], 202);
+        return response()->json(['message' => __('runtime.install_started', ['runtime' => 'Node', 'version' => $version])], 202);
     }
 
     /**
@@ -175,13 +178,13 @@ class SettingController extends Controller
         $version = (string) $request->validated('version');
 
         if ($php->installed($version)) {
-            return response()->json(['message' => __('runtime.already_installed', ['version' => $version])], 200);
+            return response()->json(['message' => __('runtime.already_installed', ['runtime' => 'PHP', 'version' => $version])], 200);
         }
 
         InstallPhpVersion::dispatch($version);
         $log->log('runtime.php_install_started', null, ['version' => $version]);
 
-        return response()->json(['message' => __('runtime.install_started', ['version' => $version])], 202);
+        return response()->json(['message' => __('runtime.install_started', ['runtime' => 'PHP', 'version' => $version])], 202);
     }
 
     /**
@@ -215,6 +218,83 @@ class SettingController extends Controller
         $log->log('runtime.php_uninstalled', null, ['version' => $version]);
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Every extension available to a version, with its current state.
+     */
+    public function phpExtensions(string $version, PhpExtensionManager $extensions, PhpRuntime $php): JsonResponse
+    {
+        abort_unless($php->installed($version), 404);
+
+        return response()->json([
+            'extensions' => $extensions->catalog($version),
+            'panel_required' => $version === $php->panelVersion() ? $extensions->panelRequired() : [],
+        ]);
+    }
+
+    /**
+     * Turn one extension on or off for a version.
+     *
+     * One toggle, not two controls. On installs the package if it is missing;
+     * off only unlinks it. Nothing is ever purged — a disabled extension costs
+     * a few megabytes, and purging is how `php8.4-common` goes with it and
+     * takes every site on the server down.
+     */
+    public function updatePhpExtension(
+        PhpExtensionRequest $request,
+        string $version,
+        string $extension,
+        PhpExtensionManager $extensions,
+        PhpRuntime $php,
+        ActivityLogger $log,
+    ): JsonResponse {
+        abort_unless($php->installed($version), 404);
+
+        // The name becomes an apt package and a path. A pattern is not enough
+        // — it has to be something this server actually offers.
+        $row = $extensions->find($version, $extension);
+
+        abort_if($row === null, 404);
+
+        if ($row['builtin']) {
+            return response()->json(['message' => __('errors/runtime.extension_builtin', ['extension' => $extension])], 422);
+        }
+
+        $enabled = (bool) $request->validated('enabled');
+        $properties = ['version' => $version, 'extension' => $extension];
+
+        if (! $enabled) {
+            // Only on the panel's own version. Another version may disable
+            // whatever it likes — the panel is not running on it.
+            if ($version === $php->panelVersion() && ($blockers = $extensions->panelBlockers($row['modules'])) !== []) {
+                return response()->json([
+                    'message' => __('errors/runtime.extension_runs_panel', [
+                        'extension' => $extension,
+                        'modules' => implode(', ', $blockers),
+                    ]),
+                ], 422);
+            }
+
+            $extensions->disable($version, $extension);
+            $log->log('runtime.php_extension_disabled', null, $properties);
+
+            return response()->json(['extension' => $extensions->find($version, $extension)]);
+        }
+
+        if (! $row['installed']) {
+            InstallPhpExtension::dispatch($version, $extension);
+            $log->log('runtime.php_extension_install_started', null, $properties);
+
+            return response()->json([
+                'message' => __('runtime.extension_install_started', ['extension' => $extension]),
+            ], 202);
+        }
+
+        $extensions->enable($version, $extension);
+        $log->log('runtime.php_extension_enabled', null, $properties);
+
+        return response()->json(['extension' => $extensions->find($version, $extension)]);
     }
 
     /**
