@@ -11,6 +11,7 @@ return [
         'craftcms' => ['title' => 'Craft CMS', 'tagline' => '開発者向けコンテンツ管理'],
         'akaunting' => ['title' => 'Akaunting', 'tagline' => '会計・請求管理'],
         'statamic' => ['title' => 'Statamic', 'tagline' => 'フラットファイル CMS — データベース不要'],
+        'prestashop' => ['title' => 'PrestaShop', 'tagline' => 'オンラインストア・EC'],
         'git' => ['title' => 'Gitリポジトリから', 'tagline' => 'GitHub・GitLab・Bitbucket から自分のコードをデプロイ'],
         'php' => ['title' => '空のPHPサイト', 'tagline' => '空のサイト — ファイルは自分でアップロード'],
         'static' => ['title' => '静的サイト', 'tagline' => 'HTML・CSS・JavaScript のみ'],

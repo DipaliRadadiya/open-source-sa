@@ -11,6 +11,7 @@ return [
         'craftcms' => ['title' => 'Craft CMS', 'tagline' => 'Gestión de contenidos para desarrolladores'],
         'akaunting' => ['title' => 'Akaunting', 'tagline' => 'Contabilidad y facturación'],
         'statamic' => ['title' => 'Statamic', 'tagline' => 'CMS de archivos planos, sin base de datos'],
+        'prestashop' => ['title' => 'PrestaShop', 'tagline' => 'Tienda en línea y comercio electrónico'],
         'git' => ['title' => 'Desde un repositorio Git', 'tagline' => 'Despliega tu propio código desde GitHub, GitLab o Bitbucket'],
         'php' => ['title' => 'Sitio PHP vacío', 'tagline' => 'Un sitio vacío: sube tus propios archivos'],
         'static' => ['title' => 'Sitio estático', 'tagline' => 'HTML, CSS y JavaScript simples'],

@@ -644,9 +644,11 @@ Requires the `application` permission (`view` to read, `manage` to mutate).
 
 > **Phase 2 provisions the site.** Creating an application queues the work: directory → ownership → placeholder page → site config → **config test** → reload. The response returns before any of that has run, so **poll `GET /applications/{id}` and drive the UI from `status`**. Code is still not fetched — a new site serves a placeholder page until git deploy (P3) lands.
 
-One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moodle**, **Mautic**, **Craft CMS**, **Akaunting**, **Statamic**, **phpMyAdmin**.
+One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moodle**, **Mautic**, **Craft CMS**, **Akaunting**, **Statamic**, **PrestaShop**, **phpMyAdmin**.
 
 **Two of these need no database** — phpMyAdmin (it reads the ones already there) and **Statamic** (flat-file). `needs_database` on the card says which, so the create form can leave the database step out.
+
+**Installers keep secrets off the command line wherever the application allows it** — they go into a config file the application reads, or into a prompt answered on stdin. **Two cannot: Statamic and PrestaShop.** Their installers take the password as an argument and offer no alternative (PrestaShop's reads `$argv` and never touches stdin; Statamic's only prompt path throws when input is piped). For the seconds those commands run, the password is visible to a local user reading `ps`. Recorded here so it is a known exception rather than a surprise.
 
 **`web_root` defaults per type, not to `/`.** Craft CMS serves from `/web`; serving its root would publish the application's source and its `.env`. The `web_root` field carries the right default for the chosen card — send it back unchanged unless the user edits it, and if you omit it entirely the API applies the type's default rather than the site root. **Nextcloud** takes an admin user, email and password, and gets its own database. Its archive is ~280 MB, so provisioning takes noticeably longer than the others — the `steps[]` progress on `GET /api/applications/{id}` is the thing to show. phpMyAdmin takes no fields beyond the common ones and creates **no database** — it reads the ones already on the server, and each user signs in with their own database credentials.
 

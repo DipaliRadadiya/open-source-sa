@@ -9,6 +9,7 @@ use App\Services\Applications\Types\MoodleSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
 use App\Services\Applications\Types\PhpSiteType;
+use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
@@ -22,6 +23,7 @@ use App\Services\Server\Applications\Installers\MauticInstaller;
 use App\Services\Server\Applications\Installers\MoodleInstaller;
 use App\Services\Server\Applications\Installers\NextcloudInstaller;
 use App\Services\Server\Applications\Installers\PhpMyAdminInstaller;
+use App\Services\Server\Applications\Installers\PrestaShopInstaller;
 use App\Services\Server\Applications\Installers\StatamicInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
@@ -189,6 +191,16 @@ return [
             'timeout' => (int) env('SERVER_JOOMLA_TIMEOUT', 900),
         ],
 
+        'prestashop' => [
+            'driver' => PrestaShopInstaller::class,
+            // PrestaShop's own channel feed, not GitHub: their 9.x tags ship
+            // no package, and this feed is what their updater follows — so a
+            // new stable branch is picked up without a code change.
+            'download_url' => env('SERVER_PRESTASHOP_URL', ''),
+            'channel_feed' => env('SERVER_PRESTASHOP_FEED', 'https://api.prestashop.com/xml/channel.xml'),
+            'timeout' => (int) env('SERVER_PRESTASHOP_TIMEOUT', 1800),
+        ],
+
         'statamic' => [
             // Composer-built and flat-file: no archive, and no database.
             'driver' => StatamicInstaller::class,
@@ -263,6 +275,7 @@ return [
         CraftCmsSiteType::class,
         AkauntingSiteType::class,
         StatamicSiteType::class,
+        PrestaShopSiteType::class,
         PhpMyAdminSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,

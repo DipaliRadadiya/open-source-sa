@@ -11,6 +11,7 @@ return [
         'craftcms' => ['title' => 'Craft CMS', 'tagline' => 'Управление контентом для разработчиков'],
         'akaunting' => ['title' => 'Akaunting', 'tagline' => 'Бухгалтерия и счета'],
         'statamic' => ['title' => 'Statamic', 'tagline' => 'CMS на файлах — без базы данных'],
+        'prestashop' => ['title' => 'PrestaShop', 'tagline' => 'Интернет-магазин и электронная коммерция'],
         'git' => ['title' => 'Из Git-репозитория', 'tagline' => 'Разверните свой код из GitHub, GitLab или Bitbucket'],
         'php' => ['title' => 'Пустой PHP-сайт', 'tagline' => 'Пустой сайт — загрузите свои файлы'],
         'static' => ['title' => 'Статический сайт', 'tagline' => 'Только HTML, CSS и JavaScript'],

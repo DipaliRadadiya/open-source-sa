@@ -16,6 +16,7 @@ return [
         'craftcms' => ['title' => 'Craft CMS', 'tagline' => 'Content management for developers'],
         'akaunting' => ['title' => 'Akaunting', 'tagline' => 'Accounting and invoicing'],
         'statamic' => ['title' => 'Statamic', 'tagline' => 'Flat-file CMS — no database needed'],
+        'prestashop' => ['title' => 'PrestaShop', 'tagline' => 'Online store and e-commerce'],
         'git' => ['title' => 'From Git repo', 'tagline' => 'Deploy your own code from GitHub, GitLab or Bitbucket'],
         'php' => ['title' => 'Blank PHP site', 'tagline' => 'An empty site — upload your own files'],
         'static' => ['title' => 'Static site', 'tagline' => 'Plain HTML, CSS and JavaScript'],
