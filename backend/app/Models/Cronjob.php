@@ -61,8 +61,13 @@ class Cronjob extends Model
 
         $timezone = ServerTimezone::get();
 
+        // Carbon::now() rather than the string 'now': the string is resolved
+        // by the cron library against the real clock, which ignores a frozen
+        // test time — so a test that appeared to pin the date was really
+        // asserting against whatever day it ran on, and passed until it
+        // didn't.
         $date = (new CronExpression((string) $this->expression))
-            ->getNextRunDate('now', 0, false, $timezone);
+            ->getNextRunDate(Carbon::now(), 0, false, $timezone);
 
         return Carbon::instance($date)->setTimezone($timezone);
     }
