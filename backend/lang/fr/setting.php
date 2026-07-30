@@ -22,4 +22,7 @@ return [
             6 => 'Samedi',
         ],
     ],
+    'redis' => [
+        'password_applying' => 'Le mot de passe Redis est en cours d\'application. Rechargez dans un instant pour confirmer.',
+    ],
 ];

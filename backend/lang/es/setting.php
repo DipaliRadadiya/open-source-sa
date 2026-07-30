@@ -22,4 +22,7 @@ return [
             6 => 'Sábado',
         ],
     ],
+    'redis' => [
+        'password_applying' => 'Se está aplicando la contraseña de Redis. Vuelva a cargar en un momento para confirmar.',
+    ],
 ];

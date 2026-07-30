@@ -15,6 +15,7 @@ use App\Http\Requests\Server\Setting\UpdateSettingsRequest;
 use App\Services\ActivityLogger;
 use App\Services\Server\ServerOps;
 use App\Services\Server\Settings\RebootScheduleSettings;
+use App\Services\Server\Settings\RedisSettings;
 use App\Services\Server\Settings\SettingsManager;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
@@ -49,9 +50,25 @@ class SettingController extends Controller
         return $this->save('swap', $request, $settings, $log);
     }
 
+    /**
+     * Memory settings apply immediately; a password change is applied after
+     * this response is sent, because the credential the panel is currently
+     * using is the one being replaced. `202` says so rather than returning a
+     * body that claims a password is set before it is.
+     */
     public function updateRedis(RedisSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
     {
-        return $this->save('redis', $request, $settings, $log);
+        $response = $this->save('redis', $request, $settings, $log);
+
+        $group = $settings->find('redis');
+
+        if ($group instanceof RedisSettings && $group->passwordChangePending) {
+            return response()->json([
+                'message' => __('setting.redis.password_applying'),
+            ], 202);
+        }
+
+        return $response;
     }
 
     /**
