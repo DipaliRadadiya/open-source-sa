@@ -330,7 +330,21 @@ On any OS-op failure → `500 {message, reference}` and the DB change is rolled 
 ### Firewall
 Requires the `firewall` permission (`view` to read, `manage` to mutate). Backed by **UFW**; the DB is the record, UFW the enforcement. Rules are **create/delete only** (edit = delete + re-add). Enabled/disabled is read **live** from `ufw status` (no stored flag).
 
-**`GET /api/firewall`** — status + rules.
+**`GET /api/firewall`** — status, rules, and the context needed to act on them.
+- `your_ip` — the caller's own address. Offer it as a one-click **"only my IP"** source; without it people leave a port open to everyone rather than go and look their address up.
+- `ssh_port` — the port SSH is really on, read here rather than from `/api/settings`. A firewall-only user calling Settings gets a `403` and would fall back to 22, and being wrong about the SSH port on this screen is how somebody locks themselves out.
+- `listening[]` — `{port, protocol, address, public, program}`, what is actually behind the rules.
+  - **`public`** is the field to lead with: bound to `0.0.0.0`/`::` a rule can expose it; bound to `127.0.0.1` no rule can. That distinction is most of the reason to show this.
+  - **`program` is `null` for most entries.** The kernel only names a socket's process to that process's owner, and the panel is unprivileged — it will populate once the panel runs with more privilege. It is deliberately **not** inferred from the port number: a wrong service name on a firewall screen is worse than none.
+  - A service bound to both IPv4 and IPv6 appears **once**.
+- `risky_ports[]` — `{port, label, reason, installed}`. Derived from the engines actually on this server rather than a list in the UI, so the warning is about this machine. `installed: false` still warrants a warning — the port could be opened before the engine arrives.
+
+**`PUT /api/firewall/rules/{firewallRule}`** (`manage`) — edit a rule, or switch it off.
+- Body: any of `port_from`, `port_to`, `protocol`, `action`, `source_ip`, `description`, `enabled`.
+- **`enabled: false` keeps the rule and removes it from UFW.** Testing whether a rule matters no longer means deleting it and hoping it gets retyped correctly — which, for a `deny` rule, means the thing it blocked is allowed in the meantime.
+- **A description-only change never touches UFW.** Fixing a typo in a label does not go near a live firewall rule.
+- When the rule itself changes, the **new one is added before the old is removed** — the other order leaves a window with neither in place, and a failed add would turn a `deny` into "allowed".
+- Every rule now carries **`enabled`** in the list response.
 - Response: `{"enabled": bool, "default_policy": {"incoming": "deny", "outgoing": "allow"}, "rules": [ …rule objects… ]}`.
 - Rule object: `{id, port_from, port_to|null, protocol, action, source_ip|null, description|null, origin, protected, summary, created_at, created_at_human}`. `origin` = `user`|`default`|`db_user`; `protected: true` = system-seeded (UI shows a lock, can't delete while enabled). `summary` = localized plain-English row, e.g. `"Allow 443/tcp from Anywhere"`.
 

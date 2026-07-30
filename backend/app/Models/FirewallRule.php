@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['port_from', 'port_to', 'protocol', 'action', 'source_ip', 'description', 'origin'])]
+#[Fillable(['port_from', 'port_to', 'protocol', 'action', 'source_ip', 'description', 'origin', 'enabled'])]
 class FirewallRule extends Model
 {
     /**
@@ -16,6 +16,7 @@ class FirewallRule extends Model
         return [
             'port_from' => 'integer',
             'port_to' => 'integer',
+            'enabled' => 'boolean',
         ];
     }
 

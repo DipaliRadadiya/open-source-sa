@@ -352,6 +352,21 @@ return [
         ',', (string) env('SERVER_DEFAULT_FIREWALL_PORTS', '80,443')
     ))),
 
+    'firewall' => [
+        // Ports worth a warning that aren't a database engine we manage —
+        // those are derived from what's installed. These are the ones that
+        // hand over the machine, or a large part of it, if reached from the
+        // internet.
+        'risky_ports' => [
+            6379 => 'Redis',
+            11211 => 'Memcached',
+            9200 => 'Elasticsearch',
+            5672 => 'RabbitMQ',
+            2375 => 'Docker',
+            25 => 'SMTP',
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Services

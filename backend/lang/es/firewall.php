@@ -19,4 +19,9 @@ return [
         'dns' => 'DNS',
         'custom' => 'Puerto personalizado',
     ],
+
+    'risky' => [
+        'database' => ':engine es una base de datos: accesible desde internet, es una vía de entrada a sus datos.',
+        'service' => ':service no debería ser accesible desde internet.',
+    ],
 ];
