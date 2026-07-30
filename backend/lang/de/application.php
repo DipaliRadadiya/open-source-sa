@@ -8,6 +8,7 @@ return [
         'joomla' => ['title' => 'Joomla', 'tagline' => 'Flexibles Content-Management-System'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Online-Kurse und Lernen'],
         'mautic' => ['title' => 'Mautic', 'tagline' => 'Marketing-Automatisierung und Kampagnen'],
+        'craftcms' => ['title' => 'Craft CMS', 'tagline' => 'Content-Management für Entwickler'],
         'git' => ['title' => 'Aus Git-Repository', 'tagline' => 'Eigenen Code von GitHub, GitLab oder Bitbucket ausrollen'],
         'php' => ['title' => 'Leere PHP-Seite', 'tagline' => 'Eine leere Seite — eigene Dateien hochladen'],
         'static' => ['title' => 'Statische Seite', 'tagline' => 'Reines HTML, CSS und JavaScript'],

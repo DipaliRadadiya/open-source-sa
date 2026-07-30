@@ -8,6 +8,7 @@ return [
         'joomla' => ['title' => 'Joomla', 'tagline' => '柔軟なコンテンツ管理システム'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'オンライン学習・コース管理'],
         'mautic' => ['title' => 'Mautic', 'tagline' => 'マーケティング自動化とキャンペーン'],
+        'craftcms' => ['title' => 'Craft CMS', 'tagline' => '開発者向けコンテンツ管理'],
         'git' => ['title' => 'Gitリポジトリから', 'tagline' => 'GitHub・GitLab・Bitbucket から自分のコードをデプロイ'],
         'php' => ['title' => '空のPHPサイト', 'tagline' => '空のサイト — ファイルは自分でアップロード'],
         'static' => ['title' => '静的サイト', 'tagline' => 'HTML・CSS・JavaScript のみ'],

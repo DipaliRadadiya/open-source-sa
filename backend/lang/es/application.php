@@ -8,6 +8,7 @@ return [
         'joomla' => ['title' => 'Joomla', 'tagline' => 'Sistema de gestión de contenidos flexible'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Cursos y aprendizaje en línea'],
         'mautic' => ['title' => 'Mautic', 'tagline' => 'Automatización de marketing y campañas'],
+        'craftcms' => ['title' => 'Craft CMS', 'tagline' => 'Gestión de contenidos para desarrolladores'],
         'git' => ['title' => 'Desde un repositorio Git', 'tagline' => 'Despliega tu propio código desde GitHub, GitLab o Bitbucket'],
         'php' => ['title' => 'Sitio PHP vacío', 'tagline' => 'Un sitio vacío: sube tus propios archivos'],
         'static' => ['title' => 'Sitio estático', 'tagline' => 'HTML, CSS y JavaScript simples'],

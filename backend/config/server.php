@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
 use App\Services\Applications\Types\MauticSiteType;
@@ -12,6 +13,7 @@ use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
+use App\Services\Server\Applications\Installers\CraftCmsInstaller;
 use App\Services\Server\Applications\Installers\JoomlaInstaller;
 use App\Services\Server\Applications\Installers\MauticInstaller;
 use App\Services\Server\Applications\Installers\MoodleInstaller;
@@ -142,6 +144,10 @@ return [
     // runs on the same PHP that will serve it.
     'php_binary_pattern' => env('SERVER_PHP_BINARY_PATTERN', '/usr/bin/php{version}'),
 
+    // Applications distributed through Composer are built rather than
+    // unpacked, so it has to be present for those cards to work.
+    'composer_binary' => env('SERVER_COMPOSER_BINARY', 'composer'),
+
     /*
     | Git deploys. The credential file is written 0600 and deleted as soon as
     | the command finishes — the token is never a command argument and never
@@ -177,6 +183,13 @@ return [
             'releases_api' => env('SERVER_JOOMLA_RELEASES_API', 'https://api.github.com/repos/joomla/joomla-cms/releases/latest'),
             'db_type' => env('SERVER_JOOMLA_DB_TYPE', 'mysqli'),
             'timeout' => (int) env('SERVER_JOOMLA_TIMEOUT', 900),
+        ],
+
+        'craftcms' => [
+            // Distributed through Composer — there is no tarball, so this one
+            // builds the application rather than unpacking it.
+            'driver' => CraftCmsInstaller::class,
+            'timeout' => (int) env('SERVER_CRAFTCMS_TIMEOUT', 1800),
         ],
 
         'mautic' => [
@@ -229,6 +242,7 @@ return [
         JoomlaSiteType::class,
         MoodleSiteType::class,
         MauticSiteType::class,
+        CraftCmsSiteType::class,
         PhpMyAdminSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,
