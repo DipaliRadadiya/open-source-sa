@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Runtimes;
 
+use App\Contracts\PhpStack;
 use App\Contracts\Runtime;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Server\Php\PhpVersionManager;
@@ -30,6 +31,7 @@ class PhpRuntime implements Runtime
     public function __construct(
         private ServerOps $serverOps,
         private PhpVersionManager $versions,
+        private PhpStack $stack,
     ) {}
 
     public function key(): string
@@ -100,11 +102,11 @@ class PhpRuntime implements Runtime
     public function installable(): array
     {
         $output = $this->serverOps->run(
-            ['apt-cache', 'search', '--names-only', '^php[0-9]+\.[0-9]+-fpm$'],
+            ['apt-cache', 'search', '--names-only', $this->stack->installablePattern()],
             ['feature' => 'runtime', 'op' => 'php_installable'],
         )->output();
 
-        preg_match_all('/^php(\d+\.\d+)-fpm\s/m', $output, $matches);
+        preg_match_all($this->stack->installableMatcher(), $output, $matches);
 
         $installed = $this->versions->versions();
 
@@ -123,7 +125,7 @@ class PhpRuntime implements Runtime
 
     public function binaryPath(string $version): string
     {
-        return str_replace('{version}', $version, (string) config('server.php_binary_pattern', '/usr/bin/php{version}'));
+        return $this->stack->binaryPath($version);
     }
 
     /**
@@ -145,13 +147,8 @@ class PhpRuntime implements Runtime
      */
     public function install(string $version): void
     {
-        $packages = array_map(
-            fn (string $package) => "php{$version}-{$package}",
-            (array) config('server.runtimes.php.base_packages', ['fpm', 'cli', 'common']),
-        );
-
         $this->must($this->serverOps->run(
-            ['apt-get', 'install', '-y', '--no-install-recommends', ...$packages],
+            ['apt-get', 'install', '-y', '--no-install-recommends', ...$this->stack->versionPackages($version)],
             ['feature' => 'runtime', 'op' => 'php_install', 'version' => $version],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             // apt refuses to run unattended without this, and a prompt with
@@ -182,7 +179,7 @@ class PhpRuntime implements Runtime
     public function uninstall(string $version): void
     {
         $this->must($this->serverOps->run(
-            ['apt-get', 'purge', '-y', "php{$version}-*"],
+            ['apt-get', 'purge', '-y', $this->stack->packagePrefix($version).'*'],
             ['feature' => 'runtime', 'op' => 'php_uninstall', 'version' => $version],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],

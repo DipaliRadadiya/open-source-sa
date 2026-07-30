@@ -2,6 +2,8 @@
 
 namespace App\Services\Server;
 
+use App\Contracts\PhpStack;
+
 /**
  * Validates a service's configuration without applying it.
  *
@@ -14,7 +16,10 @@ namespace App\Services\Server;
  */
 class ConfigTester
 {
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private PhpStack $stack,
+    ) {}
 
     public function testable(string $key): bool
     {
@@ -52,8 +57,10 @@ class ConfigTester
     private function command(string $key): ?array
     {
         // php8.4-fpm, php8.3-fpm … each version validates itself.
-        if (preg_match('/^php(\d+\.\d+)-fpm$/', $key, $matches) === 1) {
-            return [(string) config('server.php_fpm_binary', '/usr/sbin/php-fpm').$matches[1], '-t'];
+        // Which PHP version this unit is, according to the stack that named
+        // it — the unit pattern differs between FPM and LSPHP.
+        if (($version = $this->stack->versionForService($key)) !== null) {
+            return $this->stack->configTestCommand($version);
         }
 
         $command = config("server.config_tests.{$key}");

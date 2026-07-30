@@ -2,11 +2,12 @@
 
 namespace App\Services\Server;
 
+use App\Contracts\PhpStack;
 use App\Models\Cronjob;
 
 /**
  * Read-only access to server log files. The catalog is the configured source
- * registry, plus per-version php-fpm logs detected from `php_dir`, plus one
+ * registry, plus one log per PHP version the stack reports, plus one
  * source per cron job (the only part that reads the DB — a cron log's label
  * is its job's name, which only the DB knows). Everything is filtered at read
  * time to files that actually exist (detect-don't-trust).
@@ -21,6 +22,8 @@ class LogManager
     public const DEFAULT_LINES = 200;
 
     public const MAX_LINES = 5000;
+
+    public function __construct(private PhpStack $stack) {}
 
     /**
      * All configured sources that exist on this box, with live metadata.
@@ -154,22 +157,20 @@ class LogManager
      */
     private function phpFpmLogs(): array
     {
-        $dir = (string) config('server.php_dir', '/etc/php');
-
-        if (! is_dir($dir)) {
-            return [];
-        }
-
-        $pattern = (string) config('server.php_fpm_log', '/var/log/php{version}-fpm.log');
-
         $logs = [];
-        foreach (glob($dir.'/*/fpm', GLOB_ONLYDIR) ?: [] as $fpm) {
-            $version = basename(dirname($fpm));
+
+        foreach ($this->stack->versions() as $version) {
+            $path = $this->stack->logPath($version);
+
+            if ($path === null) {
+                continue;
+            }
+
             $logs[] = [
                 'key' => "php{$version}_fpm",
                 'label' => "PHP {$version} FPM",
                 'group' => 'php',
-                'path' => str_replace('{version}', $version, $pattern),
+                'path' => $path,
             ];
         }
 

@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use App\Contracts\Firewall;
+use App\Contracts\PhpStack;
 use App\Models\User;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Firewall\UfwFirewall;
+use App\Services\Server\Php\PhpStackManager;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -20,6 +23,18 @@ class AppServiceProvider extends ServiceProvider
     {
         // The firewall engine — UFW today; swap the binding for firewalld later.
         $this->app->bind(Firewall::class, UfwFirewall::class);
+
+        // How PHP is served here. Resolved from the web server this box runs,
+        // because nginx and Apache use PHP-FPM and OpenLiteSpeed cannot —
+        // it runs LSPHP, with different packages, paths and no per-version
+        // service. Everything that needs a PHP fact asks this rather than
+        // assuming one.
+        $this->app->scoped(PhpStack::class, fn ($app) => $app->make(PhpStackManager::class)->stack());
+
+        // One registry per request. Nearly every server feature reads it, and
+        // on a box with no record yet the first read shells out to detect —
+        // a fresh instance per consumer turns that into one detection each.
+        $this->app->scoped(ServerCapabilities::class);
     }
 
     /**

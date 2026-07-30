@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\File;
  */
 class ServerCapabilities
 {
+    private ?ServerCapability $current = null;
+
     /**
      * Stack presets → what the installer laid down. `mern` maps to nginx
      * because MERN *uses* nginx; it is not a web server of its own.
@@ -45,13 +47,11 @@ class ServerCapabilities
      */
     public function current(): ServerCapability
     {
-        $record = ServerCapability::query()->first();
-
-        if ($record !== null) {
-            return $record;
-        }
-
-        return $this->detectAndStore();
+        // Memoised for the life of the request. This is read by nearly every
+        // server feature — and on a box with no record yet it triggers
+        // detection, which shells out. Re-detecting per caller turned a
+        // single systemctl call into one per consumer.
+        return $this->current ??= ServerCapability::query()->first() ?? $this->detectAndStore();
     }
 
     public function supports(string $capability): bool
@@ -62,6 +62,20 @@ class ServerCapabilities
     public function webServer(): ?string
     {
         return $this->current()->web_server;
+    }
+
+    /**
+     * The recorded web server, or null if nothing has been recorded yet.
+     *
+     * The difference from `webServer()` is that this never detects. Callers
+     * that only need to pick a driver should not cause a box-wide probe as a
+     * side effect of a read — and they have a sane default when the answer is
+     * unknown, which is what makes not detecting acceptable here.
+     */
+    public function recordedWebServer(): ?string
+    {
+        return $this->current?->web_server
+            ?? ServerCapability::query()->value('web_server');
     }
 
     /**
@@ -117,6 +131,8 @@ class ServerCapabilities
      */
     private function store(array $attributes): ServerCapability
     {
+        $this->current = null;
+
         $record = ServerCapability::query()->first() ?? new ServerCapability;
 
         $record->fill($attributes + ['verified_at' => now()])->save();
@@ -147,15 +163,29 @@ class ServerCapabilities
     private function detectRuntimes(): array
     {
         return [
-            // Any installed PHP-FPM version means PHP apps can run.
-            'php' => $this->hasPhpFpm(),
+            // Any installed PHP version means PHP apps can run.
+            'php' => $this->hasPhp(),
             'node' => $this->hasBinary((string) config('server.node_binary', 'node')),
         ];
     }
 
-    private function hasPhpFpm(): bool
+    private function hasPhp(): bool
     {
-        return count((array) File::glob(rtrim((string) config('server.php_dir'), '/').'/*/fpm')) > 0;
+        // Asked of *every* stack rather than the resolved one. On an
+        // OpenLiteSpeed box PHP lives outside /etc/php entirely, so globbing
+        // for FPM would report a server that has PHP as having none — but the
+        // resolved stack is derived from the web server this very method is
+        // helping to record, and asking for it here is a cycle. Detection
+        // cannot depend on the thing being detected.
+        foreach ((array) config('server.php_stacks', []) as $stack) {
+            $driver = $stack['driver'] ?? null;
+
+            if ($driver !== null && app($driver)->versions() !== []) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function hasBinary(string $binary): bool

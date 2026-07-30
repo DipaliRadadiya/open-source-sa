@@ -32,6 +32,7 @@ use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\TmpTarget;
+use App\Services\Server\Php\Stacks\FpmPhpStack;
 use App\Services\Server\WebServers\ApacheDriver;
 use App\Services\Server\WebServers\NginxDriver;
 
@@ -137,10 +138,13 @@ return [
         'nginx' => [
             'driver' => NginxDriver::class,
             'sites_dir' => env('SERVER_NGINX_SITES_DIR', '/etc/nginx/sites-enabled'),
+            // Which PHP stack this web server implies — see `php_stacks`.
+            'php_stack' => 'fpm',
         ],
         'apache' => [
             'driver' => ApacheDriver::class,
             'sites_dir' => env('SERVER_APACHE_SITES_DIR', '/etc/apache2/sites-enabled'),
+            'php_stack' => 'fpm',
         ],
     ],
 
@@ -413,6 +417,17 @@ return [
     */
 
     'php_dir' => env('SERVER_PHP_DIR', '/etc/php'),
+
+    /*
+    | How PHP is served, per web server. nginx and Apache talk to PHP-FPM;
+    | OpenLiteSpeed cannot and runs LSPHP over LSAPI instead — different
+    | packages, paths, ini files, and no per-version service at all. One
+    | server runs one web server, so it has exactly one of these.
+    */
+
+    'php_stacks' => [
+        'fpm' => ['driver' => FpmPhpStack::class],
+    ],
 
     /*
     | Per-service configuration tests. A service absent from this map has no

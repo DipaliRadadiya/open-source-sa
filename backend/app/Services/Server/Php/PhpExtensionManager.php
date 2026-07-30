@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Php;
 
+use App\Contracts\PhpStack;
 use App\Exceptions\Server\Php\PhpConfigException;
 use App\Services\Server\ServerOps;
 
@@ -32,6 +33,7 @@ class PhpExtensionManager
     public function __construct(
         private ServerOps $serverOps,
         private PhpVersionManager $versions,
+        private PhpStack $stack,
     ) {}
 
     /**
@@ -56,7 +58,7 @@ class PhpExtensionManager
 
             $rows[] = [
                 'name' => $name,
-                'package' => "php{$version}-{$name}",
+                'package' => $this->stack->extensionPackage($version, $name),
                 'modules' => $modules,
                 'installed' => $installed,
                 // On only when every module the package provides is on. A
@@ -127,7 +129,7 @@ class PhpExtensionManager
         $this->assertVersion($version);
 
         $result = $this->serverOps->run(
-            ['apt-get', 'install', '-y', '--no-install-recommends', "php{$version}-{$name}"],
+            ['apt-get', 'install', '-y', '--no-install-recommends', $this->stack->extensionPackage($version, $name)],
             ['feature' => 'php', 'op' => 'extension_install', 'version' => $version, 'extension' => $name],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
@@ -187,14 +189,13 @@ class PhpExtensionManager
      */
     private function reload(string $version): void
     {
-        if (! is_dir($this->sapiDir($version, 'fpm'))) {
+        // LSPHP has no per-version unit at all, so there is nothing here to
+        // reload — the stack decides what applying a change means.
+        if ($this->stack->serviceName($version) === null) {
             return;
         }
 
-        $this->serverOps->run(
-            ['systemctl', 'reload', "php{$version}-fpm"],
-            ['feature' => 'php', 'op' => 'reload', 'version' => $version],
-        );
+        $this->stack->reload($version);
     }
 
     /**
@@ -210,13 +211,14 @@ class PhpExtensionManager
     private function availablePackages(string $version): array
     {
         $output = $this->serverOps->run(
-            ['apt-cache', 'search', '--names-only', "^php{$version}-"],
+            ['apt-cache', 'search', '--names-only', '^'.$this->stack->packagePrefix($version)],
             ['feature' => 'php', 'op' => 'extension_catalog', 'version' => $version],
         )->output();
 
         $excluded = (array) config('server.runtimes.php.non_extension_packages', []);
 
-        preg_match_all('/^php'.preg_quote($version, '/').'-([a-z0-9_]+)\s/m', $output, $matches);
+        $prefix = preg_quote($this->stack->packagePrefix($version), '/');
+        preg_match_all('/^'.$prefix.'([a-z0-9_]+)\s/m', $output, $matches);
 
         return collect($matches[1] ?? [])
             ->unique()
@@ -234,7 +236,7 @@ class PhpExtensionManager
      */
     private function installedModules(string $version): array
     {
-        $dir = $this->versionDir($version).'/mods-available';
+        $dir = $this->stack->modsDir($version);
 
         return collect(glob($dir.'/*.ini') ?: [])
             ->map(fn (string $path) => basename($path, '.ini'))
@@ -273,7 +275,8 @@ class PhpExtensionManager
         $map = [];
 
         // php8.4-mysql: /usr/lib/php/20240924/pdo_mysql.so
-        preg_match_all('/^php'.preg_quote($version, '/').'-([a-z0-9_]+):\s*(\S+\.so)$/m', $output, $matches, PREG_SET_ORDER);
+        $prefix = preg_quote($this->stack->packagePrefix($version), '/');
+        preg_match_all('/^'.$prefix.'([a-z0-9_]+):\s*(\S+\.so)$/m', $output, $matches, PREG_SET_ORDER);
 
         foreach ($matches as [, $package, $path]) {
             $module = basename($path, '.so');
@@ -301,7 +304,7 @@ class PhpExtensionManager
     {
         $enabled = [];
 
-        foreach ((array) config('server.runtimes.php.sapis', ['cli', 'fpm']) as $sapi) {
+        foreach ($this->stack->sapis($version) as $sapi) {
             $dir = $this->sapiDir($version, $sapi);
 
             if (! is_dir($dir)) {
@@ -388,17 +391,12 @@ class PhpExtensionManager
 
     private function binary(string $version): string
     {
-        return str_replace('{version}', $version, (string) config('server.php_binary_pattern', '/usr/bin/php{version}'));
-    }
-
-    private function versionDir(string $version): string
-    {
-        return rtrim((string) config('server.php_dir', '/etc/php'), '/')."/{$version}";
+        return $this->stack->binaryPath($version);
     }
 
     private function sapiDir(string $version, string $sapi): string
     {
-        return $this->versionDir($version)."/{$sapi}";
+        return $this->stack->sapiDir($version, $sapi);
     }
 
     private function assertVersion(string $version): void

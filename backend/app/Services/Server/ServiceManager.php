@@ -2,6 +2,8 @@
 
 namespace App\Services\Server;
 
+use App\Contracts\PhpStack;
+
 /**
  * Manages system services via systemctl. No DB — state is read live from
  * systemd (detect-don't-trust). The catalog is our supported type sets
@@ -21,6 +23,7 @@ class ServiceManager
         private ServiceUsage $usage,
         private ConfigTester $tester,
         private LogManager $logs,
+        private PhpStack $stack,
     ) {}
 
     /**
@@ -98,8 +101,8 @@ class ServiceManager
     public function logKeys(string $key): array
     {
         // php8.4-fpm → php8.4_fpm, the key LogManager derives per version.
-        $candidates = preg_match('/^php(\d+\.\d+)-fpm$/', $key, $matches) === 1
-            ? ["php{$matches[1]}_fpm"]
+        $candidates = ($version = $this->stack->versionForService($key)) !== null
+            ? ["php{$version}_fpm"]
             : (array) config("server.service_logs.{$key}", []);
 
         return array_values(array_filter(
@@ -149,16 +152,19 @@ class ServiceManager
      */
     private function phpFpmServices(): array
     {
-        $dir = (string) config('server.php_dir', '/etc/php');
-
-        if (! is_dir($dir)) {
-            return [];
-        }
-
         $services = [];
-        foreach (glob($dir.'/*/fpm', GLOB_ONLYDIR) ?: [] as $fpm) {
-            $version = basename(dirname($fpm));
-            $services[] = ['key' => "php{$version}-fpm", 'unit' => "php{$version}-fpm", 'label' => "PHP {$version} FPM"];
+
+        foreach ($this->stack->versions() as $version) {
+            $unit = $this->stack->serviceName($version);
+
+            // LSPHP has no per-version unit — its processes belong to the web
+            // server. A stack with nothing to start or stop contributes no
+            // rows rather than rows that cannot be acted on.
+            if ($unit === null) {
+                continue;
+            }
+
+            $services[] = ['key' => $unit, 'unit' => $unit, 'label' => "PHP {$version} FPM"];
         }
 
         return $services;
