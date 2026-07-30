@@ -49,7 +49,7 @@ class AkauntingInstaller extends AbstractSiteInstaller
         $this->runAsSiteUser('install_app', $application, [
             $this->phpBinary($application), 'artisan', 'install',
             '--db-host='.($context['db_host'] ?? '127.0.0.1'),
-            '--db-port=3306',
+            '--db-port='.($context['db_port'] ?? 3306),
             '--db-name='.$context['database'],
             '--db-username='.$context['db_user'],
             '--db-prefix='.($settings['table_prefix'] ?? ''),

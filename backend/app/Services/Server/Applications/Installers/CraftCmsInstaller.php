@@ -56,8 +56,11 @@ class CraftCmsInstaller extends AbstractSiteInstaller
         $this->writeSecretFile($application, "{$projectRoot}/.env", View::make('server.apps.craftcms.env', [
             'appId' => 'CraftCMS--'.Str::uuid(),
             'securityKey' => Str::random(32),
-            'driver' => ($context['engine'] ?? '') === 'postgresql' ? 'pgsql' : 'mysql',
+            // mysql covers MySQL and MariaDB, which is every SQL engine
+            // the panel supports.
+            'driver' => 'mysql',
             'host' => $context['db_host'] ?? '127.0.0.1',
+            'port' => $context['db_port'] ?? 3306,
             'database' => $context['database'],
             'username' => $context['db_user'],
             'password' => $context['db_password'],

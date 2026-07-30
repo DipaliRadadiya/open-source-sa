@@ -9,7 +9,7 @@ CRAFT_SECURITY_KEY={{ $securityKey }}
 
 CRAFT_DB_DRIVER={{ $driver }}
 CRAFT_DB_SERVER={{ $host }}
-CRAFT_DB_PORT=3306
+CRAFT_DB_PORT={{ $port }}
 CRAFT_DB_DATABASE={{ $database }}
 CRAFT_DB_USER={{ $username }}
 CRAFT_DB_PASSWORD={{ $password }}

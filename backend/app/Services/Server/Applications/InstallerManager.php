@@ -104,11 +104,20 @@ class InstallerManager
             throw new ProvisioningFailedException('create_database', (string) Str::uuid());
         }
 
+        // Read the host and port off the engine's own connection record
+        // rather than assuming 127.0.0.1:3306. A server whose MySQL listens
+        // on a non-default port would otherwise have every installer write a
+        // config pointing at a port nothing is on — and the failure surfaces
+        // as the application's own "cannot connect to database", not as ours.
+        $connection = $this->databases->connection($engine);
+
         return [
             'database' => $database->name,
             'db_user' => $name,
             'db_password' => $password,
-            'db_host' => '127.0.0.1',
+            'db_host' => $connection->host ?: '127.0.0.1',
+            'db_port' => (int) ($connection->port ?: config("server.databases.engines.{$engine}.default_port")),
+            'db_socket' => $connection->socket,
             // Which engine it actually is. Most applications treat MySQL and
             // MariaDB as one thing; Moodle picks a different driver for each.
             'engine' => $engine,
