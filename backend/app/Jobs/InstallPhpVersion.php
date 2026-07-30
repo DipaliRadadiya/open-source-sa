@@ -36,11 +36,11 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
         try {
             $php->install($this->version);
         } catch (Throwable $e) {
-            $log->log('runtime.php_install_failed', null, ['version' => $this->version]);
+            $log->log('php.install_failed', null, ['version' => $this->version]);
 
             throw $e;
         }
 
-        $log->log('runtime.php_installed', null, ['version' => $this->version]);
+        $log->log('php.installed', null, ['version' => $this->version]);
     }
 }

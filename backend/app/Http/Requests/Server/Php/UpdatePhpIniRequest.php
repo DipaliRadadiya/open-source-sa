@@ -8,7 +8,7 @@ class UpdatePhpIniRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->canManage('service') ?? false;
+        return (bool) $this->user()?->canManage('php');
     }
 
     /**

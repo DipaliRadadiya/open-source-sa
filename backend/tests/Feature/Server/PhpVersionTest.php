@@ -35,17 +35,20 @@ function phpHeaders(): array
 }
 
 it('lists the installed php versions, newest first', function () {
-    $response = $this->withHeaders(phpHeaders())->getJson('/api/php-versions');
+    $response = $this->withHeaders(phpHeaders())->getJson('/api/php');
 
     $response->assertOk();
-    expect(collect($response->json('php_versions'))->pluck('version')->all())->toBe(['8.4', '8.3']);
-    $response->assertJsonPath('php_versions.0.service', 'php8.4-fpm');
+    expect(collect($response->json('php.versions'))->pluck('version')->all())->toBe(['8.4', '8.3']);
+    // The FPM unit is named here so the PHP screen can link across to
+    // Services, where starting and stopping a daemon still lives.
+    $response->assertJsonPath('php.versions.0.service', 'php8.4-fpm');
+    $response->assertJsonPath('php.versions.0.ini_path', config('server.php_dir').'/8.4/fpm/php.ini');
 });
 
 it('returns the raw ini for the editor to load', function () {
     Process::fake(['*' => Process::result(output: "memory_limit = 128M\n")]);
 
-    $response = $this->withHeaders(phpHeaders())->getJson('/api/php-versions/8.4/ini');
+    $response = $this->withHeaders(phpHeaders())->getJson('/api/php/versions/8.4/ini');
 
     $response->assertOk();
     $response->assertJsonPath('php_ini.version', '8.4');
@@ -54,16 +57,16 @@ it('returns the raw ini for the editor to load', function () {
 });
 
 it('refuses a version that is not installed', function () {
-    $this->withHeaders(phpHeaders())->getJson('/api/php-versions/5.6/ini')->assertNotFound();
+    $this->withHeaders(phpHeaders())->getJson('/api/php/versions/5.6/ini')->assertNotFound();
 
     // A path is never built from an unchecked client string.
-    $this->withHeaders(phpHeaders())->getJson('/api/php-versions/..%2F..%2Fetc/ini')->assertNotFound();
+    $this->withHeaders(phpHeaders())->getJson('/api/php/versions/..%2F..%2Fetc/ini')->assertNotFound();
 });
 
 it('backs up, writes, tests and reloads on a valid ini', function () {
     Process::fake(['*' => Process::result(exitCode: 0)]);
 
-    $this->withHeaders(phpHeaders())->putJson('/api/php-versions/8.4/ini', [
+    $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
         'contents' => "memory_limit = 512M\n",
         'acknowledged' => true,
     ])->assertOk();
@@ -81,7 +84,7 @@ it('restores the previous ini and does not reload when php rejects it', function
         ? Process::result(errorOutput: 'Failed to parse', exitCode: 1)
         : Process::result(exitCode: 0));
 
-    $response = $this->withHeaders(phpHeaders())->putJson('/api/php-versions/8.4/ini', [
+    $response = $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
         'contents' => "this is not valid\n",
         'acknowledged' => true,
     ]);
@@ -99,7 +102,7 @@ it('restores the previous ini and does not reload when php rejects it', function
 it('requires the impact to be acknowledged', function () {
     Process::fake();
 
-    $this->withHeaders(phpHeaders())->putJson('/api/php-versions/8.4/ini', [
+    $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
         'contents' => "memory_limit = 512M\n",
     ])->assertStatus(422)->assertJsonValidationErrors('acknowledged');
 
@@ -110,7 +113,7 @@ it('requires the impact to be acknowledged', function () {
 it('only reloads the version that was edited', function () {
     Process::fake(['*' => Process::result(exitCode: 0)]);
 
-    $this->withHeaders(phpHeaders())->putJson('/api/php-versions/8.3/ini', [
+    $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.3/ini', [
         'contents' => "memory_limit = 256M\n",
         'acknowledged' => true,
     ])->assertOk();
@@ -122,15 +125,15 @@ it('only reloads the version that was edited', function () {
 it('denies editing with view-only access', function () {
     Process::fake();
     $user = User::factory()->create();
-    grantPermission($user, 'service', view: true, manage: false);
+    grantPermission($user, 'php', view: true, manage: false);
     $token = $user->createToken('t')->plainTextToken;
 
     // Reading is allowed...
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->getJson('/api/php-versions')->assertOk();
+        ->getJson('/api/php')->assertOk();
 
     // ...editing is not.
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->putJson('/api/php-versions/8.4/ini', ['contents' => 'x', 'acknowledged' => true])
+        ->putJson('/api/php/versions/8.4/ini', ['contents' => 'x', 'acknowledged' => true])
         ->assertForbidden();
 });

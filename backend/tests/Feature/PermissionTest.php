@@ -13,17 +13,17 @@ it('creates the Administrator system role with every permission, idempotently', 
     expect($admin)->toHaveCount(1);
     expect($admin->first()->is_system)->toBeTrue();
     // holds all 14 permissions, view+manage
-    expect($admin->first()->permissions()->count())->toBe(14);
+    expect($admin->first()->permissions()->count())->toBe(15);
     foreach ($admin->first()->permissions as $permission) {
         expect((bool) $permission->pivot->view)->toBeTrue();
         expect((bool) $permission->pivot->manage)->toBeTrue();
     }
 });
 
-it('seeds the 14 server-level permission items in order', function () {
+it('seeds the 15 server-level permission items in order', function () {
     $this->seed(PermissionSeeder::class);
 
-    expect(Permission::count())->toBe(14);
+    expect(Permission::count())->toBe(15);
     expect(Permission::orderBy('order')->pluck('name')->first())->toBe('dashboard');
     expect(Permission::orderBy('order')->pluck('name')->last())->toBe('storage');
     expect(Permission::pluck('level')->unique()->all())->toBe(['server']);
@@ -40,7 +40,7 @@ it('groups the git and storage permissions under the integration sub-level', fun
     expect($integrations->pluck('level')->unique()->all())->toBe(['server']);
     expect($integrations->pluck('url')->all())->toBe(['/integrations/git', '/integrations/storage']);
     // the existing items are untouched — no sidebar churn
-    expect(Permission::where('sub_level', 'server')->count())->toBe(12);
+    expect(Permission::where('sub_level', 'server')->count())->toBe(13);
 });
 
 it('returns a localized sub-level header alongside each permission', function () {
@@ -82,7 +82,7 @@ it('shows an admin every permission with full view+manage access', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions');
 
-    $response->assertOk()->assertJsonCount(14, 'permissions');
+    $response->assertOk()->assertJsonCount(15, 'permissions');
     foreach ($response->json('permissions') as $permission) {
         expect($permission['permissions']['view'])->toBeTrue();
         expect($permission['permissions']['manage'])->toBeTrue();
@@ -139,7 +139,7 @@ it('filters the check endpoint by level', function () {
         ->getJson('/api/permissions/check?level=server');
 
     // level=server spans both sub-levels — the grouping is a display concern
-    $response->assertOk()->assertJsonCount(14, 'permissions');
+    $response->assertOk()->assertJsonCount(15, 'permissions');
 });
 
 it('requires a level on the check endpoint', function () {

@@ -21,17 +21,3 @@ Route::put('/settings/node', [SettingController::class, 'updateNode'])->middlewa
 Route::post('/settings/node/versions', [SettingController::class, 'installNodeVersion'])->middleware('permission:setting,manage');
 Route::post('/settings/node/versions/{version}/npm', [SettingController::class, 'updateNodeNpm'])->middleware('permission:setting,manage');
 Route::delete('/settings/node/versions/{version}', [SettingController::class, 'destroyNodeVersion'])->middleware('permission:setting,manage');
-
-// Runtimes → PHP. Same shape as Node; apt and update-alternatives do the work
-// a version manager had to do for Node. Editing a version's ini stays on the
-// Services screen, next to its FPM unit.
-Route::put('/settings/php', [SettingController::class, 'updatePhp'])->middleware('permission:setting,manage');
-Route::post('/settings/php/versions', [SettingController::class, 'installPhpVersion'])->middleware('permission:setting,manage');
-Route::delete('/settings/php/versions/{version}', [SettingController::class, 'destroyPhpVersion'])->middleware('permission:setting,manage');
-
-// Runtimes → PHP → extensions, per version. One toggle per package: enabling
-// installs it first if it is missing, disabling only unlinks it. Nothing is
-// ever purged — a disabled extension costs disk, and `apt purge php8.4-*` is
-// how a server loses every site at once.
-Route::get('/settings/php/versions/{version}/extensions', [SettingController::class, 'phpExtensions'])->middleware('permission:setting');
-Route::put('/settings/php/versions/{version}/extensions/{extension}', [SettingController::class, 'updatePhpExtension'])->middleware('permission:setting,manage');

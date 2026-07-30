@@ -459,19 +459,66 @@ Requires the `service` permission (`view` to read, `manage` to act). Manages **s
 - Response `200`: `{"service": { …refreshed service object… }}`.
 - `404` if the key is unknown or not installed; `422` if the action is blocked for a **protected** service (`stop`/`disable`) or the action is invalid; `500 {message, reference}` on systemctl failure.
 
-#### PHP versions and the FPM ini
+### PHP
+Requires the **`php`** permission (`view` / `manage`) — its own sidebar item, not a corner of Settings.
 
-Same `service` permission — these belong to the Services screen.
+> **Moved.** These were previously split between `GET /api/php-versions/…` (gated by `service`) and `PUT|POST|DELETE /api/settings/php/…` (gated by `setting`), and the `php` group has been removed from `GET /api/settings`. Managing PHP used to need *both* permissions — and `setting` also grants the SSH port and the reboot button, so "can change the PHP version" implied "can reboot the server". All of it is now one feature behind one permission.
 
-**`GET /api/php-versions`** → `{"php_versions": [{version, service, ini_path}, …]}`, newest first. Detected from the same directory the services list reads, so the two can never disagree about what is installed.
+**`GET /api/php`** — everything the screen needs in one call.
+```json
+{"php": {
+  "default": "8.4",              // what bare `php` resolves to (update-alternatives)
+  "panel_version": "8.4",        // the version the panel itself runs on
+  "versions": [{"version": "8.4", "path": "/usr/bin/php8.4", "is_default": true,
+                "source": "apt", "in_use_by_panel": true, "in_use_by": 0,
+                "service": "php8.4-fpm", "ini_path": "/etc/php/8.4/fpm/php.ini"}],
+  "installable": ["8.5", "8.3", "8.2"]
+}}
+```
+- **`in_use_by_panel`** → hide the remove control on that row; the API refuses it too.
+- **`in_use_by`** is how many sites pin the version (`applications.php_version`).
+- **`installable`** comes from the package index, so a box with the Ondřej archive sees the full range and one without sees only what its distro ships.
+- **`service`** is the FPM unit. **Starting and stopping it stays on the Services screen** — that's the same job there as for nginx or redis, and it isn't the same thing as managing PHP. Link across using this key.
 
-**`GET /api/php-versions/{version}/ini`** → `{"php_ini": {version, path, contents}}` — the raw file, for the editor to load.
+**`PUT /api/php/default`** (`manage`) — `{"default": "8.4"}` via `update-alternatives`. Only the CLI default moves; **a site keeps whatever version its FPM pool runs**. `422` if not installed.
 
-**`PUT /api/php-versions/{version}/ini`** (`manage`) — replace it.
-- Body: `contents` (the whole file) and **`acknowledged: true`**. The acknowledgement is required: a raw ini edit can stop PHP-FPM starting, so it must not be reachable by an accidental request.
-- The sequence is **back up → write → `php-fpm{version} -t` → reload**. If PHP rejects the configuration, **the previous file is restored and nothing is reloaded** — `422` with `errors/php.invalid_ini`. A broken ini is worse than a broken vhost: FPM may refuse to start at all, taking every site on that version down with no obvious cause.
-- Only the edited version's unit is reloaded; other PHP versions are untouched.
-- `404` for a version that is not installed. The version is checked against the detected list before any path is built from it.
+**`POST /api/php/versions`** (`manage`) — `{"version": "8.3"}` → **`202`**, queued (apt takes minutes and holds a lock). Already installed returns `200`. Must be `major.minor`. Installs a usable PHP, not a bare interpreter: fpm, cli, common, mysql, curl, mbstring, xml, zip, gd, intl, bcmath, soap.
+
+**`DELETE /api/php/versions/{version}`** (`manage`) → `204`. Three refusals, all `422`: **the version the panel runs on**, **a version a site pins** (named in the message), and **the current default**.
+
+**`GET /api/php/versions/{version}/ini`** → `{"php_ini": {version, path, contents}}` — the raw file, for the editor.
+
+**`PUT /api/php/versions/{version}/ini`** (`manage`) — replace it.
+- Body: `contents` (the whole file) and **`acknowledged: true`**. A raw ini edit can stop PHP-FPM starting, so it must not be reachable by an accidental request.
+- Sequence is **back up → write → `php-fpm{version} -t` → reload**. If PHP rejects it, **the previous file is restored and nothing is reloaded** — `422` with `errors/php.invalid_ini`. Only the edited version's unit is reloaded.
+- `404` for a version that is not installed; the version is checked against the detected list before any path is built from it.
+
+**`GET /api/php/versions/{version}/extensions`** (`view`)
+```json
+{"extensions": [
+  {"name": "mysql", "package": "php8.4-mysql", "modules": ["mysqli","mysqlnd","pdo_mysql"],
+   "installed": true, "enabled": true, "builtin": false, "sapis": {"cli": true, "fpm": true}},
+  {"name": "json", "package": null, "modules": ["json"],
+   "installed": true, "enabled": true, "builtin": true, "sapis": {}}
+ ],
+ "panel_required": ["curl", "mbstring", "..."]}
+```
+**96 rows, 32 installed, 16 built-in** on this box. Sorted installed-first — expect to need a search box.
+- **A row is a package, not a module.** `php8.4-mysql` provides three. `enabled` is true only when *every* module is on in *every* SAPI — half-enabled behaves like off.
+- **`sapis` is read-only**, showing drift from a manual `phpdismod`. The toggle always writes all SAPIs; splitting them lets a site work in a browser and fail in a cron deploy.
+- **`builtin: true`** → render no control; the API refuses with `422`.
+- **`panel_required`** is non-empty only for the panel's own version → disable those rows.
+
+**`PUT /api/php/versions/{version}/extensions/{extension}`** (`manage`) — `{"enabled": true|false}`
+
+| | |
+|---|---|
+| on, installed | `200 {extension}` — enabled in all SAPIs, FPM reloaded |
+| on, not installed | **`202`** — apt queued; poll until `installed` flips |
+| off | `200 {extension}` — unlinked, FPM reloaded. **Never purged.** |
+| built-in / panel-required / unknown | `422`, `422`, `404` |
+
+**Nothing is ever purged** — a disabled extension costs a few megabytes; `apt purge php8.4-*` is how a server loses `php8.4-common` and every site with it. **The panel reloads FPM**, because `phpenmod` doesn't — it moves symlinks and stops there.
 
 ### Logs
 Requires the `logs` permission (`view`). **Read-only.** No DB — the catalog is a fixed source registry (web server / database / system / security / daemon) + auto-detected **php-fpm** logs, filtered to files that **actually exist** on the box (detect-don't-trust). The client only ever references a source by its **`key`**; the panel resolves the real path server-side (no client paths → no traversal).
@@ -603,82 +650,13 @@ Under Settings, gated by the same `setting` permission. Node versions live here 
 
 **`POST /api/settings/node/versions/{version}/npm`** (`manage`) — updates npm inside that version, using that version's own npm.
 
-#### Runtimes → PHP
+#### Redis
 
-Same section, same `setting` permission, same shape as Node — deliberately, so the frontend renders one component for both. The differences are all in the data, not the contract.
+**`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET` + `REWRITE`. `404` if redis isn't installed. The password is never returned — `read()` reports only `has_password`.
 
-`GET /api/settings` gains a `php` group:
-```json
-"php": {
-  "manager": "apt",                       // always "apt"
-  "default": "8.4",
-  "versions": [{"version": "8.4", "path": "/usr/bin/php8.4",
-                "is_default": true, "source": "apt",
-                "in_use_by_panel": true, "in_use_by": 3}],
-  "system": null,
-  "installable": ["8.3", "8.2", "8.1"]
-}
-```
-- **`manager`** is always `apt`, and **`system`** is always `null`. PHP needs no fnm equivalent: the distribution (with the Ondřej archive on Ubuntu) already packages every version side by side, at fixed paths, with an FPM unit each. There is no unmanaged install to report the way there is for Node.
-- **`default`** is what bare `php` resolves to, read from and written through `update-alternatives`. **Only the CLI moves** — a site keeps whatever version its FPM pool runs.
-- **`in_use_by_panel`** marks the version the panel itself runs on. **Hide the remove button on that row**; the API refuses it too, but a user who clicks it is asking to take the panel offline from inside the panel.
-- **`in_use_by`** is how many sites pin that version (`applications.php_version`).
-- **`installable`** is read from the package index (`apt-cache`), not hardcoded — a server with the Ondřej archive sees the full range, one without sees only what its distribution ships. Both are the truth for that server.
-- Versions come from the same source as the Services screen and the ini editor, so the three can never disagree about what exists.
+> ⚠️ **Known issue.** Setting a Redis password does **not** update the panel's own `REDIS_PASSWORD`, so once cache/session/queue are on Redis this locks the panel out with `NOAUTH`. Don't wire this control up yet — the fix (write `.env`, verify with a fresh authenticated `PING`, roll back on failure) is queued ahead of the installer.
 
-**`PUT /api/settings/php`** (`manage`) — `{"default": "8.4"}` via `update-alternatives --set`. `422` if the version isn't installed.
-
-**`POST /api/settings/php/versions`** (`manage`) — `{"version": "8.4"}` → `202`. Queued; apt takes minutes and holds a lock. **Idempotent**: already installed returns `200`. Two requests for the same version collapse into one job. Version must be `major.minor` — it becomes a package name and a path. Installs a **usable** PHP, not a bare interpreter: fpm, cli, common, mysql, curl, mbstring, xml, zip, gd, intl, bcmath, soap (configurable via `SERVER_PHP_BASE_PACKAGES`).
-
-**`DELETE /api/settings/php/versions/{version}`** (`manage`) → `204`. Three refusals, all `422`: **the version the panel runs on**, **a version a site pins** (the message names the sites), and **the current default**.
-
-#### Runtimes → PHP → extensions
-
-Per version, on the same `setting` permission. **One toggle per extension**, not an install control and a separate enable control.
-
-**`GET /api/settings/php/versions/{version}/extensions`** (`view`)
-```json
-{
-  "extensions": [
-    {"name": "mysql", "package": "php8.4-mysql",
-     "modules": ["mysqli", "mysqlnd", "pdo_mysql"],
-     "installed": true, "enabled": true, "builtin": false,
-     "sapis": {"cli": true, "fpm": true}},
-    {"name": "xdebug", "package": "php8.4-xdebug", "modules": ["xdebug"],
-     "installed": false, "enabled": false, "builtin": false,
-     "sapis": {"cli": false, "fpm": false}},
-    {"name": "json", "package": null, "modules": ["json"],
-     "installed": true, "enabled": true, "builtin": true, "sapis": {}}
-  ],
-  "panel_required": ["curl", "mbstring", "..."]
-}
-```
-On this server that's **96 rows, 32 installed, 16 built-in**. Sorted installed-first, then alphabetically — expect to need a search box.
-
-- **A row is a package, not a module.** `php8.4-mysql` is one row providing three modules. Three checkboxes that must always move together is a trap, not a choice.
-- **`enabled`** is true only when *every* module the package provides is on in *every* SAPI. Half-enabled behaves like off — a site calling PDO still fails — so it reports as off.
-- **`sapis`** shows per-SAPI state so drift from a manual `phpdismod` is visible. It is **read-only**: the toggle always writes all SAPIs. Splitting them lets a site work in a browser and fail in a cron deploy, same code, same server, nothing on screen explaining why.
-- **`builtin: true`** is compiled into the binary — `json`, `pcre`, `openssl`, `session`. Listed so a search for them finds something; **render no control**, the API refuses with `422`.
-- **`panel_required`** is only non-empty for the version the panel itself runs on. **Disable those rows** — the API refuses too, but the user shouldn't get that far.
-
-**`PUT /api/settings/php/versions/{version}/extensions/{extension}`** (`manage`) — `{"enabled": true|false}`
-
-| | |
-|---|---|
-| on, already installed | `200 {extension: {…}}` — enabled in all SAPIs, FPM reloaded |
-| on, not installed | **`202`** — apt is queued; poll the catalog until `installed` flips |
-| off | `200 {extension: {…}}` — unlinked, FPM reloaded. **The package is never purged.** |
-| built-in | `422` |
-| in `panel_required`, on the panel's version | `422`, naming the modules |
-| not in this server's catalog | `404` |
-
-**Nothing is ever purged.** A disabled extension costs a few megabytes; `apt purge php8.4-*` is how a server loses `php8.4-common` and every site with it. Re-enabling a disabled extension is instant — no download.
-
-**FPM is reloaded by the panel**, because `phpenmod` doesn't. It moves symlinks and stops there; without the reload the toggle flips in the UI and changes nothing until something else restarts FPM.
-
-**`PUT /api/settings/general`** applies **only the fields that changed**. The form submits all three every time, and they don't share a privilege level — running an untouched one can fail the whole request *after* an earlier one already took effect. Re-saving a form you didn't edit performs no OS command at all and cannot fail.
-
-**`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET`+`REWRITE`. `404` if redis isn't installed.
+**`PUT /api/settings/general`** (`manage`) — `timezone`, `hostname`, `ntp`. **Applies only the fields that changed**: the form submits all three every time and they don't share a privilege level, so running an untouched one can fail the whole request *after* an earlier one already took effect. Re-saving an unedited form performs no OS command and cannot fail. Timezone values come from **`GET /api/timezones`**.
 
 Each write returns `{ <group>: {…refreshed values…} }`, writes a `setting.updated` activity entry (`group` property), and returns `500 {message, reference}` on OS-command failure.
 
