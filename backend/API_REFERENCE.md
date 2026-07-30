@@ -74,6 +74,23 @@ Dropdown options for the caller's own history. **Same response shape as `/admin/
 - **Difference from the admin version:** these options come from the caller's **own rows** (DISTINCT), not from the full catalog in `lang/activity.php`. A user who has never touched a database is not offered a `database` filter that would match nothing. Admin lists everything that *can* exist; a personal history lists what actually happened.
 - **A user with no activity gets `{"types": [], "actions": {"all": []}}`** — hide/disable the dropdowns rather than rendering an empty select.
 
+### `GET /timezones`
+Every timezone the panel accepts, grouped by region — for a picker.
+
+**Authenticated, but not permission-gated.** This is a reference list, not a resource: server settings, cronjob schedules and backup windows all need it, and gating it on any one of those permissions would hide it from the others.
+
+- Query: none
+- Response: `{"timezones": [{"region": "Asia", "zones": [{"value": "Asia/Kolkata", "label": "Kolkata", "offset": "+05:30", "offset_minutes": 330}]}]}`
+
+**419 zones across 11 regions**, regions sorted, zones sorted by label within each — render in the order received.
+
+- **`value`** is the IANA identifier and the only thing to send back (to `PUT /api/settings/general`, and later to schedule fields). **`label`** is the city with underscores replaced (`America/New_York` → `New York`) — what people actually scan for.
+- **`offset` is the offset right now**, recomputed per request, so it stays right across DST rather than being frozen at deploy time. It costs under 10 ms for all 419, so there's no cache to go stale. Don't persist it; re-read the list rather than storing offsets.
+- **`offset_minutes`** is there so you can sort or filter by offset without parsing the string. Note the half- and quarter-hour zones are real and common: `Asia/Kolkata` is 330, `Asia/Kathmandu` 345 — don't assume whole hours.
+- **`UTC` is its own region** with a single zone. It has no region segment in its identifier, and it's the value a server is most likely already set to.
+- The list is **exactly** what `PUT /api/settings/general` validates against, and a test pins the two together. Don't source a timezone list from anywhere else — `timedatectl list-timezones` reports 497, and the extra 78 are deprecated aliases (`US/Eastern`, `Etc/GMT+5`) the API will reject.
+- To preselect the visitor's own zone, match `value` against `Intl.DateTimeFormat().resolvedOptions().timeZone` — it returns an IANA identifier from the same vocabulary.
+
 ### `GET /permissions`
 Permission items the caller can see — the **deduped OR-union** across all their assigned roles (each permission appears once; `manage`/`view` are true if any role grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
 - Query: `level` (string, optional — filters to one permission level, e.g. `server`)
