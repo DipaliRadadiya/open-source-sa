@@ -552,6 +552,35 @@ Requires the `setting` permission (`view` to read, `manage` to change). A server
 
 **`PUT /api/settings/updates`** (`manage`) — `security_updates_enabled` (bool), `auto_reboot` (bool), `reboot_time` (`HH:MM` or `now`). Writes an `apt.conf.d` drop-in (unattended-upgrades).
 
+#### Runtimes → Node
+
+Under Settings, gated by the same `setting` permission. Node versions live here rather than on Services because Node is a binary, not a daemon — Services answers *what is running*, this answers *what is installed*.
+
+`GET /api/settings` gains a `node` group:
+```json
+"node": {
+  "manager": "fnm",                       // fnm | system | none
+  "default": "20.11.0",
+  "versions": [{"version": "20.11.0",
+                "path": "/opt/fnm/node-versions/v20.11.0/installation/bin/node",
+                "is_default": true, "source": "fnm", "in_use_by": 2}],
+  "system": {"version": "24.18.0", "path": "/usr/bin/node"},
+  "installable": ["22.11.0", "20.19.1", "18.20.4"]
+}
+```
+- **`system`** is a Node that was already on the machine — the distro package on a migrated server. It is reported so it can be used, and is **never modified**. `manager: "system"` means there is Node but no version manager; `"none"` means no Node at all. **Both are normal states, not errors** — render the install prompt.
+- **`path`** is the absolute binary. It is what gets written into a site's systemd unit, which is why versions are managed with fnm at all.
+- **`in_use_by`** is how many sites pin that version. Use it to disable the remove button before the API has to refuse.
+- **`installable`** is the newest patch of each recent major, not every release.
+
+**`PUT /api/settings/node`** (`manage`) — `{"default": "20.11.0"}`. Sets what bare `node` resolves to by moving `/usr/local/bin` symlinks. **Sites that pinned a version are unaffected** — they hold an absolute path. `422` if the version isn't installed.
+
+**`POST /api/settings/node/versions`** (`manage`) — `{"version": "20.11.0"}` → `202`. Queued; unpacking a runtime takes minutes. **Idempotent**: a version already installed returns `200`, not an error. Poll `GET /api/settings` until it appears. Two requests for the same version collapse into one job.
+
+**`DELETE /api/settings/node/versions/{version}`** (`manage`) → `204`. **`422` when a site pins it** (the message names the sites) **or when it is the default**. Show `in_use_by` so the user sees why before clicking.
+
+**`POST /api/settings/node/versions/{version}/npm`** (`manage`) — updates npm inside that version, using that version's own npm.
+
 **`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET`+`REWRITE`. `404` if redis isn't installed.
 
 Each write returns `{ <group>: {…refreshed values…} }`, writes a `setting.updated` activity entry (`group` property), and returns `500 {message, reference}` on OS-command failure.

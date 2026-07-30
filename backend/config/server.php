@@ -584,6 +584,34 @@ return [
 
     'redis_cli' => env('SERVER_REDIS_CLI', '/usr/bin/redis-cli'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Runtimes
+    |--------------------------------------------------------------------------
+    |
+    | Language versions the server can hold several of at once, shown under
+    | Settings. Node is managed with fnm rather than nvm because a systemd
+    | unit's ExecStart needs an absolute binary path and has no shell to
+    | source a profile in — fnm keeps every version at a fixed, readable path.
+    |
+    | Installed system-wide so one copy serves every site user.
+    |
+    */
+
+    'runtimes' => [
+        'node' => [
+            'binary' => env('SERVER_FNM_BINARY', '/usr/local/bin/fnm'),
+            'dir' => env('SERVER_FNM_DIR', '/opt/fnm'),
+            // Whatever Node was already on the box. Detected and reported so
+            // a migrated server keeps working; never modified.
+            'system_binary' => env('SERVER_NODE_BINARY', 'node'),
+            // Newest patch of this many majors, so the picker is a list
+            // somebody can read rather than every release ever made.
+            'installable_majors' => (int) env('SERVER_NODE_INSTALLABLE_MAJORS', 6),
+            'install_timeout' => (int) env('SERVER_NODE_INSTALL_TIMEOUT', 900),
+        ],
+    ],
+
     'redis_maxmemory_policies' => [
         'noeviction', 'allkeys-lru', 'allkeys-lfu', 'allkeys-random',
         'volatile-lru', 'volatile-lfu', 'volatile-random', 'volatile-ttl',
