@@ -11,8 +11,15 @@ class AdministratorRole
 
     /**
      * Ensure the protected "Administrator" system role exists and holds
-     * EVERY permission (view+manage). Idempotent — safe to call on every
-     * deploy/seed and at first-admin registration. Returns the role.
+     * EVERY permission currently in the catalog (view+manage). Idempotent —
+     * safe to call on every deploy/seed and at first-admin registration.
+     * Returns the role.
+     *
+     * Note what this does NOT do: it heals the role, not the catalog the role
+     * is made of. On a database where the permissions table is empty it
+     * happily produces an Administrator that grants nothing. Callers that
+     * cannot assume a seeded catalog must run PermissionCatalog::sync()
+     * first — RegisterFirstAdmin does.
      */
     public function ensure(): Role
     {

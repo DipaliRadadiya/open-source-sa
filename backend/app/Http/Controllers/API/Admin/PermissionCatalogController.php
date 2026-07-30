@@ -6,8 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PermissionResource;
 use App\Models\Permission;
 use App\Services\ActivityLogger;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Database\Eloquent\Model;
+use App\Services\PermissionCatalog;
 use Illuminate\Http\JsonResponse;
 
 class PermissionCatalogController extends Controller
@@ -33,11 +32,9 @@ class PermissionCatalogController extends Controller
      * deploy runbook does, useful after new permissions are added. Returns
      * the refreshed catalog.
      */
-    public function sync(PermissionSeeder $seeder, ActivityLogger $activityLogger): JsonResponse
+    public function sync(PermissionCatalog $catalog, ActivityLogger $activityLogger): JsonResponse
     {
-        // The seeder mass-assigns on Permission (a code-managed catalog); the
-        // artisan seed command auto-unguards, so replicate that here.
-        Model::unguarded(fn () => $seeder->run());
+        $catalog->sync();
 
         $permissions = Permission::query()->orderBy('order')->get();
 
