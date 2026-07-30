@@ -646,9 +646,14 @@ Requires the `setting` permission (`view` to read, `manage` to change). A server
 
 > **This is not the same as the `updates` auto-reboot.** That one is unattended-upgrades: it fires *only when a reboot is required* after a patch, and has no frequency at all. This one is a cadence, unconditional. Both exist because they answer different questions.
 
-**`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET` + `REWRITE`. `404` if redis isn't installed. The password is never returned — `read()` reports only `has_password`.
+**`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), and the password.
+- **`password`** (string, min 8) sets a new one. **Omitting it leaves the current password alone** — the read side never returns it, so an unchanged form has nothing to send back.
+- **`remove_password: true`** clears it. This needs its own flag because Laravel rewrites `""` to `null` before validation, making an empty password indistinguishable from an omitted one.
+- **A password change returns `202`, not `200`**, and no `redis` body. It is applied **after this response is sent**, because the credential the panel is using is the one being replaced — the throttle middleware writes rate-limit headers to the cache after the controller returns but before the response is flushed, and by then Redis wants a password this process does not have. Poll `GET /api/settings` and read `has_password` to confirm. Memory settings still apply synchronously and return `200`.
+- **`password_manageable`** (read) is false when the panel cannot write its own `.env` — **disable the control** rather than offering it and then refusing. Attempting it anyway is a `422` that names the reason, raised *before* Redis is touched.
+- Changing the password also rewrites the panel's own `REDIS_PASSWORD`, so the two never drift. If the new credential cannot be verified, or cannot be recorded, **the old password is put back** and the failure is written to the `server-ops` log — nothing can reach the caller by then.
+- The password is never returned; `read()` reports only `has_password`.
 
-> ⚠️ **Known issue.** Setting a Redis password does **not** update the panel's own `REDIS_PASSWORD`, so once cache/session/queue are on Redis this locks the panel out with `NOAUTH`. Don't wire this control up yet — the fix (write `.env`, verify with a fresh authenticated `PING`, roll back on failure) is queued ahead of the installer.
 
 **`PUT /api/settings/general`** (`manage`) — `timezone`, `hostname`, `ntp`. **Applies only the fields that changed**: the form submits all three every time and they don't share a privilege level, so running an untouched one can fail the whole request *after* an earlier one already took effect. Re-saving an unedited form performs no OS command and cannot fail. Timezone values come from **`GET /api/timezones`**.
 

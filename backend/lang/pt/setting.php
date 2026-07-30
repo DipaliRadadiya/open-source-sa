@@ -22,4 +22,7 @@ return [
             6 => 'Sábado',
         ],
     ],
+    'redis' => [
+        'password_applying' => 'A palavra-passe do Redis está a ser aplicada. Recarregue daqui a pouco para confirmar.',
+    ],
 ];
