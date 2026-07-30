@@ -11,6 +11,7 @@ return [
     'logs' => 'Registros',
     'service' => 'Serviço',
     'php' => 'PHP',
+    'node' => 'Node.js',
     'setting' => 'Configurações',
     'disk_cleaner' => 'Limpeza de disco',
     'activity_log' => 'Registro de atividades',

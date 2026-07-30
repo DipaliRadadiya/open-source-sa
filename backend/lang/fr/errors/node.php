@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Node runtime errors.
+ * Node feature errors.
  */
 
 return [

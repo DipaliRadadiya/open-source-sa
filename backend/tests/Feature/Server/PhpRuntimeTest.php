@@ -87,7 +87,7 @@ it('offers only versions that are not installed yet', function () {
     fakePhp();
 
     // apt-cache lists 8.2, 8.3 and 8.4; the last two are already here.
-    expect(phpSettings()['installable'])->toBe(['8.2']);
+    expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.2']);
 });
 
 it('marks the version the panel itself runs on', function () {

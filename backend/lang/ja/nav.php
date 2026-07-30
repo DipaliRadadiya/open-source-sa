@@ -11,6 +11,7 @@ return [
     'logs' => 'ログ',
     'service' => 'サービス',
     'php' => 'PHP',
+    'node' => 'Node.js',
     'setting' => '設定',
     'disk_cleaner' => 'ディスククリーナー',
     'activity_log' => 'アクティビティログ',

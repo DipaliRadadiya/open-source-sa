@@ -611,6 +611,20 @@ return [
             'install_timeout' => (int) env('SERVER_NODE_INSTALL_TIMEOUT', 900),
         ],
 
+        // How many site names a version carries in a list response. Enough
+        // to answer "whose site breaks", never enough to bloat a payload the
+        // screen loads on every visit. The count is always the true total.
+        'pinned_sites_shown' => (int) env('SERVER_PINNED_SITES_SHOWN', 5),
+
+        // Where support and end-of-life dates come from. Node publishes its
+        // own schedule; PHP does not publish lifecycle JSON, so endoflife.date
+        // is the practical source. Both are read by a scheduled command and
+        // cached — never fetched inside a request.
+        'lifecycle' => [
+            'node_url' => env('RUNTIME_LIFECYCLE_NODE_URL', 'https://raw.githubusercontent.com/nodejs/Release/main/schedule.json'),
+            'php_url' => env('RUNTIME_LIFECYCLE_PHP_URL', 'https://endoflife.date/api/php.json'),
+        ],
+
         'php' => [
             // A bare phpX.Y-fpm has no mysql, no curl, no mbstring — every
             // application in the marketplace would fail on it. Installing a

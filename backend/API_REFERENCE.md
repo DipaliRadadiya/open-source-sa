@@ -476,7 +476,10 @@ Requires the **`php`** permission (`view` / `manage`) — its own sidebar item, 
 }}
 ```
 - **`in_use_by_panel`** → hide the remove control on that row; the API refuses it too.
-- **`in_use_by`** is how many sites pin the version (`applications.php_version`).
+- **`in_use_by`** is how many sites pin the version, and **`sites`** names up to five of them — "3 sites" doesn't tell you whether removing this breaks staging or the shop. **`sites_truncated`** is true when there are more; `in_use_by` is always the real total. The refusal message on `DELETE` names *every* site, uncapped.
+- **`lifecycle`** is `{status, eol_date}` — `active` | `security` | `eol`. **There is no `lts` field for PHP**, because PHP has no LTS releases: active support, then security-only, then end of life. Sourced from endoflife.date by a daily scheduled command.
+- **`lifecycle_available`** is false on a box with no outbound network or one that hasn't run the refresh. **Hide the badges entirely when it's false** — otherwise every version reads as unknown-and-therefore-suspect. Individual `lifecycle: null` means that one version isn't in the upstream data.
+- **`installable`** is now `[{version, lifecycle}]`, not a flat string array, so the install picker can warn before someone installs something already dead.
 - **`installable`** comes from the package index, so a box with the Ondřej archive sees the full range and one without sees only what its distro ships.
 - **`service`** is the FPM unit. **Starting and stopping it stays on the Services screen** — that's the same job there as for nginx or redis, and it isn't the same thing as managing PHP. Link across using this key.
 
@@ -621,34 +624,6 @@ Requires the `setting` permission (`view` to read, `manage` to change). A server
 
 **`PUT /api/settings/updates`** (`manage`) — `security_updates_enabled` (bool), `auto_reboot` (bool), `reboot_time` (`HH:MM` or `now`). Writes an `apt.conf.d` drop-in (unattended-upgrades).
 
-#### Runtimes → Node
-
-Under Settings, gated by the same `setting` permission. Node versions live here rather than on Services because Node is a binary, not a daemon — Services answers *what is running*, this answers *what is installed*.
-
-`GET /api/settings` gains a `node` group:
-```json
-"node": {
-  "manager": "fnm",                       // fnm | system | none
-  "default": "20.11.0",
-  "versions": [{"version": "20.11.0",
-                "path": "/opt/fnm/node-versions/v20.11.0/installation/bin/node",
-                "is_default": true, "source": "fnm", "in_use_by": 2}],
-  "system": {"version": "24.18.0", "path": "/usr/bin/node"},
-  "installable": ["22.11.0", "20.19.1", "18.20.4"]
-}
-```
-- **`system`** is a Node that was already on the machine — the distro package on a migrated server. It is reported so it can be used, and is **never modified**. `manager: "system"` means there is Node but no version manager; `"none"` means no Node at all. **Both are normal states, not errors** — render the install prompt.
-- **`path`** is the absolute binary. It is what gets written into a site's systemd unit, which is why versions are managed with fnm at all.
-- **`in_use_by`** is how many sites pin that version. Use it to disable the remove button before the API has to refuse.
-- **`installable`** is the newest patch of each recent major, not every release.
-
-**`PUT /api/settings/node`** (`manage`) — `{"default": "20.11.0"}`. Sets what bare `node` resolves to by moving `/usr/local/bin` symlinks. **Sites that pinned a version are unaffected** — they hold an absolute path. `422` if the version isn't installed.
-
-**`POST /api/settings/node/versions`** (`manage`) — `{"version": "20.11.0"}` → `202`. Queued; unpacking a runtime takes minutes. **Idempotent**: a version already installed returns `200`, not an error. Poll `GET /api/settings` until it appears. Two requests for the same version collapse into one job.
-
-**`DELETE /api/settings/node/versions/{version}`** (`manage`) → `204`. **`422` when a site pins it** (the message names the sites) **or when it is the default**. Show `in_use_by` so the user sees why before clicking.
-
-**`POST /api/settings/node/versions/{version}/npm`** (`manage`) — updates npm inside that version, using that version's own npm.
 
 #### Redis
 
@@ -659,6 +634,40 @@ Under Settings, gated by the same `setting` permission. Node versions live here 
 **`PUT /api/settings/general`** (`manage`) — `timezone`, `hostname`, `ntp`. **Applies only the fields that changed**: the form submits all three every time and they don't share a privilege level, so running an untouched one can fail the whole request *after* an earlier one already took effect. Re-saving an unedited form performs no OS command and cannot fail. Timezone values come from **`GET /api/timezones`**.
 
 Each write returns `{ <group>: {…refreshed values…} }`, writes a `setting.updated` activity entry (`group` property), and returns `500 {message, reference}` on OS-command failure.
+
+### Node.js
+Requires the **`node`** permission (`view` / `manage`) — its own sidebar item, mirroring PHP.
+
+> **Moved.** Was `PUT|POST|DELETE /api/settings/node/*` gated by `setting`, and the `node` group is gone from `GET /api/settings`. Same reason as PHP: `setting` also grants the SSH port and the reboot button, and Node needed a permission of its own before it could have a sidebar row. **Settings no longer has a Runtimes section** — neither runtime was ever a setting.
+
+**`GET /api/node`**
+```json
+{"node": {
+  "manager": "fnm",                      // fnm | system | none
+  "default": "20.11.0",
+  "versions": [{"version": "20.11.0",
+                "path": "/opt/fnm/node-versions/v20.11.0/installation/bin/node",
+                "is_default": true, "source": "fnm",
+                "npm_version": "10.2.4",
+                "in_use_by": 7, "sites": ["shop","blog","api","crm","docs"], "sites_truncated": true,
+                "lifecycle": {"status": "lts", "eol_date": "2026-04-30", "lts_name": "Iron"}}],
+  "system": {"version": "24.18.0", "path": "/usr/bin/node"},
+  "installable": [{"version": "22.11.0", "lifecycle": {…}}],
+  "lifecycle_available": true
+}}
+```
+- **`npm_version`** is read from *that version's own* npm, not from whatever `npm` is on `PATH` — a global read reports the default version's npm next to every row, wrong for all but one. **`null`** when it can't be read; show nothing rather than a wrong number.
+- **`lifecycle.status`** is `current` | `lts` | `maintenance` | `eol`, with **`lts_name`** (the codename, e.g. `Jod`) present for Node and `null` on lines that never become LTS. Sourced from **`nodejs/Release/schedule.json`**, the project's own file — **not** inferred from even-numbered majors, which is a convention rather than a rule.
+- **`sites` / `sites_truncated` / `lifecycle_available`** behave exactly as on `GET /api/php`.
+- **`system`** is a Node that was already on the box; reported so it can be used, never modified. `manager: "none"` means no Node at all — both are normal states, render the install prompt.
+
+**`PUT /api/node/default`** (`manage`) — `{"default": "20.11.0"}`. Moves `/usr/local/bin` symlinks only. **A site that pinned a version is unaffected** — it holds an absolute path in its unit. `422` if not installed.
+
+**`POST /api/node/versions`** (`manage`) — `{"version": "20.11.0"}` → **`202`**, queued. Already installed returns `200`. Two clicks collapse into one job.
+
+**`DELETE /api/node/versions/{version}`** (`manage`) → `204`. `422` when a site pins it (**every** site named) or when it's the default.
+
+**`POST /api/node/versions/{version}/npm`** (`manage`) — updates npm inside that version using that version's own npm. Returns `{message, npm_version}` so the row can update without a refetch.
 
 ### Server Dashboard
 Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics are read cheaply from `/proc` (+ `df`) — no root, no storage; 24h history comes from a 5-min collector (`server_metrics`, pruned to 24h → bounded ~288 rows). Each concern is its own endpoint.

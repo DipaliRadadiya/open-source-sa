@@ -21,3 +21,9 @@ Schedule::command('db:sample-metrics')->everyFiveMinutes()->withoutOverlapping()
 // command self-gates on the DB schedule (enabled / due / threshold). No cron
 // file, so it can never drift with the user-managed Cronjobs feature.
 Schedule::command('disk-cleaner:run')->everyMinute()->withoutOverlapping();
+
+// Support and end-of-life dates for Node and PHP, from each project's own
+// published schedule. Daily is far more often than these change; the point is
+// that the API never makes a network call inside a request. A box with no
+// egress simply keeps an empty cache and shows no badges, which is honest.
+Schedule::command('runtimes:refresh-lifecycle')->daily()->withoutOverlapping();

@@ -11,6 +11,7 @@ return [
     'logs' => 'Journaux',
     'service' => 'Service',
     'php' => 'PHP',
+    'node' => 'Node.js',
     'setting' => 'Paramètres',
     'disk_cleaner' => 'Nettoyeur de disque',
     'activity_log' => 'Journal d\'activité',

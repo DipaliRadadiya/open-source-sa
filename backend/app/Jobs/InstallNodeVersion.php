@@ -41,11 +41,11 @@ class InstallNodeVersion implements ShouldBeUnique, ShouldQueue
         try {
             $node->install($this->version);
         } catch (Throwable $e) {
-            $log->log('runtime.node_install_failed', null, ['version' => $this->version]);
+            $log->log('node.install_failed', null, ['version' => $this->version]);
 
             throw $e;
         }
 
-        $log->log('runtime.node_installed', null, ['version' => $this->version]);
+        $log->log('node.installed', null, ['version' => $this->version]);
     }
 }

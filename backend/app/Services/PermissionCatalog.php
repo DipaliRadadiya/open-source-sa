@@ -41,16 +41,17 @@ class PermissionCatalog
             // `setting` permission meant "can change the PHP version" also
             // meant "can reboot the server and move the SSH port".
             ['name' => 'php', 'title' => 'PHP', 'icon' => 'file-code', 'url' => '/php', 'order' => 10],
-            ['name' => 'setting', 'title' => 'Setting', 'icon' => 'settings', 'url' => '/settings', 'order' => 11],
-            ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 12],
-            ['name' => 'activity_log', 'title' => 'Activity Log', 'icon' => 'history', 'url' => '/activity-log', 'order' => 13],
+            ['name' => 'node', 'title' => 'Node.js', 'icon' => 'hexagon', 'url' => '/node', 'order' => 11],
+            ['name' => 'setting', 'title' => 'Setting', 'icon' => 'settings', 'url' => '/settings', 'order' => 12],
+            ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 13],
+            ['name' => 'activity_log', 'title' => 'Activity Log', 'icon' => 'history', 'url' => '/activity-log', 'order' => 14],
 
             // Integrations — externally-connected accounts/credentials the
             // features consume (git accounts for app deploys, storage
             // destinations for backups). Same `server` level, grouped under
             // their own sub-level so the sidebar renders them as a section.
-            ['name' => 'git', 'title' => 'Git', 'icon' => 'git-branch', 'url' => '/integrations/git', 'order' => 14, 'sub_level' => 'integration'],
-            ['name' => 'storage', 'title' => 'Storage', 'icon' => 'hard-drive', 'url' => '/integrations/storage', 'order' => 15, 'sub_level' => 'integration'],
+            ['name' => 'git', 'title' => 'Git', 'icon' => 'git-branch', 'url' => '/integrations/git', 'order' => 15, 'sub_level' => 'integration'],
+            ['name' => 'storage', 'title' => 'Storage', 'icon' => 'hard-drive', 'url' => '/integrations/storage', 'order' => 16, 'sub_level' => 'integration'],
         ];
     }
 
