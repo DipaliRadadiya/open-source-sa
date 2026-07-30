@@ -620,6 +620,27 @@ return [
                 'fpm,cli,common,mysql,curl,mbstring,xml,zip,gd,intl,bcmath,soap'
             )))),
             'install_timeout' => (int) env('SERVER_PHP_INSTALL_TIMEOUT', 900),
+
+            // SAPIs an extension is toggled in. All of them together: cli and
+            // fpm diverging means a site that works in a browser and fails in
+            // a cron deploy, with nothing on screen explaining why.
+            'sapis' => array_values(array_filter(explode(',', (string) env('SERVER_PHP_SAPIS', 'cli,fpm')))),
+
+            // Share the phpX.Y- prefix but are not extensions: the SAPIs
+            // themselves, the shared config package, the headers. Nothing to
+            // toggle, so nothing to list.
+            'non_extension_packages' => array_values(array_filter(explode(',', (string) env(
+                'SERVER_PHP_NON_EXTENSION_PACKAGES',
+                'cli,common,dev,fpm,cgi,phpdbg,embed,litespeed,all_dev'
+            )))),
+
+            // Modules the panel itself needs. Turning one of these off under
+            // the panel's own version means the request to turn it back on
+            // never gets answered.
+            'panel_required' => array_values(array_filter(explode(',', (string) env(
+                'SERVER_PHP_PANEL_REQUIRED',
+                'curl,mbstring,xml,dom,tokenizer,fileinfo,pdo,pdo_sqlite,sqlite3,phar,openssl,simplexml,xmlwriter,ctype'
+            )))),
         ],
     ],
 
