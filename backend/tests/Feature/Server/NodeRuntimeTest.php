@@ -4,6 +4,7 @@ use App\Jobs\InstallNodeVersion;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Node\NodeOverview;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -66,7 +67,7 @@ function fakeNode(bool $fnm = true, array $installed = [], ?string $default = nu
 function nodeSettings(): array
 {
     return test()->withHeader('Authorization', 'Bearer '.test()->token)
-        ->getJson('/api/settings')->json('settings.node');
+        ->getJson('/api/node')->json('node');
 }
 
 function nodeCall(string $method, string $uri, array $body = []): TestResponse
@@ -120,7 +121,7 @@ it('offers one version per major rather than every patch release', function () {
     fakeNode();
 
     // A dropdown of every Node release ever made is not a dropdown.
-    expect(nodeSettings()['installable'])->toBe(['22.11.0', '20.19.1', '18.20.4']);
+    expect(collect(nodeSettings()['installable'])->pluck('version')->all())->toBe(['22.11.0', '20.19.1', '18.20.4']);
 });
 
 it('counts how many sites pin each version', function () {
@@ -141,7 +142,7 @@ it('queues an install, once per version however many times it is clicked', funct
     Queue::fake();
     fakeNode();
 
-    nodeCall('POST', '/api/settings/node/versions', ['version' => '20.11.0'])->assertStatus(202);
+    nodeCall('POST', '/api/node/versions', ['version' => '20.11.0'])->assertStatus(202);
 
     // Two clicks would otherwise start two fnm installs racing over the same
     // directory.
@@ -156,7 +157,7 @@ it('treats installing an already-present version as done, not as an error', func
     fakeNode(installed: ['20.11.0']);
 
     // The outcome the caller wanted is already true.
-    nodeCall('POST', '/api/settings/node/versions', ['version' => '20.11.0'])->assertOk();
+    nodeCall('POST', '/api/node/versions', ['version' => '20.11.0'])->assertOk();
     Queue::assertNothingPushed();
 });
 
@@ -164,14 +165,14 @@ it('rejects anything that is not a plain version number', function () {
     fakeNode();
 
     // It reaches a command argument; the shape is the guard.
-    nodeCall('POST', '/api/settings/node/versions', ['version' => '20; rm -rf /'])
+    nodeCall('POST', '/api/node/versions', ['version' => '20; rm -rf /'])
         ->assertUnprocessable()->assertJsonValidationErrors('version');
 });
 
 it('moves the symlinks when the default changes, and no unit files', function () {
     $runs = fakeNode(installed: ['20.11.0', '18.20.4'], default: '18.20.4');
 
-    nodeCall('PUT', '/api/settings/node', ['default' => '20.11.0'])->assertOk();
+    nodeCall('PUT', '/api/node/default', ['default' => '20.11.0'])->assertOk();
 
     $commands = collect($runs)->pluck('command');
     $bin = '/opt/fnm/node-versions/v20.11.0/installation/bin';
@@ -187,7 +188,7 @@ it('moves the symlinks when the default changes, and no unit files', function ()
 it('refuses a default that is not installed', function () {
     fakeNode(installed: ['20.11.0']);
 
-    nodeCall('PUT', '/api/settings/node', ['default' => '22.11.0'])->assertUnprocessable();
+    nodeCall('PUT', '/api/node/default', ['default' => '22.11.0'])->assertUnprocessable();
 });
 
 it('refuses to remove a version a site depends on, and names the site', function () {
@@ -202,7 +203,7 @@ it('refuses to remove a version a site depends on, and names the site', function
 
     // Otherwise the failure is a site that stops booting with no obvious
     // cause.
-    nodeCall('DELETE', '/api/settings/node/versions/18.20.4')
+    nodeCall('DELETE', '/api/node/versions/18.20.4')
         ->assertUnprocessable()
         ->assertJsonFragment(['message' => 'Node 18.20.4 is used by Checkout. Change those sites first.']);
 });
@@ -210,13 +211,13 @@ it('refuses to remove a version a site depends on, and names the site', function
 it('refuses to remove the default version', function () {
     fakeNode(installed: ['20.11.0'], default: '20.11.0');
 
-    nodeCall('DELETE', '/api/settings/node/versions/20.11.0')->assertUnprocessable();
+    nodeCall('DELETE', '/api/node/versions/20.11.0')->assertUnprocessable();
 });
 
 it('removes a version nothing depends on', function () {
     $runs = fakeNode(installed: ['20.11.0', '18.20.4'], default: '20.11.0');
 
-    nodeCall('DELETE', '/api/settings/node/versions/18.20.4')->assertNoContent();
+    nodeCall('DELETE', '/api/node/versions/18.20.4')->assertNoContent();
 
     expect(collect($runs)->pluck('command')->flatten())->toContain('uninstall', '18.20.4');
 });
@@ -224,7 +225,7 @@ it('removes a version nothing depends on', function () {
 it('updates npm with that version\'s own npm', function () {
     $runs = fakeNode(installed: ['20.11.0']);
 
-    nodeCall('POST', '/api/settings/node/versions/20.11.0/npm')->assertOk();
+    nodeCall('POST', '/api/node/versions/20.11.0/npm')->assertOk();
 
     // A global npm belongs to whichever version is default, and would update
     // the wrong one.
@@ -235,16 +236,61 @@ it('updates npm with that version\'s own npm', function () {
 it('denies every mutation to a view-only user', function () {
     fakeNode(installed: ['20.11.0']);
     $user = User::factory()->create();
-    grantPermission($user, 'setting', view: true, manage: false);
+    grantPermission($user, 'node', view: true, manage: false);
     $token = $user->createToken('t')->plainTextToken;
 
-    $this->withHeader('Authorization', "Bearer {$token}")->getJson('/api/settings')->assertOk();
+    $this->withHeader('Authorization', "Bearer {$token}")->getJson('/api/node')->assertOk();
 
     foreach ([
-        ['PUT', '/api/settings/node', ['default' => '20.11.0']],
-        ['POST', '/api/settings/node/versions', ['version' => '20.11.0']],
-        ['DELETE', '/api/settings/node/versions/20.11.0', []],
+        ['PUT', '/api/node/default', ['default' => '20.11.0']],
+        ['POST', '/api/node/versions', ['version' => '20.11.0']],
+        ['DELETE', '/api/node/versions/20.11.0', []],
     ] as [$method, $uri, $body]) {
         $this->withHeader('Authorization', "Bearer {$token}")->json($method, $uri, $body)->assertForbidden();
     }
+});
+
+it('reads npm from each version own npm, not from whatever is on PATH', function () {
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+        $command = $process->command;
+
+        return match (true) {
+            str_contains(implode(' ', $command), 'fnm') && in_array('list', $command, true) => Process::result(
+                output: "* v20.11.0 default\n* v18.20.4\n"
+            ),
+            str_ends_with((string) ($command[0] ?? ''), '/npm') && in_array('-v', $command, true) => Process::result(
+                output: str_contains($command[0], 'v20.11.0') ? "10.2.4\n" : "9.8.1\n"
+            ),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    $versions = collect(app(NodeOverview::class)->read()['versions'])->keyBy('version');
+
+    // A global `npm -v` reports the default version's npm for every row —
+    // the same number next to every version, and wrong for all but one.
+    expect($versions['20.11.0']['npm_version'])->toBe('10.2.4')
+        ->and($versions['18.20.4']['npm_version'])->toBe('9.8.1');
+
+    $npmCalls = collect($runs)->filter(fn (array $c) => str_ends_with((string) ($c[0] ?? ''), '/npm'));
+    expect($npmCalls->every(fn (array $c) => str_starts_with($c[0], '/opt/fnm/')))->toBeTrue();
+});
+
+it('reports no npm version rather than a wrong one when it cannot be read', function () {
+    Process::fake(function ($process) {
+        $command = $process->command;
+
+        return match (true) {
+            str_contains(implode(' ', $command), 'fnm') && in_array('list', $command, true) => Process::result(output: "* v20.11.0 default\n"),
+            in_array('-v', $command, true) => Process::result(exitCode: 1),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    $versions = collect(app(NodeOverview::class)->read()['versions'])->keyBy('version');
+
+    expect($versions['20.11.0']['npm_version'])->toBeNull();
 });

@@ -2,7 +2,8 @@
 
 namespace App\Services\Server\Php;
 
-use App\Models\Application;
+use App\Services\Runtime\LifecycleCatalog;
+use App\Services\Runtime\PinnedSites;
 use App\Services\Server\Runtimes\PhpRuntime;
 
 /**
@@ -22,6 +23,8 @@ class PhpOverview
     public function __construct(
         private PhpRuntime $runtime,
         private PhpVersionManager $versions,
+        private PinnedSites $pinned,
+        private LifecycleCatalog $lifecycle,
     ) {}
 
     /**
@@ -29,25 +32,36 @@ class PhpOverview
      */
     public function read(): array
     {
-        $inUse = Application::query()
-            ->whereNotNull('php_version')
-            ->selectRaw('php_version, count(*) as total')
-            ->groupBy('php_version')
-            ->pluck('total', 'php_version');
+        $sites = $this->pinned->summary('php_version');
 
         return [
             'default' => $this->runtime->default(),
             'panel_version' => $this->runtime->panelVersion(),
-            'versions' => array_map(fn (array $version) => [
-                ...$version,
-                'in_use_by' => (int) ($inUse[$version['version']] ?? 0),
-                // The FPM unit stays on the Services screen — starting and
-                // stopping a daemon is the same job there as for nginx or
-                // redis. Named here so the two screens can link to each other.
-                'service' => "php{$version['version']}-fpm",
-                'ini_path' => $this->versions->iniPath($version['version']),
-            ], $this->runtime->versions()),
-            'installable' => $this->runtime->installable(),
+            'versions' => array_map(function (array $version) use ($sites) {
+                $pinned = $sites[$version['version']] ?? null;
+
+                return [
+                    ...$version,
+                    // Names, not just a count: "3 sites" does not tell you
+                    // whether removing this breaks staging or the shop.
+                    'in_use_by' => $pinned['count'] ?? 0,
+                    'sites' => $pinned['names'] ?? [],
+                    'sites_truncated' => $pinned['truncated'] ?? false,
+                    // PHP has no LTS — active support, then security-only.
+                    // There is deliberately no `lts` field here.
+                    'lifecycle' => $this->lifecycle->for('php', $version['version']),
+                    // The FPM unit stays on the Services screen — starting and
+                    // stopping a daemon is the same job there as for nginx or
+                    // redis. Named here so the two screens can link.
+                    'service' => "php{$version['version']}-fpm",
+                    'ini_path' => $this->versions->iniPath($version['version']),
+                ];
+            }, $this->runtime->versions()),
+            'installable' => array_map(fn (string $version) => [
+                'version' => $version,
+                'lifecycle' => $this->lifecycle->for('php', $version),
+            ], $this->runtime->installable()),
+            'lifecycle_available' => ! $this->lifecycle->isStale(),
         ];
     }
 }

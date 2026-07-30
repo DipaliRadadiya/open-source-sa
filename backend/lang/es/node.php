@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Node runtime messages.
+ * Node feature messages.
  */
 
 return [

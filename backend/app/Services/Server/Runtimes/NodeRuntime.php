@@ -224,6 +224,26 @@ class NodeRuntime implements Runtime
     }
 
     /**
+     * The npm bundled with one Node version.
+     *
+     * Read from that version's own npm, not from whatever `npm` is on PATH —
+     * which belongs to the default version and would report the wrong number
+     * for every other row. Null when it cannot be read, so the UI can say
+     * nothing rather than something false.
+     */
+    public function npmVersion(string $version): ?string
+    {
+        $result = $this->serverOps->run(
+            [dirname($this->binaryPath($version)).'/npm', '-v'],
+            ['feature' => 'runtime', 'op' => 'npm_version', 'version' => $version],
+        );
+
+        $npm = trim($result->output());
+
+        return $result->ok && $npm !== '' ? $npm : null;
+    }
+
+    /**
      * @param  array<int, string>  $args
      */
     private function fnm(array $args, int $timeout = 60): ServerOpsResult

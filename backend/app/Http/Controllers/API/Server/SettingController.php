@@ -5,18 +5,13 @@ namespace App\Http\Controllers\API\Server;
 use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Server\Runtime\InstallNodeVersionRequest;
-use App\Http\Requests\Server\Runtime\NodeDefaultRequest;
 use App\Http\Requests\Server\Setting\GeneralSettingsRequest;
 use App\Http\Requests\Server\Setting\RebootServerRequest;
 use App\Http\Requests\Server\Setting\RedisSettingsRequest;
 use App\Http\Requests\Server\Setting\SecuritySettingsRequest;
 use App\Http\Requests\Server\Setting\SwapSettingsRequest;
 use App\Http\Requests\Server\Setting\UpdateSettingsRequest;
-use App\Jobs\InstallNodeVersion;
-use App\Models\Application;
 use App\Services\ActivityLogger;
-use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\Settings\SettingsManager;
 use Illuminate\Foundation\Http\FormRequest;
@@ -55,92 +50,6 @@ class SettingController extends Controller
     public function updateRedis(RedisSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
     {
         return $this->save('redis', $request, $settings, $log);
-    }
-
-    /**
-     * Choose the version bare `node` resolves to.
-     *
-     * Only the symlinks move. A site that pinned a version keeps the absolute
-     * path already in its unit — changing the server default must not migrate
-     * a running site onto a different Node behind its back.
-     */
-    public function updateNode(NodeDefaultRequest $request, SettingsManager $settings, ActivityLogger $log, NodeRuntime $node): JsonResponse
-    {
-        $version = (string) $request->validated('default');
-
-        abort_unless($node->installed($version), 422, __('errors/runtime.not_installed', ['version' => $version]));
-
-        $group = $settings->find('node');
-        $group->apply($request->validated());
-
-        // Its own verb rather than a generic "settings updated": this
-        // re-points system-wide symlinks, which is not what saving a form
-        // usually means.
-        $log->log('runtime.node_default_changed', null, ['version' => $version]);
-
-        return response()->json(['node' => $group->read()]);
-    }
-
-    /**
-     * Install a Node version (manage). Queued: unpacking a runtime is far too
-     * slow to hold a request open for. `202 Accepted`.
-     */
-    public function installNodeVersion(InstallNodeVersionRequest $request, NodeRuntime $node, ActivityLogger $log): JsonResponse
-    {
-        $version = (string) $request->validated('version');
-
-        // Idempotent: asking for a version that is already here is a no-op
-        // rather than an error, since the outcome the caller wanted is true.
-        if ($node->installed($version)) {
-            return response()->json(['message' => __('runtime.already_installed', ['version' => $version])], 200);
-        }
-
-        InstallNodeVersion::dispatch($version);
-        $log->log('runtime.node_install_started', null, ['version' => $version]);
-
-        return response()->json(['message' => __('runtime.install_started', ['version' => $version])], 202);
-    }
-
-    /**
-     * Remove a Node version (manage).
-     *
-     * Refused while a site depends on it, or while it is the default: the
-     * failure would otherwise be a site that stops booting with no obvious
-     * cause.
-     */
-    public function destroyNodeVersion(string $version, NodeRuntime $node, ActivityLogger $log): JsonResponse
-    {
-        abort_unless($node->installed($version), 404);
-
-        $pinned = Application::query()->where('node_version', $version)->pluck('name');
-
-        if ($pinned->isNotEmpty()) {
-            return response()->json([
-                'message' => __('errors/runtime.version_in_use', ['version' => $version, 'apps' => $pinned->join(', ')]),
-            ], 422);
-        }
-
-        if ($node->default() === $version) {
-            return response()->json(['message' => __('errors/runtime.version_is_default')], 422);
-        }
-
-        $node->uninstall($version);
-        $log->log('runtime.node_uninstalled', null, ['version' => $version]);
-
-        return response()->json(null, 204);
-    }
-
-    /**
-     * Update npm inside one version (manage), using that version's own npm.
-     */
-    public function updateNodeNpm(string $version, NodeRuntime $node, ActivityLogger $log): JsonResponse
-    {
-        abort_unless($node->installed($version), 404);
-
-        $node->updateNpm($version);
-        $log->log('runtime.npm_updated', null, ['version' => $version]);
-
-        return response()->json(['message' => __('runtime.npm_updated', ['version' => $version])]);
     }
 
     /**
