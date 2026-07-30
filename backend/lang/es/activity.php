@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'Eliminó el usuario :username',
     'user.profile_updated' => 'Actualizó su perfil',
     'setting.updated' => 'Actualizó la configuración de :group',
+    'setting.reboot_schedule_updated' => 'Cambió la programación de reinicio automático',
     'node.install_started' => 'Inició la instalación de Node :version',
     'node.installed' => 'Instaló Node :version',
     'node.install_failed' => 'La instalación de Node :version falló',

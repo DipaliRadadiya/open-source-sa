@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'Usuário :username excluído',
     'user.profile_updated' => 'Atualizou seu perfil',
     'setting.updated' => 'Atualizou as configurações de :group',
+    'setting.reboot_schedule_updated' => 'Alterou o agendamento de reinício automático',
     'node.install_started' => 'Iniciou a instalação do Node :version',
     'node.installed' => 'Instalou o Node :version',
     'node.install_failed' => 'A instalação do Node :version falhou',

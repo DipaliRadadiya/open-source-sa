@@ -7,8 +7,8 @@ use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Models\FirewallRule;
 use App\Models\SshKey;
+use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
-use Illuminate\Support\Facades\File;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -24,6 +24,7 @@ class SecuritySettings implements SettingGroup
     public function __construct(
         private ServerOps $serverOps,
         private Firewall $firewall,
+        private ManagedFile $files,
     ) {}
 
     public function key(): string
@@ -72,7 +73,15 @@ class SecuritySettings implements SettingGroup
             ."PermitRootLogin {$rootLogin}\n"
             .'PasswordAuthentication '.($data['password_authentication'] ? 'yes' : 'no')."\n";
 
-        File::put(rtrim((string) config('server.sshd_config_dir'), '/').'/99-panel.conf', $config);
+        $write = $this->files->put(
+            rtrim((string) config('server.sshd_config_dir'), '/').'/99-panel.conf',
+            $config,
+            ['feature' => 'setting', 'group' => 'security'],
+        );
+
+        if ($write->failed()) {
+            throw new SettingOperationException($write->reference);
+        }
 
         // Refuse to reload on a bad config — the running SSH daemon stays up.
         $test = $this->serverOps->run(['sshd', '-t'], ['feature' => 'setting', 'group' => 'security', 'op' => 'test']);

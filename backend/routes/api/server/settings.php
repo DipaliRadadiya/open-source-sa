@@ -13,3 +13,9 @@ Route::post('/settings/reboot', [SettingController::class, 'reboot'])->middlewar
 Route::put('/settings/security', [SettingController::class, 'updateSecurity'])->middleware('permission:setting,manage');
 Route::put('/settings/updates', [SettingController::class, 'updateUpdates'])->middleware('permission:setting,manage');
 Route::put('/settings/redis', [SettingController::class, 'updateRedis'])->middleware('permission:setting,manage');
+
+// A plain scheduled reboot — daily, weekly or monthly, whether or not an
+// update asked for one. Separate from the `updates` group, which is
+// unattended-upgrades' reboot-when-required and has no frequency at all.
+Route::get('/settings/reboot-schedule/presets', [SettingController::class, 'rebootSchedulePresets'])->middleware('permission:setting');
+Route::put('/settings/reboot-schedule', [SettingController::class, 'updateRebootSchedule'])->middleware('permission:setting,manage');

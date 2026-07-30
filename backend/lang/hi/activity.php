@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'उपयोगकर्ता :username हटाया',
     'user.profile_updated' => 'अपनी प्रोफ़ाइल अपडेट की',
     'setting.updated' => ':group सेटिंग्स अपडेट कीं',
+    'setting.reboot_schedule_updated' => 'स्वचालित रीबूट शेड्यूल बदला',
     'node.install_started' => 'Node :version की स्थापना शुरू की',
     'node.installed' => 'Node :version स्थापित किया',
     'node.install_failed' => 'Node :version की स्थापना विफल रही',
