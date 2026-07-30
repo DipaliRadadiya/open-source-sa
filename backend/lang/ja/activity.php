@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'ユーザー :username を削除しました',
     'user.profile_updated' => 'プロフィールを更新しました',
     'setting.updated' => ':group の設定を更新しました',
+    'setting.reboot_schedule_updated' => '自動再起動のスケジュールを変更しました',
     'node.install_started' => 'Node :version のインストールを開始しました',
     'node.installed' => 'Node :version をインストールしました',
     'node.install_failed' => 'Node :version のインストールに失敗しました',

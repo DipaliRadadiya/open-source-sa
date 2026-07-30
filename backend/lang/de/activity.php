@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'Benutzer :username gelöscht',
     'user.profile_updated' => 'Profil aktualisiert',
     'setting.updated' => 'Einstellungen :group aktualisiert',
+    'setting.reboot_schedule_updated' => 'Zeitplan für automatischen Neustart geändert',
     'node.install_started' => 'Installation von Node :version gestartet',
     'node.installed' => 'Node :version installiert',
     'node.install_failed' => 'Installation von Node :version fehlgeschlagen',

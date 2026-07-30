@@ -39,6 +39,20 @@ function fakeSettings(): void
         $cmd = $process->command;
         $bin = $cmd[0] ?? '';
 
+        // Config writes go through ServerOps now rather than File::put, so
+        // the fake has to perform them — otherwise the file never appears
+        // and the assertions below would be checking nothing at all.
+        if ($bin === 'tee') {
+            File::put($cmd[1], (string) $process->input);
+
+            return Process::result(exitCode: 0);
+        }
+        if ($bin === 'rm') {
+            File::delete(end($cmd));
+
+            return Process::result(exitCode: 0);
+        }
+
         if ($bin === 'timedatectl' && ($cmd[1] ?? '') === 'show') {
             $value = str_contains(implode(' ', $cmd), 'NTP') ? 'yes' : 'Etc/UTC';
 

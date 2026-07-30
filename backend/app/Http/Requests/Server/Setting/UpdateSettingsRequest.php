@@ -21,6 +21,9 @@ class UpdateSettingsRequest extends FormRequest
             'auto_reboot' => ['required', 'boolean'],
             // "HH:MM" (24h) or the literal "now".
             'reboot_time' => ['required', 'string', 'regex:/^(now|([01]\d|2[0-3]):[0-5]\d)$/'],
+            // Upstream defaults to true — rebooting under a logged-in admin.
+            // Optional so an older client keeps working; absent means false.
+            'reboot_with_users' => ['sometimes', 'boolean'],
         ];
     }
 }

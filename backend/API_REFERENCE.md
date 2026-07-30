@@ -627,11 +627,32 @@ Requires the `setting` permission (`view` to read, `manage` to change). A server
 
 #### Redis
 
+**`GET /api/settings/reboot-schedule/presets`** (`view`) — options for the dropdowns, **localized**, so nothing is hardcoded client-side.
+```json
+{"frequencies": [{"value": "daily", "label": "Daily"}, …],
+ "hours": [{"value": 0, "label": "00:00"}, … 24 entries],
+ "days_of_week": [{"value": 0, "label": "Sunday"}, …]}
+```
+
+**`PUT /api/settings/reboot-schedule`** (`manage`) — a plain scheduled reboot, whether or not an update asked for one.
+- Body: `enabled` (bool), and when enabled `frequency` (`daily|weekly|monthly`), `hour` (0–23), plus `day_of_week` (0–6) for weekly or `day_of_month` (**1–28**) for monthly.
+- **There is no free-form cron expression, deliberately.** Every other scheduling surface in the panel takes one; this restarts the machine, and `* * * * *` is a reboot loop nobody can log in to stop.
+- **`day_of_month` caps at 28** so "monthly" happens twelve times a year — the 31st silently skips February and the short months.
+- The reboot is scheduled a few minutes past the hour, not on it: every `:00` cron job fires on the same tick, and a reboot landing on a running backup is a half-written archive. (ServerAvatar's docs advise the same buffer.)
+- Runs `shutdown -r +1`, not `reboot` — logged-in users get the wall message and services stop cleanly.
+- Disabling **removes** the cron file rather than commenting it out; a disabled schedule left in `/etc/cron.d` is one uncomment away from a surprise restart.
+- Read back in `GET /api/settings` as the **`reboot_schedule`** group: `{enabled, frequency, hour, day_of_week, day_of_month, timezone, next_run, next_run_human}`. It parses what is actually on disk, so a hand-edited file shows the truth.
+- **`timezone` is the server's own**, because that's what cron uses — the same timezone set two fields up in General. No hidden UTC conversion, which is how a 3am window fires at 8am. `next_run` is computed from the written expression, so there is nothing to guess.
+
+> **This is not the same as the `updates` auto-reboot.** That one is unattended-upgrades: it fires *only when a reboot is required* after a patch, and has no frequency at all. This one is a cadence, unconditional. Both exist because they answer different questions.
+
 **`PUT /api/settings/redis`** (`manage`) — `maxmemory` (`0` or `256mb`…), `maxmemory_policy` (enum), `password` (optional; only changed when provided). Via `redis-cli CONFIG SET` + `REWRITE`. `404` if redis isn't installed. The password is never returned — `read()` reports only `has_password`.
 
 > ⚠️ **Known issue.** Setting a Redis password does **not** update the panel's own `REDIS_PASSWORD`, so once cache/session/queue are on Redis this locks the panel out with `NOAUTH`. Don't wire this control up yet — the fix (write `.env`, verify with a fresh authenticated `PING`, roll back on failure) is queued ahead of the installer.
 
 **`PUT /api/settings/general`** (`manage`) — `timezone`, `hostname`, `ntp`. **Applies only the fields that changed**: the form submits all three every time and they don't share a privilege level, so running an untouched one can fail the whole request *after* an earlier one already took effect. Re-saving an unedited form performs no OS command and cannot fail. Timezone values come from **`GET /api/timezones`**.
+
+**`PUT /api/settings/updates`** also takes **`reboot_with_users`** (bool, optional). unattended-upgrades defaults this to *true*, which restarts the box under an administrator mid-SSH-session; omitting it here means **false**, so the surprising behaviour has to be chosen deliberately.
 
 Each write returns `{ <group>: {…refreshed values…} }`, writes a `setting.updated` activity entry (`group` property), and returns `500 {message, reference}` on OS-command failure.
 

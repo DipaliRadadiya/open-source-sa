@@ -4,7 +4,9 @@ namespace App\Services\Server\Settings;
 
 use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
+use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use App\Services\Server\ServerOpsResult;
 use App\Support\Bytes;
 use Illuminate\Support\Facades\File;
 
@@ -17,7 +19,10 @@ use Illuminate\Support\Facades\File;
  */
 class SwapSettings implements SettingGroup
 {
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private ManagedFile $files,
+    ) {}
 
     public function key(): string
     {
@@ -87,7 +92,7 @@ class SwapSettings implements SettingGroup
         $this->removeFstab($file);
 
         if (is_file($file)) {
-            @unlink($file);
+            $this->files->delete($file, ['feature' => 'setting', 'group' => 'swap']);
         }
     }
 
@@ -137,7 +142,7 @@ class SwapSettings implements SettingGroup
             return; // already mounted at boot — leave it be
         }
 
-        File::put($path, rtrim($contents, "\n")."\n{$file} none swap sw 0 0\n");
+        $this->must($this->files->put($path, rtrim($contents, "\n")."\n{$file} none swap sw 0 0\n", ['feature' => 'setting', 'group' => 'swap']));
     }
 
     private function removeFstab(string $file): void
@@ -152,7 +157,7 @@ class SwapSettings implements SettingGroup
             fn (string $line) => $line !== '' && ! str_contains($line, $file.' '),
         );
 
-        File::put($path, $kept === [] ? '' : implode("\n", $kept)."\n");
+        $this->must($this->files->put($path, $kept === [] ? '' : implode("\n", $kept)."\n", ['feature' => 'setting', 'group' => 'swap']));
     }
 
     /**
@@ -163,6 +168,13 @@ class SwapSettings implements SettingGroup
         $result = $this->serverOps->run($command, ['feature' => 'setting', 'group' => 'swap', 'op' => 'apply']);
 
         if (! $allowFailure && $result->failed()) {
+            throw new SettingOperationException($result->reference);
+        }
+    }
+
+    private function must(ServerOpsResult $result): void
+    {
+        if ($result->failed()) {
             throw new SettingOperationException($result->reference);
         }
     }

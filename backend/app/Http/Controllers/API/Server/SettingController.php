@@ -6,6 +6,7 @@ use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Setting\GeneralSettingsRequest;
+use App\Http\Requests\Server\Setting\RebootScheduleRequest;
 use App\Http\Requests\Server\Setting\RebootServerRequest;
 use App\Http\Requests\Server\Setting\RedisSettingsRequest;
 use App\Http\Requests\Server\Setting\SecuritySettingsRequest;
@@ -13,6 +14,7 @@ use App\Http\Requests\Server\Setting\SwapSettingsRequest;
 use App\Http\Requests\Server\Setting\UpdateSettingsRequest;
 use App\Services\ActivityLogger;
 use App\Services\Server\ServerOps;
+use App\Services\Server\Settings\RebootScheduleSettings;
 use App\Services\Server\Settings\SettingsManager;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
@@ -50,6 +52,51 @@ class SettingController extends Controller
     public function updateRedis(RedisSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
     {
         return $this->save('redis', $request, $settings, $log);
+    }
+
+    /**
+     * The frequencies the reboot schedule accepts, with localized labels.
+     *
+     * Served rather than hardcoded in the frontend, same as the cronjob
+     * schedule presets — and it is a closed list on purpose: this restarts
+     * the machine, so there is no free-form cron expression to get wrong.
+     */
+    public function rebootSchedulePresets(): JsonResponse
+    {
+        return response()->json([
+            'frequencies' => array_map(fn (string $frequency) => [
+                'value' => $frequency,
+                'label' => __("setting.reboot_schedule.frequency.{$frequency}"),
+            ], RebootScheduleSettings::FREQUENCIES),
+            // 0–23 in the server's own timezone, which is what cron uses.
+            'hours' => array_map(fn (int $hour) => [
+                'value' => $hour,
+                'label' => sprintf('%02d:00', $hour),
+            ], range(0, 23)),
+            'days_of_week' => array_map(fn (int $day) => [
+                'value' => $day,
+                'label' => __("setting.reboot_schedule.day.{$day}"),
+            ], range(0, 6)),
+        ]);
+    }
+
+    public function updateRebootSchedule(RebootScheduleRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
+    {
+        $group = $settings->find('reboot_schedule');
+        $group->apply($request->validated());
+
+        $values = $group->read();
+
+        // Its own verb rather than a generic "settings updated": this arranges
+        // for the server to restart on its own, which is not what saving a
+        // form usually means.
+        $log->log('setting.reboot_schedule_updated', null, [
+            'enabled' => $values['enabled'] ? 'yes' : 'no',
+            'frequency' => $values['frequency'],
+            'hour' => sprintf('%02d:00', $values['hour']),
+        ]);
+
+        return response()->json(['reboot_schedule' => $values]);
     }
 
     /**

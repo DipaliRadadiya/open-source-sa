@@ -598,6 +598,17 @@ return [
     |
     */
 
+    // A plain scheduled reboot, separate from unattended-upgrades' reboot
+    // after a required update.
+    'reboot_schedule' => [
+        'file' => env('SERVER_REBOOT_SCHEDULE_FILE', 'panel-reboot'),
+        'default_hour' => (int) env('SERVER_REBOOT_SCHEDULE_HOUR', 3),
+        // Not on the hour. Cron fires every :00 job on the same tick, and a
+        // reboot landing on top of a backup is how you get a half-written
+        // archive. ServerAvatar's docs advise the same buffer.
+        'minute' => (int) env('SERVER_REBOOT_SCHEDULE_MINUTE', 10),
+    ],
+
     'runtimes' => [
         'node' => [
             'binary' => env('SERVER_FNM_BINARY', '/usr/local/bin/fnm'),

@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'Удалён пользователь :username',
     'user.profile_updated' => 'Обновил свой профиль',
     'setting.updated' => 'Обновил настройки :group',
+    'setting.reboot_schedule_updated' => 'Изменил расписание автоматической перезагрузки',
     'node.install_started' => 'Начал установку Node :version',
     'node.installed' => 'Установил Node :version',
     'node.install_failed' => 'Не удалось установить Node :version',

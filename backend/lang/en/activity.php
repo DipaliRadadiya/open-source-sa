@@ -14,6 +14,7 @@ return [
     'user.deleted' => 'Deleted user :username',
     'user.profile_updated' => 'Updated their profile',
     'setting.updated' => 'Updated :group settings',
+    'setting.reboot_schedule_updated' => 'Changed the automatic reboot schedule',
     'node.install_started' => 'Started installing Node :version',
     'node.installed' => 'Installed Node :version',
     'node.install_failed' => 'Node :version installation failed',
