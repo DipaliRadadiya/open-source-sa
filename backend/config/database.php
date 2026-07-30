@@ -38,9 +38,29 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
+            /*
+             * SQLite defaults to the rollback journal, where a writer takes
+             * an exclusive lock on the whole file and readers block writers.
+             * Every API request writes — the rate limiter alone bumps a
+             * counter in the cache table — so two concurrent requests are
+             * enough to produce "database is locked", and the frontend fires
+             * several on every page load.
+             *
+             * The busy timeout does not rescue that on its own: SQLite
+             * returns BUSY immediately, without invoking the busy handler,
+             * when waiting would deadlock — which is exactly the shape of a
+             * request that reads and then writes while another holds a
+             * shared lock. WAL removes the deadlock by letting readers and
+             * one writer proceed together, which is also what makes the
+             * timeout meaningful for the contention that remains.
+             *
+             * NORMAL synchronous is the documented safe pairing with WAL: it
+             * can lose the last transactions to a power cut, but never
+             * corrupts the database.
+             */
+            'busy_timeout' => env('DB_BUSY_TIMEOUT', 5000),
+            'journal_mode' => env('DB_JOURNAL_MODE', 'WAL'),
+            'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL'),
             'transaction_mode' => 'DEFERRED',
         ],
 
