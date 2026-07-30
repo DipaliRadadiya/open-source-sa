@@ -37,11 +37,11 @@ class InstallPhpExtension implements ShouldBeUnique, ShouldQueue
         try {
             $extensions->install($this->version, $this->extension);
         } catch (Throwable $e) {
-            $log->log('runtime.php_extension_install_failed', null, $properties);
+            $log->log('php.extension_install_failed', null, $properties);
 
             throw $e;
         }
 
-        $log->log('runtime.php_extension_enabled', null, $properties);
+        $log->log('php.extension_enabled', null, $properties);
     }
 }

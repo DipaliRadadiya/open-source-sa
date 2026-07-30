@@ -1,8 +1,16 @@
 <?php
 
+/*
+ * PHP feature errors. Split from errors/runtime.php when PHP became its own
+ * feature: the shared keys carried a :runtime placeholder so Node and PHP
+ * could share a sentence, which is a coupling neither needed.
+ */
+
 return [
-    'unknown_version' => 'PHP :version не установлен на этом сервере.',
-    'unreadable' => 'Не удалось прочитать конфигурацию PHP :version.',
-    'invalid_ini' => 'PHP отклонил эту конфигурацию, предыдущая восстановлена. Перезагрузка не выполнялась.',
-    'operation_failed' => 'Не удалось обновить конфигурацию PHP :version.',
+    'not_installed' => 'PHP :version не установлен.',
+    'version_in_use' => 'PHP :version используется: :apps. Сначала измените эти сайты.',
+    'version_is_default' => 'Это версия по умолчанию. Сначала выберите другую.',
+    'version_runs_panel' => 'Удаление PHP :version отключит панель — именно на этой версии она работает.',
+    'extension_builtin' => 'Расширение :extension встроено в PHP и не может быть отключено.',
+    'extension_runs_panel' => 'Отключение :extension остановит панель — ей нужны :modules.',
 ];

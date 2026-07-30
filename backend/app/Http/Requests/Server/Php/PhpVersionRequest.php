@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Server\Runtime;
+namespace App\Http\Requests\Server\Php;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -8,7 +8,7 @@ class PhpVersionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (bool) $this->user()?->canManage('setting');
+        return (bool) $this->user()?->canManage('php');
     }
 
     /**

@@ -37,16 +37,20 @@ class PermissionCatalog
             ['name' => 'fail2ban', 'title' => 'Fail2ban', 'icon' => 'ban', 'url' => '/fail2ban', 'order' => 7],
             ['name' => 'logs', 'title' => 'Logs', 'icon' => 'file-text', 'url' => '/logs', 'order' => 8],
             ['name' => 'service', 'title' => 'Service', 'icon' => 'settings-2', 'url' => '/services', 'order' => 9],
-            ['name' => 'setting', 'title' => 'Setting', 'icon' => 'settings', 'url' => '/settings', 'order' => 10],
-            ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 11],
-            ['name' => 'activity_log', 'title' => 'Activity Log', 'icon' => 'history', 'url' => '/activity-log', 'order' => 12],
+            // PHP is its own feature, not a corner of Settings. Sharing the
+            // `setting` permission meant "can change the PHP version" also
+            // meant "can reboot the server and move the SSH port".
+            ['name' => 'php', 'title' => 'PHP', 'icon' => 'file-code', 'url' => '/php', 'order' => 10],
+            ['name' => 'setting', 'title' => 'Setting', 'icon' => 'settings', 'url' => '/settings', 'order' => 11],
+            ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 12],
+            ['name' => 'activity_log', 'title' => 'Activity Log', 'icon' => 'history', 'url' => '/activity-log', 'order' => 13],
 
             // Integrations — externally-connected accounts/credentials the
             // features consume (git accounts for app deploys, storage
             // destinations for backups). Same `server` level, grouped under
             // their own sub-level so the sidebar renders them as a section.
-            ['name' => 'git', 'title' => 'Git', 'icon' => 'git-branch', 'url' => '/integrations/git', 'order' => 13, 'sub_level' => 'integration'],
-            ['name' => 'storage', 'title' => 'Storage', 'icon' => 'hard-drive', 'url' => '/integrations/storage', 'order' => 14, 'sub_level' => 'integration'],
+            ['name' => 'git', 'title' => 'Git', 'icon' => 'git-branch', 'url' => '/integrations/git', 'order' => 14, 'sub_level' => 'integration'],
+            ['name' => 'storage', 'title' => 'Storage', 'icon' => 'hard-drive', 'url' => '/integrations/storage', 'order' => 15, 'sub_level' => 'integration'],
         ];
     }
 

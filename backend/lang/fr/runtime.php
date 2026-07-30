@@ -1,8 +1,11 @@
 <?php
 
+/*
+ * Node runtime messages.
+ */
+
 return [
-    'install_started' => 'Installation de :runtime :version. Cela prend quelques minutes.',
-    'already_installed' => ':runtime :version est déjà installé.',
+    'install_started' => 'Installation de Node :version. Cela prend quelques minutes.',
+    'already_installed' => 'Node :version est déjà installé.',
     'npm_updated' => 'npm mis à jour pour Node :version.',
-    'extension_install_started' => 'Installation de :extension. Elle apparaîtra une fois apt terminé.',
 ];

@@ -10,6 +10,7 @@ return [
     'fail2ban' => 'Fail2ban',
     'logs' => 'Protokolle',
     'service' => 'Dienst',
+    'php' => 'PHP',
     'setting' => 'Einstellungen',
     'disk_cleaner' => 'Datenträgerbereinigung',
     'activity_log' => 'Aktivitätsprotokoll',

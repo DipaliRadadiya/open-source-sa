@@ -56,7 +56,7 @@ function fakePhp(string $default = '8.4'): ArrayObject
 function phpSettings(): array
 {
     return test()->withHeader('Authorization', 'Bearer '.test()->token)
-        ->getJson('/api/settings')->json('settings.php');
+        ->getJson('/api/php')->json('php');
 }
 
 function phpCall(string $method, string $uri, array $body = []): TestResponse
@@ -69,8 +69,7 @@ it('reads the default from update-alternatives, which is what owns /usr/bin/php'
 
     // Managing that symlink by hand would fight the package manager on its
     // own ground; update-alternatives is the supported mechanism.
-    expect(phpSettings()['default'])->toBe('8.3')
-        ->and(phpSettings()['manager'])->toBe('apt');
+    expect(phpSettings()['default'])->toBe('8.3');
 });
 
 it('lists installed versions from the same place the Services screen reads', function () {
@@ -107,7 +106,7 @@ it('refuses to remove the version the panel is running on', function () {
 
     // This is the one that would take the panel offline from inside the
     // panel, with no way back in to undo it.
-    phpCall('DELETE', "/api/settings/php/versions/{$panel}")
+    phpCall('DELETE', "/api/php/versions/{$panel}")
         ->assertUnprocessable()
         ->assertJsonFragment(['message' => "Removing PHP {$panel} would take the panel offline — it is the version the panel itself runs on."]);
 });
@@ -122,7 +121,7 @@ it('refuses to remove a version a site is pinned to, naming the site', function 
         'status' => 'pending', 'php_version' => '8.3',
     ]);
 
-    phpCall('DELETE', '/api/settings/php/versions/8.3')
+    phpCall('DELETE', '/api/php/versions/8.3')
         ->assertUnprocessable()
         ->assertJsonFragment(['message' => 'PHP 8.3 is used by Legacy shop. Change those sites first.']);
 });
@@ -130,7 +129,7 @@ it('refuses to remove a version a site is pinned to, naming the site', function 
 it('removes a version nothing depends on', function () {
     $runs = fakePhp(default: '8.4');
 
-    phpCall('DELETE', '/api/settings/php/versions/8.3')->assertNoContent();
+    phpCall('DELETE', '/api/php/versions/8.3')->assertNoContent();
 
     expect(collect($runs)->pluck('command'))->toContain(['apt-get', 'purge', '-y', 'php8.3-*']);
 });
@@ -166,7 +165,7 @@ it('queues the install, once per version', function () {
     Queue::fake();
     fakePhp();
 
-    phpCall('POST', '/api/settings/php/versions', ['version' => '8.2'])->assertStatus(202);
+    phpCall('POST', '/api/php/versions', ['version' => '8.2'])->assertStatus(202);
 
     // apt takes a lock; a second run for the same version would sit waiting
     // for the first and then repeat its work.
@@ -178,7 +177,7 @@ it('treats installing a version that is already here as done', function () {
     Queue::fake();
     fakePhp();
 
-    phpCall('POST', '/api/settings/php/versions', ['version' => '8.4'])->assertOk();
+    phpCall('POST', '/api/php/versions', ['version' => '8.4'])->assertOk();
     Queue::assertNothingPushed();
 });
 
@@ -187,7 +186,7 @@ it('rejects a version that is not major.minor', function () {
 
     // It becomes a package name and a path.
     foreach (['8', '8.4.1', '8.4; rm -rf /'] as $bad) {
-        phpCall('POST', '/api/settings/php/versions', ['version' => $bad])
+        phpCall('POST', '/api/php/versions', ['version' => $bad])
             ->assertUnprocessable()->assertJsonValidationErrors('version');
     }
 });
@@ -195,7 +194,7 @@ it('rejects a version that is not major.minor', function () {
 it('changes the default through update-alternatives', function () {
     $runs = fakePhp(default: '8.4');
 
-    phpCall('PUT', '/api/settings/php', ['default' => '8.3'])->assertOk();
+    phpCall('PUT', '/api/php/default', ['default' => '8.3'])->assertOk();
 
     expect(collect($runs)->pluck('command'))
         ->toContain(['update-alternatives', '--set', 'php', '/usr/bin/php8.3']);
@@ -204,21 +203,21 @@ it('changes the default through update-alternatives', function () {
 it('refuses a default that is not installed', function () {
     fakePhp();
 
-    phpCall('PUT', '/api/settings/php', ['default' => '8.1'])->assertUnprocessable();
+    phpCall('PUT', '/api/php/default', ['default' => '8.1'])->assertUnprocessable();
 });
 
 it('denies every mutation to a view-only user', function () {
     fakePhp();
     $user = User::factory()->create();
-    grantPermission($user, 'setting', view: true, manage: false);
+    grantPermission($user, 'php', view: true, manage: false);
     $token = $user->createToken('t')->plainTextToken;
 
-    $this->withHeader('Authorization', "Bearer {$token}")->getJson('/api/settings')->assertOk();
+    $this->withHeader('Authorization', "Bearer {$token}")->getJson('/api/php')->assertOk();
 
     foreach ([
-        ['PUT', '/api/settings/php', ['default' => '8.3']],
-        ['POST', '/api/settings/php/versions', ['version' => '8.2']],
-        ['DELETE', '/api/settings/php/versions/8.3', []],
+        ['PUT', '/api/php/default', ['default' => '8.3']],
+        ['POST', '/api/php/versions', ['version' => '8.2']],
+        ['DELETE', '/api/php/versions/8.3', []],
     ] as [$method, $uri, $body]) {
         $this->withHeader('Authorization', "Bearer {$token}")->json($method, $uri, $body)->assertForbidden();
     }

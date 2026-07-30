@@ -10,6 +10,7 @@ return [
     'fail2ban' => 'Fail2ban',
     'logs' => 'लॉग',
     'service' => 'सेवा',
+    'php' => 'PHP',
     'setting' => 'सेटिंग',
     'disk_cleaner' => 'डिस्क क्लीनर',
     'activity_log' => 'गतिविधि लॉग',

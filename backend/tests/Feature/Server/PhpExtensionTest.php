@@ -110,7 +110,7 @@ function extCall(string $method, string $uri, array $body = []): TestResponse
 
 function catalogFor(string $version): Collection
 {
-    return collect(extCall('GET', "/api/settings/php/versions/{$version}/extensions")->json('extensions'))
+    return collect(extCall('GET', "/api/php/versions/{$version}/extensions")->json('extensions'))
         ->keyBy('name');
 }
 
@@ -171,14 +171,14 @@ it('lists compiled-in extensions without a control', function () {
 it('refuses to turn off a compiled-in extension', function () {
     fakeExtensions();
 
-    extCall('PUT', "/api/settings/php/versions/{$this->panel}/extensions/json", ['enabled' => false])
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/json", ['enabled' => false])
         ->assertUnprocessable();
 });
 
 it('reloads fpm after a toggle, because phpenmod does not', function () {
     $runs = fakeExtensions();
 
-    extCall('PUT', "/api/settings/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])
         ->assertOk();
 
     $commands = collect($runs);
@@ -192,7 +192,7 @@ it('reloads fpm after a toggle, because phpenmod does not', function () {
 it('toggles every SAPI at once', function () {
     $runs = fakeExtensions();
 
-    extCall('PUT', "/api/settings/php/versions/{$this->panel}/extensions/redis", ['enabled' => true])
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => true])
         ->assertOk();
 
     // cli and fpm diverging means a site that works in a browser and fails in
@@ -204,7 +204,7 @@ it('queues an install when enabling something not on the box yet', function () {
     Queue::fake();
     fakeExtensions();
 
-    extCall('PUT', "/api/settings/php/versions/{$this->panel}/extensions/xdebug", ['enabled' => true])
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/xdebug", ['enabled' => true])
         ->assertStatus(202);
 
     Queue::assertPushed(InstallPhpExtension::class, 1);
@@ -216,7 +216,7 @@ it('refuses to disable an extension the panel runs on', function () {
 
     // curl is in panel_required. Disabling it under the panel means the
     // request to turn it back on never gets answered.
-    extCall('PUT', "/api/settings/php/versions/{$this->panel}/extensions/curl", ['enabled' => false])
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/curl", ['enabled' => false])
         ->assertUnprocessable()
         ->assertJsonFragment(['message' => 'Turning curl off would take the panel offline — it needs curl.']);
 });
@@ -224,7 +224,7 @@ it('refuses to disable an extension the panel runs on', function () {
 it('allows disabling that same extension on a version the panel does not use', function () {
     $runs = fakeExtensions();
 
-    extCall('PUT', "/api/settings/php/versions/{$this->other}/extensions/curl", ['enabled' => false])
+    extCall('PUT', "/api/php/versions/{$this->other}/extensions/curl", ['enabled' => false])
         ->assertOk();
 
     expect(collect($runs))->toContain(['/usr/sbin/phpdismod', '-v', $this->other, '-s', 'ALL', 'curl']);
@@ -236,7 +236,7 @@ it('refuses an extension this server does not offer', function () {
     // The name becomes an apt package name and a path, so a pattern is not
     // enough — it has to be something apt actually lists.
     foreach (['nosuchext', 'redis;rm -rf /', '../../etc/passwd'] as $name) {
-        extCall('PUT', "/api/settings/php/versions/{$this->panel}/extensions/".urlencode($name), ['enabled' => true])
+        extCall('PUT', "/api/php/versions/{$this->panel}/extensions/".urlencode($name), ['enabled' => true])
             ->assertNotFound();
     }
 });
@@ -244,14 +244,14 @@ it('refuses an extension this server does not offer', function () {
 it('404s for a version that is not installed', function () {
     fakeExtensions();
 
-    extCall('GET', '/api/settings/php/versions/5.6/extensions')->assertNotFound();
-    extCall('PUT', '/api/settings/php/versions/5.6/extensions/redis', ['enabled' => true])->assertNotFound();
+    extCall('GET', '/api/php/versions/5.6/extensions')->assertNotFound();
+    extCall('PUT', '/api/php/versions/5.6/extensions/redis', ['enabled' => true])->assertNotFound();
 });
 
 it('never purges a package', function () {
     $runs = fakeExtensions();
 
-    extCall('PUT', "/api/settings/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])->assertOk();
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])->assertOk();
 
     // Disabling unlinks and stops. `apt purge php8.4-*` is how a server loses
     // php8.4-common and every site with it.
@@ -271,14 +271,14 @@ it('installs with --no-install-recommends and no prompt', function () {
 it('lets a view-only user read the catalog but not change it', function () {
     fakeExtensions();
     $user = User::factory()->create();
-    grantPermission($user, 'setting', view: true, manage: false);
+    grantPermission($user, 'php', view: true, manage: false);
     $token = $user->createToken('t')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->getJson("/api/settings/php/versions/{$this->panel}/extensions")->assertOk();
+        ->getJson("/api/php/versions/{$this->panel}/extensions")->assertOk();
 
     $this->withHeader('Authorization', "Bearer {$token}")
-        ->putJson("/api/settings/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])
+        ->putJson("/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])
         ->assertForbidden();
 });
 
