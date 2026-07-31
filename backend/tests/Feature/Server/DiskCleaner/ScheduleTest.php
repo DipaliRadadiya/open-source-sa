@@ -54,7 +54,6 @@ it('saves the schedule and logs the change', function () {
             'frequency' => 'daily',
             'categories' => ['service_logs'],
             'threshold_percent' => 80,
-            'notify' => true,
         ])
         ->assertOk()
         ->assertJsonPath('schedule.enabled', true)

@@ -17,7 +17,6 @@ return new class extends Migration
             $table->json('categories')->nullable();
             // Clean only when disk usage is at/above this % (null = always when due).
             $table->unsignedTinyInteger('threshold_percent')->nullable();
-            $table->boolean('notify')->default(false);
             // Last time a scheduled run actually executed (drives the due check).
             $table->timestamp('last_run_at')->nullable();
             $table->timestamps();

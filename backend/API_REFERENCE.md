@@ -618,10 +618,11 @@ Requires the `disk_cleaner` permission (`view` to preview, `manage` to clean). *
 #### Automatic cleaner (schedule) — Phase 2
 The schedule is a **DB profile** (single source of truth) run by the **Laravel scheduler** — there is **no cron file**, so it can never drift with the Cronjobs feature. Managed entirely here (not on the Cronjobs page).
 
-**`GET /api/disk-cleaner/schedule`** — the profile (defaults when none set). `{ schedule: {enabled, frequency, categories, threshold_percent, notify, last_run_at, last_run_at_human} }`.
+**`GET /api/disk-cleaner/schedule`** — the profile (defaults when none set). `{ schedule: {enabled, frequency, categories, threshold_percent, last_run_at, last_run_at_human} }`.
 
 **`PUT /api/disk-cleaner/schedule`** (`manage`) — create/update the profile.
-- Body: `enabled` (bool), `frequency` (`hourly｜daily｜weekly｜monthly`), `categories` (array of **safe** category keys), `threshold_percent` (1–100 or null = always), `notify` (bool).
+- Body: `enabled` (bool), `frequency` (`hourly｜daily｜weekly｜monthly`), `categories` (array of **safe** category keys), `threshold_percent` (1–100 or null = always).
+- **`notify` is gone** (removed 2026-07-31). It was stored and echoed back but nothing ever read it — there is no notification or mail layer in the panel, and no email address to send to, since accounts are username-only. Render no toggle for it; a scheduled run records `disk_cleaner.cleaned` in the activity log, which is where "what did the cleaner do" is answered today.
 - Runs unattended **safe-only** categories, **only when due AND** (if set) disk usage ≥ `threshold_percent`. Edit/disable takes effect on the next tick.
 - Response `200`: `{ schedule: {…} }`. Writes `disk_cleaner.schedule_updated`.
 

@@ -33,7 +33,6 @@ class UpdateScheduleRequest extends FormRequest
             'categories' => ['required', 'array', 'min:1'],
             'categories.*' => [Rule::in($safe)],
             'threshold_percent' => ['nullable', 'integer', 'min:1', 'max:100'],
-            'notify' => ['sometimes', 'boolean'],
         ];
     }
 }
