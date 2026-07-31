@@ -67,7 +67,7 @@ class NodeBbInstaller extends AbstractNodeInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
 
@@ -95,8 +95,6 @@ class NodeBbInstaller extends AbstractNodeInstaller
         // Setup rewrote config.json. Put ours back, or the site loses the URL
         // and port the panel gave it and starts answering on 4567.
         $this->writeSecretFile($application, "{$documentRoot}/config.json", $config);
-
-        return ['download', 'extract', 'configure', 'install_app'];
     }
 
     /**

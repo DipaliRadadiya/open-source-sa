@@ -34,17 +34,14 @@ class NextcloudInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
-        $steps = [];
 
         $this->downloadAndExtract(
             $application,
             (string) config('server.installers.nextcloud.download_url'),
             $documentRoot,
         );
-        $steps[] = 'download';
-        $steps[] = 'extract';
 
         $dataDir = dirname($documentRoot).'/nextcloud-data';
         $this->run('configure', ['mkdir', '-p', $dataDir], $application);
@@ -54,7 +51,6 @@ class NextcloudInstaller extends AbstractPhpInstaller
         // Upstream's hardening guidance: nobody but the site user has any
         // business reading what users have uploaded.
         $this->run('configure', ['chmod', '0750', $dataDir], $application);
-        $steps[] = 'configure';
 
         $php = $this->phpBinary($application);
 
@@ -70,7 +66,6 @@ class NextcloudInstaller extends AbstractPhpInstaller
             '--admin-email', (string) ($application->settings['admin_email'] ?? ''),
             '--data-dir', $dataDir,
         ], $context['db_password']."\n".($application->settings['admin_password'] ?? '')."\n", $documentRoot);
-        $steps[] = 'install_app';
 
         // Installed from the command line, Nextcloud has no request to learn
         // the hostname from, so it trusts only localhost. Without this the
@@ -86,8 +81,5 @@ class NextcloudInstaller extends AbstractPhpInstaller
             $php, 'occ', 'config:system:set', 'overwrite.cli.url',
             '--value=https://'.$application->domain,
         ], null, $documentRoot);
-        $steps[] = 'trust_domain';
-
-        return $steps;
     }
 }

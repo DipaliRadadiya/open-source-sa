@@ -43,14 +43,11 @@ class JoomlaInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
-        $steps = [];
 
         $this->downloadAndExtract($application, null, $documentRoot);
-        $steps[] = 'download';
-        $steps[] = 'extract';
 
         // Every option except the two passwords is given here. Joomla prompts
         // for whatever it wasn't told, and prompting is the only way to get a
@@ -82,9 +79,6 @@ class JoomlaInstaller extends AbstractPhpInstaller
             ($settings['admin_password'] ?? '')."\n".$context['db_password']."\n",
             $documentRoot,
         );
-        $steps[] = 'install_app';
-
-        return $steps;
     }
 
     /**

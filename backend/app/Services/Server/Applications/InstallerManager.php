@@ -24,7 +24,22 @@ class InstallerManager
     public function __construct(
         private CreateDatabase $createDatabase,
         private DatabaseManager $databases,
+        private ProvisionProgress $progress,
     ) {}
+
+    /**
+     * Whether a site type installs anything, **without building the installer**.
+     *
+     * `installerForType()` resolves the class, and a PHP installer asks the
+     * container for the `PhpStack` — which on a server with no capability
+     * record yet shells out to detect one. That is fine inside a queued job and
+     * wrong in an HTTP request that only wants to know whether an installer
+     * exists.
+     */
+    public function hasInstaller(string $siteType): bool
+    {
+        return config("server.installers.{$siteType}.driver") !== null;
+    }
 
     public function installerFor(Application $application): ?SiteInstaller
     {
@@ -43,16 +58,18 @@ class InstallerManager
     }
 
     /**
-     * @return array<int, string> steps completed (empty when nothing to install)
+     * Steps are reported to {@see ProvisionProgress} as they complete rather
+     * than returned, so a site the user is watching install shows progress
+     * while it happens.
      *
      * @throws ProvisioningFailedException
      */
-    public function install(Application $application, string $documentRoot): array
+    public function install(Application $application, string $documentRoot): void
     {
         $installer = $this->installerFor($application);
 
         if ($installer === null) {
-            return [];
+            return;
         }
 
         $context = [];
@@ -61,7 +78,7 @@ class InstallerManager
             $context = $this->provisionDatabase($application, $installer->acceptedEngines());
         }
 
-        return $installer->install($application, $documentRoot, $context);
+        $installer->install($application, $documentRoot, $context);
     }
 
     /**
@@ -111,6 +128,11 @@ class InstallerManager
         // config pointing at a port nothing is on — and the failure surfaces
         // as the application's own "cannot connect to database", not as ours.
         $connection = $this->databases->connection($engine);
+
+        // `create_database` was in the documented step list and was never
+        // actually emitted — the only step the frontend was told to expect that
+        // could not appear.
+        $this->progress->record('create_database');
 
         return [
             'database' => $database->name,

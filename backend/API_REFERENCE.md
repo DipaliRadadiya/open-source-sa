@@ -893,8 +893,10 @@ One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moo
 | `active` | serving | the domain loads |
 | `failed` | stopped at `failed_step` | show the step + a **Retry** button |
 
-- `steps` — the steps completed in order. Provisioning: `create_directory`, `set_ownership`, `placeholder`, `write_config`, `test_config`, `reload`. **One-click apps then continue:** `create_database`, `download`, `extract`, `configure`, `install_cli` (only when the setup tool is missing), `install_app`. Deploy: `clone` (or `fetch` + `checkout`), `set_ownership`, `build`. Localized labels are in the `application.steps.*` translations.
-- `failed_step` — which one broke (`worker` means the background process itself died).
+- `steps` — the steps completed in order, **written as each one finishes**, so polling this while `status` is `provisioning` shows real progress. Provisioning: `create_directory`, `set_ownership`, `placeholder`, `write_config`, `test_config`, `reload`. **One-click apps then continue:** `create_database` (only when the app needs a database), `download`, `extract`, `configure`, `install_cli` (only when the setup tool is missing), `install_app`, plus a few app-specific ones (`harden`, `trust_domain`, `set_password`, `install_cache`). **Apps that run a process end with** `start_app`, or `write_unit` for a git app whose code has not arrived yet. Deploy: `clone` (or `fetch` + `checkout`), `set_ownership`, `build`, `restart_app`. Localized labels are in the `application.steps.*` translations.
+  - Do not treat the list as fixed: a step only appears if it ran, the exact set depends on the site type, and **a new step can be added by a future release**. Render the ones you know and skip the ones you don't — the last entry is where it currently is.
+  - **A failure keeps what it got through.** `steps` is what completed, `failed_step` is what broke; a retry starts the list again from empty.
+- `failed_step` — which one broke (`worker` means the background process itself died — the job was killed or the worker was, rather than a step returning an error).
 - `reference` — quote this to support. **The raw server error is deliberately not in the response**; it's in the server-ops log under this id.
 
 **The config is always tested before any reload, and a failed test removes the config we just wrote.** A broken vhost that reached a reload would take every other site on the server down — so one site's bad config can never cost the whole box.

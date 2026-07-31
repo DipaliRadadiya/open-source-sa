@@ -27,6 +27,19 @@ return [
     | Drivers: "sync", "database", "beanstalkd", "sqs", "redis",
     |          "deferred", "background", "failover", "null"
     |
+    | `retry_after` is the reservation window: how long the queue waits before
+    | deciding a reserved job is dead and letting another worker take it. It
+    | MUST outlast the longest job, or a job that is merely slow is picked up a
+    | second time while the first is still running. This panel's jobs change
+    | the server — a second worker re-entering a half-applied provision is the
+    | worst failure mode it has, and `$tries = 1` does not prevent it because
+    | the second run is a new reservation, not a retry.
+    |
+    | Laravel's 90s default was left in place while installers grew to 1800s
+    | (Nextcloud's download, NodeBB's `npm install`). 2400 clears
+    | `ProvisioningBudget::longest()` — a test asserts it still does, so adding
+    | a slower application fails the suite rather than the server.
+    |
     */
 
     'connections' => [
@@ -40,7 +53,7 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 2400),
             'after_commit' => false,
         ],
 
@@ -48,7 +61,7 @@ return [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),
             'queue' => env('BEANSTALKD_QUEUE', 'default'),
-            'retry_after' => (int) env('BEANSTALKD_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('BEANSTALKD_QUEUE_RETRY_AFTER', 2400),
             'block_for' => 0,
             'after_commit' => false,
         ],
@@ -68,7 +81,7 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 2400),
             'block_for' => null,
             'after_commit' => false,
         ],

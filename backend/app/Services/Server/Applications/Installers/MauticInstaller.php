@@ -36,14 +36,11 @@ class MauticInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
-        $steps = [];
 
         $this->downloadAndExtract($application, null, $documentRoot);
-        $steps[] = 'download';
-        $steps[] = 'extract';
 
         $configDir = $documentRoot.'/'.trim((string) config('server.installers.mautic.config_dir', 'config'), '/');
         $this->run('configure', ['mkdir', '-p', $configDir], $application);
@@ -63,16 +60,12 @@ class MauticInstaller extends AbstractPhpInstaller
             'adminLastName' => $settings['admin_last_name'] ?? 'User',
             'siteUrl' => 'https://'.$application->domain,
         ])->render());
-        $steps[] = 'configure';
 
         $this->runAsSiteUser('install_app', $application, [
             $this->phpBinary($application), 'bin/console', 'mautic:install',
             'https://'.$application->domain,
             '--no-interaction',
         ], null, $documentRoot);
-        $steps[] = 'install_app';
-
-        return $steps;
     }
 
     /**

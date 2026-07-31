@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\Firewall;
 use App\Contracts\PhpStack;
 use App\Models\User;
+use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Firewall\UfwFirewall;
 use App\Services\Server\Php\PhpStackManager;
@@ -35,6 +36,11 @@ class AppServiceProvider extends ServiceProvider
         // on a box with no record yet the first read shells out to detect —
         // a fresh instance per consumer turns that into one detection each.
         $this->app->scoped(ServerCapabilities::class);
+
+        // One progress recorder per job, shared by the provisioner and the
+        // installer it calls — they are recording steps of the same run, and
+        // two instances would each keep half the list.
+        $this->app->scoped(ProvisionProgress::class);
     }
 
     /**

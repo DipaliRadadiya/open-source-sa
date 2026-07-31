@@ -7,6 +7,7 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ProvisioningBudget;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -27,9 +28,17 @@ class ProvisionApplication implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 300;
+    /**
+     * Sized from the site type's own installer timeout rather than fixed —
+     * see {@see ProvisioningBudget}. Set here because the constructor runs at
+     * dispatch and the property travels with the serialized job.
+     */
+    public int $timeout;
 
-    public function __construct(public int $applicationId) {}
+    public function __construct(public int $applicationId)
+    {
+        $this->timeout = app(ProvisioningBudget::class)->forApplication($applicationId);
+    }
 
     public function handle(ApplicationProvisioner $provisioner, ActivityLogger $activityLogger): void
     {

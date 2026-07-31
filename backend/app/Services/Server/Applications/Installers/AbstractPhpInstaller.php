@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Contracts\PhpStack;
 use App\Models\Application;
+use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\ServerOps;
 
 /**
@@ -18,9 +19,10 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
 {
     public function __construct(
         ServerOps $serverOps,
+        ProvisionProgress $progress,
         protected PhpStack $stack,
     ) {
-        parent::__construct($serverOps);
+        parent::__construct($serverOps, $progress);
     }
 
     /**

@@ -25,18 +25,15 @@ class WordPressInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
-        $steps = [];
 
         $this->downloadAndExtract(
             $application,
             (string) config('server.installers.wordpress.download_url'),
             $documentRoot,
         );
-        $steps[] = 'download';
-        $steps[] = 'extract';
 
         $this->writeSecretFile($application, "{$documentRoot}/wp-config.php", View::make('server.apps.wordpress.wp-config', [
             'database' => $context['database'],
@@ -46,7 +43,6 @@ class WordPressInstaller extends AbstractPhpInstaller
             'prefix' => $settings['table_prefix'] ?? 'wp_',
             'salts' => $this->salts(),
         ])->render());
-        $steps[] = 'configure';
 
         $this->ensureWpCli($application);
 
@@ -70,14 +66,10 @@ class WordPressInstaller extends AbstractPhpInstaller
             '--skip-email',
             '--prompt=admin_password',
         ]), ($settings['admin_password'] ?? '')."\n");
-        $steps[] = 'install_app';
 
         if ($this->stack->key() === 'lsphp') {
             $this->installLiteSpeedCache($application, $documentRoot);
-            $steps[] = 'install_cache';
         }
-
-        return $steps;
     }
 
     /**

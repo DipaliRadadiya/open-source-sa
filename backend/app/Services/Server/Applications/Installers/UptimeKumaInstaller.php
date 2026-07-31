@@ -38,7 +38,7 @@ class UptimeKumaInstaller extends AbstractNodeInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $this->cloneInto(
             $application,
@@ -51,7 +51,5 @@ class UptimeKumaInstaller extends AbstractNodeInstaller
         // dependencies, then build the frontend. Running `npm ci` here instead
         // would leave the app with no built assets and a blank page.
         $this->runWithNode('install_app', $application, ['npm', 'run', 'setup'], $documentRoot);
-
-        return ['download', 'extract', 'install_app'];
     }
 }
