@@ -13,4 +13,9 @@ return [
     'version_runs_panel' => 'PHP :version हटाने से पैनल बंद हो जाएगा — पैनल स्वयं इसी संस्करण पर चलता है।',
     'extension_builtin' => ':extension PHP में अंतर्निहित है। इसे बंद नहीं किया जा सकता।',
     'extension_runs_panel' => ':extension बंद करने से पैनल बंद हो जाएगा — इसे :modules चाहिए।',
+
+    // LSPHP has no phpenmod equivalent. Refusing beats a control that
+    // reports success and changes nothing.
+    'unsupported_on_stack' => ':stack PHP स्टैक पर यह समर्थित नहीं है।',
+
 ];

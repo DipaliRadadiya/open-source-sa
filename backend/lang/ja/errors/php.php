@@ -13,4 +13,9 @@ return [
     'version_runs_panel' => 'PHP :version を削除するとパネルが停止します。パネル自身がこのバージョンで動作しています。',
     'extension_builtin' => ':extension は PHP に組み込まれているため、無効にできません。',
     'extension_runs_panel' => ':extension を無効にするとパネルが停止します。:modules が必要です。',
+
+    // LSPHP has no phpenmod equivalent. Refusing beats a control that
+    // reports success and changes nothing.
+    'unsupported_on_stack' => 'これは :stack PHP スタックではサポートされていません。',
+
 ];

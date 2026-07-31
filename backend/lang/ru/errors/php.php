@@ -13,4 +13,9 @@ return [
     'version_runs_panel' => 'Удаление PHP :version отключит панель — именно на этой версии она работает.',
     'extension_builtin' => 'Расширение :extension встроено в PHP и не может быть отключено.',
     'extension_runs_panel' => 'Отключение :extension остановит панель — ей нужны :modules.',
+
+    // LSPHP has no phpenmod equivalent. Refusing beats a control that
+    // reports success and changes nothing.
+    'unsupported_on_stack' => 'Это не поддерживается в стеке PHP :stack.',
+
 ];

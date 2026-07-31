@@ -53,12 +53,27 @@ abstract class AbstractWebServerDriver implements WebServerDriver
 
         abort_unless(View::exists($view), 500);
 
-        return View::make($view, [
+        return View::make($view, $this->viewData($application, $documentRoot))->render();
+    }
+
+    /**
+     * What a vhost template is given. A driver whose syntax needs more than
+     * this adds to it.
+     *
+     * @return array<string, mixed>
+     */
+    protected function viewData(Application $application, string $documentRoot): array
+    {
+        return [
             'application' => $application,
             'domain' => $application->domain,
             'documentRoot' => $documentRoot,
             'phpVersion' => $application->php_version ?: config('server.default_php_version'),
-        ])->render();
+            // The OS account the site runs as. nginx and Apache reach PHP
+            // through a pool that already knows this; OLS spawns the process
+            // itself and has to be told.
+            'user' => $application->systemUser?->username,
+        ];
     }
 
     public function test(): ServerOpsResult

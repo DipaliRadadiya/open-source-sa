@@ -13,4 +13,9 @@ return [
     'version_runs_panel' => 'Eliminar PHP :version dejaría el panel fuera de servicio: es la versión con la que funciona el propio panel.',
     'extension_builtin' => 'La extensión :extension está compilada en PHP. No se puede desactivar.',
     'extension_runs_panel' => 'Desactivar :extension dejaría el panel fuera de servicio: necesita :modules.',
+
+    // LSPHP has no phpenmod equivalent. Refusing beats a control that
+    // reports success and changes nothing.
+    'unsupported_on_stack' => 'Esto no es compatible con la pila de PHP :stack.',
+
 ];
