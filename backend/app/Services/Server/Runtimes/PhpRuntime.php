@@ -109,11 +109,9 @@ class PhpRuntime implements Runtime
             ['feature' => 'runtime', 'op' => 'php_installable'],
         )->output();
 
-        preg_match_all($this->stack->installableMatcher(), $output, $matches);
-
         $installed = $this->versions->versions();
 
-        return collect($matches[1] ?? [])
+        return collect($this->stack->installableVersions($output))
             ->unique()
             ->reject(fn (string $version) => in_array($version, $installed, true))
             ->sortByDesc(fn (string $version) => (float) $version)

@@ -6,6 +6,7 @@ use App\Exceptions\Server\WebServer\OlsListenerNotFoundException;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * The two entries every OpenLiteSpeed site needs in the *shared*
@@ -94,9 +95,50 @@ class OlsSharedConfig
     }
 
     /**
+     * Whether the shared config still refers to a site — anywhere in the file,
+     * not just inside the managed region.
+     *
+     * The whole file on purpose. Checking only the region would answer "did we
+     * remove our entry", when the question before deleting a site's files is
+     * "does OpenLiteSpeed still expect them". Those differ exactly when the
+     * entries have escaped the markers — which is what the WebAdmin console
+     * leaves behind, since the markers are comments and it strips them.
+     */
+    public function references(string $name): bool
+    {
+        $read = $this->serverOps->run(
+            ['cat', $this->path()],
+            ['feature' => 'application', 'op' => 'ols_read', 'site' => $name],
+        );
+
+        if (! $read->ok) {
+            // Unreadable is not "absent". Treat it as still referenced so the
+            // caller does not delete on the strength of a failed read.
+            return true;
+        }
+
+        $quoted = preg_quote($name, '/');
+
+        return preg_match('/^\s*(virtualHost\s+'.$quoted.'\s*\{|map\s+'.$quoted.'\s)/m', $read->output()) === 1;
+    }
+
+    /**
      * @param  callable(array<string, array<int, string>>): array<string, array<int, string>>  $change
      */
     private function rewrite(callable $change, string $name, string $op): ServerOpsResult
+    {
+        // Read-modify-write on a file shared by every site, from a queue that
+        // runs more than one worker. Without this, two sites provisioning at
+        // once means the second read misses the first's entry and writes it
+        // back out — the site reports Active with a vhost the server has never
+        // heard of.
+        return Cache::lock('ols-shared-config', 30)->block(20, fn () => $this->rewriteLocked($change, $name, $op));
+    }
+
+    /**
+     * @param  callable(array<string, array<int, string>>): array<string, array<int, string>>  $change
+     */
+    private function rewriteLocked(callable $change, string $name, string $op): ServerOpsResult
     {
         $path = $this->path();
         $context = ['feature' => 'application', 'op' => $op, 'site' => $name];
@@ -125,7 +167,12 @@ class OlsSharedConfig
 
         $written = $this->files->put($path, $updated, $context);
 
+        // `tee` truncates before it writes, so a failure here — no disk space,
+        // a killed worker, a timeout — leaves the file empty or half written.
+        // Restoring is not optional: this is every site on the box.
         if ($written->failed()) {
+            $this->serverOps->run(['cp', '-f', $backup, $path], $context);
+
             return $written;
         }
 
@@ -203,8 +250,16 @@ class OlsSharedConfig
 
         $pattern = '/'.preg_quote($begin, '/').'.*?'.preg_quote($end, '/').'/s';
 
-        if (preg_match($pattern, $contents) === 1) {
-            return (string) preg_replace($pattern, str_replace('\\', '\\\\', $region), $contents, 1);
+        // Spliced by offset rather than with preg_replace. A replacement string
+        // has its own semantics — `$1` and `\1` are backreferences — so any
+        // path or name containing them would be silently eaten. Nothing does
+        // today, but the input includes operator-set config paths, and this is
+        // the file every site on the box depends on. Substr has no semantics
+        // to get wrong.
+        if (preg_match($pattern, $contents, $matches, PREG_OFFSET_CAPTURE) === 1) {
+            [$matched, $offset] = $matches[0];
+
+            return substr($contents, 0, $offset).$region.substr($contents, $offset + strlen($matched));
         }
 
         return $append
@@ -228,14 +283,41 @@ class OlsSharedConfig
             throw new OlsListenerNotFoundException($listener);
         }
 
-        $open = $matches[0][1] + strlen($matches[0][0]);
-        $close = strpos($contents, "\n}", $open);
+        $close = $this->matchingBrace($contents, $matches[0][1] + strlen($matches[0][0]) - 1);
 
-        if ($close === false) {
+        if ($close === null) {
             throw new OlsListenerNotFoundException($listener);
         }
 
-        return substr($contents, 0, $close + 1).$region."\n".substr($contents, $close + 1);
+        return substr($contents, 0, $close).$region."\n".substr($contents, $close);
+    }
+
+    /**
+     * The offset of the brace closing the one at `$open`.
+     *
+     * Counted rather than found by looking for a line starting with `}`. A
+     * hand-written config that indents its closing brace would send that
+     * search past the end of the listener and splice the maps region into
+     * whatever block came next — where `map` is illegal, so every later
+     * registration would fail its config test.
+     */
+    private function matchingBrace(string $contents, int $open): ?int
+    {
+        $depth = 0;
+
+        for ($i = $open, $length = strlen($contents); $i < $length; $i++) {
+            $depth += match ($contents[$i]) {
+                '{' => 1,
+                '}' => -1,
+                default => 0,
+            };
+
+            if ($depth === 0 && $contents[$i] === '}') {
+                return $i;
+            }
+        }
+
+        return null;
     }
 
     private function region(string $contents, string $begin, string $end): string

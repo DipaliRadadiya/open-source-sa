@@ -89,8 +89,17 @@ interface PhpStack
     /** apt-cache search pattern that finds every installable version. */
     public function installablePattern(): string;
 
-    /** Regex pulling the version number out of those package names. */
-    public function installableMatcher(): string;
+    /**
+     * The versions in that search's output.
+     *
+     * Parsing lives here rather than being a regex the caller applies, because
+     * the package name is not always the version: LiteSpeed ships `lsphp84`,
+     * which has to become `8.4` before anything can compare it with what is
+     * installed or send it back to the API.
+     *
+     * @return array<int, string>
+     */
+    public function installableVersions(string $output): array;
 
     /**
      * SAPIs whose conf.d an extension is enabled in.
