@@ -33,10 +33,16 @@ class StoreApplicationRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'domain' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/'],
             'system_user_id' => ['required', 'integer', 'exists:system_users,id'],
-            'php_version' => ['nullable', 'string', 'max:10'],
-            'node_version' => ['nullable', 'string', 'max:10'],
+            // Both versions become path segments and, for PHP, part of an
+            // executed binary path. `max:10` alone let a newline through.
+            'php_version' => ['nullable', 'string', 'max:10', 'regex:/^\d+\.\d+$/'],
+            'node_version' => ['nullable', 'string', 'max:10', 'regex:/^\d+(\.\d+)*$/'],
             'app_port' => ['nullable', 'integer', 'between:1024,65535'],
-            'web_root' => ['nullable', 'string', 'max:255'],
+            // A relative path under the site, and nothing else. This reaches
+            // `mkdir -p`, `chown -R` and `tee` as root, so a `..` segment would
+            // walk out of the site — `web_root=../../../../etc` handed /etc to
+            // the site's own user.
+            'web_root' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],
         ];
 
         // An unknown site_type fails on the rule above; skip type rules so we

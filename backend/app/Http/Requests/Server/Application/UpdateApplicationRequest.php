@@ -23,7 +23,8 @@ class UpdateApplicationRequest extends FormRequest
         return [
             'name' => ['sometimes', 'string', 'max:255'],
             'domain' => ['sometimes', 'string', 'max:255', 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/'],
-            'web_root' => ['sometimes', 'nullable', 'string', 'max:255'],
+            // See StoreApplicationRequest: this becomes a path used by root.
+            'web_root' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],
             'build_command' => ['sometimes', 'nullable', 'string', 'max:500'],
             'start_command' => ['sometimes', 'nullable', 'string', 'max:500'],
             'branch' => ['sometimes', 'nullable', 'string', 'max:255'],
