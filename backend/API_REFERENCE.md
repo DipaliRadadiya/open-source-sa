@@ -542,7 +542,10 @@ Requires the **`php`** permission (`view` / `manage`) — its own sidebar item, 
 | on, not installed | **`202`** — apt queued; the row is already `status: "installing"`, poll until it leaves that state |
 | off | `200 {extension}` — unlinked, FPM reloaded. **Never purged.** |
 | built-in / panel-required / unknown | `422`, `422`, `404` |
-| **any, on an OpenLiteSpeed server** | **`422`** — LSPHP has no `phpenmod`, so the panel refuses rather than reporting a success that changes nothing. Hide the toggles when `web_server` is `openlitespeed`. |
+| **on, not installed, on OpenLiteSpeed** | **`202`** — installing works normally (`apt install lsphp84-redis`). LiteSpeed's package puts its ini where LSPHP already reads it, so it is live after the restart. |
+| **on/off for an *installed* extension, on OpenLiteSpeed** | **`422`** — there is no `phpenmod` for LSPHP and nothing to unlink an ini with, so installed and enabled are the same state. |
+
+- **On OpenLiteSpeed, render "Install" but not a toggle.** An installed extension always reports `enabled: true`, because it genuinely is. Uninstalling is not offered on any web server — a disabled extension costs a few megabytes, and purging `php8.4-common` takes every site down with it.
 
 - **`enable_failed`** is its own `reason`, distinct from a failed install: apt succeeded and `phpenmod` did not, so the package **is** installed. Offer "try again" — the retry takes the enable-only path and usually fixes it. Do not present it as "the install failed", which would send the user to redo work that is done.
 

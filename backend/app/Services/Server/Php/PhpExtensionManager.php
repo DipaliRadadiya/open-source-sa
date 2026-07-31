@@ -163,6 +163,16 @@ class PhpExtensionManager
             );
         }
 
+        // On a stack with no toggle, the package's ini already sits where the
+        // interpreter reads it — there is nothing to switch on, only the
+        // running processes to restart. Calling enable() here would refuse and
+        // report a failed install for an apt run that succeeded.
+        if (! $this->stack->togglesExtensions()) {
+            $this->reload($version);
+
+            return;
+        }
+
         // Debian's postinst normally enables the module itself — but "normally"
         // is not a guarantee, nothing here checked it, and the job goes on to
         // log `extension_enabled` regardless. Enable explicitly so the claim
@@ -354,6 +364,15 @@ class PhpExtensionManager
      */
     private function enabledBySapi(string $version): array
     {
+        // No toggle means installed *is* enabled: the ini is already in a
+        // directory the interpreter loads, and there are no conf.d symlinks to
+        // read a second state from. Reporting every extension as disabled —
+        // which globbing a conf.d that does not exist would do — is worse than
+        // useless, because the screen offers to enable what is already on.
+        if (! $this->stack->togglesExtensions()) {
+            return [$this->stack->sapis($version)[0] ?? 'litespeed' => $this->installedModules($version)];
+        }
+
         $enabled = [];
 
         foreach ($this->stack->sapis($version) as $sapi) {

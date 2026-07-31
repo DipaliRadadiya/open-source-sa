@@ -63,6 +63,18 @@ interface PhpStack
     public function reload(string $version): ServerOpsResult;
 
     /**
+     * Whether extensions can be switched on and off independently of being
+     * installed.
+     *
+     * Debian's `phpenmod` symlinks a module's ini into each SAPI's conf.d, so
+     * FPM has two states. LiteSpeed's packages drop their ini straight into a
+     * directory LSPHP loads, with no tool to unlink it — so on LSPHP an
+     * extension is enabled exactly when it is installed, and offering a toggle
+     * would be offering a control that cannot exist.
+     */
+    public function togglesExtensions(): bool;
+
+    /**
      * Switch an extension on or off across every SAPI.
      *
      * A command rather than a tool path: `phpenmod` is Debian's, it only knows

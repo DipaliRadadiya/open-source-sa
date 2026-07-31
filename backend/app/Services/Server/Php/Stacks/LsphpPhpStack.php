@@ -248,6 +248,16 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
+     * No. LiteSpeed's packages put their ini where LSPHP already reads it and
+     * ship nothing to unlink it again, so installed and enabled are the same
+     * state here.
+     */
+    public function togglesExtensions(): bool
+    {
+        return false;
+    }
+
+    /**
      * Refused, not silently ignored.
      *
      * `phpenmod` is Debian's and only understands `/etc/php`; pointed at the
