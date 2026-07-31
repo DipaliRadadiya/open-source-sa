@@ -912,6 +912,16 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
 - `git_account_id: null` with a `repository_url` = a public repository, cloned without credentials.
 - `settings` holds the type-specific answers (WordPress admin email, table prefix, …), shaped by that type's field schema.
 
+**`GET /api/applications/port-check?port=8080[&application_id=3]`** (`view`) — ask before submitting, so the user is warned as they type rather than refused after.
+```json
+{"port_check": {"port": 8080, "available": true, "reason": "registered",
+                "service": "http-alt", "suggested_port": null,
+                "message": "Port 8080 is normally used by http-alt. You can still use it if nothing on this server does."}}
+```
+- **Three outcomes, not two.** `available: true, reason: null` → fine. `available: true, reason: "registered"` → **a warning, not an error**: `/etc/services` has a name for it (`service`), but the user may well mean it. `available: false` → taken, with `reason` either `in_use_by_app` (another application here) or `in_use` (something outside the panel is listening) — those send the user to different places, so show the message rather than a generic one.
+- **`suggested_port`** is only present when the answer is no. Offering an alternative to someone whose choice was fine is noise.
+- Pass **`application_id`** when editing, so an application is not told its own current port is taken.
+
 **`POST /api/applications/{id}/process/{start|stop|restart}`** (`manage`) — control the application's own process.
 - `200 {application}` with fresh live status · `422` if the application runs no process · `404` for any action outside those three · `500 {message, reference}` when systemd refuses.
 - **`has_process`** on the resource is the flag to render controls from — it is true exactly when `start_command` is set. PHP and static sites are false; show no start/stop buttons for them.
