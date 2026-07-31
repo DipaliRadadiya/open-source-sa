@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Rules\AvailablePort;
 use App\Rules\StartCommand;
 use App\Services\Applications\SiteTypeManager;
 use Illuminate\Contracts\Validation\Validator;
@@ -38,7 +39,10 @@ class StoreApplicationRequest extends FormRequest
             // executed binary path. `max:10` alone let a newline through.
             'php_version' => ['nullable', 'string', 'max:10', 'regex:/^\d+\.\d+$/'],
             'node_version' => ['nullable', 'string', 'max:10', 'regex:/^\d+(\.\d+)*$/'],
-            'app_port' => ['nullable', 'integer', 'between:1024,65535'],
+            // Any port the owner of this server wants, provided nothing is
+            // already using it. The auto-allocated range is a default, not a
+            // restriction.
+            'app_port' => ['nullable', 'integer', 'between:1024,65535', new AvailablePort],
             // Becomes systemd's ExecStart, which is not a shell — see the rule.
             'start_command' => ['nullable', 'string', 'max:500', new StartCommand],
             // A relative path under the site, and nothing else. This reaches

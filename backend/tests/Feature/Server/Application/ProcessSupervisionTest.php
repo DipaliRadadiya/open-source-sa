@@ -157,6 +157,50 @@ describe('ports', function () {
         expect(app(PortAllocator::class)->allocate())->toBe(3002);
     });
 
+    it('lets the owner of the server pick a port that merely has a name', function () {
+        Process::fake(fn () => Process::result(output: ''));
+
+        // 8080 is `http-alt` in /etc/services and is also where half the Node
+        // applications in the world listen. Refusing it would be the panel
+        // overruling someone about their own machine.
+        $this->withHeaders(supervisorHeaders())->postJson('/api/applications', [
+            'system_user_id' => $this->su->id, 'name' => 'API', 'domain' => 'api8080.test',
+            'site_type' => 'php', 'app_port' => 8080,
+        ])->assertCreated()->assertJsonPath('application.app_port', 8080);
+    });
+
+    it('refuses a port another application on this server already has', function () {
+        Process::fake(fn () => Process::result(output: ''));
+        nodeApp(['app_port' => 3500, 'domain' => 'taken.test']);
+
+        // Before this, the only thing standing in the way was the unique
+        // index — a 500 rather than a message naming the problem.
+        $this->withHeaders(supervisorHeaders())->postJson('/api/applications', [
+            'system_user_id' => $this->su->id, 'name' => 'B', 'domain' => 'b.test',
+            'site_type' => 'php', 'app_port' => 3500,
+        ])->assertJsonValidationErrors('app_port');
+    });
+
+    it('refuses a port something outside the panel is listening on', function () {
+        // The user's server runs things the panel did not put there.
+        Process::fake(fn () => Process::result(output: "LISTEN 0 511 127.0.0.1:9999 0.0.0.0:*\n"));
+
+        $this->withHeaders(supervisorHeaders())->postJson('/api/applications', [
+            'system_user_id' => $this->su->id, 'name' => 'C', 'domain' => 'c.test',
+            'site_type' => 'php', 'app_port' => 9999,
+        ])->assertJsonValidationErrors('app_port');
+    });
+
+    it('does not report an application port as taken by itself', function () {
+        Process::fake(fn () => Process::result(output: ''));
+        $app = nodeApp(['app_port' => 3500, 'domain' => 'self.test']);
+
+        // Saving an unchanged form must not fail.
+        $this->withHeaders(supervisorHeaders())
+            ->putJson("/api/applications/{$app->id}", ['app_port' => 3500])
+            ->assertOk();
+    });
+
     it('skips a port /etc/services has spoken for, even with nothing on it', function () {
         config(['server.applications.port_range' => ['from' => 3306, 'to' => 3310]]);
         Process::fake(fn () => Process::result(output: ''));
@@ -165,7 +209,9 @@ describe('ports', function () {
         // installed *yet* — so a listening-only check would hand it out, and
         // installing MySQL next week would break one of the two.
         expect(app(PortAllocator::class)->allocate())->toBe(3307)
-            ->and(app(PortAllocator::class)->available(3306))->toBeFalse();
+            // Allocation is the conservative side: the panel choosing for
+            // itself skips anything /etc/services names.
+            ->and(app(PortAllocator::class)->conflict(3306))->toBeNull();
     });
 
     it('stays below the range the kernel hands to outgoing connections', function () {

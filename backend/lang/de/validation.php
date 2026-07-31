@@ -175,4 +175,7 @@ return [
     'start_command_shell' => 'Der Startbefehl darf „:token“ nicht enthalten – er wird direkt ausgeführt, nicht über eine Shell.',
     'start_command_wrapper' => 'Starte die App mit ihrer Einstiegsdatei, z. B. „node server.js“, nicht mit :binary. Ein Paketmanager forkt den eigentlichen Prozess, sodass Signale ihn nie erreichen.',
 
+    'port_in_use_by_app' => 'Port :port wird bereits von einer anderen Anwendung auf diesem Server verwendet.',
+    'port_in_use' => 'Auf diesem Server lauscht bereits etwas auf Port :port. Wähle einen anderen oder beende, was ihn belegt.',
+
 ];

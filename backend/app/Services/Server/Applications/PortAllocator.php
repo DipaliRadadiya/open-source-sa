@@ -44,9 +44,22 @@ class PortAllocator
     }
 
     /**
-     * Whether a port the user chose themselves can be used.
+     * Why a port the user chose cannot be used, or null when it can.
+     *
+     * Deliberately a **weaker** test than allocation. Skipping every name in
+     * /etc/services is right when the panel is choosing for itself, and wrong
+     * when the owner of the server is choosing: 8080 is `http-alt` in that
+     * file and is also the single most common port anyone runs a Node app on.
+     * Refusing it would be the panel overruling someone about their own
+     * machine.
+     *
+     * So only real conflicts are refused — another application the panel
+     * manages, or something listening right now. A registered name is not a
+     * conflict; it is a coincidence of naming.
+     *
+     * @return 'in_use_by_app'|'in_use'|null
      */
-    public function available(int $port, ?Application $except = null): bool
+    public function conflict(int $port, ?Application $except = null): ?string
     {
         $taken = Application::query()
             ->whereNotNull('app_port')
@@ -54,9 +67,11 @@ class PortAllocator
             ->pluck('app_port')
             ->all();
 
-        return ! in_array($port, $taken, true)
-            && ! in_array($port, $this->listening(), true)
-            && ! in_array($port, $this->registered(), true);
+        if (in_array($port, $taken, true)) {
+            return 'in_use_by_app';
+        }
+
+        return in_array($port, $this->listening(), true) ? 'in_use' : null;
     }
 
     /**

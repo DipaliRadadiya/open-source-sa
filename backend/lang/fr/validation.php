@@ -175,4 +175,7 @@ return [
     'start_command_shell' => 'La commande de démarrage ne peut pas contenir « :token » : elle est exécutée directement, pas via un shell.',
     'start_command_wrapper' => 'Démarrez l\'app avec son fichier d\'entrée, par exemple « node server.js », pas avec :binary. Un gestionnaire de paquets fork le vrai processus, donc les signaux ne l\'atteignent jamais.',
 
+    'port_in_use_by_app' => 'Le port :port est déjà utilisé par une autre application sur ce serveur.',
+    'port_in_use' => 'Quelque chose écoute déjà sur le port :port de ce serveur. Choisissez-en un autre ou arrêtez ce qui l\'occupe.',
+
 ];
