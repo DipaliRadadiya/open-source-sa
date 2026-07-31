@@ -17,7 +17,6 @@ class DiskCleanerScheduleResource extends JsonResource
             'frequency' => $this->frequency,
             'categories' => $this->categories ?? [],
             'threshold_percent' => $this->threshold_percent,
-            'notify' => (bool) $this->notify,
             'last_run_at' => $this->last_run_at?->format('d-m-Y H:i:s'),
             'last_run_at_human' => $this->last_run_at?->diffForHumans(),
         ];
