@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Rules\AvailablePort;
 use App\Rules\StartCommand;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -29,7 +30,9 @@ class UpdateApplicationRequest extends FormRequest
             'build_command' => ['sometimes', 'nullable', 'string', 'max:500'],
             // Becomes systemd's ExecStart, which is not a shell — see the rule.
             'start_command' => ['sometimes', 'nullable', 'string', 'max:500', new StartCommand],
-            'app_port' => ['sometimes', 'nullable', 'integer', 'between:1024,65535'],
+            // Excluding this application, so saving an unchanged form does
+            // not report the port as taken by itself.
+            'app_port' => ['sometimes', 'nullable', 'integer', 'between:1024,65535', new AvailablePort($this->route('application'))],
             'branch' => ['sometimes', 'nullable', 'string', 'max:255'],
             'settings' => ['sometimes', 'array'],
         ];

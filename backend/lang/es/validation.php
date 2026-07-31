@@ -198,4 +198,7 @@ return [
     'start_command_shell' => 'El comando de inicio no puede contener \":token\": se ejecuta directamente, no a través de un shell.',
     'start_command_wrapper' => 'Inicia la app con su archivo de entrada, por ejemplo \"node server.js\", no con :binary. Un gestor de paquetes bifurca el proceso real, así que las señales nunca le llegan.',
 
+    'port_in_use_by_app' => 'El puerto :port ya lo usa otra aplicación en este servidor.',
+    'port_in_use' => 'Algo en este servidor ya está escuchando en el puerto :port. Elige otro o detén lo que lo usa.',
+
 ];
