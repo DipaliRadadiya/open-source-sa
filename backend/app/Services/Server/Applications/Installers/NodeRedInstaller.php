@@ -43,7 +43,7 @@ class NodeRedInstaller extends AbstractNodeInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
 
@@ -62,8 +62,6 @@ class NodeRedInstaller extends AbstractNodeInstaller
                 (string) ($settings['admin_password'] ?? ''),
             ),
         );
-
-        return ['install_app', 'configure'];
     }
 
     /**

@@ -40,14 +40,11 @@ class MoodleInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
-        $steps = [];
 
         $this->downloadAndExtract($application, null, $documentRoot);
-        $steps[] = 'download';
-        $steps[] = 'extract';
 
         // Moodle keeps uploaded files, caches and session data here. Upstream
         // is emphatic that it belongs outside the web root; inside it, every
@@ -69,7 +66,6 @@ class MoodleInstaller extends AbstractPhpInstaller
             'wwwroot' => 'https://'.$application->domain,
             'dataroot' => $dataDir,
         ])->render());
-        $steps[] = 'configure';
 
         $php = $this->phpBinary($application);
         $adminUser = (string) ($settings['admin_user'] ?? 'admin');
@@ -84,7 +80,6 @@ class MoodleInstaller extends AbstractPhpInstaller
             '--shortname='.($settings['short_name'] ?? Str::limit(Str::slug((string) $application->name), 20, '')),
             '--adminpass='.$this->throwawayPassword(),
         ], null, $documentRoot);
-        $steps[] = 'install_app';
 
         // Now the real one, on stdin. reset_password.php asks for exactly one
         // thing when given a username, which is what makes this reliable
@@ -92,9 +87,6 @@ class MoodleInstaller extends AbstractPhpInstaller
         $this->runAsSiteUser('set_password', $application, [
             $php, 'admin/cli/reset_password.php', '--username='.$adminUser,
         ], ($settings['admin_password'] ?? '')."\n", $documentRoot);
-        $steps[] = 'set_password';
-
-        return $steps;
     }
 
     /**

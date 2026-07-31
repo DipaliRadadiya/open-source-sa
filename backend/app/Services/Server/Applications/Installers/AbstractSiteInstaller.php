@@ -5,6 +5,8 @@ namespace App\Services\Server\Applications\Installers;
 use App\Contracts\SiteInstaller;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Applications\ProvisioningBudget;
+use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Str;
 
@@ -25,6 +27,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
 {
     public function __construct(
         protected ServerOps $serverOps,
+        protected ProvisionProgress $progress,
     ) {}
 
     /**
@@ -42,14 +45,6 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         return ['mysql', 'mariadb'];
     }
 
-    /**
-     * How long this application's steps may take.
-     *
-     * Per-installer because the applications differ by an order of magnitude:
-     * WordPress is a 25 MB archive, Nextcloud a 280 MB one, and a timeout
-     * sized for the first turns the second into a guaranteed failure on any
-     * ordinary connection.
-     */
     /**
      * How many leading path components to strip when unpacking.
      *
@@ -88,6 +83,15 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         return (string) config("server.installers.{$this->siteType()}.download_url");
     }
 
+    /**
+     * How long this application's steps may take.
+     *
+     * Per-installer because the applications differ by an order of magnitude:
+     * WordPress is a 25 MB archive, Nextcloud a 280 MB one, and a timeout
+     * sized for the first turns the second into a guaranteed failure on any
+     * ordinary connection. {@see ProvisioningBudget}
+     * sizes the queued job from this, so the two cannot disagree.
+     */
     protected function timeout(): int
     {
         return (int) config(
@@ -193,5 +197,11 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         if ($result->failed()) {
             throw new ProvisioningFailedException($step, $result->reference);
         }
+
+        // Every command an installer runs arrives here, so this one line is
+        // what gives all of them live progress — no installer needs to keep a
+        // list, and none can forget to. Recorded after success: a step the user
+        // is shown as done has to actually be done.
+        $this->progress->record($step);
     }
 }

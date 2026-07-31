@@ -36,9 +36,14 @@ class GitDeployer
         private GitProviderManager $providers,
         private NodeRuntime $node,
         private ProcessSupervisor $supervisor,
+        private ProvisionProgress $progress,
     ) {}
 
     /**
+     * Steps land on the application as they complete — a build is the longest
+     * thing this panel does on a live site, and the user watching it deserves
+     * to see where it is rather than an empty list until it ends.
+     *
      * @return array{steps: array<int, string>, commit: ?string}
      *
      * @throws ProvisioningFailedException
@@ -46,7 +51,8 @@ class GitDeployer
     public function deploy(Application $application, string $documentRoot): array
     {
         $credentialFile = null;
-        $steps = [];
+
+        $this->progress->open($application);
 
         try {
             $credentialFile = $this->writeCredential($application);
@@ -63,17 +69,14 @@ class GitDeployer
                 $this->run('fetch', $credentialFile, [
                     'git', '-C', $documentRoot, 'fetch', 'origin', $branch, '--depth', '1',
                 ]);
-                $steps[] = 'fetch';
 
                 $this->run('checkout', null, [
                     'git', '-C', $documentRoot, 'reset', '--hard', "origin/{$branch}",
                 ]);
-                $steps[] = 'checkout';
             } else {
                 $this->run('clone', $credentialFile, [
                     'git', 'clone', '--depth', '1', '--branch', $branch, $remote, $documentRoot,
                 ]);
-                $steps[] = 'clone';
 
                 // Store the remote without any credential in it, so nothing
                 // sensitive is written into .git/config.
@@ -89,11 +92,9 @@ class GitDeployer
                 "{$application->systemUser->username}:{$application->systemUser->username}",
                 $documentRoot,
             ]);
-            $steps[] = 'set_ownership';
 
             if (filled($application->build_command)) {
                 $this->runBuild($application, $documentRoot);
-                $steps[] = 'build';
             }
 
             // New code is only live once the process running it has been
@@ -108,10 +109,11 @@ class GitDeployer
             // that changed it rather than the one after.
             if ($this->supervisor->runs($application)) {
                 $this->supervisor->apply($application, $documentRoot);
-                $steps[] = 'restart_app';
+
+                $this->progress->record('restart_app');
             }
 
-            return ['steps' => $steps, 'commit' => $commit];
+            return ['steps' => $this->progress->steps(), 'commit' => $commit];
         } finally {
             // Always — a failed deploy must not leave a credential on disk.
             if ($credentialFile !== null) {
@@ -208,6 +210,8 @@ class GitDeployer
             throw new ProvisioningFailedException($step, $result->reference);
         }
 
+        $this->progress->record($step);
+
         return $result;
     }
 
@@ -234,6 +238,8 @@ class GitDeployer
         if ($result->failed()) {
             throw new ProvisioningFailedException('build', $result->reference);
         }
+
+        $this->progress->record('build');
     }
 
     /**

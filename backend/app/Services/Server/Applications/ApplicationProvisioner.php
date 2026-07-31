@@ -27,6 +27,7 @@ class ApplicationProvisioner
         private WebServerManager $webServers,
         private InstallerManager $installers,
         private ProcessSupervisor $supervisor,
+        private ProvisionProgress $progress,
     ) {}
 
     /**
@@ -58,6 +59,10 @@ class ApplicationProvisioner
     }
 
     /**
+     * Steps are recorded on the application as each one completes, not
+     * collected and written at the end — the user is watching this happen, and
+     * a failure halfway should leave behind how far it got.
+     *
      * @return array<int, string> the steps completed, in order
      *
      * @throws ProvisioningFailedException
@@ -67,29 +72,26 @@ class ApplicationProvisioner
         $driver = $this->webServers->driver();
         $user = $application->systemUser;
         $documentRoot = $this->documentRoot($application);
-        $completed = [];
+
+        $this->progress->open($application);
 
         $this->step('create_directory', fn () => $this->serverOps->run(
             ['mkdir', '-p', $documentRoot],
             ['feature' => 'application', 'op' => 'mkdir', 'application' => $application->id],
         ));
-        $completed[] = 'create_directory';
 
         $this->step('set_ownership', fn () => $this->serverOps->run(
             ['chown', '-R', "{$user->username}:{$user->username}", $documentRoot],
             ['feature' => 'application', 'op' => 'chown', 'application' => $application->id],
         ));
-        $completed[] = 'set_ownership';
 
         $this->step('placeholder', fn () => $this->serverOps->run(
             ['tee', $this->placeholderPath($application, $documentRoot)],
             ['feature' => 'application', 'op' => 'placeholder', 'application' => $application->id],
             input: $this->placeholderContents($application),
         ));
-        $completed[] = 'placeholder';
 
         $this->step('write_config', fn () => $driver->apply($application, $documentRoot));
-        $completed[] = 'write_config';
 
         // Test before reload — and if the test fails, take our config back out
         // so the next reload (ours or anyone else's) is not poisoned by it.
@@ -105,16 +107,15 @@ class ApplicationProvisioner
             throw new ProvisioningFailedException('test_config', $test->reference);
         }
 
-        $completed[] = 'test_config';
+        $this->progress->record('test_config');
 
         $this->step('reload', fn () => $driver->reload());
-        $completed[] = 'reload';
 
         // Marketplace apps install once the site is actually being served —
         // WordPress writes its own URL into the database during setup, so it
         // needs the vhost live first. Site types with no installer (git,
-        // blank PHP, static) return nothing here.
-        $completed = array_merge($completed, $this->installers->install($application, $documentRoot));
+        // blank PHP, static) record nothing here.
+        $this->installers->install($application, $documentRoot);
 
         // The process last, because until the installer has run there is
         // nothing to start. Starting first was wrong in both directions: a
@@ -122,7 +123,9 @@ class ApplicationProvisioner
         // and a git application has no code at all until its first deploy —
         // `systemctl start` succeeds, the process dies immediately, and
         // provisioning fails on a site that is otherwise fine.
-        return array_merge($completed, $this->startProcess($application, $documentRoot));
+        $this->startProcess($application, $documentRoot);
+
+        return $this->progress->steps();
     }
 
     /**
@@ -138,11 +141,9 @@ class ApplicationProvisioner
      * the boot behaviour are all in place — but it is not started, because the
      * code arrives with the first deploy, which starts it.
      *
-     * @return array<int, string>
-     *
      * @throws ProvisioningFailedException
      */
-    private function startProcess(Application $application, string $documentRoot): array
+    private function startProcess(Application $application, string $documentRoot): void
     {
         $installer = $this->installers->installerFor($application);
         $command = $installer?->startCommand($application, $documentRoot);
@@ -152,7 +153,7 @@ class ApplicationProvisioner
         }
 
         if (! $this->supervisor->runs($application)) {
-            return [];
+            return;
         }
 
         // Installed applications have their code now; a git checkout does not.
@@ -160,7 +161,7 @@ class ApplicationProvisioner
 
         $this->supervisor->apply($application, $documentRoot, start: $ready);
 
-        return [$ready ? 'start_app' : 'write_unit'];
+        $this->progress->record($ready ? 'start_app' : 'write_unit');
     }
 
     /**
@@ -221,5 +222,7 @@ class ApplicationProvisioner
         if ($result->failed()) {
             throw new ProvisioningFailedException($name, $result->reference);
         }
+
+        $this->progress->record($name);
     }
 }

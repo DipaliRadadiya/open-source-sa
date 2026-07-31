@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\GitDeployer;
+use App\Services\Server\Applications\ProvisioningBudget;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -27,9 +28,18 @@ class DeployApplication implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 900;
+    /**
+     * Clone plus build plus the steps around them — see
+     * {@see ProvisioningBudget::forDeploy()}. The old flat 900 was exactly
+     * `git_timeout` + `build_timeout`, leaving nothing for the chown and the
+     * restart that follow it.
+     */
+    public int $timeout;
 
-    public function __construct(public int $applicationId) {}
+    public function __construct(public int $applicationId)
+    {
+        $this->timeout = app(ProvisioningBudget::class)->forDeploy();
+    }
 
     public function handle(
         GitDeployer $deployer,

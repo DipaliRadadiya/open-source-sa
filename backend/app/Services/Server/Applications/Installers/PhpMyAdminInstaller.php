@@ -45,17 +45,14 @@ class PhpMyAdminInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
-        $steps = [];
 
         $this->downloadAndExtract(
             $application,
             (string) config('server.installers.phpmyadmin.download_url'),
             $documentRoot,
         );
-        $steps[] = 'download';
-        $steps[] = 'extract';
 
         // Kept beside the site rather than inside it: phpMyAdmin writes
         // uploads and exports here, and anything under the document root is
@@ -72,13 +69,9 @@ class PhpMyAdminInstaller extends AbstractPhpInstaller
             'host' => (string) config('server.installers.phpmyadmin.db_host', '127.0.0.1'),
             'tempDir' => $tempDir,
         ])->render());
-        $steps[] = 'configure';
 
         // The distribution's own advice is to secure the setup script. There
         // is nothing to secure it with here, so it goes.
         $this->run('harden', ['rm', '-rf', "{$documentRoot}/setup"], $application);
-        $steps[] = 'harden';
-
-        return $steps;
     }
 }

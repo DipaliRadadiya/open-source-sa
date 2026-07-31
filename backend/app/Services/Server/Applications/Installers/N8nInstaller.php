@@ -49,7 +49,7 @@ class N8nInstaller extends AbstractNodeInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $this->runWithNode('install_app', $application, [
             'npm', 'install', '--omit=dev', '--no-audit', '--no-fund',
@@ -57,8 +57,6 @@ class N8nInstaller extends AbstractNodeInstaller
         ], $documentRoot);
 
         $this->writeSecretFile($application, "{$documentRoot}/.env", $this->environment($application, $documentRoot));
-
-        return ['install_app', 'configure'];
     }
 
     private function environment(Application $application, string $documentRoot): string

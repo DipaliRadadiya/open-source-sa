@@ -43,13 +43,11 @@ class PrestaShopInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
-        $steps = [];
 
         $this->downloadAndExtract($application, null, $documentRoot);
-        $steps[] = 'download';
 
         // The second unzip. Without it the web root holds an archive.
         $this->run('extract', ['unzip', '-q', '-o', "{$documentRoot}/prestashop.zip", '-d', $documentRoot], $application);
@@ -57,7 +55,6 @@ class PrestaShopInstaller extends AbstractPhpInstaller
         $this->run('extract', [
             'chown', '-R', "{$application->systemUser->username}:{$application->systemUser->username}", $documentRoot,
         ], $application);
-        $steps[] = 'extract';
 
         $this->runAsSiteUser('install_app', $application, [
             $this->phpBinary($application), 'install/index_cli.php',
@@ -84,14 +81,10 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             // retry must not be able to wipe a shop that already installed.
             '--db_clear=0',
         ], null, $documentRoot);
-        $steps[] = 'install_app';
 
         // The installer directory is a working install wizard left in a public
         // web root; upstream requires its removal before the shop is usable.
         $this->run('harden', ['rm', '-rf', "{$documentRoot}/install"], $application);
-        $steps[] = 'harden';
-
-        return $steps;
     }
 
     /**

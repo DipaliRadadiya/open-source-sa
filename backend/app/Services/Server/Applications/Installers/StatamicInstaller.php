@@ -45,24 +45,21 @@ class StatamicInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
         // `public/` is served; Statamic itself lives above it.
         $projectRoot = dirname($documentRoot);
-        $steps = [];
 
         $this->run('download', [
             (string) config('server.composer_binary', 'composer'),
             'create-project', 'statamic/statamic', $projectRoot,
             '--no-interaction', '--no-progress',
         ], $application);
-        $steps[] = 'download';
 
         $this->run('extract', [
             'chown', '-R', "{$application->systemUser->username}:{$application->systemUser->username}", $projectRoot,
         ], $application);
-        $steps[] = 'extract';
 
         // The email argument selects the non-interactive path. `--password` is
         // on the command line because Statamic offers no other way in — see
@@ -73,8 +70,5 @@ class StatamicInstaller extends AbstractPhpInstaller
             '--super',
             '--password='.($settings['admin_password'] ?? ''),
         ]), null, $projectRoot);
-        $steps[] = 'install_app';
-
-        return $steps;
     }
 }

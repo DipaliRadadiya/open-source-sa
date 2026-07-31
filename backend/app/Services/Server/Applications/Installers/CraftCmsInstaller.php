@@ -32,25 +32,22 @@ class CraftCmsInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
         // `web/` is the document root; Craft itself lives in the directory
         // above it, and that is where its commands must run.
         $projectRoot = dirname($documentRoot);
-        $steps = [];
 
         $this->run('download', [
             (string) config('server.composer_binary', 'composer'),
             'create-project', 'craftcms/craft', $projectRoot,
             '--no-interaction', '--no-scripts', '--no-progress',
         ], $application);
-        $steps[] = 'download';
 
         $this->run('extract', [
             'chown', '-R', "{$application->systemUser->username}:{$application->systemUser->username}", $projectRoot,
         ], $application);
-        $steps[] = 'extract';
 
         // Craft reads these; they are never passed to a command.
         $this->writeSecretFile($application, "{$projectRoot}/.env", View::make('server.apps.craftcms.env', [
@@ -66,7 +63,6 @@ class CraftCmsInstaller extends AbstractPhpInstaller
             'password' => $context['db_password'],
             'siteUrl' => 'https://'.$application->domain,
         ])->render());
-        $steps[] = 'configure';
 
         // `--password` is left out on purpose: Craft then asks, and Yii's
         // prompt reads stdin.
@@ -78,8 +74,5 @@ class CraftCmsInstaller extends AbstractPhpInstaller
             '--site-url=https://'.$application->domain,
             '--language='.($settings['language'] ?? 'en-US'),
         ], ($settings['admin_password'] ?? '')."\n", $projectRoot);
-        $steps[] = 'install_app';
-
-        return $steps;
     }
 }

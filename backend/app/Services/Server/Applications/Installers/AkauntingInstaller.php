@@ -35,14 +35,11 @@ class AkauntingInstaller extends AbstractPhpInstaller
     /**
      * @param  array<string, mixed>  $context
      */
-    public function install(Application $application, string $documentRoot, array $context): array
+    public function install(Application $application, string $documentRoot, array $context): void
     {
         $settings = $application->settings ?? [];
-        $steps = [];
 
         $this->downloadAndExtract($application, null, $documentRoot);
-        $steps[] = 'download';
-        $steps[] = 'extract';
 
         // Everything except the two passwords. Anything omitted becomes a
         // question, and a question nobody answers hangs until the timeout.
@@ -62,9 +59,6 @@ class AkauntingInstaller extends AbstractPhpInstaller
             $context['db_password']."\n".($settings['admin_password'] ?? '')."\n",
             $documentRoot,
         );
-        $steps[] = 'install_app';
-
-        return $steps;
     }
 
     /**

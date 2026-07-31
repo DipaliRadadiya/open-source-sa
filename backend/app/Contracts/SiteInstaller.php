@@ -4,6 +4,7 @@ namespace App\Contracts;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Applications\ProvisionProgress;
 
 /**
  * Installs a marketplace application into a site that has already been
@@ -51,10 +52,16 @@ interface SiteInstaller
      * as `database`, `db_user` and `db_password`, so an installer never talks
      * to the database engine itself.
      *
+     * Returns nothing: progress is recorded as it happens, by
+     * {@see ProvisionProgress} — every
+     * command an installer runs passes through one method that reports the
+     * step it belongs to. An installer that also returned its step list would
+     * be keeping a second copy of the same information, and the two disagreed:
+     * three installers named steps in an order their commands do not run in.
+     *
      * @param  array<string, mixed>  $context
-     * @return array<int, string> the steps completed, in order
      *
      * @throws ProvisioningFailedException
      */
-    public function install(Application $application, string $documentRoot, array $context): array;
+    public function install(Application $application, string $documentRoot, array $context): void;
 }

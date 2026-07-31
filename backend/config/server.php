@@ -252,6 +252,15 @@ return [
     'installer_work_dir' => env('SERVER_INSTALLER_WORK_DIR', sys_get_temp_dir()),
     'installer_timeout' => (int) env('SERVER_INSTALLER_TIMEOUT', 300),
 
+    /*
+    | Everything a provision or deploy does *besides* the slow part: the
+    | directory, ownership, the vhost write/test/reload, creating the database,
+    | and starting the unit. Added to the installer (or git + build) timeout to
+    | size the queued job, because a job killed at its own timeout leaves a
+    | half-applied server change with nothing but "worker" to point at.
+    */
+    'job_overhead' => (int) env('SERVER_JOB_OVERHEAD', 120),
+
     'installers' => [
         'wordpress' => [
             'driver' => WordPressInstaller::class,

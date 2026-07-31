@@ -95,9 +95,12 @@ it('installs wordpress end to end after the site is serving', function () {
 
     // The install runs only after the vhost is live — WordPress writes its own
     // URL into the database during setup.
+    // `create_database` is in this list now. It was always in the documented
+    // one and never emitted, because the step lists were assembled by hand in
+    // each installer and the database is created by the manager above them.
     expect($app->steps)->toBe([
         'create_directory', 'set_ownership', 'placeholder', 'write_config', 'test_config', 'reload',
-        'download', 'extract', 'configure', 'install_app',
+        'create_database', 'download', 'extract', 'configure', 'install_app',
     ]);
 
     Process::assertRan(fn ($p) => $p->command[0] === 'curl'
