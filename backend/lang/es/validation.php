@@ -195,4 +195,7 @@ return [
         'role' => 'rol',
     ],
 
+    'start_command_shell' => 'El comando de inicio no puede contener \":token\": se ejecuta directamente, no a través de un shell.',
+    'start_command_wrapper' => 'Inicia la app con su archivo de entrada, por ejemplo \"node server.js\", no con :binary. Un gestor de paquetes bifurca el proceso real, así que las señales nunca le llegan.',
+
 ];

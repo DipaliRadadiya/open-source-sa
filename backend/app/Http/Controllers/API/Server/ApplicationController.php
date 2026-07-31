@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Application\CreateApplication;
 use App\Actions\Server\Application\DeleteApplication;
 use App\Actions\Server\Application\DeprovisionApplication;
+use App\Actions\Server\Application\RunApplicationProcess;
 use App\Actions\Server\Application\UpdateApplication;
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
@@ -14,6 +15,7 @@ use App\Http\Resources\ApplicationResource;
 use App\Jobs\DeployApplication;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
+use App\Services\Server\Applications\ProcessSupervisor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -84,6 +86,41 @@ class ApplicationController extends Controller
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
         ], 202);
+    }
+
+    /**
+     * Start, stop or restart the application's own process.
+     *
+     * Refused for an application that has none: a PHP site has no process to
+     * act on, and reporting success for a no-op would teach the user that the
+     * button does something.
+     */
+    public function process(
+        Application $application,
+        string $action,
+        ProcessSupervisor $supervisor,
+        RunApplicationProcess $run,
+    ): JsonResponse {
+        abort_unless(in_array($action, RunApplicationProcess::ACTIONS, true), 404);
+
+        abort_unless(
+            $supervisor->runs($application),
+            422,
+            __('errors/application.no_process', ['name' => $application->name]),
+        );
+
+        $result = $run->execute($application->load('systemUser'), $action);
+
+        if ($result->failed()) {
+            return response()->json([
+                'message' => __('errors/application.process_failed', ['action' => $action]),
+                'reference' => $result->reference,
+            ], 500);
+        }
+
+        return response()->json([
+            'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
+        ]);
     }
 
     /**

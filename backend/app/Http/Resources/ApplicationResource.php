@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Server\Applications\ProcessSupervisor;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -36,6 +37,16 @@ class ApplicationResource extends JsonResource
             'web_root' => $this->web_root,
             'build_command' => $this->build_command,
             'start_command' => $this->start_command,
+
+            // Whether this application runs a process of its own, and what
+            // systemd says about it *right now*. Null for PHP and static sites,
+            // which have nothing to run — render no controls for those rather
+            // than controls that would do nothing.
+            'has_process' => app(ProcessSupervisor::class)->runs($this->resource),
+            'process' => $this->when(
+                app(ProcessSupervisor::class)->runs($this->resource),
+                fn () => app(ProcessSupervisor::class)->status($this->resource),
+            ),
 
             // Git source: a null account means a public repository, which
             // needs no credentials.

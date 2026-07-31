@@ -6,4 +6,8 @@ return [
     'provision_failed' => 'Die Einrichtung der Website ist im Schritt „:step" fehlgeschlagen.',
     'not_a_git_application' => 'Diese Anwendung ist kein Git-Deployment — es gibt nichts abzurufen.',
     'no_database_engine' => 'Keine Datenbank-Engine verfügbar. Installiere und konfiguriere MySQL oder MariaDB, bevor du diese Anwendung anlegst.',
+    'no_process' => '„:name“ führt keinen eigenen Prozess aus.',
+    'process_failed' => 'Die Anwendung konnte nicht :action werden. Nenne dem Support die Referenz.',
+    'no_port_available' => 'Kein freier Port zwischen :from und :to. Gib einen frei oder erweitere den Bereich.',
+
 ];

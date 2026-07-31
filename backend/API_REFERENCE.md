@@ -912,6 +912,14 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
 - `git_account_id: null` with a `repository_url` = a public repository, cloned without credentials.
 - `settings` holds the type-specific answers (WordPress admin email, table prefix, …), shaped by that type's field schema.
 
+**`POST /api/applications/{id}/process/{start|stop|restart}`** (`manage`) — control the application's own process.
+- `200 {application}` with fresh live status · `422` if the application runs no process · `404` for any action outside those three · `500 {message, reference}` when systemd refuses.
+- **`has_process`** on the resource is the flag to render controls from — it is true exactly when `start_command` is set. PHP and static sites are false; show no start/stop buttons for them.
+- **`process`** is present only when `has_process`, and is read **live from systemd on every request** — never stored, so it cannot drift from reality: `{state, sub_state, since, memory, restarts}`. `state` is systemd's own vocabulary (`active`, `failed`, `activating`, …).
+- **`app_port`** is allocated automatically when an application has a start command and none was given, from the range in `server.applications.port_range` (3000–3999 by default). A port you send is checked against both the panel's records **and** what is actually listening on the box.
+- **`start_command` is executed directly, not through a shell.** Two things are refused with an explanatory message: shell syntax (`&&`, `|`, `;`, `$(`, redirects), and starting via `npm`/`yarn`/`pnpm`/`bun`/`npx`. Use the entry file — `node server.js`. A package manager forks the real process, so shutdown signals never reach the app and it is killed by timeout instead.
+- The process starts during provisioning (step `start_app`), restarts after a successful git deploy (step `restart_app`), and is stopped, disabled and removed when the application is deleted.
+
 *(Web server is **not** an application field — it belongs to the server, which owns port 80. Nor is the database engine: it follows from the app type. See `GET /api/server/capabilities` below.)*
 
 **`GET /api/server/capabilities`** — what this server is and can run. Written by the installation script; if the row is missing (a server migrated in from elsewhere) it is detected once and stored on first use.

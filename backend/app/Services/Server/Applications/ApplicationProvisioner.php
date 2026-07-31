@@ -26,6 +26,7 @@ class ApplicationProvisioner
         private ServerOps $serverOps,
         private WebServerManager $webServers,
         private InstallerManager $installers,
+        private ProcessSupervisor $supervisor,
     ) {}
 
     /**
@@ -109,6 +110,14 @@ class ApplicationProvisioner
         $this->step('reload', fn () => $driver->reload());
         $completed[] = 'reload';
 
+        // The application's own process, once the site is being served. After
+        // the vhost so a reverse proxy has something to point at, and before
+        // the installers so an installer that talks to its own API can.
+        if ($this->supervisor->runs($application)) {
+            $this->supervisor->apply($application, $documentRoot);
+            $completed[] = 'start_app';
+        }
+
         // Marketplace apps install once the site is actually being served —
         // WordPress writes its own URL into the database during setup, so it
         // needs the vhost live first. Site types with no installer (git,
@@ -123,6 +132,10 @@ class ApplicationProvisioner
      */
     public function deprovision(Application $application, bool $removeFiles = false): void
     {
+        // The process first: a unit left running holds its port and keeps
+        // serving traffic for a site the panel has stopped listing.
+        $this->supervisor->remove($application);
+
         $driver = $this->webServers->driver();
 
         $driver->remove($application);

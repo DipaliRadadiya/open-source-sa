@@ -172,4 +172,7 @@ return [
         'role' => 'rôle',
     ],
 
+    'start_command_shell' => 'La commande de démarrage ne peut pas contenir « :token » : elle est exécutée directement, pas via un shell.',
+    'start_command_wrapper' => 'Démarrez l\'app avec son fichier d\'entrée, par exemple « node server.js », pas avec :binary. Un gestionnaire de paquets fork le vrai processus, donc les signaux ne l\'atteignent jamais.',
+
 ];

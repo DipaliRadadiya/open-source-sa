@@ -63,6 +63,11 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('status');
+            // One app per port. Two apps bound to the same port means the
+            // second silently never starts, and the reverse proxy sends its
+            // traffic to the first — a data leak between sites, not just a
+            // broken deploy.
+            $table->unique('app_port');
         });
     }
 

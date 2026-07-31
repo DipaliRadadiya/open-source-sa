@@ -7,6 +7,7 @@ use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\PortAllocator;
 
 /**
  * Record an application the user asked for.
@@ -20,6 +21,7 @@ class CreateApplication
     public function __construct(
         private SiteTypeManager $siteTypes,
         private ActivityLogger $activityLogger,
+        private PortAllocator $ports,
     ) {}
 
     /**
@@ -40,7 +42,11 @@ class CreateApplication
             'domain' => $data['domain'],
             'php_version' => $data['php_version'] ?? null,
             'node_version' => $data['node_version'] ?? null,
-            'app_port' => $data['app_port'] ?? null,
+            // Allocated when the app needs a process and the user did not pick
+            // one. A port the panel chose is checked against both the database
+            // and what is actually listening; a port the user typed is checked
+            // the same way at validation.
+            'app_port' => $this->port($data),
             // The type's own default, not a bare '/': a framework
             // application served from its root publishes its own source.
             'web_root' => $data['web_root'] ?? $type?->defaultWebRoot() ?? '/',
@@ -87,5 +93,19 @@ class CreateApplication
         }
 
         return $settings;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function port(array $data): ?int
+    {
+        if (filled($data['app_port'] ?? null)) {
+            return (int) $data['app_port'];
+        }
+
+        // Only an application that runs something needs a port. Handing one to
+        // every PHP site would exhaust the range for no reason.
+        return blank($data['start_command'] ?? null) ? null : $this->ports->allocate();
     }
 }

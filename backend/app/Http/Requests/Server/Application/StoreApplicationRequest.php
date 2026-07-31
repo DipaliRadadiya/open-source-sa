@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Rules\StartCommand;
 use App\Services\Applications\SiteTypeManager;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -38,6 +39,8 @@ class StoreApplicationRequest extends FormRequest
             'php_version' => ['nullable', 'string', 'max:10', 'regex:/^\d+\.\d+$/'],
             'node_version' => ['nullable', 'string', 'max:10', 'regex:/^\d+(\.\d+)*$/'],
             'app_port' => ['nullable', 'integer', 'between:1024,65535'],
+            // Becomes systemd's ExecStart, which is not a shell — see the rule.
+            'start_command' => ['nullable', 'string', 'max:500', new StartCommand],
             // A relative path under the site, and nothing else. This reaches
             // `mkdir -p`, `chown -R` and `tee` as root, so a `..` segment would
             // walk out of the site — `web_root=../../../../etc` handed /etc to
