@@ -456,7 +456,12 @@ describe('the driver', function () {
         // turn editing WordPress permalinks into server downtime.
         expect($config)
             ->toContain('autoLoadHtaccess        0')
-            ->toContain('RewriteRule ^(.*)$ /index.php?$1 [L,QSA]');
+            // Apache's mod_rewrite, which OLS implements — not a translation
+            // of nginx's try_files. The loop guard keeps its leading slash
+            // because OLS does not strip one at vhost level.
+            ->toContain('RewriteRule ^/index\\.php$ - [L]')
+            ->toContain('RewriteRule . /index.php [L]')
+            ->not->toContain('QSA');
     });
 
     it('serves no PHP from a static site', function () {

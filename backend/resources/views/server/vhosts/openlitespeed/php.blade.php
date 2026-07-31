@@ -49,16 +49,28 @@ scripthandler {
 
 {{-- The front-controller rewrite lives here rather than in .htaccess. OLS only
      reads .htaccess when Auto Load is on and needs a full restart after every
-     change to one, which would turn a permalink edit into server downtime. --}}
+     change to one, which would turn a permalink edit into server downtime.
+
+     This is Apache's mod_rewrite, which OpenLiteSpeed implements — not
+     nginx's. Three consequences, each of which was wrong here before:
+
+     - Rules are bare directives inside the block, the way the shipped
+       Example vhconf.conf writes `RewriteFile`. The `rules <<<HEREDOC` form
+       was a guess.
+     - `RewriteRule . /index.php [L]` is the documented front controller.
+       `^(.*)$ /index.php?$1` was a translation of nginx's `try_files`, and it
+       hands the path to PHP as a *query string* — which WordPress does not
+       read, since it works from REQUEST_URI.
+     - **At vhost level OLS does not strip the leading slash** before matching,
+       so the loop guard has to be `^/index\.php$`, not `^index\.php$`. Without
+       it the rule rewrites index.php to itself. --}}
 rewrite {
   enable                  1
   autoLoadHtaccess        0
-
-  rules                   <<<END_rules
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ /index.php?$1 [L,QSA]
-  END_rules
+  RewriteRule ^/index\.php$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.php [L]
 }
 
 {{-- Version control and dotfiles must never be served. A .git directory inside
