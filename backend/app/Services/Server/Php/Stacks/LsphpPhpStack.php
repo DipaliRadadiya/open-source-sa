@@ -85,6 +85,23 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
+     * `bin/lsphp`, not `bin/php`.
+     *
+     * The LiteSpeed repository installs both: `lsphp` is the LSAPI build the
+     * web server speaks to, `php` is the ordinary CLI. LiteSpeed's own
+     * documentation names `/usr/local/lsws/lsphpXX/bin/lsphp` everywhere an
+     * external processor is configured. Pointing a vhost at the CLI hands
+     * OpenLiteSpeed a program that does not speak LSAPI, and no PHP would run.
+     */
+    public function handlerPath(string $version): ?string
+    {
+        return $this->interpolate(
+            (string) config('server.php_stacks.lsphp.handler_path', '{root}/lsphp{compact}/bin/lsphp'),
+            $version,
+        );
+    }
+
+    /**
      * None, and that is the point.
      *
      * LSPHP processes belong to lshttpd, so there is no `php8.4-fpm` to start

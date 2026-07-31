@@ -58,7 +58,8 @@ class OlsDriver extends AbstractWebServerDriver
         return [
             ...$data,
             'lsphpVersion' => str_replace('.', '', $version),
-            'lsphpBinary' => $this->stack->binaryPath($version),
+            // The LSAPI binary, not the CLI — this is what OLS spawns.
+            'lsphpBinary' => $this->stack->handlerPath($version),
         ];
     }
 

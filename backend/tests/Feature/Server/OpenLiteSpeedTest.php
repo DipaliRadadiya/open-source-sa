@@ -410,7 +410,9 @@ describe('the driver', function () {
             ->toContain('vhDomain                  shop.test')
             // lsphp84, not lsphp8.4 — LiteSpeed drops the dot everywhere.
             ->toContain('extprocessor lsphp84 {')
-            ->toContain('path                    '.$this->lsws.'/lsphp84/bin/php')
+            // bin/lsphp, not bin/php: the CLI does not speak LSAPI, so a
+            // vhost pointed at it would run no PHP at all.
+            ->toContain('path                    '.$this->lsws.'/lsphp84/bin/lsphp')
             // OLS spawns the process itself, so it has to be told who as.
             ->toContain('extUser                 shopuser');
     });

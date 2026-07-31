@@ -475,7 +475,11 @@ return [
             'driver' => LsphpPhpStack::class,
             'dir' => env('SERVER_LSWS_DIR', '/usr/local/lsws'),
             'ini_path' => '{root}/lsphp{compact}/etc/php/{version}/litespeed/php.ini',
+            // Two binaries, and they are not interchangeable. `php` is the
+            // ordinary CLI, used by installers; `lsphp` is the LSAPI build the
+            // web server spawns. A vhost pointed at the CLI runs no PHP at all.
             'binary_path' => '{root}/lsphp{compact}/bin/php',
+            'handler_path' => '{root}/lsphp{compact}/bin/lsphp',
             'reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],
             'sapis' => ['litespeed'],
             /*
