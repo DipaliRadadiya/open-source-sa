@@ -76,12 +76,26 @@ class LsphpPhpStack implements PhpStack
         );
     }
 
+    /**
+     * The CLI, found rather than assumed.
+     *
+     * LSPHP is not always in the lsws tree — some builds put it at
+     * `/usr/bin/lsphp8.2`, and note the dot there where the lsws tree uses
+     * `lsphp82`. A single hardcoded pattern is right on the common install and
+     * silently wrong on the others, which is the sort of thing that only shows
+     * up as "the installer did nothing" on somebody's server.
+     *
+     * Detection is honest here because the panel runs on the machine it
+     * manages, so the file either exists or it does not.
+     */
     public function binaryPath(string $version): string
     {
-        return $this->interpolate(
-            (string) config('server.php_stacks.lsphp.binary_path', '{root}/lsphp{compact}/bin/php'),
-            $version,
-        );
+        return $this->detect('binary_candidates', [
+            '{root}/lsphp{compact}/bin/php',
+            '/usr/bin/lsphp{version}',
+            '/usr/local/bin/lsphp{version}',
+            '{root}/lsphp{compact}/bin/lsphp',
+        ], $version);
     }
 
     /**
@@ -95,10 +109,14 @@ class LsphpPhpStack implements PhpStack
      */
     public function handlerPath(string $version): ?string
     {
-        return $this->interpolate(
-            (string) config('server.php_stacks.lsphp.handler_path', '{root}/lsphp{compact}/bin/lsphp'),
-            $version,
-        );
+        // The LSAPI build only — `bin/php` is deliberately absent from this
+        // list, because the CLI does not speak LSAPI and a vhost pointed at it
+        // serves nothing.
+        return $this->detect('handler_candidates', [
+            '{root}/lsphp{compact}/bin/lsphp',
+            '/usr/bin/lsphp{version}',
+            '/usr/local/bin/lsphp{version}',
+        ], $version);
     }
 
     /**
@@ -272,6 +290,33 @@ class LsphpPhpStack implements PhpStack
     public function extensionToggleCommand(string $version, string $extension, bool $enable): array
     {
         throw PhpConfigException::unsupportedOnStack($this->key());
+    }
+
+    /**
+     * The first candidate that exists, or the first as a last resort.
+     *
+     * Falling back to the first rather than to a bare `lsphp8.4` on PATH:
+     * a PATH name that is not there fails as "command not found", which reads
+     * like a broken panel. An absolute path that is not there names the file
+     * we expected and did not find, which is the more useful thing for
+     * somebody to see in the server-ops log.
+     *
+     * @param  array<int, string>  $defaults
+     */
+    private function detect(string $key, array $defaults, string $version): string
+    {
+        $candidates = array_map(
+            fn (string $pattern) => $this->interpolate($pattern, $version),
+            (array) config("server.php_stacks.lsphp.{$key}", $defaults),
+        );
+
+        foreach ($candidates as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return $candidates[0] ?? '';
     }
 
     /**

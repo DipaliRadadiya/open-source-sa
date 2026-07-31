@@ -475,11 +475,27 @@ return [
             'driver' => LsphpPhpStack::class,
             'dir' => env('SERVER_LSWS_DIR', '/usr/local/lsws'),
             'ini_path' => '{root}/lsphp{compact}/etc/php/{version}/litespeed/php.ini',
-            // Two binaries, and they are not interchangeable. `php` is the
-            // ordinary CLI, used by installers; `lsphp` is the LSAPI build the
-            // web server spawns. A vhost pointed at the CLI runs no PHP at all.
-            'binary_path' => '{root}/lsphp{compact}/bin/php',
-            'handler_path' => '{root}/lsphp{compact}/bin/lsphp',
+            /*
+            | Two binaries, and they are not interchangeable. `php` is the
+            | ordinary CLI, used by installers; `lsphp` is the LSAPI build the
+            | web server spawns. A vhost pointed at the CLI runs no PHP at all.
+            |
+            | Lists, not single paths, and probed in order: LSPHP is not always
+            | in the lsws tree. Note the dot in the /usr/bin forms where the
+            | lsws tree uses `lsphp82` — that asymmetry is real, and taken from
+            | the Go agent that ran on production servers.
+            */
+            'binary_candidates' => [
+                '{root}/lsphp{compact}/bin/php',
+                '/usr/bin/lsphp{version}',
+                '/usr/local/bin/lsphp{version}',
+                '{root}/lsphp{compact}/bin/lsphp',
+            ],
+            'handler_candidates' => [
+                '{root}/lsphp{compact}/bin/lsphp',
+                '/usr/bin/lsphp{version}',
+                '/usr/local/bin/lsphp{version}',
+            ],
             'reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],
             'sapis' => ['litespeed'],
             /*

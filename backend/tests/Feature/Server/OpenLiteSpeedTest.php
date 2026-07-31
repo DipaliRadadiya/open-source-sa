@@ -43,6 +43,10 @@ beforeEach(function () {
     $this->lsws = sys_get_temp_dir().'/sv-oss-lsws-'.getmypid();
     File::deleteDirectory($this->lsws);
     File::makeDirectory($this->lsws.'/lsphp84/etc/php/8.4/litespeed', 0755, true);
+    File::makeDirectory($this->lsws.'/lsphp84/bin', 0755, true);
+    // Both binaries, because the panel probes for them rather than assuming.
+    File::put($this->lsws.'/lsphp84/bin/php', '');
+    File::put($this->lsws.'/lsphp84/bin/lsphp', '');
 
     config([
         'server.php_stacks.lsphp.dir' => $this->lsws,
@@ -545,6 +549,45 @@ describe('the lsphp stack', function () {
         // success that never happened.
         expect(fn () => app(LsphpPhpStack::class)->extensionToggleCommand('8.4', 'redis', true))
             ->toThrow(PhpConfigException::class);
+    });
+
+    it('finds the binaries in the lsws tree when they are there', function () {
+        $stack = app(LsphpPhpStack::class);
+
+        expect($stack->binaryPath('8.4'))->toBe($this->lsws.'/lsphp84/bin/php')
+            // The LSAPI build for the vhost, the CLI for installers. Not
+            // interchangeable.
+            ->and($stack->handlerPath('8.4'))->toBe($this->lsws.'/lsphp84/bin/lsphp');
+    });
+
+    it('falls through to the other places LSPHP gets installed', function () {
+        // Some builds put it outside the lsws tree — and note the dot, where
+        // the lsws tree uses `lsphp84`. Taken from the Go agent that ran on
+        // production servers; a single hardcoded pattern is right on the
+        // common install and quietly wrong on the rest.
+        File::delete($this->lsws.'/lsphp84/bin/php');
+
+        $elsewhere = $this->lsws.'/usr-bin';
+        File::makeDirectory($elsewhere, 0755, true);
+        File::put($elsewhere.'/lsphp8.4', '');
+
+        config(['server.php_stacks.lsphp.binary_candidates' => [
+            '{root}/lsphp{compact}/bin/php',
+            $elsewhere.'/lsphp{version}',
+        ]]);
+
+        expect(app(LsphpPhpStack::class)->binaryPath('8.4'))->toBe($elsewhere.'/lsphp8.4');
+    });
+
+    it('names the path it expected when nothing is found', function () {
+        File::deleteDirectory($this->lsws);
+
+        // An absolute path that is missing tells the operator which file we
+        // looked for. A bare `lsphp8.4` on PATH would fail as "command not
+        // found", which reads like a broken panel rather than a missing
+        // package.
+        expect(app(LsphpPhpStack::class)->binaryPath('8.4'))
+            ->toBe($this->lsws.'/lsphp84/bin/php');
     });
 
     it('expands compact package names into real versions', function () {
