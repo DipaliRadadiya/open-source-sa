@@ -42,6 +42,16 @@ class PhpConfigException extends Exception
         return new self('errors/php.operation_failed', 500, $reference, ['version' => $version]);
     }
 
+    /**
+     * The PHP stack this server runs has no way to do it. Refusing is the
+     * honest answer — the alternative is a control that reports success and
+     * changes nothing.
+     */
+    public static function unsupportedOnStack(string $stack): self
+    {
+        return new self('errors/php.unsupported_on_stack', 422, replace: ['stack' => $stack]);
+    }
+
     public function render(Request $request): JsonResponse
     {
         $payload = ['message' => __($this->messageKey, $this->replace)];

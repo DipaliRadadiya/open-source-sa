@@ -13,4 +13,9 @@ return [
     'version_runs_panel' => 'Remover o PHP :version deixaria o painel offline — é a versão em que o próprio painel corre.',
     'extension_builtin' => 'A extensão :extension está compilada no PHP. Não pode ser desativada.',
     'extension_runs_panel' => 'Desativar :extension deixaria o painel offline — precisa de :modules.',
+
+    // LSPHP has no phpenmod equivalent. Refusing beats a control that
+    // reports success and changes nothing.
+    'unsupported_on_stack' => 'Isto não é suportado na pilha PHP :stack.',
+
 ];

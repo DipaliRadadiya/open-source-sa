@@ -33,8 +33,10 @@ use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\TmpTarget;
 use App\Services\Server\Php\Stacks\FpmPhpStack;
+use App\Services\Server\Php\Stacks\LsphpPhpStack;
 use App\Services\Server\WebServers\ApacheDriver;
 use App\Services\Server\WebServers\NginxDriver;
+use App\Services\Server\WebServers\OlsDriver;
 
 return [
 
@@ -145,6 +147,28 @@ return [
             'driver' => ApacheDriver::class,
             'sites_dir' => env('SERVER_APACHE_SITES_DIR', '/etc/apache2/sites-enabled'),
             'php_stack' => 'fpm',
+        ],
+
+        /*
+        | OpenLiteSpeed. Unlike the other two, a site is a directory under
+        | `vhost_root` *and* two entries in `shared_config` — see OlsSharedConfig
+        | for why that file is edited by marked region rather than appended to.
+        |
+        | Every value here is unverified against a real OLS box; they come from
+        | LiteSpeed's docs. They are config precisely so a wrong one is an edit
+        | rather than a patch.
+        */
+        'openlitespeed' => [
+            'driver' => OlsDriver::class,
+            'vhost_root' => env('SERVER_OLS_VHOST_ROOT', '/usr/local/lsws/conf/vhosts'),
+            'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
+            // A `map` is only legal inside a listener, and this names which.
+            'listener' => env('SERVER_OLS_LISTENER', 'Default'),
+            'test_command' => ['/usr/local/lsws/bin/lswsctrl', 'config_test'],
+            // Restart, not reload: nothing lighter picks up a new virtual host,
+            // and it is graceful — old workers drain rather than being cut off.
+            'reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],
+            'php_stack' => 'lsphp',
         ],
     ],
 
@@ -427,6 +451,21 @@ return [
 
     'php_stacks' => [
         'fpm' => ['driver' => FpmPhpStack::class],
+
+        /*
+        | LSPHP. Note `{compact}` — LiteSpeed names everything `lsphp84`, not
+        | `lsphp8.4`, and assuming the dot produces a "package not found" that
+        | reads like a broken repository. Unverified against a real box.
+        */
+        'lsphp' => [
+            'driver' => LsphpPhpStack::class,
+            'dir' => env('SERVER_LSWS_DIR', '/usr/local/lsws'),
+            'ini_path' => '{root}/lsphp{compact}/etc/php/{version}/litespeed/php.ini',
+            'binary_path' => '{root}/lsphp{compact}/bin/php',
+            'reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],
+            'sapis' => ['litespeed'],
+            'base_packages' => ['common', 'mysql', 'curl', 'mbstring', 'xml', 'zip', 'gd', 'intl', 'bcmath'],
+        ],
     ],
 
     /*

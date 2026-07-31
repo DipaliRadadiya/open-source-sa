@@ -163,7 +163,10 @@ it('writes a static config without a php handler', function () {
 
 it('refuses to provision when the web server is not one we can configure', function () {
     Process::fake();
-    ServerCapability::query()->update(['web_server' => 'openlitespeed']);
+    // Was `openlitespeed`, which the panel can now configure. The rule this
+    // guards is unchanged — a web server with no driver is refused rather
+    // than guessed at — so it needs a web server that genuinely has none.
+    ServerCapability::query()->update(['web_server' => 'caddy']);
 
     $app = makeApp();
 
