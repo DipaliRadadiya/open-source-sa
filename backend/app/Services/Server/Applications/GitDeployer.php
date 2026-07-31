@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Git\GitProviderManager;
+use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Str;
@@ -33,6 +34,7 @@ class GitDeployer
     public function __construct(
         private ServerOps $serverOps,
         private GitProviderManager $providers,
+        private NodeRuntime $node,
     ) {}
 
     /**
@@ -207,7 +209,7 @@ class GitDeployer
         $result = $this->serverOps->run(
             [
                 'runuser', '-u', $application->systemUser->username, '--',
-                'sh', '-c', 'cd '.escapeshellarg($documentRoot).' && '.$application->build_command,
+                'sh', '-c', $this->nodePath($application).'cd '.escapeshellarg($documentRoot).' && '.$application->build_command,
             ],
             ['feature' => 'application', 'op' => 'git.build', 'application' => $application->id],
             timeout: (int) config('server.build_timeout', 600),
@@ -216,6 +218,30 @@ class GitDeployer
         if ($result->failed()) {
             throw new ProvisioningFailedException('build', $result->reference);
         }
+    }
+
+    /**
+     * `export PATH=…;` putting the site's own Node first, or nothing when the
+     * site pinned no version.
+     *
+     * Without it `npm ci && npm run build` runs under whatever `node` the
+     * default happens to be. A site pinned to 18 on a box defaulting to 22
+     * built with 22 — silently, and only visibly much later, as a runtime
+     * error in code that compiled fine.
+     *
+     * Written into the shell command rather than passed as an environment
+     * variable because `runuser` sits in between, and how much of the
+     * environment survives that depends on its configuration. This does not.
+     */
+    private function nodePath(Application $application): string
+    {
+        if (blank($application->node_version)) {
+            return '';
+        }
+
+        $bin = dirname($this->node->binaryPath((string) $application->node_version));
+
+        return 'export PATH='.escapeshellarg($bin).':"$PATH"; ';
     }
 
     private function isRepository(string $documentRoot): bool

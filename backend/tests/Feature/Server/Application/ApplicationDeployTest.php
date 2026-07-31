@@ -177,6 +177,30 @@ it('runs the build command as the site user, not as the panel', function () {
     expect($app->fresh()->steps)->toContain('build');
 });
 
+it('builds with the Node version the site pinned, not the default', function () {
+    fakeGit();
+    $app = gitApp(['build_command' => 'npm ci && npm run build', 'node_version' => '18.20.0']);
+
+    runDeploy($app);
+
+    // A site pinned to 18 on a box defaulting to 22 built with 22 — silently,
+    // and only visible much later as a runtime error in code that compiled.
+    Process::assertRan(fn ($p) => $p->command[0] === 'runuser'
+        && str_contains(end($p->command), "export PATH='/opt/fnm/node-versions/v18.20.0/installation/bin':\"\$PATH\";")
+        && str_contains(end($p->command), 'npm ci && npm run build'));
+});
+
+it('leaves PATH alone when the site pinned no version', function () {
+    fakeGit();
+    $app = gitApp(['build_command' => 'composer install', 'node_version' => null]);
+
+    runDeploy($app);
+
+    // A PHP site has no business having its PATH rewritten.
+    Process::assertRan(fn ($p) => $p->command[0] === 'runuser'
+        && ! str_contains(end($p->command), 'export PATH='));
+});
+
 it('pairs the token with the right username per provider', function () {
     fakeGit();
     $this->account->update(['provider' => 'gitlab', 'identifier' => 'dev']);
