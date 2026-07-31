@@ -105,5 +105,7 @@ return [
     'application.webhook_disabled' => 'Отключил автодеплой по push для :name',
     'application.webhook_rotated' => 'Заменил секрет автодеплоя для :name (:provider)',
     'application.webhook_deployed' => 'Развернул :name после push в :branch',
+    'database.engine_installed' => 'Установил движок базы данных :engine',
+    'database.engine_install_failed' => 'Не удалось установить движок базы данных :engine (:reason)',
     'php.ini_updated' => 'Обновлена конфигурация PHP :version',
 ];

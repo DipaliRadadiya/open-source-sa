@@ -105,5 +105,7 @@ return [
     'application.webhook_disabled' => ':name के लिए push पर डिप्लॉय बंद किया',
     'application.webhook_rotated' => ':name के लिए push पर डिप्लॉय का सीक्रेट बदला (:provider)',
     'application.webhook_deployed' => ':branch पर push के बाद :name डिप्लॉय किया',
+    'database.engine_installed' => ':engine डेटाबेस इंजन इंस्टॉल किया',
+    'database.engine_install_failed' => ':engine डेटाबेस इंजन इंस्टॉल नहीं हो सका (:reason)',
     'php.ini_updated' => 'PHP :version की कॉन्फ़िगरेशन अपडेट की',
 ];

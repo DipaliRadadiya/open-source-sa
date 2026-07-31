@@ -10,9 +10,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
 use App\Http\Requests\Server\Database\StoreDatabaseRequest;
 use App\Http\Resources\DatabaseResource;
+use App\Jobs\InstallDatabaseEngine;
 use App\Models\Database;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Databases\Installers\EngineInstallerManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -21,10 +24,60 @@ class DatabaseController extends Controller
 {
     /**
      * Supported engines + their live availability (capability list).
+     *
+     * `installable` says whether the panel can put this engine on the server
+     * itself. MongoDB is operable but not installable yet — it needs its own apt
+     * repository — and the catalog saying so is what stops the setup page
+     * offering a button that cannot work.
      */
-    public function engines(DatabaseManager $manager): JsonResponse
+    public function engines(DatabaseManager $manager, EngineInstallerManager $installers): JsonResponse
     {
-        return response()->json(['engines' => $manager->capabilities()]);
+        $progress = app(InstallTracker::class)->versions('database')->keyBy('version');
+
+        $engines = array_map(function (array $engine) use ($installers, $progress) {
+            $name = (string) $engine['engine'];
+            $row = $progress->get($name);
+
+            return $engine + [
+                'installable' => $installers->canInstall($name),
+                // Only ever `installing` or `failed`: a finished install deletes
+                // its row, so "installed" is answered by detection above and
+                // there is no second copy of that fact to go stale.
+                'install_status' => $row?->status,
+                'install_reason' => $row?->reason,
+                'install_message' => $row?->reason
+                    ? __('errors/database.engine_install.'.$row->reason)
+                    : null,
+            ];
+        }, $manager->capabilities());
+
+        return response()->json(['engines' => $engines]);
+    }
+
+    /**
+     * Install an engine. `202` — the work is queued; poll `GET /databases/engines`
+     * and drive the UI from `install_status`.
+     */
+    public function installEngine(
+        string $engine,
+        DatabaseManager $manager,
+        EngineInstallerManager $installers,
+        InstallTracker $installs,
+    ): JsonResponse {
+        abort_unless($installers->canInstall($engine), 422, __('errors/database.engine_not_installable'));
+
+        if ($installers->installer($engine)->installed()) {
+            return response()->json(['engines' => $manager->capabilities(), 'queued' => false]);
+        }
+
+        // The row is written here, before dispatch — inside the job it would
+        // leave a blind window between this response and the worker picking it
+        // up, during which the setup page would show nothing happening.
+        $installs->start('database', $engine);
+
+        InstallDatabaseEngine::dispatch($engine);
+
+        return response()->json(['queued' => true], 202);
     }
 
     public function index(): JsonResponse

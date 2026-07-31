@@ -37,6 +37,8 @@ use App\Services\Server\Applications\Installers\PrestaShopInstaller;
 use App\Services\Server\Applications\Installers\StatamicInstaller;
 use App\Services\Server\Applications\Installers\UptimeKumaInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
+use App\Services\Server\Databases\Installers\MariaDbInstaller;
+use App\Services\Server\Databases\Installers\MySqlInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
 use App\Services\Server\DiskCleaner\Targets\JournalTarget;
@@ -946,9 +948,28 @@ return [
 
     'databases' => [
         'engines' => [
-            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
-            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
-            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'default_port' => 27017, 'default_socket' => null],
+            // `installer` is what makes an engine offerable in the setup page.
+            // MongoDB is operable but not installable yet — it needs its own apt
+            // repository — so it has none, and the catalog says so rather than
+            // showing a button that cannot work.
+            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MySqlInstaller::class],
+            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MariaDbInstaller::class],
+            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'default_port' => 27017, 'default_socket' => null, 'installer' => null],
+        ],
+
+        // Engine installs pull a few hundred MB and run their own post-install
+        // scripts; 60s would kill one mid-configure.
+        'install_timeout' => (int) env('SERVER_DB_INSTALL_TIMEOUT', 900),
+
+        // apt output -> stable reason code. The human sentence is built from the
+        // code at read time in the viewer's locale; stderr is never stored,
+        // because its wording changes between releases and it leaks paths.
+        'failure_reasons' => [
+            'package_not_found' => '/Unable to locate package|has no installation candidate/i',
+            'apt_lock' => '/Could not get lock|dpkg frontend lock|another process is using/i',
+            'no_space' => '/No space left on device|not enough free disk space/i',
+            'network' => '/Temporary failure resolving|Could not resolve|Connection failed|Unable to connect/i',
+            'dpkg_broken' => '/dpkg was interrupted|broken packages|Sub-process .* returned an error/i',
         ],
 
         // Never created/dropped/altered by the panel (deny-by-default guard).

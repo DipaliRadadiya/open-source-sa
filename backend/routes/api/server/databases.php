@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Route;
 
 // Engines capability + admin-connection config (static routes before bindings).
 Route::get('/databases/engines', [DatabaseController::class, 'engines'])->middleware('permission:database');
+Route::post('/databases/engines/{engine}', [DatabaseController::class, 'installEngine'])
+    ->middleware('permission:database,manage');
 Route::get('/databases/connections', [DatabaseConnectionController::class, 'index'])->middleware('permission:database');
 Route::put('/databases/connections/{engine}', [DatabaseConnectionController::class, 'update'])->middleware('permission:database,manage');
 Route::post('/databases/connections/{engine}/test', [DatabaseConnectionController::class, 'test'])->middleware('permission:database,manage');

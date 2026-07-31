@@ -147,10 +147,11 @@ it('returns the known distinct types and actions for filter dropdowns', function
 
     $response->assertOk()
         ->assertJsonPath('types', ['application', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'permission', 'php', 'role', 'server', 'service', 'setting', 'system_user', 'user'])
-        ->assertJsonCount(78, 'actions.all'); // all distinct verbs (deduped across types)
+        ->assertJsonCount(80, 'actions.all'); // all distinct verbs (deduped across types)
     // `all` = every verb; per-type keys are scoped to that type's verbs.
     expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'downloaded', 'cleaned', 'schedule_updated', 'profile_updated', 'user_created', 'connection_updated');
     expect($response->json('actions.application'))->toContain('webhook_enabled', 'webhook_disabled', 'webhook_rotated', 'webhook_deployed');
+    expect($response->json('actions.database'))->toContain('engine_installed', 'engine_install_failed');
     expect($response->json('actions.database'))->toContain('created', 'deleted', 'user_created', 'user_deleted', 'password_reset', 'imported', 'connection_updated');
     expect($response->json('actions.system_user'))->toContain('created', 'ssh_key_added', 'password_set', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'ssh_disabled')->not->toContain('registered');
     expect($response->json('actions.role'))->toEqual(['created', 'deleted', 'updated']);

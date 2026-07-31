@@ -87,9 +87,22 @@ class DatabaseManager
         return in_array($name, (array) config("server.databases.system_schemas.{$key}", []), true);
     }
 
+    /**
+     * Users the panel refuses to touch.
+     *
+     * The config list covers the engines' own accounts. The stored connection
+     * usernames are added because the panel's *own* account — `panel_xxxxxxxxxx`,
+     * created by the engine installer — is otherwise an ordinary-looking user in
+     * the Database Users list, and deleting it silently breaks every database
+     * operation with no way back through the UI.
+     */
     public function isSystemUser(string $username): bool
     {
-        return in_array($username, (array) config('server.databases.system_users', []), true);
+        if (in_array($username, (array) config('server.databases.system_users', []), true)) {
+            return true;
+        }
+
+        return DatabaseConnection::query()->where('username', $username)->exists();
     }
 
     private function assertKnownEngine(string $engine): void

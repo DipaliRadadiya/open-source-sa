@@ -768,7 +768,22 @@ Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics ar
 ### Databases (P1)
 Requires the `database` permission (`view` to read, `manage` to mutate). **3 engines** — `mysql | mariadb | mongodb` — via a `DatabaseEngine` strategy (SqlEngine covers mysql+mariadb, MongoEngine its own). Every op runs locally through the engine client with the admin creds in a 0600 auth file + statements over stdin (never a password on argv). A **DB user belongs to exactly one database** (nested resource). Identifiers are strict-regex validated (DDL can't be parameterised). Passwords are encrypted at rest but returned so you can build the connection string. `500 {message, reference}` on an engine failure.
 
-**`GET /api/databases/engines`** — capability list: `{ engines: [{engine, driver, running, version, charsets}] }` (`running` = reachable with the configured connection).
+**`GET /api/databases/engines`** — capability list: `{ engines: [{engine, driver, running, version, charsets, installable, install_status, install_reason, install_message}] }` (`running` = reachable with the configured connection).
+
+- **`installable`** — whether the panel can put this engine on the server itself. `true` for `mariadb` and `mysql`; **`false` for `mongodb`**, which is operable but needs its own apt repository, so don't render an install button for it.
+- **`install_status`** is only ever `installing`, `failed`, or `null` — never `installed`. A finished install **deletes its progress row** so that detection (`running` / `version`) stays the single answer to "is it there", and the two can't drift. `null` + `running: false` means "not installed, nothing in flight".
+- **`install_message`** is the localized sentence for `install_reason`, built in *your* `Accept-Language`. Reasons: `package_not_found`, `apt_lock`, `no_space`, `network`, `dpkg_broken`, `port_in_use_by_mysql`, `port_in_use_by_mariadb`, `root_unreachable`, `grant_failed`, `unknown`.
+
+**`POST /api/databases/engines/{engine}`** (`manage`) — install it. `202 { queued: true }`; poll the endpoint above and drive the UI from `install_status`.
+- Already installed → `200 { queued: false }` with the capability list. Not an error: a migrated server that already had MariaDB is a success, not a conflict.
+- Not installable (`mongodb`) → `422`.
+- **Only one SQL engine per server.** MySQL and MariaDB are mutually exclusive on 3306 — installing one while the other is present is refused with `port_in_use_by_*`, because on Debian-family systems apt would *remove* the first as a conflicting package and take its databases' server with it.
+
+**What it does with credentials, and what it deliberately doesn't.** The panel creates **its own account** — `panel_` plus ten random characters — with `ALL PRIVILEGES … WITH GRANT OPTION`, and stores that password encrypted. It **never sets a root password**: on MariaDB 10.4+ and MySQL 8 on Ubuntu, root authenticates over the unix socket and has password login disabled outright, so giving it one would be *creating* a secret rather than reading one — and would make root usable over TCP. `sudo mysql` keeps working for the server's owner exactly as before.
+
+If the panel **can't** sign in as root over the socket — someone already changed how root authenticates — it refuses with `root_unreachable` rather than guessing, because overwriting an existing root credential could lock out whatever else on the box depends on it.
+
+The panel's own account is also protected from deletion through **Database Users**: it looks like an ordinary user there, and removing it would break every database operation with no way back through the UI.
 
 **Admin connection** (per engine, config lives in the DB, not `.env`):
 - **`GET /api/databases/connections`** → `{ connections: [{engine, driver, connection_type, host, port, socket, username, has_password, options}] }` (password never returned).

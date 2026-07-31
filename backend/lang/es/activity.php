@@ -105,5 +105,7 @@ return [
     'application.webhook_disabled' => 'Desactivó el despliegue automático de :name',
     'application.webhook_rotated' => 'Reemplazó el secreto de despliegue automático de :name (:provider)',
     'application.webhook_deployed' => 'Desplegó :name por un push a :branch',
+    'database.engine_installed' => 'Instaló el motor de base de datos :engine',
+    'database.engine_install_failed' => 'No se pudo instalar el motor de base de datos :engine (:reason)',
     'php.ini_updated' => 'Actualizó la configuración de PHP :version',
 ];
