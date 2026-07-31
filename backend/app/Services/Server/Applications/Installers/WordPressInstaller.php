@@ -51,7 +51,14 @@ class WordPressInstaller extends AbstractSiteInstaller
 
         // The admin password goes in on stdin via --prompt, never as an
         // argument — `ps` is readable by every user on the machine.
+        // Run the phar through the site's own interpreter rather than letting
+        // its `#!/usr/bin/env php` shebang pick one. Two reasons: on
+        // OpenLiteSpeed there may be no system `php` at all — LSPHP lives in
+        // the lsws tree — and even on nginx the shebang finds whatever
+        // /usr/bin/php happens to be, which need not be the version this site
+        // was given.
         $this->runAsSiteUser('install_app', $application, array_filter([
+            $this->phpBinary($application),
             (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
             'core', 'install',
             '--path='.$documentRoot,
