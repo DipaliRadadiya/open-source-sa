@@ -163,8 +163,19 @@ class PhpExtensionManager
             );
         }
 
-        // The package enables itself, but nothing tells FPM.
-        $this->reload($version);
+        // Debian's postinst normally enables the module itself — but "normally"
+        // is not a guarantee, nothing here checked it, and the job goes on to
+        // log `extension_enabled` regardless. Enable explicitly so the claim
+        // and the state agree: phpenmod on an already-enabled module is a
+        // no-op, and it performs the reload FPM needs anyway.
+        try {
+            $this->enable($version, $name);
+        } catch (PhpConfigException $e) {
+            // Installed but not switched on is its own outcome, and worth
+            // saying so — "the install failed" would be wrong, and the user
+            // would retry an apt run that already succeeded.
+            throw new RuntimeInstallException((string) $e->reference, 'enable_failed');
+        }
     }
 
     /**
