@@ -83,4 +83,6 @@ return [
         'reload' => 'Recarregando o servidor web',
         'worker' => 'O processo em segundo plano parou',
     ],
+    'port_free' => 'A porta :port está livre.',
+
 ];

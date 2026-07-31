@@ -75,6 +75,64 @@ class PortAllocator
     }
 
     /**
+     * Everything the screen needs to say about a port before it is submitted.
+     *
+     * Three outcomes, not two. A conflict is a refusal; a port that merely has
+     * a name in /etc/services is a **warning** — the user may well mean it,
+     * since 8080 is `http-alt` there and is also where most Node applications
+     * listen. Telling them which service owns the name lets them decide;
+     * silently allowing it teaches them nothing, and refusing it would be
+     * wrong.
+     *
+     * @return array{port: int, available: bool, reason: ?string, service: ?string, suggested_port: ?int}
+     */
+    public function inspect(int $port, ?Application $except = null): array
+    {
+        $conflict = $this->conflict($port, $except);
+        $service = $this->serviceName($port);
+
+        return [
+            'port' => $port,
+            'available' => $conflict === null,
+            // `in_use_by_app` and `in_use` block; `registered` does not.
+            'reason' => $conflict ?? ($service !== null ? 'registered' : null),
+            'service' => $service,
+            // Only when the answer is no — offering an alternative to someone
+            // whose choice was fine would just be noise.
+            'suggested_port' => $conflict === null ? null : $this->suggest(),
+        ];
+    }
+
+    /**
+     * A free port to offer, or null when the range is exhausted — a suggestion
+     * is a convenience, so failing to find one must not fail the check.
+     */
+    private function suggest(): ?int
+    {
+        try {
+            return $this->allocate();
+        } catch (NoPortAvailableException) {
+            return null;
+        }
+    }
+
+    /**
+     * What `/etc/services` calls a port, if anything.
+     */
+    private function serviceName(int $port): ?string
+    {
+        $contents = @file_get_contents('/etc/services');
+
+        if ($contents === false) {
+            return null;
+        }
+
+        return preg_match('/^([a-z0-9._-]+)\s+'.$port.'\/tcp/mi', $contents, $matches) === 1
+            ? $matches[1]
+            : null;
+    }
+
+    /**
      * Ports `/etc/services` says belong to something, whether or not it is
      * installed yet.
      *

@@ -243,6 +243,56 @@ describe('ports', function () {
     });
 });
 
+describe('the port check', function () {
+    it('warns about a named port without refusing it', function () {
+        Process::fake(fn () => Process::result(output: ''));
+
+        // The distinction the screen needs: this is a caution, not an error.
+        $this->withHeaders(supervisorHeaders())
+            ->getJson('/api/applications/port-check?port=8080')
+            ->assertOk()
+            ->assertJsonPath('port_check.available', true)
+            ->assertJsonPath('port_check.reason', 'registered')
+            ->assertJsonPath('port_check.service', 'http-alt')
+            // No alternative offered — the choice was fine.
+            ->assertJsonPath('port_check.suggested_port', null);
+    });
+
+    it('refuses a port another application holds, and offers a free one', function () {
+        Process::fake(fn () => Process::result(output: ''));
+        nodeApp(['app_port' => 3500, 'domain' => 'held.test']);
+
+        $this->withHeaders(supervisorHeaders())
+            ->getJson('/api/applications/port-check?port=3500')
+            ->assertOk()
+            ->assertJsonPath('port_check.available', false)
+            ->assertJsonPath('port_check.reason', 'in_use_by_app')
+            // Somewhere to go next, rather than just a refusal.
+            ->assertJsonPath('port_check.suggested_port', 3000);
+    });
+
+    it('reports a port nothing claims as simply free', function () {
+        Process::fake(fn () => Process::result(output: ''));
+
+        $this->withHeaders(supervisorHeaders())
+            ->getJson('/api/applications/port-check?port=3777')
+            ->assertOk()
+            ->assertJsonPath('port_check.available', true)
+            ->assertJsonPath('port_check.reason', null)
+            ->assertJsonPath('port_check.service', null);
+    });
+
+    it('does not report an application own port back to it as taken', function () {
+        Process::fake(fn () => Process::result(output: ''));
+        $app = nodeApp(['app_port' => 3500, 'domain' => 'mine.test']);
+
+        $this->withHeaders(supervisorHeaders())
+            ->getJson("/api/applications/port-check?port=3500&application_id={$app->id}")
+            ->assertOk()
+            ->assertJsonPath('port_check.available', true);
+    });
+});
+
 describe('the endpoint', function () {
     it('refuses to act on an application with no process', function () {
         $app = nodeApp(['start_command' => null]);

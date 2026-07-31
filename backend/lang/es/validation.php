@@ -201,4 +201,6 @@ return [
     'port_in_use_by_app' => 'El puerto :port ya lo usa otra aplicación en este servidor.',
     'port_in_use' => 'Algo en este servidor ya está escuchando en el puerto :port. Elige otro o detén lo que lo usa.',
 
+    'port_registered' => 'El puerto :port lo usa normalmente :service. Puedes usarlo igualmente si nada en este servidor lo hace.',
+
 ];

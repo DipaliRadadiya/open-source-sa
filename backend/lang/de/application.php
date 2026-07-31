@@ -83,4 +83,6 @@ return [
         'reload' => 'Webserver wird neu geladen',
         'worker' => 'Der Hintergrundprozess wurde beendet',
     ],
+    'port_free' => 'Port :port ist frei.',
+
 ];

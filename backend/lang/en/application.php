@@ -88,4 +88,6 @@ return [
         'reload' => 'Reloading the web server',
         'worker' => 'The background worker stopped',
     ],
+    'port_free' => 'Port :port is free.',
+
 ];

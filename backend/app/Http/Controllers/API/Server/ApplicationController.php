@@ -15,6 +15,7 @@ use App\Http\Resources\ApplicationResource;
 use App\Jobs\DeployApplication;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
+use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,6 +87,42 @@ class ApplicationController extends Controller
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
         ], 202);
+    }
+
+    /**
+     * Whether a port can be used, before the user submits the form.
+     *
+     * A read, so it needs only `application` — checking a port is not a
+     * change. Three answers rather than two: taken, free, or free but named
+     * after a service, which the screen should show as a warning rather than
+     * an error. See PortAllocator::inspect().
+     */
+    public function portCheck(Request $request, PortAllocator $ports): JsonResponse
+    {
+        $validated = $request->validate([
+            'port' => ['required', 'integer', 'between:1024,65535'],
+            'application_id' => ['nullable', 'integer', 'exists:applications,id'],
+        ]);
+
+        // Excluded so an application editing its own settings is not told its
+        // current port is taken — by itself.
+        $except = filled($validated['application_id'] ?? null)
+            ? Application::find($validated['application_id'])
+            : null;
+
+        $result = $ports->inspect((int) $validated['port'], $except);
+
+        return response()->json([
+            'port_check' => [
+                ...$result,
+                'message' => $result['reason'] === null
+                    ? __('application.port_free', ['port' => $result['port']])
+                    : __('validation.port_'.$result['reason'], [
+                        'port' => $result['port'],
+                        'service' => $result['service'] ?? '',
+                    ]),
+            ],
+        ]);
     }
 
     /**

@@ -18,6 +18,8 @@ Route::get('/site-types', [SiteTypeController::class, 'index'])->middleware('per
 
 Route::get('/applications', [ApplicationController::class, 'index'])->middleware('permission:application');
 Route::post('/applications', [ApplicationController::class, 'store'])->middleware('permission:application,manage');
+Route::get('/applications/port-check', [ApplicationController::class, 'portCheck'])
+    ->middleware('permission:application');
 Route::get('/applications/{application}', [ApplicationController::class, 'show'])->middleware('permission:application');
 Route::put('/applications/{application}', [ApplicationController::class, 'update'])->middleware('permission:application,manage');
 Route::post('/applications/{application}/provision', [ApplicationController::class, 'provision'])->middleware('permission:application,manage');

@@ -178,4 +178,6 @@ return [
     'port_in_use_by_app' => 'A porta :port já é usada por outra aplicação neste servidor.',
     'port_in_use' => 'Algo neste servidor já está a escutar na porta :port. Escolha outra ou pare o que a está a usar.',
 
+    'port_registered' => 'A porta :port é normalmente usada por :service. Pode usá-la mesmo assim se nada neste servidor a usar.',
+
 ];

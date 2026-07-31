@@ -210,4 +210,6 @@ return [
     'port_in_use_by_app' => 'Port :port is already used by another application on this server.',
     'port_in_use' => 'Something on this server is already listening on port :port. Pick another, or stop what is using it.',
 
+    'port_registered' => 'Port :port is normally used by :service. You can still use it if nothing on this server does.',
+
 ];
