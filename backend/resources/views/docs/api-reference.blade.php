@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex">
-    <title>ServerAvatar OSS — API Reference</title>
+    <title>API Reference</title>
     <style>
         :root {
             --fg: #1f2328; --muted: #656d76; --bg: #ffffff; --border: #d0d7de;

@@ -137,7 +137,7 @@ class CrontabManager
         // copytruncate: the running job holds the file open, so rotating by
         // rename would leave it writing to a file nobody can see.
         $policy = <<<CONF
-            # Managed by ServerAvatar OSS — cron job output logs; do not edit by hand
+            # Managed by the control panel — cron job output logs; do not edit by hand
             {$dir}/*.log {
                 daily
                 rotate {$days}
@@ -239,7 +239,7 @@ class CrontabManager
      */
     private function render(Cronjob $cronjob): string
     {
-        return "# Managed by ServerAvatar OSS — cronjob #{$cronjob->id} ({$cronjob->name}); do not edit by hand\n"
+        return "# Managed by the control panel — cronjob #{$cronjob->id} ({$cronjob->name}); do not edit by hand\n"
             ."{$cronjob->expression} {$cronjob->username} {$this->runLine($cronjob)}\n";
     }
 

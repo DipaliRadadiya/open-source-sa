@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ServerAvatar OSS — installer.
+# Self-hosted server control panel — installer.
 #
 #   curl -fsSL https://raw.githubusercontent.com/DipaliRadadiya/open-source-sa/main/install.sh | sudo bash
 #
@@ -33,14 +33,23 @@ umask 077
 
 REPO_URL="${REPO_URL:-https://github.com/DipaliRadadiya/open-source-sa.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
-APP_DIR="${APP_DIR:-/var/www/serveravatar}"
-APP_USER="${APP_USER:-serveravatar}"
+# Every artifact this script creates — the account, the paths, the systemd units,
+# the sudoers and cron files — is named from this one slug, and none of them
+# carries a product name.
+#
+# Deliberate: the panel is white-labelled, so a reseller's customer must not find
+# an upstream brand stamped across their own server. Overridable, so rebranding
+# is one value rather than a grep.
+PANEL_SLUG="${PANEL_SLUG:-panel}"
+
+APP_DIR="${APP_DIR:-/var/www/${PANEL_SLUG}}"
+APP_USER="${APP_USER:-${PANEL_SLUG}}"
 PHP_VERSION="${PHP_VERSION:-8.4}"
 NODE_VERSION="${NODE_VERSION:-24}"
 FRONTEND_PORT="${FRONTEND_PORT:-3100}"
 FNM_DIR="/opt/fnm"
 FNM_BIN="/usr/local/bin/fnm"
-LOG_FILE="/var/log/serveravatar-install.log"
+LOG_FILE="/var/log/${PANEL_SLUG}-install.log"
 
 DOMAIN=""          # --domain=panel.example.com  (skips nip.io entirely)
 ADMIN_EMAIL=""     # --email= for Let's Encrypt expiry notices
@@ -91,7 +100,7 @@ for arg in "$@"; do
         --dry-run)  DRY_RUN=1 ;;
         -h|--help)
             cat <<'USAGE'
-ServerAvatar OSS installer
+Control panel installer
 
   sudo bash install.sh [options]
 
@@ -140,7 +149,7 @@ preflight() {
     local port
     for port in 80 443; do
         if ss -ltnH "sport = :${port}" 2>/dev/null | grep -q .; then
-            if [[ -f /etc/nginx/sites-enabled/serveravatar.conf ]]; then
+            if [[ -f /etc/nginx/sites-enabled/${PANEL_SLUG}.conf ]]; then
                 skip "port ${port} is in use by our own nginx"
             else
                 die "port ${port} is already in use by something else.
@@ -441,7 +450,7 @@ configure_redis() {
         skip "Redis already has a password"
     else
         REDIS_PASSWORD=$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 32)
-        printf '\n# Added by the ServerAvatar OSS installer\nrequirepass %s\n' "$REDIS_PASSWORD" >>"$conf"
+        printf '\n# Added by the Control panel installer\nrequirepass %s\n' "$REDIS_PASSWORD" >>"$conf"
         ok "generated a Redis password"
     fi
 
@@ -561,24 +570,24 @@ configure_fpm() {
     # Its own pool on its own socket, owned by the panel's user. `ondemand`
     # because a control panel is idle most of the time and a 1 GB box has
     # better uses for the memory than parked PHP workers.
-    cat >"/etc/php/${PHP_VERSION}/fpm/pool.d/serveravatar.conf" <<POOL
-[serveravatar]
+    cat >"/etc/php/${PHP_VERSION}/fpm/pool.d/${PANEL_SLUG}.conf" <<POOL
+[${PANEL_SLUG}]
 user = ${APP_USER}
 group = ${APP_USER}
-listen = /run/php/serveravatar-fpm.sock
+listen = /run/php/${PANEL_SLUG}-fpm.sock
 listen.owner = www-data
 listen.group = www-data
 pm = ondemand
 pm.max_children = 10
 pm.process_idle_timeout = 30s
 pm.max_requests = 500
-php_admin_value[error_log] = /var/log/php-serveravatar.log
+php_admin_value[error_log] = /var/log/php-${PANEL_SLUG}.log
 php_admin_flag[log_errors] = on
 POOL
 
     run systemctl enable "php${PHP_VERSION}-fpm"
     run systemctl restart "php${PHP_VERSION}-fpm"
-    ok "pool listening on /run/php/serveravatar-fpm.sock"
+    ok "pool listening on /run/php/${PANEL_SLUG}-fpm.sock"
 }
 
 # ─── nginx ───────────────────────────────────────────────────────────────────
@@ -592,8 +601,8 @@ configure_nginx() {
     # port-443 server blocks include. Written this way so the two can never
     # drift apart — the alternative, duplicating them per listener, is how a
     # config ends up serving different things over HTTP and HTTPS.
-    local api_locations=/etc/nginx/snippets/serveravatar-api.conf
-    local panel_locations=/etc/nginx/snippets/serveravatar-panel.conf
+    local api_locations=/etc/nginx/snippets/${PANEL_SLUG}-api.conf
+    local panel_locations=/etc/nginx/snippets/${PANEL_SLUG}-web.conf
 
     # The API. `^~ /api` in single-host mode so it wins over the catch-all proxy
     # to Next without a regex fight; a plain `/` when the API has its own name.
@@ -601,7 +610,7 @@ configure_nginx() {
     (( SINGLE_HOST )) && api_prefix="^~ /api"
 
     cat >"$api_locations" <<NGINX
-# Managed by the ServerAvatar OSS installer.
+# Managed by the Control panel installer.
 client_max_body_size 64M;
 
 location ${api_prefix} {
@@ -610,7 +619,7 @@ location ${api_prefix} {
 
 location ~ \.php\$ {
     include fastcgi_params;
-    fastcgi_pass unix:/run/php/serveravatar-fpm.sock;
+    fastcgi_pass unix:/run/php/${PANEL_SLUG}-fpm.sock;
     fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
     fastcgi_index index.php;
     # Long enough for a queued install to be *dispatched*; the work itself
@@ -622,7 +631,7 @@ location ~ /\.(?!well-known) { deny all; }
 NGINX
 
     cat >"$panel_locations" <<NGINX
-# Managed by the ServerAvatar OSS installer.
+# Managed by the Control panel installer.
 # Hashed, immutable assets served straight off disk — Next's standalone output
 # does not serve them, and round-tripping them through Node is wasted work.
 location /_next/static/ {
@@ -647,8 +656,8 @@ location / {
 NGINX
 
     if (( SINGLE_HOST )); then
-        cat >/etc/nginx/sites-available/serveravatar.conf <<NGINX
-# Managed by the ServerAvatar OSS installer.
+        cat >/etc/nginx/sites-available/${PANEL_SLUG}.conf <<NGINX
+# Managed by the Control panel installer.
 server {
     listen 80;
     listen [::]:80;
@@ -662,8 +671,8 @@ server {
 }
 NGINX
     else
-        cat >/etc/nginx/sites-available/serveravatar.conf <<NGINX
-# Managed by the ServerAvatar OSS installer.
+        cat >/etc/nginx/sites-available/${PANEL_SLUG}.conf <<NGINX
+# Managed by the Control panel installer.
 server {
     listen 80;
     listen [::]:80;
@@ -689,7 +698,7 @@ server {
 NGINX
     fi
 
-    ln -sf /etc/nginx/sites-available/serveravatar.conf /etc/nginx/sites-enabled/serveravatar.conf
+    ln -sf /etc/nginx/sites-available/${PANEL_SLUG}.conf /etc/nginx/sites-enabled/${PANEL_SLUG}.conf
 
     # Ubuntu's default site is a catch-all on port 80. Left enabled it answers
     # for our hostnames too, depending on which loads first.
@@ -714,9 +723,9 @@ install_services() {
 
     local backend="${APP_DIR}/backend"
 
-    cat >/etc/systemd/system/serveravatar-frontend.service <<UNIT
+    cat >/etc/systemd/system/${PANEL_SLUG}-frontend.service <<UNIT
 [Unit]
-Description=ServerAvatar OSS panel (Next.js)
+Description=Control panel web interface (Next.js)
 After=network.target
 
 [Service]
@@ -741,9 +750,9 @@ UNIT
 
     # One worker. Server operations are sequential by nature — two workers
     # racing to change the same server is a failure mode, not throughput.
-    cat >/etc/systemd/system/serveravatar-queue.service <<UNIT
+    cat >/etc/systemd/system/${PANEL_SLUG}-queue.service <<UNIT
 [Unit]
-Description=ServerAvatar OSS queue worker
+Description=Control panel queue worker
 After=network.target
 
 [Service]
@@ -766,14 +775,14 @@ UNIT
 
     # The scheduler tick. Without it the metrics collector never samples and the
     # disk cleaner never runs — features that look built but do nothing.
-    cat >/etc/cron.d/serveravatar-scheduler <<CRON
+    cat >/etc/cron.d/${PANEL_SLUG}-scheduler <<CRON
 * * * * * ${APP_USER} /usr/bin/php${PHP_VERSION} ${backend}/artisan schedule:run >> /dev/null 2>&1
 CRON
-    chmod 644 /etc/cron.d/serveravatar-scheduler
+    chmod 644 /etc/cron.d/${PANEL_SLUG}-scheduler
 
     run systemctl daemon-reload
-    run systemctl enable --now serveravatar-frontend.service
-    run systemctl enable --now serveravatar-queue.service
+    run systemctl enable --now ${PANEL_SLUG}-frontend.service
+    run systemctl enable --now ${PANEL_SLUG}-queue.service
     ok "panel, queue worker and scheduler running"
 }
 
@@ -826,18 +835,18 @@ configure_sudoers() {
     list=$(printf '%s, ' "${bins[@]}")
     list="${list%, }"
 
-    cat >/etc/sudoers.d/serveravatar <<SUDOERS
-# Managed by the ServerAvatar OSS installer.
+    cat >/etc/sudoers.d/${PANEL_SLUG} <<SUDOERS
+# Managed by the Control panel installer.
 # See configure_sudoers() in install.sh for what this does and does not contain.
 Defaults:${APP_USER} !requiretty
 ${APP_USER} ALL=(root) NOPASSWD: ${list}
 SUDOERS
-    chmod 440 /etc/sudoers.d/serveravatar
+    chmod 440 /etc/sudoers.d/${PANEL_SLUG}
 
     # A malformed sudoers file locks everyone out of sudo, so it is validated
     # and removed if it does not parse.
-    if ! visudo -cqf /etc/sudoers.d/serveravatar >>"$LOG_FILE" 2>&1; then
-        rm -f /etc/sudoers.d/serveravatar
+    if ! visudo -cqf /etc/sudoers.d/${PANEL_SLUG} >>"$LOG_FILE" 2>&1; then
+        rm -f /etc/sudoers.d/${PANEL_SLUG}
         die "the generated sudoers file did not validate and has been removed"
     fi
     ok "sudoers rule installed for ${APP_USER}"
@@ -909,10 +918,10 @@ configure_tls() {
     fi
 
     say "     falling back to a self-signed certificate so traffic is still encrypted"
-    mkdir -p /etc/ssl/serveravatar
+    mkdir -p /etc/ssl/${PANEL_SLUG}
     run openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
-        -keyout /etc/ssl/serveravatar/key.pem \
-        -out /etc/ssl/serveravatar/cert.pem \
+        -keyout /etc/ssl/${PANEL_SLUG}/key.pem \
+        -out /etc/ssl/${PANEL_SLUG}/cert.pem \
         -subj "/CN=${PANEL_HOST}"
 
     # A separate file rather than appending to the port-80 config, so a later
@@ -920,13 +929,13 @@ configure_tls() {
     # can simply be deleted. The 443 blocks include the very same location
     # snippets the port-80 blocks do — nothing is duplicated, so HTTP and HTTPS
     # cannot end up serving different things.
-    local tls_conf=/etc/nginx/sites-available/serveravatar-tls.conf
-    local api_locations=/etc/nginx/snippets/serveravatar-api.conf
-    local panel_locations=/etc/nginx/snippets/serveravatar-panel.conf
+    local tls_conf=/etc/nginx/sites-available/${PANEL_SLUG}-tls.conf
+    local api_locations=/etc/nginx/snippets/${PANEL_SLUG}-api.conf
+    local panel_locations=/etc/nginx/snippets/${PANEL_SLUG}-web.conf
 
     if (( SINGLE_HOST )); then
         cat >"$tls_conf" <<NGINX
-# Self-signed fallback, written by the ServerAvatar OSS installer.
+# Self-signed fallback, written by the Control panel installer.
 # Delete this file and run: certbot --nginx -d ${PANEL_HOST}
 server {
     listen 443 ssl;
@@ -934,8 +943,8 @@ server {
     server_name ${PANEL_HOST};
     root ${APP_DIR}/backend/public;
 
-    ssl_certificate /etc/ssl/serveravatar/cert.pem;
-    ssl_certificate_key /etc/ssl/serveravatar/key.pem;
+    ssl_certificate /etc/ssl/${PANEL_SLUG}/cert.pem;
+    ssl_certificate_key /etc/ssl/${PANEL_SLUG}/key.pem;
 
     include ${api_locations};
     include ${panel_locations};
@@ -943,7 +952,7 @@ server {
 NGINX
     else
         cat >"$tls_conf" <<NGINX
-# Self-signed fallback, written by the ServerAvatar OSS installer.
+# Self-signed fallback, written by the Control panel installer.
 # Delete this file and run: certbot --nginx -d ${PANEL_HOST} -d ${API_HOST}
 server {
     listen 443 ssl;
@@ -952,8 +961,8 @@ server {
     root ${APP_DIR}/backend/public;
     index index.php;
 
-    ssl_certificate /etc/ssl/serveravatar/cert.pem;
-    ssl_certificate_key /etc/ssl/serveravatar/key.pem;
+    ssl_certificate /etc/ssl/${PANEL_SLUG}/cert.pem;
+    ssl_certificate_key /etc/ssl/${PANEL_SLUG}/key.pem;
 
     include ${api_locations};
 }
@@ -964,15 +973,15 @@ server {
     server_name ${PANEL_HOST};
     root ${APP_DIR}/frontend;
 
-    ssl_certificate /etc/ssl/serveravatar/cert.pem;
-    ssl_certificate_key /etc/ssl/serveravatar/key.pem;
+    ssl_certificate /etc/ssl/${PANEL_SLUG}/cert.pem;
+    ssl_certificate_key /etc/ssl/${PANEL_SLUG}/key.pem;
 
     include ${panel_locations};
 }
 NGINX
     fi
 
-    ln -sf "$tls_conf" /etc/nginx/sites-enabled/serveravatar-tls.conf
+    ln -sf "$tls_conf" /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
 
     if nginx -t >>"$LOG_FILE" 2>&1; then
         run systemctl reload nginx
@@ -984,7 +993,7 @@ NGINX
         # this went in a separate file rather than being appended to the working
         # one. Serving plain HTTP beats serving nothing.
         warn "the self-signed configuration did not validate; staying on HTTP"
-        rm -f /etc/nginx/sites-enabled/serveravatar-tls.conf
+        rm -f /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
         nginx -t >>"$LOG_FILE" 2>&1 && systemctl reload nginx
         TLS_STATE="none"
         SCHEME="http"
@@ -1006,7 +1015,7 @@ finish() {
 
     local scheme="$SCHEME"
 
-    printf '\n%s%s ServerAvatar OSS is installed%s\n\n' "$BOLD" "$GREEN" "$RESET"
+    printf '\n%s%s The control panel is installed%s\n\n' "$BOLD" "$GREEN" "$RESET"
     printf '  Panel:   %s%s://%s%s\n' "$BOLD" "$scheme" "$PANEL_HOST" "$RESET"
     (( SINGLE_HOST )) || printf '  API:     %s://%s\n' "$scheme" "$API_HOST"
     printf '  Log:     %s\n' "$LOG_FILE"
@@ -1031,7 +1040,7 @@ finish() {
 # ─── Run ─────────────────────────────────────────────────────────────────────
 
 main() {
-    printf '%sServerAvatar OSS installer%s\n' "$BOLD" "$RESET"
+    printf '%sControl panel installer%s\n' "$BOLD" "$RESET"
     (( DRY_RUN )) && printf '%s(dry run — nothing will be changed)%s\n' "$DIM" "$RESET"
 
     preflight
