@@ -136,10 +136,9 @@ describe('the FPM facts it now owns', function () {
     it('finds every installable version, and reads the number back out', function () {
         expect($this->stack->installablePattern())->toBe('^php[0-9]+\.[0-9]+-fpm$');
 
-        preg_match_all($this->stack->installableMatcher(), "php8.4-fpm - server\nphp8.3-fpm - server\nphp8.4-cli - cli\n", $matches);
-
         // The -cli line must not match: only a version that ships an FPM
         // package is one this stack can install.
-        expect($matches[1])->toBe(['8.4', '8.3']);
+        expect($this->stack->installableVersions("php8.4-fpm - server\nphp8.3-fpm - server\nphp8.4-cli - cli\n"))
+            ->toBe(['8.4', '8.3']);
     });
 });

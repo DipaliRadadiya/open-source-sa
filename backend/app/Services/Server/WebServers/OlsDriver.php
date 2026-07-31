@@ -72,7 +72,7 @@ class OlsDriver extends AbstractWebServerDriver
      */
     public function configPath(Application $application): string
     {
-        $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root'), '/');
+        $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', '/usr/local/lsws/conf/vhosts'), '/');
 
         return "{$root}/{$application->domain}/vhconf.conf";
     }
@@ -130,10 +130,27 @@ class OlsDriver extends AbstractWebServerDriver
             return $unregistered;
         }
 
-        return $this->serverOps->run(
-            ['rm', '-rf', dirname($this->configPath($application))],
-            $context,
-        );
+        // Verify it actually went, rather than trusting a success that can be
+        // vacuous: `unregister()` reports ok when nothing changed, and nothing
+        // changes if the entries sit outside the managed markers — which is
+        // what the WebAdmin console leaves behind, since the markers are
+        // comments. Deleting the vhost file while the shared config still
+        // names it breaks the config test for every site on the box.
+        if ($this->shared->references($application->domain)) {
+            return $this->shared->test();
+        }
+
+        $directory = dirname($this->configPath($application));
+        $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', '/usr/local/lsws/conf/vhosts'), '/');
+
+        // `rm -rf` on a path built from a record is the most destructive
+        // command in the panel. The domain is validated to a hostname charset
+        // long before it reaches here, but a blank one would make this the
+        // vhost root itself — deleting the configuration of every site on the
+        // server. Refuse rather than rely on validation upstream staying put.
+        abort_unless($directory !== $root && str_starts_with($directory, $root.'/'), 500);
+
+        return $this->serverOps->run(['rm', '-rf', $directory], $context);
     }
 
     /**

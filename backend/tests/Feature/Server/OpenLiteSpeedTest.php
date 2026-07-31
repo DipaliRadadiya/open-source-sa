@@ -18,6 +18,7 @@ use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * OpenLiteSpeed support.
@@ -235,6 +236,54 @@ describe('the shared httpd_config.conf', function () {
             ->not->toContain('tee');
     });
 
+    it('keeps regex metacharacters in paths intact', function () {
+        // `$1` and `\1` are backreferences in a replacement string. vhost_root
+        // is operator-set config, so it can contain them, and the old
+        // preg_replace ate them silently — in the file every site depends on.
+        config(['server.web_server_drivers.openlitespeed.vhost_root' => '/srv/$1/vhosts']);
+        fakeOls(olsConfig());
+
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test']);
+
+        expect(sharedConfig())->toContain('/srv/$1/vhosts/shop.test/vhconf.conf');
+    });
+
+    it('restores the file when the write itself fails, not just the test', function () {
+        $runs = fakeOls(olsConfig());
+        $original = sharedConfig();
+
+        // tee truncates before writing, so a failed write leaves the file
+        // empty — with the backup sitting right there unused.
+        Process::fake(function ($process) use ($runs, $original) {
+            $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
+
+            return match ($process->command[0] ?? '') {
+                'cat' => Process::result(output: $original),
+                'tee' => Process::result(output: '', errorOutput: 'No space left on device', exitCode: 1),
+                default => Process::result(output: ''),
+            };
+        });
+
+        $result = app(OlsSharedConfig::class)->register('shop.test', ['shop.test']);
+
+        expect($result->failed())->toBeTrue()
+            ->and(collect($runs)->pluck('command'))
+            ->toContain(['cp', '-f', sharedPath().'.panel-bak', sharedPath()]);
+    });
+
+    it('finds the listener closing brace by counting, not by column', function () {
+        // A hand-written config that indents its closing brace would otherwise
+        // send the search into the next block, where `map` is illegal.
+        fakeOls("listener Default {\n  address *:80\n  }\n\nvirtualHost legacy {\n  vhRoot /x/\n}\n");
+
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test']);
+
+        $config = sharedConfig();
+        $map = strpos($config, 'map                     shop.test');
+
+        expect($map)->toBeLessThan(strpos($config, 'virtualHost legacy'));
+    });
+
     it('refuses when there is no listener to map into', function () {
         fakeOls("serverName Nothing\nuser nobody\n");
 
@@ -296,6 +345,32 @@ describe('the driver', function () {
         // The mirror of apply: stop OLS referring to the site before removing
         // what it refers to.
         expect(array_search('cat', $order, true))->toBeLessThan(array_search('rm', $order, true));
+    });
+
+    it('does not delete the vhost files when the shared entry did not go', function () {
+        // The markers are comments, and the OLS WebAdmin console strips
+        // comments when it rewrites the file. The entries then survive outside
+        // the region, `unregister()` changes nothing and reports success, and
+        // deleting the file it still points at breaks config_test for every
+        // site on the box.
+        fakeOls("listener Default {\n  address *:80\n  map shop.test shop.test\n}\n\nvirtualHost shop.test {\n  vhRoot /x/\n}\n");
+
+        app(OlsDriver::class)->remove($this->app_);
+
+        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'rm');
+    });
+
+    it('refuses to rm -rf anything that is not inside the vhost root', function () {
+        fakeOls(olsConfig());
+        $this->app_->forceFill(['domain' => ''])->save();
+
+        // A blank domain makes the target the vhost root itself — deleting
+        // every site's configuration on the server. Validation upstream stops
+        // this today; the guard means it stays stopped.
+        expect(fn () => app(OlsDriver::class)->remove($this->app_))
+            ->toThrow(HttpException::class);
+
+        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'rm');
     });
 
     it('renders a vhost pointing at the site, its user and its lsphp', function () {
@@ -402,6 +477,15 @@ describe('the lsphp stack', function () {
         // success that never happened.
         expect(fn () => app(LsphpPhpStack::class)->extensionToggleCommand('8.4', 'redis', true))
             ->toThrow(PhpConfigException::class);
+    });
+
+    it('expands compact package names into real versions', function () {
+        // Left as `84`, it never matches the `8.4` that versions() reports, so
+        // an installed version stays listed as installable forever — and the
+        // value posted back fails the major.minor rule, so it can never be
+        // installed either.
+        expect(app(LsphpPhpStack::class)->installableVersions("lsphp84 - LiteSpeed PHP\nlsphp83 - LiteSpeed PHP\n"))
+            ->toBe(['8.4', '8.3']);
     });
 
     it('validates an ini with that version own binary, not with lswsctrl', function () {

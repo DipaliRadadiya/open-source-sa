@@ -179,9 +179,25 @@ class LsphpPhpStack implements PhpStack
         return '^lsphp[0-9]+$';
     }
 
-    public function installableMatcher(): string
+    /**
+     * `lsphp84` → `8.4`.
+     *
+     * The expansion is the whole point. Left compact, `84` never matches the
+     * `8.4` that `versions()` reports, so an installed version stays listed as
+     * installable forever — and the value the UI posts back fails the
+     * `major.minor` rule the endpoint enforces, so it can never be installed
+     * either.
+     *
+     * @return array<int, string>
+     */
+    public function installableVersions(string $output): array
     {
-        return '/^lsphp(\d+)\s/m';
+        preg_match_all('/^lsphp(\d+)\s/m', $output, $matches);
+
+        return array_values(array_filter(array_map(
+            fn (string $compact) => $this->expand($compact),
+            $matches[1] ?? [],
+        )));
     }
 
     /**

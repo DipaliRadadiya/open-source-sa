@@ -151,9 +151,14 @@ class FpmPhpStack implements PhpStack
         return '^php[0-9]+\\.[0-9]+-fpm$';
     }
 
-    public function installableMatcher(): string
+    /**
+     * @return array<int, string>
+     */
+    public function installableVersions(string $output): array
     {
-        return '/^php(\\d+\\.\\d+)-fpm\\s/m';
+        preg_match_all('/^php(\\d+\\.\\d+)-fpm\\s/m', $output, $matches);
+
+        return $matches[1] ?? [];
     }
 
     /**
