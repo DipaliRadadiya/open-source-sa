@@ -57,6 +57,17 @@ WANT_SSL=1         # --no-ssl
 SCHEME="https"     # settled by configure_tls before any URL is written
 DRY_RUN=0          # --dry-run
 
+# Which stack to build. Asked rather than assumed, because it decides the web
+# server — and the web server serves the panel itself, so it cannot be changed
+# from inside the panel later without the panel going down with it.
+#
+# `ols` is deliberately absent. The panel's OpenLiteSpeed support has never run
+# on real hardware, and offering it here would make it the first thing a new user
+# can pick *and* the thing serving the panel they would use to recover. It
+# becomes a fourth option once it has been proven on a box.
+STACK=""           # --stack=lemp|lamp|mern  (prompted, or lemp)
+WEB_SERVER=""      # derived from STACK
+
 # ─── Output ──────────────────────────────────────────────────────────────────
 
 if [[ -t 1 ]]; then
@@ -93,6 +104,7 @@ $(tail -n 15 "$LOG_FILE" 2>/dev/null | sed 's/^/       /')"
 for arg in "$@"; do
     case "$arg" in
         --domain=*) DOMAIN="${arg#*=}" ;;
+        --stack=*)  STACK="${arg#*=}" ;;
         --email=*)  ADMIN_EMAIL="${arg#*=}" ;;
         --branch=*) REPO_BRANCH="${arg#*=}" ;;
         --repo=*)   REPO_URL="${arg#*=}" ;;
@@ -104,6 +116,13 @@ Control panel installer
 
   sudo bash install.sh [options]
 
+  --stack=lemp                 Which stack to build:
+                                 lemp  nginx + PHP          (default)
+                                 lamp  Apache + PHP
+                                 mern  nginx + Node
+                               Asked interactively when not given and a terminal
+                               is available. Required for `curl | bash`, which
+                               has no terminal to ask on.
   --domain=panel.example.com   Use your own domain instead of a nip.io name.
                                Point its A record at this server first.
   --email=you@example.com      Address for Let's Encrypt expiry warnings.
@@ -144,13 +163,15 @@ preflight() {
         *) die "unsupported architecture: $(uname -m) (need x86_64 or aarch64)" ;;
     esac
 
-    # Ports, before nginx is installed. `ss` ships with iproute2 on both
-    # supported releases. An nginx that is already ours is not a conflict.
+    # Ports, before any web server is installed. `ss` ships with iproute2 on
+    # both supported releases. A web server that is already ours is not a
+    # conflict — this is the re-run case.
     local port
     for port in 80 443; do
         if ss -ltnH "sport = :${port}" 2>/dev/null | grep -q .; then
-            if [[ -f /etc/nginx/sites-enabled/${PANEL_SLUG}.conf ]]; then
-                skip "port ${port} is in use by our own nginx"
+            if [[ -f /etc/nginx/sites-enabled/${PANEL_SLUG}.conf ]] \
+               || [[ -f /etc/apache2/sites-enabled/${PANEL_SLUG}.conf ]]; then
+                skip "port ${port} is in use by our own web server"
             else
                 die "port ${port} is already in use by something else.
      The panel needs 80 and 443. Stop that service and run this again:
@@ -171,6 +192,61 @@ preflight() {
     : >"$LOG_FILE"
     chmod 600 "$LOG_FILE"
     ok "logging to $LOG_FILE"
+}
+
+# ─── Stack ───────────────────────────────────────────────────────────────────
+
+resolve_stack() {
+    step "Choosing the stack"
+
+    # Asked from /dev/tty, never stdin. Under `curl … | bash` the *script itself*
+    # is on stdin, so a plain `read` would swallow the rest of the script rather
+    # than wait for an answer — the install would then behave bizarrely rather
+    # than hang, which is worse. No terminal means no question: the flag or the
+    # default decides.
+    if [[ -z "$STACK" ]]; then
+        if [[ -r /dev/tty && -w /dev/tty ]]; then
+            printf '\n     Which stack should this server run?\n\n'
+            printf '       1) lemp   nginx + PHP     %s(default)%s\n' "$DIM" "$RESET"
+            printf '       2) lamp   Apache + PHP\n'
+            printf '       3) mern   nginx + Node\n\n'
+            printf '     Choice [1]: '
+
+            local answer=""
+            read -r answer < /dev/tty || answer=""
+            printf '\n'
+
+            case "${answer:-1}" in
+                1|lemp|'') STACK="lemp" ;;
+                2|lamp)    STACK="lamp" ;;
+                3|mern)    STACK="mern" ;;
+                *) die "not one of the options: ${answer}" ;;
+            esac
+        else
+            STACK="lemp"
+            say "     no terminal to ask on — defaulting to lemp (use --stack= to choose)"
+        fi
+    fi
+
+    case "$STACK" in
+        lemp|mern) WEB_SERVER="nginx" ;;
+        lamp)      WEB_SERVER="apache" ;;
+        ols)
+            # Refused rather than attempted. The panel's OpenLiteSpeed support has
+            # never run on hardware, and here it would be serving the panel
+            # itself — so a wrong path leaves a server with no working panel and
+            # no UI to recover from.
+            die "the openlitespeed stack is not available from this installer yet.
+     Its support in the panel has never been verified on a real server, and
+     here it would be serving the panel itself. Use lemp, lamp or mern."
+            ;;
+        *) die "unknown stack: ${STACK}  (expected lemp, lamp or mern)" ;;
+    esac
+
+    # PHP and Node are installed regardless of the stack: the panel's API is PHP
+    # and its own interface is a Next.js build. The stack decides what *sites*
+    # get, and which web server owns port 80.
+    ok "${STACK} — ${WEB_SERVER}, PHP ${PHP_VERSION}, Node ${NODE_VERSION}"
 }
 
 # ─── Hostnames ───────────────────────────────────────────────────────────────
@@ -300,8 +376,16 @@ install_packages() {
         "php${PHP_VERSION}-gd" "php${PHP_VERSION}-sqlite3" "php${PHP_VERSION}-mysql"
         "php${PHP_VERSION}-redis" "php${PHP_VERSION}-igbinary" "php${PHP_VERSION}-opcache"
     )
-    run apt-get install -y nginx redis-server sqlite3 "${php_pkgs[@]}"
-    ok "nginx, redis, sqlite, PHP ${PHP_VERSION}"
+    # Only the chosen web server. Installing both would have them fight over
+    # port 80, and apt starts them on install.
+    local web_pkgs=()
+    case "$WEB_SERVER" in
+        nginx)  web_pkgs=(nginx) ;;
+        apache) web_pkgs=(apache2) ;;
+    esac
+
+    run apt-get install -y "${web_pkgs[@]}" redis-server sqlite3 "${php_pkgs[@]}"
+    ok "${WEB_SERVER}, redis, sqlite, PHP ${PHP_VERSION}"
 
     if ! command -v composer >/dev/null 2>&1; then
         run curl -fsSL -o /tmp/composer-setup.php https://getcomposer.org/installer
@@ -527,8 +611,8 @@ setup_backend() {
     # Tell the panel what we built. It can detect that nginx and PHP are here,
     # but not whether that was a deliberate `lemp` build or a box somebody
     # assembled by hand — and the difference matters to the setup page.
-    run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${dir}/artisan" server:record-stack lemp
-    ok "stack recorded as lemp"
+    run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${dir}/artisan" server:record-stack "$STACK"
+    ok "stack recorded as ${STACK}"
 }
 
 # ─── Frontend ────────────────────────────────────────────────────────────────
@@ -591,6 +675,13 @@ POOL
 }
 
 # ─── nginx ───────────────────────────────────────────────────────────────────
+
+configure_web_server() {
+    case "$WEB_SERVER" in
+        nginx)  configure_nginx ;;
+        apache) configure_apache ;;
+    esac
+}
 
 configure_nginx() {
     step "Configuring nginx"
@@ -717,6 +808,114 @@ NGINX
 }
 
 # ─── Services ────────────────────────────────────────────────────────────────
+
+configure_apache() {
+    step "Configuring Apache"
+
+    # proxy_fcgi + SetHandler rather than mod_php or fcgid. mod_php would run PHP
+    # inside Apache as www-data, which throws away the per-site user isolation the
+    # whole panel is built on — the FPM pool exists precisely so PHP runs as the
+    # panel's own account.
+    run a2enmod proxy proxy_fcgi proxy_http rewrite headers setenvif ssl
+
+    # Apache's default site is a catch-all on port 80 and answers for our
+    # hostnames depending on load order.
+    run a2dissite 000-default
+
+    local conf="/etc/apache2/sites-available/${PANEL_SLUG}.conf"
+    local api_block panel_block
+
+    # The API. `AllowOverride All` because Laravel ships a .htaccess doing the
+    # front-controller rewrite — reproducing it here would mean two copies of the
+    # same rules that can disagree after an upgrade.
+    read -r -d '' api_block <<CONF || true
+    DocumentRoot ${APP_DIR}/backend/public
+
+    <Directory ${APP_DIR}/backend/public>
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    <FilesMatch \\.php\$>
+        SetHandler "proxy:unix:/run/php/${PANEL_SLUG}-fpm.sock|fcgi://localhost"
+    </FilesMatch>
+
+    # 300s so dispatching a queued install has room; the work itself happens in
+    # the worker, not the request.
+    ProxyTimeout 300
+CONF
+
+    read -r -d '' panel_block <<CONF || true
+    ProxyPreserveHost On
+
+    # Hashed immutable assets straight off disk. Next's standalone output does not
+    # serve them, and routing them through Node is wasted work.
+    Alias /_next/static ${APP_DIR}/frontend/.next/static
+    <Directory ${APP_DIR}/frontend/.next/static>
+        Require all granted
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </Directory>
+    ProxyPass /_next/static !
+
+    # The WebSocket rewrite MUST come before ProxyPass / — otherwise the
+    # catch-all swallows the upgrade as ordinary HTTP and the handshake never
+    # completes. Ordering, not presence, is what makes this work.
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} =websocket [NC]
+    RewriteRule /(.*) ws://127.0.0.1:${FRONTEND_PORT}/\$1 [P,L]
+
+    ProxyPass / http://127.0.0.1:${FRONTEND_PORT}/
+    ProxyPassReverse / http://127.0.0.1:${FRONTEND_PORT}/
+CONF
+
+    if (( SINGLE_HOST )); then
+        # One name: /api to Laravel, everything else to Next. Same origin, so no
+        # cross-site cookie to get wrong.
+        cat >"$conf" <<CONF
+# Managed by the control panel installer.
+<VirtualHost *:80>
+    ServerName ${PANEL_HOST}
+
+${api_block}
+
+    <Location /api>
+        ProxyPass !
+    </Location>
+
+${panel_block}
+</VirtualHost>
+CONF
+    else
+        cat >"$conf" <<CONF
+# Managed by the control panel installer.
+<VirtualHost *:80>
+    ServerName ${API_HOST}
+
+${api_block}
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName ${PANEL_HOST}
+    DocumentRoot ${APP_DIR}/frontend
+
+${panel_block}
+</VirtualHost>
+CONF
+    fi
+
+    run a2ensite "${PANEL_SLUG}"
+
+    # Tested before reloading, exactly as with nginx: a broken config that reaches
+    # a reload takes the web server down, and on this box that includes the panel
+    # you would use to fix it.
+    if ! apache2ctl configtest >>"$LOG_FILE" 2>&1; then
+        die "the generated Apache config failed its own test — see $LOG_FILE"
+    fi
+
+    run systemctl enable apache2
+    run systemctl reload apache2
+    ok "Apache serving ${PANEL_HOST}"
+}
 
 install_services() {
     step "Installing services"
@@ -877,6 +1076,43 @@ configure_firewall() {
 
 # ─── TLS ─────────────────────────────────────────────────────────────────────
 
+# The Apache half of the self-signed fallback. Separate file and separate site so
+# a later successful certbot run edits an untouched config, and so backing this
+# out is one `a2dissite` rather than an unpick.
+self_signed_apache() {
+    local conf="/etc/apache2/sites-available/${PANEL_SLUG}-tls.conf"
+    local names="${PANEL_HOST}"
+    (( SINGLE_HOST )) || names="${PANEL_HOST} ${API_HOST}"
+
+    {
+        printf '# Self-signed fallback, written by the control panel installer.\n'
+        printf '# Delete this site and run: certbot --apache -d %s\n' "$names"
+        # Apache needs one VirtualHost per name here, and each includes the same
+        # blocks the port-80 sites use — read back from the file we already wrote
+        # rather than duplicated, so the two cannot drift.
+        sed -e 's/\*:80/*:443/' \
+            -e "/ServerName/a\\    SSLEngine on\\n    SSLCertificateFile /etc/ssl/${PANEL_SLUG}/cert.pem\\n    SSLCertificateKeyFile /etc/ssl/${PANEL_SLUG}/key.pem" \
+            "/etc/apache2/sites-available/${PANEL_SLUG}.conf" | tail -n +2
+    } >"$conf"
+
+    run a2ensite "${PANEL_SLUG}-tls"
+
+    if apache2ctl configtest >>"$LOG_FILE" 2>&1; then
+        run systemctl reload apache2
+        ok "self-signed certificate in place — browsers will warn until a real one is issued"
+        TLS_STATE="self-signed"
+        SCHEME="https"
+    else
+        # One a2dissite puts Apache back exactly as it was. Serving plain HTTP
+        # beats serving nothing.
+        warn "the self-signed configuration did not validate; staying on HTTP"
+        run a2dissite "${PANEL_SLUG}-tls"
+        apache2ctl configtest >>"$LOG_FILE" 2>&1 && systemctl reload apache2
+        TLS_STATE="none"
+        SCHEME="http"
+    fi
+}
+
 configure_tls() {
     step "Setting up HTTPS"
 
@@ -888,9 +1124,16 @@ configure_tls() {
     fi
 
     export DEBIAN_FRONTEND=noninteractive
-    run apt-get install -y certbot python3-certbot-nginx
+    case "$WEB_SERVER" in
+        nginx)  run apt-get install -y certbot python3-certbot-nginx ;;
+        apache) run apt-get install -y certbot python3-certbot-apache ;;
+    esac
 
-    local args=(--nginx --non-interactive --agree-tos --redirect -d "$PANEL_HOST")
+    # certbot's plugin has to match the web server it is editing.
+    local plugin="--nginx"
+    [[ "$WEB_SERVER" == "apache" ]] && plugin="--apache"
+
+    local args=("$plugin" --non-interactive --agree-tos --redirect -d "$PANEL_HOST")
     (( SINGLE_HOST )) || args+=(-d "$API_HOST")
 
     if [[ -n "$ADMIN_EMAIL" ]]; then
@@ -923,6 +1166,11 @@ configure_tls() {
         -keyout /etc/ssl/${PANEL_SLUG}/key.pem \
         -out /etc/ssl/${PANEL_SLUG}/cert.pem \
         -subj "/CN=${PANEL_HOST}"
+
+    if [[ "$WEB_SERVER" == "apache" ]]; then
+        self_signed_apache
+        return
+    fi
 
     # A separate file rather than appending to the port-80 config, so a later
     # successful `certbot --nginx` run has an untouched file to edit and this one
@@ -1018,6 +1266,7 @@ finish() {
     printf '\n%s%s The control panel is installed%s\n\n' "$BOLD" "$GREEN" "$RESET"
     printf '  Panel:   %s%s://%s%s\n' "$BOLD" "$scheme" "$PANEL_HOST" "$RESET"
     (( SINGLE_HOST )) || printf '  API:     %s://%s\n' "$scheme" "$API_HOST"
+    printf '  Stack:   %s (%s)\n' "$STACK" "$WEB_SERVER"
     printf '  Log:     %s\n' "$LOG_FILE"
     printf '  Files:   %s\n\n' "$APP_DIR"
 
@@ -1044,6 +1293,7 @@ main() {
     (( DRY_RUN )) && printf '%s(dry run — nothing will be changed)%s\n' "$DIM" "$RESET"
 
     preflight
+    resolve_stack
     resolve_hostnames
     configure_swap
     install_packages
@@ -1056,7 +1306,7 @@ main() {
     # .env and the frontend's build. Next inlines NEXT_PUBLIC_* at build time, so
     # building first and getting TLS afterwards ships a panel calling https on a
     # server answering http.
-    configure_nginx
+    configure_web_server
     configure_tls
     setup_backend
     build_frontend
