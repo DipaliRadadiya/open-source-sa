@@ -36,6 +36,17 @@ interface PhpStack
     public function binaryPath(string $version): string;
 
     /**
+     * The binary the web server spawns to serve PHP, or null when it talks to
+     * a daemon instead.
+     *
+     * FPM is a daemon on a socket, so there is nothing here to name. LSPHP is
+     * a binary OpenLiteSpeed starts itself — and it is **not** the CLI: the
+     * LSAPI build is `bin/lsphp`, and pointing a vhost at `bin/php` gives the
+     * web server a program that does not speak its protocol.
+     */
+    public function handlerPath(string $version): ?string;
+
+    /**
      * The systemd unit for a version, or null where there is none — LSPHP
      * processes are spawned by the web server, so there is nothing per
      * version to start or stop.

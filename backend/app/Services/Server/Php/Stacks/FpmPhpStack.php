@@ -67,6 +67,15 @@ class FpmPhpStack implements PhpStack
         return $pattern === '' ? 'php' : str_replace('{version}', $version, $pattern);
     }
 
+    /**
+     * None: nginx and Apache hand requests to a running FPM daemon over a
+     * socket rather than starting a binary themselves.
+     */
+    public function handlerPath(string $version): ?string
+    {
+        return null;
+    }
+
     public function serviceName(string $version): ?string
     {
         return "php{$version}-fpm";
