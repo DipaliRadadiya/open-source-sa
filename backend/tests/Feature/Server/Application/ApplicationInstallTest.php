@@ -105,6 +105,26 @@ it('installs wordpress end to end after the site is serving', function () {
     Process::assertRan(fn ($p) => $p->command[0] === 'tar' && in_array('--strip-components=1', $p->command, true));
 });
 
+it('runs wp-cli under the site own php, not whatever the shebang finds', function () {
+    fakeSaltService();
+    fakeInstallServer();
+
+    runProvision(wpApp());
+
+    // wp-cli is a phar with `#!/usr/bin/env php`. Trusting that means the
+    // site's own PHP version is not necessarily the one that installs it —
+    // and on an OpenLiteSpeed box, where PHP lives in the lsws tree, there
+    // may be no system `php` for the shebang to find at all.
+    Process::assertRan(function ($p) {
+        $command = $p->command;
+        $wp = array_search('/usr/local/bin/wp', $command, true);
+
+        return $wp !== false
+            && in_array('core', $command, true)
+            && ($command[$wp - 1] ?? '') === '/usr/bin/php8.4';
+    });
+});
+
 it('never puts the admin password on a command line', function () {
     fakeSaltService();
     fakeInstallServer();
