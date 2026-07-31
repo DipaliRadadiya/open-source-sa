@@ -3,7 +3,12 @@
 namespace App\Services\Server\Php;
 
 use App\Contracts\PhpStack;
+use App\Enums\InstallStatus;
 use App\Exceptions\Server\Php\PhpConfigException;
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
+use App\Models\RuntimeInstall;
+use App\Services\Runtime\InstallFailureClassifier;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\ServerOps;
 
 /**
@@ -34,12 +39,14 @@ class PhpExtensionManager
         private ServerOps $serverOps,
         private PhpVersionManager $versions,
         private PhpStack $stack,
+        private InstallTracker $installs,
+        private InstallFailureClassifier $classifier,
     ) {}
 
     /**
      * Every extension this version could have, with its current state.
      *
-     * @return array<int, array{name: string, package: string, modules: array<int, string>, installed: bool, enabled: bool, builtin: bool, sapis: array<string, bool>}>
+     * @return array<int, array{name: string, package: string, modules: array<int, string>, installed: bool, enabled: bool, builtin: bool, sapis: array<string, bool>, status: string, started_at: ?string, reason: ?string, message: ?string, reference: ?string}>
      */
     public function catalog(string $version): array
     {
@@ -49,6 +56,10 @@ class PhpExtensionManager
         $packageModules = $this->packageModules($version, $installedModules);
         $enabled = $this->enabledBySapi($version);
         $enabledEverywhere = $this->intersect(array_values($enabled));
+
+        // In-flight and last-failed apt runs for this version's extensions.
+        // One query for the whole catalog rather than one per row.
+        $installs = $this->installs->extensions('php', $version);
 
         $rows = [];
 
@@ -67,6 +78,12 @@ class PhpExtensionManager
                 'enabled' => $installed && $modules === array_values(array_intersect($modules, $enabledEverywhere)),
                 'builtin' => false,
                 'sapis' => $this->sapiState($modules, $enabled),
+                // The state of the *operation*, not of the extension. A row
+                // that has never been installed is `ready` — meaning nothing
+                // is in flight, so `installed` and `enabled` above can be
+                // trusted. If this meant installedness it would contradict
+                // them on every row.
+                ...$this->progress($installs->get($name)),
             ];
         }
 
@@ -81,6 +98,9 @@ class PhpExtensionManager
                 'enabled' => true,
                 'builtin' => true,
                 'sapis' => [],
+                // Compiled in: there is no apt package, so there is nothing
+                // that could ever be mid-install.
+                ...$this->progress(null),
             ];
         }
 
@@ -90,7 +110,7 @@ class PhpExtensionManager
     }
 
     /**
-     * @return array{name: string, package: string, modules: array<int, string>, installed: bool, enabled: bool, builtin: bool, sapis: array<string, bool>}|null
+     * @return array{name: string, package: string, modules: array<int, string>, installed: bool, enabled: bool, builtin: bool, sapis: array<string, bool>, status: string, started_at: ?string, reason: ?string, message: ?string, reference: ?string}|null
      */
     public function find(string $version, string $name): ?array
     {
@@ -134,8 +154,13 @@ class PhpExtensionManager
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
         );
 
+        // Same classification as a version install: the screen shows both in
+        // the same list, so "why did it fail" has to mean the same thing.
         if ($result->failed()) {
-            throw PhpConfigException::operationFailed($version, $result->reference);
+            throw new RuntimeInstallException(
+                $result->reference,
+                $this->classifier->classify('php', $result->output()),
+            );
         }
 
         // The package enables itself, but nothing tells FPM.
@@ -163,6 +188,23 @@ class PhpExtensionManager
     public function panelBlockers(array $modules): array
     {
         return array_values(array_intersect($modules, $this->panelRequired()));
+    }
+
+    /**
+     * The progress fields for a catalog row.
+     *
+     * @return array<string, mixed>
+     */
+    private function progress(?RuntimeInstall $install): array
+    {
+        return $install?->toProgress() ?? [
+            'status' => InstallStatus::Ready->value,
+            'started_at' => null,
+            'started_at_human' => null,
+            'reason' => null,
+            'message' => null,
+            'reference' => null,
+        ];
     }
 
     private function toggle(string $version, string $name, bool $enable): void

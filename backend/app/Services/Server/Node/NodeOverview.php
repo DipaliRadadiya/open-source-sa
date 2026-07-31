@@ -4,6 +4,7 @@ namespace App\Services\Server\Node;
 
 use App\Services\Runtime\LifecycleCatalog;
 use App\Services\Runtime\PinnedSites;
+use App\Services\Runtime\RuntimeProgress;
 use App\Services\Server\Runtimes\NodeRuntime;
 
 /**
@@ -19,6 +20,7 @@ class NodeOverview
         private NodeRuntime $node,
         private PinnedSites $pinned,
         private LifecycleCatalog $lifecycle,
+        private RuntimeProgress $progress,
     ) {}
 
     /**
@@ -28,10 +30,9 @@ class NodeOverview
     {
         $sites = $this->pinned->summary('node_version');
 
-        return [
-            'manager' => $this->node->manager(),
-            'default' => $this->node->default(),
-            'versions' => array_map(function (array $version) use ($sites) {
+        $progress = $this->progress->apply(
+            'node',
+            array_map(function (array $version) use ($sites) {
                 $pinned = $sites[$version['version']] ?? null;
 
                 return [
@@ -45,11 +46,18 @@ class NodeOverview
                     'lifecycle' => $this->lifecycle->for('node', $version['version']),
                 ];
             }, $this->node->versions()),
-            'system' => $this->node->system(),
-            'installable' => array_map(fn (string $version) => [
+            array_map(fn (string $version) => [
                 'version' => $version,
                 'lifecycle' => $this->lifecycle->for('node', $version),
             ], $this->node->installable()),
+        );
+
+        return [
+            'manager' => $this->node->manager(),
+            'default' => $this->node->default(),
+            'versions' => $progress['versions'],
+            'system' => $this->node->system(),
+            'installable' => $progress['installable'],
             // So the frontend knows the difference between "this version has
             // no lifecycle data" and "we have no lifecycle data at all" — the
             // second is a box with no egress, and the badges should stay off

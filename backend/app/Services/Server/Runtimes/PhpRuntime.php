@@ -4,7 +4,9 @@ namespace App\Services\Server\Runtimes;
 
 use App\Contracts\PhpStack;
 use App\Contracts\Runtime;
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
+use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -32,6 +34,7 @@ class PhpRuntime implements Runtime
         private ServerOps $serverOps,
         private PhpVersionManager $versions,
         private PhpStack $stack,
+        private InstallFailureClassifier $classifier,
     ) {}
 
     public function key(): string
@@ -143,18 +146,27 @@ class PhpRuntime implements Runtime
      * application in the marketplace would fail on it. The base set is
      * configurable rather than assumed, but it is not empty.
      *
-     * @throws SettingOperationException
+     * @throws RuntimeInstallException
      */
     public function install(string $version): void
     {
-        $this->must($this->serverOps->run(
+        $result = $this->serverOps->run(
             ['apt-get', 'install', '-y', '--no-install-recommends', ...$this->stack->versionPackages($version)],
             ['feature' => 'runtime', 'op' => 'php_install', 'version' => $version],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             // apt refuses to run unattended without this, and a prompt with
             // nobody to answer it hangs until the timeout.
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
-        ));
+        );
+
+        // Classified here, where the output still exists. Past this point only
+        // the code travels — apt's stderr never leaves the server-ops log.
+        if ($result->failed()) {
+            throw new RuntimeInstallException(
+                $result->reference,
+                $this->classifier->classify('php', $result->output()),
+            );
+        }
     }
 
     /**

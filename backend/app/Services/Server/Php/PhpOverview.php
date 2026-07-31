@@ -4,6 +4,7 @@ namespace App\Services\Server\Php;
 
 use App\Services\Runtime\LifecycleCatalog;
 use App\Services\Runtime\PinnedSites;
+use App\Services\Runtime\RuntimeProgress;
 use App\Services\Server\Runtimes\PhpRuntime;
 
 /**
@@ -25,6 +26,7 @@ class PhpOverview
         private PhpVersionManager $versions,
         private PinnedSites $pinned,
         private LifecycleCatalog $lifecycle,
+        private RuntimeProgress $progress,
     ) {}
 
     /**
@@ -34,10 +36,9 @@ class PhpOverview
     {
         $sites = $this->pinned->summary('php_version');
 
-        return [
-            'default' => $this->runtime->default(),
-            'panel_version' => $this->runtime->panelVersion(),
-            'versions' => array_map(function (array $version) use ($sites) {
+        $progress = $this->progress->apply(
+            'php',
+            array_map(function (array $version) use ($sites) {
                 $pinned = $sites[$version['version']] ?? null;
 
                 return [
@@ -57,10 +58,17 @@ class PhpOverview
                     'ini_path' => $this->versions->iniPath($version['version']),
                 ];
             }, $this->runtime->versions()),
-            'installable' => array_map(fn (string $version) => [
+            array_map(fn (string $version) => [
                 'version' => $version,
                 'lifecycle' => $this->lifecycle->for('php', $version),
             ], $this->runtime->installable()),
+        );
+
+        return [
+            'default' => $this->runtime->default(),
+            'panel_version' => $this->runtime->panelVersion(),
+            'versions' => $progress['versions'],
+            'installable' => $progress['installable'],
             'lifecycle_available' => ! $this->lifecycle->isStale(),
         ];
     }

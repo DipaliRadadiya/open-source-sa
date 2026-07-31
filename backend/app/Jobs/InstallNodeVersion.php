@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -36,16 +38,32 @@ class InstallNodeVersion implements ShouldBeUnique, ShouldQueue
         return 'node-install-'.$this->version;
     }
 
-    public function handle(NodeRuntime $node, ActivityLogger $log): void
+    public function handle(NodeRuntime $node, ActivityLogger $log, InstallTracker $installs): void
     {
         try {
             $node->install($this->version);
+        } catch (RuntimeInstallException $e) {
+            $installs->fail('node', $this->version, null, $e->reason, $e->reference);
+            $log->log('node.install_failed', null, ['version' => $this->version, 'reason' => $e->reason]);
+
+            throw $e;
         } catch (Throwable $e) {
+            $installs->fail('node', $this->version, null, 'unknown');
             $log->log('node.install_failed', null, ['version' => $this->version]);
 
             throw $e;
         }
 
+        $installs->succeed('node', $this->version);
         $log->log('node.installed', null, ['version' => $this->version]);
+    }
+
+    /**
+     * Timeout or a killed worker. Leave the row honest rather than stuck at
+     * `installing` with nothing running behind it.
+     */
+    public function failed(?Throwable $e): void
+    {
+        app(InstallTracker::class)->abandon('node', $this->version);
     }
 }

@@ -11,6 +11,7 @@ use App\Jobs\InstallPhpExtension;
 use App\Jobs\InstallPhpVersion;
 use App\Models\Application;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpVersionManager;
@@ -44,7 +45,7 @@ class PhpController extends Controller
     /**
      * Install a version. Queued — apt takes minutes and holds a lock.
      */
-    public function store(PhpVersionRequest $request, PhpRuntime $php, ActivityLogger $log): JsonResponse
+    public function store(PhpVersionRequest $request, PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
         $version = (string) $request->validated('version');
 
@@ -53,6 +54,11 @@ class PhpController extends Controller
         if ($php->installed($version)) {
             return response()->json(['message' => __('php.already_installed', ['version' => $version])], 200);
         }
+
+        // Before dispatch, not inside the job: a client that polls straight
+        // after this 202 must see the version, and the worker may not have
+        // picked the job up yet.
+        $installs->start('php', $version);
 
         InstallPhpVersion::dispatch($version);
         $log->log('php.install_started', null, ['version' => $version]);
@@ -161,6 +167,7 @@ class PhpController extends Controller
         PhpExtensionManager $extensions,
         PhpRuntime $php,
         ActivityLogger $log,
+        InstallTracker $installs,
     ): JsonResponse {
         abort_unless($php->installed($version), 404);
 
@@ -196,6 +203,10 @@ class PhpController extends Controller
         }
 
         if (! $row['installed']) {
+            // Same ordering as a version install: recorded before dispatch so
+            // the row is already `installing` when the client re-reads.
+            $installs->start('php', $version, $extension);
+
             InstallPhpExtension::dispatch($version, $extension);
             $log->log('php.extension_install_started', null, $properties);
 

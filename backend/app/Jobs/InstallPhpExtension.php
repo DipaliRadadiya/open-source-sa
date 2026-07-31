@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\PhpExtensionManager;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,18 +32,34 @@ class InstallPhpExtension implements ShouldBeUnique, ShouldQueue
         return "php-ext-{$this->version}-{$this->extension}";
     }
 
-    public function handle(PhpExtensionManager $extensions, ActivityLogger $log): void
+    public function handle(PhpExtensionManager $extensions, ActivityLogger $log, InstallTracker $installs): void
     {
         $properties = ['version' => $this->version, 'extension' => $this->extension];
 
         try {
             $extensions->install($this->version, $this->extension);
+        } catch (RuntimeInstallException $e) {
+            $installs->fail('php', $this->version, $this->extension, $e->reason, $e->reference);
+            $log->log('php.extension_install_failed', null, [...$properties, 'reason' => $e->reason]);
+
+            throw $e;
         } catch (Throwable $e) {
+            $installs->fail('php', $this->version, $this->extension, 'unknown');
             $log->log('php.extension_install_failed', null, $properties);
 
             throw $e;
         }
 
+        $installs->succeed('php', $this->version, $this->extension);
         $log->log('php.extension_enabled', null, $properties);
+    }
+
+    /**
+     * Timeout or a killed worker — the row must not outlive the process that
+     * was meant to finish it.
+     */
+    public function failed(?Throwable $e): void
+    {
+        app(InstallTracker::class)->abandon('php', $this->version, $this->extension);
     }
 }

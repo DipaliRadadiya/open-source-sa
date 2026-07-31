@@ -626,6 +626,13 @@ return [
 
     'runtimes' => [
         'node' => [
+            // Same idea as the PHP list above, matched against fnm's output.
+            'failure_reasons' => [
+                'package_not_found' => '/Can\'t find version|Version .* not found|unknown version/i',
+                'network' => '/error sending request|dns error|Connection timed out|failed to lookup address/i',
+                'no_space' => '/No space left on device/i',
+            ],
+
             'binary' => env('SERVER_FNM_BINARY', '/usr/local/bin/fnm'),
             'dir' => env('SERVER_FNM_DIR', '/opt/fnm'),
             // Whatever Node was already on the box. Detected and reported so
@@ -652,6 +659,23 @@ return [
         ],
 
         'php' => [
+            /*
+            | Why an install failed, matched against apt's output in order.
+            |
+            | These become `reason` codes on the PHP screen, rendered into a
+            | sentence in the viewer's locale — the raw output is never shown,
+            | because it names internal paths and cannot be translated. An
+            | unmatched failure is `unknown`, which still carries a reference
+            | to the server-ops log; guessing a cause we cannot recognise
+            | would be worse than saying we do not know.
+            */
+            'failure_reasons' => [
+                'package_not_found' => '/Unable to locate package|has no installation candidate/i',
+                'apt_lock' => '/Could not get lock|Unable to acquire the dpkg frontend lock/i',
+                'network' => '/Temporary failure resolving|Failed to fetch|Connection timed out/i',
+                'no_space' => '/No space left on device/i',
+            ],
+
             // A bare phpX.Y-fpm has no mysql, no curl, no mbstring — every
             // application in the marketplace would fail on it. Installing a
             // version means installing something usable.

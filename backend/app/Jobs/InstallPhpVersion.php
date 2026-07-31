@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,16 +33,34 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
         return 'php-install-'.$this->version;
     }
 
-    public function handle(PhpRuntime $php, ActivityLogger $log): void
+    public function handle(PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): void
     {
         try {
             $php->install($this->version);
+        } catch (RuntimeInstallException $e) {
+            $installs->fail('php', $this->version, null, $e->reason, $e->reference);
+            $log->log('php.install_failed', null, ['version' => $this->version, 'reason' => $e->reason]);
+
+            throw $e;
         } catch (Throwable $e) {
+            $installs->fail('php', $this->version, null, 'unknown');
             $log->log('php.install_failed', null, ['version' => $this->version]);
 
             throw $e;
         }
 
+        // The version is on disk now, so the row has nothing left to say.
+        $installs->succeed('php', $this->version);
         $log->log('php.installed', null, ['version' => $this->version]);
+    }
+
+    /**
+     * The job died outright — timeout, or the worker was killed. Without this
+     * the row sits at `installing` forever and the screen spins on something
+     * that stopped running.
+     */
+    public function failed(?Throwable $e): void
+    {
+        app(InstallTracker::class)->abandon('php', $this->version);
     }
 }
