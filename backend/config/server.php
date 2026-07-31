@@ -214,12 +214,21 @@ return [
     | Applications that run their own process (Node, and anything else with a
     | start command).
     |
-    | The port range is the panel's to hand out; picking outside it would put a
-    | site on a port the operator never set aside. `memory_max` is per app —
-    | low enough that one runaway site cannot take the box down, high enough
-    | that an ordinary Node app is not killed mid-request. Both are starting
-    | points chosen from common practice rather than measurement; revisit once
-    | there is real traffic to measure.
+    | The range sits **below the ephemeral range** the kernel hands to outgoing
+    | connections (`net.ipv4.ip_local_port_range`, 32768–60999 on a stock
+    | Linux). An application parked inside that range would work until the
+    | moment the kernel handed the same port to something else — an
+    | intermittent failure with no obvious cause. The IANA dynamic range
+    | (49152+) is exactly the wrong choice for this, for the same reason.
+    |
+    | Ports that `/etc/services` names are skipped at allocation, so a site
+    | never lands on 3306 and collides with a MySQL installed next week.
+    | `reserved_ports` is for anything the OS does not know about.
+    |
+    | `memory_max` is per app: low enough that one runaway site cannot take the
+    | box down, high enough that an ordinary Node app is not killed
+    | mid-request. Chosen from common practice, not measurement — revisit when
+    | there is real traffic.
     */
 
     'applications' => [
@@ -228,6 +237,7 @@ return [
             'from' => (int) env('SERVER_APP_PORT_FROM', 3000),
             'to' => (int) env('SERVER_APP_PORT_TO', 3999),
         ],
+        'reserved_ports' => [],
         'memory_max' => env('SERVER_APP_MEMORY_MAX', '512M'),
     ],
 

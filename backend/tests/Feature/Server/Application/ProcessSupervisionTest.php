@@ -157,6 +157,27 @@ describe('ports', function () {
         expect(app(PortAllocator::class)->allocate())->toBe(3002);
     });
 
+    it('skips a port /etc/services has spoken for, even with nothing on it', function () {
+        config(['server.applications.port_range' => ['from' => 3306, 'to' => 3310]]);
+        Process::fake(fn () => Process::result(output: ''));
+
+        // 3306 is MySQL. Nothing is listening on a box where MySQL is not
+        // installed *yet* — so a listening-only check would hand it out, and
+        // installing MySQL next week would break one of the two.
+        expect(app(PortAllocator::class)->allocate())->toBe(3307)
+            ->and(app(PortAllocator::class)->available(3306))->toBeFalse();
+    });
+
+    it('stays below the range the kernel hands to outgoing connections', function () {
+        $range = @file_get_contents('/proc/sys/net/ipv4/ip_local_port_range');
+        $ephemeralFrom = (int) (preg_split('/\s+/', trim((string) $range))[0] ?? 32768);
+
+        // A port inside the ephemeral range works until the kernel gives the
+        // same one to an outgoing connection — an intermittent bind failure
+        // with nothing to point at.
+        expect((int) config('server.applications.port_range.to'))->toBeLessThan($ephemeralFrom);
+    });
+
     it('refuses rather than reaching outside the configured range', function () {
         config(['server.applications.port_range' => ['from' => 3000, 'to' => 3000]]);
         nodeApp(['app_port' => 3000, 'domain' => 'a.test']);

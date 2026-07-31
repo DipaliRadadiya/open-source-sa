@@ -32,10 +32,10 @@ class PortAllocator
         $to = (int) config('server.applications.port_range.to', 3999);
 
         $taken = Application::query()->whereNotNull('app_port')->pluck('app_port')->all();
-        $listening = $this->listening();
+        $unavailable = [...$taken, ...$this->listening(), ...$this->registered()];
 
         for ($port = $from; $port <= $to; $port++) {
-            if (! in_array($port, $taken, true) && ! in_array($port, $listening, true)) {
+            if (! in_array($port, $unavailable, true)) {
                 return $port;
             }
         }
@@ -54,7 +54,41 @@ class PortAllocator
             ->pluck('app_port')
             ->all();
 
-        return ! in_array($port, $taken, true) && ! in_array($port, $this->listening(), true);
+        return ! in_array($port, $taken, true)
+            && ! in_array($port, $this->listening(), true)
+            && ! in_array($port, $this->registered(), true);
+    }
+
+    /**
+     * Ports `/etc/services` says belong to something, whether or not it is
+     * installed yet.
+     *
+     * Listening-only was not enough, and the gap is not theoretical: **3306 is
+     * MySQL** and sits inside the default range. On a box where MySQL has not
+     * been installed yet nothing is listening there, so an application would
+     * be given 3306 — and installing MySQL afterwards breaks one of the two,
+     * long after anyone would connect the two events.
+     *
+     * `/etc/services` rather than a list of our own: it is the machine's own
+     * record of what a port means, it covers services we have never heard of,
+     * and it is maintained by the distribution rather than by us.
+     *
+     * @return array<int, int>
+     */
+    private function registered(): array
+    {
+        $extra = array_map('intval', (array) config('server.applications.reserved_ports', []));
+
+        $contents = @file_get_contents('/etc/services');
+
+        if ($contents === false) {
+            return $extra;
+        }
+
+        // "mysql   3306/tcp   # comment" — name, then port/protocol.
+        preg_match_all('/^[a-z0-9._-]+\s+(\d+)\/tcp/mi', $contents, $matches);
+
+        return [...$extra, ...array_map('intval', $matches[1] ?? [])];
     }
 
     /**
