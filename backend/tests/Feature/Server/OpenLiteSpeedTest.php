@@ -453,15 +453,36 @@ describe('the driver', function () {
         $config = app(OlsDriver::class)->renderConfig($this->app_, '/home/shopuser/shop.test');
 
         // OLS needs a full restart after any .htaccess change, which would
-        // turn editing WordPress permalinks into server downtime.
+        // turn editing permalinks into server downtime — so everything that
+        // can live in the vhost does.
         expect($config)
-            ->toContain('autoLoadHtaccess        0')
             // Apache's mod_rewrite, which OLS implements — not a translation
             // of nginx's try_files. The loop guard keeps its leading slash
             // because OLS does not strip one at vhost level.
             ->toContain('RewriteRule ^/index\\.php$ - [L]')
             ->toContain('RewriteRule . /index.php [L]')
             ->not->toContain('QSA');
+    });
+
+    it('reads .htaccess for WordPress, because LSCache has no other way in', function () {
+        fakeOls(olsConfig());
+
+        // The plugin writes its cache rules to .htaccess and OLS's cache
+        // module reads them from there. With autoload off, LSCache installs,
+        // activates, reports itself enabled — and caches nothing. That is the
+        // reason people choose OLS, so it cannot be silently off.
+        expect(app(OlsDriver::class)->renderConfig($this->app_, '/home/shopuser/shop.test'))
+            ->toContain('autoLoadHtaccess        1');
+    });
+
+    it('does not read .htaccess for anything else', function () {
+        fakeOls(olsConfig());
+        $this->app_->update(['site_type' => 'php']);
+
+        // A blank PHP site gets its whole rewrite from the vhost, so an
+        // .htaccess someone drops in should not start costing restarts.
+        expect(app(OlsDriver::class)->renderConfig($this->app_, '/home/shopuser/shop.test'))
+            ->toContain('autoLoadHtaccess        0');
     });
 
     it('serves no PHP from a static site', function () {

@@ -66,7 +66,23 @@ scripthandler {
        it the rule rewrites index.php to itself. --}}
 rewrite {
   enable                  1
+@if ($readsHtaccess)
+  {{-- On for WordPress, because LiteSpeed Cache has no other way in: the
+       plugin writes its cache rules to .htaccess and OpenLiteSpeed's cache
+       module reads them from there. With this off, LSCache installs, activates,
+       reports itself enabled — and caches nothing. That is the single reason
+       most people choose OLS, so it must not be quietly disabled.
+
+       The cost is real and accepted: OLS needs a graceful restart to pick up
+       an .htaccess change, so a permalink or cache-setting change does not
+       take effect until then. OLS only parses the rules it recognises, so the
+       vhost rules below still cover everything else. --}}
+  autoLoadHtaccess        1
+@else
+  {{-- Off everywhere else: the rewrite below is the whole rewrite, and an
+       .htaccess a user drops in should not silently start costing restarts. --}}
   autoLoadHtaccess        0
+@endif
   RewriteRule ^/index\.php$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

@@ -57,6 +57,14 @@ class OlsDriver extends AbstractWebServerDriver
 
         return [
             ...$data,
+            // Site types whose cache or rewrite integration goes through
+            // .htaccess. WordPress is the one that matters: LiteSpeed Cache
+            // talks to the OLS cache module through that file and nothing else.
+            'readsHtaccess' => in_array(
+                $application->site_type,
+                (array) config('server.web_server_drivers.openlitespeed.htaccess_site_types', ['wordpress']),
+                true,
+            ),
             'lsphpVersion' => str_replace('.', '', $version),
             // The LSAPI binary, not the CLI — this is what OLS spawns.
             'lsphpBinary' => $this->stack->handlerPath($version),
