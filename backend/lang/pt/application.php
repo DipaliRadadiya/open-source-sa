@@ -36,6 +36,7 @@ return [
     ],
 
     'fields' => [
+        'rendering_type' => 'Tipo de renderização',
         'name' => 'Nome',
         'domain' => 'Domínio',
         'system_user_id' => 'Usuário do sistema',
@@ -59,6 +60,9 @@ return [
     ],
 
     'help' => [
+        'start_command' => 'O ficheiro de entrada, por exemplo \"node server.js\". Não \"npm start\": um gestor de pacotes bifurca o processo real, por isso os sinais de encerramento nunca lhe chegam.',
+        'app_port' => 'Se deixar vazio, o painel escolhe uma porta livre.',
+        'rendering_type' => 'A renderização no servidor executa a sua app e faz proxy para ela. As outras duas compilam ficheiros que o servidor web entrega diretamente — mais rápido e sem nada a manter em execução.',
         'repository_url' => 'Um repositório público — sem necessidade de conta. Deve ser um endereço https://.',
         'build_command' => 'Executado após baixar o código, ex.: composer install --no-dev',
     ],
@@ -84,5 +88,12 @@ return [
         'worker' => 'O processo em segundo plano parou',
     ],
     'port_free' => 'A porta :port está livre.',
+
+    'rendering' => [
+        'php' => 'Aplicação PHP (Laravel, Symfony, PHP simples)',
+        'ssr' => 'Renderização no servidor (executa um processo)',
+        'csr' => 'Renderização no cliente (compilado em ficheiros)',
+        'static' => 'Site estático (compilado em ficheiros)',
+    ],
 
 ];

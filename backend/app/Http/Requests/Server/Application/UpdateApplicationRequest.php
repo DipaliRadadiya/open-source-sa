@@ -5,6 +5,7 @@ namespace App\Http\Requests\Server\Application;
 use App\Rules\AvailablePort;
 use App\Rules\StartCommand;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Only the things that are safe to change while nothing is provisioned. The
@@ -28,6 +29,9 @@ class UpdateApplicationRequest extends FormRequest
             // See StoreApplicationRequest: this becomes a path used by root.
             'web_root' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],
             'build_command' => ['sometimes', 'nullable', 'string', 'max:500'],
+            // Rebuilding the same repository a different way is an ordinary
+            // change of mind, so this is editable — unlike the site type.
+            'rendering_type' => ['sometimes', 'string', Rule::in(['php', 'static', 'csr', 'ssr'])],
             // Becomes systemd's ExecStart, which is not a shell — see the rule.
             'start_command' => ['sometimes', 'nullable', 'string', 'max:500', new StartCommand],
             // Excluding this application, so saving an unchanged form does

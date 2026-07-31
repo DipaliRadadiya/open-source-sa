@@ -36,6 +36,7 @@ return [
     ],
 
     'fields' => [
+        'rendering_type' => 'Rendering-Typ',
         'name' => 'Name',
         'domain' => 'Domain',
         'system_user_id' => 'Systembenutzer',
@@ -59,6 +60,9 @@ return [
     ],
 
     'help' => [
+        'start_command' => 'Die Einstiegsdatei, z. B. „node server.js“. Nicht „npm start“ – ein Paketmanager forkt den eigentlichen Prozess, sodass Shutdown-Signale ihn nie erreichen.',
+        'app_port' => 'Leer gelassen wählt das Panel einen freien Port.',
+        'rendering_type' => 'Server-Rendering führt deine App aus und leitet an sie weiter. Die anderen beiden bauen Dateien, die der Webserver direkt ausliefert – schneller, und nichts muss laufen.',
         'repository_url' => 'Ein öffentliches Repository — kein Konto nötig. Muss eine https://-Adresse sein.',
         'build_command' => 'Läuft nach dem Abrufen des Codes, z. B. composer install --no-dev',
     ],
@@ -84,5 +88,12 @@ return [
         'worker' => 'Der Hintergrundprozess wurde beendet',
     ],
     'port_free' => 'Port :port ist frei.',
+
+    'rendering' => [
+        'php' => 'PHP-Anwendung (Laravel, Symfony, einfaches PHP)',
+        'ssr' => 'Server-Rendering (führt einen Prozess aus)',
+        'csr' => 'Client-Rendering (zu Dateien gebaut)',
+        'static' => 'Statische Seite (zu Dateien gebaut)',
+    ],
 
 ];

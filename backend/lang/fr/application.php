@@ -36,6 +36,7 @@ return [
     ],
 
     'fields' => [
+        'rendering_type' => 'Type de rendu',
         'name' => 'Nom',
         'domain' => 'Domaine',
         'system_user_id' => 'Utilisateur système',
@@ -59,6 +60,9 @@ return [
     ],
 
     'help' => [
+        'start_command' => 'Le fichier d\'entrée, par exemple « node server.js ». Pas « npm start » : un gestionnaire de paquets fork le vrai processus, donc les signaux d\'arrêt ne l\'atteignent jamais.',
+        'app_port' => 'Laissé vide, le panneau en choisit un libre.',
+        'rendering_type' => 'Le rendu côté serveur exécute votre app et lui sert de proxy. Les deux autres compilent des fichiers que le serveur web sert directement — plus rapide, et rien à maintenir en marche.',
         'repository_url' => 'Un dépôt public — aucun compte requis. Doit être une adresse https://.',
         'build_command' => 'Exécutée après la récupération du code, ex. composer install --no-dev',
     ],
@@ -84,5 +88,12 @@ return [
         'worker' => 'Le processus en arrière-plan s\'est arrêté',
     ],
     'port_free' => 'Le port :port est libre.',
+
+    'rendering' => [
+        'php' => 'Application PHP (Laravel, Symfony, PHP simple)',
+        'ssr' => 'Rendu côté serveur (exécute un processus)',
+        'csr' => 'Rendu côté client (compilé en fichiers)',
+        'static' => 'Site statique (compilé en fichiers)',
+    ],
 
 ];

@@ -36,6 +36,7 @@ return [
     ],
 
     'fields' => [
+        'rendering_type' => 'Tipo de renderizado',
         'name' => 'Nombre',
         'domain' => 'Dominio',
         'system_user_id' => 'Usuario del sistema',
@@ -59,6 +60,9 @@ return [
     ],
 
     'help' => [
+        'start_command' => 'El archivo de entrada, por ejemplo \"node server.js\". No \"npm start\": un gestor de paquetes bifurca el proceso real, así que las señales de apagado nunca le llegan.',
+        'app_port' => 'Si lo dejas vacío, el panel elige uno libre.',
+        'rendering_type' => 'El renderizado en servidor ejecuta tu app y hace de proxy hacia ella. Los otros dos compilan a archivos que el servidor web entrega directamente: más rápido y sin nada que mantener en ejecución.',
         'repository_url' => 'Un repositorio público: no hace falta cuenta. Debe ser una dirección https://.',
         'build_command' => 'Se ejecuta tras descargar el código, p. ej. composer install --no-dev',
     ],
@@ -84,5 +88,12 @@ return [
         'worker' => 'El proceso en segundo plano se detuvo',
     ],
     'port_free' => 'El puerto :port está libre.',
+
+    'rendering' => [
+        'php' => 'Aplicación PHP (Laravel, Symfony, PHP simple)',
+        'ssr' => 'Renderizado en servidor (ejecuta un proceso)',
+        'csr' => 'Renderizado en cliente (compilado a archivos)',
+        'static' => 'Sitio estático (compilado a archivos)',
+    ],
 
 ];

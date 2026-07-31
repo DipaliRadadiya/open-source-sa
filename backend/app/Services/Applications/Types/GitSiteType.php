@@ -2,7 +2,9 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Rules\AvailablePort;
 use App\Rules\SafeProviderHost;
+use App\Rules\StartCommand;
 use Illuminate\Validation\Rule;
 
 /**
@@ -79,9 +81,36 @@ class GitSiteType extends AbstractSiteType
                 'source' => 'git_branches',
                 'depends_on' => 'repository',
             ]),
+
+            // Asked early, because it decides which of the fields below the
+            // form should show at all — and it has no safe default: a Node app
+            // served as a directory publishes its source, and a PHP app served
+            // by proxy is a permanent 502. So the question is asked outright
+            // rather than guessed from the repository.
+            $this->field('rendering_type', 'select', required: true, extra: [
+                'options' => [
+                    ['value' => 'php', 'label' => __('application.rendering.php')],
+                    ['value' => 'ssr', 'label' => __('application.rendering.ssr')],
+                    ['value' => 'csr', 'label' => __('application.rendering.csr')],
+                    ['value' => 'static', 'label' => __('application.rendering.static')],
+                ],
+                'help' => __('application.help.rendering_type'),
+            ]),
         ], $this->commonFields(), $this->phpFields(), [
             $this->field('build_command', 'text', advanced: true, extra: [
                 'help' => __('application.help.build_command'),
+            ]),
+
+            // Only meaningful for server-side rendering — `depends_on` tells
+            // the form to hide them otherwise rather than collecting answers
+            // that would then be refused.
+            $this->field('start_command', 'text', extra: [
+                'depends_on' => 'rendering_type',
+                'help' => __('application.help.start_command'),
+            ]),
+            $this->field('app_port', 'number', extra: [
+                'depends_on' => 'rendering_type',
+                'help' => __('application.help.app_port'),
             ]),
         ]);
     }
@@ -112,6 +141,25 @@ class GitSiteType extends AbstractSiteType
             ],
             'branch' => ['required', 'string', 'max:255'],
             'build_command' => ['nullable', 'string', 'max:500'],
+
+            // `php` covers the common case this card is used for — a Laravel
+            // or plain-PHP repository — which is neither built to files nor
+            // run as a process.
+            'rendering_type' => ['required', Rule::in(['php', 'static', 'csr', 'ssr'])],
+
+            // Required for SSR and refused otherwise. A static site with a
+            // start command would get a systemd unit and a proxy vhost for a
+            // process nothing routes to; the honest answer is that the two
+            // choices are incompatible, not that one silently wins.
+            'start_command' => [
+                Rule::requiredIf(fn () => request()->input('rendering_type') === 'ssr'),
+                Rule::excludeIf(request()->input('rendering_type') !== 'ssr'),
+                'string', 'max:500', new StartCommand,
+            ],
+            'app_port' => [
+                Rule::excludeIf(request()->input('rendering_type') !== 'ssr'),
+                'nullable', 'integer', 'between:1024,65535', new AvailablePort,
+            ],
         ];
     }
 }
