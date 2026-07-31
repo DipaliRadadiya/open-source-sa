@@ -134,7 +134,7 @@ describe('the shared httpd_config.conf', function () {
     it('registers a site as a virtualHost block and a listener map', function () {
         fakeOls(olsConfig());
 
-        app(OlsSharedConfig::class)->register('shop.test', ['shop.test', 'www.shop.test']);
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test', 'www.shop.test'], '/home/shopuser/shop.test');
 
         expect(sharedConfig())
             ->toContain('virtualHost shop.test {')
@@ -144,7 +144,7 @@ describe('the shared httpd_config.conf', function () {
     it('never touches anything outside its markers', function () {
         fakeOls(olsConfig());
 
-        app(OlsSharedConfig::class)->register('shop.test', ['shop.test']);
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         // Users migrate real servers into this panel with hand-written config
         // in this file. Losing it would be unforgivable.
@@ -158,7 +158,7 @@ describe('the shared httpd_config.conf', function () {
     it('puts the map inside the listener block, where it is legal', function () {
         fakeOls(olsConfig());
 
-        app(OlsSharedConfig::class)->register('shop.test', ['shop.test']);
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         $config = sharedConfig();
         $listener = strpos($config, 'listener Default {');
@@ -172,20 +172,47 @@ describe('the shared httpd_config.conf', function () {
         fakeOls(olsConfig());
         $shared = app(OlsSharedConfig::class);
 
-        $shared->register('shop.test', ['shop.test']);
-        $shared->register('shop.test', ['shop.test']);
+        $shared->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+        $shared->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         // The region is rebuilt rather than appended to, so a re-provision
         // cannot duplicate a site.
         expect(substr_count(sharedConfig(), 'virtualHost shop.test {'))->toBe(1);
     });
 
+    it('points vhRoot at the site, not at the config directory', function () {
+        fakeOls(olsConfig());
+
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        // With `restrained 1` the vhost may only reach files under vhRoot. Set
+        // to the config directory — as it was — the document root sits outside
+        // the only tree the site is allowed to read, and every request is
+        // refused. The site would never have served a single page.
+        expect(sharedConfig())
+            ->toContain('vhRoot                  /home/shopuser/shop.test/')
+            ->toContain('configFile              /usr/local/lsws/conf/vhosts/shop.test/vhconf.conf');
+    });
+
+    it('preserves another site vhRoot when rebuilding the region', function () {
+        fakeOls(olsConfig());
+        $shared = app(OlsSharedConfig::class);
+
+        $shared->register('blog.test', ['blog.test'], '/home/bloguser/blog.test');
+        $shared->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        // The region is rebuilt on every change, so each site's root has to be
+        // read back out rather than regenerated from a default — otherwise
+        // adding one site silently moves another.
+        expect(sharedConfig())->toContain('vhRoot                  /home/bloguser/blog.test/');
+    });
+
     it('keeps other managed sites when one is removed', function () {
         fakeOls(olsConfig());
         $shared = app(OlsSharedConfig::class);
 
-        $shared->register('shop.test', ['shop.test']);
-        $shared->register('blog.test', ['blog.test']);
+        $shared->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+        $shared->register('blog.test', ['blog.test'], '/home/bloguser/blog.test');
         $shared->unregister('shop.test');
 
         expect(sharedConfig())
@@ -199,7 +226,7 @@ describe('the shared httpd_config.conf', function () {
         fakeOls(olsConfig());
         $shared = app(OlsSharedConfig::class);
 
-        $shared->register('shop.test', ['shop.test']);
+        $shared->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
         $shared->unregister('shop.test');
 
         // A leftover map pointing at a gone virtualHost fails config_test and
@@ -210,7 +237,7 @@ describe('the shared httpd_config.conf', function () {
     it('restores the whole file when the config test fails', function () {
         $runs = fakeOls(olsConfig(), testPasses: false);
 
-        $result = app(OlsSharedConfig::class)->register('shop.test', ['shop.test']);
+        $result = app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         $commands = collect($runs)->pluck('command');
 
@@ -226,9 +253,9 @@ describe('the shared httpd_config.conf', function () {
         $runs = fakeOls(olsConfig());
         $shared = app(OlsSharedConfig::class);
 
-        $shared->register('shop.test', ['shop.test']);
+        $shared->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
         $runs->exchangeArray([]);
-        $shared->register('shop.test', ['shop.test']);
+        $shared->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         // No reason to rewrite a file every site depends on to say the same
         // thing again.
@@ -243,7 +270,7 @@ describe('the shared httpd_config.conf', function () {
         config(['server.web_server_drivers.openlitespeed.vhost_root' => '/srv/$1/vhosts']);
         fakeOls(olsConfig());
 
-        app(OlsSharedConfig::class)->register('shop.test', ['shop.test']);
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         expect(sharedConfig())->toContain('/srv/$1/vhosts/shop.test/vhconf.conf');
     });
@@ -264,7 +291,7 @@ describe('the shared httpd_config.conf', function () {
             };
         });
 
-        $result = app(OlsSharedConfig::class)->register('shop.test', ['shop.test']);
+        $result = app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         expect($result->failed())->toBeTrue()
             ->and(collect($runs)->pluck('command'))
@@ -276,7 +303,7 @@ describe('the shared httpd_config.conf', function () {
         // send the search into the next block, where `map` is illegal.
         fakeOls("listener Default {\n  address *:80\n  }\n\nvirtualHost legacy {\n  vhRoot /x/\n}\n");
 
-        app(OlsSharedConfig::class)->register('shop.test', ['shop.test']);
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         $config = sharedConfig();
         $map = strpos($config, 'map                     shop.test');
@@ -289,7 +316,7 @@ describe('the shared httpd_config.conf', function () {
 
         // Inventing a listener means guessing an address and port — either a
         // no-op or a hijack of one something else owns.
-        expect(fn () => app(OlsSharedConfig::class)->register('shop.test', ['shop.test']))
+        expect(fn () => app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test'))
             ->toThrow(OlsListenerNotFoundException::class);
     });
 });
@@ -386,6 +413,31 @@ describe('the driver', function () {
             ->toContain('path                    '.$this->lsws.'/lsphp84/bin/php')
             // OLS spawns the process itself, so it has to be told who as.
             ->toContain('extUser                 shopuser');
+    });
+
+    it('uses OpenLiteSpeed regex context syntax, not nginx', function () {
+        fakeOls(olsConfig());
+
+        $config = app(OlsDriver::class)->renderConfig($this->app_, '/home/shopuser/shop.test');
+
+        // `context ~ /re/` is nginx. OLS spells it `exp:`, and the wrong one
+        // fails the config test — which would have stopped every OLS site from
+        // provisioning, not just broken this rule.
+        expect($config)->toContain('context exp:^/\.(git|svn|hg|bzr|env) {')
+            ->and($config)->not->toContain('context ~')
+            // .well-known must stay reachable or certificates cannot be issued.
+            ->and($config)->not->toContain('well-known');
+    });
+
+    it('creates the log directory the vhost names', function () {
+        $runs = fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop.test');
+
+        // OLS does not create it, and silently falls back to the server-wide
+        // log — so a site's errors land where nobody thinks to look.
+        expect(collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'mkdir'))
+            ->toContain('/home/shopuser/shop.test/logs');
     });
 
     it('generates rewrites into the vhost rather than relying on .htaccess', function () {

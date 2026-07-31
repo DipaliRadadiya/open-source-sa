@@ -62,8 +62,14 @@ RewriteRule ^(.*)$ /index.php?$1 [L,QSA]
 }
 
 {{-- Version control and dotfiles must never be served. A .git directory inside
-     a web root is a full source disclosure. --}}
-context ~ /\.(?!well-known) {
-  location                $DOC_ROOT
+     a web root is a full source disclosure.
+
+     `exp:` is how OpenLiteSpeed spells a regex context — nginx's `~` is not
+     valid here and fails the config test, which would have stopped every site
+     from provisioning. The directories are named rather than matched with a
+     `(?!well-known)` lookahead, both because .well-known must stay reachable
+     for certificate issuance and because OLS's regex support is not
+     documented as handling lookaheads. --}}
+context exp:^/\.(git|svn|hg|bzr|env) {
   allowBrowse             0
 }
