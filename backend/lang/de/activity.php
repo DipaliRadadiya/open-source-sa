@@ -101,5 +101,9 @@ return [
     'application.provision_failed' => 'Einrichtung der Anwendung :name fehlgeschlagen (Schritt: :step)',
     'application.deployed' => 'Anwendung :name ausgerollt (:branch)',
     'application.deploy_failed' => 'Ausrollen der Anwendung :name fehlgeschlagen (Schritt: :step)',
+    'application.webhook_enabled' => 'Deploy-on-Push für :name aktiviert (:provider)',
+    'application.webhook_disabled' => 'Deploy-on-Push für :name deaktiviert',
+    'application.webhook_rotated' => 'Deploy-on-Push-Secret für :name ersetzt (:provider)',
+    'application.webhook_deployed' => ':name nach einem Push auf :branch bereitgestellt',
     'php.ini_updated' => 'Konfiguration von PHP :version aktualisiert',
 ];

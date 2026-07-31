@@ -10,4 +10,6 @@ return [
     'process_failed' => 'Impossible de :action l\'application. Communiquez la référence au support.',
     'no_port_available' => 'Aucun port libre entre :from et :to. Libérez-en un ou élargissez la plage.',
 
+    'webhook_not_a_git_application' => 'Le déploiement automatique n\'est disponible que pour les applications déployées depuis un dépôt git.',
+
 ];

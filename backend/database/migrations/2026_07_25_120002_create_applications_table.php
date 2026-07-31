@@ -64,6 +64,19 @@ return new class extends Migration
             $table->string('last_commit')->nullable();
             $table->timestamp('last_deployed_at')->nullable();
 
+            // Deploy-on-push. `webhook_identifier` is the public part, and only
+            // names the application — it is not a credential, so it can sit in
+            // a URL. `webhook_secret` is the credential and is encrypted at
+            // rest. `webhook_provider` is stored rather than sniffed from the
+            // request: the three providers sign differently, and letting a
+            // caller's own headers choose which check runs is letting them pick
+            // the weakest one.
+            $table->boolean('webhook_enabled')->default(false);
+            $table->string('webhook_provider')->nullable();
+            $table->string('webhook_identifier')->nullable()->unique();
+            $table->text('webhook_secret')->nullable();
+            $table->timestamp('webhook_last_delivered_at')->nullable();
+
             $table->timestamps();
 
             $table->index('status');

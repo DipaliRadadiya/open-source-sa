@@ -10,4 +10,6 @@ return [
     'process_failed' => 'Não foi possível :action a aplicação. Informe a referência ao suporte.',
     'no_port_available' => 'Nenhuma porta livre entre :from e :to. Libere uma ou amplie o intervalo.',
 
+    'webhook_not_a_git_application' => 'O deploy automático está disponível apenas para aplicações implantadas a partir de um repositório git.',
+
 ];

@@ -101,5 +101,9 @@ return [
     'application.provision_failed' => 'एप्लिकेशन :name सेट करने में विफल (चरण: :step)',
     'application.deployed' => 'एप्लिकेशन :name डिप्लॉय किया (:branch)',
     'application.deploy_failed' => 'एप्लिकेशन :name डिप्लॉय करने में विफल (चरण: :step)',
+    'application.webhook_enabled' => ':name के लिए push पर डिप्लॉय चालू किया (:provider)',
+    'application.webhook_disabled' => ':name के लिए push पर डिप्लॉय बंद किया',
+    'application.webhook_rotated' => ':name के लिए push पर डिप्लॉय का सीक्रेट बदला (:provider)',
+    'application.webhook_deployed' => ':branch पर push के बाद :name डिप्लॉय किया',
     'php.ini_updated' => 'PHP :version की कॉन्फ़िगरेशन अपडेट की',
 ];

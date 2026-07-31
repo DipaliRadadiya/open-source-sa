@@ -101,5 +101,9 @@ return [
     'application.provision_failed' => 'Falha ao configurar a aplicação :name (etapa: :step)',
     'application.deployed' => 'Implantou a aplicação :name (:branch)',
     'application.deploy_failed' => 'Falha ao implantar a aplicação :name (etapa: :step)',
+    'application.webhook_enabled' => 'Ativou o deploy automático de :name (:provider)',
+    'application.webhook_disabled' => 'Desativou o deploy automático de :name',
+    'application.webhook_rotated' => 'Substituiu o segredo de deploy automático de :name (:provider)',
+    'application.webhook_deployed' => 'Implantou :name após um push para :branch',
     'php.ini_updated' => 'Atualizou a configuração do PHP :version',
 ];

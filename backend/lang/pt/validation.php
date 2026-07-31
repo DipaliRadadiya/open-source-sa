@@ -180,4 +180,6 @@ return [
 
     'port_registered' => 'A porta :port é normalmente usada por :service. Pode usá-la mesmo assim se nada neste servidor a usar.',
 
+    'webhook_secret_min' => 'O segredo do webhook deve ter pelo menos 16 caracteres.',
+
 ];

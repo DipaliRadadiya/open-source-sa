@@ -10,4 +10,6 @@ return [
     'process_failed' => 'アプリケーションを:actionできませんでした。参照番号をサポートにお伝えください。',
     'no_port_available' => ':from から :to の間に空きポートがありません。解放するか範囲を広げてください。',
 
+    'webhook_not_a_git_application' => 'プッシュ時デプロイは、git リポジトリからデプロイされたアプリケーションでのみ利用できます。',
+
 ];

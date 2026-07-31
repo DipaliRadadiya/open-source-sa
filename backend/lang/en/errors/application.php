@@ -10,4 +10,6 @@ return [
     'process_failed' => 'Could not :action the application. Quote the reference to support.',
     'no_port_available' => 'No free port between :from and :to. Free one or widen the range.',
 
+    'webhook_not_a_git_application' => 'Deploy-on-push is only available for applications deployed from a git repository.',
+
 ];

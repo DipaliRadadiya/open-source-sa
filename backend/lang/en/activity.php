@@ -101,5 +101,9 @@ return [
     'application.provision_failed' => 'Failed to set up application :name (step: :step)',
     'application.deployed' => 'Deployed application :name (:branch)',
     'application.deploy_failed' => 'Failed to deploy application :name (step: :step)',
+    'application.webhook_enabled' => 'Enabled deploy-on-push for :name (:provider)',
+    'application.webhook_disabled' => 'Disabled deploy-on-push for :name',
+    'application.webhook_rotated' => 'Replaced the deploy-on-push secret for :name (:provider)',
+    'application.webhook_deployed' => 'Deployed :name from a push to :branch',
     'php.ini_updated' => 'Updated the PHP :version configuration',
 ];

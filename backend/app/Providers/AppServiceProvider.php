@@ -56,5 +56,13 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', fn (Request $request) => $request->user()
             ? Limit::perMinute(120)->by($request->user()->id)
             : Limit::perMinute(20)->by($request->ip()));
+
+        // Deploy webhooks: keyed on the webhook, not the caller's IP. A provider
+        // delivers from shared egress, so an IP bucket would have one busy
+        // repository throttle another user's, while doing nothing to bound the
+        // one endpoint an attacker can actually aim at. 60/minute is far above
+        // any real push rate and far below what would keep the queue busy.
+        RateLimiter::for('webhook', fn (Request $request) => Limit::perMinute(60)
+            ->by((string) $request->route('identifier')));
     }
 }
