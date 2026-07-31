@@ -4,6 +4,10 @@ return [
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ブログ・ウェブサイト作成'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ブラウザーからデータベースを管理'],
+        'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => '稼働監視とステータスページ'],
+        'n8n' => ['title' => 'n8n', 'tagline' => 'ワークフロー自動化 (フェアコードライセンス)'],
+        'nodered' => ['title' => 'Node-RED', 'tagline' => 'デバイス・API・サービスをつなぐ'],
+        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'フォーラムソフトウェア — MongoDB が必要'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'プライベートなファイル同期・共有'],
         'joomla' => ['title' => 'Joomla', 'tagline' => '柔軟なコンテンツ管理システム'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'オンライン学習・コース管理'],
@@ -25,6 +29,7 @@ return [
     ],
 
     'unavailable' => [
+        'database' => 'このアプリケーションには :engines が必要ですが、このサーバーにはありません。',
         'php' => 'このサーバーには PHP がインストールされていません。',
         'node' => 'このサーバーには Node.js がインストールされていません。',
         'web_server' => 'このアプリケーションは :web_server サーバーではまだ利用できません。',
@@ -53,6 +58,7 @@ return [
         'branch' => 'ブランチ',
         'site_title' => 'サイトタイトル',
         'admin_user' => '管理者ユーザー名',
+        'admin_username' => '管理者ユーザー名',
         'admin_email' => '管理者メールアドレス',
         'admin_password' => '管理者パスワード',
         'site_language' => 'サイトの言語',

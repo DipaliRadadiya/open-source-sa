@@ -2,7 +2,6 @@
 
 namespace App\Services\Server\Applications\Installers;
 
-use App\Contracts\PhpStack;
 use App\Contracts\SiteInstaller;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
@@ -26,28 +25,21 @@ abstract class AbstractSiteInstaller implements SiteInstaller
 {
     public function __construct(
         protected ServerOps $serverOps,
-        protected PhpStack $stack,
     ) {}
 
     /**
-     * The PHP binary an application's own CLI should run under.
+     * Which database engines this application can actually use.
      *
-     * The site's version, from the stack that serves it. Every installer used
-     * to build this from `php_binary_pattern`, which is the FPM answer — on an
-     * OpenLiteSpeed box the interpreter lives in the lsws tree, and running
-     * /usr/bin/php there means installing an application against a different
-     * PHP than the one that will serve it.
+     * Most of the marketplace speaks MySQL, and MariaDB is a drop-in for it.
+     * Anything else says so — NodeBB cannot use either, and handing it a MySQL
+     * database would fail at its own setup with an error about a driver, long
+     * after the point where the panel could have said something useful.
+     *
+     * @return array<int, string>
      */
-    protected function phpBinary(Application $application): string
+    public function acceptedEngines(): array
     {
-        $version = (string) ($application->php_version ?: config('server.default_php_version', '8.4'));
-
-        return $this->stack->binaryPath($version);
-    }
-
-    public function needsDatabase(): bool
-    {
-        return true;
+        return ['mysql', 'mariadb'];
     }
 
     /**

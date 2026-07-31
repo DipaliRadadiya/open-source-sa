@@ -26,7 +26,7 @@ use App\Models\Application;
  * the second the command takes, on a machine whose only other accounts are the
  * site users this panel created, is the smaller risk of the two.
  */
-class StatamicInstaller extends AbstractSiteInstaller
+class StatamicInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

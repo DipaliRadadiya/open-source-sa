@@ -24,6 +24,27 @@ interface SiteInstaller
     public function needsDatabase(): bool;
 
     /**
+     * The engines this application can actually use, most preferred first.
+     *
+     * Only consulted when it needs a database. Handing an application an
+     * engine it cannot speak fails inside its own setup, with an error about
+     * a driver rather than about the server.
+     *
+     * @return array<int, string>
+     */
+    public function acceptedEngines(): array;
+
+    /**
+     * The command that runs this application, for the ones that are a process
+     * rather than a directory of files — null for everything served by PHP.
+     *
+     * The panel writes it rather than asking: a one-click application has one
+     * right answer, and the path it needs is only known once the document root
+     * is.
+     */
+    public function startCommand(Application $application, string $documentRoot): ?string;
+
+    /**
      * Install into the prepared document root.
      *
      * The database (when needed) is already created and passed in `$context`

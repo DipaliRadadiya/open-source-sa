@@ -21,7 +21,7 @@ use Illuminate\Support\Str;
  * Its package is also the first zip in the set, and a flat one: entries start
  * at `.env.test` and `favicon.ico`, with no wrapping directory.
  */
-class MauticInstaller extends AbstractSiteInstaller
+class MauticInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

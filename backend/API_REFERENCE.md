@@ -842,10 +842,23 @@ One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moo
   - It is editable on `PUT`. **Changing away from `ssr` clears `start_command` and `app_port`** — the process is gone, so keeping either would render start/stop controls with no unit behind them and hold a port the next application could have had. Re-read the application after the update rather than assuming your form still matches.
 - **All 13 types are available on every web server, OpenLiteSpeed included.** An audit found nothing in any installer or site type that depends on the web server — none mention `.htaccess`, `mod_rewrite` or Apache, none declare extension requirements, and the site-type contract has no web-server concept. The per-web-server restriction exists in config if a real limitation ever turns up, but none is claimed today. (OLS is still unproven on real hardware — that's a verification caveat, not a narrower catalog.)
 - The create endpoint applies **the same check**, so a card you can click can never be refused for a reason the grid didn't show. A blocked type returns `422` with the reason on `site_type`.
+- **Four one-click Node applications** — `uptimekuma`, `n8n`, `nodered`, `nodebb`. They behave like the PHP marketplace with three differences the form has to respect:
+  - **Never ask for a start command.** The installer writes it; there is one right answer per application and the field is not in their schema. `app_port` is present but **advanced** — the panel allocates a free one.
+  - **They need Node**, so the card is greyed with `installable_runtime: "node"` on a server without it, exactly like a PHP card without PHP.
+  - **`nodebb` needs MongoDB and cannot use MySQL.** On a server without MongoDB the card is greyed with `unavailable_reason` naming it and **`installable_runtime: null`** — the runtime installer cannot fix a missing database engine. It is the only card blocked this way.
+
+  | Type | Admin account | Data |
+  |---|---|---|
+  | `uptimekuma` | **created by the first visitor** — there is no setup CLI | SQLite in the site |
+  | `n8n` | **created by the first visitor** | SQLite in the site |
+  | `nodered` | `admin_username` + `admin_password`, both **required** | files in the site |
+  | `nodebb` | `admin_username` + `admin_email` + `admin_password` | MongoDB |
+
+  For the two with no admin fields, **tell the user to open the site and claim it** as soon as it goes active. Until they do, anyone who reaches the URL can. `n8n` is fair-code (Sustainable Use Licence), not open source — its tagline says so and the UI should not hide that.
 - **`has_installer`** — whether picking this type actually installs software. `true` for WordPress and phpMyAdmin (you get a working application); `false` for git / blank PHP / static (you get a served directory and supply the contents yourself). Use it to word the card and the confirm step — the two outcomes are very different and the card is otherwise identical.
   - *(This field was previously called `installable`, which held the runtime and read as though it meant "installs itself". It now says what it holds.)*
 - Each **field**: `{name, label, type, required, advanced}` plus optionally `default`, `help`, `options`, `generate`, and the two keys that drive dependent dropdowns:
-  - **`source`** — which endpoint fills it: `git_accounts`, `git_repositories`, `git_branches`, `system_users`, `php_versions`
+  - **`source`** — which endpoint fills it: `git_accounts`, `git_repositories`, `git_branches`, `system_users`, `php_versions`, `node_versions` (the last from `GET /api/node`, same shape as `php_versions`)
   - **`depends_on`** — don't load until that field is chosen; clear this field when the parent changes
 - `advanced: true` fields belong behind an **Advanced** toggle, collapsed by default.
 
@@ -943,7 +956,10 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   - A port merely *named* in `/etc/services` is **allowed** — 8080 is `http-alt` there and is also where most Node apps listen. Auto-allocation avoids those names; your explicit choice is not second-guessed.
   - Auto-allocation skips `/etc/services` names so a site never lands on 3306 and collides with a MySQL installed later, and the range sits below the kernel's ephemeral range so the OS cannot hand the same port to an outgoing connection.
 - **`start_command` is executed directly, not through a shell.** Two things are refused with an explanatory message: shell syntax (`&&`, `|`, `;`, `$(`, redirects), and starting via `npm`/`yarn`/`pnpm`/`bun`/`npx`. Use the entry file — `node server.js`. A package manager forks the real process, so shutdown signals never reach the app and it is killed by timeout instead.
-- The process starts during provisioning (step `start_app`), restarts after a successful git deploy (step `restart_app`), and is stopped, disabled and removed when the application is deleted.
+- **When the process starts depends on whether the code is there yet**, and the step name tells you which happened:
+  - **One-click Node app** — installed, then started. Step `start_app`.
+  - **Git app (`rendering_type: "ssr"`)** — provisioning writes and enables the unit but does **not** start it, because the repository hasn't been cloned yet. Step `write_unit`. It starts on the first successful deploy, step `restart_app`. So a freshly-created git app is `active` with `has_process: true` and a process that is not running — that is correct, not a fault. Show "deploy to start", not an error.
+- It is stopped, disabled and removed when the application is deleted.
 
 *(Web server is **not** an application field — it belongs to the server, which owns port 80. Nor is the database engine: it follows from the app type. See `GET /api/server/capabilities` below.)*
 

@@ -5,6 +5,7 @@ namespace App\Services\Applications;
 use App\Contracts\SiteType;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\Databases\DatabaseManager;
 
 /**
  * The application catalog — resolves site types and describes them for the
@@ -21,6 +22,7 @@ class SiteTypeManager
     public function __construct(
         private ServerCapabilities $capabilities,
         private InstallerManager $installers,
+        private DatabaseManager $databases,
     ) {}
 
     /**
@@ -111,6 +113,15 @@ class SiteTypeManager
             return ['reason' => __("application.unavailable.{$runtime}"), 'runtime' => $runtime];
         }
 
+        $missing = $this->missingEngines($type);
+
+        if ($missing !== null) {
+            return [
+                'reason' => __('application.unavailable.database', ['engines' => $missing]),
+                'runtime' => null,
+            ];
+        }
+
         $webServer = (string) $this->capabilities->webServer();
         $allowed = (array) config("server.web_server_drivers.{$webServer}.site_types", []);
 
@@ -129,6 +140,49 @@ class SiteTypeManager
         }
 
         return null;
+    }
+
+    /**
+     * The engines this type needs and this server hasn't got, as a readable
+     * list — or null when it needs none, or has one.
+     *
+     * Only asked of applications that need something **other** than the usual
+     * MySQL/MariaDB. NodeBB is why: it takes MongoDB alone, so on a MySQL-only
+     * server it has to be greyed rather than offered and then failed with a
+     * message telling the user to install MySQL.
+     *
+     * The ordinary case is deliberately left alone. An application that wants
+     * MySQL on a server with no database engine already fails at
+     * `create_database` with an accurate message, before anything is
+     * downloaded — and greying ten cards on a server whose engine simply is
+     * not up yet would hide the catalog rather than explain it.
+     */
+    private function missingEngines(SiteType $type): ?string
+    {
+        $installer = $this->installers->installerForType($type->name());
+
+        if ($installer === null || ! $installer->needsDatabase()) {
+            return null;
+        }
+
+        $accepted = $installer->acceptedEngines();
+
+        if (array_intersect($accepted, ['mysql', 'mariadb']) !== []) {
+            return null;
+        }
+
+        $installed = $this->databases->engineNames();
+
+        foreach ($accepted as $engine) {
+            if (in_array($engine, $installed, true) && $this->databases->engine($engine)->available()) {
+                return null;
+            }
+        }
+
+        return implode(' / ', array_map(
+            fn (string $engine) => (string) config("server.databases.engines.{$engine}.label", $engine),
+            $accepted,
+        ));
     }
 
     /**

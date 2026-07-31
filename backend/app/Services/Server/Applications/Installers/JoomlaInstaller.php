@@ -25,7 +25,7 @@ use Illuminate\Support\Str;
  *    installation succeeds with the two swapped, and the user is locked out of
  *    a site that otherwise looks fine.
  */
-class JoomlaInstaller extends AbstractSiteInstaller
+class JoomlaInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

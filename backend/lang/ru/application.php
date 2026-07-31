@@ -4,6 +4,10 @@ return [
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Конструктор блогов и сайтов'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Управляйте базами данных в браузере'],
+        'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Мониторинг доступности и страницы статуса'],
+        'n8n' => ['title' => 'n8n', 'tagline' => 'Автоматизация рабочих процессов (лицензия fair-code)'],
+        'nodered' => ['title' => 'Node-RED', 'tagline' => 'Связывайте устройства, API и сервисы'],
+        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'Форумное ПО — требуется MongoDB'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'Приватная синхронизация и обмен файлами'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'Гибкая система управления контентом'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Онлайн-курсы и обучение'],
@@ -25,6 +29,7 @@ return [
     ],
 
     'unavailable' => [
+        'database' => 'Этому приложению нужен :engines, которого нет на этом сервере.',
         'php' => 'На этом сервере не установлен PHP.',
         'node' => 'На этом сервере не установлен Node.js.',
         'web_server' => 'Это приложение пока недоступно на серверах :web_server.',
@@ -53,6 +58,7 @@ return [
         'branch' => 'Ветка',
         'site_title' => 'Название сайта',
         'admin_user' => 'Имя администратора',
+        'admin_username' => 'Имя администратора',
         'admin_email' => 'E-mail администратора',
         'admin_password' => 'Пароль администратора',
         'site_language' => 'Язык сайта',

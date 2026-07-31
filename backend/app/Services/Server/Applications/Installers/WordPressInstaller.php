@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  * fresh set of salts, then runs `wp core install` as the site user to create
  * the admin account.
  */
-class WordPressInstaller extends AbstractSiteInstaller
+class WordPressInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

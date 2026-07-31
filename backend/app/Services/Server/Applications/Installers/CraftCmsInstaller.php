@@ -22,7 +22,7 @@ use Illuminate\Support\Str;
  * server at the root would publish the application's own source, `.env`
  * included.
  */
-class CraftCmsInstaller extends AbstractSiteInstaller
+class CraftCmsInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

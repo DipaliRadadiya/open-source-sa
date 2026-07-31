@@ -100,7 +100,14 @@ class GitDeployer
             // replaced. A deploy that pulls, builds and leaves the old process
             // serving is the most confusing possible outcome: the panel says
             // deployed, the site says otherwise.
-            if ($this->supervisor->runs($application) && $this->supervisor->restart($application)->ok) {
+            //
+            // `apply` rather than `restart`: provisioning writes the unit but
+            // deliberately does not start it, because there was no code yet.
+            // This is where there is. It also rewrites the unit first, so a
+            // changed port or start command takes effect on the same deploy
+            // that changed it rather than the one after.
+            if ($this->supervisor->runs($application)) {
+                $this->supervisor->apply($application, $documentRoot);
                 $steps[] = 'restart_app';
             }
 

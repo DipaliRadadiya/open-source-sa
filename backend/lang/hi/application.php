@@ -4,6 +4,10 @@ return [
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ब्लॉग और वेबसाइट बिल्डर'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ब्राउज़र में अपने डेटाबेस प्रबंधित करें'],
+        'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'अपटाइम निगरानी और स्टेटस पेज'],
+        'n8n' => ['title' => 'n8n', 'tagline' => 'वर्कफ़्लो स्वचालन (fair-code लाइसेंस)'],
+        'nodered' => ['title' => 'Node-RED', 'tagline' => 'डिवाइस, API और सेवाओं को जोड़ें'],
+        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'फ़ोरम सॉफ़्टवेयर — MongoDB चाहिए'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'निजी फ़ाइल सिंक और साझाकरण'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'लचीली सामग्री प्रबंधन प्रणाली'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'ऑनलाइन पाठ्यक्रम और शिक्षण'],
@@ -25,6 +29,7 @@ return [
     ],
 
     'unavailable' => [
+        'database' => 'इस एप्लिकेशन को :engines चाहिए, जो इस सर्वर पर नहीं है।',
         'php' => 'इस सर्वर पर PHP इंस्टॉल नहीं है।',
         'node' => 'इस सर्वर पर Node.js इंस्टॉल नहीं है।',
         'web_server' => 'यह एप्लिकेशन अभी :web_server सर्वर पर उपलब्ध नहीं है।',
@@ -53,6 +58,7 @@ return [
         'branch' => 'ब्रांच',
         'site_title' => 'साइट शीर्षक',
         'admin_user' => 'एडमिन उपयोगकर्ता नाम',
+        'admin_username' => 'एडमिन उपयोगकर्ता नाम',
         'admin_email' => 'एडमिन ईमेल',
         'admin_password' => 'एडमिन पासवर्ड',
         'site_language' => 'साइट भाषा',

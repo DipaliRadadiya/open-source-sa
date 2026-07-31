@@ -55,6 +55,26 @@ abstract class AbstractSiteType implements SiteType
         ];
     }
 
+    /**
+     * Runtime + port fields for anything that runs its own process.
+     *
+     * The port is optional and advanced: the panel allocates a free one, and
+     * on a server the user owns they may still want to choose. There is no
+     * start-command field — a one-click application has exactly one right
+     * answer and its installer writes it.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function nodeFields(): array
+    {
+        return [
+            $this->field('node_version', 'select', extra: ['source' => 'node_versions']),
+            $this->field('app_port', 'number', advanced: true, extra: [
+                'help' => __('application.help.app_port'),
+            ]),
+        ];
+    }
+
     public function defaultWebRoot(): string
     {
         return '/';

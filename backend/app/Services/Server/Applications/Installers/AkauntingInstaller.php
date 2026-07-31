@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
  * error rather than a question, so passing it would defeat the whole
  * arrangement.
  */
-class AkauntingInstaller extends AbstractSiteInstaller
+class AkauntingInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

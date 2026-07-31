@@ -31,13 +31,14 @@ class CreateApplication
     public function execute(array $data): Application
     {
         $type = $this->siteTypes->find((string) $data['site_type']);
+        $servingProfile = ServingProfile::resolve($type, $data);
 
         $application = Application::create([
             'site_type' => $type->name(),
             // Derived, never taken from the client — from the rendering type
             // the user chose, or the site type where there is none. See the
             // resolver for why the two must not be decided separately.
-            'serving_profile' => ServingProfile::resolve($type, $data),
+            'serving_profile' => $servingProfile,
             'rendering_type' => $data['rendering_type'] ?? null,
             'status' => ApplicationStatus::Pending,
             'system_user_id' => $data['system_user_id'],
@@ -49,7 +50,7 @@ class CreateApplication
             // one. A port the panel chose is checked against both the database
             // and what is actually listening; a port the user typed is checked
             // the same way at validation.
-            'app_port' => $this->port($data),
+            'app_port' => $this->port($data, $servingProfile),
             // The type's own default, not a bare '/': a framework
             // application served from its root publishes its own source.
             'web_root' => $data['web_root'] ?? $type?->defaultWebRoot() ?? '/',
@@ -101,7 +102,7 @@ class CreateApplication
     /**
      * @param  array<string, mixed>  $data
      */
-    private function port(array $data): ?int
+    private function port(array $data, string $servingProfile): ?int
     {
         if (filled($data['app_port'] ?? null)) {
             return (int) $data['app_port'];
@@ -109,6 +110,12 @@ class CreateApplication
 
         // Only an application that runs something needs a port. Handing one to
         // every PHP site would exhaust the range for no reason.
-        return blank($data['start_command'] ?? null) ? null : $this->ports->allocate();
+        //
+        // Keyed on the serving profile rather than on the start command: a
+        // one-click Node application is never sent one — its installer writes
+        // it — so asking for the command here left Uptime Kuma and friends
+        // with no port at all, a unit with no `PORT`, and a reverse proxy
+        // pointed at nothing.
+        return $servingProfile === 'node' ? $this->ports->allocate() : null;
     }
 }
