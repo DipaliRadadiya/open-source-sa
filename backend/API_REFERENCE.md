@@ -822,6 +822,37 @@ The panel's own account is also protected from deletion through **Database Users
 
 *(Remaining P2: **import/restore** — deferred (writes data → will ship with existing-target-only + backup-before + confirm). P3: engine install-on-demand, app auto-DB + env-wiring, rename-database, phpMyAdmin signon SSO.)*
 
+### Setup page / Services
+
+**`GET /api/setup`** (`setting`) — one read that drives both the first-run wizard and the panel's Services page. They are the same list deliberately: building them separately would guarantee they drift, and something skipped on day one would then be lost rather than one click away.
+
+```json
+{ "setup": {
+  "complete": false, "status": "installing", "percent": 60,
+  "key": "database", "label": "Installing Database",
+  "stack": "lemp", "web_server": "nginx",
+  "components": [
+    { "key": "database", "title": "Database", "description": "…",
+      "state": "installing", "detail": null, "recommended": true,
+      "action": null, "reason": null, "message": null, "retryable": false,
+      "options": [
+        { "value": "mariadb", "label": "MariaDB", "installed": false, "version": null,
+          "installable": true, "recommended": true,
+          "action": { "method": "POST", "endpoint": "/api/databases/engines/mariadb" } }
+      ] },
+    { "key": "php", "state": "installed", "detail": "8.4",
+      "action": { "method": "POST", "endpoint": "/api/php/versions" }, "options": [] }
+  ] } }
+```
+
+- **`state` is always detected, never remembered** — `installed · pending · installing · failed`. A server that already ran MariaDB shows it installed before anything is clicked; something removed later goes back to `pending`. So **`pending` means "we looked and it is not there"**, not "we have not tried". `installed` beats a stale `installing` row, so a spinner can never hang forever.
+- **`percent` is derived** (`installed ÷ total`). It cannot go backwards or drift when a component is added.
+- **`action` is the endpoint to call** — the ones that already existed for PHP versions, Node versions, fail2ban and database engines. There is no `POST /setup/...`: a second way to trigger the same install is the one that drifts. **`null` means the panel cannot install it** (Redis, MongoDB) — render no button rather than one that fails.
+- **`options` is a pick-one** — only the database has them. MariaDB comes back `recommended: true`; MongoDB `installable: false`.
+- **`complete` tracks the *recommended* set, not everything.** Nothing here is required: the installer already put the web server, PHP and Node in place, so the panel works from first boot. A wizard that demanded the rest would block people over preferences.
+- **A failure keeps its `reason`, a localized `message` and `retryable: true`** — never cleared. There is nowhere to go back to when the panel *is* the server.
+- The web server is **not** on this list. It is chosen when the installer runs (`--stack=lemp|lamp|mern`) and serves the panel itself, so it cannot be swapped from inside the panel without the panel going down with it.
+
 ### Applications (Phase 1 — catalog + record only)
 
 Requires the `application` permission (`view` to read, `manage` to mutate).

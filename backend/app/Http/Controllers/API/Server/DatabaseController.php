@@ -43,11 +43,11 @@ class DatabaseController extends Controller
                 // Only ever `installing` or `failed`: a finished install deletes
                 // its row, so "installed" is answered by detection above and
                 // there is no second copy of that fact to go stale.
-                'install_status' => $row?->status,
+                'install_status' => $row?->status?->value,
                 'install_reason' => $row?->reason,
-                'install_message' => $row?->reason
-                    ? __('errors/database.engine_install.'.$row->reason)
-                    : null,
+                // The model's own message, so the engine list and the setup page
+                // cannot word the same failure differently.
+                'install_message' => $row?->message(),
             ];
         }, $manager->capabilities());
 

@@ -5,10 +5,17 @@ namespace App\Providers;
 use App\Contracts\Firewall;
 use App\Contracts\PhpStack;
 use App\Models\User;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Firewall\UfwFirewall;
 use App\Services\Server\Php\PhpStackManager;
+use App\Services\Server\Setup\Components\DatabaseComponent;
+use App\Services\Server\Setup\Components\Fail2banComponent;
+use App\Services\Server\Setup\Components\NodeComponent;
+use App\Services\Server\Setup\Components\PhpComponent;
+use App\Services\Server\Setup\Components\RedisComponent;
+use App\Services\Server\Setup\SetupCatalog;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -41,6 +48,21 @@ class AppServiceProvider extends ServiceProvider
         // installer it calls — they are recording steps of the same run, and
         // two instances would each keep half the list.
         $this->app->scoped(ProvisionProgress::class);
+
+        // The setup page's component list, in the order it is shown. Registered
+        // here rather than discovered, because the order is a product decision:
+        // the database first because it is what blocks a first real site.
+        $this->app->bind(SetupCatalog::class, fn ($app) => new SetupCatalog(
+            [
+                $app->make(DatabaseComponent::class),
+                $app->make(PhpComponent::class),
+                $app->make(NodeComponent::class),
+                $app->make(RedisComponent::class),
+                $app->make(Fail2banComponent::class),
+            ],
+            $app->make(InstallTracker::class),
+            $app->make(ServerCapabilities::class),
+        ));
     }
 
     /**

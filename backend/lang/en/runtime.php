@@ -15,6 +15,11 @@ return [
         'no_space' => 'The server has run out of disk space.',
         'worker' => 'The install stopped unexpectedly. It may have timed out — try again.',
         'unknown' => 'The install failed. Quote the reference below to support.',
+        'dpkg_broken' => 'This server needs its package database repaired before anything else can install.',
+        'port_in_use_by_mysql' => 'MySQL is already installed and owns this port. Remove it first, or keep using it.',
+        'port_in_use_by_mariadb' => 'MariaDB is already installed and owns this port. Remove it first, or keep using it.',
+        'root_unreachable' => 'It is installed but the panel could not sign in to it. Its administrator login has been changed from the default, so the panel needs those details to continue.',
+        'grant_failed' => 'It is installed but the panel could not create its own account on it.',
     ],
 
     'extension_install_failed' => [
