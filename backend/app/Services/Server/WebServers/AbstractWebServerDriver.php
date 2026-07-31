@@ -4,13 +4,38 @@ namespace App\Services\Server\WebServers;
 
 use App\Contracts\WebServerDriver;
 use App\Models\Application;
+use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\View;
 
 abstract class AbstractWebServerDriver implements WebServerDriver
 {
-    public function __construct(protected ServerOps $serverOps) {}
+    public function __construct(
+        protected ServerOps $serverOps,
+        protected ManagedFile $files,
+    ) {}
+
+    /**
+     * One file in a directory, which is true for nginx and Apache. A driver
+     * whose configuration is not one file overrides this.
+     */
+    public function apply(Application $application, string $documentRoot): ServerOpsResult
+    {
+        return $this->files->put(
+            $this->configPath($application),
+            $this->renderConfig($application, $documentRoot),
+            ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id],
+        );
+    }
+
+    public function remove(Application $application): ServerOpsResult
+    {
+        return $this->files->delete(
+            $this->configPath($application),
+            ['feature' => 'application', 'op' => 'remove_config', 'application' => $application->id],
+        );
+    }
 
     public function configPath(Application $application): string
     {

@@ -23,6 +23,23 @@ interface WebServerDriver
     public function configPath(Application $application): string;
 
     /**
+     * Put the site's configuration in place.
+     *
+     * A driver owns this rather than the provisioner writing a file itself,
+     * because "the site's config" is not one file everywhere. nginx and Apache
+     * drop a file in a directory; OpenLiteSpeed needs that *and* entries in the
+     * shared httpd_config.conf, which no `tee` can express.
+     */
+    public function apply(Application $application, string $documentRoot): ServerOpsResult;
+
+    /**
+     * Take it back out again — the inverse of `apply()`, and the rollback when
+     * a config test fails. `rm -f` is not enough for a driver whose site lives
+     * partly inside a file shared with every other site.
+     */
+    public function remove(Application $application): ServerOpsResult;
+
+    /**
      * Render the site config for the application's serving profile.
      *
      * Profiles, not site types: `php` and `static` between them cover every

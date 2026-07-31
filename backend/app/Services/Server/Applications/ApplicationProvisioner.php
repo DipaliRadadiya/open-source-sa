@@ -55,7 +55,6 @@ class ApplicationProvisioner
         $driver = $this->webServers->driver();
         $user = $application->systemUser;
         $documentRoot = $this->documentRoot($application);
-        $configPath = $driver->configPath($application);
         $completed = [];
 
         $this->step('create_directory', fn () => $this->serverOps->run(
@@ -77,11 +76,7 @@ class ApplicationProvisioner
         ));
         $completed[] = 'placeholder';
 
-        $this->step('write_config', fn () => $this->serverOps->run(
-            ['tee', $configPath],
-            ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id],
-            input: $driver->renderConfig($application, $documentRoot),
-        ));
+        $this->step('write_config', fn () => $driver->apply($application, $documentRoot));
         $completed[] = 'write_config';
 
         // Test before reload — and if the test fails, take our config back out
@@ -89,10 +84,11 @@ class ApplicationProvisioner
         $test = $driver->test();
 
         if ($test->failed()) {
-            $this->serverOps->run(
-                ['rm', '-f', $configPath],
-                ['feature' => 'application', 'op' => 'rollback_config', 'application' => $application->id],
-            );
+            // The driver's own removal, not `rm -f`: on a web server whose
+            // site lives partly in a shared file, deleting the per-site file
+            // would leave the shared one pointing at something gone — a config
+            // that is still broken, and now broken in a harder way.
+            $driver->remove($application);
 
             throw new ProvisioningFailedException('test_config', $test->reference);
         }
@@ -118,10 +114,7 @@ class ApplicationProvisioner
     {
         $driver = $this->webServers->driver();
 
-        $this->serverOps->run(
-            ['rm', '-f', $driver->configPath($application)],
-            ['feature' => 'application', 'op' => 'remove_config', 'application' => $application->id],
-        );
+        $driver->remove($application);
 
         if ($removeFiles) {
             $this->serverOps->run(
