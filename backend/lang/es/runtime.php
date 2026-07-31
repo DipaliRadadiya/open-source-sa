@@ -24,6 +24,7 @@ return [
         'no_space' => 'El servidor se ha quedado sin espacio en disco.',
         'worker' => 'La instalación de :extension se detuvo inesperadamente. Puede haber excedido el tiempo — inténtalo de nuevo.',
         'unknown' => 'La instalación de :extension falló. Indica la referencia siguiente al soporte.',
+        'enable_failed' => ':extension se instaló pero no se pudo activar. Vuelve a intentarlo con el interruptor.',
     ],
 
 ];

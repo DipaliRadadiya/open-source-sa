@@ -24,6 +24,7 @@ return [
         'no_space' => 'Le serveur n\'a plus d\'espace disque.',
         'worker' => 'L\'installation de :extension s\'est arrêtée de façon inattendue. Elle a peut-être expiré — réessayez.',
         'unknown' => 'L\'installation de :extension a échoué. Communiquez la référence ci-dessous au support.',
+        'enable_failed' => ':extension a été installée mais n\'a pas pu être activée. Réessayez avec l\'interrupteur.',
     ],
 
 ];

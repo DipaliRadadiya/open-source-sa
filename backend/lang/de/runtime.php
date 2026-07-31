@@ -24,6 +24,7 @@ return [
         'no_space' => 'Auf dem Server ist kein Speicherplatz mehr frei.',
         'worker' => 'Die Installation von :extension wurde unerwartet beendet. Möglicherweise ein Timeout — versuche es erneut.',
         'unknown' => 'Die Installation von :extension ist fehlgeschlagen. Nenne dem Support die untenstehende Referenz.',
+        'enable_failed' => ':extension wurde installiert, konnte aber nicht aktiviert werden. Versuche den Schalter erneut.',
     ],
 
 ];

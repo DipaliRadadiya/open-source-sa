@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\InstallStatus;
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Jobs\InstallPhpExtension;
 use App\Jobs\InstallPhpVersion;
 use App\Models\RuntimeInstall;
@@ -212,6 +213,53 @@ describe('extensions', function () {
         // The version row must not be picked up as an extension of itself.
         expect($tracker->versions('php')->keys()->all())->toBe(['8.3'])
             ->and($tracker->extensions('php', '8.3')->keys()->all())->toBe(['redis']);
+    });
+
+    it('switches an extension on after installing it, rather than trusting postinst', function () {
+        $runs = new ArrayObject;
+
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+
+            return Process::result(output: ($process->command[0] ?? '') === 'apt-cache'
+                ? "php8.4-redis - Redis\n"
+                : '');
+        });
+
+        app(PhpExtensionManager::class)->install('8.4', 'redis');
+
+        // Debian's postinst normally enables the module, but nothing verified
+        // it while the job went on to log `extension_enabled`. The claim and
+        // the state have to agree.
+        expect(collect($runs))
+            ->toContain(['apt-get', 'install', '-y', '--no-install-recommends', 'php8.4-redis'])
+            ->toContain(['/usr/sbin/phpenmod', '-v', '8.4', '-s', 'ALL', 'redis']);
+    });
+
+    it('reports installed-but-not-enabled as its own reason, not as a failed install', function () {
+        Process::fake(function ($process) {
+            $command = $process->command;
+
+            if (($command[0] ?? '') === 'apt-cache') {
+                return Process::result(output: "php8.4-redis - Redis\n");
+            }
+
+            // apt succeeds, phpenmod does not.
+            return str_contains((string) ($command[0] ?? ''), 'phpenmod')
+                ? Process::result(output: '', errorOutput: 'phpenmod: broken', exitCode: 1)
+                : Process::result(output: '');
+        });
+
+        // "The install failed" would be wrong — apt already succeeded, and the
+        // user would retry work that is done.
+        expect(fn () => app(PhpExtensionManager::class)->install('8.4', 'redis'))
+            ->toThrow(RuntimeInstallException::class);
+
+        try {
+            app(PhpExtensionManager::class)->install('8.4', 'redis');
+        } catch (RuntimeInstallException $e) {
+            expect($e->reason)->toBe('enable_failed');
+        }
     });
 
     it('marks a stranded extension install failed when the worker dies', function () {
