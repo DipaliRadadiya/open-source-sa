@@ -117,11 +117,4 @@ class MoodleInstaller extends AbstractSiteInstaller
         // picks a different driver for each.
         return ($context['engine'] ?? '') === 'mariadb' ? 'mariadb' : 'mysqli';
     }
-
-    private function phpBinary(Application $application): string
-    {
-        $version = $application->php_version ?: config('server.default_php_version', '8.4');
-
-        return str_replace('{version}', (string) $version, (string) config('server.php_binary_pattern', '/usr/bin/php{version}'));
-    }
 }

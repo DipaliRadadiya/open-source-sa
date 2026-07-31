@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Php;
 
+use App\Contracts\PhpStack;
 use App\Exceptions\Server\Php\PhpConfigException;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -21,7 +22,10 @@ use App\Services\Server\ServerOpsResult;
  */
 class PhpVersionManager
 {
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private PhpStack $stack,
+    ) {}
 
     /**
      * Installed PHP versions, newest first.
@@ -30,20 +34,7 @@ class PhpVersionManager
      */
     public function versions(): array
     {
-        $dir = rtrim((string) config('server.php_dir', '/etc/php'), '/');
-
-        if (! is_dir($dir)) {
-            return [];
-        }
-
-        $versions = array_map(
-            fn (string $fpm) => basename(dirname($fpm)),
-            glob($dir.'/*/fpm', GLOB_ONLYDIR) ?: [],
-        );
-
-        usort($versions, fn (string $a, string $b) => version_compare($b, $a));
-
-        return $versions;
+        return $this->stack->versions();
     }
 
     public function exists(string $version): bool
@@ -63,7 +54,7 @@ class PhpVersionManager
             throw PhpConfigException::unknownVersion($version);
         }
 
-        return rtrim((string) config('server.php_dir', '/etc/php'), '/')."/{$version}/fpm/php.ini";
+        return $this->stack->iniPath($version);
     }
 
     public function readIni(string $version): string
@@ -115,10 +106,7 @@ class PhpVersionManager
             throw PhpConfigException::invalid($version);
         }
 
-        $this->must('reload', $this->serverOps->run(
-            ['systemctl', 'reload', "php{$version}-fpm"],
-            ['feature' => 'php', 'op' => 'reload', 'version' => $version],
-        ), $version);
+        $this->must('reload', $this->stack->reload($version), $version);
     }
 
     /**
@@ -126,10 +114,7 @@ class PhpVersionManager
      */
     public function test(string $version): ServerOpsResult
     {
-        return $this->serverOps->run(
-            [(string) config('server.php_fpm_binary', '/usr/sbin/php-fpm').$version, '-t'],
-            ['feature' => 'php', 'op' => 'config_test', 'version' => $version],
-        );
+        return $this->stack->configTest($version);
     }
 
     private function must(string $step, ServerOpsResult $result, string $version): void

@@ -90,17 +90,4 @@ class NextcloudInstaller extends AbstractSiteInstaller
 
         return $steps;
     }
-
-    /**
-     * The PHP the site itself runs on, so occ builds the database schema with
-     * the same version and extensions that will serve the application.
-     */
-    private function phpBinary(Application $application): string
-    {
-        $version = $application->php_version ?: config('server.default_php_version', '8.4');
-
-        return (string) config('server.php_binary_pattern', '/usr/bin/php{version}') === ''
-            ? 'php'
-            : str_replace('{version}', (string) $version, (string) config('server.php_binary_pattern', '/usr/bin/php{version}'));
-    }
 }

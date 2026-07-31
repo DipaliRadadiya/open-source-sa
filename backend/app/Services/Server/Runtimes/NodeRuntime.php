@@ -3,7 +3,9 @@
 namespace App\Services\Server\Runtimes;
 
 use App\Contracts\Runtime;
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
+use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 
@@ -28,7 +30,10 @@ use App\Services\Server\ServerOpsResult;
  */
 class NodeRuntime implements Runtime
 {
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private InstallFailureClassifier $classifier,
+    ) {}
 
     public function key(): string
     {
@@ -171,7 +176,16 @@ class NodeRuntime implements Runtime
      */
     public function install(string $version): void
     {
-        $this->must($this->fnm(['install', $version], timeout: (int) config('server.runtimes.node.install_timeout', 900)));
+        $result = $this->fnm(['install', $version], timeout: (int) config('server.runtimes.node.install_timeout', 900));
+
+        // Classified here, where fnm's output still exists — past this point
+        // only the reason code travels.
+        if ($result->failed()) {
+            throw new RuntimeInstallException(
+                $result->reference,
+                $this->classifier->classify('node', $result->output()),
+            );
+        }
     }
 
     /**

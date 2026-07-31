@@ -2,7 +2,13 @@
 
 namespace App\Services\Server\Php;
 
+use App\Contracts\PhpStack;
+use App\Enums\InstallStatus;
 use App\Exceptions\Server\Php\PhpConfigException;
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
+use App\Models\RuntimeInstall;
+use App\Services\Runtime\InstallFailureClassifier;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\ServerOps;
 
 /**
@@ -32,12 +38,15 @@ class PhpExtensionManager
     public function __construct(
         private ServerOps $serverOps,
         private PhpVersionManager $versions,
+        private PhpStack $stack,
+        private InstallTracker $installs,
+        private InstallFailureClassifier $classifier,
     ) {}
 
     /**
      * Every extension this version could have, with its current state.
      *
-     * @return array<int, array{name: string, package: string, modules: array<int, string>, installed: bool, enabled: bool, builtin: bool, sapis: array<string, bool>}>
+     * @return array<int, array{name: string, package: string, modules: array<int, string>, installed: bool, enabled: bool, builtin: bool, sapis: array<string, bool>, status: string, started_at: ?string, reason: ?string, message: ?string, reference: ?string}>
      */
     public function catalog(string $version): array
     {
@@ -48,6 +57,10 @@ class PhpExtensionManager
         $enabled = $this->enabledBySapi($version);
         $enabledEverywhere = $this->intersect(array_values($enabled));
 
+        // In-flight and last-failed apt runs for this version's extensions.
+        // One query for the whole catalog rather than one per row.
+        $installs = $this->installs->extensions('php', $version);
+
         $rows = [];
 
         foreach ($this->availablePackages($version) as $name) {
@@ -56,7 +69,7 @@ class PhpExtensionManager
 
             $rows[] = [
                 'name' => $name,
-                'package' => "php{$version}-{$name}",
+                'package' => $this->stack->extensionPackage($version, $name),
                 'modules' => $modules,
                 'installed' => $installed,
                 // On only when every module the package provides is on. A
@@ -65,6 +78,12 @@ class PhpExtensionManager
                 'enabled' => $installed && $modules === array_values(array_intersect($modules, $enabledEverywhere)),
                 'builtin' => false,
                 'sapis' => $this->sapiState($modules, $enabled),
+                // The state of the *operation*, not of the extension. A row
+                // that has never been installed is `ready` — meaning nothing
+                // is in flight, so `installed` and `enabled` above can be
+                // trusted. If this meant installedness it would contradict
+                // them on every row.
+                ...$this->progress($installs->get($name)),
             ];
         }
 
@@ -79,6 +98,9 @@ class PhpExtensionManager
                 'enabled' => true,
                 'builtin' => true,
                 'sapis' => [],
+                // Compiled in: there is no apt package, so there is nothing
+                // that could ever be mid-install.
+                ...$this->progress(null),
             ];
         }
 
@@ -88,7 +110,7 @@ class PhpExtensionManager
     }
 
     /**
-     * @return array{name: string, package: string, modules: array<int, string>, installed: bool, enabled: bool, builtin: bool, sapis: array<string, bool>}|null
+     * @return array{name: string, package: string, modules: array<int, string>, installed: bool, enabled: bool, builtin: bool, sapis: array<string, bool>, status: string, started_at: ?string, reason: ?string, message: ?string, reference: ?string}|null
      */
     public function find(string $version, string $name): ?array
     {
@@ -102,20 +124,19 @@ class PhpExtensionManager
     }
 
     /**
-     * Turn an extension on in every SAPI, then reload FPM.
+     * Turn an extension on in every SAPI, then apply the change.
      *
-     * All SAPIs together, deliberately. Splitting cli from fpm lets a site
-     * work in a browser and fail in a cron deploy — the same code, the same
-     * server, a different answer, and nothing on screen explaining why.
+     * Which tool does that is the stack's business: `phpenmod` is Debian's and
+     * only understands `/etc/php`.
      */
     public function enable(string $version, string $name): void
     {
-        $this->toggle('/usr/sbin/phpenmod', $version, $name);
+        $this->toggle($version, $name, enable: true);
     }
 
     public function disable(string $version, string $name): void
     {
-        $this->toggle('/usr/sbin/phpdismod', $version, $name);
+        $this->toggle($version, $name, enable: false);
     }
 
     /**
@@ -127,14 +148,19 @@ class PhpExtensionManager
         $this->assertVersion($version);
 
         $result = $this->serverOps->run(
-            ['apt-get', 'install', '-y', '--no-install-recommends', "php{$version}-{$name}"],
+            ['apt-get', 'install', '-y', '--no-install-recommends', $this->stack->extensionPackage($version, $name)],
             ['feature' => 'php', 'op' => 'extension_install', 'version' => $version, 'extension' => $name],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
         );
 
+        // Same classification as a version install: the screen shows both in
+        // the same list, so "why did it fail" has to mean the same thing.
         if ($result->failed()) {
-            throw PhpConfigException::operationFailed($version, $result->reference);
+            throw new RuntimeInstallException(
+                $result->reference,
+                $this->classifier->classify('php', $result->output()),
+            );
         }
 
         // The package enables itself, but nothing tells FPM.
@@ -164,13 +190,30 @@ class PhpExtensionManager
         return array_values(array_intersect($modules, $this->panelRequired()));
     }
 
-    private function toggle(string $binary, string $version, string $name): void
+    /**
+     * The progress fields for a catalog row.
+     *
+     * @return array<string, mixed>
+     */
+    private function progress(?RuntimeInstall $install): array
+    {
+        return $install?->toProgress() ?? [
+            'status' => InstallStatus::Ready->value,
+            'started_at' => null,
+            'started_at_human' => null,
+            'reason' => null,
+            'message' => null,
+            'reference' => null,
+        ];
+    }
+
+    private function toggle(string $version, string $name, bool $enable): void
     {
         $this->assertVersion($version);
 
         $result = $this->serverOps->run(
-            [$binary, '-v', $version, '-s', 'ALL', $name],
-            ['feature' => 'php', 'op' => basename($binary), 'version' => $version, 'extension' => $name],
+            $this->stack->extensionToggleCommand($version, $name, $enable),
+            ['feature' => 'php', 'op' => $enable ? 'extension_enable' : 'extension_disable', 'version' => $version, 'extension' => $name],
         );
 
         if ($result->failed()) {
@@ -187,14 +230,13 @@ class PhpExtensionManager
      */
     private function reload(string $version): void
     {
-        if (! is_dir($this->sapiDir($version, 'fpm'))) {
+        // LSPHP has no per-version unit at all, so there is nothing here to
+        // reload — the stack decides what applying a change means.
+        if ($this->stack->serviceName($version) === null) {
             return;
         }
 
-        $this->serverOps->run(
-            ['systemctl', 'reload', "php{$version}-fpm"],
-            ['feature' => 'php', 'op' => 'reload', 'version' => $version],
-        );
+        $this->stack->reload($version);
     }
 
     /**
@@ -210,13 +252,14 @@ class PhpExtensionManager
     private function availablePackages(string $version): array
     {
         $output = $this->serverOps->run(
-            ['apt-cache', 'search', '--names-only', "^php{$version}-"],
+            ['apt-cache', 'search', '--names-only', '^'.$this->stack->packagePrefix($version)],
             ['feature' => 'php', 'op' => 'extension_catalog', 'version' => $version],
         )->output();
 
         $excluded = (array) config('server.runtimes.php.non_extension_packages', []);
 
-        preg_match_all('/^php'.preg_quote($version, '/').'-([a-z0-9_]+)\s/m', $output, $matches);
+        $prefix = preg_quote($this->stack->packagePrefix($version), '/');
+        preg_match_all('/^'.$prefix.'([a-z0-9_]+)\s/m', $output, $matches);
 
         return collect($matches[1] ?? [])
             ->unique()
@@ -234,7 +277,7 @@ class PhpExtensionManager
      */
     private function installedModules(string $version): array
     {
-        $dir = $this->versionDir($version).'/mods-available';
+        $dir = $this->stack->modsDir($version);
 
         return collect(glob($dir.'/*.ini') ?: [])
             ->map(fn (string $path) => basename($path, '.ini'))
@@ -273,7 +316,8 @@ class PhpExtensionManager
         $map = [];
 
         // php8.4-mysql: /usr/lib/php/20240924/pdo_mysql.so
-        preg_match_all('/^php'.preg_quote($version, '/').'-([a-z0-9_]+):\s*(\S+\.so)$/m', $output, $matches, PREG_SET_ORDER);
+        $prefix = preg_quote($this->stack->packagePrefix($version), '/');
+        preg_match_all('/^'.$prefix.'([a-z0-9_]+):\s*(\S+\.so)$/m', $output, $matches, PREG_SET_ORDER);
 
         foreach ($matches as [, $package, $path]) {
             $module = basename($path, '.so');
@@ -301,7 +345,7 @@ class PhpExtensionManager
     {
         $enabled = [];
 
-        foreach ((array) config('server.runtimes.php.sapis', ['cli', 'fpm']) as $sapi) {
+        foreach ($this->stack->sapis($version) as $sapi) {
             $dir = $this->sapiDir($version, $sapi);
 
             if (! is_dir($dir)) {
@@ -388,17 +432,12 @@ class PhpExtensionManager
 
     private function binary(string $version): string
     {
-        return str_replace('{version}', $version, (string) config('server.php_binary_pattern', '/usr/bin/php{version}'));
-    }
-
-    private function versionDir(string $version): string
-    {
-        return rtrim((string) config('server.php_dir', '/etc/php'), '/')."/{$version}";
+        return $this->stack->binaryPath($version);
     }
 
     private function sapiDir(string $version, string $sapi): string
     {
-        return $this->versionDir($version)."/{$sapi}";
+        return $this->stack->sapiDir($version, $sapi);
     }
 
     private function assertVersion(string $version): void

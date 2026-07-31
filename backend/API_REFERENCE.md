@@ -471,10 +471,23 @@ Requires the **`php`** permission (`view` / `manage`) — its own sidebar item, 
   "panel_version": "8.4",        // the version the panel itself runs on
   "versions": [{"version": "8.4", "path": "/usr/bin/php8.4", "is_default": true,
                 "source": "apt", "in_use_by_panel": true, "in_use_by": 0,
-                "service": "php8.4-fpm", "ini_path": "/etc/php/8.4/fpm/php.ini"}],
-  "installable": ["8.5", "8.3", "8.2"]
+                "service": "php8.4-fpm", "ini_path": "/etc/php/8.4/fpm/php.ini",
+                "status": "ready", "started_at": null, "reason": null,
+                "message": null, "reference": null},
+               {"version": "8.3", "status": "installing",
+                "started_at": "31-07-2026 05:20:11", "started_at_human": "2 minutes ago",
+                "reason": null, "message": null, "reference": null}],
+  "installable": [{"version": "8.5", "lifecycle": {"status": "active", "eol_date": "…"}}]
 }}
 ```
+
+**`status`** is `installing` | `ready` | `failed`, on every version row — one field to switch on.
+- A version that is **installing has no other fields**: nothing is on disk yet, so there is no path, no ini and no FPM unit to report. This is the entry that did not exist before — versions are detected from the filesystem, so an in-flight apt run was invisible.
+- **A version being installed is removed from `installable`**, so the install button can't start a second apt run for it.
+- The row is written **before** the `202` returns, so polling immediately after `POST` always sees it.
+- On **`failed`**: **`reason`** is a stable code — `package_not_found` | `apt_lock` | `network` | `no_space` | `worker` | `unknown` — switch on this, not on the text. **`message`** is that reason as a sentence, localized to the *caller's* `Accept-Language`, so don't cache it across locales. **`reference`** locates the raw apt output in the server-ops log; the raw output is never returned, because it names internal paths and can't be translated.
+- `worker` means the job died (timeout or a killed worker) rather than apt reporting anything. Without it a killed worker would leave the row spinning at `installing` forever.
+- **A failed row persists until it's retried** — `POST` the same version again and it flips back to `installing` with `reason`/`reference` cleared. A successful install **deletes** the row and the version reappears from the filesystem as `ready`; `ready` is never stored, so it can't disagree with what's actually installed.
 - **`in_use_by_panel`** → hide the remove control on that row; the API refuses it too.
 - **`in_use_by`** is how many sites pin the version, and **`sites`** names up to five of them — "3 sites" doesn't tell you whether removing this breaks staging or the shop. **`sites_truncated`** is true when there are more; `in_use_by` is always the real total. The refusal message on `DELETE` names *every* site, uncapped.
 - **`lifecycle`** is `{status, eol_date}` — `active` | `security` | `eol`. **There is no `lts` field for PHP**, because PHP has no LTS releases: active support, then security-only, then end of life. Sourced from endoflife.date by a daily scheduled command.
@@ -500,12 +513,21 @@ Requires the **`php`** permission (`view` / `manage`) — its own sidebar item, 
 ```json
 {"extensions": [
   {"name": "mysql", "package": "php8.4-mysql", "modules": ["mysqli","mysqlnd","pdo_mysql"],
-   "installed": true, "enabled": true, "builtin": false, "sapis": {"cli": true, "fpm": true}},
+   "installed": true, "enabled": true, "builtin": false, "sapis": {"cli": true, "fpm": true},
+   "status": "ready", "started_at": null, "reason": null, "message": null, "reference": null},
+  {"name": "redis", "package": "php8.4-redis", "modules": ["redis"],
+   "installed": false, "enabled": false, "builtin": false, "sapis": {},
+   "status": "installing", "started_at": "31-07-2026 05:20:11", "reason": null,
+   "message": null, "reference": null},
   {"name": "json", "package": null, "modules": ["json"],
-   "installed": true, "enabled": true, "builtin": true, "sapis": {}}
+   "installed": true, "enabled": true, "builtin": true, "sapis": {},
+   "status": "ready", "started_at": null, "reason": null, "message": null, "reference": null}
  ],
  "panel_required": ["curl", "mbstring", "..."]}
 ```
+- **`status` is the state of the *operation*, not of the extension** — `installing` | `ready` | `failed`, with the same `reason` / `message` / `reference` fields as a version. `ready` means *nothing is in flight*, so `installed` and `enabled` can be trusted. A never-installed extension is therefore `ready`, not `failed`: if `status` meant installedness it would contradict `installed` on most rows.
+- **`builtin` rows are always `ready`** — there is no package, so there is nothing that could be mid-install.
+- Written before the `202` returns, same as versions, so the row is already `installing` when you re-read.
 **96 rows, 32 installed, 16 built-in** on this box. Sorted installed-first — expect to need a search box.
 - **A row is a package, not a module.** `php8.4-mysql` provides three. `enabled` is true only when *every* module is on in *every* SAPI — half-enabled behaves like off.
 - **`sapis` is read-only**, showing drift from a manual `phpdismod`. The toggle always writes all SAPIs; splitting them lets a site work in a browser and fail in a cron deploy.
@@ -517,7 +539,7 @@ Requires the **`php`** permission (`view` / `manage`) — its own sidebar item, 
 | | |
 |---|---|
 | on, installed | `200 {extension}` — enabled in all SAPIs, FPM reloaded |
-| on, not installed | **`202`** — apt queued; poll until `installed` flips |
+| on, not installed | **`202`** — apt queued; the row is already `status: "installing"`, poll until it leaves that state |
 | off | `200 {extension}` — unlinked, FPM reloaded. **Never purged.** |
 | built-in / panel-required / unknown | `422`, `422`, `404` |
 
@@ -685,6 +707,7 @@ Requires the **`node`** permission (`view` / `manage`) — its own sidebar item,
 - **`npm_version`** is read from *that version's own* npm, not from whatever `npm` is on `PATH` — a global read reports the default version's npm next to every row, wrong for all but one. **`null`** when it can't be read; show nothing rather than a wrong number.
 - **`lifecycle.status`** is `current` | `lts` | `maintenance` | `eol`, with **`lts_name`** (the codename, e.g. `Jod`) present for Node and `null` on lines that never become LTS. Sourced from **`nodejs/Release/schedule.json`**, the project's own file — **not** inferred from even-numbered majors, which is a convention rather than a rule.
 - **`sites` / `sites_truncated` / `lifecycle_available`** behave exactly as on `GET /api/php`.
+- **`status` / `started_at` / `reason` / `message` / `reference`** are on every version row and behave **exactly as on `GET /api/php`** — same values, same rules, so one component renders both screens. An installing Node version appears here with no `path` and no `npm_version`, for the same reason: nothing is on disk yet. `reason: "package_not_found"` on Node means fnm doesn't know that version.
 - **`system`** is a Node that was already on the box; reported so it can be used, never modified. `manager: "none"` means no Node at all — both are normal states, render the install prompt.
 
 **`PUT /api/node/default`** (`manage`) — `{"default": "20.11.0"}`. Moves `/usr/local/bin` symlinks only. **A site that pinned a version is unaffected** — it holds an absolute path in its unit. `422` if not installed.

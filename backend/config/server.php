@@ -32,6 +32,7 @@ use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\TmpTarget;
+use App\Services\Server\Php\Stacks\FpmPhpStack;
 use App\Services\Server\WebServers\ApacheDriver;
 use App\Services\Server\WebServers\NginxDriver;
 
@@ -137,10 +138,13 @@ return [
         'nginx' => [
             'driver' => NginxDriver::class,
             'sites_dir' => env('SERVER_NGINX_SITES_DIR', '/etc/nginx/sites-enabled'),
+            // Which PHP stack this web server implies — see `php_stacks`.
+            'php_stack' => 'fpm',
         ],
         'apache' => [
             'driver' => ApacheDriver::class,
             'sites_dir' => env('SERVER_APACHE_SITES_DIR', '/etc/apache2/sites-enabled'),
+            'php_stack' => 'fpm',
         ],
     ],
 
@@ -415,6 +419,17 @@ return [
     'php_dir' => env('SERVER_PHP_DIR', '/etc/php'),
 
     /*
+    | How PHP is served, per web server. nginx and Apache talk to PHP-FPM;
+    | OpenLiteSpeed cannot and runs LSPHP over LSAPI instead — different
+    | packages, paths, ini files, and no per-version service at all. One
+    | server runs one web server, so it has exactly one of these.
+    */
+
+    'php_stacks' => [
+        'fpm' => ['driver' => FpmPhpStack::class],
+    ],
+
+    /*
     | Per-service configuration tests. A service absent from this map has no
     | meaningful test and is reported as not testable rather than being given
     | a command that proves nothing. php-fpm is handled separately, since each
@@ -611,6 +626,13 @@ return [
 
     'runtimes' => [
         'node' => [
+            // Same idea as the PHP list above, matched against fnm's output.
+            'failure_reasons' => [
+                'package_not_found' => '/Can\'t find version|Version .* not found|unknown version/i',
+                'network' => '/error sending request|dns error|Connection timed out|failed to lookup address/i',
+                'no_space' => '/No space left on device/i',
+            ],
+
             'binary' => env('SERVER_FNM_BINARY', '/usr/local/bin/fnm'),
             'dir' => env('SERVER_FNM_DIR', '/opt/fnm'),
             // Whatever Node was already on the box. Detected and reported so
@@ -637,6 +659,23 @@ return [
         ],
 
         'php' => [
+            /*
+            | Why an install failed, matched against apt's output in order.
+            |
+            | These become `reason` codes on the PHP screen, rendered into a
+            | sentence in the viewer's locale — the raw output is never shown,
+            | because it names internal paths and cannot be translated. An
+            | unmatched failure is `unknown`, which still carries a reference
+            | to the server-ops log; guessing a cause we cannot recognise
+            | would be worse than saying we do not know.
+            */
+            'failure_reasons' => [
+                'package_not_found' => '/Unable to locate package|has no installation candidate/i',
+                'apt_lock' => '/Could not get lock|Unable to acquire the dpkg frontend lock/i',
+                'network' => '/Temporary failure resolving|Failed to fetch|Connection timed out/i',
+                'no_space' => '/No space left on device/i',
+            ],
+
             // A bare phpX.Y-fpm has no mysql, no curl, no mbstring — every
             // application in the marketplace would fail on it. Installing a
             // version means installing something usable.

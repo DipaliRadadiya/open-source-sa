@@ -2,8 +2,11 @@
 
 namespace App\Services\Server\Runtimes;
 
+use App\Contracts\PhpStack;
 use App\Contracts\Runtime;
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
+use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -30,6 +33,8 @@ class PhpRuntime implements Runtime
     public function __construct(
         private ServerOps $serverOps,
         private PhpVersionManager $versions,
+        private PhpStack $stack,
+        private InstallFailureClassifier $classifier,
     ) {}
 
     public function key(): string
@@ -100,11 +105,11 @@ class PhpRuntime implements Runtime
     public function installable(): array
     {
         $output = $this->serverOps->run(
-            ['apt-cache', 'search', '--names-only', '^php[0-9]+\.[0-9]+-fpm$'],
+            ['apt-cache', 'search', '--names-only', $this->stack->installablePattern()],
             ['feature' => 'runtime', 'op' => 'php_installable'],
         )->output();
 
-        preg_match_all('/^php(\d+\.\d+)-fpm\s/m', $output, $matches);
+        preg_match_all($this->stack->installableMatcher(), $output, $matches);
 
         $installed = $this->versions->versions();
 
@@ -123,7 +128,7 @@ class PhpRuntime implements Runtime
 
     public function binaryPath(string $version): string
     {
-        return str_replace('{version}', $version, (string) config('server.php_binary_pattern', '/usr/bin/php{version}'));
+        return $this->stack->binaryPath($version);
     }
 
     /**
@@ -141,23 +146,27 @@ class PhpRuntime implements Runtime
      * application in the marketplace would fail on it. The base set is
      * configurable rather than assumed, but it is not empty.
      *
-     * @throws SettingOperationException
+     * @throws RuntimeInstallException
      */
     public function install(string $version): void
     {
-        $packages = array_map(
-            fn (string $package) => "php{$version}-{$package}",
-            (array) config('server.runtimes.php.base_packages', ['fpm', 'cli', 'common']),
-        );
-
-        $this->must($this->serverOps->run(
-            ['apt-get', 'install', '-y', '--no-install-recommends', ...$packages],
+        $result = $this->serverOps->run(
+            ['apt-get', 'install', '-y', '--no-install-recommends', ...$this->stack->versionPackages($version)],
             ['feature' => 'runtime', 'op' => 'php_install', 'version' => $version],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             // apt refuses to run unattended without this, and a prompt with
             // nobody to answer it hangs until the timeout.
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
-        ));
+        );
+
+        // Classified here, where the output still exists. Past this point only
+        // the code travels — apt's stderr never leaves the server-ops log.
+        if ($result->failed()) {
+            throw new RuntimeInstallException(
+                $result->reference,
+                $this->classifier->classify('php', $result->output()),
+            );
+        }
     }
 
     /**
@@ -182,7 +191,7 @@ class PhpRuntime implements Runtime
     public function uninstall(string $version): void
     {
         $this->must($this->serverOps->run(
-            ['apt-get', 'purge', '-y', "php{$version}-*"],
+            ['apt-get', 'purge', '-y', $this->stack->packagePrefix($version).'*'],
             ['feature' => 'runtime', 'op' => 'php_uninstall', 'version' => $version],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],

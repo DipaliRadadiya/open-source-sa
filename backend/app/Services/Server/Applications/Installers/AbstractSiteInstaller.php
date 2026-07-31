@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Contracts\PhpStack;
 use App\Contracts\SiteInstaller;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
@@ -23,7 +24,26 @@ use Illuminate\Support\Str;
  */
 abstract class AbstractSiteInstaller implements SiteInstaller
 {
-    public function __construct(protected ServerOps $serverOps) {}
+    public function __construct(
+        protected ServerOps $serverOps,
+        protected PhpStack $stack,
+    ) {}
+
+    /**
+     * The PHP binary an application's own CLI should run under.
+     *
+     * The site's version, from the stack that serves it. Every installer used
+     * to build this from `php_binary_pattern`, which is the FPM answer — on an
+     * OpenLiteSpeed box the interpreter lives in the lsws tree, and running
+     * /usr/bin/php there means installing an application against a different
+     * PHP than the one that will serve it.
+     */
+    protected function phpBinary(Application $application): string
+    {
+        $version = (string) ($application->php_version ?: config('server.default_php_version', '8.4'));
+
+        return $this->stack->binaryPath($version);
+    }
 
     public function needsDatabase(): bool
     {

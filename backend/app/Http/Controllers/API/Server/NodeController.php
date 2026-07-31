@@ -7,6 +7,7 @@ use App\Http\Requests\Server\Node\InstallNodeVersionRequest;
 use App\Http\Requests\Server\Node\NodeDefaultRequest;
 use App\Jobs\InstallNodeVersion;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Runtime\PinnedSites;
 use App\Services\Server\Node\NodeOverview;
 use App\Services\Server\Runtimes\NodeRuntime;
@@ -50,7 +51,7 @@ class NodeController extends Controller
      * Install a version. Queued: unpacking a runtime is far too slow to hold
      * a request open for.
      */
-    public function store(InstallNodeVersionRequest $request, NodeRuntime $node, ActivityLogger $log): JsonResponse
+    public function store(InstallNodeVersionRequest $request, NodeRuntime $node, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
         $version = (string) $request->validated('version');
 
@@ -59,6 +60,10 @@ class NodeController extends Controller
         if ($node->installed($version)) {
             return response()->json(['message' => __('node.already_installed', ['version' => $version])], 200);
         }
+
+        // Before dispatch: a client polling straight after this 202 must see
+        // the version, and the worker may not have started yet.
+        $installs->start('node', $version);
 
         InstallNodeVersion::dispatch($version);
         $log->log('node.install_started', null, ['version' => $version]);
