@@ -35,6 +35,7 @@ class GitDeployer
         private ServerOps $serverOps,
         private GitProviderManager $providers,
         private NodeRuntime $node,
+        private ProcessSupervisor $supervisor,
     ) {}
 
     /**
@@ -93,6 +94,14 @@ class GitDeployer
             if (filled($application->build_command)) {
                 $this->runBuild($application, $documentRoot);
                 $steps[] = 'build';
+            }
+
+            // New code is only live once the process running it has been
+            // replaced. A deploy that pulls, builds and leaves the old process
+            // serving is the most confusing possible outcome: the panel says
+            // deployed, the site says otherwise.
+            if ($this->supervisor->runs($application) && $this->supervisor->restart($application)->ok) {
+                $steps[] = 'restart_app';
             }
 
             return ['steps' => $steps, 'commit' => $commit];

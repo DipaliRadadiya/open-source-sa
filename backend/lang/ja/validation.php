@@ -172,4 +172,7 @@ return [
         'role' => 'ロール',
     ],
 
+    'start_command_shell' => '起動コマンドに「:token」は使えません。シェルを介さず直接実行されます。',
+    'start_command_wrapper' => 'アプリはエントリファイル（例:「node server.js」）で起動してください。:binary では実際のプロセスがフォークされ、シグナルが届きません。',
+
 ];

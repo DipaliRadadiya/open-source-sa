@@ -172,4 +172,7 @@ return [
         'role' => 'Rolle',
     ],
 
+    'start_command_shell' => 'Der Startbefehl darf „:token“ nicht enthalten – er wird direkt ausgeführt, nicht über eine Shell.',
+    'start_command_wrapper' => 'Starte die App mit ihrer Einstiegsdatei, z. B. „node server.js“, nicht mit :binary. Ein Paketmanager forkt den eigentlichen Prozess, sodass Signale ihn nie erreichen.',
+
 ];

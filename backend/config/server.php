@@ -210,6 +210,27 @@ return [
     | into the web root, so a bad archive never lands on a live site.
     */
 
+    /*
+    | Applications that run their own process (Node, and anything else with a
+    | start command).
+    |
+    | The port range is the panel's to hand out; picking outside it would put a
+    | site on a port the operator never set aside. `memory_max` is per app —
+    | low enough that one runaway site cannot take the box down, high enough
+    | that an ordinary Node app is not killed mid-request. Both are starting
+    | points chosen from common practice rather than measurement; revisit once
+    | there is real traffic to measure.
+    */
+
+    'applications' => [
+        'systemd_dir' => env('SERVER_SYSTEMD_DIR', '/etc/systemd/system'),
+        'port_range' => [
+            'from' => (int) env('SERVER_APP_PORT_FROM', 3000),
+            'to' => (int) env('SERVER_APP_PORT_TO', 3999),
+        ],
+        'memory_max' => env('SERVER_APP_MEMORY_MAX', '512M'),
+    ],
+
     'installer_work_dir' => env('SERVER_INSTALLER_WORK_DIR', sys_get_temp_dir()),
     'installer_timeout' => (int) env('SERVER_INSTALLER_TIMEOUT', 300),
 

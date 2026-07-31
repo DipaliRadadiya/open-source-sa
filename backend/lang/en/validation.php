@@ -204,4 +204,7 @@ return [
         'role' => 'role',
     ],
 
+    'start_command_shell' => 'The start command cannot contain \":token\" — it is run directly, not through a shell.',
+    'start_command_wrapper' => 'Start the app with its entry file, for example \"node server.js\", not with :binary. A package manager forks the real process, so signals never reach it.',
+
 ];

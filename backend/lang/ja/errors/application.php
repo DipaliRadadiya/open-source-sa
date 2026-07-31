@@ -6,4 +6,8 @@ return [
     'provision_failed' => 'サイトのセットアップが「:step」の段階で失敗しました。',
     'not_a_git_application' => 'このアプリケーションはgitデプロイではないため、取得するものがありません。',
     'no_database_engine' => '利用可能なデータベースエンジンがありません。このアプリケーションを作成する前に MySQL または MariaDB を設定してください。',
+    'no_process' => '「:name」は独自のプロセスを実行していません。',
+    'process_failed' => 'アプリケーションを:actionできませんでした。参照番号をサポートにお伝えください。',
+    'no_port_available' => ':from から :to の間に空きポートがありません。解放するか範囲を広げてください。',
+
 ];

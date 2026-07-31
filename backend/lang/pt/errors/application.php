@@ -6,4 +6,8 @@ return [
     'provision_failed' => 'A configuração do site falhou na etapa ":step".',
     'not_a_git_application' => 'A aplicação não é uma implantação git, portanto não há nada para baixar.',
     'no_database_engine' => 'Nenhum mecanismo de banco de dados disponível. Instale e configure o MySQL ou MariaDB antes de criar esta aplicação.',
+    'no_process' => '\"‎:name\" não executa um processo próprio.',
+    'process_failed' => 'Não foi possível :action a aplicação. Informe a referência ao suporte.',
+    'no_port_available' => 'Nenhuma porta livre entre :from e :to. Libere uma ou amplie o intervalo.',
+
 ];
