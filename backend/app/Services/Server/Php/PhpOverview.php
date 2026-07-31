@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Php;
 
+use App\Contracts\PhpStack;
 use App\Services\Runtime\LifecycleCatalog;
 use App\Services\Runtime\PinnedSites;
 use App\Services\Runtime\RuntimeProgress;
@@ -27,6 +28,7 @@ class PhpOverview
         private PinnedSites $pinned,
         private LifecycleCatalog $lifecycle,
         private RuntimeProgress $progress,
+        private PhpStack $stack,
     ) {}
 
     /**
@@ -54,7 +56,11 @@ class PhpOverview
                     // The FPM unit stays on the Services screen — starting and
                     // stopping a daemon is the same job there as for nginx or
                     // redis. Named here so the two screens can link.
-                    'service' => "php{$version['version']}-fpm",
+                    //
+                    // Asked of the stack, not spelled out: on OpenLiteSpeed
+                    // there is no per-version unit at all, and naming one would
+                    // link the user to a service that does not exist.
+                    'service' => $this->stack->serviceName($version['version']),
                     'ini_path' => $this->versions->iniPath($version['version']),
                 ];
             }, $this->runtime->versions()),
