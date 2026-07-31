@@ -24,7 +24,9 @@ index {
 {{-- No script handler at all. A static site that can execute PHP is a static
      site one upload away from not being static. --}}
 
-context ~ /\.(?!well-known) {
-  location                $DOC_ROOT
+{{-- `exp:` is OpenLiteSpeed's regex context; nginx's `~` fails the config
+     test. Named directories rather than a lookahead, so .well-known stays
+     reachable for certificate issuance. --}}
+context exp:^/\.(git|svn|hg|bzr|env) {
   allowBrowse             0
 }

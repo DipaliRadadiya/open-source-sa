@@ -90,8 +90,12 @@ class OlsDriver extends AbstractWebServerDriver
     {
         $context = ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id];
 
+        // The config directory, and the log directory the vhost names.
+        // OpenLiteSpeed does not create the latter — it silently falls back to
+        // the server-wide log, so a site's own errors go somewhere nobody
+        // thinks to look.
         $directory = $this->serverOps->run(
-            ['mkdir', '-p', dirname($this->configPath($application))],
+            ['mkdir', '-p', dirname($this->configPath($application)), $this->vhRoot($application).'/logs'],
             $context,
         );
 
@@ -109,7 +113,22 @@ class OlsDriver extends AbstractWebServerDriver
             return $written;
         }
 
-        return $this->shared->register($application->domain, $this->domains($application));
+        return $this->shared->register(
+            $application->domain,
+            $this->domains($application),
+            $this->vhRoot($application),
+        );
+    }
+
+    /**
+     * The site's own directory — the one `restrained 1` confines the vhost to,
+     * and the one its logs live under. Not the config directory.
+     */
+    private function vhRoot(Application $application): string
+    {
+        $home = rtrim((string) $application->systemUser->home_path, '/');
+
+        return "{$home}/{$application->domain}";
     }
 
     /**

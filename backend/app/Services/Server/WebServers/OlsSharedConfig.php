@@ -54,9 +54,13 @@ class OlsSharedConfig
      *
      * @param  array<int, string>  $domains
      */
-    public function register(string $name, array $domains): ServerOpsResult
+    public function register(string $name, array $domains, string $vhRoot): ServerOpsResult
     {
-        return $this->rewrite(fn (array $sites) => [...$sites, $name => $domains], $name, 'ols_register');
+        return $this->rewrite(
+            fn (array $sites) => [...$sites, $name => ['domains' => $domains, 'root' => $vhRoot]],
+            $name,
+            'ols_register',
+        );
     }
 
     public function unregister(string $name): ServerOpsResult
@@ -80,14 +84,28 @@ class OlsSharedConfig
      */
     public function sites(string $contents): array
     {
-        $region = $this->region($contents, self::BEGIN_MAPS, self::END_MAPS);
         $sites = [];
 
-        foreach (preg_split('/\r?\n/', $region) ?: [] as $line) {
+        // Domains come from the listener maps…
+        foreach (preg_split('/\r?\n/', $this->region($contents, self::BEGIN_MAPS, self::END_MAPS)) ?: [] as $line) {
             if (preg_match('/^\s*map\s+(\S+)\s+(.+?)\s*$/', $line, $matches) === 1) {
-                $sites[$matches[1]] = array_values(array_filter(
-                    array_map('trim', explode(',', $matches[2]))
-                ));
+                $sites[$matches[1]] = [
+                    'domains' => array_values(array_filter(array_map('trim', explode(',', $matches[2])))),
+                    'root' => null,
+                ];
+            }
+        }
+
+        // …and each site's root from its own virtualHost block, so a rebuild
+        // preserves it. Reading only the maps would mean regenerating every
+        // other site's vhRoot from a default and silently moving it.
+        $vhosts = $this->region($contents, self::BEGIN_VHOSTS, self::END_VHOSTS);
+
+        preg_match_all('/virtualHost\s+(\S+)\s*\{[^}]*?vhRoot\s+(\S+)/s', $vhosts, $found, PREG_SET_ORDER);
+
+        foreach ($found as [, $name, $root]) {
+            if (isset($sites[$name])) {
+                $sites[$name]['root'] = rtrim($root, '/');
             }
         }
 
@@ -198,9 +216,9 @@ class OlsSharedConfig
         $vhosts = [];
         $maps = [];
 
-        foreach ($sites as $name => $domains) {
-            $vhosts[] = $this->vhostBlock($name);
-            $maps[] = '  map                     '.$name.' '.implode(', ', $domains);
+        foreach ($sites as $name => $site) {
+            $vhosts[] = $this->vhostBlock((string) $name, (string) ($site['root'] ?? ''));
+            $maps[] = '  map                     '.$name.' '.implode(', ', $site['domains'] ?? []);
         }
 
         $contents = $this->replaceRegion(
@@ -220,14 +238,22 @@ class OlsSharedConfig
         );
     }
 
-    private function vhostBlock(string $name): string
+    /**
+     * @param  string  $vhRoot  the site's own directory, NOT the config directory
+     */
+    private function vhostBlock(string $name, string $vhRoot): string
     {
-        $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', '/usr/local/lsws/conf/vhosts'), '/');
+        $conf = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', '/usr/local/lsws/conf/vhosts'), '/');
+        $vhRoot = rtrim($vhRoot, '/');
 
         return implode("\n", [
             "virtualHost {$name} {",
-            "  vhRoot                  {$root}/{$name}/",
-            "  configFile              {$root}/{$name}/vhconf.conf",
+            // vhRoot is the *site* directory. It used to be the config
+            // directory, which with `restrained 1` — access confined to
+            // vhRoot — put the document root outside the only tree the vhost
+            // was allowed to read. Every request would have been refused.
+            "  vhRoot                  {$vhRoot}/",
+            "  configFile              {$conf}/{$name}/vhconf.conf",
             '  allowSymbolLink         1',
             '  enableScript            1',
             '  restrained              1',
