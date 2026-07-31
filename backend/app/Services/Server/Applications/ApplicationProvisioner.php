@@ -41,8 +41,19 @@ class ApplicationProvisioner
         $webRoot = trim((string) ($application->web_root ?: '/'), '/');
 
         $base = "{$home}/{$application->domain}";
+        $path = $webRoot === '' ? $base : "{$base}/{$webRoot}";
 
-        return $webRoot === '' ? $base : "{$base}/{$webRoot}";
+        // Checked here as well as in validation, because this string is handed
+        // straight to `mkdir -p`, `chown -R` and `tee` as root. A `..` segment
+        // in web_root would walk out of the site and hand, say, /etc to the
+        // site's user. Validation is the fix; this is the belt to its braces,
+        // and the place the damage would actually happen.
+        abort_if(
+            str_contains($path, '/../') || str_ends_with($path, '/..'),
+            500,
+        );
+
+        return $path;
     }
 
     /**
