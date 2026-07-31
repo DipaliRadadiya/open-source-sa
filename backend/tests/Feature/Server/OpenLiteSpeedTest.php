@@ -9,6 +9,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpStackManager;
 use App\Services\Server\Php\Stacks\LsphpPhpStack;
@@ -523,6 +524,19 @@ describe('the lsphp stack', function () {
 
         expect(collect($runs)->pluck('command'))
             ->toContain(['/usr/local/lsws/bin/lswsctrl', 'restart']);
+    });
+
+    it('installs an extension without trying to enable it afterwards', function () {
+        Process::fake(fn ($process) => Process::result(output: ''));
+
+        // apt drops the ini where LSPHP already reads it. Calling enable()
+        // here would refuse and report `enable_failed` for an install that
+        // actually worked — which is what this did before.
+        app(PhpExtensionManager::class)->install('8.4', 'redis');
+
+        Process::assertRan(fn ($p) => ($p->command[0] ?? '') === 'apt-get'
+            && in_array('lsphp84-redis', $p->command, true));
+        Process::assertNotRan(fn ($p) => str_contains((string) ($p->command[0] ?? ''), 'phpenmod'));
     });
 
     it('refuses to toggle extensions rather than pretending to', function () {

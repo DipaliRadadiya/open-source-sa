@@ -100,6 +100,11 @@ class FpmPhpStack implements PhpStack
         );
     }
 
+    public function togglesExtensions(): bool
+    {
+        return true;
+    }
+
     /**
      * `-s ALL` deliberately: splitting cli from fpm lets a site work in a
      * browser and fail in a cron deploy, with nothing on screen to explain it.
