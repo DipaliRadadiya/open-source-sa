@@ -50,6 +50,8 @@ function gitPayload(array $overrides = []): array
         'git_account_id' => test()->account->id,
         'repository' => 'octocat/hello',
         'branch' => 'main',
+        // How the repository is served has no safe default, so the card asks.
+        'rendering_type' => 'php',
     ], $overrides);
 }
 
@@ -148,6 +150,7 @@ it('creates a git application from a public url with no account', function () {
         'git_source' => 'public_url',
         'repository_url' => 'https://github.com/laravel/laravel.git',
         'branch' => 'main',
+        'rendering_type' => 'php',
     ]);
 
     $response->assertCreated();

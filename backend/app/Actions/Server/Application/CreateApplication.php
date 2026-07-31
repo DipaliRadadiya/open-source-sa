@@ -6,6 +6,7 @@ use App\Enums\ApplicationStatus;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Services\ActivityLogger;
+use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\PortAllocator;
 
@@ -33,12 +34,11 @@ class CreateApplication
 
         $application = Application::create([
             'site_type' => $type->name(),
-            // Derived, never taken from the client. The type decides how it
-            // is served — unless the application runs a process of its own, in
-            // which case it is served by proxying to that process. Serving the
-            // directory instead would publish the source of an app whose
-            // routing lives in code.
-            'serving_profile' => filled($data['start_command'] ?? null) ? 'node' : $type->servingProfile(),
+            // Derived, never taken from the client — from the rendering type
+            // the user chose, or the site type where there is none. See the
+            // resolver for why the two must not be decided separately.
+            'serving_profile' => ServingProfile::resolve($type, $data),
+            'rendering_type' => $data['rendering_type'] ?? null,
             'status' => ApplicationStatus::Pending,
             'system_user_id' => $data['system_user_id'],
             'name' => $data['name'],

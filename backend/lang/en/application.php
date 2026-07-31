@@ -41,6 +41,7 @@ return [
     ],
 
     'fields' => [
+        'rendering_type' => 'Rendering type',
         'name' => 'Name',
         'domain' => 'Domain',
         'system_user_id' => 'System user',
@@ -64,6 +65,9 @@ return [
     ],
 
     'help' => [
+        'start_command' => 'The entry file, for example \"node server.js\". Not \"npm start\" — a package manager forks the real process, so shutdown signals never reach it.',
+        'app_port' => 'Left empty, the panel picks a free one.',
+        'rendering_type' => 'Server-side rendering runs your app and proxies to it. The other two build to files the web server hands out directly — faster, and nothing to keep running.',
         'repository_url' => 'A public repository — no account needed. Must be an https:// address.',
         'build_command' => 'Run after the code is fetched, e.g. composer install --no-dev',
     ],
@@ -89,5 +93,12 @@ return [
         'worker' => 'The background worker stopped',
     ],
     'port_free' => 'Port :port is free.',
+
+    'rendering' => [
+        'php' => 'PHP application (Laravel, Symfony, plain PHP)',
+        'ssr' => 'Server-side rendering (runs a process)',
+        'csr' => 'Client-side rendering (built to files)',
+        'static' => 'Static site (built to files)',
+    ],
 
 ];

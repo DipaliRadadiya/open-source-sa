@@ -33,6 +33,10 @@ return new class extends Migration
             $table->string('php_version')->nullable();
             $table->string('node_version')->nullable();
             $table->unsignedInteger('app_port')->nullable();
+            // php | ssr | csr | static — how a git repository is served. Only
+            // `ssr` runs a process; `csr` and `static` are built to files, and
+            // `php` goes through the PHP stack like any other PHP site.
+            $table->string('rendering_type')->nullable();
 
             $table->string('web_root')->default('/');
             $table->string('build_command', 500)->nullable();

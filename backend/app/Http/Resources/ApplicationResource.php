@@ -20,6 +20,9 @@ class ApplicationResource extends JsonResource
             'site_type' => $this->site_type,
             'site_type_title' => __("application.types.{$this->site_type}.title"),
             'serving_profile' => $this->serving_profile,
+            // How a git app was built. The serving profile is derived from it,
+            // but the user chose *this*, so echo it back for the edit form.
+            'rendering_type' => $this->rendering_type,
             'status' => $this->status->value,
             'status_title' => $this->status->label(),
             // P1 never provisions, so make the gap explicit rather than

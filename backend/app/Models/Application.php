@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'system_user_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
-    'php_version', 'node_version', 'app_port', 'web_root',
+    'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
     'build_command', 'start_command',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
     'steps', 'failed_step', 'reference', 'last_commit', 'last_deployed_at',

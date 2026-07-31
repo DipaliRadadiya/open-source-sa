@@ -828,7 +828,18 @@ One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moo
 - There are now **two reasons** a card can be unavailable, and they need different UI:
   - **Missing runtime** — `installable_runtime` is `php` or `node`. Offer to install it; the card becomes usable afterwards.
   - **Not supported on this web server** — `installable_runtime` is **`null`**. Nothing the user can install will fix it, so offer no action. **Switch on `installable_runtime`, not on the message.**
-- **`serving_profile` follows the start command.** An application with one is served **`node`** — a reverse proxy to its port on all three web servers, WebSocket upgrades included — because an app that routes in code must not have its directory served instead. Remove the start command and it reverts to the site type's own profile. The field is derived; never send it.
+- **`serving_profile` follows `rendering_type`, and the start command where there is no rendering type.** An application served **`node`** gets a reverse proxy to its port on all three web servers, WebSocket upgrades included, because an app that routes in code must not have its directory served instead. The field is derived; never send it.
+- **`rendering_type` — how a git repository is served. Asked outright, never guessed.** It is `required` on the git card and deliberately has **no default**: a Node app served as a directory publishes its source, and a PHP app served by proxy is a permanent 502, so a wrong guess is invisible until the site is live. Four answers, and the resulting profile:
+
+  | `rendering_type` | means | `serving_profile` | process? |
+  |---|---|---|---|
+  | `php` | Laravel, Symfony, plain PHP | `php` | no |
+  | `ssr` | Next.js, Nuxt, Express, Nest | `node` | **yes** |
+  | `csr` | React/Vue/Angular SPA, built to files | `static` | no |
+  | `static` | Astro, Hugo, plain HTML | `static` | no |
+
+  - `start_command` and `app_port` carry `depends_on: "rendering_type"` — **show them only for `ssr`.** For `ssr`, `start_command` is required (`422` without it). For anything else both are dropped from the request rather than stored, so a leftover value in your form can't create a unit nothing routes to.
+  - It is editable on `PUT`. **Changing away from `ssr` clears `start_command` and `app_port`** — the process is gone, so keeping either would render start/stop controls with no unit behind them and hold a port the next application could have had. Re-read the application after the update rather than assuming your form still matches.
 - **All 13 types are available on every web server, OpenLiteSpeed included.** An audit found nothing in any installer or site type that depends on the web server — none mention `.htaccess`, `mod_rewrite` or Apache, none declare extension requirements, and the site-type contract has no web-server concept. The per-web-server restriction exists in config if a real limitation ever turns up, but none is claimed today. (OLS is still unproven on real hardware — that's a verification caveat, not a narrower catalog.)
 - The create endpoint applies **the same check**, so a card you can click can never be refused for a reason the grid didn't show. A blocked type returns `422` with the reason on `site_type`.
 - **`has_installer`** — whether picking this type actually installs software. `true` for WordPress and phpMyAdmin (you get a working application); `false` for git / blank PHP / static (you get a served directory and supply the contents yourself). Use it to word the card and the confirm step — the two outcomes are very different and the card is otherwise identical.
@@ -848,7 +859,7 @@ One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moo
 - **Git — two paths, exactly one required:** `git_source: "account"` needs `git_account_id` + `repository`; `git_source: "public_url"` needs `repository_url` and **no account at all** (a public repo needs no credentials). Pasted URLs must be `https://` and may not point at loopback or the cloud metadata range.
 - `422` on a site type this server can't run — the record would describe something unprovisionable.
 
-**`PUT /api/applications/{application}`** (`manage`) — `name`, `domain`, `web_root`, `build_command`, `start_command`, `branch`, `settings`. `settings` **merges**, so a partial update doesn't wipe the other answers. The site type is not editable — a different type is a different application.
+**`PUT /api/applications/{application}`** (`manage`) — `name`, `domain`, `web_root`, `build_command`, `rendering_type`, `start_command`, `app_port`, `branch`, `settings`. `settings` **merges**, so a partial update doesn't wipe the other answers. The site type is not editable — a different type is a different application.
 
 **`POST /api/applications/{application}/provision`** (`manage`) — retry after a failure. `202 { application: {…} }` with `status: "provisioning"`; the previous `failed_step`/`reference` are cleared. Provisioning is **never retried automatically** — repeating a server change the user hasn't seen the reason for is how half-applied state happens.
 
@@ -898,7 +909,7 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
 {
   "id": 4, "name": "My shop", "domain": "shop.example.com",
   "site_type": "git", "site_type_title": "From Git repo",
-  "serving_profile": "php",
+  "serving_profile": "php", "rendering_type": "php",
   "status": "pending", "status_title": "Not deployed yet", "deployed": false,
   "system_user": { "id": 3, "username": "deploy" },
   "php_version": "8.4", "node_version": null, "app_port": null,
