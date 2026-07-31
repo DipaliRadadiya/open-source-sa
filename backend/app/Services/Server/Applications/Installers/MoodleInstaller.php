@@ -30,7 +30,7 @@ use Illuminate\Support\Str;
  * here: waiving it would let a weak password through, and letting the reset
  * fail would leave the account on a random password nobody knows.
  */
-class MoodleInstaller extends AbstractSiteInstaller
+class MoodleInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

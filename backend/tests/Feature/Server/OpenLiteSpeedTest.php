@@ -35,7 +35,9 @@ beforeEach(function () {
     ServerCapability::query()->create([
         'stack' => 'ols',
         'web_server' => 'openlitespeed',
-        'capabilities' => ['php' => true],
+        // Node too, so the catalog assertions below are about the web server
+        // rather than about a runtime this fixture happens to lack.
+        'capabilities' => ['php' => true, 'node' => true],
         'source' => 'installer',
         'verified_at' => now(),
     ]);
@@ -647,8 +649,12 @@ describe('the site type catalog', function () {
         // mod_rewrite or Apache, none declaring extension requirements, and no
         // web-server concept in the SiteType contract. A shorter list here
         // would be a guess about risk dressed as a capability limit.
-        expect($catalog->where('available', false)->count())->toBe(0)
-            ->and($catalog)->toHaveCount(13);
+        // NodeBB is the one exception, and not because of the web server:
+        // it takes MongoDB alone, and this fixture has no database engine.
+        expect($catalog->where('available', false)->pluck('name')->all())->toBe(['nodebb'])
+            ->and($catalog->firstWhere('name', 'nodebb')['unavailable_reason'])
+            ->toBe('This application needs MongoDB, which this server does not have.')
+            ->and($catalog)->toHaveCount(17);
     });
 
     it('can still restrict a web server that genuinely needs it', function () {
@@ -695,8 +701,9 @@ describe('the site type catalog', function () {
         $catalog = collect(app(SiteTypeManager::class)->catalog());
 
         // No `site_types` list on a driver means no restriction — the OLS
-        // limit must not leak into the servers that were already fine.
-        expect($catalog->where('available', false)->count())->toBe(0);
+        // limit must not leak into the servers that were already fine. NodeBB
+        // is blocked by its database, not by nginx.
+        expect($catalog->where('available', false)->pluck('name')->all())->toBe(['nodebb']);
     });
 });
 

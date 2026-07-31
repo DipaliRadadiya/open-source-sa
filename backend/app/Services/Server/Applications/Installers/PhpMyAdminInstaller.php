@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\View;
  *    public web root it is a configuration console on the open internet. It
  *    is removed.
  */
-class PhpMyAdminInstaller extends AbstractSiteInstaller
+class PhpMyAdminInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

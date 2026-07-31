@@ -58,7 +58,7 @@ class InstallerManager
         $context = [];
 
         if ($installer->needsDatabase()) {
-            $context = $this->provisionDatabase($application);
+            $context = $this->provisionDatabase($application, $installer->acceptedEngines());
         }
 
         return $installer->install($application, $documentRoot, $context);
@@ -71,13 +71,14 @@ class InstallerManager
      * the user never needs to see it since it only ever goes into the app's
      * own config file.
      *
+     * @param  array<int, string>  $accepted  engines this application can use
      * @return array<string, mixed>
      *
      * @throws ProvisioningFailedException
      */
-    private function provisionDatabase(Application $application): array
+    private function provisionDatabase(Application $application, array $accepted): array
     {
-        $engine = $this->firstAvailableEngine();
+        $engine = $this->firstAvailableEngine($accepted);
 
         if ($engine === null) {
             // Fail here rather than half-installing: without a database the
@@ -140,10 +141,21 @@ class InstallerManager
         return ($base ?: 'app').'_'.Str::lower(Str::random(6));
     }
 
-    private function firstAvailableEngine(): ?string
+    /**
+     * The first engine the application accepts that this server actually has.
+     *
+     * Ordered by the application's preference, not the server's: NodeBB
+     * accepts MongoDB alone, and picking whatever happened to be installed
+     * first would hand it a MySQL it cannot speak.
+     *
+     * @param  array<int, string>  $accepted
+     */
+    private function firstAvailableEngine(array $accepted): ?string
     {
-        foreach ($this->databases->engineNames() as $engine) {
-            if ($this->databases->driver($engine) === 'sql' && $this->databases->engine($engine)->available()) {
+        $installed = $this->databases->engineNames();
+
+        foreach ($accepted as $engine) {
+            if (in_array($engine, $installed, true) && $this->databases->engine($engine)->available()) {
                 return $engine;
             }
         }

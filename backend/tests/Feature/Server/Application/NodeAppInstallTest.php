@@ -1,0 +1,228 @@
+<?php
+
+use App\Models\Application;
+use App\Models\ServerCapability;
+use App\Models\SystemUser;
+use App\Models\User;
+use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\Installers\NodeBbInstaller;
+use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Process;
+
+/**
+ * The four one-click Node applications.
+ *
+ * These are the first installers whose result is a *process* rather than a
+ * directory, which changes three things that each have their own way of going
+ * wrong: the start command has to be written by the panel, the process must
+ * not be started before the code exists, and the application must be pointed
+ * at the site rather than at the home directory the unit mounts read-only.
+ */
+beforeEach(function () {
+    $this->seed(PermissionSeeder::class);
+    $this->admin = User::factory()->admin()->create();
+    $this->token = $this->admin->createToken('t')->plainTextToken;
+
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'mern', 'web_server' => 'nginx',
+        'capabilities' => ['php' => true, 'node' => true],
+        'source' => 'installer', 'verified_at' => now(),
+    ]);
+
+    $this->su = SystemUser::create([
+        'username' => 'apps', 'home_path' => '/home/apps',
+        'shell' => '/bin/bash', 'sudo' => false,
+    ]);
+
+    // Laravel's Process fake has no recorder in this version, so collect the
+    // commands as they run — several of these assertions are about *order*.
+    $this->ran = collect();
+
+    Process::fake(function ($process) {
+        test()->ran->push($process);
+
+        return Process::result(output: '');
+    });
+});
+
+function oneClickApp(string $type, array $settings = []): Application
+{
+    return Application::create([
+        'system_user_id' => test()->su->id,
+        'name' => ucfirst($type), 'domain' => "{$type}.test",
+        'site_type' => $type, 'serving_profile' => 'node', 'status' => 'pending',
+        'web_root' => '/', 'app_port' => 3300, 'node_version' => '22',
+        'settings' => $settings,
+    ]);
+}
+
+/** Every command that ran, as one searchable blob. */
+function ranCommands(): string
+{
+    return test()->ran
+        ->map(fn ($process) => is_array($process->command)
+            ? implode(' ', $process->command)
+            : (string) $process->command)
+        ->implode("\n");
+}
+
+/** What was piped into the command that wrote `$path`. */
+function writtenTo(string $path): ?string
+{
+    return test()->ran
+        ->first(fn ($process) => is_array($process->command)
+            && ($process->command[0] ?? '') === 'tee'
+            && in_array($path, $process->command, true))
+        ?->input;
+}
+
+it('offers all four, and says what each one is', function () {
+    $catalog = collect(app(SiteTypeManager::class)->catalog())->keyBy('name');
+
+    foreach (['uptimekuma', 'n8n', 'nodered', 'nodebb'] as $type) {
+        expect($catalog[$type]['serving_profile'])->toBe('node')
+            ->and($catalog[$type]['has_installer'])->toBeTrue()
+            // Localized, never a hardcoded English string in the frontend.
+            ->and($catalog[$type]['title'])->not->toStartWith('application.');
+    }
+
+    // Only NodeBB stores anything outside its own directory.
+    expect($catalog['nodebb']['needs_database'])->toBeTrue()
+        ->and($catalog['uptimekuma']['needs_database'])->toBeFalse()
+        ->and($catalog['n8n']['needs_database'])->toBeFalse()
+        ->and($catalog['nodered']['needs_database'])->toBeFalse();
+});
+
+it('never asks for a start command — the installer knows it', function () {
+    $fields = collect(app(SiteTypeManager::class)->catalog())
+        ->whereIn('name', ['uptimekuma', 'n8n', 'nodered', 'nodebb'])
+        ->flatMap(fn (array $type) => collect($type['fields'])->pluck('name'));
+
+    expect($fields)->not->toContain('start_command');
+});
+
+it('allocates a port even though nothing asked for one', function () {
+    // The user never sends a start command for a one-click application — the
+    // installer writes it later — so keying allocation on that left these with
+    // no port, a unit with no PORT, and a proxy pointed at nothing.
+    $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+        ->postJson('/api/applications', [
+            'system_user_id' => $this->su->id,
+            'name' => 'Status', 'domain' => 'status.test', 'site_type' => 'uptimekuma',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('application.serving_profile', 'node');
+
+    expect(Application::query()->value('app_port'))->toBeGreaterThanOrEqual(3000);
+});
+
+it('writes the start command itself, and starts only after installing', function () {
+    $app = oneClickApp('uptimekuma');
+
+    app(ApplicationProvisioner::class)->provision($app);
+
+    expect($app->fresh()->start_command)->toBe('node server/server.js');
+
+    $commands = ranCommands();
+
+    // Cloned and built before anything was started — starting first would run
+    // the unit against an empty directory.
+    expect(strpos($commands, 'npm run setup'))
+        ->toBeLessThan(strpos($commands, 'systemctl restart sv-app-'));
+});
+
+it('does not start a git application that has no code yet', function () {
+    // Its unit is written and enabled, so the port and the boot behaviour are
+    // in place — but `node server.js` in an empty directory exits instantly,
+    // and a provision that failed on that would report a broken site that is
+    // in fact fine, just not deployed.
+    $app = oneClickApp('git');
+    $app->update(['start_command' => 'node server.js']);
+
+    $steps = app(ApplicationProvisioner::class)->provision($app);
+
+    expect($steps)->toContain('write_unit')
+        ->and($steps)->not->toContain('start_app')
+        ->and(ranCommands())->toContain('systemctl enable sv-app-')
+        ->and(ranCommands())->not->toContain('systemctl restart sv-app-');
+});
+
+it('runs every Node command under the version the site pinned', function () {
+    app(ApplicationProvisioner::class)->provision(oneClickApp('n8n'));
+
+    // Otherwise npm resolves through its own `#!/usr/bin/env node` shebang and
+    // builds against whatever the panel's PATH had, not the version the unit
+    // will run.
+    expect(ranCommands())->toContain('PATH=/opt/fnm/node-versions/v22')
+        ->and(ranCommands())->toContain('runuser -u apps --');
+});
+
+it('keeps n8n inside the site, with a key generated before first start', function () {
+    $app = oneClickApp('n8n');
+
+    app(ApplicationProvisioner::class)->provision($app);
+
+    expect(writtenTo('/home/apps/n8n.test/.env'))
+        // The home is mounted read-only by the unit, so the default ~/.n8n
+        // would start and then fail to write.
+        ->toContain('N8N_USER_FOLDER="/home/apps/n8n.test"')
+        // Reached through the reverse proxy only.
+        ->toContain('N8N_LISTEN_ADDRESS="127.0.0.1"')
+        ->toContain('N8N_PORT="3300"')
+        // Lose this and every stored credential is unreadable, with no error
+        // until a workflow runs.
+        ->toMatch('/N8N_ENCRYPTION_KEY="[0-9a-f]{64}"/')
+        // The proxy terminates TLS, so n8n has to be told what the browser sees.
+        ->toContain('WEBHOOK_URL="https://n8n.test/"');
+});
+
+it('gives Node-RED a password, because it ships without one', function () {
+    // An unauthenticated Node-RED is a remote shell: a flow runs arbitrary
+    // code as the site user.
+    $app = oneClickApp('nodered', ['admin_username' => 'ops', 'admin_password' => 'a-long-password']);
+
+    app(ApplicationProvisioner::class)->provision($app);
+
+    expect(writtenTo('/home/apps/nodered.test/settings.js'))
+        ->toContain('username: "ops"')
+        // $2a$, not PHP's $2y$: bcryptjs accepts both but the native bcrypt
+        // binding rejects $2y$ outright.
+        ->toMatch('/password: "\$2a\$/')
+        ->toContain('uiPort: process.env.PORT')
+        // The default user directory is under the home, which the unit mounts
+        // read-only — so a flow could never be saved.
+        ->and($app->fresh()->start_command)
+        ->toBe('node /home/apps/nodered.test/node_modules/node-red/red.js'
+            .' --userDir /home/apps/nodered.test --settings /home/apps/nodered.test/settings.js');
+});
+
+it('greys NodeBB on a server with no MongoDB, rather than offering MySQL', function () {
+    // No mongo client on this box, which is how the engine reports itself
+    // absent.
+    Process::fake(fn ($process) => ($process->command[0] ?? '') === 'mongosh'
+        ? Process::result(exitCode: 1)
+        : Process::result(output: ''));
+
+    $nodebb = collect(app(SiteTypeManager::class)->catalog())->firstWhere('name', 'nodebb');
+
+    // NodeBB speaks MongoDB, Redis or PostgreSQL — never MySQL. Offering the
+    // card and then failing inside its setup would send the user to install
+    // the one database that cannot help.
+    expect($nodebb['available'])->toBeFalse()
+        ->and($nodebb['unavailable_reason'])->toContain('MongoDB')
+        // Nothing the runtime installer offers would fix this.
+        ->and($nodebb['installable_runtime'])->toBeNull();
+});
+
+it('starts NodeBB in the foreground, so systemd keeps hold of it', function () {
+    $app = oneClickApp('nodebb');
+    $installer = app(NodeBbInstaller::class);
+
+    // Without --no-daemon the loader forks and exits; systemd sees the parent
+    // die and kills the children it left behind in the cgroup.
+    expect($installer->startCommand($app, '/home/apps/nodebb.test'))
+        ->toBe('node /home/apps/nodebb.test/loader.js --no-daemon --no-silent')
+        ->and($installer->acceptedEngines())->toBe(['mongodb']);
+});

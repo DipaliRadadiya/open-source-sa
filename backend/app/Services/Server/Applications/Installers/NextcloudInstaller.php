@@ -24,7 +24,7 @@ use App\Models\Application;
  *    that is not in `trusted_domains`, so a site installed without this step
  *    answers every request with a refusal page.
  */
-class NextcloudInstaller extends AbstractSiteInstaller
+class NextcloudInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

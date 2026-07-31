@@ -6,12 +6,16 @@ use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
 use App\Services\Applications\Types\MauticSiteType;
 use App\Services\Applications\Types\MoodleSiteType;
+use App\Services\Applications\Types\N8nSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
+use App\Services\Applications\Types\NodeBbSiteType;
+use App\Services\Applications\Types\NodeRedSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
 use App\Services\Applications\Types\PhpSiteType;
 use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
+use App\Services\Applications\Types\UptimeKumaSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
@@ -21,10 +25,14 @@ use App\Services\Server\Applications\Installers\CraftCmsInstaller;
 use App\Services\Server\Applications\Installers\JoomlaInstaller;
 use App\Services\Server\Applications\Installers\MauticInstaller;
 use App\Services\Server\Applications\Installers\MoodleInstaller;
+use App\Services\Server\Applications\Installers\N8nInstaller;
 use App\Services\Server\Applications\Installers\NextcloudInstaller;
+use App\Services\Server\Applications\Installers\NodeBbInstaller;
+use App\Services\Server\Applications\Installers\NodeRedInstaller;
 use App\Services\Server\Applications\Installers\PhpMyAdminInstaller;
 use App\Services\Server\Applications\Installers\PrestaShopInstaller;
 use App\Services\Server\Applications\Installers\StatamicInstaller;
+use App\Services\Server\Applications\Installers\UptimeKumaInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
@@ -326,6 +334,44 @@ return [
             'timeout' => (int) env('SERVER_NEXTCLOUD_TIMEOUT', 1800),
         ],
 
+        /*
+        | The Node applications. Distributed as git repositories or npm
+        | packages rather than release archives, so these do not use the
+        | shared download-and-extract helper.
+        |
+        | `version` is pinned to a range rather than a number: `latest` on a
+        | major-version boundary is how an install silently becomes an upgrade
+        | nobody asked for.
+        */
+
+        'uptimekuma' => [
+            'driver' => UptimeKumaInstaller::class,
+            'repository' => env('SERVER_UPTIME_KUMA_REPO', 'https://github.com/louislam/uptime-kuma.git'),
+            'branch' => env('SERVER_UPTIME_KUMA_BRANCH', '2.0.0'),
+            // Clone plus a full frontend build.
+            'timeout' => (int) env('SERVER_UPTIME_KUMA_TIMEOUT', 1800),
+        ],
+
+        'nodered' => [
+            'driver' => NodeRedInstaller::class,
+            'version' => env('SERVER_NODE_RED_VERSION', '4'),
+            'timeout' => (int) env('SERVER_NODE_RED_TIMEOUT', 900),
+        ],
+
+        'n8n' => [
+            'driver' => N8nInstaller::class,
+            'version' => env('SERVER_N8N_VERSION', '1'),
+            // The largest npm install in the catalog by some distance.
+            'timeout' => (int) env('SERVER_N8N_TIMEOUT', 1800),
+        ],
+
+        'nodebb' => [
+            'driver' => NodeBbInstaller::class,
+            'repository' => env('SERVER_NODEBB_REPO', 'https://github.com/NodeBB/NodeBB.git'),
+            'branch' => env('SERVER_NODEBB_BRANCH', 'v4.x'),
+            'timeout' => (int) env('SERVER_NODEBB_TIMEOUT', 1800),
+        ],
+
         'phpmyadmin' => [
             'driver' => PhpMyAdminInstaller::class,
             // Redirects to the current release; both hops are https, which the
@@ -350,6 +396,10 @@ return [
         StatamicSiteType::class,
         PrestaShopSiteType::class,
         PhpMyAdminSiteType::class,
+        UptimeKumaSiteType::class,
+        N8nSiteType::class,
+        NodeRedSiteType::class,
+        NodeBbSiteType::class,
         GitSiteType::class,
         PhpSiteType::class,
         StaticSiteType::class,
@@ -884,9 +934,9 @@ return [
 
     'databases' => [
         'engines' => [
-            'mysql' => ['driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
-            'mariadb' => ['driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
-            'mongodb' => ['driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'default_port' => 27017, 'default_socket' => null],
+            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
+            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
+            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'default_port' => 27017, 'default_socket' => null],
         ],
 
         // Never created/dropped/altered by the panel (deny-by-default guard).

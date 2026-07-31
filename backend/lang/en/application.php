@@ -9,6 +9,10 @@ return [
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Blog and website builder'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Manage your databases in the browser'],
+        'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Uptime monitoring and status pages'],
+        'n8n' => ['title' => 'n8n', 'tagline' => 'Workflow automation (fair-code licence)'],
+        'nodered' => ['title' => 'Node-RED', 'tagline' => 'Wire up devices, APIs and services'],
+        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'Forum software — needs MongoDB'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'Private file sync and share'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'Flexible content management system'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Online courses and learning'],
@@ -30,6 +34,7 @@ return [
     ],
 
     'unavailable' => [
+        'database' => 'This application needs :engines, which this server does not have.',
         'php' => 'This server does not have PHP installed.',
         'node' => 'This server does not have Node.js installed.',
         'web_server' => 'This application is not available on :web_server servers yet.',
@@ -58,6 +63,7 @@ return [
         'branch' => 'Branch',
         'site_title' => 'Site title',
         'admin_user' => 'Admin username',
+        'admin_username' => 'Admin username',
         'admin_email' => 'Admin email',
         'admin_password' => 'Admin password',
         'site_language' => 'Site language',

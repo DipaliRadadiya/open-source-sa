@@ -110,19 +110,57 @@ class ApplicationProvisioner
         $this->step('reload', fn () => $driver->reload());
         $completed[] = 'reload';
 
-        // The application's own process, once the site is being served. After
-        // the vhost so a reverse proxy has something to point at, and before
-        // the installers so an installer that talks to its own API can.
-        if ($this->supervisor->runs($application)) {
-            $this->supervisor->apply($application, $documentRoot);
-            $completed[] = 'start_app';
-        }
-
         // Marketplace apps install once the site is actually being served —
         // WordPress writes its own URL into the database during setup, so it
         // needs the vhost live first. Site types with no installer (git,
         // blank PHP, static) return nothing here.
-        return array_merge($completed, $this->installers->install($application, $documentRoot));
+        $completed = array_merge($completed, $this->installers->install($application, $documentRoot));
+
+        // The process last, because until the installer has run there is
+        // nothing to start. Starting first was wrong in both directions: a
+        // one-click Node app would be launched against an empty directory,
+        // and a git application has no code at all until its first deploy —
+        // `systemctl start` succeeds, the process dies immediately, and
+        // provisioning fails on a site that is otherwise fine.
+        return array_merge($completed, $this->startProcess($application, $documentRoot));
+    }
+
+    /**
+     * Start the application's process, if there is one and there is anything
+     * for it to run yet.
+     *
+     * A one-click application's start command is written here rather than
+     * asked for: the installer knows the one right answer, and it needs the
+     * document root to say it.
+     *
+     * A git application reaches this with a start command and an empty
+     * directory. Its unit is written and enabled — so the port, the limits and
+     * the boot behaviour are all in place — but it is not started, because the
+     * code arrives with the first deploy, which starts it.
+     *
+     * @return array<int, string>
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function startProcess(Application $application, string $documentRoot): array
+    {
+        $installer = $this->installers->installerFor($application);
+        $command = $installer?->startCommand($application, $documentRoot);
+
+        if ($command !== null) {
+            $application->forceFill(['start_command' => $command])->save();
+        }
+
+        if (! $this->supervisor->runs($application)) {
+            return [];
+        }
+
+        // Installed applications have their code now; a git checkout does not.
+        $ready = $command !== null;
+
+        $this->supervisor->apply($application, $documentRoot, start: $ready);
+
+        return [$ready ? 'start_app' : 'write_unit'];
     }
 
     /**

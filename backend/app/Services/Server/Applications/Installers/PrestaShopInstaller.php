@@ -28,7 +28,7 @@ use Illuminate\Support\Str;
  * line; this one cannot, so it is the deliberate exception rather than an
  * oversight, and the API reference says so plainly.
  */
-class PrestaShopInstaller extends AbstractSiteInstaller
+class PrestaShopInstaller extends AbstractPhpInstaller
 {
     public function siteType(): string
     {

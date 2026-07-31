@@ -4,6 +4,10 @@ return [
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Créateur de blogs et de sites web'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Gérez vos bases de données dans le navigateur'],
+        'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Surveillance de disponibilité et pages de statut'],
+        'n8n' => ['title' => 'n8n', 'tagline' => 'Automatisation de flux de travail (licence fair-code)'],
+        'nodered' => ['title' => 'Node-RED', 'tagline' => 'Reliez appareils, API et services'],
+        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'Logiciel de forum — nécessite MongoDB'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'Synchronisation et partage de fichiers privés'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'Système de gestion de contenu flexible'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Cours et apprentissage en ligne'],
@@ -25,6 +29,7 @@ return [
     ],
 
     'unavailable' => [
+        'database' => 'Cette application nécessite :engines, absent de ce serveur.',
         'php' => 'PHP n\'est pas installé sur ce serveur.',
         'node' => 'Node.js n\'est pas installé sur ce serveur.',
         'web_server' => 'Cette application n\'est pas encore disponible sur les serveurs :web_server.',
@@ -53,6 +58,7 @@ return [
         'branch' => 'Branche',
         'site_title' => 'Titre du site',
         'admin_user' => 'Identifiant administrateur',
+        'admin_username' => 'Nom d\'utilisateur admin',
         'admin_email' => 'E-mail administrateur',
         'admin_password' => 'Mot de passe administrateur',
         'site_language' => 'Langue du site',

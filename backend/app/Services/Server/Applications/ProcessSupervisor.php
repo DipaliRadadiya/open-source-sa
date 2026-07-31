@@ -62,7 +62,7 @@ class ProcessSupervisor
      *
      * @throws ProvisioningFailedException
      */
-    public function apply(Application $application, string $documentRoot): void
+    public function apply(Application $application, string $documentRoot, bool $start = true): void
     {
         $context = ['feature' => 'application', 'op' => 'unit_write', 'application' => $application->id];
 
@@ -80,6 +80,13 @@ class ProcessSupervisor
             $this->forget($application);
 
             throw new ProvisioningFailedException('enable_unit', $enabled->reference);
+        }
+
+        // Enabled but not started: the unit exists and will come up at boot,
+        // but there is nothing to run yet. Starting it here would be a
+        // guaranteed failure on an application whose code arrives later.
+        if (! $start) {
+            return;
         }
 
         $started = $this->systemctl('restart', $application);
