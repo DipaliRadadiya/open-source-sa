@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpStackManager;
 use App\Services\Server\Php\Stacks\LsphpPhpStack;
 use App\Services\Server\WebServers\OlsDriver;
@@ -371,6 +372,16 @@ describe('the lsphp stack', function () {
         expect($stack->serviceName('8.4'))->toBeNull()
             ->and($stack->versionForService('lsphp84'))->toBeNull()
             ->and($stack->logPath('8.4'))->toBeNull();
+    });
+
+    it('reports no FPM unit on the PHP screen', function () {
+        $runs = fakeOls(olsConfig());
+
+        $versions = app(PhpOverview::class)->read()['versions'];
+
+        // Linking the PHP screen to a `php8.4-fpm` that does not exist would
+        // send the user to a Services row that is not there.
+        expect(collect($versions)->pluck('service')->unique()->all())->toBe([null]);
     });
 
     it('applies an ini change by restarting the web server', function () {

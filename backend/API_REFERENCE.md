@@ -485,7 +485,7 @@ Requires the **`php`** permission (`view` / `manage`) — its own sidebar item, 
 - A version that is **installing has no other fields**: nothing is on disk yet, so there is no path, no ini and no FPM unit to report. This is the entry that did not exist before — versions are detected from the filesystem, so an in-flight apt run was invisible.
 - **A version being installed is removed from `installable`**, so the install button can't start a second apt run for it.
 - The row is written **before** the `202` returns, so polling immediately after `POST` always sees it.
-- On **`failed`**: **`reason`** is a stable code — `package_not_found` | `apt_lock` | `network` | `no_space` | `worker` | `unknown` — switch on this, not on the text. **`message`** is that reason as a sentence, localized to the *caller's* `Accept-Language`, so don't cache it across locales. **`reference`** locates the raw apt output in the server-ops log; the raw output is never returned, because it names internal paths and can't be translated.
+- On **`failed`**: **`reason`** is a stable code — `package_not_found` | `apt_lock` | `network` | `no_space` | `worker` | `enable_failed` | `unknown` — switch on this, not on the text. Treat an unrecognised code as `unknown` rather than assuming the list is closed; it can grow. **`message`** is that reason as a sentence, localized to the *caller's* `Accept-Language`, so don't cache it across locales. **`reference`** locates the raw apt output in the server-ops log; the raw output is never returned, because it names internal paths and can't be translated.
 - `worker` means the job died (timeout or a killed worker) rather than apt reporting anything. Without it a killed worker would leave the row spinning at `installing` forever.
 - **A failed row persists until it's retried** — `POST` the same version again and it flips back to `installing` with `reason`/`reference` cleared. A successful install **deletes** the row and the version reappears from the filesystem as `ready`; `ready` is never stored, so it can't disagree with what's actually installed.
 - **`in_use_by_panel`** → hide the remove control on that row; the API refuses it too.
@@ -542,6 +542,9 @@ Requires the **`php`** permission (`view` / `manage`) — its own sidebar item, 
 | on, not installed | **`202`** — apt queued; the row is already `status: "installing"`, poll until it leaves that state |
 | off | `200 {extension}` — unlinked, FPM reloaded. **Never purged.** |
 | built-in / panel-required / unknown | `422`, `422`, `404` |
+| **any, on an OpenLiteSpeed server** | **`422`** — LSPHP has no `phpenmod`, so the panel refuses rather than reporting a success that changes nothing. Hide the toggles when `web_server` is `openlitespeed`. |
+
+- **`enable_failed`** is its own `reason`, distinct from a failed install: apt succeeded and `phpenmod` did not, so the package **is** installed. Offer "try again" — the retry takes the enable-only path and usually fixes it. Do not present it as "the install failed", which would send the user to redo work that is done.
 
 **Nothing is ever purged** — a disabled extension costs a few megabytes; `apt purge php8.4-*` is how a server loses `php8.4-common` and every site with it. **The panel reloads FPM**, because `phpenmod` doesn't — it moves symlinks and stops there.
 
@@ -907,6 +910,11 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
 - Response: `{ capabilities: {stack, web_server, capabilities: {php, node}, source, verified_at} }`
 - `stack` (`lemp|lamp|ols|mern`) is how the box was **built**; `capabilities` is what it can run **now**. They legitimately differ — installing Node on a LEMP box adds the capability without changing how it was built — so **filter the UI on `capabilities`, never on `stack`.**
 - `web_server` is `nginx|apache|openlitespeed`. **`mern` is not a web server** — a MERN box runs nginx.
+- **All three can provision applications** as of 2026-07-31; OpenLiteSpeed previously refused every site type. A web server outside that list is still refused rather than guessed at — provisioning fails immediately, before anything is written to disk.
+- **`openlitespeed` changes two things for the UI**, both because OLS runs LSPHP rather than PHP-FPM:
+  - **PHP extension toggles return `422`** — there is no `phpenmod` equivalent. Hide them.
+  - **PHP contributes no rows to the Services screen.** LSPHP is spawned by the web server, so there is no `php8.4-fpm` unit to start or stop; the `service` field on a PHP version is `null`. The OpenLiteSpeed service itself (`lshttpd`) is listed as normal.
+- ⚠️ **OpenLiteSpeed support has not yet run on a real OLS server.** The logic is tested; the paths and directives come from LiteSpeed's documentation. Expect the first live box to need corrections in `config/server.php`.
 
 ### Git integrations (Integrations → Git)
 
