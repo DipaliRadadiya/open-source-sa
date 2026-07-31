@@ -33,9 +33,12 @@ class CreateApplication
 
         $application = Application::create([
             'site_type' => $type->name(),
-            // Derived, never taken from the client: the type decides how it
-            // must be served.
-            'serving_profile' => $type->servingProfile(),
+            // Derived, never taken from the client. The type decides how it
+            // is served — unless the application runs a process of its own, in
+            // which case it is served by proxying to that process. Serving the
+            // directory instead would publish the source of an app whose
+            // routing lives in code.
+            'serving_profile' => filled($data['start_command'] ?? null) ? 'node' : $type->servingProfile(),
             'status' => ApplicationStatus::Pending,
             'system_user_id' => $data['system_user_id'],
             'name' => $data['name'],

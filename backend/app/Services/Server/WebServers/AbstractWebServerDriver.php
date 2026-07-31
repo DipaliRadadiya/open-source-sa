@@ -73,6 +73,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // through a pool that already knows this; OLS spawns the process
             // itself and has to be told.
             'user' => $application->systemUser?->username,
+            // Where a reverse proxy sends traffic, and a name for the backend
+            // that is unique per application — OpenLiteSpeed declares external
+            // applications by name, and two sites sharing one would have the
+            // second quietly overwrite the first.
+            'appPort' => $application->app_port,
+            'appName' => 'sv-app-'.$application->id,
         ];
     }
 
