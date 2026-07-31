@@ -32,6 +32,7 @@ return [
     'unavailable' => [
         'php' => 'This server does not have PHP installed.',
         'node' => 'This server does not have Node.js installed.',
+        'web_server' => 'This application is not available on :web_server servers yet.',
     ],
 
     'git_source' => [

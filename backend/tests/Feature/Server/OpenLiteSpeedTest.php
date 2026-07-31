@@ -6,6 +6,8 @@ use App\Exceptions\Server\WebServer\OlsListenerNotFoundException;
 use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
+use App\Models\User;
+use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpStackManager;
@@ -13,6 +15,7 @@ use App\Services\Server\Php\Stacks\LsphpPhpStack;
 use App\Services\Server\WebServers\OlsDriver;
 use App\Services\Server\WebServers\OlsSharedConfig;
 use App\Services\Server\WebServers\WebServerManager;
+use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
@@ -412,6 +415,57 @@ describe('the lsphp stack', function () {
             $this->lsws.'/lsphp84/etc/php/8.4/litespeed/php.ini',
             '-v',
         ]);
+    });
+});
+
+describe('the site type catalog', function () {
+    it('offers only the types proven on OpenLiteSpeed', function () {
+        $catalog = collect(app(SiteTypeManager::class)->catalog());
+
+        expect($catalog->where('available', true)->pluck('name')->sort()->values()->all())
+            ->toBe(['git', 'php', 'phpmyadmin', 'static', 'wordpress']);
+    });
+
+    it('greys the rest out with a reason rather than hiding them', function () {
+        $catalog = collect(app(SiteTypeManager::class)->catalog());
+        $joomla = $catalog->firstWhere('name', 'joomla');
+
+        // Hidden would read as a missing feature. Greyed with a reason says
+        // the limit is deliberate and temporary.
+        expect($joomla['available'])->toBeFalse()
+            ->and($joomla['unavailable_reason'])->toBe('This application is not available on OpenLiteSpeed servers yet.')
+            // Nothing installable fixes this, so the card must not offer to.
+            ->and($joomla['installable_runtime'])->toBeNull();
+    });
+
+    it('refuses to create a type this web server does not offer', function () {
+        $this->seed(PermissionSeeder::class);
+        $user = User::factory()->admin()->create();
+        $token = $user->createToken('t')->plainTextToken;
+
+        SystemUser::create([
+            'username' => 'u1', 'home_path' => '/home/u1',
+            'shell' => '/bin/bash', 'sudo' => false,
+        ]);
+
+        // The grid and the endpoint read the same method, so a card the user
+        // could click can never be refused for a reason the grid did not show.
+        $this->withHeaders(['Authorization' => 'Bearer '.$token])
+            ->postJson('/api/applications', [
+                'system_user_id' => SystemUser::query()->value('id'),
+                'name' => 'Shop', 'domain' => 'j.test', 'site_type' => 'joomla',
+            ])
+            ->assertJsonValidationErrors('site_type');
+    });
+
+    it('does not restrict nginx, which serves everything we ship', function () {
+        ServerCapability::query()->update(['web_server' => 'nginx']);
+
+        $catalog = collect(app(SiteTypeManager::class)->catalog());
+
+        // No `site_types` list on a driver means no restriction — the OLS
+        // limit must not leak into the servers that were already fine.
+        expect($catalog->where('available', false)->count())->toBe(0);
     });
 });
 
