@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Server\Application;
 
 use App\Services\Applications\SiteTypeManager;
-use App\Services\Server\Capabilities\ServerCapabilities;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -60,10 +59,11 @@ class StoreApplicationRequest extends FormRequest
                     return;
                 }
 
-                $runtime = $manager->requiredRuntime($type->servingProfile());
-
-                if ($runtime !== null && ! app(ServerCapabilities::class)->supports($runtime)) {
-                    $validator->errors()->add('site_type', __("application.unavailable.{$runtime}"));
+                // The same check the card grid renders from, so a card the user
+                // could click can never be refused here for a reason the grid
+                // did not show.
+                if (($blocked = $manager->unavailable($type)) !== null) {
+                    $validator->errors()->add('site_type', $blocked['reason']);
                 }
             },
         ];

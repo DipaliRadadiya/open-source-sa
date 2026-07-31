@@ -27,6 +27,7 @@ return [
     'unavailable' => [
         'php' => 'PHP n\'est pas installé sur ce serveur.',
         'node' => 'Node.js n\'est pas installé sur ce serveur.',
+        'web_server' => 'Cette application n\'est pas encore disponible sur les serveurs :web_server.',
     ],
 
     'git_source' => [

@@ -160,6 +160,22 @@ return [
         */
         'openlitespeed' => [
             'driver' => OlsDriver::class,
+            'label' => 'OpenLiteSpeed',
+            /*
+            | Site types offered on OpenLiteSpeed. Everything else is returned
+            | greyed out with a reason rather than hidden, so the limit is
+            | visible instead of looking like a missing feature.
+            |
+            | Deliberately short: OLS support has not run on a real box, and
+            | the marketplace installers are the part most likely to surprise
+            | us there. These five are the ones that either run no PHP at all
+            | (phpmyadmin, static) or install nothing (php, git) — plus
+            | WordPress, which is why people choose OLS.
+            |
+            | nginx and Apache have no such list, which means no restriction.
+            | Widen this as each type is proven on a real OLS server.
+            */
+            'site_types' => ['wordpress', 'phpmyadmin', 'php', 'git', 'static'],
             'vhost_root' => env('SERVER_OLS_VHOST_ROOT', '/usr/local/lsws/conf/vhosts'),
             'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
             // A `map` is only legal inside a listener, and this names which.

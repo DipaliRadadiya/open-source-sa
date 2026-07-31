@@ -27,6 +27,7 @@ return [
     'unavailable' => [
         'php' => 'इस सर्वर पर PHP इंस्टॉल नहीं है।',
         'node' => 'इस सर्वर पर Node.js इंस्टॉल नहीं है।',
+        'web_server' => 'यह एप्लिकेशन अभी :web_server सर्वर पर उपलब्ध नहीं है।',
     ],
 
     'git_source' => [
