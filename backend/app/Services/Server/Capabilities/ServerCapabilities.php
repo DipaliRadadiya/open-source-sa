@@ -79,9 +79,10 @@ class ServerCapabilities
     }
 
     /**
-     * Record what the installer built. Called by the install script's endpoint
-     * (and by tests); derives the web server and starting capabilities from the
-     * stack so only one value is ever authored and they cannot contradict.
+     * Record what the installer built. Called by `server:record-stack`, which
+     * the install script runs; derives the web server and starting capabilities
+     * from the stack so only one value is ever authored and they cannot
+     * contradict.
      */
     public function recordStack(string $stack): ServerCapability
     {

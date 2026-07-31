@@ -514,6 +514,12 @@ setup_backend() {
     run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${dir}/artisan" migrate --force
     run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${dir}/artisan" db:seed --class=PermissionSeeder --force
     ok "database migrated and permissions seeded"
+
+    # Tell the panel what we built. It can detect that nginx and PHP are here,
+    # but not whether that was a deliberate `lemp` build or a box somebody
+    # assembled by hand — and the difference matters to the setup page.
+    run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${dir}/artisan" server:record-stack lemp
+    ok "stack recorded as lemp"
 }
 
 # ─── Frontend ────────────────────────────────────────────────────────────────
