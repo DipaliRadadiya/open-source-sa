@@ -101,5 +101,9 @@ return [
     'application.provision_failed' => 'Error al configurar la aplicación :name (paso: :step)',
     'application.deployed' => 'Desplegó la aplicación :name (:branch)',
     'application.deploy_failed' => 'Error al desplegar la aplicación :name (paso: :step)',
+    'application.webhook_enabled' => 'Activó el despliegue automático de :name (:provider)',
+    'application.webhook_disabled' => 'Desactivó el despliegue automático de :name',
+    'application.webhook_rotated' => 'Reemplazó el secreto de despliegue automático de :name (:provider)',
+    'application.webhook_deployed' => 'Desplegó :name por un push a :branch',
     'php.ini_updated' => 'Actualizó la configuración de PHP :version',
 ];

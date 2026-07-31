@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'build_command', 'start_command',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
     'steps', 'failed_step', 'reference', 'last_commit', 'last_deployed_at',
+    'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
+    'webhook_last_delivered_at',
 ])]
 class Application extends Model
 {
@@ -30,6 +32,11 @@ class Application extends Model
             'settings' => 'array',
             'steps' => 'array',
             'last_deployed_at' => 'datetime',
+            'webhook_enabled' => 'boolean',
+            // Encrypted at rest: this is the one value that lets an
+            // unauthenticated request start a deploy.
+            'webhook_secret' => 'encrypted',
+            'webhook_last_delivered_at' => 'datetime',
         ];
     }
 

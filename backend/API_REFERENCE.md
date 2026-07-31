@@ -881,6 +881,54 @@ One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moo
 - `build_command` (if set) runs after the code is fetched, **as the site's own system user** — never as the panel.
 - On success: `last_commit` + `last_deployed_at` record what is actually on disk.
 - **A failed redeploy leaves a live site live.** The old code is still there and still served, so `status` stays `active` and only `failed_step`/`reference` are set. Show that as a deploy warning, not as an outage.
+- **A burst of pushes queues one deploy, not one per push.** The job is unique-until-processing per application: at most one running plus one waiting. A push that arrives mid-deploy still queues the follow-up, because the running deploy fetched the tip before that commit existed.
+
+#### Deploy on push (webhooks)
+
+**`GET /api/webhook-providers`** (`application`) → `{ webhook_providers: [ { name, title, secret_source, instructions } ] }`. Render the setup steps from this rather than hardcoding three sets — **`secret_source` differs and it matters**:
+
+| Provider | Verified by | `secret_source` |
+|---|---|---|
+| `github` | HMAC-SHA256 over the raw body, `X-Hub-Signature-256` | `generate` — we mint it, the user pastes it into GitHub |
+| `bitbucket` | HMAC-SHA256 over the raw body, `X-Hub-Signature` | `generate` |
+| `gitlab` | its **signing token** (HMAC over `id.timestamp.body`, Standard Webhooks) *or* its legacy plaintext `X-Gitlab-Token` | `either` — GitLab mints the signing token and shows it once, so that one can only be **pasted in**; the legacy one we can generate |
+
+**`PUT /api/applications/{application}/webhook`** (`manage`) — body `{ enabled, provider?, secret?, rotate? }` → `{ application: {…} }`. Git applications only (`422` otherwise).
+- `provider` is **required when enabling**; it is stored, not detected from the incoming request, so a caller cannot pick which verification runs. For a public repository there is no connected account to infer it from, which is why it is asked for.
+- `secret` omitted → the panel generates one (64 hex chars). Paste one instead for a **GitLab signing token**.
+- `rotate: true` mints a new secret and invalidates the old, keeping the same URL.
+- Disabling **keeps the URL and the secret**, so switching it back on does not invalidate what the user already pasted into their repository settings.
+
+The application resource carries a `webhook` block:
+
+```json
+"webhook": {
+  "enabled": true,
+  "provider": "gitlab",
+  "url": "https://panel.example.com/api/webhooks/deploy/6f1e…",
+  "secret": "…",
+  "verification": "token",
+  "last_delivered_at": "31-07-2026 11:40:02",
+  "last_delivered_at_human": "2 minutes ago"
+}
+```
+
+**`verification` is worth surfacing.** `signature` means the delivery is HMAC-verified; `token` means a plaintext shared secret, which only happens on GitLab when no signing token was pasted. Offer the user the upgrade rather than leaving them on the scheme GitLab itself labels not recommended.
+
+**`POST /api/webhooks/deploy/{identifier}`** — **the provider calls this; your app never does.** Unauthenticated by design: the signature over the body is the credential, and no token exists on a request from GitHub. Not rate-limited per IP (a provider delivers from shared egress) but per webhook, 60/min.
+
+| Response | Meaning |
+|---|---|
+| `202 { deployed: true, reason: "queued" }` | authentic push to the tracked branch — deploy queued |
+| `202 { deployed: false, reason: "other_branch" }` | authentic, but not this application's branch (also: a tag, or a branch deletion) |
+| `202 { deployed: false, reason: "not_a_push" }` | authentic, but some other event type |
+| `202 { deployed: false, reason: "duplicate_delivery" }` | the provider retried a delivery already handled |
+| `401 { deployed: false, reason: "invalid_signature" }` | not authentic |
+| `404` | no such webhook, **or** it is disabled — deliberately indistinguishable |
+
+**Everything authentic answers 2xx, including the deliveries that deploy nothing.** Providers disable a hook that keeps failing (GitLab after four consecutive failures), so "understood, nothing to do" must not look like a fault.
+
+Two provider behaviours worth telling users about: GitLab sends **no webhook at all** for a push touching more than 3 branches or tags, and both GitLab and GitHub time out around 10s — which this endpoint is well inside, since it only queues.
 
 **`DELETE /api/applications/{application}`** (`manage`) → `{ deleted: true }`. Also **removes the site config and reloads**, so the domain stops being served. The site's **files are kept** unless you pass `?remove_files=true` — deleting a panel record must not silently destroy someone's code. An application still at `pending` touches nothing on the server.
 

@@ -101,5 +101,9 @@ return [
     'application.provision_failed' => 'アプリケーション :name の構築に失敗しました (:step)',
     'application.deployed' => 'アプリケーション :name をデプロイしました (:branch)',
     'application.deploy_failed' => 'アプリケーション :name のデプロイに失敗しました (:step)',
+    'application.webhook_enabled' => ':name のプッシュ時デプロイを有効にしました (:provider)',
+    'application.webhook_disabled' => ':name のプッシュ時デプロイを無効にしました',
+    'application.webhook_rotated' => ':name のプッシュ時デプロイのシークレットを再発行しました (:provider)',
+    'application.webhook_deployed' => ':branch へのプッシュにより :name をデプロイしました',
     'php.ini_updated' => 'PHP :version の設定を更新しました',
 ];

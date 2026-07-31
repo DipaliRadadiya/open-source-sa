@@ -9,6 +9,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\GitDeployer;
 use App\Services\Server\Applications\ProvisioningBudget;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -22,11 +23,26 @@ use Throwable;
  * untouched either way. That matters: a broken build must not take a working
  * site offline.
  */
-class DeployApplication implements ShouldQueue
+class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Queueable;
 
     public int $tries = 1;
+
+    /**
+     * One queued deploy per application.
+     *
+     * A webhook fires per push, and pushes arrive in bursts — ten commits to a
+     * branch would otherwise queue ten identical deploys, each fetching the
+     * same tip. Unique **until processing** rather than until finished, so a
+     * push that lands while a deploy is running still queues one behind it:
+     * that deploy started before the new commit existed, so dropping the second
+     * would leave the newest code undeployed with nothing to say so.
+     */
+    public function uniqueId(): string
+    {
+        return (string) $this->applicationId;
+    }
 
     /**
      * Clone plus build plus the steps around them — see

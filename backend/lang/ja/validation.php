@@ -180,4 +180,6 @@ return [
 
     'port_registered' => 'ポート :port は通常 :service が使用します。このサーバーで何も使っていなければ、そのまま使用できます。',
 
+    'webhook_secret_min' => 'Webhook のシークレットは 16 文字以上で入力してください。',
+
 ];

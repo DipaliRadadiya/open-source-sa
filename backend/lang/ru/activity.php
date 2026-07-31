@@ -101,5 +101,9 @@ return [
     'application.provision_failed' => 'Не удалось настроить приложение :name (шаг: :step)',
     'application.deployed' => 'Приложение :name развёрнуто (:branch)',
     'application.deploy_failed' => 'Не удалось развернуть приложение :name (шаг: :step)',
+    'application.webhook_enabled' => 'Включил автодеплой по push для :name (:provider)',
+    'application.webhook_disabled' => 'Отключил автодеплой по push для :name',
+    'application.webhook_rotated' => 'Заменил секрет автодеплоя для :name (:provider)',
+    'application.webhook_deployed' => 'Развернул :name после push в :branch',
     'php.ini_updated' => 'Обновлена конфигурация PHP :version',
 ];

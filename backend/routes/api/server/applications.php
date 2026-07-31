@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Server\ApplicationController;
+use App\Http\Controllers\API\Server\ApplicationWebhookController;
 use App\Http\Controllers\API\Server\ServerCapabilityController;
 use App\Http\Controllers\API\Server\SiteTypeController;
 use Illuminate\Support\Facades\Route;
@@ -25,5 +26,12 @@ Route::put('/applications/{application}', [ApplicationController::class, 'update
 Route::post('/applications/{application}/provision', [ApplicationController::class, 'provision'])->middleware('permission:application,manage');
 Route::post('/applications/{application}/deploy', [ApplicationController::class, 'deploy'])->middleware('permission:application,manage');
 Route::post('/applications/{application}/process/{action}', [ApplicationController::class, 'process'])
+    ->middleware('permission:application,manage');
+
+// Deploy-on-push. The delivery endpoint itself is unauthenticated and lives in
+// routes/api/webhooks.php; these two only configure it.
+Route::get('/webhook-providers', [ApplicationWebhookController::class, 'providers'])
+    ->middleware('permission:application');
+Route::put('/applications/{application}/webhook', [ApplicationWebhookController::class, 'update'])
     ->middleware('permission:application,manage');
 Route::delete('/applications/{application}', [ApplicationController::class, 'destroy'])->middleware('permission:application,manage');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Git\Webhooks\WebhookManager;
 use App\Services\Server\Applications\ProcessSupervisor;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -57,6 +58,32 @@ class ApplicationResource extends JsonResource
             'repository' => $this->repository,
             'repository_url' => $this->repository_url,
             'branch' => $this->branch,
+
+            // Deploy-on-push. The secret is shown because the user has to paste
+            // it into their repository settings and will come back for it — the
+            // same reasoning as the System User password. `url` is built here so
+            // the frontend never assembles it (and never gets the path wrong on
+            // a panel served under a different host).
+            'webhook' => [
+                'enabled' => (bool) $this->webhook_enabled,
+                'provider' => $this->webhook_provider,
+                'url' => $this->webhook_identifier
+                    ? url("/api/webhooks/deploy/{$this->webhook_identifier}")
+                    : null,
+                'secret' => $this->webhook_secret,
+                // Which check this secret gets. `token` means a plaintext
+                // shared value — only GitLab has one, only because it is the
+                // sole thing the panel can generate there, and the UI should
+                // offer the stronger signing token rather than let someone sit
+                // on the weaker scheme without knowing it exists.
+                'verification' => $this->webhook_provider && filled($this->webhook_secret)
+                    ? app(WebhookManager::class)
+                        ->driver($this->webhook_provider)
+                        ->verificationMode((string) $this->webhook_secret)
+                    : null,
+                'last_delivered_at' => $this->webhook_last_delivered_at?->format('d-m-Y H:i:s'),
+                'last_delivered_at_human' => $this->webhook_last_delivered_at?->diffForHumans(),
+            ],
 
             'settings' => $this->settings ?? [],
 

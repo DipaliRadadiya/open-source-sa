@@ -20,6 +20,9 @@ use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
 use App\Services\Git\GitlabProvider;
+use App\Services\Git\Webhooks\BitbucketWebhook;
+use App\Services\Git\Webhooks\GithubWebhook;
+use App\Services\Git\Webhooks\GitlabWebhook;
 use App\Services\Server\Applications\Installers\AkauntingInstaller;
 use App\Services\Server\Applications\Installers\CraftCmsInstaller;
 use App\Services\Server\Applications\Installers\JoomlaInstaller;
@@ -1019,6 +1022,32 @@ return [
                     'token' => ['required' => true, 'type' => 'password'],
                 ],
             ],
+        ],
+    ],
+
+    /*
+    | Deploy-on-push. One verifier per provider, because the three sign
+    | differently and one of the differences is a trap: GitHub's header is
+    | `X-Hub-Signature-256` and Bitbucket's is `X-Hub-Signature` — the same
+    | scheme under a name that differs by a suffix.
+    |
+    | `timestamp_tolerance` bounds replay on GitLab's signed deliveries, which
+    | carry a timestamp inside the signed content. A captured delivery stays
+    | validly signed forever; the window is what stops it being replayable
+    | forever. Five minutes covers ordinary clock skew and queueing.
+    |
+    | `delivery_memory` is how long a delivery id is remembered so a retried or
+    | replayed delivery does not deploy twice. Providers retry on timeout, so
+    | this is a normal occurrence, not an attack.
+    */
+    'webhooks' => [
+        'timestamp_tolerance' => (int) env('SERVER_WEBHOOK_TIMESTAMP_TOLERANCE', 300),
+        'delivery_memory' => (int) env('SERVER_WEBHOOK_DELIVERY_MEMORY', 3600),
+
+        'providers' => [
+            'github' => ['driver' => GithubWebhook::class],
+            'gitlab' => ['driver' => GitlabWebhook::class],
+            'bitbucket' => ['driver' => BitbucketWebhook::class],
         ],
     ],
 
