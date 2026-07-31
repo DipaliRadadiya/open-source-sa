@@ -419,26 +419,36 @@ describe('the lsphp stack', function () {
 });
 
 describe('the site type catalog', function () {
-    it('offers only the types proven on OpenLiteSpeed', function () {
+    it('offers every site type, because nothing in them depends on the web server', function () {
         $catalog = collect(app(SiteTypeManager::class)->catalog());
 
-        expect($catalog->where('available', true)->pluck('name')->sort()->values()->all())
-            ->toBe(['git', 'php', 'phpmyadmin', 'static', 'wordpress']);
+        // An audit found no installer or site type that mentions .htaccess,
+        // mod_rewrite or Apache, none declaring extension requirements, and no
+        // web-server concept in the SiteType contract. A shorter list here
+        // would be a guess about risk dressed as a capability limit.
+        expect($catalog->where('available', false)->count())->toBe(0)
+            ->and($catalog)->toHaveCount(13);
     });
 
-    it('greys the rest out with a reason rather than hiding them', function () {
+    it('can still restrict a web server that genuinely needs it', function () {
+        config(['server.web_server_drivers.openlitespeed.site_types' => ['wordpress', 'static']]);
+
         $catalog = collect(app(SiteTypeManager::class)->catalog());
         $joomla = $catalog->firstWhere('name', 'joomla');
 
-        // Hidden would read as a missing feature. Greyed with a reason says
-        // the limit is deliberate and temporary.
-        expect($joomla['available'])->toBeFalse()
+        expect($catalog->where('available', true)->pluck('name')->sort()->values()->all())
+            ->toBe(['static', 'wordpress'])
+            // Greyed with a reason, not hidden — hiding reads as a missing
+            // feature rather than a deliberate limit.
             ->and($joomla['unavailable_reason'])->toBe('This application is not available on OpenLiteSpeed servers yet.')
-            // Nothing installable fixes this, so the card must not offer to.
+            // Nothing installable fixes a web-server block, so the card must
+            // not offer an action that cannot work.
             ->and($joomla['installable_runtime'])->toBeNull();
     });
 
-    it('refuses to create a type this web server does not offer', function () {
+    it('refuses to create a type the web server does not offer', function () {
+        config(['server.web_server_drivers.openlitespeed.site_types' => ['wordpress']]);
+
         $this->seed(PermissionSeeder::class);
         $user = User::factory()->admin()->create();
         $token = $user->createToken('t')->plainTextToken;

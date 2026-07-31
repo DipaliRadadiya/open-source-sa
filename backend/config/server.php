@@ -162,20 +162,18 @@ return [
             'driver' => OlsDriver::class,
             'label' => 'OpenLiteSpeed',
             /*
-            | Site types offered on OpenLiteSpeed. Everything else is returned
-            | greyed out with a reason rather than hidden, so the limit is
-            | visible instead of looking like a missing feature.
+            | No `site_types` list, so no restriction — the same as nginx and
+            | Apache. An audit found nothing in any installer or site type that
+            | depends on the web server: none of them mention .htaccess, mod
+            | rewrite or Apache, none declare extension requirements, and the
+            | SiteType contract has no web-server concept at all. All ten
+            | installers ask the PHP stack where the interpreter is.
             |
-            | Deliberately short: OLS support has not run on a real box, and
-            | the marketplace installers are the part most likely to surprise
-            | us there. These five are the ones that either run no PHP at all
-            | (phpmyadmin, static) or install nothing (php, git) — plus
-            | WordPress, which is why people choose OLS.
-            |
-            | nginx and Apache have no such list, which means no restriction.
-            | Widen this as each type is proven on a real OLS server.
+            | A shorter list here was a guess about risk wearing the costume of
+            | a capability limit. If a type is genuinely unsupported on a web
+            | server, list the supported ones here and the grid will grey the
+            | rest with a reason.
             */
-            'site_types' => ['wordpress', 'phpmyadmin', 'php', 'git', 'static'],
             'vhost_root' => env('SERVER_OLS_VHOST_ROOT', '/usr/local/lsws/conf/vhosts'),
             'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
             // A `map` is only legal inside a listener, and this names which.
@@ -480,7 +478,13 @@ return [
             'binary_path' => '{root}/lsphp{compact}/bin/php',
             'reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],
             'sapis' => ['litespeed'],
-            'base_packages' => ['common', 'mysql', 'curl', 'mbstring', 'xml', 'zip', 'gd', 'intl', 'bcmath'],
+            /*
+            | Matches the FPM set deliberately. On OpenLiteSpeed the extension
+            | toggles are refused — LSPHP has no phpenmod — so whatever ships
+            | here is what the user is stuck with. A base set smaller than
+            | FPM's would be a real difference in what the two can run.
+            */
+            'base_packages' => ['common', 'mysql', 'curl', 'mbstring', 'xml', 'zip', 'gd', 'intl', 'bcmath', 'soap'],
         ],
     ],
 
