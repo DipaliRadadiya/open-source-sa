@@ -26,7 +26,11 @@ Route::get('/applications/port-check', [ApplicationController::class, 'portCheck
 Route::get('/applications/{application}', [ApplicationController::class, 'show'])->middleware('permission:application');
 Route::put('/applications/{application}', [ApplicationController::class, 'update'])->middleware('permission:application,manage');
 Route::post('/applications/{application}/provision', [ApplicationController::class, 'provision'])->middleware('permission:application,manage');
-Route::post('/applications/{application}/deploy', [ApplicationController::class, 'deploy'])->middleware('permission:application,manage');
+// Deploy is the Deployment screen's action, so it is gated by that screen's
+// permission rather than the server-level `application` one. That also brings
+// it under the site-type check: a WordPress install has no repository, so the
+// endpoint 404s rather than running against a site that cannot deploy.
+Route::post('/applications/{application}/deploy', [ApplicationController::class, 'deploy'])->middleware('permission:app_deployment,manage');
 Route::post('/applications/{application}/process/{action}', [ApplicationController::class, 'process'])
     ->middleware('permission:application,manage');
 

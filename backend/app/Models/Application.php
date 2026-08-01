@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ApplicationStatus;
 use App\Enums\DomainType;
+use App\Services\Applications\SiteTypeManager;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -87,6 +88,32 @@ class Application extends Model
             ->all();
 
         return $names !== [] ? $names : array_filter([$this->domain]);
+    }
+
+    /**
+     * The app-sidebar items this site actually supports, by permission name.
+     *
+     * The second of the two filters behind an application's sidebar — the
+     * first being what the user has been granted. Answered by the site type,
+     * so a WordPress site does not offer a Deployment screen it has no
+     * repository for, and a static site does not offer PHP settings it has no
+     * PHP for.
+     *
+     * An unknown type (a row from before a type was removed) supports nothing
+     * beyond the basics rather than everything: an empty answer shows a thin
+     * sidebar, a permissive one shows screens that then fail.
+     *
+     * @return array<int, string>
+     */
+    public function features(): array
+    {
+        return app(SiteTypeManager::class)->find($this->site_type)?->features()
+            ?? ['app_dashboard', 'app_domain', 'app_log', 'app_setting'];
+    }
+
+    public function supports(string $feature): bool
+    {
+        return in_array($feature, $this->features(), true);
     }
 
     public function certificate(): HasOne

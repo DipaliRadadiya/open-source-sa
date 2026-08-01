@@ -1123,6 +1123,41 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   - **PHP contributes no rows to the Services screen.** LSPHP is spawned by the web server, so there is no `php8.4-fpm` unit to start or stop; the `service` field on a PHP version is `null`. The OpenLiteSpeed service itself (`lshttpd`) is listed as normal.
 - ⚠️ **OpenLiteSpeed support has not yet run on a real OLS server.** The logic is tested; the paths and directives come from LiteSpeed's documentation. Expect the first live box to need corrections in `config/server.php`.
 
+### The application sidebar (`GET /api/permissions?level=application&application_id=…`)
+
+**The sidebar for one site is filtered by the backend. The frontend renders what it gets and writes no conditions.**
+
+Two filters decide whether an item appears, and both are applied server-side:
+
+1. **What the user was granted** — `view` / `manage`, from their roles.
+2. **What the site type can actually do** — a WordPress install has no git repository, a static site has no PHP.
+
+| request | answer | use it for |
+|---|---|---|
+| `?level=application&application_id=7` | that site's sidebar, both filters applied | **the app sidebar** |
+| `?level=application` | all 16 items, grants only | **the role form** — an admin assigning a role is not looking at one site |
+| `?level=server` | unchanged | the server sidebar |
+
+`application_id` on a `level=server` request is ignored: a server permission has nothing to do with any one site. An id that does not exist is a `422`.
+
+**Hide, don't grey.** There is nothing a user can do to enable PHP settings on a static site, so a disabled row is only noise. Greying is for things they *can* fix — like a site-type card that names the runtime to install.
+
+What each type supports is declared by the type itself, so a new site type costs one class and no frontend change — the same trade `GET /site-types` already makes for the create form. Today:
+
+- **Every site:** Dashboard · Domains & SSL · Logs · Backups · Settings · Files · Password Protection · Firewall · AI Bot Blocker · Fail2ban · Site Clone
+- **Deployment** — git sites only. A one-click install has no repository, branch or commit history.
+- **PHP Settings** — PHP sites only.
+- **Workers** — Node sites and git sites. A marketplace PHP app has nothing to supervise.
+- **Environment** — git and Node sites, plus **Craft CMS and Statamic** (both read a `.env` despite being one-click). **Not WordPress** — its configuration lives in `wp-config.php`, which is the application's file, not an env file the panel owns.
+- **Staging** — WordPress only for now: pushing a staging site back needs URL rewriting inside serialised data, and that recipe exists for WordPress and nothing else yet.
+- **phpMyAdmin** drops Backups and Site Clone — it holds no content of its own, so reinstalling is the honest recovery path. Password Protection stays, because an exposed phpMyAdmin is a login page for every database on the box.
+
+#### Hiding is not authorising
+
+Every app route gated by an `app_*` permission also checks the site type, so the endpoint is closed even if someone types the URL. It answers **`404`, not `403`** — for this site the screen does not exist at all, which is a different statement from "you may not".
+
+⚠️ **`POST /api/applications/{id}/deploy` has moved from `application,manage` to `app_deployment,manage`.** It is the Deployment screen's action, so it takes that screen's permission. Two consequences: a role with server `application` but not `app_deployment` can no longer deploy, and deploying a non-git site now returns `404` instead of `422` — the refusal happens before the controller rather than as a validation failure inside it.
+
 ### Application domains (App sidebar → Domains)
 
 Requires the **`app_domain`** permission (`view` to read, `manage` to mutate) — an

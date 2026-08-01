@@ -70,4 +70,20 @@ class WordPressSiteType extends AbstractSiteType
             'table_prefix' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9_]+$/'],
         ];
     }
+
+    /**
+     * Staging is a per-type recipe, not a generic file copy: pushing a
+     * WordPress staging site back needs URL rewriting inside serialised data,
+     * wp-cron disabled and outbound mail trapped. That recipe exists for
+     * WordPress and nothing else yet, so nothing else offers the screen.
+     *
+     * No `app_environment`: WordPress keeps its configuration in
+     * wp-config.php, which is the application's file, not an env file the
+     * panel owns. Presenting it as one would invite edits that the next
+     * WordPress update overwrites.
+     */
+    public function features(): array
+    {
+        return [...parent::features(), 'app_staging'];
+    }
 }

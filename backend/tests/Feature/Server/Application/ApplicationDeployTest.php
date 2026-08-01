@@ -227,9 +227,13 @@ it('queues a deploy and refuses one for a non-git application', function () {
         'site_type' => 'static', 'serving_profile' => 'static', 'status' => 'active',
     ]);
 
+    // 404 rather than 422 since the route moved to `app_deployment`: for a
+    // static site the Deployment screen does not exist at all, so the refusal
+    // happens before the controller rather than as a validation failure inside
+    // it. Same outcome, said earlier and more accurately.
     $this->withHeaders(deployHeaders())
         ->postJson("/api/applications/{$static->id}/deploy")
-        ->assertStatus(422);
+        ->assertStatus(404);
 });
 
 it('never returns the git token or the raw git error', function () {

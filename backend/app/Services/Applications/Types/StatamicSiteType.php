@@ -69,4 +69,13 @@ class StatamicSiteType extends AbstractSiteType
             'admin_password' => ['required', 'string', 'min:10'],
         ];
     }
+
+    /**
+     * Statamic is Laravel underneath, so it has a `.env` like any Laravel
+     * application even though it arrives as a one-click install.
+     */
+    public function features(): array
+    {
+        return [...parent::features(), 'app_environment'];
+    }
 }

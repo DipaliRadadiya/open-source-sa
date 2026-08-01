@@ -73,4 +73,15 @@ class CraftCmsSiteType extends AbstractSiteType
             'language' => ['nullable', 'string', 'max:12', 'regex:/^[A-Za-z-]+$/'],
         ];
     }
+
+    /**
+     * Craft reads a `.env` at the project root — unusual for a marketplace
+     * install, and the reason this overrides the default. Database credentials
+     * and the security key live there, so hiding the screen would mean the
+     * only way to change them is a file manager.
+     */
+    public function features(): array
+    {
+        return [...parent::features(), 'app_environment'];
+    }
 }

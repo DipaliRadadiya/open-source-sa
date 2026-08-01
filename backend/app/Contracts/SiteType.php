@@ -23,6 +23,24 @@ interface SiteType
     /** How it is built. Internal — the user is never asked to choose a method. */
     public function method(): string;
 
+    /**
+     * The app-sidebar items this type supports, by permission name.
+     *
+     * The second of the two filters that decide an application's sidebar: the
+     * first is what the user has been granted, this is what the site can
+     * actually do. A WordPress site has no git repository, so a Deployment
+     * screen for it is not a disabled button — it is a screen about nothing.
+     *
+     * Declared here rather than inferred by the frontend so a new site type
+     * costs one class and no frontend change, the same trade the create form
+     * already makes. `AbstractSiteType` derives a sensible set from the
+     * serving profile and the build method; a type overrides only where it
+     * genuinely differs.
+     *
+     * @return array<int, string>
+     */
+    public function features(): array;
+
     /** php | node | static | proxy — what has to be installed to serve it. */
     public function servingProfile(): string;
 
