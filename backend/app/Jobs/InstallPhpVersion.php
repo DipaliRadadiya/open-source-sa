@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
+use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Runtimes\PhpRuntime;
@@ -21,12 +22,13 @@ use Throwable;
 class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
+    use TracksActor;
 
     public int $tries = 1;
 
     public int $timeout = 900;
 
-    public function __construct(public string $version) {}
+    public function __construct(public string $version, public ?int $actorId = null) {}
 
     public function uniqueId(): string
     {
@@ -39,19 +41,19 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
             $php->install($this->version);
         } catch (RuntimeInstallException $e) {
             $installs->fail('php', $this->version, null, $e->reason, $e->reference);
-            $log->log('php.install_failed', null, ['version' => $this->version, 'reason' => $e->reason]);
+            $log->log('php.install_failed', null, ['version' => $this->version, 'reason' => $e->reason], actor: $this->actor());
 
             throw $e;
         } catch (Throwable $e) {
             $installs->fail('php', $this->version, null, 'unknown');
-            $log->log('php.install_failed', null, ['version' => $this->version]);
+            $log->log('php.install_failed', null, ['version' => $this->version], actor: $this->actor());
 
             throw $e;
         }
 
         // The version is on disk now, so the row has nothing left to say.
         $installs->succeed('php', $this->version);
-        $log->log('php.installed', null, ['version' => $this->version]);
+        $log->log('php.installed', null, ['version' => $this->version], actor: $this->actor());
     }
 
     /**

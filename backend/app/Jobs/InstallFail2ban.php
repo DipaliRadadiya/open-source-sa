@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Server\Fail2ban\Fail2banManager;
 use App\Services\Server\ServerOps;
@@ -21,10 +22,13 @@ use Illuminate\Foundation\Queue\Queueable;
 class InstallFail2ban implements ShouldQueue
 {
     use Queueable;
+    use TracksActor;
 
     public int $tries = 1;
 
     public int $timeout = 600;
+
+    public function __construct(public ?int $actorId = null) {}
 
     public function handle(ServerOps $serverOps, Fail2banManager $fail2ban, ActivityLogger $log): void
     {
@@ -35,7 +39,7 @@ class InstallFail2ban implements ShouldQueue
         );
 
         if ($result->failed()) {
-            $log->log('fail2ban.install_failed', null, ['reference' => $result->reference]);
+            $log->log('fail2ban.install_failed', null, ['reference' => $result->reference], actor: $this->actor());
 
             return;
         }
@@ -48,6 +52,6 @@ class InstallFail2ban implements ShouldQueue
             array_fill_keys(array_column((array) config('server.fail2ban.jails', []), 'name'), false),
         );
 
-        $log->log('fail2ban.installed', null, ['version' => $fail2ban->version() ?? '—']);
+        $log->log('fail2ban.installed', null, ['version' => $fail2ban->version() ?? '—'], actor: $this->actor());
     }
 }

@@ -19,6 +19,7 @@ use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ApplicationController extends Controller
 {
@@ -63,7 +64,7 @@ class ApplicationController extends Controller
      */
     public function provision(Application $application): JsonResponse
     {
-        ProvisionApplication::dispatch($application->id);
+        ProvisionApplication::dispatch($application->id, Auth::id());
 
         $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'reference' => null]);
 
@@ -82,7 +83,7 @@ class ApplicationController extends Controller
     {
         abort_unless($application->site_type === 'git', 422, __('errors/application.not_a_git_application'));
 
-        DeployApplication::dispatch($application->id);
+        DeployApplication::dispatch($application->id, Auth::id());
 
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),

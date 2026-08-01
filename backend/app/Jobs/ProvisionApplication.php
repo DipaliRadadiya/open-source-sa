@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\ApplicationStatus;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Jobs\Concerns\TracksActor;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
@@ -25,6 +26,7 @@ use Throwable;
 class ProvisionApplication implements ShouldQueue
 {
     use Queueable;
+    use TracksActor;
 
     public int $tries = 1;
 
@@ -35,7 +37,7 @@ class ProvisionApplication implements ShouldQueue
      */
     public int $timeout;
 
-    public function __construct(public int $applicationId)
+    public function __construct(public int $applicationId, public ?int $actorId = null)
     {
         $this->timeout = app(ProvisioningBudget::class)->forApplication($applicationId);
     }
@@ -62,7 +64,7 @@ class ProvisionApplication implements ShouldQueue
 
             $activityLogger->log('application.provisioned', $application, [
                 'name' => $application->name,
-            ], actor: null);
+            ], actor: $this->actor());
         } catch (ProvisioningFailedException $e) {
             // The step that broke is useful to the user; the raw stderr is not,
             // and lives only in the server-ops log under this reference.
@@ -75,7 +77,7 @@ class ProvisionApplication implements ShouldQueue
             $activityLogger->log('application.provision_failed', $application, [
                 'name' => $application->name,
                 'step' => $e->step,
-            ], actor: null);
+            ], actor: $this->actor());
         }
     }
 

@@ -86,7 +86,11 @@ class ReceiveDeployWebhook
 
         // Unique-until-processing: a burst of pushes leaves at most one deploy
         // queued behind the one running, rather than twenty.
-        DeployApplication::dispatch($application->id);
+        //
+        // No actor, on purpose. A git push is not a panel user, and every other
+        // dispatch site now passes one — so a null here reads as "the system did
+        // this", which is true, rather than "we lost track of who did".
+        DeployApplication::dispatch($application->id, null);
 
         $this->activityLogger->log('application.webhook_deployed', $application, [
             'name' => $application->name,

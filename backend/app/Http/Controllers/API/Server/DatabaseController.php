@@ -18,6 +18,7 @@ use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DatabaseController extends Controller
@@ -75,7 +76,7 @@ class DatabaseController extends Controller
         // up, during which the setup page would show nothing happening.
         $installs->start('database', $engine);
 
-        InstallDatabaseEngine::dispatch($engine);
+        InstallDatabaseEngine::dispatch($engine, Auth::id());
 
         return response()->json(['queued' => true], 202);
     }

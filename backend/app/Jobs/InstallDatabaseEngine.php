@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Exceptions\Server\Database\EngineInstallException;
+use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
@@ -26,6 +27,7 @@ use Throwable;
 class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Queueable;
+    use TracksActor;
 
     /**
      * One attempt. A blind retry of a half-finished apt run is how a package
@@ -41,7 +43,7 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
      */
     public int $timeout;
 
-    public function __construct(public string $engine)
+    public function __construct(public string $engine, public ?int $actorId = null)
     {
         $this->timeout = (int) config('server.databases.install_timeout', 900) + 120;
     }
@@ -69,7 +71,7 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
             $log->log('database.engine_install_failed', null, [
                 'engine' => $this->engine,
                 'reason' => $e->reason,
-            ], actor: null);
+            ], actor: $this->actor());
 
             throw $e;
         } catch (Throwable $e) {
@@ -77,7 +79,7 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
             $log->log('database.engine_install_failed', null, [
                 'engine' => $this->engine,
                 'reason' => 'unknown',
-            ], actor: null);
+            ], actor: $this->actor());
 
             throw $e;
         }
@@ -89,7 +91,7 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
         // detection — creating a database is the first thing anyone will try.
         $capabilities->refresh();
 
-        $log->log('database.engine_installed', null, ['engine' => $this->engine], actor: null);
+        $log->log('database.engine_installed', null, ['engine' => $this->engine], actor: $this->actor());
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
+use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Runtimes\NodeRuntime;
@@ -23,12 +24,13 @@ use Throwable;
 class InstallNodeVersion implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
+    use TracksActor;
 
     public int $tries = 1;
 
     public int $timeout = 900;
 
-    public function __construct(public string $version) {}
+    public function __construct(public string $version, public ?int $actorId = null) {}
 
     /**
      * Two requests for Node 20 are one job; Node 20 and Node 22 are two.
@@ -44,18 +46,18 @@ class InstallNodeVersion implements ShouldBeUnique, ShouldQueue
             $node->install($this->version);
         } catch (RuntimeInstallException $e) {
             $installs->fail('node', $this->version, null, $e->reason, $e->reference);
-            $log->log('node.install_failed', null, ['version' => $this->version, 'reason' => $e->reason]);
+            $log->log('node.install_failed', null, ['version' => $this->version, 'reason' => $e->reason], actor: $this->actor());
 
             throw $e;
         } catch (Throwable $e) {
             $installs->fail('node', $this->version, null, 'unknown');
-            $log->log('node.install_failed', null, ['version' => $this->version]);
+            $log->log('node.install_failed', null, ['version' => $this->version], actor: $this->actor());
 
             throw $e;
         }
 
         $installs->succeed('node', $this->version);
-        $log->log('node.installed', null, ['version' => $this->version]);
+        $log->log('node.installed', null, ['version' => $this->version], actor: $this->actor());
     }
 
     /**

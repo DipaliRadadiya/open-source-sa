@@ -9,6 +9,7 @@ use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\PortAllocator;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Record an application the user asked for.
@@ -70,7 +71,7 @@ class CreateApplication
 
         // Provisioning is long enough that the request must not wait for it;
         // the client polls the application's status.
-        ProvisionApplication::dispatch($application->id);
+        ProvisionApplication::dispatch($application->id, Auth::id());
 
         return $application->fresh(['systemUser']);
     }

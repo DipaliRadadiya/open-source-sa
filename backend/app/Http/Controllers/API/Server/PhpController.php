@@ -17,6 +17,7 @@ use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * PHP as one feature: versions, the default, extensions, and each version's
@@ -60,7 +61,7 @@ class PhpController extends Controller
         // picked the job up yet.
         $installs->start('php', $version);
 
-        InstallPhpVersion::dispatch($version);
+        InstallPhpVersion::dispatch($version, Auth::id());
         $log->log('php.install_started', null, ['version' => $version]);
 
         return response()->json(['message' => __('php.install_started', ['version' => $version])], 202);
@@ -207,7 +208,7 @@ class PhpController extends Controller
             // the row is already `installing` when the client re-reads.
             $installs->start('php', $version, $extension);
 
-            InstallPhpExtension::dispatch($version, $extension);
+            InstallPhpExtension::dispatch($version, $extension, Auth::id());
             $log->log('php.extension_install_started', null, $properties);
 
             return response()->json([

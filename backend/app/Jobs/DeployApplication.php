@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\ApplicationStatus;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Jobs\Concerns\TracksActor;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
@@ -26,6 +27,7 @@ use Throwable;
 class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Queueable;
+    use TracksActor;
 
     public int $tries = 1;
 
@@ -52,7 +54,7 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
      */
     public int $timeout;
 
-    public function __construct(public int $applicationId)
+    public function __construct(public int $applicationId, public ?int $actorId = null)
     {
         $this->timeout = app(ProvisioningBudget::class)->forDeploy();
     }
@@ -85,7 +87,7 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
             $activityLogger->log('application.deployed', $application, [
                 'name' => $application->name,
                 'branch' => $application->branch,
-            ], actor: null);
+            ], actor: $this->actor());
         } catch (ProvisioningFailedException $e) {
             $application->update([
                 // Back to what it was: if the site was already live, a failed
@@ -100,7 +102,7 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
             $activityLogger->log('application.deploy_failed', $application, [
                 'name' => $application->name,
                 'step' => $e->step,
-            ], actor: null);
+            ], actor: $this->actor());
         }
     }
 
