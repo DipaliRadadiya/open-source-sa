@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * A site the panel manages. Provisioning (files, vhost, clone) lands in later
@@ -86,5 +87,31 @@ class Application extends Model
             ->all();
 
         return $names !== [] ? $names : array_filter([$this->domain]);
+    }
+
+    public function certificate(): HasOne
+    {
+        return $this->hasOne(Certificate::class);
+    }
+
+    /**
+     * The names that can go on a certificate, primary first.
+     *
+     * A subset of `serverNames()`: redirects are included, because a redirect
+     * from `http://old` to `https://new` is only reachable if `old` also
+     * answers on HTTPS — a browser that has ever seen HSTS will refuse the
+     * plaintext hop and the redirect never runs. Test domains are excluded,
+     * since nip.io shares one weekly issuance limit with the whole internet.
+     *
+     * @return array<int, string>
+     */
+    public function certifiableDomains(): array
+    {
+        return $this->domains
+            ->filter(fn (ApplicationDomain $domain) => $domain->certifiable())
+            ->sortBy(fn (ApplicationDomain $domain) => $domain->type === DomainType::Primary ? 0 : 1)
+            ->pluck('domain')
+            ->values()
+            ->all();
     }
 }

@@ -35,12 +35,16 @@ class ApplicationDomain extends Model
      * Let's Encrypt certificate issued for it anywhere in the world counts
      * against one shared weekly limit. `install.sh` already carries the same
      * warning for the panel's own hostname.
+     *
+     * A redirect *is* certifiable, which is not obvious. `http://old` →
+     * `https://new` looks like it needs no certificate of its own, but any
+     * browser that has seen HSTS for `old` refuses the plaintext hop and never
+     * reaches the redirect at all. The old name has to answer on HTTPS to be
+     * able to send anyone anywhere.
      */
     public function certifiable(): bool
     {
-        return ! $this->is_test
-            && $this->type !== DomainType::Redirect
-            && $this->dns_verified_at !== null;
+        return ! $this->is_test && $this->dns_verified_at !== null;
     }
 
     /**

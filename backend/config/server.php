@@ -191,6 +191,12 @@ return [
             'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
             // A `map` is only legal inside a listener, and this names which.
             'listener' => env('SERVER_OLS_LISTENER', 'Default'),
+
+            // OpenLiteSpeed binds certificates to a listener rather than to a
+            // vhost, so a site only answers on 443 once it is mapped here too.
+            // A box that has never had TLS legitimately has no such listener,
+            // and registration skips it rather than failing.
+            'ssl_listener' => env('SERVER_OLS_SSL_LISTENER', 'Defaultssl'),
             'test_command' => ['/usr/local/lsws/bin/lswsctrl', 'config_test'],
             // Restart, not reload: nothing lighter picks up a new virtual host,
             // and it is graceful — old workers drain rather than being cut off.
@@ -267,6 +273,54 @@ return [
     | a list that is a few months stale; these change rarely. Current list:
     | https://www.cloudflare.com/ips-v4
     */
+    /*
+    |--------------------------------------------------------------------------
+    | TLS certificates
+    |--------------------------------------------------------------------------
+    |
+    | certbot is driven in `certonly --webroot` mode, never through the
+    | `--nginx` / `--apache` plugins. The plugins work by editing the vhost —
+    | and the panel regenerates that file on every domain change, so their edits
+    | would be silently wiped and the site would lose HTTPS with nothing to show
+    | why. Issuing the files and writing the directives ourselves keeps one
+    | owner for the config. It is also the only mode that works on
+    | OpenLiteSpeed, which has no certbot plugin at all: one code path, three
+    | web servers.
+    |
+    */
+
+    'certificates' => [
+        'certbot' => env('SV_CERTBOT_BIN', 'certbot'),
+
+        // One challenge directory shared by every site, aliased into all nine
+        // vhost templates. Per-site document roots would not work for the node
+        // and proxy profiles, which serve nothing from disk — there is no
+        // directory for certbot to drop the token in.
+        'challenge_root' => env('SV_ACME_CHALLENGE_ROOT', '/var/www/.well-known-acme'),
+
+        'live_dir' => env('SV_LETSENCRYPT_LIVE_DIR', '/etc/letsencrypt/live'),
+
+        // Where certbot runs its post-renewal commands. The renewal itself is
+        // certbot's own systemd timer; without a hook here the new certificate
+        // sits on disk while the web server keeps serving the old one from
+        // memory until something happens to reload it.
+        'renewal_hook_dir' => env('SV_LETSENCRYPT_HOOK_DIR', '/etc/letsencrypt/renewal-hooks/deploy'),
+
+        // Uploaded and self-signed certificates. Not under /etc/letsencrypt —
+        // certbot owns that tree and prunes what it does not recognise.
+        'custom_dir' => env('SV_CUSTOM_CERT_DIR', '/etc/ssl/sv-oss'),
+
+        // certbot can sit through two DNS lookups, an HTTP round trip and a
+        // retry. The default 60s ServerOps timeout runs out in the middle of a
+        // successful issuance and leaves a certificate on disk that the panel
+        // thinks failed.
+        'timeout' => 180,
+
+        // Warn this far out. Let's Encrypt certificates last 90 days and renew
+        // at 30; a warning any earlier is noise, any later is not a warning.
+        'expiry_warning_days' => 14,
+    ],
+
     'cloudflare_ranges' => [
         '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
         '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',

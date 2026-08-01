@@ -44,6 +44,18 @@ class OlsSharedConfig
 
     private const END_MAPS = '  ### END panel-managed maps';
 
+    /**
+     * The same maps again, inside the SSL listener.
+     *
+     * OpenLiteSpeed binds certificates to a *listener*, not to a vhost — a site
+     * only answers on 443 if it is mapped there as well. Its own marked region
+     * because the two listeners are separate blocks in the file, and a single
+     * region cannot span both.
+     */
+    private const BEGIN_SSL_MAPS = '  ### BEGIN panel-managed SSL maps — do not edit between these markers';
+
+    private const END_SSL_MAPS = '  ### END panel-managed SSL maps';
+
     public function __construct(
         private ServerOps $serverOps,
         private ManagedFile $files,
@@ -229,13 +241,30 @@ class OlsSharedConfig
             append: true,
         );
 
-        return $this->replaceRegion(
+        $contents = $this->replaceRegion(
             $contents,
             self::BEGIN_MAPS,
             self::END_MAPS,
             implode("\n", $maps),
             append: false,
         );
+
+        // Skipped rather than fatal when the box has no SSL listener. A server
+        // that has never had a certificate legitimately does not have one, and
+        // refusing to register a plain HTTP site because of that would break
+        // provisioning on every OLS box until somebody set up TLS by hand.
+        try {
+            return $this->replaceRegion(
+                $contents,
+                self::BEGIN_SSL_MAPS,
+                self::END_SSL_MAPS,
+                implode("\n", $maps),
+                append: false,
+                listener: (string) config('server.web_server_drivers.openlitespeed.ssl_listener', 'Defaultssl'),
+            );
+        } catch (OlsListenerNotFoundException) {
+            return $contents;
+        }
     }
 
     /**
@@ -268,7 +297,7 @@ class OlsSharedConfig
      * where a top-level `virtualHost` belongs. `append: false` puts it inside
      * the listener block, because that is the only place a `map` is legal.
      */
-    private function replaceRegion(string $contents, string $begin, string $end, string $body, bool $append): string
+    private function replaceRegion(string $contents, string $begin, string $end, string $body, bool $append, ?string $listener = null): string
     {
         $region = trim($body) === ''
             ? $begin."\n".$end
@@ -290,7 +319,7 @@ class OlsSharedConfig
 
         return $append
             ? rtrim($contents)."\n\n".$region."\n"
-            : $this->insertInListener($contents, $region);
+            : $this->insertInListener($contents, $region, $listener);
     }
 
     /**
@@ -300,9 +329,9 @@ class OlsSharedConfig
      * only legal inside one, and inventing a listener would mean guessing which
      * address and port this server is supposed to answer on.
      */
-    private function insertInListener(string $contents, string $region): string
+    private function insertInListener(string $contents, string $region, ?string $listener = null): string
     {
-        $listener = (string) config('server.web_server_drivers.openlitespeed.listener', 'Default');
+        $listener ??= (string) config('server.web_server_drivers.openlitespeed.listener', 'Default');
         $pattern = '/^listener\s+'.preg_quote($listener, '/').'\s*\{/m';
 
         if (preg_match($pattern, $contents, $matches, PREG_OFFSET_CAPTURE) !== 1) {

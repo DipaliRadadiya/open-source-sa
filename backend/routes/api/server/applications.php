@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\Server\ApplicationController;
 use App\Http\Controllers\API\Server\ApplicationDomainController;
 use App\Http\Controllers\API\Server\ApplicationWebhookController;
+use App\Http\Controllers\API\Server\CertificateController;
 use App\Http\Controllers\API\Server\ServerCapabilityController;
 use App\Http\Controllers\API\Server\SiteTypeController;
 use Illuminate\Support\Facades\Route;
@@ -50,4 +51,17 @@ Route::post('/applications/{application}/domains/{domain}/verify', [ApplicationD
 Route::post('/applications/{application}/domains/{domain}/primary', [ApplicationDomainController::class, 'makePrimary'])
     ->middleware('permission:app_domain,manage');
 Route::delete('/applications/{application}/domains/{domain}', [ApplicationDomainController::class, 'destroy'])
+    ->middleware('permission:app_domain,manage');
+
+// Certificates live under the same `app_domain` permission as the names they
+// cover. Two permissions would let someone add a domain but not secure it,
+// which is not a state anybody wants to be in — and Forge's own 2025 redesign
+// merged the two screens for the same reason.
+Route::get('/applications/{application}/certificate', [CertificateController::class, 'show'])
+    ->middleware('permission:app_domain');
+Route::post('/applications/{application}/certificate', [CertificateController::class, 'store'])
+    ->middleware('permission:app_domain,manage');
+Route::put('/applications/{application}/certificate/force-https', [CertificateController::class, 'forceHttps'])
+    ->middleware('permission:app_domain,manage');
+Route::delete('/applications/{application}/certificate', [CertificateController::class, 'destroy'])
     ->middleware('permission:app_domain,manage');

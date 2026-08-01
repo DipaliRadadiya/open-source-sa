@@ -1172,6 +1172,53 @@ keeps the authority on one. Say so in the UI — most users pick "alias" meaning
   certificate issued for it *anywhere on the internet* shares one weekly limit.
   Hide the SSL action rather than letting it fail.
 
+### Certificates / SSL (App sidebar → Domains)
+
+Same permission as domains — **`app_domain`** (`view` to read, `manage` to
+mutate). Two permissions would let someone add a domain but not secure it,
+which is not a state anybody wants to be in; Forge's own 2025 redesign merged
+the two screens for the same reason.
+
+**One certificate per application.** A server block presents exactly one, so a
+second record would be a certificate serving nothing. Reissuing replaces the
+row; what it replaced is in the activity log.
+
+**`GET /api/applications/{id}/certificate`** → `{certificate: {...} | null}`
+- **`null`, not `404`.** "This site has no certificate" is a normal state the screen has to render, not an error.
+- Fields: `id, type, type_title, status, domains[], missing_domains[], force_https, auto_renew, renewable, issued_at, expires_at, expires_at_human, days_remaining, expired, expiring_soon, reason, message, reference`
+
+**`POST /api/applications/{id}/certificate`**
+- Body: `type` = `letsencrypt` | `self_signed` | `custom`. For `custom` also `certificate`, `private_key`, and optionally `chain` (all PEM).
+- **`letsencrypt` and `self_signed` return `202`** with `status: "pending"` — the work is queued. **Poll `GET .../certificate` and drive the UI from `status`** (`pending → issuing → active | failed`). ACME involves a round trip back to this server and routinely outlasts the request.
+- **`custom` returns `201`** and is already `active`. There is nothing to wait for; adding a spinner to two file writes would be theatre.
+- A `custom` upload is checked before anything is written: the key must match the certificate (`422` on `private_key`) and both must be PEM. A mismatched pair is otherwise written happily, fails the config test, and takes the site down over a copy-paste.
+
+**`PUT /api/applications/{id}/certificate/force-https`** → `{certificate: {...}}`
+- Body: `force_https` (bool).
+- **Refused with `422` unless a certificate is active.** This is not a preference: redirecting to HTTPS with nothing listening on 443 does not degrade the site, it takes it off the internet for every visitor at once — including the one who just clicked the toggle.
+
+**`DELETE /api/applications/{id}/certificate`** → `204`
+- Removes the TLS directives, clears force-HTTPS in the same step, and tells certbot to stop renewing. A renewal left behind keeps running forever, keeps spending rate limit, and eventually emails the user about a site they deleted.
+
+#### What the frontend needs to get right
+
+- **`status: "failed"` carries a `reason` code and a localized `message`.** Show the message; the codes are `rate_limited`, `rate_limited_failures`, `unreachable`, `dns_not_pointing`, `challenge_not_served`, `certbot_missing`, `self_sign_failed`, `unknown`. Each says what to do, because "it failed" is the least useful sentence a panel can produce about a certificate.
+  - **`rate_limited` must not offer a retry button.** Retrying is precisely what must not happen — the wait is a week. `rate_limited_failures` is an hour.
+- **`missing_domains` is the quiet failure.** A name added after issuance is served by a certificate that does not mention it: the browser refuses it, the server logs nothing, and the panel is the only place that can say so. If it is non-empty, prompt to reissue.
+- **`renewable: false`** (uploaded and self-signed) means nothing will renew it. Show the expiry as a deadline the user owns, not as a date that will take care of itself.
+- **`expiring_soon`** is computed server-side against one threshold so the rule lives in one place — certificate lifetimes are shrinking, and that threshold will move.
+- **Issuance needs `dns_verified: true` on the domain** (see the domains section). Requesting without it is refused with `422`, deliberately: Let's Encrypt allows five failed authorisations per hostname per hour, and guessing locks the user out of the fix for an hour.
+- **`self_signed` is the exception to that rule** — an internal or staging hostname that could never be validated publicly is the only reason it exists. Every browser will warn about it; say so in the UI rather than letting the user discover it.
+
+#### How this works on the server, and why
+
+- **certbot runs in `certonly --webroot`, never the `--nginx` / `--apache` plugins.** The plugins work by editing the vhost — the file this panel regenerates on every domain change. Their edits would be silently wiped and HTTPS would disappear with nothing to explain it. It is also the only mode that works on **OpenLiteSpeed**, which has no certbot plugin at all: one code path, three web servers.
+- **One shared ACME challenge directory**, aliased into all nine vhost templates. Per-site document roots cannot work for node and proxy sites — they serve nothing from disk, so there is nowhere for certbot to drop the token. The alias sits ahead of the front-controller rewrite, or a WordPress site answers with its 404 page and burns an authorisation attempt.
+- **Force-HTTPS never redirects `/.well-known/acme-challenge/`.** Without that exception renewal stops working and the redirect goes on pointing confidently at a certificate that has expired.
+- **A redirect domain gets its own HTTPS listener.** `http://old` → `https://new` looks like it needs no certificate, but a browser that has seen HSTS for `old` refuses the plaintext hop and never reaches the redirect at all.
+- **certbot's post-renewal hook reloads the web server.** Without it renewal half-works: a new certificate lands on disk while the server keeps serving the old one from memory, surfacing weeks later as an expired certificate on a site whose files are fine.
+- ⚠️ **Not yet exercised against a live ACME server.** The logic and the failure classification are tested; the paths and certbot flags come from its documentation. Expect the first real issuance to need corrections.
+
 ### Git integrations (Integrations → Git)
 
 Requires the `git` permission (`view` to read, `manage` to mutate). Connected git provider accounts, managed **centrally and before any application exists** — the app-create wizard later just picks a connected account → repo → branch. This feature is panel-only: it stores a credential and reads repositories/branches. No cloning, no provisioning, no filesystem writes (those land with Applications).

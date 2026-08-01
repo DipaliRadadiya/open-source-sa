@@ -79,6 +79,17 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'redirects' => $application->domains
                 ->filter(fn ($domain) => $domain->type === DomainType::Redirect)
                 ->values(),
+            // Only a certificate with files behind it. A pending or failed one
+            // is deliberately hidden from the template: pointing a server block
+            // at a path that is not there fails the config test and takes a
+            // working site down over a certificate it never had.
+            'certificate' => $application->certificate?->servable() ? $application->certificate : null,
+            'forceHttps' => (bool) ($application->certificate?->servable() && $application->certificate->force_https),
+            // The shared ACME webroot, aliased into every profile. Per-site
+            // document roots cannot work for node and proxy sites — they serve
+            // nothing from disk, so there is nowhere for certbot to drop the
+            // challenge token.
+            'challengeRoot' => rtrim((string) config('server.certificates.challenge_root'), '/'),
             'documentRoot' => $documentRoot,
             'phpVersion' => $application->php_version ?: config('server.default_php_version'),
             // The OS account the site runs as. nginx and Apache reach PHP
@@ -108,6 +119,22 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             $this->reloadCommand(),
             ['feature' => 'application', 'op' => 'reload', 'web_server' => $this->name()],
         );
+    }
+
+    /**
+     * The reload command as something else can run.
+     *
+     * Exposed for certbot's post-renewal hook, which is a shell script run by
+     * certbot's own timer rather than by the panel. Without it renewal
+     * half-works: a new certificate lands on disk and the web server keeps
+     * serving the old one from memory until something unrelated reloads it,
+     * which surfaces weeks later as an expired certificate on a healthy site.
+     *
+     * @return array<int, string>
+     */
+    public function reloadCommandForHook(): array
+    {
+        return $this->reloadCommand();
     }
 
     /**
