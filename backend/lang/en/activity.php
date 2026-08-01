@@ -31,6 +31,7 @@ return [
     'php.extension_disabled' => 'Disabled the :extension extension for PHP :version',
     'php.extension_install_failed' => 'Installing the :extension extension for PHP :version failed',
     'setting.reboot_requested' => 'Requested a server reboot (:when)',
+    'setting.auto_rebooted' => 'Restarted the server on schedule',
     'database.created' => 'Created database :name',
     'database.deleted' => 'Deleted database :name',
     'database.user_created' => 'Created database user :username on :database',

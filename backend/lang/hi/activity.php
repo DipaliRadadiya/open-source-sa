@@ -31,6 +31,7 @@ return [
     'php.extension_disabled' => 'PHP :version के लिए :extension एक्सटेंशन अक्षम किया',
     'php.extension_install_failed' => 'PHP :version के लिए :extension एक्सटेंशन की स्थापना विफल रही',
     'setting.reboot_requested' => 'सर्वर रीबूट का अनुरोध किया (:when)',
+    'setting.auto_rebooted' => 'निर्धारित समय पर सर्वर पुनः आरंभ किया',
     'database.created' => ':name डेटाबेस बनाया',
     'database.deleted' => ':name डेटाबेस हटाया',
     'database.user_created' => ':database पर डेटाबेस उपयोगकर्ता :username बनाया',

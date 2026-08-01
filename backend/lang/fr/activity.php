@@ -31,6 +31,7 @@ return [
     'php.extension_disabled' => 'A désactivé l\'extension :extension pour PHP :version',
     'php.extension_install_failed' => 'L\'installation de l\'extension :extension pour PHP :version a échoué',
     'setting.reboot_requested' => 'A demandé un redémarrage du serveur (:when)',
+    'setting.auto_rebooted' => 'Serveur redémarré comme prévu',
     'database.created' => 'A créé la base de données :name',
     'database.deleted' => 'A supprimé la base de données :name',
     'database.user_created' => 'A créé l\'utilisateur de base de données :username sur :database',

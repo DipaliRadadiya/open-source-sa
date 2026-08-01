@@ -31,6 +31,7 @@ return [
     'php.extension_disabled' => 'Отключил расширение :extension для PHP :version',
     'php.extension_install_failed' => 'Не удалось установить расширение :extension для PHP :version',
     'setting.reboot_requested' => 'Запросил перезагрузку сервера (:when)',
+    'setting.auto_rebooted' => 'Сервер перезагружен по расписанию',
     'database.created' => 'Создал базу данных :name',
     'database.deleted' => 'Удалил базу данных :name',
     'database.user_created' => 'Создал пользователя базы данных :username в :database',

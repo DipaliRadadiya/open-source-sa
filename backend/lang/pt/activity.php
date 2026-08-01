@@ -31,6 +31,7 @@ return [
     'php.extension_disabled' => 'Desativou a extensão :extension para o PHP :version',
     'php.extension_install_failed' => 'A instalação da extensão :extension para o PHP :version falhou',
     'setting.reboot_requested' => 'Solicitou uma reinicialização do servidor (:when)',
+    'setting.auto_rebooted' => 'Reiniciou o servidor conforme agendado',
     'database.created' => 'Criou o banco de dados :name',
     'database.deleted' => 'Excluiu o banco de dados :name',
     'database.user_created' => 'Criou o usuário de banco de dados :username em :database',

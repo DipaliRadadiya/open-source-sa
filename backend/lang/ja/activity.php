@@ -31,6 +31,7 @@ return [
     'php.extension_disabled' => 'PHP :version の拡張 :extension を無効にしました',
     'php.extension_install_failed' => 'PHP :version の拡張 :extension のインストールに失敗しました',
     'setting.reboot_requested' => 'サーバーの再起動をリクエストしました (:when)',
+    'setting.auto_rebooted' => 'スケジュールに従ってサーバーを再起動しました',
     'database.created' => ':name データベースを作成しました',
     'database.deleted' => ':name データベースを削除しました',
     'database.user_created' => ':database に データベースユーザー :username を作成しました',

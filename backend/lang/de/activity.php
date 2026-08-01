@@ -31,6 +31,7 @@ return [
     'php.extension_disabled' => 'Erweiterung :extension für PHP :version deaktiviert',
     'php.extension_install_failed' => 'Installation der Erweiterung :extension für PHP :version fehlgeschlagen',
     'setting.reboot_requested' => 'Serverneustart angefordert (:when)',
+    'setting.auto_rebooted' => 'Server planmäßig neu gestartet',
     'database.created' => 'Datenbank :name erstellt',
     'database.deleted' => 'Datenbank :name gelöscht',
     'database.user_created' => 'Datenbankbenutzer :username in :database erstellt',
