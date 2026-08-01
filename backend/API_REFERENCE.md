@@ -93,8 +93,12 @@ Every timezone the panel accepts, grouped by region — for a picker.
 
 ### `GET /permissions`
 Permission items the caller can see — the **deduped OR-union** across all their assigned roles (each permission appears once; `manage`/`view` are true if any role grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
-- Query: `level` (string, optional — filters to one permission level, e.g. `server`)
+- Query: `level` (string, optional — filters to one permission level: `server` or `application`)
 - Response: `{"permissions": [{level, sub_level, sub_level_title, name, title, icon, url, permissions: {view, manage}}]}`
+- **There are two sidebars, and `level` is what selects them.** `?level=server` (17 items) renders the server sidebar; **`?level=application` (16 items) renders the sidebar shown *inside* an application**. Same shape, same rules — the permission row *is* the nav entry.
+- **Application `url`s are relative segments**, not paths: `/domains`, `/files`, `''` for the dashboard. The real route is `/applications/{id}{url}` — prefix it client-side. Server `url`s stay absolute (`/databases`).
+- Application permission names are all prefixed **`app_`** (`app_domain`, `app_log`, …). That is deliberate and load-bearing: ability checks resolve by name, so an app permission called `logs` would collide with the server-level one. Never assume `logs` and `app_log` are related — server `logs` is auth.log and syslog for the whole box, `app_log` is one site's access log.
+- Some application permissions are seeded ahead of their screens (`app_staging`, `app_clone`, `app_fail2ban`, `app_firewall`, `app_bot_blocker`, `app_php`, `app_security`) so roles can be set up once. Render the sidebar from what this endpoint returns **and** what the application supports — a static site has no PHP settings regardless of grants.
 - **Sidebar grouping:** group the items by `sub_level` and render `sub_level_title` as the section header (already localized — do **not** hardcode it). Current values: `server` → "Server", `integration` → "Integrations". A group is a **label only**: no route, no permission of its own. Show a group only when at least one item inside it came back, otherwise a limited role sees an empty header.
 - **`title` is localized** to the request locale (send `Accept-Language: <code>`) — the sidebar label comes back already translated (8 locales). `name` is the stable machine key; use it if you'd rather translate client-side. A permission with no translation yet falls back to its English title. (Same for `/permissions/check` and `/admin/permissions`.)
 

@@ -12,23 +12,34 @@ it('creates the Administrator system role with every permission, idempotently', 
     $admin = Role::where('slug', 'administrator')->get();
     expect($admin)->toHaveCount(1);
     expect($admin->first()->is_system)->toBeTrue();
-    // holds all 14 permissions, view+manage
-    expect($admin->first()->permissions()->count())->toBe(16);
+    // holds every permission at both levels, view+manage
+    expect($admin->first()->permissions()->count())->toBe(33);
     foreach ($admin->first()->permissions as $permission) {
         expect((bool) $permission->pivot->view)->toBeTrue();
         expect((bool) $permission->pivot->manage)->toBeTrue();
     }
 });
 
-it('seeds the 16 server-level permission items in order', function () {
+it('seeds the server and application permission items in order', function () {
     $this->seed(PermissionSeeder::class);
 
-    expect(Permission::count())->toBe(16);
-    expect(Permission::orderBy('order')->pluck('name')->first())->toBe('dashboard');
-    expect(Permission::orderBy('order')->pluck('name')->last())->toBe('storage');
-    expect(Permission::pluck('level')->unique()->all())->toBe(['server']);
-    expect(Permission::orderBy('order')->pluck('sub_level')->unique()->values()->all())
-        ->toBe(['server', 'integration']);
+    expect(Permission::count())->toBe(33);
+    expect(Permission::where('level', 'server')->count())->toBe(17);
+    expect(Permission::where('level', 'application')->count())->toBe(16);
+
+    $server = Permission::where('level', 'server')->orderBy('order');
+    expect($server->pluck('name')->first())->toBe('dashboard');
+    expect($server->pluck('name')->last())->toBe('storage');
+
+    $app = Permission::where('level', 'application')->orderBy('order');
+    expect($app->pluck('name')->first())->toBe('app_dashboard');
+    expect($app->pluck('name')->last())->toBe('app_clone');
+
+    // Every application permission carries the `app_` prefix. hasAbility()
+    // resolves by name and ignores level, so a collision with a server-level
+    // name would silently grant one through the other.
+    expect(Permission::where('level', 'application')->pluck('name')
+        ->every(fn (string $name) => str_starts_with($name, 'app_')))->toBeTrue();
 });
 
 it('groups the git and storage permissions under the integration sub-level', function () {
@@ -40,7 +51,7 @@ it('groups the git and storage permissions under the integration sub-level', fun
     expect($integrations->pluck('level')->unique()->all())->toBe(['server']);
     expect($integrations->pluck('url')->all())->toBe(['/integrations/git', '/integrations/storage']);
     // the existing items are untouched — no sidebar churn
-    expect(Permission::where('sub_level', 'server')->count())->toBe(14);
+    expect(Permission::where('sub_level', 'server')->count())->toBe(15);
 });
 
 it('returns a localized sub-level header alongside each permission', function () {
@@ -82,7 +93,7 @@ it('shows an admin every permission with full view+manage access', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions');
 
-    $response->assertOk()->assertJsonCount(16, 'permissions');
+    $response->assertOk()->assertJsonCount(33, 'permissions');
     foreach ($response->json('permissions') as $permission) {
         expect($permission['permissions']['view'])->toBeTrue();
         expect($permission['permissions']['manage'])->toBeTrue();
@@ -139,7 +150,15 @@ it('filters the check endpoint by level', function () {
         ->getJson('/api/permissions/check?level=server');
 
     // level=server spans both sub-levels — the grouping is a display concern
-    $response->assertOk()->assertJsonCount(16, 'permissions');
+    $response->assertOk()->assertJsonCount(17, 'permissions');
+
+    // …and level=application returns the sidebar rendered *inside* an app.
+    // Each level is its own sidebar; this filter is what separates them.
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/permissions/check?level=application')
+        ->assertOk()
+        ->assertJsonCount(16, 'permissions')
+        ->assertJsonPath('permissions.0.name', 'app_dashboard');
 });
 
 it('requires a level on the check endpoint', function () {
