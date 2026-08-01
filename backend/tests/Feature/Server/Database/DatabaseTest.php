@@ -1,6 +1,10 @@
 <?php
 
+use App\Actions\Server\Database\ExportDatabase;
+use App\Enums\ExportStatus;
+use App\Jobs\RunDatabaseExport;
 use App\Models\Database;
+use App\Models\DatabaseExport;
 use App\Models\DatabaseUser;
 use App\Models\DbMetric;
 use App\Models\User;
@@ -8,6 +12,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -332,17 +337,80 @@ it('exports a database and streams the download', function () {
         return Process::result(exitCode: 0);
     });
 
+    // Faked so dispatch does not run inline: the point of the change is that
+    // the request returns before the dump does.
+    Queue::fake();
+
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
 
-    $res = test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/export")->assertStatus(201);
-    $file = $res->json('export.file');
-    expect($res->json('export.size_bytes'))->toBeGreaterThan(0);
-    expect($res->json('export.download_url'))->toContain('/api/databases/exports/'.$file);
+    // 202, not 201: the dump is queued. It outlives nginx's read timeout on any
+    // real database, so the request used to be told it had failed while
+    // mysqldump carried on and succeeded.
+    $res = test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/export")->assertStatus(202);
+    expect($res->json('export.status'))->toBe('queued')
+        ->and($res->json('export.file'))->toBeNull()
+        ->and($res->json('export.download_url'))->toBeNull();
+
+    // Run the queued work the way a worker would.
+    app(RunDatabaseExport::class, ['exportId' => $res->json('export.id')])
+        ->handle(app(ExportDatabase::class));
+
+    $export = DatabaseExport::find($res->json('export.id'));
+    expect($export->status)->toBe(ExportStatus::Completed)
+        ->and($export->size_bytes)->toBeGreaterThan(0);
+
     test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'exported']);
 
-    test()->withHeaders(dbAuth())->get("/api/databases/exports/{$file}")->assertOk();
+    test()->withHeaders(dbAuth())->get("/api/databases/exports/{$export->file}")->assertOk();
 
     File::deleteDirectory($dir);
+});
+
+it('records a failed export instead of leaving it queued forever', function () {
+    $dir = sys_get_temp_dir().'/sv-oss-exp-'.uniqid();
+    config(['server.databases.export_dir' => $dir]);
+
+    // The dump itself fails — no file is written.
+    Process::fake(fn ($process) => in_array($process->command[0] ?? '', ['mysqldump', 'mariadb-dump'], true)
+        ? Process::result(exitCode: 1, errorOutput: 'access denied')
+        : Process::result(exitCode: 0));
+
+    Queue::fake();
+
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    $res = test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/export")->assertStatus(202);
+    $id = $res->json('export.id');
+
+    try {
+        app(RunDatabaseExport::class, ['exportId' => $id])->handle(app(ExportDatabase::class));
+    } catch (Throwable) {
+        // Rethrown so the queue marks the job failed; the row is already written.
+    }
+
+    $export = DatabaseExport::find($id);
+    expect($export->status)->toBe(ExportStatus::Failed)
+        ->and($export->reason)->toBe('dump_failed')
+        // A code, worded at read time — never a stored sentence.
+        ->and($export->message())->not->toBeNull()
+        ->and($export->reference)->not->toBeNull();
+
+    File::deleteDirectory($dir);
+});
+
+it('does not strand an export at running when the worker dies', function () {
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+    $export = DatabaseExport::create([
+        'database_id' => $db->id, 'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Running,
+    ]);
+
+    // Without the failed() hook the row sits at `running` forever and the
+    // screen spins on something that stopped existing.
+    (new RunDatabaseExport($export->id))->failed(null);
+
+    expect($export->refresh()->status)->toBe(ExportStatus::Failed)
+        ->and($export->reason)->toBe('worker');
 });
 
 it('404s a missing or traversal export filename', function () {

@@ -836,7 +836,13 @@ The panel's own account is also protected from deletion through **Database Users
 - **`POST /api/databases/{database}/optimize`** and **`POST /api/databases/{database}/repair`** (`manage`) — `OPTIMIZE`/`REPAIR TABLE` across the DB's tables (SQL; no-op on Mongo). `{ database: {…} }`.
 
 **Export (dump) — read-only, safe:**
-- **`POST /api/databases/{database}/export`** — dumps the DB (`mysqldump --single-transaction` / `mongodump --archive --gzip`) to a managed exports dir. `201 { export: {file, size_bytes, created_at, download_url} }`. Source DB untouched; activity `database.exported`.
+- **`POST /api/databases/{database}/export`** (**queued**) — dumps the DB (`mysqldump --single-transaction` / `mongodump --archive --gzip`) to a managed exports dir. Source DB untouched; activity `database.exported` written **on completion**, not on request.
+  - **`202 { export: {...} }`** — the work is queued. The response body is the row at `status: "queued"`, with `file` and `download_url` **null**. Poll and drive the UI from `status`.
+  - **It used to be `201` and run inline.** A dump of any real database outlives nginx's `fastcgi_read_timeout` (300s) while `mysqldump` runs to 600s — so the browser was shown a failure while the dump carried on and succeeded, leaving a file nobody could find.
+  - Export shape: `{id, database_id, database, engine, file, status, size_bytes, size_human, reason, message, reference, available, download_url, requested_by, created_at, created_at_human, finished_at, finished_at_human}`.
+  - **`status`**: `queued` → `running` → `completed` | `failed`. Same polling shape as the engine installer.
+  - On failure: `reason` is a stable code (`dump_failed`, `database_missing`, `worker`), `message` is that code worded in the **viewer's** locale, `reference` correlates with the server-ops log.
+  - **`available`** is `false` when the file has since been deleted from disk by hand — `download_url` is null then too, rather than offering a link that 404s.
 - **`GET /api/databases/exports/{file}`** — streams a previously-created export for download. Filename strict-validated + resolved inside the exports dir (no traversal).
 
 *(Remaining P2: **import/restore** — deferred (writes data → will ship with existing-target-only + backup-before + confirm). P3: engine install-on-demand, app auto-DB + env-wiring, rename-database, phpMyAdmin signon SSO.)*

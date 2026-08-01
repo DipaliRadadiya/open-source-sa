@@ -5,13 +5,16 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Database\AdoptDatabases;
 use App\Actions\Server\Database\CreateDatabase;
 use App\Actions\Server\Database\DeleteDatabase;
-use App\Actions\Server\Database\ExportDatabase;
+use App\Enums\ExportStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
 use App\Http\Requests\Server\Database\StoreDatabaseRequest;
+use App\Http\Resources\DatabaseExportResource;
 use App\Http\Resources\DatabaseResource;
 use App\Jobs\InstallDatabaseEngine;
+use App\Jobs\RunDatabaseExport;
 use App\Models\Database;
+use App\Models\DatabaseExport;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
@@ -164,13 +167,30 @@ class DatabaseController extends Controller
 
     /**
      * Export (dump) a database — read-only, non-destructive.
+     *
+     * `202` — the work is queued. Poll `GET /databases/exports` (or the row's
+     * own id) and drive the UI from `status`.
+     *
+     * The row is created here, before dispatch, deliberately: started inside
+     * the job instead, there is a window between the 202 and a worker picking
+     * it up where the export exists and nothing can see it — which is the
+     * blindness this table exists to remove.
      */
-    public function export(Database $database, ExportDatabase $action): JsonResponse
+    public function export(Database $database): JsonResponse
     {
-        $export = $action->execute($database);
-        $export['download_url'] = url('/api/databases/exports/'.$export['file']);
+        $export = DatabaseExport::create([
+            'database_id' => $database->id,
+            'database_name' => $database->name,
+            'engine' => $database->engine,
+            'status' => ExportStatus::Queued,
+            'user_id' => Auth::id(),
+        ]);
 
-        return response()->json(['export' => $export], 201);
+        RunDatabaseExport::dispatch($export->id);
+
+        return response()->json([
+            'export' => DatabaseExportResource::make($export)->resolve(),
+        ], 202);
     }
 
     /**
