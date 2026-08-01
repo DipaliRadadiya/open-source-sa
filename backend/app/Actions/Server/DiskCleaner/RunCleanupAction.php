@@ -43,6 +43,25 @@ class RunCleanupAction
             $result = $target->clean();
 
             if ($result->failed()) {
+                // Recorded before throwing. A scheduled clean swallows the
+                // exception so one bad category cannot stop the tick, which
+                // used to mean a cleaner failing every night looked exactly
+                // like one that had never run — and the `failed` status the
+                // run table defines was never written by anything.
+                DiskCleanerRun::create([
+                    'trigger' => $trigger,
+                    'categories' => $keys,
+                    'freed' => collect($cleaned)->pluck('freed', 'key')->all(),
+                    'freed_total' => $freedTotal,
+                    'status' => 'failed',
+                    'disk_percent' => $this->cleaner->disk()['percent'],
+                ]);
+
+                $this->activityLogger->log($this->verb($trigger, failed: true), null, [
+                    'categories' => implode(', ', $keys),
+                    'category' => $key,
+                ]);
+
                 throw new DiskCleanerException($result->reference);
             }
 
@@ -67,7 +86,7 @@ class RunCleanupAction
             'disk_percent' => $disk['percent'],
         ]);
 
-        $this->activityLogger->log('disk_cleaner.cleaned', null, [
+        $this->activityLogger->log($this->verb($trigger), null, [
             'categories' => implode(', ', $keys),
             'freed' => Bytes::human($freedTotal),
         ]);
@@ -79,5 +98,29 @@ class RunCleanupAction
             'freed_total' => $freedTotal,
             'freed_total_human' => Bytes::human($freedTotal),
         ];
+    }
+
+    /**
+     * The activity verb for this run.
+     *
+     * A separate verb rather than a `trigger` property, because the activity
+     * filters are built from the lang keys and filter on the indexed `action`
+     * column — a property would only be visible by opening each row, while a
+     * verb becomes something you can actually filter the page by.
+     *
+     * It also lets the automatic sentence stand on its own. A scheduled run has
+     * no actor, and "Cleaned disk" next to an empty name reads as though we had
+     * lost track of who did it.
+     */
+    private function verb(string $trigger, bool $failed = false): string
+    {
+        $automatic = $trigger === 'scheduled';
+
+        return match (true) {
+            $automatic && $failed => 'disk_cleaner.auto_clean_failed',
+            $automatic => 'disk_cleaner.auto_cleaned',
+            $failed => 'disk_cleaner.clean_failed',
+            default => 'disk_cleaner.cleaned',
+        };
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ActivityLog;
 use App\Models\Role;
 use App\Models\User;
 
@@ -147,7 +148,7 @@ it('returns the known distinct types and actions for filter dropdowns', function
 
     $response->assertOk()
         ->assertJsonPath('types', ['application', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'permission', 'php', 'role', 'server', 'service', 'setting', 'system_user', 'user'])
-        ->assertJsonCount(81, 'actions.all'); // all distinct verbs (deduped across types)
+        ->assertJsonCount(84, 'actions.all'); // all distinct verbs (deduped across types)
     // `all` = every verb; per-type keys are scoped to that type's verbs.
     expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'downloaded', 'cleaned', 'schedule_updated', 'profile_updated', 'user_created', 'connection_updated');
     expect($response->json('actions.application'))->toContain('webhook_enabled', 'webhook_disabled', 'webhook_rotated', 'webhook_deployed');
@@ -165,4 +166,33 @@ it('denies a regular user from viewing activity-log filter options', function ()
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/admin/activity-log/filters')
         ->assertForbidden();
+});
+
+it('marks entries with no person behind them as system actions', function () {
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    // Two rows that differ only in whether a user is attached.
+    ActivityLog::create([
+        'user_id' => $admin->id, 'type' => 'setting', 'action' => 'reboot_requested',
+        'properties' => ['when' => 'now'],
+    ]);
+    ActivityLog::create([
+        'user_id' => null, 'type' => 'setting', 'action' => 'auto_rebooted', 'properties' => [],
+    ]);
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log')->assertOk();
+
+    // Looked up by action rather than by index: both rows are written in the
+    // same second, so their relative order is not something to assert on.
+    $entries = collect($response->json('activity_log'))->keyBy('action');
+
+    // Stated outright rather than inferred from a null user: "the system did
+    // this" and "this row lost its user" would otherwise be the same value,
+    // and only one of them is acceptable.
+    expect($entries['auto_rebooted']['is_system'])->toBeTrue()
+        ->and($entries['auto_rebooted']['user'])->toBeNull()
+        ->and($entries['reboot_requested']['is_system'])->toBeFalse()
+        ->and($entries['reboot_requested']['user']['username'])->toBe($admin->username);
 });

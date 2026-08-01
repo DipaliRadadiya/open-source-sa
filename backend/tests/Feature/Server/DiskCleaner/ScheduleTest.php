@@ -122,6 +122,78 @@ it('runs the scheduled cleaner when enabled, due and over threshold', function (
     Process::assertRan(fn ($p) => $p->command[0] === 'truncate');
 });
 
+it('logs an automatic clean under its own verb, with no actor', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 10:30:00'));
+    fakeDiskAt(85);
+    DiskCleanerSchedule::create([
+        'enabled' => true, 'frequency' => 'hourly', 'categories' => ['service_logs'],
+        'threshold_percent' => 80, 'last_run_at' => null,
+    ]);
+
+    $this->artisan('disk-cleaner:run')->assertExitCode(0);
+
+    // A distinct verb, not a property: the activity filters are built from the
+    // lang keys and filter on `action`, so this is the difference between a
+    // filterable "automatic" and something you can only see row by row.
+    $this->assertDatabaseHas('activity_logs', [
+        'type' => 'disk_cleaner',
+        'action' => 'auto_cleaned',
+        'user_id' => null,
+    ]);
+
+    $this->assertDatabaseMissing('activity_logs', [
+        'type' => 'disk_cleaner',
+        'action' => 'cleaned',
+    ]);
+});
+
+it('logs a manual clean under the plain verb, attributed to the user', function () {
+    fakeDiskAt(85);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/disk-cleaner/clean', ['categories' => ['service_logs']])
+        ->assertOk();
+
+    $this->assertDatabaseHas('activity_logs', [
+        'type' => 'disk_cleaner',
+        'action' => 'cleaned',
+        'user_id' => $this->admin->id,
+    ]);
+});
+
+it('records a failed automatic clean instead of failing silently', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 10:30:00'));
+
+    $total = 100_000_000_000;
+    Process::fake(function ($process) use ($total) {
+        return match ($process->command[0] ?? '') {
+            'df' => Process::result(output: "fs 1B-blocks Used Avail Cap Mount\n/dev/vda1 {$total} 85000000000 15000000000 85% /\n"),
+            // The category itself fails. The scheduler swallows the exception
+            // so one bad target cannot stop the tick — which is exactly how a
+            // cleaner that fails every night used to look like one that had
+            // never run at all.
+            'truncate' => Process::result(exitCode: 1, errorOutput: 'permission denied'),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    DiskCleanerSchedule::create([
+        'enabled' => true, 'frequency' => 'hourly', 'categories' => ['service_logs'],
+        'threshold_percent' => 80, 'last_run_at' => null,
+    ]);
+
+    $this->artisan('disk-cleaner:run')->assertExitCode(0);
+
+    $this->assertDatabaseHas('activity_logs', [
+        'type' => 'disk_cleaner',
+        'action' => 'auto_clean_failed',
+        'user_id' => null,
+    ]);
+
+    // The `failed` status the runs table has always defined, finally written.
+    expect(DiskCleanerRun::where('status', 'failed')->count())->toBe(1);
+});
+
 it('skips when disk is below the threshold (and does not mark as run)', function () {
     Carbon::setTestNow(Carbon::parse('2026-07-27 10:30:00'));
     fakeDiskAt(50);

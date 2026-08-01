@@ -177,7 +177,10 @@ The **full** list of every permission (the menu of what *can* be granted) — us
 ### `GET /admin/activity-log`
 Admin-wide activity — every user's actions, not just the caller's.
 - Query: `filter[scope]` (`account`|`server` — see `/activity-log` above for the split), `filter[user_id]` (integer, must exist), `filter[type]` (string, exact — the entity, e.g. `user`/`role`/`system_user`), `filter[action]` (string, exact — the verb, e.g. `created`/`deleted`/`ssh_key_added`), `search` (free-text on type/action/actor name/username), `per_page` (10|20|50|100). `type` and `action` are separate **indexed** columns.
-- Response: `{"activity_log": [{id, type, action, scope, description, user: {id, username}|null, created_at, created_at_human}], "meta": {...}}` — `type` = entity (`system_user`), `action` = verb (`created`), `description` = the full human sentence composed from both in the viewer's locale.
+- Response: `{"activity_log": [{id, type, action, scope, description, user: {id, username}|null, is_system, created_at, created_at_human}], "meta": {...}}` — `type` = entity (`system_user`), `action` = verb (`created`), `description` = the full human sentence composed from both in the viewer's locale.
+- **`is_system`** (bool) — true when no person was behind the entry: a scheduled reboot, an automatic disk clean, a deploy triggered by a git webhook. `user` is `null` on those. **Render these as "System"** rather than a blank actor.
+  - It's an explicit flag rather than something to infer from `user === null`, because "the machine did this" and "this row lost its user" would otherwise be indistinguishable. The panel deliberately does **not** stamp an admin's id onto system actions — that would name someone who wasn't there and put machine activity in their personal history.
+  - Automatic actions get **their own verb**, not a flag on the manual one, so they're filterable: `disk_cleaner.auto_cleaned` vs `disk_cleaner.cleaned`, `setting.auto_rebooted` vs `setting.reboot_requested`.
 
 ### `GET /admin/activity-log/filters`
 Distinct `type`/`action` values, for populating a frontend filter dropdown. Sourced from the known translation keys (`lang/activity.php`), not a `DISTINCT` query on actual log rows — so it's fully populated even on a fresh install with zero activity yet.
