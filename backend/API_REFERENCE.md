@@ -639,9 +639,25 @@ The schedule is a **DB profile** (single source of truth) run by the **Laravel s
 ### Settings
 Requires the `setting` permission (`view` to read, `manage` to change). A server-config hub of **groups**; no DB — values are read **live** and changes are written to **managed non-destructive drop-ins** (the distro's own config is never touched → migration-safe). Groups are detect-gated (unavailable ones, e.g. Redis when not installed, are omitted).
 
-**`GET /api/settings`** — all available groups + current values.
-- `{ settings: { general:{timezone,ntp,hostname}, swap:{enabled,path,size,size_human,used,used_human,free,free_human}, security:{port,permit_root_login,password_authentication}, updates:{security_updates_enabled,auto_reboot,reboot_time,reboot_required}, redis?:{maxmemory,maxmemory_policy,has_password} } }`.
+**`GET /api/settings`** — all available groups + current values, plus who last changed each.
+- `{ settings: {…}, last_changed: {…} }`.
+- `settings`: `general:{timezone,ntp,clock_synchronized,hostname}`, `swap:{enabled,path,size,size_human,used,used_human,free,free_human}`, `security:{port,permit_root_login,password_authentication,has_ssh_key}`, `updates:{security_updates_enabled,auto_reboot,reboot_time,reboot_required,updates_available,security_updates_available,lists_refreshed_at,unattended_last_run_at,unattended_last_result}`, `redis?:{maxmemory,maxmemory_policy,has_password,password_manageable,running,memory_used,memory_used_human}`.
 - `redis` omitted when redis-cli isn't installed. Passwords are never returned (`has_password` bool only).
+
+**Read-only facts on the groups** — none of these are writable; they exist so each section can show state rather than an unlabelled toggle.
+
+- **`updates.updates_available` / `security_updates_available`** (int|**null**) — from `apt-check`, the same source Ubuntu's MOTD uses (no apt lock, no network).
+- **`updates.lists_refreshed_at`** — when `apt-get update` last **succeeded**. From `/var/lib/apt/periodic/update-success-stamp`, not the mtime of `/var/lib/apt/lists`, which also moves on failed runs.
+- **`updates.unattended_last_run_at`** + **`unattended_last_result`** (`success｜failed｜null`) — parsed from the tail of the unattended-upgrades log, scoped to everything after the **last** start marker so an old error can't taint the current run. `unattended_last_result` is a **code, not a sentence** — the frontend owns the wording, as with runtime-install reasons.
+- ⚠️ **`null` ≠ `0` here, and the difference is load-bearing.** `0` means "nothing is waiting"; `null` means "we could not find out" (`update-notifier-common` absent, log unreadable, command failed). Render them differently — a failed check drawn as `0` recreates the exact silent failure these fields exist to expose.
+- **`security.has_ssh_key`** (bool) — whether any SSH key exists. This is *the same predicate* `PUT /api/settings/security` guards with, so use it to disable key-only login up front instead of accepting the choice and then returning `422`. One function, so the greyed-out control and the error can never disagree.
+- **`general.clock_synchronized`** (bool) — whether the clock has actually reached a time server, which is **not** the same as `ntp` (the daemon being enabled). Enabled-but-not-syncing is silent: cron fires late and log timestamps drift, with nothing reporting a fault.
+- **`redis.running`** (bool) + **`memory_used`** (bytes int|null) / **`memory_used_human`** — `running` comes from `PING`, so a `NOAUTH` reply still counts as up. The group is present whenever redis-cli is installed, so *installed but stopped* is a state you will see. Usage sits next to `maxmemory` because a limit alone tells the reader nothing.
+
+**`last_changed`** — `{ "<group>": { user: {id, username}|null, at, at_human } }`.
+- Keyed by group; **groups never changed are absent**, not null. `user` is null when the actor has since been deleted (the change still happened).
+- A sibling of `settings`, not a field inside each group: the group maps are live OS state and are echoed verbatim by every `PUT`, and an actor is neither.
+- Sourced from the existing `setting.updated` activity entries — nothing new is stored. `reboot_schedule` is found under its own verb (`setting.reboot_schedule_updated`), which carries no `group` property.
 
 **`PUT /api/settings/general`** (`manage`) — `timezone` (valid tz id), `hostname`, `ntp` (bool). Applies via `timedatectl`/`hostnamectl`.
 

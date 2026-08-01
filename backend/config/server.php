@@ -771,6 +771,30 @@ return [
 
     'reboot_required_file' => env('SERVER_REBOOT_REQUIRED', '/var/run/reboot-required'),
 
+    /*
+    | How many updates are waiting. This is the script the MOTD uses: it reads
+    | the apt cache directly, so it needs no lock, no network and no `apt-get
+    | update` — and it prints `updates;security` to **stderr**, not stdout.
+    |
+    | It ships in `update-notifier-common`, which a minimal install may not
+    | have. Absent, the counts read `null` — deliberately not `0`, which would
+    | claim the box is up to date on no evidence.
+    */
+    'apt_check' => env('SERVER_APT_CHECK', '/usr/lib/update-notifier/apt-check'),
+
+    /*
+    | Touched by APT::Periodic only when `apt-get update` *succeeded*, which is
+    | the question being asked. The mtime of /var/lib/apt/lists moves on failed
+    | runs too, so it would report a refresh that did not happen.
+    */
+    'apt_update_stamp' => env('SERVER_APT_UPDATE_STAMP', '/var/lib/apt/periodic/update-success-stamp'),
+
+    /*
+    | Its directory is root:adm 0750, so the panel user cannot open this
+    | directly — it is read through ServerOps (sudo tail), not File::get.
+    */
+    'unattended_upgrades_log' => env('SERVER_UNATTENDED_LOG', '/var/log/unattended-upgrades/unattended-upgrades.log'),
+
     'redis_cli' => env('SERVER_REDIS_CLI', '/usr/bin/redis-cli'),
 
     /*

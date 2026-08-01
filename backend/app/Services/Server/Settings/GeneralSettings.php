@@ -29,6 +29,11 @@ class GeneralSettings implements SettingGroup
         return [
             'timezone' => $this->timedatectl('Timezone') ?: 'Etc/UTC',
             'ntp' => $this->timedatectl('NTP') === 'yes',
+            // Whether the clock has actually reached a time server, which is a
+            // different question from whether the daemon is switched on.
+            // Enabled-but-not-syncing fails silently: cron fires late and every
+            // log timestamp is wrong, with nothing anywhere reporting a fault.
+            'clock_synchronized' => $this->timedatectl('NTPSynchronized') === 'yes',
             'hostname' => $this->hostname(),
         ];
     }

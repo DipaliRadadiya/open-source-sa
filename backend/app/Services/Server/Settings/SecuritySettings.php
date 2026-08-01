@@ -48,6 +48,12 @@ class SecuritySettings implements SettingGroup
             'port' => (int) ($effective['port'] ?? config('server.ssh_port', 22)),
             'permit_root_login' => $effective['permitrootlogin'] ?? 'prohibit-password',
             'password_authentication' => ($effective['passwordauthentication'] ?? 'yes') === 'yes',
+            // Deliberately the same predicate `apply()` guards with, not a
+            // second implementation of "is there a key". It lets the UI disable
+            // key-only login up front instead of accepting the choice and then
+            // refusing it — and because there is one function, the greyed-out
+            // control and the 422 can never disagree about why.
+            'has_ssh_key' => $this->hasSshKey(),
         ];
     }
 

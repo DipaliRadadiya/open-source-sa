@@ -350,7 +350,11 @@ install_packages() {
     export DEBIAN_FRONTEND=noninteractive
 
     run apt-get update -qq
-    run apt-get install -y software-properties-common curl git unzip ca-certificates gnupg
+    # update-notifier-common provides `apt-check`, which is how the panel counts
+    # pending and security updates. Without it the Settings page cannot tell the
+    # difference between "nothing waiting" and "could not look", so it reports
+    # neither. Cheap, and it is the same source Ubuntu's own MOTD uses.
+    run apt-get install -y software-properties-common curl git unzip ca-certificates gnupg update-notifier-common
 
     # The panel offers PHP versions by asking apt what it can install. Without
     # this repository that answer is "only the one Ubuntu ships", and the whole
@@ -449,6 +453,18 @@ create_user() {
     else
         run useradd --system --create-home --home-dir "/home/${APP_USER}" --shell /usr/sbin/nologin "$APP_USER"
         ok "user ${APP_USER}"
+    fi
+
+    # `adm` is Debian's read-the-logs group, and several of the logs the panel
+    # reports on are root:adm 0750 — /var/log/unattended-upgrades among them.
+    # Membership is the intended way in, and a far narrower grant than adding
+    # another root command to the sudoers list: it is read access to logs, not
+    # the ability to run anything.
+    if id -nG "$APP_USER" | tr ' ' '\n' | grep -qx adm; then
+        skip "${APP_USER} is in the adm group"
+    else
+        run usermod -aG adm "$APP_USER"
+        ok "${APP_USER} added to the adm group (log read access)"
     fi
 }
 

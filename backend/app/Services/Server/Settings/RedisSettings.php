@@ -87,6 +87,7 @@ class RedisSettings implements SettingGroup
             // cannot record the new one, the control should be disabled rather
             // than offered and then refused.
             'password_manageable' => $this->env->writable(),
+            ...$this->liveState(),
         ];
     }
 
@@ -235,6 +236,52 @@ class RedisSettings implements SettingGroup
         $lines = preg_split('/\r?\n/', trim($result->output())) ?: [];
 
         return isset($lines[1]) ? trim($lines[1]) : '';
+    }
+
+    /**
+     * Whether Redis is actually up, and how much memory it is using.
+     *
+     * `available()` only says redis-cli is installed, so "installed but not
+     * running" is a state this group can be in and should report rather than
+     * render as an empty form.
+     *
+     * PING rather than `systemctl is-active`: a NOAUTH reply still proves a
+     * server answered, and it asks the process itself instead of asking systemd
+     * about a unit that may not be the one serving this socket.
+     *
+     * Usage is reported next to the limit because a limit on its own tells the
+     * reader nothing — 512 MB is either roomy or nearly full, and only the pair
+     * says which.
+     *
+     * @return array<string, mixed>
+     */
+    private function liveState(): array
+    {
+        $ping = $this->cli(['ping']);
+        $running = $ping->ok || str_contains($ping->output().$ping->errorOutput(), 'NOAUTH');
+
+        if (! $running) {
+            return ['running' => false, 'memory_used' => null, 'memory_used_human' => null];
+        }
+
+        $info = $this->cli(['info', 'memory']);
+
+        // used_memory is the byte count; used_memory_human is Redis's own
+        // formatting of the same number, taken rather than reimplemented so the
+        // panel and redis-cli never disagree by a rounding step.
+        $used = null;
+        $human = null;
+
+        foreach (preg_split('/\r?\n/', trim($info->output())) ?: [] as $line) {
+            if (preg_match('/^used_memory:(\d+)/', trim($line), $bytes) === 1) {
+                $used = (int) $bytes[1];
+            }
+            if (preg_match('/^used_memory_human:(.+)$/', trim($line), $pretty) === 1) {
+                $human = trim($pretty[1]);
+            }
+        }
+
+        return ['running' => true, 'memory_used' => $used, 'memory_used_human' => $human];
     }
 
     private function configGet(string $key): string
