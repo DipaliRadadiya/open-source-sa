@@ -843,7 +843,14 @@ The panel's own account is also protected from deletion through **Database Users
   - **`status`**: `queued` → `running` → `completed` | `failed`. Same polling shape as the engine installer.
   - On failure: `reason` is a stable code (`dump_failed`, `database_missing`, `worker`), `message` is that code worded in the **viewer's** locale, `reference` correlates with the server-ops log.
   - **`available`** is `false` when the file has since been deleted from disk by hand — `download_url` is null then too, rather than offering a link that 404s.
-- **`GET /api/databases/exports/{file}`** — streams a previously-created export for download. Filename strict-validated + resolved inside the exports dir (no traversal).
+- **`GET /api/databases/exports`** (`view`) — every export, newest first. `{ exports: [ …same shape as above… ] }`.
+  - **In-flight rows are included**, not filtered out — a `queued`/`running` export is exactly what someone who just pressed the button is looking for.
+  - Rows survive their database being deleted (`database` is a copied name, `database_id` goes null), so a dump of something since-dropped is still listed and downloadable.
+- **`GET /api/databases/exports/{file}`** (`view`) — streams a previously-created export for download. Filename strict-validated + resolved inside the exports dir (no traversal).
+- **`DELETE /api/databases/exports/{id}`** (**`manage`**) — deletes the row *and* the file. `204`. Activity `database.export_deleted`.
+  - **Keyed by id, not filename** (the frontend asked for `{file}`): a `queued` or `failed` export has no file, and by filename those rows would sit in the list permanently with nothing able to clear them.
+  - `manage` rather than `view` because this destroys the only copy of that data; listing stays on `view`.
+  - ⚠️ **Not yet automatic** — nothing prunes old exports on a schedule, so they still accumulate until someone deletes them. Retention is a separate piece of work.
 
 *(Remaining P2: **import/restore** — deferred (writes data → will ship with existing-target-only + backup-before + confirm). P3: engine install-on-demand, app auto-DB + env-wiring, rename-database, phpMyAdmin signon SSO.)*
 

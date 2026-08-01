@@ -52,6 +52,7 @@ return [
     'database.optimized' => ':name डेटाबेस ऑप्टिमाइज़ किया',
     'database.repaired' => ':name डेटाबेस मरम्मत किया',
     'database.exported' => ':name डेटाबेस एक्सपोर्ट किया',
+    'database.export_deleted' => ':name का एक निर्यात हटाया',
     'role.created' => 'भूमिका :name बनाई',
     'role.updated' => 'भूमिका :name अपडेट की',
     'role.deleted' => 'भूमिका :name हटाई',

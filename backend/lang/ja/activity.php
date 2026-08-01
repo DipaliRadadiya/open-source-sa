@@ -52,6 +52,7 @@ return [
     'database.optimized' => ':name データベースを最適化しました',
     'database.repaired' => ':name データベースを修復しました',
     'database.exported' => ':name データベースをエクスポートしました',
+    'database.export_deleted' => ':name のエクスポートを削除しました',
     'role.created' => 'ロール :name を作成しました',
     'role.updated' => 'ロール :name を更新しました',
     'role.deleted' => 'ロール :name を削除しました',

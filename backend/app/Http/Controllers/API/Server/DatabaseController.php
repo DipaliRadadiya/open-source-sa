@@ -206,4 +206,55 @@ class DatabaseController extends Controller
 
         return response()->download($path);
     }
+
+    /**
+     * Every export, newest first.
+     *
+     * Without this a dump could only be downloaded by someone who already knew
+     * its generated filename — so leaving the page lost the file for good, even
+     * though it was sitting on disk the whole time.
+     *
+     * In-flight rows are included rather than filtered out: a queued or running
+     * export is exactly what someone who has just pressed the button is looking
+     * for, and hiding it until it finishes is how a page ends up appearing to
+     * have done nothing.
+     */
+    public function exports(): JsonResponse
+    {
+        $exports = DatabaseExport::query()->with('user:id,username')->latest('id')->get();
+
+        return response()->json([
+            'exports' => DatabaseExportResource::collection($exports)->resolve(),
+        ]);
+    }
+
+    /**
+     * Delete an export — the row and the file it points at.
+     *
+     * Keyed by id rather than filename so that queued and failed rows, which
+     * have no file, can still be cleared out. Otherwise they would sit in the
+     * list permanently with nothing able to remove them.
+     */
+    public function destroyExport(DatabaseExport $export, ActivityLogger $log): JsonResponse
+    {
+        // basename() as well as the column, because this path is built from
+        // stored data and a file value is still a file value however it got
+        // there — one guard at the point of deletion, not a trust assumption.
+        if ($export->file !== null) {
+            $path = rtrim((string) config('server.databases.export_dir'), '/').'/'.basename($export->file);
+
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
+
+        $log->log('database.export_deleted', null, [
+            'name' => $export->database_name,
+            'file' => (string) $export->file,
+        ]);
+
+        $export->delete();
+
+        return response()->json(null, 204);
+    }
 }

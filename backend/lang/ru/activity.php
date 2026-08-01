@@ -52,6 +52,7 @@ return [
     'database.optimized' => 'Оптимизировал базу данных :name',
     'database.repaired' => 'Восстановил базу данных :name',
     'database.exported' => 'Экспортировал базу данных :name',
+    'database.export_deleted' => 'Удалил экспорт базы :name',
     'role.created' => 'Создана роль :name',
     'role.updated' => 'Обновлена роль :name',
     'role.deleted' => 'Удалена роль :name',

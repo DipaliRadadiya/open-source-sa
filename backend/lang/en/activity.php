@@ -52,6 +52,7 @@ return [
     'database.optimized' => 'Optimized database :name',
     'database.repaired' => 'Repaired database :name',
     'database.exported' => 'Exported database :name',
+    'database.export_deleted' => 'Deleted an export of :name',
     'role.created' => 'Created role :name',
     'role.updated' => 'Updated role :name',
     'role.deleted' => 'Deleted role :name',

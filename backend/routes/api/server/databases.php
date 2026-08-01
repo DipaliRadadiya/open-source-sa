@@ -28,9 +28,19 @@ Route::delete('/databases/processes/{id}', [DatabaseMonitorController::class, 'k
 Route::get('/databases/status/{engine}', [DatabaseMonitorController::class, 'status'])->middleware('permission:database');
 Route::get('/databases/metrics/history', [DatabaseMonitorController::class, 'history'])->middleware('permission:database');
 
-// Export download (static; strict filename, resolved inside the exports dir).
+// Exports (static; before the {database} binding).
+Route::get('/databases/exports', [DatabaseController::class, 'exports'])->middleware('permission:database');
+
+// Export download (strict filename, resolved inside the exports dir).
 Route::get('/databases/exports/{file}', [DatabaseController::class, 'download'])
     ->where('file', '[A-Za-z0-9._-]+')->middleware('permission:database');
+
+// Deleting a dump destroys the only copy of that data, so it needs `manage`
+// while merely reading the list does not. Keyed by id, not filename: a queued
+// or failed export has no file and would otherwise be undeletable — visible in
+// the list forever with no way to clear it.
+Route::delete('/databases/exports/{export}', [DatabaseController::class, 'destroyExport'])
+    ->where('export', '[0-9]+')->middleware('permission:database,manage');
 
 // Databases.
 Route::get('/databases', [DatabaseController::class, 'index'])->middleware('permission:database');

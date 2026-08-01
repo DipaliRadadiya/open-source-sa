@@ -419,3 +419,91 @@ it('404s a missing or traversal export filename', function () {
     test()->withHeaders(dbAuth())->getJson('/api/databases/exports/nope-does-not-exist.sql')->assertNotFound();
     test()->withHeaders(dbAuth())->getJson('/api/databases/exports/..%2f..%2fetc%2fpasswd')->assertNotFound();
 });
+
+it('lists exports newest first, including ones still running', function () {
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    DatabaseExport::create([
+        'database_id' => $db->id, 'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Completed, 'file' => 'old.sql', 'size_bytes' => 2048,
+    ]);
+    DatabaseExport::create([
+        'database_id' => $db->id, 'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Running,
+    ]);
+
+    $res = test()->withHeaders(dbAuth())->getJson('/api/databases/exports')->assertOk();
+
+    // The in-flight one is what someone who just pressed the button is looking
+    // for; hiding it until it finishes is how a page looks like it did nothing.
+    expect($res->json('exports.0.status'))->toBe('running')
+        ->and($res->json('exports.1.status'))->toBe('completed')
+        ->and($res->json('exports.1.database'))->toBe('shop')
+        ->and($res->json('exports.1.size_human'))->toBe('2.0 KB');
+});
+
+it('does not offer a download for an export whose file has been removed', function () {
+    config(['server.databases.export_dir' => sys_get_temp_dir().'/sv-oss-gone-'.uniqid()]);
+
+    DatabaseExport::create([
+        'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Completed, 'file' => 'deleted-by-hand.sql', 'size_bytes' => 10,
+    ]);
+
+    $res = test()->withHeaders(dbAuth())->getJson('/api/databases/exports')->assertOk();
+
+    // A link that 404s is worse than saying the file has gone.
+    expect($res->json('exports.0.available'))->toBeFalse()
+        ->and($res->json('exports.0.download_url'))->toBeNull();
+});
+
+it('deletes an export and the file it points at', function () {
+    $dir = sys_get_temp_dir().'/sv-oss-del-'.uniqid();
+    File::ensureDirectoryExists($dir);
+    File::put($dir.'/dump.sql', 'x');
+    config(['server.databases.export_dir' => $dir]);
+
+    $export = DatabaseExport::create([
+        'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Completed, 'file' => 'dump.sql', 'size_bytes' => 1,
+    ]);
+
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/exports/{$export->id}")->assertNoContent();
+
+    expect(File::exists($dir.'/dump.sql'))->toBeFalse()
+        ->and(DatabaseExport::find($export->id))->toBeNull();
+    test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'export_deleted']);
+
+    File::deleteDirectory($dir);
+});
+
+it('deletes a failed export that never produced a file', function () {
+    $export = DatabaseExport::create([
+        'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Failed, 'reason' => 'dump_failed',
+    ]);
+
+    // Keyed by id precisely so these are removable — by filename they would sit
+    // in the list forever with nothing able to clear them.
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/exports/{$export->id}")->assertNoContent();
+
+    expect(DatabaseExport::find($export->id))->toBeNull();
+});
+
+it('refuses to delete an export without manage permission', function () {
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'database', view: true, manage: false);
+    $token = $viewer->createToken('t')->plainTextToken;
+
+    $export = DatabaseExport::create([
+        'database_name' => 'shop', 'engine' => 'mysql', 'status' => ExportStatus::Completed,
+    ]);
+
+    // Deleting a dump destroys the only copy of that data; reading the list
+    // does not.
+    test()->withHeader('Authorization', "Bearer {$token}")
+        ->deleteJson("/api/databases/exports/{$export->id}")->assertForbidden();
+
+    test()->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/databases/exports')->assertOk();
+});
