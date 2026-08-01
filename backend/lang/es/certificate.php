@@ -21,6 +21,7 @@ return [
         'certbot_missing' => 'certbot no está instalado en este servidor.',
         'no_certifiable_domains' => 'Ningún dominio de este sitio está listo para un certificado. Verifique primero el DNS.',
         'self_sign_failed' => 'No se pudo generar el certificado autofirmado.',
+        'file_missing' => 'Falta el archivo del certificado en este servidor. Vuelva a emitirlo.',
         'unknown' => 'No se pudo emitir el certificado.',
     ],
 

@@ -21,6 +21,7 @@ return [
         'certbot_missing' => 'このサーバーに certbot がインストールされていません。',
         'no_certifiable_domains' => 'このサイトに証明書を発行できるドメインがありません。まず DNS を確認してください。',
         'self_sign_failed' => '自己署名証明書を生成できませんでした。',
+        'file_missing' => 'このサーバーに証明書ファイルがありません。再発行してください。',
         'unknown' => '証明書を発行できませんでした。',
     ],
 

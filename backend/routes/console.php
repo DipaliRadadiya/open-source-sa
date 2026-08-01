@@ -34,3 +34,10 @@ Schedule::command('disk-cleaner:run')->everyMinute()->withoutOverlapping();
 // that the API never makes a network call inside a request. A box with no
 // egress simply keeps an empty cache and shows no badges, which is honest.
 Schedule::command('runtimes:refresh-lifecycle')->daily()->withoutOverlapping();
+
+// Renewal happens outside the panel — certbot's own timer swaps the file every
+// sixty days and tells nothing. Without this the SSL screen counts down from
+// the date captured at issuance and eventually reports "expired" on a site
+// whose certificate renewed correctly weeks ago. Daily, because the number it
+// maintains is measured in days.
+Schedule::command('certificates:refresh-expiry')->daily()->withoutOverlapping();
