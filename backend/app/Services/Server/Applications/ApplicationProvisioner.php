@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Actions\Server\Application\AutoIssueCertificate;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
@@ -28,6 +29,7 @@ class ApplicationProvisioner
         private InstallerManager $installers,
         private ProcessSupervisor $supervisor,
         private ProvisionProgress $progress,
+        private AutoIssueCertificate $autoCertificate,
     ) {}
 
     /**
@@ -124,6 +126,14 @@ class ApplicationProvisioner
         // `systemctl start` succeeds, the process dies immediately, and
         // provisioning fails on a site that is otherwise fine.
         $this->startProcess($application, $documentRoot);
+
+        // Last, and unable to fail the provision. The site is created, serving
+        // and correct by this point; a DNS timeout must not turn that into a
+        // failed application over a certificate nobody asked for. Declines
+        // silently when the domain is not pointed here yet, which for a new
+        // domain is most of the time — writing a failed certificate there
+        // would make every new site look broken on its first screen.
+        $this->autoCertificate->attempt($application->fresh(['domains', 'certificate']));
 
         return $this->progress->steps();
     }

@@ -1238,6 +1238,20 @@ The check also never fetches a third party: if the name resolves somewhere other
 - **Issuance needs `dns_verified: true` on the domain** (see the domains section). Requesting without it is refused with `422`, deliberately: Let's Encrypt allows five failed authorisations per hostname per hour, and guessing locks the user out of the fix for an hour.
 - **`self_signed` is the exception to that rule** — an internal or staging hostname that could never be validated publicly is the only reason it exists. Every browser will warn about it; say so in the UI rather than letting the user discover it.
 
+#### Automatic issuance on site creation
+
+When a site finishes provisioning, the panel runs the same dry run once and — **only if it passes** — issues a certificate on its own. No button, no request from the frontend.
+
+**A decline writes nothing.** No certificate row, no activity entry, `certificate: null`. This is deliberate and the frontend should rely on it: for a genuinely new domain the DNS record almost never points at the server yet, so most sites will decline. If that wrote a `failed` certificate, every new site would open on a red SSL error about something the user has not set up yet. The SSL screen simply shows its ordinary install button.
+
+Where it does fire is the case where DNS was pointed in advance — a site migrated from another server, or a record set before the site was created. For those, HTTPS is already there when the user first opens the site.
+
+- **Never for test domains** (`*.nip.io`): every certificate issued for nip.io anywhere shares one weekly limit, and spending it automatically on every site created on every install of this panel would be antisocial.
+- **Never over an existing certificate.** Provisioning can be re-run; reissuing over a working one spends rate limit to achieve nothing.
+- **Cannot fail the provision.** By the time it runs the site is created, serving and correct — a DNS timeout must not turn that into a failed application.
+- Operators can turn it off with `SV_AUTO_ISSUE_CERTIFICATES=false` (a box with no public DNS).
+- **There is no background retry.** If it declines, nothing tries again on its own; the user installs from the panel when they are ready, and the button now says precisely why if it is still not possible.
+
 #### How this works on the server, and why
 
 - **certbot runs in `certonly --webroot`, never the `--nginx` / `--apache` plugins.** The plugins work by editing the vhost — the file this panel regenerates on every domain change. Their edits would be silently wiped and HTTPS would disappear with nothing to explain it. It is also the only mode that works on **OpenLiteSpeed**, which has no certbot plugin at all: one code path, three web servers.

@@ -316,6 +316,14 @@ return [
         // thinks failed.
         'timeout' => 180,
 
+        // Try for a certificate on its own once a site is provisioned, when
+        // the domain already points here — a migrated site, or a record set in
+        // advance. Off makes the panel wait to be asked, which is the right
+        // choice on a box with no public DNS. It declines silently either way:
+        // a decline writes nothing, so a new site never opens on a red error
+        // about SSL the user has not set up yet.
+        'auto_issue' => env('SV_AUTO_ISSUE_CERTIFICATES', true),
+
         // Warn this far out. Let's Encrypt certificates last 90 days and renew
         // at 30; a warning any earlier is noise, any later is not a warning.
         'expiry_warning_days' => 14,
