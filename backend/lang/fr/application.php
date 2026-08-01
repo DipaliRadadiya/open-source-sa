@@ -1,6 +1,14 @@
 <?php
 
 return [
+    // What a name attached to an application does. Shown as the badge
+    // beside each domain, so it has to read as a noun, not a sentence.
+    'domain_type' => [
+        'primary' => 'Principal',
+        'alias' => 'Alias',
+        'redirect' => 'Redirection',
+    ],
+
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Créateur de blogs et de sites web'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Gérez vos bases de données dans le navigateur'],

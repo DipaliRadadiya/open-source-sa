@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'primary_domain_not_removable' => 'Le domaine principal ne peut pas être supprimé. Définissez d\'abord un autre domaine comme principal.',
     'unsupported_web_server' => 'Le panneau ne peut pas écrire la configuration du site pour :web_server.',
     'no_web_server' => 'aucun serveur web détecté',
     'provision_failed' => 'La configuration du site a échoué à l\'étape « :step ».',

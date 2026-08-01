@@ -3,6 +3,7 @@
 namespace App\Services\Server\WebServers;
 
 use App\Contracts\WebServerDriver;
+use App\Enums\DomainType;
 use App\Models\Application;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
@@ -67,6 +68,17 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         return [
             'application' => $application,
             'domain' => $application->domain,
+            // Every name the site answers to, primary first. Templates used to
+            // hardcode `www.{domain}` alongside the primary; that guess is now
+            // a row in application_domains, backfilled for existing sites so
+            // what they serve is unchanged.
+            'serverNames' => $application->serverNames(),
+            // Redirects get their own server block — they serve nothing, they
+            // send a 301 somewhere else, and mixing them into the main block
+            // would serve the same content under both names instead.
+            'redirects' => $application->domains
+                ->filter(fn ($domain) => $domain->type === DomainType::Redirect)
+                ->values(),
             'documentRoot' => $documentRoot,
             'phpVersion' => $application->php_version ?: config('server.default_php_version'),
             // The OS account the site runs as. nginx and Apache reach PHP

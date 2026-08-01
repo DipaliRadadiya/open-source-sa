@@ -1123,6 +1123,55 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   - **PHP contributes no rows to the Services screen.** LSPHP is spawned by the web server, so there is no `php8.4-fpm` unit to start or stop; the `service` field on a PHP version is `null`. The OpenLiteSpeed service itself (`lshttpd`) is listed as normal.
 - ⚠️ **OpenLiteSpeed support has not yet run on a real OLS server.** The logic is tested; the paths and directives come from LiteSpeed's documentation. Expect the first live box to need corrections in `config/server.php`.
 
+### Application domains (App sidebar → Domains)
+
+Requires the **`app_domain`** permission (`view` to read, `manage` to mutate) — an
+*application*-level permission, not the server-level `application`. The two are
+deliberately separate: sharing one permission across that line would turn "can
+manage this one site's domains" into "can manage every application".
+
+A site is no longer one hostname. Every name it answers to is a row, and every
+row has a **type** that says what that name does:
+
+| type | what it does |
+|---|---|
+| `primary` | The canonical name. Exactly one per application. The vhost file and both log files are named after it. |
+| `alias` | Serves the same content under a second name. |
+| `redirect` | Serves nothing — sends a `301` (or `302`/`307`/`308`) to `redirect_to`. |
+
+**The alias/redirect distinction is not cosmetic.** An alias makes search engines
+index the same site twice and split the ranking between the two names; a redirect
+keeps the authority on one. Say so in the UI — most users pick "alias" meaning
+"redirect".
+
+**`GET /api/applications/{id}/domains`** — primary first, then alphabetical.
+- Response: `{ domains: [{id, domain, type, type_title, redirect_to, redirect_status, is_test, dns_verified, dns_verified_at, dns_verified_at_human, dns_resolved_ip, behind_proxy, certifiable, created_at, created_at_human}] }`
+
+**`POST /api/applications/{id}/domains`** → `201 {domain: {...}}`
+- Body: `domain` (required), `type` (`alias|redirect`, default `alias`), `redirect_to` (required when `type=redirect`), `redirect_status` (`301|302|307|308`, default `301`).
+- **`primary` is not accepted here** — promoting a name is its own endpoint, because it renames three files.
+- `domain` is unique **across every application on the server**, not just this one. Two sites claiming one hostname is otherwise resolved by whichever vhost the web server reads first.
+- The charset is strict (lowercase hostname labels only). This value ends up in a filename and inside a config directive, so anything that could introduce a path separator or break out of the directive is refused here — a `422` on `domain`, not an escaped string later.
+- Adding a domain **rewrites and reloads the vhost**. If the new config fails its test, **the previous one is put back** rather than removed — a mistyped hostname must not take a live site down.
+
+**`POST /api/applications/{id}/domains/{domain}/verify`** → `{domain: {...}}`
+- Re-checks DNS. Its own button because propagation is something the user waits on: they add a record at their registrar and come back.
+- **`dns_verified: false` is the gate on offering a certificate.** Let's Encrypt allows five authorisation failures per hostname per hour, so guessing is expensive — check first, then offer.
+- **`behind_proxy: true`** means the name resolves to Cloudflare, not to this server. DNS is correct *and* HTTP validation will still fail, because the proxy answers first. This is the single most common support question this feature will generate — surface it as its own message ("pause the proxy, or use DNS validation"), not as a generic failure.
+
+**`POST /api/applications/{id}/domains/{domain}/primary`** → `{domains: [...]}`
+- Promotes a name to canonical. The name it replaces stays attached as an alias, so the site keeps answering on it.
+- This **renames the vhost and both log files** and removes the configuration under the old name.
+- ⚠️ **It does not rewrite URLs stored inside the application.** A WordPress site keeps its old `siteurl` in the database and will redirect straight back. Warn before confirming.
+
+**`DELETE /api/applications/{id}/domains/{domain}`** → `204`
+- The **primary is refused** (`422` on `domain`): removing it would leave the site with no canonical name, no vhost filename and no log paths. Promote another name first.
+
+- **`certifiable: false`** means this name can never go on a certificate. Test domains
+  (`*.nip.io`) are the case: nip.io is not on the Public Suffix List, so every
+  certificate issued for it *anywhere on the internet* shares one weekly limit.
+  Hide the SSL action rather than letting it fail.
+
 ### Git integrations (Integrations → Git)
 
 Requires the `git` permission (`view` to read, `manage` to mutate). Connected git provider accounts, managed **centrally and before any application exists** — the app-create wizard later just picks a connected account → repo → branch. This feature is panel-only: it stores a credential and reads repositories/branches. No cloning, no provisioning, no filesystem writes (those land with Applications).

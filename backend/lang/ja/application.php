@@ -1,6 +1,14 @@
 <?php
 
 return [
+    // What a name attached to an application does. Shown as the badge
+    // beside each domain, so it has to read as a noun, not a sentence.
+    'domain_type' => [
+        'primary' => 'プライマリ',
+        'alias' => 'エイリアス',
+        'redirect' => 'リダイレクト',
+    ],
+
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ブログ・ウェブサイト作成'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ブラウザーからデータベースを管理'],

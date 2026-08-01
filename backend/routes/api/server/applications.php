@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Server\ApplicationController;
+use App\Http\Controllers\API\Server\ApplicationDomainController;
 use App\Http\Controllers\API\Server\ApplicationWebhookController;
 use App\Http\Controllers\API\Server\ServerCapabilityController;
 use App\Http\Controllers\API\Server\SiteTypeController;
@@ -35,3 +36,18 @@ Route::get('/webhook-providers', [ApplicationWebhookController::class, 'provider
 Route::put('/applications/{application}/webhook', [ApplicationWebhookController::class, 'update'])
     ->middleware('permission:application,manage');
 Route::delete('/applications/{application}', [ApplicationController::class, 'destroy'])->middleware('permission:application,manage');
+
+// Domains. Gated by `app_domain` — an application-level permission, not the
+// server-level `application`, because these are two different sidebars and
+// sharing a permission across that line is how a narrow grant turns into a
+// wide one.
+Route::get('/applications/{application}/domains', [ApplicationDomainController::class, 'index'])
+    ->middleware('permission:app_domain');
+Route::post('/applications/{application}/domains', [ApplicationDomainController::class, 'store'])
+    ->middleware('permission:app_domain,manage');
+Route::post('/applications/{application}/domains/{domain}/verify', [ApplicationDomainController::class, 'verify'])
+    ->middleware('permission:app_domain');
+Route::post('/applications/{application}/domains/{domain}/primary', [ApplicationDomainController::class, 'makePrimary'])
+    ->middleware('permission:app_domain,manage');
+Route::delete('/applications/{application}/domains/{domain}', [ApplicationDomainController::class, 'destroy'])
+    ->middleware('permission:app_domain,manage');

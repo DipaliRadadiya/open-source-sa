@@ -254,6 +254,26 @@ return [
         'memory_max' => env('SERVER_APP_MEMORY_MAX', '512M'),
     ],
 
+    /*
+    | Cloudflare's published address ranges.
+    |
+    | Held here rather than fetched. A domain pointing at Cloudflare resolves
+    | perfectly well but does not reach this server, so HTTP validation fails
+    | for a reason no error message mentions — it is the most common SSL
+    | support question on panels of this kind. Recognising the address lets the
+    | panel say so before anyone spends a Let's Encrypt attempt on it.
+    |
+    | A network call in the middle of a form submission is a worse failure than
+    | a list that is a few months stale; these change rarely. Current list:
+    | https://www.cloudflare.com/ips-v4
+    */
+    'cloudflare_ranges' => [
+        '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+        '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+        '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+        '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+    ],
+
     'installer_work_dir' => env('SERVER_INSTALLER_WORK_DIR', sys_get_temp_dir()),
     'installer_timeout' => (int) env('SERVER_INSTALLER_TIMEOUT', 300),
 

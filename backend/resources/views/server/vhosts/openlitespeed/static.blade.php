@@ -1,7 +1,9 @@
 {{-- Managed by the panel. Manual edits are overwritten on the next deploy. --}}
 docRoot                   {{ $documentRoot }}
-vhDomain                  {{ $domain }}
-vhAliases                 www.{{ $domain }}
+vhDomain                  {{ $serverNames[0] }}
+@if (count($serverNames) > 1 || $redirects->isNotEmpty())
+vhAliases                 {{ implode(', ', array_merge(array_slice($serverNames, 1), $redirects->pluck('domain')->all())) }}
+@endif
 enableGzip                1
 
 errorlog $VH_ROOT/logs/error.log {
@@ -30,3 +32,16 @@ index {
 context exp:^/\.(git|svn|hg|bzr|env) {
   allowBrowse             0
 }
+
+{{-- A rewrite block only when there is a redirect to serve. OLS routes these
+     names here as aliases, so they must be sent on explicitly or they would
+     serve the site under a second name. --}}
+@if ($redirects->isNotEmpty())
+rewrite {
+  enable                  1
+@foreach ($redirects as $redirect)
+  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
+  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: 'https://'.$domain }}/$1 [R={{ $redirect->redirect_status }},L]
+@endforeach
+}
+@endif

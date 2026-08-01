@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'primary_domain_not_removable' => 'प्राथमिक डोमेन हटाया नहीं जा सकता। पहले किसी अन्य डोमेन को प्राथमिक बनाएं।',
     'unsupported_web_server' => ':web_server के लिए पैनल साइट कॉन्फ़िग नहीं लिख सकता।',
     'no_web_server' => 'कोई वेब सर्वर नहीं मिला',
     'provision_failed' => 'साइट सेटअप ":step" चरण पर विफल रहा।',

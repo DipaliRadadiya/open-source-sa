@@ -1,7 +1,9 @@
 {{-- Managed by the panel. Manual edits are overwritten on the next deploy. --}}
 docRoot                   {{ $documentRoot }}
-vhDomain                  {{ $domain }}
-vhAliases                 www.{{ $domain }}
+vhDomain                  {{ $serverNames[0] }}
+@if (count($serverNames) > 1 || $redirects->isNotEmpty())
+vhAliases                 {{ implode(', ', array_merge(array_slice($serverNames, 1), $redirects->pluck('domain')->all())) }}
+@endif
 enableGzip                1
 
 errorlog $VH_ROOT/logs/error.log {
@@ -83,6 +85,13 @@ rewrite {
        .htaccess a user drops in should not silently start costing restarts. --}}
   autoLoadHtaccess        0
 @endif
+{{-- Redirect names first, before the front controller sees them: OLS routes
+     them here as aliases, so without these they would serve the site instead
+     of sending a 301. --}}
+@foreach ($redirects as $redirect)
+  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
+  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: 'https://'.$domain }}/$1 [R={{ $redirect->redirect_status }},L]
+@endforeach
   RewriteRule ^/index\.php$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

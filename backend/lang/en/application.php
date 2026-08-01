@@ -6,6 +6,14 @@
  */
 
 return [
+    // What a name attached to an application does. Shown as the badge
+    // beside each domain, so it has to read as a noun, not a sentence.
+    'domain_type' => [
+        'primary' => 'Primary',
+        'alias' => 'Alias',
+        'redirect' => 'Redirect',
+    ],
+
     'types' => [
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Blog and website builder'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Manage your databases in the browser'],

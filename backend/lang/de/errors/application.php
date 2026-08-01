@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'primary_domain_not_removable' => 'Die primäre Domain kann nicht entfernt werden. Machen Sie zuerst eine andere Domain zur primären.',
     'unsupported_web_server' => 'Das Panel kann für :web_server keine Website-Konfiguration schreiben.',
     'no_web_server' => 'kein Webserver erkannt',
     'provision_failed' => 'Die Einrichtung der Website ist im Schritt „:step" fehlgeschlagen.',
