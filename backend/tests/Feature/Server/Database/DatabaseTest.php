@@ -547,3 +547,58 @@ it('leaves the last known size alone when the engine cannot be reached', functio
     // used to give.
     expect($db->refresh()->size_bytes)->toBe(4096);
 });
+
+// ---- installed vs running ----
+
+it('reports an engine that answers as both installed and running', function () {
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->getJson('/api/databases/engines')->assertOk()
+        ->assertJsonPath('engines.0.running', true)
+        ->assertJsonPath('engines.0.installed', true);
+});
+
+it('tells a stopped engine apart from one that was never installed', function () {
+    Process::fake(function ($process) {
+        $bin = $process->command[0] ?? '';
+
+        // The server is down, so nothing answers a query...
+        if (in_array($bin, ['mysql', 'mariadb', 'mongosh'], true)) {
+            return Process::result(exitCode: 1, errorOutput: "Can't connect to local server");
+        }
+        // ...but the package is still on the box.
+        if ($bin === 'dpkg-query') {
+            return Process::result(output: 'install ok installed');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $res = test()->withHeaders(dbAuth())->getJson('/api/databases/engines')->assertOk();
+
+    // Both of these are `running: false`. Without `installed` the UI cannot
+    // tell "start the service" from "install it first".
+    expect($res->json('engines.0.running'))->toBeFalse()
+        ->and($res->json('engines.0.installed'))->toBeTrue()
+        ->and($res->json('engines.0.version'))->toBeNull();
+});
+
+it('reports an engine that is neither running nor present as not installed', function () {
+    Process::fake(function ($process) {
+        $bin = $process->command[0] ?? '';
+
+        if ($bin === 'dpkg-query') {
+            return Process::result(exitCode: 1, errorOutput: 'no packages found');
+        }
+        if ($bin === 'which') {
+            return Process::result(exitCode: 1);
+        }
+
+        return Process::result(exitCode: 1, errorOutput: 'not found');
+    });
+
+    $res = test()->withHeaders(dbAuth())->getJson('/api/databases/engines')->assertOk();
+
+    expect($res->json('engines.0.running'))->toBeFalse()
+        ->and($res->json('engines.0.installed'))->toBeFalse();
+});

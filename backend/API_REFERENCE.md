@@ -787,7 +787,19 @@ Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics ar
 ### Databases (P1)
 Requires the `database` permission (`view` to read, `manage` to mutate). **3 engines** — `mysql | mariadb | mongodb` — via a `DatabaseEngine` strategy (SqlEngine covers mysql+mariadb, MongoEngine its own). Every op runs locally through the engine client with the admin creds in a 0600 auth file + statements over stdin (never a password on argv). A **DB user belongs to exactly one database** (nested resource). Identifiers are strict-regex validated (DDL can't be parameterised). Passwords are encrypted at rest but returned so you can build the connection string. `500 {message, reference}` on an engine failure.
 
-**`GET /api/databases/engines`** — capability list: `{ engines: [{engine, driver, running, version, charsets, installable, install_status, install_reason, install_message}] }` (`running` = reachable with the configured connection).
+**`GET /api/databases/engines`** — capability list: `{ engines: [{engine, driver, running, version, installed, charsets, installable, install_status, install_reason, install_message}] }`.
+
+- **`running`** = answered a live `SELECT VERSION()` just now. **`version`** is that answer, so the two can never disagree — **`running: false` with a non-null `version` cannot occur.**
+- **`installed`** = present on the server, whether or not it is up. This is the field that separates the two states you actually need different screens for:
+
+| `installed` | `running` | Means | Tell the user |
+|---|---|---|---|
+| `false` | `false` | not on the server | install it |
+| `true` | `false` | present but not answering | **start the service**, or check the connection settings |
+| `true` | `true` | working | — |
+
+- Detected from the package manager (`dpkg-query`) when the engine has an installer; MongoDB has none, so it falls back to the client binary — weaker evidence, since a client can exist without a server.
+- **`installable`** is a different question again: whether the *panel* can install it for you. MongoDB is `installable: false` because it needs its own apt repository.
 
 - **`installable`** — whether the panel can put this engine on the server itself. `true` for `mariadb` and `mysql`; **`false` for `mongodb`**, which is operable but needs its own apt repository, so don't render an install button for it.
 - **`install_status`** is only ever `installing`, `failed`, or `null` — never `installed`. A finished install **deletes its progress row** so that detection (`running` / `version`) stays the single answer to "is it there", and the two can't drift. `null` + `running: false` means "not installed, nothing in flight".

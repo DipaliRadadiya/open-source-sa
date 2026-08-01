@@ -75,9 +75,53 @@ class DatabaseManager
                 'driver' => $this->driver($engine),
                 'running' => $version !== null,
                 'version' => $version,
+                'installed' => $this->installed($engine, $version !== null),
                 'charsets' => $this->driver($engine) === 'sql' ? (array) config('server.databases.charsets') : [],
             ];
         }, $this->engineNames());
+    }
+
+    /**
+     * Is the engine present on this server, whether or not it is up?
+     *
+     * `running` is a live `SELECT VERSION()`, so a **stopped** engine and one
+     * that was **never installed** both answer `running: false, version: null`
+     * and are indistinguishable — while needing opposite advice: "start the
+     * service" against "install it first". This separates them.
+     *
+     * An engine that answered is installed by definition, and that costs
+     * nothing extra since the probe has already happened. Only silence is worth
+     * asking the package manager about.
+     *
+     * MongoDB has no installer — it needs its own apt repository — so there is
+     * no package name to query and it falls back to the client binary. That is
+     * weaker evidence (a client can exist without a server), which is why it is
+     * the fallback rather than the method.
+     */
+    private function installed(string $engine, bool $running): bool
+    {
+        if ($running) {
+            return true;
+        }
+
+        $installers = app(Installers\EngineInstallerManager::class);
+
+        if ($installers->canInstall($engine)) {
+            return $installers->installer($engine)->installed();
+        }
+
+        $client = (string) config("server.databases.engines.{$engine}.client", '');
+
+        if ($client === '') {
+            return false;
+        }
+
+        // Array args through ServerOps, never a shell string — same rule as
+        // every other command the panel runs.
+        return $this->serverOps->run(
+            ['which', $client],
+            ['feature' => 'database', 'engine' => $engine, 'op' => 'detect_client'],
+        )->ok;
     }
 
     public function isSystemDatabase(string $engine, string $name): bool
