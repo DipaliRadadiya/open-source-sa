@@ -52,7 +52,7 @@ class CertificateController extends Controller
 
         return response()->json([
             'certificate' => CertificateResource::make(
-                $issue->execute($application, $type)
+                $issue->execute($application, $type, (bool) $request->validated('force', false))
             )->resolve(),
         ], 202);
     }

@@ -1192,6 +1192,32 @@ row; what it replaced is in the activity log.
 - **`letsencrypt` and `self_signed` return `202`** with `status: "pending"` — the work is queued. **Poll `GET .../certificate` and drive the UI from `status`** (`pending → issuing → active | failed`). ACME involves a round trip back to this server and routinely outlasts the request.
 - **`custom` returns `201`** and is already `active`. There is nothing to wait for; adding a spinner to two file writes would be theatre.
 - A `custom` upload is checked before anything is written: the key must match the certificate (`422` on `private_key`) and both must be PEM. A mismatched pair is otherwise written happily, fails the config test, and takes the site down over a copy-paste.
+- **`force` (bool, optional)** skips the reachability dry run described below. Exists for one real case — a server behind NAT that cannot reach its own public address — and should be offered only *after* a refusal, never as the default.
+
+#### The dry run (why the button sometimes says no)
+
+Before certbot is called, the panel performs the challenge itself: it writes a random token into the ACME directory and fetches it back over plain HTTP. Only an exact match is a pass.
+
+This replaces the old "is DNS verified?" gate, and the difference matters. DNS pointing here says nothing about whether the token will be **served** — port 80 can be firewalled, Cloudflare can be answering, or the site's own rewrite rules can swallow `/.well-known/` and return a 404 page. Let's Encrypt reads that as an authorisation failure and allows only **five per hostname per hour**, so a gate that lets those through is barely a gate. The dry run costs nothing against any limit, because the request is ours.
+
+**The user never has to click "Verify DNS" first** — the check refreshes DNS itself as its first step.
+
+On refusal the response is a `422` with one message per domain under `errors.domain`, each naming a distinct fix:
+
+| reason | what the user must do |
+|---|---|
+| `dns_missing` | add an A record |
+| `dns_not_pointing` | it resolves to another address — the message names it |
+| `behind_proxy` | pause Cloudflare's proxy (grey cloud) |
+| `blocked_ip` | resolves to loopback or the metadata range; never certifiable |
+| `unreachable` | nothing answered on port 80 — firewall, or web server down |
+| `challenge_redirected` | the site redirects the challenge instead of answering it |
+| `challenge_not_served` | it answered, but not with the token — rewrite rules |
+| `precheck_failed` | the panel could not write its own test file (not the user's fault) |
+
+**Partial issuance:** if some names pass and others do not, the certificate is issued **for the ones that pass** and returns `202`. Blocking the whole request because a `www` record has not propagated helps nobody — the site gets HTTPS now, and `missing_domains` says what is left. Only if *nothing* passes is the request refused.
+
+The check also never fetches a third party: if the name resolves somewhere other than this server, that is answered from the DNS result without any request being made.
 
 **`PUT /api/applications/{id}/certificate/force-https`** → `{certificate: {...}}`
 - Body: `force_https` (bool).

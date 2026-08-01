@@ -60,8 +60,10 @@ beforeEach(function () {
 it('queues issuance and reports 202 rather than pretending it is done', function () {
     Queue::fake();
 
+    // `force` skips the reachability dry run, which has its own test file. This
+    // one is about what the endpoint returns, not about the gate in front of it.
     $this->actingAs($this->admin)
-        ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
+        ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt', 'force' => true])
         ->assertStatus(202)
         ->assertJsonPath('certificate.status', 'pending')
         ->assertJsonPath('certificate.domains.0', 'shop.example.com');
@@ -69,8 +71,8 @@ it('queues issuance and reports 202 rather than pretending it is done', function
     Queue::assertPushed(IssueCertificate::class);
 });
 
-it('refuses to request a certificate for a domain whose DNS is not verified', function () {
-    $this->application->domains()->update(['dns_verified_at' => null]);
+it('refuses to request a certificate for a domain that is not reachable', function () {
+    $this->application->domains()->update(['dns_verified_at' => null, 'dns_resolved_ip' => null]);
 
     // Not politeness — Let's Encrypt allows five failed authorisations per
     // hostname per hour, so an unchecked attempt locks the user out of the fix.

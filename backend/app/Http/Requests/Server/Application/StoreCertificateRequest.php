@@ -30,6 +30,14 @@ class StoreCertificateRequest extends FormRequest
             'certificate' => ['nullable', 'required_if:'.$custom, 'string', 'starts_with:-----BEGIN'],
             'private_key' => ['nullable', 'required_if:'.$custom, 'string', 'starts_with:-----BEGIN'],
             'chain' => ['nullable', 'string', 'starts_with:-----BEGIN'],
+
+            // Skip the reachability dry run. One legitimate case: a server
+            // behind NAT whose public address does not answer to itself, where
+            // the dry run fails but the real challenge — which arrives from
+            // outside — would succeed. Not a default, because the thing it
+            // skips is what stops a doomed attempt spending one of five
+            // authorisation failures an hour.
+            'force' => ['sometimes', 'boolean'],
         ];
     }
 
