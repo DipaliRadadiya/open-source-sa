@@ -843,6 +843,12 @@ The panel's own account is also protected from deletion through **Database Users
   - **`status`**: `queued` → `running` → `completed` | `failed`. Same polling shape as the engine installer.
   - On failure: `reason` is a stable code (`dump_failed`, `database_missing`, `worker`), `message` is that code worded in the **viewer's** locale, `reference` correlates with the server-ops log.
   - **`available`** is `false` when the file has since been deleted from disk by hand — `download_url` is null then too, rather than offering a link that 404s.
+**Database size (`size_bytes` / `size_human`)** — served from a stored column, not measured per request, so the list stays fast with many databases.
+- **`GET /api/databases`** returns the stored value. Refreshed by `databases:refresh-sizes` on a **10-minute** schedule.
+- **`GET /api/databases/{id}`** re-measures before responding — one database, someone looking straight at it, worth the query.
+- **It used to be written once at creation and never again**, so a database that had grown still reported roughly zero. It was never a performance problem; it was simply wrong.
+- A probe that fails leaves the last known value rather than writing `0` — reporting every database on a stopped engine as empty is the same confident-wrong answer.
+
 - **`GET /api/databases/exports`** (`view`) — every export, newest first. `{ exports: [ …same shape as above… ] }`.
   - **In-flight rows are included**, not filtered out — a `queued`/`running` export is exactly what someone who just pressed the button is looking for.
   - Rows survive their database being deleted (`database` is a copied name, `database_id` goes null), so a dump of something since-dropped is still listed and downloadable.

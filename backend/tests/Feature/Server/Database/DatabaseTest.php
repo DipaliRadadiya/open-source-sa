@@ -507,3 +507,43 @@ it('refuses to delete an export without manage permission', function () {
     test()->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/databases/exports')->assertOk();
 });
+
+// ---- size refresh ----
+
+it('re-measures the size when a single database is shown', function () {
+    fakeDb();
+
+    // What the column looked like before: written once at creation and never
+    // touched again, so a database that had grown still read as empty.
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 0]);
+
+    test()->withHeaders(dbAuth())->getJson("/api/databases/{$db->id}")->assertOk()
+        ->assertJsonPath('database.size_bytes', 1048576);
+
+    expect($db->refresh()->size_bytes)->toBe(1048576);
+});
+
+it('refreshes every tracked database size on the scheduled tick', function () {
+    fakeDb();
+
+    Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 0]);
+    Database::create(['name' => 'blog', 'engine' => 'mysql', 'size_bytes' => 0]);
+
+    test()->artisan('databases:refresh-sizes')->assertExitCode(0);
+
+    expect(Database::pluck('size_bytes')->all())->toBe([1048576, 1048576]);
+});
+
+it('leaves the last known size alone when the engine cannot be reached', function () {
+    // Everything fails — the engine is down.
+    Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'connection refused'));
+
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 4096]);
+
+    test()->artisan('databases:refresh-sizes')->assertExitCode(0);
+
+    // Writing a failed probe as 0 would report every database on a stopped
+    // engine as empty — the same wrong-but-confident answer the stale column
+    // used to give.
+    expect($db->refresh()->size_bytes)->toBe(4096);
+});

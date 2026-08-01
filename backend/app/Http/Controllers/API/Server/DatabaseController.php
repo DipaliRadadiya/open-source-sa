@@ -18,6 +18,7 @@ use App\Models\DatabaseExport;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Databases\DatabaseSizes;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -100,10 +101,18 @@ class DatabaseController extends Controller
         ], 201);
     }
 
-    public function show(Database $database): JsonResponse
+    /**
+     * One database, with its size re-measured.
+     *
+     * The list deliberately serves the stored value — querying every schema on
+     * every list request is the slow thing worth avoiding. Here it is a single
+     * database and someone is looking straight at it, so the exact figure is
+     * worth one query.
+     */
+    public function show(Database $database, DatabaseSizes $sizes): JsonResponse
     {
         return response()->json([
-            'database' => DatabaseResource::make($database->load('users'))->resolve(),
+            'database' => DatabaseResource::make($sizes->refresh($database)->load('users'))->resolve(),
         ]);
     }
 
