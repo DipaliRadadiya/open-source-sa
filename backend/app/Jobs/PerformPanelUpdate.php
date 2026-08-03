@@ -3,9 +3,11 @@
 namespace App\Jobs;
 
 use App\Enums\PanelUpdateStatus;
+use App\Exceptions\Admin\PanelUpdate\PanelUpdateHelperFailedException;
 use App\Jobs\Concerns\TracksActor;
 use App\Models\PanelUpdate;
 use App\Services\ActivityLogger;
+use App\Services\Panel\PanelUpdateRunner;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -54,7 +56,7 @@ class PerformPanelUpdate implements ShouldBeUnique, ShouldQueue
         return 'panel-update-'.$this->panelUpdateId;
     }
 
-    public function handle(ActivityLogger $activityLogger): void
+    public function handle(ActivityLogger $activityLogger, PanelUpdateRunner $runner): void
     {
         $update = PanelUpdate::find($this->panelUpdateId);
 
@@ -78,30 +80,30 @@ class PerformPanelUpdate implements ShouldBeUnique, ShouldQueue
             'started_at' => now(),
         ]);
 
-        $reference = (string) Str::uuid();
+        try {
+            $result = $runner->run($update);
 
-        Log::warning('Panel update attempted without the privileged helper.', [
-            'reference' => $reference,
-            'panel_update' => $update->id,
-            'actor' => $this->actorId,
-        ]);
+            $update->update([
+                'status' => PanelUpdateStatus::Succeeded,
+                'to_version' => $result['version'],
+                'to_commit' => $result['commit'],
+                'finished_at' => now(),
+            ]);
 
-        $update->update([
-            'status' => PanelUpdateStatus::Failed,
-            'reason' => 'unsupported',
-            'reference' => $reference,
-            'finished_at' => now(),
-        ]);
+            $activityLogger->log('panel_update.succeeded', $update, actor: $this->actor());
+        } catch (PanelUpdateHelperFailedException $exception) {
+            $update->update([
+                'status' => PanelUpdateStatus::Failed,
+                'reason' => 'helper',
+                'reference' => $exception->reference,
+                'finished_at' => now(),
+            ]);
 
-        $activityLogger->log(
-            'panel_update.failed',
-            $update,
-            [
-                'reason' => 'unsupported',
-                'reference' => $reference,
-            ],
-            actor: $this->actor(),
-        );
+            $activityLogger->log('panel_update.failed', $update, [
+                'reason' => 'helper',
+                'reference' => $exception->reference,
+            ], actor: $this->actor());
+        }
     }
 
     /**

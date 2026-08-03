@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/panel/updater.env
+UPDATE_ID="${1#--update-id=}"
+[[ "$1" == --update-id=* && "$UPDATE_ID" =~ ^[0-9]+$ ]] || exit 64
+: "${APP_USER:=panel}" "${APP_DIR:=/var/www/panel}" "${RELEASES_DIR:=$APP_DIR/releases}"
+: "${CURRENT_LINK:=$APP_DIR/current}" "${SHARED_DIR:=$APP_DIR/shared}"
+: "${REPOSITORY:?}" "${RELEASE_BRANCH:=main}" "${PHP_FPM_SERVICE:=php8.4-fpm}"
+: "${FRONTEND_SERVICE:=panel-frontend}" "${QUEUE_SERVICE:=panel-queue}" "${HEALTHCHECK_URL:?}"
+exec 9>"$SHARED_DIR/panel-update.lock"
+flock -n 9 || exit 75
+release="$(date -u +%Y%m%d%H%M%S)-${UPDATE_ID}"
+next="$RELEASES_DIR/$release"
+previous="$(readlink -f "$CURRENT_LINK" || true)"
+backup="$SHARED_DIR/backups/database-${release}.sqlite"
+switched=0
+maintenance=0
+rollback() {
+  status=$?
+  if [[ $status -ne 0 ]]; then
+    if [[ $switched -eq 1 && -n "$previous" ]]; then
+      ln -s "$previous" "$CURRENT_LINK.next"
+      mv -Tf "$CURRENT_LINK.next" "$CURRENT_LINK"
+      [[ -f "$backup" ]] && cp -a "$backup" "$SHARED_DIR/database/database.sqlite"
+      systemctl reload "$PHP_FPM_SERVICE" || true
+      systemctl restart "$FRONTEND_SERVICE" "$QUEUE_SERVICE" || true
+    fi
+    [[ $maintenance -eq 1 ]] && "$CURRENT_LINK/backend/artisan" up || true
+  fi
+  exit "$status"
+}
+trap rollback EXIT
+install -d -o "$APP_USER" -g "$APP_USER" "$RELEASES_DIR" "$SHARED_DIR/backups"
+git clone --depth 1 --branch "$RELEASE_BRANCH" "$REPOSITORY" "$next"
+chown -R "$APP_USER:$APP_USER" "$next"
+ln -s "$SHARED_DIR/.env" "$next/backend/.env"
+mv "$next/backend/storage" "$next/backend/storage.release"
+ln -s "$SHARED_DIR/storage" "$next/backend/storage"
+runuser -u "$APP_USER" -- composer --working-dir="$next/backend" install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+runuser -u "$APP_USER" -- npm --prefix "$next/frontend" ci --no-audit --no-fund
+runuser -u "$APP_USER" -- npm --prefix "$next/frontend" run build
+[[ -f "$SHARED_DIR/database/database.sqlite" ]] || exit 70
+cp -a "$SHARED_DIR/database/database.sqlite" "$backup"
+"$CURRENT_LINK/backend/artisan" down --retry=60
+maintenance=1
+ln -s "$next" "$CURRENT_LINK.next"
+mv -Tf "$CURRENT_LINK.next" "$CURRENT_LINK"
+switched=1
+"$CURRENT_LINK/backend/artisan" migrate --force
+"$CURRENT_LINK/backend/artisan" db:seed --class=PermissionSeeder --force
+"$CURRENT_LINK/backend/artisan" optimize
+systemctl reload "$PHP_FPM_SERVICE"
+systemctl restart "$FRONTEND_SERVICE" "$QUEUE_SERVICE"
+curl --fail --silent --show-error --max-time 15 "$HEALTHCHECK_URL" >/dev/null
+"$CURRENT_LINK/backend/artisan" up
+maintenance=0
+switched=0
+printf '{"version":"%s","commit":"%s"}\n' "$(git -C "$next" describe --tags --always)" "$(git -C "$next" rev-parse HEAD)"
