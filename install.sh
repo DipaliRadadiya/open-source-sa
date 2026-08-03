@@ -755,7 +755,7 @@ location / {
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto \$scheme;
     # The client's own Connection header is passed through rather than
-    # hardcoding "upgrade": the usual \$connection_upgrade recipe needs a `map`
+    # hardcoding "upgrade": the usual \$connection_upgrade recipe needs an nginx map
     # in the http block, which a site config cannot declare.
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection \$http_connection;
