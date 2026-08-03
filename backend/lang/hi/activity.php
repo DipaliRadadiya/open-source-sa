@@ -125,4 +125,6 @@ return [
     'database.engine_installed' => ':engine डेटाबेस इंजन इंस्टॉल किया',
     'database.engine_install_failed' => ':engine डेटाबेस इंजन इंस्टॉल नहीं हो सका (:reason)',
     'php.ini_updated' => 'PHP :version की कॉन्फ़िगरेशन अपडेट की',
+    'panel_update.queued' => ':from_version से पैनल अद्यतन कतार में रखा',
+    'panel_update.failed' => 'पैनल अद्यतन विफल (कारण: :reason)',
 ];

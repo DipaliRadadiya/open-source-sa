@@ -125,4 +125,6 @@ return [
     'database.engine_installed' => 'Instalou o motor de banco de dados :engine',
     'database.engine_install_failed' => 'Não foi possível instalar o motor de banco de dados :engine (:reason)',
     'php.ini_updated' => 'Atualizou a configuração do PHP :version',
+    'panel_update.queued' => 'Colocou em fila uma atualização do painel a partir de :from_version',
+    'panel_update.failed' => 'Atualização do painel falhou (motivo: :reason)',
 ];
