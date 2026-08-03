@@ -25,9 +25,11 @@
 #
 set -euo pipefail
 
-# Secrets are written to disk here. 077 means the group/other bits are never
-# set in the first place, rather than being cleaned up afterwards.
-umask 077
+# Runtime trees must be readable by nginx and executable by the panel account.
+# Secret files (installer log, .env rewrite, auth files) set restrictive modes
+# explicitly at their write sites; a global 077 umask would make the cloned app
+# and fnm runtime inaccessible to the users that must serve and run them.
+umask 022
 
 # ─── Defaults ────────────────────────────────────────────────────────────────
 
