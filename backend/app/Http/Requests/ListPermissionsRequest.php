@@ -18,6 +18,13 @@ class ListPermissionsRequest extends FormRequest
     {
         return [
             'level' => ['sometimes', 'string', 'max:255'],
+
+            // Which application's sidebar is being built. Optional, and the
+            // difference matters: with it the answer is filtered to what that
+            // site type can actually do; without it the answer is every
+            // application-level item, which is what the role form needs — an
+            // admin assigning a role is not looking at one site.
+            'application_id' => ['sometimes', 'integer', 'exists:applications,id'],
         ];
     }
 }

@@ -1,8 +1,40 @@
 {{-- Managed by the panel. Manual edits are overwritten on the next deploy. --}}
 docRoot                   {{ $documentRoot }}
-vhDomain                  {{ $domain }}
-vhAliases                 www.{{ $domain }}
+vhDomain                  {{ $serverNames[0] }}
+@if (count($serverNames) > 1 || $redirects->isNotEmpty())
+vhAliases                 {{ implode(', ', array_merge(array_slice($serverNames, 1), $redirects->pluck('domain')->all())) }}
+@endif
 enableGzip                1
+
+@if ($certificate)
+{{-- OpenLiteSpeed keeps TLS on the vhost as well as the listener: the listener
+     decides that 443 is answered, this decides which certificate is presented
+     for this site. Without it a second site on the box is served the first
+     one's certificate and every visitor gets a name-mismatch warning. --}}
+vhssl {
+  keyFile                 {{ $certificate->private_key_path }}
+  certFile                {{ $certificate->certificate_path }}
+  certChain               1
+  {{-- TLS 1.2 as the floor. OLS spells the version set as a bitmask-style
+       list; 1.0 and 1.1 are deprecated and fail PCI checks, and allowing them
+       buys compatibility only with browsers that stopped receiving security
+       updates years ago. --}}
+  sslProtocol             24
+}
+@endif
+
+{{-- The ACME challenge is served from one shared directory rather than the
+     site's own document root, so node and proxy sites — which serve nothing
+     from disk — have somewhere for certbot to drop the token. Declared as its
+     own context so the rewrite below cannot swallow it: a WordPress site would
+     otherwise hand the token to index.php and answer with its 404 page, which
+     Let's Encrypt reads as unauthorized and which costs one of five attempts
+     an hour. --}}
+context /.well-known/acme-challenge {
+  location                {{ $challengeRoot }}/.well-known/acme-challenge
+  allowBrowse             1
+  addDefaultCharset       off
+}
 
 errorlog $VH_ROOT/logs/error.log {
   useServer               0
@@ -83,6 +115,21 @@ rewrite {
        .htaccess a user drops in should not silently start costing restarts. --}}
   autoLoadHtaccess        0
 @endif
+@if ($forceHttps)
+  {{-- Force HTTPS. The ACME exclusion is not optional: without it renewal
+       stops working, and the redirect goes on pointing confidently at a
+       certificate that has expired. --}}
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+  RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+@endif
+{{-- Redirect names first, before the front controller sees them: OLS routes
+     them here as aliases, so without these they would serve the site instead
+     of sending a 301. --}}
+@foreach ($redirects as $redirect)
+  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
+  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: 'https://'.$domain }}/$1 [R={{ $redirect->redirect_status }},L]
+@endforeach
   RewriteRule ^/index\.php$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

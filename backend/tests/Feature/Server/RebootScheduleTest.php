@@ -50,7 +50,65 @@ function cronLine(): string
 it('writes a daily reboot at the chosen hour', function () {
     schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
 
-    expect(cronLine())->toStartWith('10 3 * * * root /sbin/shutdown -r');
+    expect(cronLine())
+        ->toStartWith('10 3 * * * root ')
+        ->toContain('/sbin/shutdown -r');
+});
+
+it('records the reboot in the activity log before performing it', function () {
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
+
+    $line = cronLine();
+
+    expect($line)
+        ->toContain('server:log-scheduled-reboot')
+        // The log runs first; a record written after the machine has gone down
+        // is a record that never gets written.
+        ->and(strpos($line, 'log-scheduled-reboot'))->toBeLessThan(strpos($line, 'shutdown'));
+});
+
+it('separates the log command from the reboot with ; so logging cannot cancel it', function () {
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
+
+    // `&&` here would make an audit record a precondition of the restart: a
+    // database the panel cannot reach would silently cancel the maintenance
+    // the administrator scheduled.
+    expect(cronLine())
+        ->toContain('; /sbin/shutdown')
+        ->not->toContain('&& /sbin/shutdown');
+});
+
+it('drops privileges for the log command but not for the reboot', function () {
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
+
+    // Artisan as root leaves root-owned files in storage/, which break the
+    // panel on its next request. Only `shutdown` needs to be root.
+    expect(cronLine())->toContain('runuser -u ');
+});
+
+it('still reads back a schedule written with the log command', function () {
+    schedule(['enabled' => true, 'frequency' => 'weekly', 'hour' => 4, 'day_of_week' => 2])->assertOk();
+
+    // The parser finds the line by looking for `shutdown` and taking the first
+    // five fields, so a longer command must not confuse it.
+    $response = test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')->assertOk();
+
+    $response->assertJsonPath('settings.reboot_schedule.enabled', true)
+        ->assertJsonPath('settings.reboot_schedule.frequency', 'weekly')
+        ->assertJsonPath('settings.reboot_schedule.hour', 4)
+        ->assertJsonPath('settings.reboot_schedule.day_of_week', 2);
+});
+
+it('logs the scheduled reboot with no actor', function () {
+    $this->artisan('server:log-scheduled-reboot')->assertSuccessful();
+
+    // Nobody pressed anything — this reads as System, not as an admin.
+    $this->assertDatabaseHas('activity_logs', [
+        'type' => 'setting',
+        'action' => 'auto_rebooted',
+        'user_id' => null,
+    ]);
 });
 
 it('writes a weekly reboot on the chosen day', function () {

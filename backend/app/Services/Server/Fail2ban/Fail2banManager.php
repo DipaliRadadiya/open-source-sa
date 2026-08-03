@@ -240,7 +240,7 @@ class Fail2banManager
     {
         $ignore = implode(' ', array_unique([...self::ALWAYS_IGNORED, ...$ignoreIps]));
 
-        $body = "# Managed by ServerAvatar OSS — do not edit by hand\n"
+        $body = "# Managed by the control panel — do not edit by hand\n"
             ."[DEFAULT]\n"
             ."bantime = {$settings['bantime']}\n"
             ."findtime = {$settings['findtime']}\n"

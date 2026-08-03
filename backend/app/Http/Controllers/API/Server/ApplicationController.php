@@ -12,13 +12,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
 use App\Http\Resources\ApplicationResource;
+use App\Enums\DeploymentTrigger;
 use App\Jobs\DeployApplication;
+use App\Services\Server\Applications\DeploymentRecorder;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ApplicationController extends Controller
 {
@@ -63,7 +66,7 @@ class ApplicationController extends Controller
      */
     public function provision(Application $application): JsonResponse
     {
-        ProvisionApplication::dispatch($application->id);
+        ProvisionApplication::dispatch($application->id, Auth::id());
 
         $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'reference' => null]);
 
@@ -82,7 +85,17 @@ class ApplicationController extends Controller
     {
         abort_unless($application->site_type === 'git', 422, __('errors/application.not_a_git_application'));
 
-        DeployApplication::dispatch($application->id);
+        // Records like any other deploy. This endpoint predates the
+        // Deployment screen and stays for compatibility, but a deploy that
+        // leaves no history depending on which button started it would be a
+        // gap nobody could explain.
+        $deployment = app(DeploymentRecorder::class)->open(
+            $application,
+            DeploymentTrigger::Manual,
+            Auth::id(),
+        );
+
+        DeployApplication::dispatch($application->id, Auth::id(), $deployment->id);
 
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),

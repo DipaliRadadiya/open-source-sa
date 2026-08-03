@@ -38,13 +38,13 @@ it('re-syncs the permission catalog for an admin', function () {
         ->postJson('/api/admin/permissions/sync');
 
     $response->assertOk()
-        ->assertJsonPath('synced', 16)
-        ->assertJsonCount(16, 'permissions');
-    expect(Permission::count())->toBe(16);
+        ->assertJsonPath('synced', 33)
+        ->assertJsonCount(33, 'permissions');
+    expect(Permission::count())->toBe(33);
 
     // audit entry recorded
     $log = ActivityLog::where('type', 'permission')->where('action', 'synced')->latest('id')->first();
-    expect($log->properties['count'])->toBe(16);
+    expect($log->properties['count'])->toBe(33);
 });
 
 it('denies a non-admin from syncing permissions', function () {

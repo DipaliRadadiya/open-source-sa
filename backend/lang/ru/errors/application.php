@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'primary_domain_not_removable' => 'Основной домен нельзя удалить. Сначала сделайте основным другой домен.',
     'unsupported_web_server' => 'Панель не может записать конфигурацию сайта для :web_server.',
     'no_web_server' => 'веб-сервер не обнаружен',
     'provision_failed' => 'Настройка сайта прервалась на шаге «:step».',

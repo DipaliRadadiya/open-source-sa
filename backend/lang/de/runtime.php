@@ -15,6 +15,11 @@ return [
         'no_space' => 'Auf dem Server ist kein Speicherplatz mehr frei.',
         'worker' => 'Die Installation wurde unerwartet beendet. Möglicherweise ein Timeout — versuche es erneut.',
         'unknown' => 'Die Installation ist fehlgeschlagen. Nenne dem Support die untenstehende Referenz.',
+        'dpkg_broken' => 'Die Paketdatenbank dieses Servers muss repariert werden, bevor etwas anderes installiert werden kann.',
+        'port_in_use_by_mysql' => 'MySQL ist bereits installiert und belegt diesen Port. Entfernen Sie es zuerst, oder nutzen Sie es weiter.',
+        'port_in_use_by_mariadb' => 'MariaDB ist bereits installiert und belegt diesen Port. Entfernen Sie es zuerst, oder nutzen Sie es weiter.',
+        'root_unreachable' => 'Es ist installiert, aber das Panel konnte sich nicht anmelden. Der Administrator-Zugang wurde gegenüber dem Standard geändert; das Panel benötigt diese Daten, um fortzufahren.',
+        'grant_failed' => 'Es ist installiert, aber das Panel konnte kein eigenes Konto darin anlegen.',
     ],
 
     'extension_install_failed' => [

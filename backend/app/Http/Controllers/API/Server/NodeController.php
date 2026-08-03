@@ -12,6 +12,7 @@ use App\Services\Runtime\PinnedSites;
 use App\Services\Server\Node\NodeOverview;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Node as its own feature, mirroring PHP.
@@ -65,7 +66,7 @@ class NodeController extends Controller
         // the version, and the worker may not have started yet.
         $installs->start('node', $version);
 
-        InstallNodeVersion::dispatch($version);
+        InstallNodeVersion::dispatch($version, Auth::id());
         $log->log('node.install_started', null, ['version' => $version]);
 
         return response()->json(['message' => __('node.install_started', ['version' => $version])], 202);

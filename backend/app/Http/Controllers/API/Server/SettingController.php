@@ -16,6 +16,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\ServerOps;
 use App\Services\Server\Settings\RebootScheduleSettings;
 use App\Services\Server\Settings\RedisSettings;
+use App\Services\Server\Settings\SettingChangeLog;
 use App\Services\Server\Settings\SettingsManager;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
@@ -23,11 +24,21 @@ use Illuminate\Http\JsonResponse;
 class SettingController extends Controller
 {
     /**
-     * All available setting groups with their current values.
+     * All available setting groups with their current values, plus who last
+     * changed each one.
+     *
+     * `last_changed` is a sibling of `settings` rather than a field inside each
+     * group: the group maps are live OS state and are echoed verbatim by every
+     * `PUT`, and an actor is neither of those things.
      */
-    public function index(SettingsManager $settings): JsonResponse
+    public function index(SettingsManager $settings, SettingChangeLog $changes): JsonResponse
     {
-        return response()->json(['settings' => $settings->all()]);
+        $values = $settings->all();
+
+        return response()->json([
+            'settings' => $values,
+            'last_changed' => $changes->forGroups(array_keys($values)),
+        ]);
     }
 
     public function updateGeneral(GeneralSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse

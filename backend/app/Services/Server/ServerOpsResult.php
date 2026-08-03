@@ -26,4 +26,15 @@ class ServerOpsResult
     {
         return $this->result?->output() ?? '';
     }
+
+    /**
+     * Standard error, for the handful of tools that report their *answer*
+     * there rather than a complaint — `apt-check` prints its counts to stderr
+     * and nothing to stdout. Reading only `output()` from one of those looks
+     * exactly like a successful empty result.
+     */
+    public function errorOutput(): string
+    {
+        return $this->result?->errorOutput() ?? '';
+    }
 }

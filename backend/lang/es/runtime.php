@@ -15,6 +15,11 @@ return [
         'no_space' => 'El servidor se ha quedado sin espacio en disco.',
         'worker' => 'La instalación se detuvo inesperadamente. Puede haber excedido el tiempo — inténtalo de nuevo.',
         'unknown' => 'La instalación falló. Indica la referencia siguiente al soporte.',
+        'dpkg_broken' => 'Hay que reparar la base de datos de paquetes de este servidor antes de poder instalar cualquier otra cosa.',
+        'port_in_use_by_mysql' => 'MySQL ya está instalado y ocupa este puerto. Elimínelo primero o siga usándolo.',
+        'port_in_use_by_mariadb' => 'MariaDB ya está instalado y ocupa este puerto. Elimínelo primero o siga usándolo.',
+        'root_unreachable' => 'Está instalado pero el panel no pudo iniciar sesión. Su acceso de administrador se ha cambiado respecto al predeterminado, por lo que el panel necesita esos datos para continuar.',
+        'grant_failed' => 'Está instalado pero el panel no pudo crear su propia cuenta en él.',
     ],
 
     'extension_install_failed' => [

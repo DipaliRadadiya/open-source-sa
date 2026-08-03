@@ -60,4 +60,22 @@ class PhpMyAdminSiteType extends AbstractSiteType
     {
         return [];
     }
+
+    /**
+     * A tool, not a site. It holds no content of its own — it reads the
+     * databases that are already on the server — so backing it up, cloning it
+     * or password-listing it are all screens about nothing. Reinstalling is
+     * the honest recovery path.
+     *
+     * Password protection stays: an exposed phpMyAdmin is a login page for
+     * every database on the box, and a second lock in front of it is the one
+     * hardening step that matters most here.
+     */
+    public function features(): array
+    {
+        return array_values(array_diff(parent::features(), [
+            'app_backup',
+            'app_clone',
+        ]));
+    }
 }

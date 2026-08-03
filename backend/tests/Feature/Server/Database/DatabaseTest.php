@@ -1,6 +1,10 @@
 <?php
 
+use App\Actions\Server\Database\ExportDatabase;
+use App\Enums\ExportStatus;
+use App\Jobs\RunDatabaseExport;
 use App\Models\Database;
+use App\Models\DatabaseExport;
 use App\Models\DatabaseUser;
 use App\Models\DbMetric;
 use App\Models\User;
@@ -8,6 +12,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -332,17 +337,80 @@ it('exports a database and streams the download', function () {
         return Process::result(exitCode: 0);
     });
 
+    // Faked so dispatch does not run inline: the point of the change is that
+    // the request returns before the dump does.
+    Queue::fake();
+
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
 
-    $res = test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/export")->assertStatus(201);
-    $file = $res->json('export.file');
-    expect($res->json('export.size_bytes'))->toBeGreaterThan(0);
-    expect($res->json('export.download_url'))->toContain('/api/databases/exports/'.$file);
+    // 202, not 201: the dump is queued. It outlives nginx's read timeout on any
+    // real database, so the request used to be told it had failed while
+    // mysqldump carried on and succeeded.
+    $res = test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/export")->assertStatus(202);
+    expect($res->json('export.status'))->toBe('queued')
+        ->and($res->json('export.file'))->toBeNull()
+        ->and($res->json('export.download_url'))->toBeNull();
+
+    // Run the queued work the way a worker would.
+    app(RunDatabaseExport::class, ['exportId' => $res->json('export.id')])
+        ->handle(app(ExportDatabase::class));
+
+    $export = DatabaseExport::find($res->json('export.id'));
+    expect($export->status)->toBe(ExportStatus::Completed)
+        ->and($export->size_bytes)->toBeGreaterThan(0);
+
     test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'exported']);
 
-    test()->withHeaders(dbAuth())->get("/api/databases/exports/{$file}")->assertOk();
+    test()->withHeaders(dbAuth())->get("/api/databases/exports/{$export->file}")->assertOk();
 
     File::deleteDirectory($dir);
+});
+
+it('records a failed export instead of leaving it queued forever', function () {
+    $dir = sys_get_temp_dir().'/sv-oss-exp-'.uniqid();
+    config(['server.databases.export_dir' => $dir]);
+
+    // The dump itself fails — no file is written.
+    Process::fake(fn ($process) => in_array($process->command[0] ?? '', ['mysqldump', 'mariadb-dump'], true)
+        ? Process::result(exitCode: 1, errorOutput: 'access denied')
+        : Process::result(exitCode: 0));
+
+    Queue::fake();
+
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    $res = test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/export")->assertStatus(202);
+    $id = $res->json('export.id');
+
+    try {
+        app(RunDatabaseExport::class, ['exportId' => $id])->handle(app(ExportDatabase::class));
+    } catch (Throwable) {
+        // Rethrown so the queue marks the job failed; the row is already written.
+    }
+
+    $export = DatabaseExport::find($id);
+    expect($export->status)->toBe(ExportStatus::Failed)
+        ->and($export->reason)->toBe('dump_failed')
+        // A code, worded at read time — never a stored sentence.
+        ->and($export->message())->not->toBeNull()
+        ->and($export->reference)->not->toBeNull();
+
+    File::deleteDirectory($dir);
+});
+
+it('does not strand an export at running when the worker dies', function () {
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+    $export = DatabaseExport::create([
+        'database_id' => $db->id, 'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Running,
+    ]);
+
+    // Without the failed() hook the row sits at `running` forever and the
+    // screen spins on something that stopped existing.
+    (new RunDatabaseExport($export->id))->failed(null);
+
+    expect($export->refresh()->status)->toBe(ExportStatus::Failed)
+        ->and($export->reason)->toBe('worker');
 });
 
 it('404s a missing or traversal export filename', function () {
@@ -350,4 +418,187 @@ it('404s a missing or traversal export filename', function () {
 
     test()->withHeaders(dbAuth())->getJson('/api/databases/exports/nope-does-not-exist.sql')->assertNotFound();
     test()->withHeaders(dbAuth())->getJson('/api/databases/exports/..%2f..%2fetc%2fpasswd')->assertNotFound();
+});
+
+it('lists exports newest first, including ones still running', function () {
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    DatabaseExport::create([
+        'database_id' => $db->id, 'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Completed, 'file' => 'old.sql', 'size_bytes' => 2048,
+    ]);
+    DatabaseExport::create([
+        'database_id' => $db->id, 'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Running,
+    ]);
+
+    $res = test()->withHeaders(dbAuth())->getJson('/api/databases/exports')->assertOk();
+
+    // The in-flight one is what someone who just pressed the button is looking
+    // for; hiding it until it finishes is how a page looks like it did nothing.
+    expect($res->json('exports.0.status'))->toBe('running')
+        ->and($res->json('exports.1.status'))->toBe('completed')
+        ->and($res->json('exports.1.database'))->toBe('shop')
+        ->and($res->json('exports.1.size_human'))->toBe('2.0 KB');
+});
+
+it('does not offer a download for an export whose file has been removed', function () {
+    config(['server.databases.export_dir' => sys_get_temp_dir().'/sv-oss-gone-'.uniqid()]);
+
+    DatabaseExport::create([
+        'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Completed, 'file' => 'deleted-by-hand.sql', 'size_bytes' => 10,
+    ]);
+
+    $res = test()->withHeaders(dbAuth())->getJson('/api/databases/exports')->assertOk();
+
+    // A link that 404s is worse than saying the file has gone.
+    expect($res->json('exports.0.available'))->toBeFalse()
+        ->and($res->json('exports.0.download_url'))->toBeNull();
+});
+
+it('deletes an export and the file it points at', function () {
+    $dir = sys_get_temp_dir().'/sv-oss-del-'.uniqid();
+    File::ensureDirectoryExists($dir);
+    File::put($dir.'/dump.sql', 'x');
+    config(['server.databases.export_dir' => $dir]);
+
+    $export = DatabaseExport::create([
+        'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Completed, 'file' => 'dump.sql', 'size_bytes' => 1,
+    ]);
+
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/exports/{$export->id}")->assertNoContent();
+
+    expect(File::exists($dir.'/dump.sql'))->toBeFalse()
+        ->and(DatabaseExport::find($export->id))->toBeNull();
+    test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'export_deleted']);
+
+    File::deleteDirectory($dir);
+});
+
+it('deletes a failed export that never produced a file', function () {
+    $export = DatabaseExport::create([
+        'database_name' => 'shop', 'engine' => 'mysql',
+        'status' => ExportStatus::Failed, 'reason' => 'dump_failed',
+    ]);
+
+    // Keyed by id precisely so these are removable — by filename they would sit
+    // in the list forever with nothing able to clear them.
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/exports/{$export->id}")->assertNoContent();
+
+    expect(DatabaseExport::find($export->id))->toBeNull();
+});
+
+it('refuses to delete an export without manage permission', function () {
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'database', view: true, manage: false);
+    $token = $viewer->createToken('t')->plainTextToken;
+
+    $export = DatabaseExport::create([
+        'database_name' => 'shop', 'engine' => 'mysql', 'status' => ExportStatus::Completed,
+    ]);
+
+    // Deleting a dump destroys the only copy of that data; reading the list
+    // does not.
+    test()->withHeader('Authorization', "Bearer {$token}")
+        ->deleteJson("/api/databases/exports/{$export->id}")->assertForbidden();
+
+    test()->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/databases/exports')->assertOk();
+});
+
+// ---- size refresh ----
+
+it('re-measures the size when a single database is shown', function () {
+    fakeDb();
+
+    // What the column looked like before: written once at creation and never
+    // touched again, so a database that had grown still read as empty.
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 0]);
+
+    test()->withHeaders(dbAuth())->getJson("/api/databases/{$db->id}")->assertOk()
+        ->assertJsonPath('database.size_bytes', 1048576);
+
+    expect($db->refresh()->size_bytes)->toBe(1048576);
+});
+
+it('refreshes every tracked database size on the scheduled tick', function () {
+    fakeDb();
+
+    Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 0]);
+    Database::create(['name' => 'blog', 'engine' => 'mysql', 'size_bytes' => 0]);
+
+    test()->artisan('databases:refresh-sizes')->assertExitCode(0);
+
+    expect(Database::pluck('size_bytes')->all())->toBe([1048576, 1048576]);
+});
+
+it('leaves the last known size alone when the engine cannot be reached', function () {
+    // Everything fails — the engine is down.
+    Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'connection refused'));
+
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 4096]);
+
+    test()->artisan('databases:refresh-sizes')->assertExitCode(0);
+
+    // Writing a failed probe as 0 would report every database on a stopped
+    // engine as empty — the same wrong-but-confident answer the stale column
+    // used to give.
+    expect($db->refresh()->size_bytes)->toBe(4096);
+});
+
+// ---- installed vs running ----
+
+it('reports an engine that answers as both installed and running', function () {
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->getJson('/api/databases/engines')->assertOk()
+        ->assertJsonPath('engines.0.running', true)
+        ->assertJsonPath('engines.0.installed', true);
+});
+
+it('tells a stopped engine apart from one that was never installed', function () {
+    Process::fake(function ($process) {
+        $bin = $process->command[0] ?? '';
+
+        // The server is down, so nothing answers a query...
+        if (in_array($bin, ['mysql', 'mariadb', 'mongosh'], true)) {
+            return Process::result(exitCode: 1, errorOutput: "Can't connect to local server");
+        }
+        // ...but the package is still on the box.
+        if ($bin === 'dpkg-query') {
+            return Process::result(output: 'install ok installed');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $res = test()->withHeaders(dbAuth())->getJson('/api/databases/engines')->assertOk();
+
+    // Both of these are `running: false`. Without `installed` the UI cannot
+    // tell "start the service" from "install it first".
+    expect($res->json('engines.0.running'))->toBeFalse()
+        ->and($res->json('engines.0.installed'))->toBeTrue()
+        ->and($res->json('engines.0.version'))->toBeNull();
+});
+
+it('reports an engine that is neither running nor present as not installed', function () {
+    Process::fake(function ($process) {
+        $bin = $process->command[0] ?? '';
+
+        if ($bin === 'dpkg-query') {
+            return Process::result(exitCode: 1, errorOutput: 'no packages found');
+        }
+        if ($bin === 'which') {
+            return Process::result(exitCode: 1);
+        }
+
+        return Process::result(exitCode: 1, errorOutput: 'not found');
+    });
+
+    $res = test()->withHeaders(dbAuth())->getJson('/api/databases/engines')->assertOk();
+
+    expect($res->json('engines.0.running'))->toBeFalse()
+        ->and($res->json('engines.0.installed'))->toBeFalse();
 });

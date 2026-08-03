@@ -10,6 +10,61 @@ use App\Contracts\SiteType;
  */
 abstract class AbstractSiteType implements SiteType
 {
+    /**
+     * Derived rather than listed, so adding a type does not mean copying
+     * sixteen names into it. Only the differences are worth writing down, and
+     * a type overrides this when it has one.
+     *
+     * @return array<int, string>
+     */
+    public function features(): array
+    {
+        // True of every site: it has a name, it is served, it is logged, it
+        // can be backed up, cloned, protected and configured.
+        $features = [
+            'app_dashboard',
+            'app_domain',
+            'app_log',
+            'app_backup',
+            'app_setting',
+            'app_file',
+            'app_security',
+            'app_firewall',
+            'app_bot_blocker',
+            'app_fail2ban',
+            'app_clone',
+        ];
+
+        // Deployment is a git screen. A one-click install has no repository, no
+        // branch and no commit history — the screen would have nothing on it.
+        if ($this->method() === 'git') {
+            $features[] = 'app_deployment';
+        }
+
+        // PHP settings edit a pool and a php.ini. A static site has neither,
+        // and a Node site's runtime is not PHP.
+        if ($this->servingProfile() === 'php') {
+            $features[] = 'app_php';
+        }
+
+        // Something running in the background: a Node process, or the queue
+        // workers a deployed application tends to need. A marketplace PHP app
+        // manages its own scheduling and has nothing here to supervise.
+        if ($this->servingProfile() === 'node' || $this->method() === 'git') {
+            $features[] = 'app_worker';
+        }
+
+        // An environment file the panel owns. Git and Node applications read
+        // one; a marketplace PHP app keeps its configuration in its own file
+        // (wp-config.php and friends), which is the application's business,
+        // not ours to present as ".env".
+        if ($this->method() === 'git' || $this->servingProfile() === 'node') {
+            $features[] = 'app_environment';
+        }
+
+        return $features;
+    }
+
     public function popular(): bool
     {
         return false;

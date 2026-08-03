@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
+use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\PhpExtensionManager;
@@ -20,12 +21,13 @@ use Throwable;
 class InstallPhpExtension implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
+    use TracksActor;
 
     public int $tries = 1;
 
     public int $timeout = 900;
 
-    public function __construct(public string $version, public string $extension) {}
+    public function __construct(public string $version, public string $extension, public ?int $actorId = null) {}
 
     public function uniqueId(): string
     {
@@ -40,18 +42,18 @@ class InstallPhpExtension implements ShouldBeUnique, ShouldQueue
             $extensions->install($this->version, $this->extension);
         } catch (RuntimeInstallException $e) {
             $installs->fail('php', $this->version, $this->extension, $e->reason, $e->reference);
-            $log->log('php.extension_install_failed', null, [...$properties, 'reason' => $e->reason]);
+            $log->log('php.extension_install_failed', null, [...$properties, 'reason' => $e->reason], actor: $this->actor());
 
             throw $e;
         } catch (Throwable $e) {
             $installs->fail('php', $this->version, $this->extension, 'unknown');
-            $log->log('php.extension_install_failed', null, $properties);
+            $log->log('php.extension_install_failed', null, $properties, actor: $this->actor());
 
             throw $e;
         }
 
         $installs->succeed('php', $this->version, $this->extension);
-        $log->log('php.extension_enabled', null, $properties);
+        $log->log('php.extension_enabled', null, $properties, actor: $this->actor());
     }
 
     /**

@@ -37,6 +37,8 @@ use App\Services\Server\Applications\Installers\PrestaShopInstaller;
 use App\Services\Server\Applications\Installers\StatamicInstaller;
 use App\Services\Server\Applications\Installers\UptimeKumaInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
+use App\Services\Server\Databases\Installers\MariaDbInstaller;
+use App\Services\Server\Databases\Installers\MySqlInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
 use App\Services\Server\DiskCleaner\Targets\JournalTarget;
@@ -189,6 +191,12 @@ return [
             'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
             // A `map` is only legal inside a listener, and this names which.
             'listener' => env('SERVER_OLS_LISTENER', 'Default'),
+
+            // OpenLiteSpeed binds certificates to a listener rather than to a
+            // vhost, so a site only answers on 443 once it is mapped here too.
+            // A box that has never had TLS legitimately has no such listener,
+            // and registration skips it rather than failing.
+            'ssl_listener' => env('SERVER_OLS_SSL_LISTENER', 'Defaultssl'),
             'test_command' => ['/usr/local/lsws/bin/lswsctrl', 'config_test'],
             // Restart, not reload: nothing lighter picks up a new virtual host,
             // and it is graceful — old workers drain rather than being cut off.
@@ -250,6 +258,114 @@ return [
         ],
         'reserved_ports' => [],
         'memory_max' => env('SERVER_APP_MEMORY_MAX', '512M'),
+    ],
+
+    /*
+    | Cloudflare's published address ranges.
+    |
+    | Held here rather than fetched. A domain pointing at Cloudflare resolves
+    | perfectly well but does not reach this server, so HTTP validation fails
+    | for a reason no error message mentions — it is the most common SSL
+    | support question on panels of this kind. Recognising the address lets the
+    | panel say so before anyone spends a Let's Encrypt attempt on it.
+    |
+    | A network call in the middle of a form submission is a worse failure than
+    | a list that is a few months stale; these change rarely. Current list:
+    | https://www.cloudflare.com/ips-v4
+    */
+    /*
+    |--------------------------------------------------------------------------
+    | TLS certificates
+    |--------------------------------------------------------------------------
+    |
+    | certbot is driven in `certonly --webroot` mode, never through the
+    | `--nginx` / `--apache` plugins. The plugins work by editing the vhost —
+    | and the panel regenerates that file on every domain change, so their edits
+    | would be silently wiped and the site would lose HTTPS with nothing to show
+    | why. Issuing the files and writing the directives ourselves keeps one
+    | owner for the config. It is also the only mode that works on
+    | OpenLiteSpeed, which has no certbot plugin at all: one code path, three
+    | web servers.
+    |
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Deployments
+    |--------------------------------------------------------------------------
+    |
+    | A site with auto-deploy on a busy repository deploys dozens of times a
+    | day, and every row carries command output. Left unbounded this is the
+    | table that quietly fills a self-hosted SQLite database, so only the newest
+    | are kept — pruned on write rather than by a scheduled command, because the
+    | growth is caused by deploying and the fix belongs where the growth is.
+    |
+    | Fifty is roughly a fortnight on an active project, which covers the only
+    | question this screen answers: what changed recently. Older deploys cannot
+    | be rolled back to (there are no release directories), and the commit
+    | history lives in git regardless.
+    |
+    */
+
+    'deployments' => [
+        'keep' => (int) env('SV_DEPLOYMENTS_KEEP', 50),
+
+        // What a new git application's deploy script starts as. A starting
+        // point rather than a policy: it is the user's file the moment they
+        // open the screen.
+        'default_scripts' => [
+            'php' => "cd {path}\ngit pull origin {branch}\n",
+            'node' => "cd {path}\ngit pull origin {branch}\nnpm ci\nnpm run build --if-present\n",
+            'static' => "cd {path}\ngit pull origin {branch}\n",
+            'proxy' => "cd {path}\ngit pull origin {branch}\n",
+        ],
+    ],
+
+    'certificates' => [
+        'certbot' => env('SV_CERTBOT_BIN', 'certbot'),
+
+        // One challenge directory shared by every site, aliased into all nine
+        // vhost templates. Per-site document roots would not work for the node
+        // and proxy profiles, which serve nothing from disk — there is no
+        // directory for certbot to drop the token in.
+        'challenge_root' => env('SV_ACME_CHALLENGE_ROOT', '/var/www/.well-known-acme'),
+
+        'live_dir' => env('SV_LETSENCRYPT_LIVE_DIR', '/etc/letsencrypt/live'),
+
+        // Where certbot runs its post-renewal commands. The renewal itself is
+        // certbot's own systemd timer; without a hook here the new certificate
+        // sits on disk while the web server keeps serving the old one from
+        // memory until something happens to reload it.
+        'renewal_hook_dir' => env('SV_LETSENCRYPT_HOOK_DIR', '/etc/letsencrypt/renewal-hooks/deploy'),
+
+        // Uploaded and self-signed certificates. Not under /etc/letsencrypt —
+        // certbot owns that tree and prunes what it does not recognise.
+        'custom_dir' => env('SV_CUSTOM_CERT_DIR', '/etc/ssl/sv-oss'),
+
+        // certbot can sit through two DNS lookups, an HTTP round trip and a
+        // retry. The default 60s ServerOps timeout runs out in the middle of a
+        // successful issuance and leaves a certificate on disk that the panel
+        // thinks failed.
+        'timeout' => 180,
+
+        // Try for a certificate on its own once a site is provisioned, when
+        // the domain already points here — a migrated site, or a record set in
+        // advance. Off makes the panel wait to be asked, which is the right
+        // choice on a box with no public DNS. It declines silently either way:
+        // a decline writes nothing, so a new site never opens on a red error
+        // about SSL the user has not set up yet.
+        'auto_issue' => env('SV_AUTO_ISSUE_CERTIFICATES', true),
+
+        // Warn this far out. Let's Encrypt certificates last 90 days and renew
+        // at 30; a warning any earlier is noise, any later is not a warning.
+        'expiry_warning_days' => 14,
+    ],
+
+    'cloudflare_ranges' => [
+        '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+        '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+        '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+        '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
     ],
 
     'installer_work_dir' => env('SERVER_INSTALLER_WORK_DIR', sys_get_temp_dir()),
@@ -769,6 +885,30 @@ return [
 
     'reboot_required_file' => env('SERVER_REBOOT_REQUIRED', '/var/run/reboot-required'),
 
+    /*
+    | How many updates are waiting. This is the script the MOTD uses: it reads
+    | the apt cache directly, so it needs no lock, no network and no `apt-get
+    | update` — and it prints `updates;security` to **stderr**, not stdout.
+    |
+    | It ships in `update-notifier-common`, which a minimal install may not
+    | have. Absent, the counts read `null` — deliberately not `0`, which would
+    | claim the box is up to date on no evidence.
+    */
+    'apt_check' => env('SERVER_APT_CHECK', '/usr/lib/update-notifier/apt-check'),
+
+    /*
+    | Touched by APT::Periodic only when `apt-get update` *succeeded*, which is
+    | the question being asked. The mtime of /var/lib/apt/lists moves on failed
+    | runs too, so it would report a refresh that did not happen.
+    */
+    'apt_update_stamp' => env('SERVER_APT_UPDATE_STAMP', '/var/lib/apt/periodic/update-success-stamp'),
+
+    /*
+    | Its directory is root:adm 0750, so the panel user cannot open this
+    | directly — it is read through ServerOps (sudo tail), not File::get.
+    */
+    'unattended_upgrades_log' => env('SERVER_UNATTENDED_LOG', '/var/log/unattended-upgrades/unattended-upgrades.log'),
+
     'redis_cli' => env('SERVER_REDIS_CLI', '/usr/bin/redis-cli'),
 
     /*
@@ -946,9 +1086,28 @@ return [
 
     'databases' => [
         'engines' => [
-            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
-            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock'],
-            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'default_port' => 27017, 'default_socket' => null],
+            // `installer` is what makes an engine offerable in the setup page.
+            // MongoDB is operable but not installable yet — it needs its own apt
+            // repository — so it has none, and the catalog says so rather than
+            // showing a button that cannot work.
+            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MySqlInstaller::class],
+            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MariaDbInstaller::class],
+            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'default_port' => 27017, 'default_socket' => null, 'installer' => null],
+        ],
+
+        // Engine installs pull a few hundred MB and run their own post-install
+        // scripts; 60s would kill one mid-configure.
+        'install_timeout' => (int) env('SERVER_DB_INSTALL_TIMEOUT', 900),
+
+        // apt output -> stable reason code. The human sentence is built from the
+        // code at read time in the viewer's locale; stderr is never stored,
+        // because its wording changes between releases and it leaks paths.
+        'failure_reasons' => [
+            'package_not_found' => '/Unable to locate package|has no installation candidate/i',
+            'apt_lock' => '/Could not get lock|dpkg frontend lock|another process is using/i',
+            'no_space' => '/No space left on device|not enough free disk space/i',
+            'network' => '/Temporary failure resolving|Could not resolve|Connection failed|Unable to connect/i',
+            'dpkg_broken' => '/dpkg was interrupted|broken packages|Sub-process .* returned an error/i',
         ],
 
         // Never created/dropped/altered by the panel (deny-by-default guard).

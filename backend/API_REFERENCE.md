@@ -93,8 +93,12 @@ Every timezone the panel accepts, grouped by region — for a picker.
 
 ### `GET /permissions`
 Permission items the caller can see — the **deduped OR-union** across all their assigned roles (each permission appears once; `manage`/`view` are true if any role grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
-- Query: `level` (string, optional — filters to one permission level, e.g. `server`)
+- Query: `level` (string, optional — filters to one permission level: `server` or `application`)
 - Response: `{"permissions": [{level, sub_level, sub_level_title, name, title, icon, url, permissions: {view, manage}}]}`
+- **There are two sidebars, and `level` is what selects them.** `?level=server` (17 items) renders the server sidebar; **`?level=application` (16 items) renders the sidebar shown *inside* an application**. Same shape, same rules — the permission row *is* the nav entry.
+- **Application `url`s are relative segments**, not paths: `/domains`, `/files`, `''` for the dashboard. The real route is `/applications/{id}{url}` — prefix it client-side. Server `url`s stay absolute (`/databases`).
+- Application permission names are all prefixed **`app_`** (`app_domain`, `app_log`, …). That is deliberate and load-bearing: ability checks resolve by name, so an app permission called `logs` would collide with the server-level one. Never assume `logs` and `app_log` are related — server `logs` is auth.log and syslog for the whole box, `app_log` is one site's access log.
+- Some application permissions are seeded ahead of their screens (`app_staging`, `app_clone`, `app_fail2ban`, `app_firewall`, `app_bot_blocker`, `app_php`, `app_security`) so roles can be set up once. Render the sidebar from what this endpoint returns **and** what the application supports — a static site has no PHP settings regardless of grants.
 - **Sidebar grouping:** group the items by `sub_level` and render `sub_level_title` as the section header (already localized — do **not** hardcode it). Current values: `server` → "Server", `integration` → "Integrations". A group is a **label only**: no route, no permission of its own. Show a group only when at least one item inside it came back, otherwise a limited role sees an empty header.
 - **`title` is localized** to the request locale (send `Accept-Language: <code>`) — the sidebar label comes back already translated (8 locales). `name` is the stable machine key; use it if you'd rather translate client-side. A permission with no translation yet falls back to its English title. (Same for `/permissions/check` and `/admin/permissions`.)
 
@@ -177,7 +181,10 @@ The **full** list of every permission (the menu of what *can* be granted) — us
 ### `GET /admin/activity-log`
 Admin-wide activity — every user's actions, not just the caller's.
 - Query: `filter[scope]` (`account`|`server` — see `/activity-log` above for the split), `filter[user_id]` (integer, must exist), `filter[type]` (string, exact — the entity, e.g. `user`/`role`/`system_user`), `filter[action]` (string, exact — the verb, e.g. `created`/`deleted`/`ssh_key_added`), `search` (free-text on type/action/actor name/username), `per_page` (10|20|50|100). `type` and `action` are separate **indexed** columns.
-- Response: `{"activity_log": [{id, type, action, scope, description, user: {id, username}|null, created_at, created_at_human}], "meta": {...}}` — `type` = entity (`system_user`), `action` = verb (`created`), `description` = the full human sentence composed from both in the viewer's locale.
+- Response: `{"activity_log": [{id, type, action, scope, description, user: {id, username}|null, is_system, created_at, created_at_human}], "meta": {...}}` — `type` = entity (`system_user`), `action` = verb (`created`), `description` = the full human sentence composed from both in the viewer's locale.
+- **`is_system`** (bool) — true when no person was behind the entry: a scheduled reboot, an automatic disk clean, a deploy triggered by a git webhook. `user` is `null` on those. **Render these as "System"** rather than a blank actor.
+  - It's an explicit flag rather than something to infer from `user === null`, because "the machine did this" and "this row lost its user" would otherwise be indistinguishable. The panel deliberately does **not** stamp an admin's id onto system actions — that would name someone who wasn't there and put machine activity in their personal history.
+  - Automatic actions get **their own verb**, not a flag on the manual one, so they're filterable: `disk_cleaner.auto_cleaned` vs `disk_cleaner.cleaned`, `setting.auto_rebooted` vs `setting.reboot_requested`.
 
 ### `GET /admin/activity-log/filters`
 Distinct `type`/`action` values, for populating a frontend filter dropdown. Sourced from the known translation keys (`lang/activity.php`), not a `DISTINCT` query on actual log rows — so it's fully populated even on a fresh install with zero activity yet.
@@ -639,9 +646,25 @@ The schedule is a **DB profile** (single source of truth) run by the **Laravel s
 ### Settings
 Requires the `setting` permission (`view` to read, `manage` to change). A server-config hub of **groups**; no DB — values are read **live** and changes are written to **managed non-destructive drop-ins** (the distro's own config is never touched → migration-safe). Groups are detect-gated (unavailable ones, e.g. Redis when not installed, are omitted).
 
-**`GET /api/settings`** — all available groups + current values.
-- `{ settings: { general:{timezone,ntp,hostname}, swap:{enabled,path,size,size_human,used,used_human,free,free_human}, security:{port,permit_root_login,password_authentication}, updates:{security_updates_enabled,auto_reboot,reboot_time,reboot_required}, redis?:{maxmemory,maxmemory_policy,has_password} } }`.
+**`GET /api/settings`** — all available groups + current values, plus who last changed each.
+- `{ settings: {…}, last_changed: {…} }`.
+- `settings`: `general:{timezone,ntp,clock_synchronized,hostname}`, `swap:{enabled,path,size,size_human,used,used_human,free,free_human}`, `security:{port,permit_root_login,password_authentication,has_ssh_key}`, `updates:{security_updates_enabled,auto_reboot,reboot_time,reboot_required,updates_available,security_updates_available,lists_refreshed_at,unattended_last_run_at,unattended_last_result}`, `redis?:{maxmemory,maxmemory_policy,has_password,password_manageable,running,memory_used,memory_used_human}`.
 - `redis` omitted when redis-cli isn't installed. Passwords are never returned (`has_password` bool only).
+
+**Read-only facts on the groups** — none of these are writable; they exist so each section can show state rather than an unlabelled toggle.
+
+- **`updates.updates_available` / `security_updates_available`** (int|**null**) — from `apt-check`, the same source Ubuntu's MOTD uses (no apt lock, no network).
+- **`updates.lists_refreshed_at`** — when `apt-get update` last **succeeded**. From `/var/lib/apt/periodic/update-success-stamp`, not the mtime of `/var/lib/apt/lists`, which also moves on failed runs.
+- **`updates.unattended_last_run_at`** + **`unattended_last_result`** (`success｜failed｜null`) — parsed from the tail of the unattended-upgrades log, scoped to everything after the **last** start marker so an old error can't taint the current run. `unattended_last_result` is a **code, not a sentence** — the frontend owns the wording, as with runtime-install reasons.
+- ⚠️ **`null` ≠ `0` here, and the difference is load-bearing.** `0` means "nothing is waiting"; `null` means "we could not find out" (`update-notifier-common` absent, log unreadable, command failed). Render them differently — a failed check drawn as `0` recreates the exact silent failure these fields exist to expose.
+- **`security.has_ssh_key`** (bool) — whether any SSH key exists. This is *the same predicate* `PUT /api/settings/security` guards with, so use it to disable key-only login up front instead of accepting the choice and then returning `422`. One function, so the greyed-out control and the error can never disagree.
+- **`general.clock_synchronized`** (bool) — whether the clock has actually reached a time server, which is **not** the same as `ntp` (the daemon being enabled). Enabled-but-not-syncing is silent: cron fires late and log timestamps drift, with nothing reporting a fault.
+- **`redis.running`** (bool) + **`memory_used`** (bytes int|null) / **`memory_used_human`** — `running` comes from `PING`, so a `NOAUTH` reply still counts as up. The group is present whenever redis-cli is installed, so *installed but stopped* is a state you will see. Usage sits next to `maxmemory` because a limit alone tells the reader nothing.
+
+**`last_changed`** — `{ "<group>": { user: {id, username}|null, at, at_human } }`.
+- Keyed by group; **groups never changed are absent**, not null. `user` is null when the actor has since been deleted (the change still happened).
+- A sibling of `settings`, not a field inside each group: the group maps are live OS state and are echoed verbatim by every `PUT`, and an actor is neither.
+- Sourced from the existing `setting.updated` activity entries — nothing new is stored. `reboot_schedule` is found under its own verb (`setting.reboot_schedule_updated`), which carries no `group` property.
 
 **`PUT /api/settings/general`** (`manage`) — `timezone` (valid tz id), `hostname`, `ntp` (bool). Applies via `timedatectl`/`hostnamectl`.
 
@@ -768,7 +791,34 @@ Requires the `dashboard` permission (`view`). Read-only. Facts + live metrics ar
 ### Databases (P1)
 Requires the `database` permission (`view` to read, `manage` to mutate). **3 engines** — `mysql | mariadb | mongodb` — via a `DatabaseEngine` strategy (SqlEngine covers mysql+mariadb, MongoEngine its own). Every op runs locally through the engine client with the admin creds in a 0600 auth file + statements over stdin (never a password on argv). A **DB user belongs to exactly one database** (nested resource). Identifiers are strict-regex validated (DDL can't be parameterised). Passwords are encrypted at rest but returned so you can build the connection string. `500 {message, reference}` on an engine failure.
 
-**`GET /api/databases/engines`** — capability list: `{ engines: [{engine, driver, running, version, charsets}] }` (`running` = reachable with the configured connection).
+**`GET /api/databases/engines`** — capability list: `{ engines: [{engine, driver, running, version, installed, charsets, installable, install_status, install_reason, install_message}] }`.
+
+- **`running`** = answered a live `SELECT VERSION()` just now. **`version`** is that answer, so the two can never disagree — **`running: false` with a non-null `version` cannot occur.**
+- **`installed`** = present on the server, whether or not it is up. This is the field that separates the two states you actually need different screens for:
+
+| `installed` | `running` | Means | Tell the user |
+|---|---|---|---|
+| `false` | `false` | not on the server | install it |
+| `true` | `false` | present but not answering | **start the service**, or check the connection settings |
+| `true` | `true` | working | — |
+
+- Detected from the package manager (`dpkg-query`) when the engine has an installer; MongoDB has none, so it falls back to the client binary — weaker evidence, since a client can exist without a server.
+- **`installable`** is a different question again: whether the *panel* can install it for you. MongoDB is `installable: false` because it needs its own apt repository.
+
+- **`installable`** — whether the panel can put this engine on the server itself. `true` for `mariadb` and `mysql`; **`false` for `mongodb`**, which is operable but needs its own apt repository, so don't render an install button for it.
+- **`install_status`** is only ever `installing`, `failed`, or `null` — never `installed`. A finished install **deletes its progress row** so that detection (`running` / `version`) stays the single answer to "is it there", and the two can't drift. `null` + `running: false` means "not installed, nothing in flight".
+- **`install_message`** is the localized sentence for `install_reason`, built in *your* `Accept-Language`. Reasons: `package_not_found`, `apt_lock`, `no_space`, `network`, `dpkg_broken`, `port_in_use_by_mysql`, `port_in_use_by_mariadb`, `root_unreachable`, `grant_failed`, `unknown`.
+
+**`POST /api/databases/engines/{engine}`** (`manage`) — install it. `202 { queued: true }`; poll the endpoint above and drive the UI from `install_status`.
+- Already installed → `200 { queued: false }` with the capability list. Not an error: a migrated server that already had MariaDB is a success, not a conflict.
+- Not installable (`mongodb`) → `422`.
+- **Only one SQL engine per server.** MySQL and MariaDB are mutually exclusive on 3306 — installing one while the other is present is refused with `port_in_use_by_*`, because on Debian-family systems apt would *remove* the first as a conflicting package and take its databases' server with it.
+
+**What it does with credentials, and what it deliberately doesn't.** The panel creates **its own account** — `panel_` plus ten random characters — with `ALL PRIVILEGES … WITH GRANT OPTION`, and stores that password encrypted. It **never sets a root password**: on MariaDB 10.4+ and MySQL 8 on Ubuntu, root authenticates over the unix socket and has password login disabled outright, so giving it one would be *creating* a secret rather than reading one — and would make root usable over TCP. `sudo mysql` keeps working for the server's owner exactly as before.
+
+If the panel **can't** sign in as root over the socket — someone already changed how root authenticates — it refuses with `root_unreachable` rather than guessing, because overwriting an existing root credential could lock out whatever else on the box depends on it.
+
+The panel's own account is also protected from deletion through **Database Users**: it looks like an ordinary user there, and removing it would break every database operation with no way back through the UI.
 
 **Admin connection** (per engine, config lives in the DB, not `.env`):
 - **`GET /api/databases/connections`** → `{ connections: [{engine, driver, connection_type, host, port, socket, username, has_password, options}] }` (password never returned).
@@ -802,10 +852,60 @@ Requires the `database` permission (`view` to read, `manage` to mutate). **3 eng
 - **`POST /api/databases/{database}/optimize`** and **`POST /api/databases/{database}/repair`** (`manage`) — `OPTIMIZE`/`REPAIR TABLE` across the DB's tables (SQL; no-op on Mongo). `{ database: {…} }`.
 
 **Export (dump) — read-only, safe:**
-- **`POST /api/databases/{database}/export`** — dumps the DB (`mysqldump --single-transaction` / `mongodump --archive --gzip`) to a managed exports dir. `201 { export: {file, size_bytes, created_at, download_url} }`. Source DB untouched; activity `database.exported`.
-- **`GET /api/databases/exports/{file}`** — streams a previously-created export for download. Filename strict-validated + resolved inside the exports dir (no traversal).
+- **`POST /api/databases/{database}/export`** (**queued**) — dumps the DB (`mysqldump --single-transaction` / `mongodump --archive --gzip`) to a managed exports dir. Source DB untouched; activity `database.exported` written **on completion**, not on request.
+  - **`202 { export: {...} }`** — the work is queued. The response body is the row at `status: "queued"`, with `file` and `download_url` **null**. Poll and drive the UI from `status`.
+  - **It used to be `201` and run inline.** A dump of any real database outlives nginx's `fastcgi_read_timeout` (300s) while `mysqldump` runs to 600s — so the browser was shown a failure while the dump carried on and succeeded, leaving a file nobody could find.
+  - Export shape: `{id, database_id, database, engine, file, status, size_bytes, size_human, reason, message, reference, available, download_url, requested_by, created_at, created_at_human, finished_at, finished_at_human}`.
+  - **`status`**: `queued` → `running` → `completed` | `failed`. Same polling shape as the engine installer.
+  - On failure: `reason` is a stable code (`dump_failed`, `database_missing`, `worker`), `message` is that code worded in the **viewer's** locale, `reference` correlates with the server-ops log.
+  - **`available`** is `false` when the file has since been deleted from disk by hand — `download_url` is null then too, rather than offering a link that 404s.
+**Database size (`size_bytes` / `size_human`)** — served from a stored column, not measured per request, so the list stays fast with many databases.
+- **`GET /api/databases`** returns the stored value. Refreshed by `databases:refresh-sizes` on a **10-minute** schedule.
+- **`GET /api/databases/{id}`** re-measures before responding — one database, someone looking straight at it, worth the query.
+- **It used to be written once at creation and never again**, so a database that had grown still reported roughly zero. It was never a performance problem; it was simply wrong.
+- A probe that fails leaves the last known value rather than writing `0` — reporting every database on a stopped engine as empty is the same confident-wrong answer.
+
+- **`GET /api/databases/exports`** (`view`) — every export, newest first. `{ exports: [ …same shape as above… ] }`.
+  - **In-flight rows are included**, not filtered out — a `queued`/`running` export is exactly what someone who just pressed the button is looking for.
+  - Rows survive their database being deleted (`database` is a copied name, `database_id` goes null), so a dump of something since-dropped is still listed and downloadable.
+- **`GET /api/databases/exports/{file}`** (`view`) — streams a previously-created export for download. Filename strict-validated + resolved inside the exports dir (no traversal).
+- **`DELETE /api/databases/exports/{id}`** (**`manage`**) — deletes the row *and* the file. `204`. Activity `database.export_deleted`.
+  - **Keyed by id, not filename** (the frontend asked for `{file}`): a `queued` or `failed` export has no file, and by filename those rows would sit in the list permanently with nothing able to clear them.
+  - `manage` rather than `view` because this destroys the only copy of that data; listing stays on `view`.
+  - ⚠️ **Not yet automatic** — nothing prunes old exports on a schedule, so they still accumulate until someone deletes them. Retention is a separate piece of work.
 
 *(Remaining P2: **import/restore** — deferred (writes data → will ship with existing-target-only + backup-before + confirm). P3: engine install-on-demand, app auto-DB + env-wiring, rename-database, phpMyAdmin signon SSO.)*
+
+### Setup page / Services
+
+**`GET /api/setup`** (`setting`) — one read that drives both the first-run wizard and the panel's Services page. They are the same list deliberately: building them separately would guarantee they drift, and something skipped on day one would then be lost rather than one click away.
+
+```json
+{ "setup": {
+  "complete": false, "status": "installing", "percent": 60,
+  "key": "database", "label": "Installing Database",
+  "stack": "lemp", "web_server": "nginx",
+  "components": [
+    { "key": "database", "title": "Database", "description": "…",
+      "state": "installing", "detail": null, "recommended": true,
+      "action": null, "reason": null, "message": null, "retryable": false,
+      "options": [
+        { "value": "mariadb", "label": "MariaDB", "installed": false, "version": null,
+          "installable": true, "recommended": true,
+          "action": { "method": "POST", "endpoint": "/api/databases/engines/mariadb" } }
+      ] },
+    { "key": "php", "state": "installed", "detail": "8.4",
+      "action": { "method": "POST", "endpoint": "/api/php/versions" }, "options": [] }
+  ] } }
+```
+
+- **`state` is always detected, never remembered** — `installed · pending · installing · failed`. A server that already ran MariaDB shows it installed before anything is clicked; something removed later goes back to `pending`. So **`pending` means "we looked and it is not there"**, not "we have not tried". `installed` beats a stale `installing` row, so a spinner can never hang forever.
+- **`percent` is derived** (`installed ÷ total`). It cannot go backwards or drift when a component is added.
+- **`action` is the endpoint to call** — the ones that already existed for PHP versions, Node versions, fail2ban and database engines. There is no `POST /setup/...`: a second way to trigger the same install is the one that drifts. **`null` means the panel cannot install it** (Redis, MongoDB) — render no button rather than one that fails.
+- **`options` is a pick-one** — only the database has them. MariaDB comes back `recommended: true`; MongoDB `installable: false`.
+- **`complete` tracks the *recommended* set, not everything.** Nothing here is required: the installer already put the web server, PHP and Node in place, so the panel works from first boot. A wizard that demanded the rest would block people over preferences.
+- **A failure keeps its `reason`, a localized `message` and `retryable: true`** — never cleared. There is nowhere to go back to when the panel *is* the server.
+- The web server is **not** on this list. It is chosen when the installer runs (`--stack=lemp|lamp|mern`) and serves the panel itself, so it cannot be swapped from inside the panel without the panel going down with it.
 
 ### Applications (Phase 1 — catalog + record only)
 
@@ -1022,6 +1122,179 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   - **PHP extension toggles return `422`** — there is no `phpenmod` equivalent. Hide them.
   - **PHP contributes no rows to the Services screen.** LSPHP is spawned by the web server, so there is no `php8.4-fpm` unit to start or stop; the `service` field on a PHP version is `null`. The OpenLiteSpeed service itself (`lshttpd`) is listed as normal.
 - ⚠️ **OpenLiteSpeed support has not yet run on a real OLS server.** The logic is tested; the paths and directives come from LiteSpeed's documentation. Expect the first live box to need corrections in `config/server.php`.
+
+### The application sidebar (`GET /api/permissions?level=application&application_id=…`)
+
+**The sidebar for one site is filtered by the backend. The frontend renders what it gets and writes no conditions.**
+
+Two filters decide whether an item appears, and both are applied server-side:
+
+1. **What the user was granted** — `view` / `manage`, from their roles.
+2. **What the site type can actually do** — a WordPress install has no git repository, a static site has no PHP.
+
+| request | answer | use it for |
+|---|---|---|
+| `?level=application&application_id=7` | that site's sidebar, both filters applied | **the app sidebar** |
+| `?level=application` | all 16 items, grants only | **the role form** — an admin assigning a role is not looking at one site |
+| `?level=server` | unchanged | the server sidebar |
+
+`application_id` on a `level=server` request is ignored: a server permission has nothing to do with any one site. An id that does not exist is a `422`.
+
+**Hide, don't grey.** There is nothing a user can do to enable PHP settings on a static site, so a disabled row is only noise. Greying is for things they *can* fix — like a site-type card that names the runtime to install.
+
+What each type supports is declared by the type itself, so a new site type costs one class and no frontend change — the same trade `GET /site-types` already makes for the create form. Today:
+
+- **Every site:** Dashboard · Domains & SSL · Logs · Backups · Settings · Files · Password Protection · Firewall · AI Bot Blocker · Fail2ban · Site Clone
+- **Deployment** — git sites only. A one-click install has no repository, branch or commit history.
+- **PHP Settings** — PHP sites only.
+- **Workers** — Node sites and git sites. A marketplace PHP app has nothing to supervise.
+- **Environment** — git and Node sites, plus **Craft CMS and Statamic** (both read a `.env` despite being one-click). **Not WordPress** — its configuration lives in `wp-config.php`, which is the application's file, not an env file the panel owns.
+- **Staging** — WordPress only for now: pushing a staging site back needs URL rewriting inside serialised data, and that recipe exists for WordPress and nothing else yet.
+- **phpMyAdmin** drops Backups and Site Clone — it holds no content of its own, so reinstalling is the honest recovery path. Password Protection stays, because an exposed phpMyAdmin is a login page for every database on the box.
+
+#### Hiding is not authorising
+
+Every app route gated by an `app_*` permission also checks the site type, so the endpoint is closed even if someone types the URL. It answers **`404`, not `403`** — for this site the screen does not exist at all, which is a different statement from "you may not".
+
+⚠️ **`POST /api/applications/{id}/deploy` has moved from `application,manage` to `app_deployment,manage`.** It is the Deployment screen's action, so it takes that screen's permission. Two consequences: a role with server `application` but not `app_deployment` can no longer deploy, and deploying a non-git site now returns `404` instead of `422` — the refusal happens before the controller rather than as a validation failure inside it.
+
+### Application domains (App sidebar → Domains)
+
+Requires the **`app_domain`** permission (`view` to read, `manage` to mutate) — an
+*application*-level permission, not the server-level `application`. The two are
+deliberately separate: sharing one permission across that line would turn "can
+manage this one site's domains" into "can manage every application".
+
+A site is no longer one hostname. Every name it answers to is a row, and every
+row has a **type** that says what that name does:
+
+| type | what it does |
+|---|---|
+| `primary` | The canonical name. Exactly one per application. The vhost file and both log files are named after it. |
+| `alias` | Serves the same content under a second name. |
+| `redirect` | Serves nothing — sends a `301` (or `302`/`307`/`308`) to `redirect_to`. |
+
+**The alias/redirect distinction is not cosmetic.** An alias makes search engines
+index the same site twice and split the ranking between the two names; a redirect
+keeps the authority on one. Say so in the UI — most users pick "alias" meaning
+"redirect".
+
+**`GET /api/applications/{id}/domains`** — primary first, then alphabetical.
+- Response: `{ domains: [{id, domain, type, type_title, redirect_to, redirect_status, is_test, dns_verified, dns_verified_at, dns_verified_at_human, dns_resolved_ip, behind_proxy, certifiable, created_at, created_at_human}] }`
+
+**`POST /api/applications/{id}/domains`** → `201 {domain: {...}}`
+- Body: `domain` (required), `type` (`alias|redirect`, default `alias`), `redirect_to` (required when `type=redirect`), `redirect_status` (`301|302|307|308`, default `301`).
+- **`primary` is not accepted here** — promoting a name is its own endpoint, because it renames three files.
+- `domain` is unique **across every application on the server**, not just this one. Two sites claiming one hostname is otherwise resolved by whichever vhost the web server reads first.
+- The charset is strict (lowercase hostname labels only). This value ends up in a filename and inside a config directive, so anything that could introduce a path separator or break out of the directive is refused here — a `422` on `domain`, not an escaped string later.
+- Adding a domain **rewrites and reloads the vhost**. If the new config fails its test, **the previous one is put back** rather than removed — a mistyped hostname must not take a live site down.
+
+**`POST /api/applications/{id}/domains/{domain}/verify`** → `{domain: {...}}`
+- Re-checks DNS. Its own button because propagation is something the user waits on: they add a record at their registrar and come back.
+- **`dns_verified: false` is the gate on offering a certificate.** Let's Encrypt allows five authorisation failures per hostname per hour, so guessing is expensive — check first, then offer.
+- **`behind_proxy: true`** means the name resolves to Cloudflare, not to this server. DNS is correct *and* HTTP validation will still fail, because the proxy answers first. This is the single most common support question this feature will generate — surface it as its own message ("pause the proxy, or use DNS validation"), not as a generic failure.
+
+**`POST /api/applications/{id}/domains/{domain}/primary`** → `{domains: [...]}`
+- Promotes a name to canonical. The name it replaces stays attached as an alias, so the site keeps answering on it.
+- This **renames the vhost and both log files** and removes the configuration under the old name.
+- ⚠️ **It does not rewrite URLs stored inside the application.** A WordPress site keeps its old `siteurl` in the database and will redirect straight back. Warn before confirming.
+
+**`DELETE /api/applications/{id}/domains/{domain}`** → `204`
+- The **primary is refused** (`422` on `domain`): removing it would leave the site with no canonical name, no vhost filename and no log paths. Promote another name first.
+
+- **`certifiable: false`** means this name can never go on a certificate. Test domains
+  (`*.nip.io`) are the case: nip.io is not on the Public Suffix List, so every
+  certificate issued for it *anywhere on the internet* shares one weekly limit.
+  Hide the SSL action rather than letting it fail.
+
+### Certificates / SSL (App sidebar → Domains)
+
+Same permission as domains — **`app_domain`** (`view` to read, `manage` to
+mutate). Two permissions would let someone add a domain but not secure it,
+which is not a state anybody wants to be in; Forge's own 2025 redesign merged
+the two screens for the same reason.
+
+**One certificate per application.** A server block presents exactly one, so a
+second record would be a certificate serving nothing. Reissuing replaces the
+row; what it replaced is in the activity log.
+
+**`GET /api/applications/{id}/certificate`** → `{certificate: {...} | null}`
+- **`null`, not `404`.** "This site has no certificate" is a normal state the screen has to render, not an error.
+- Fields: `id, type, type_title, status, domains[], missing_domains[], force_https, auto_renew, renewable, issued_at, expires_at, expires_at_human, days_remaining, expired, expiring_soon, reason, message, reference`
+
+**`POST /api/applications/{id}/certificate`**
+- Body: `type` = `letsencrypt` | `self_signed` | `custom`. For `custom` also `certificate`, `private_key`, and optionally `chain` (all PEM).
+- **`letsencrypt` and `self_signed` return `202`** with `status: "pending"` — the work is queued. **Poll `GET .../certificate` and drive the UI from `status`** (`pending → issuing → active | failed`). ACME involves a round trip back to this server and routinely outlasts the request.
+- **`custom` returns `201`** and is already `active`. There is nothing to wait for; adding a spinner to two file writes would be theatre.
+- A `custom` upload is checked before anything is written: the key must match the certificate (`422` on `private_key`) and both must be PEM. A mismatched pair is otherwise written happily, fails the config test, and takes the site down over a copy-paste.
+- **`force` (bool, optional)** skips the reachability dry run described below. Exists for one real case — a server behind NAT that cannot reach its own public address — and should be offered only *after* a refusal, never as the default.
+
+#### The dry run (why the button sometimes says no)
+
+Before certbot is called, the panel performs the challenge itself: it writes a random token into the ACME directory and fetches it back over plain HTTP. Only an exact match is a pass.
+
+This replaces the old "is DNS verified?" gate, and the difference matters. DNS pointing here says nothing about whether the token will be **served** — port 80 can be firewalled, Cloudflare can be answering, or the site's own rewrite rules can swallow `/.well-known/` and return a 404 page. Let's Encrypt reads that as an authorisation failure and allows only **five per hostname per hour**, so a gate that lets those through is barely a gate. The dry run costs nothing against any limit, because the request is ours.
+
+**The user never has to click "Verify DNS" first** — the check refreshes DNS itself as its first step.
+
+On refusal the response is a `422` with one message per domain under `errors.domain`, each naming a distinct fix:
+
+| reason | what the user must do |
+|---|---|
+| `dns_missing` | add an A record |
+| `dns_not_pointing` | it resolves to another address — the message names it |
+| `behind_proxy` | pause Cloudflare's proxy (grey cloud) |
+| `blocked_ip` | resolves to loopback or the metadata range; never certifiable |
+| `unreachable` | nothing answered on port 80 — firewall, or web server down |
+| `challenge_redirected` | the site redirects the challenge instead of answering it |
+| `challenge_not_served` | it answered, but not with the token — rewrite rules |
+| `precheck_failed` | the panel could not write its own test file (not the user's fault) |
+
+**Partial issuance:** if some names pass and others do not, the certificate is issued **for the ones that pass** and returns `202`. Blocking the whole request because a `www` record has not propagated helps nobody — the site gets HTTPS now, and `missing_domains` says what is left. Only if *nothing* passes is the request refused.
+
+The check also never fetches a third party: if the name resolves somewhere other than this server, that is answered from the DNS result without any request being made.
+
+**`PUT /api/applications/{id}/certificate/force-https`** → `{certificate: {...}}`
+- Body: `force_https` (bool).
+- **Refused with `422` unless a certificate is active.** This is not a preference: redirecting to HTTPS with nothing listening on 443 does not degrade the site, it takes it off the internet for every visitor at once — including the one who just clicked the toggle.
+
+**`DELETE /api/applications/{id}/certificate`** → `204`
+- Removes the TLS directives, clears force-HTTPS in the same step, and tells certbot to stop renewing. A renewal left behind keeps running forever, keeps spending rate limit, and eventually emails the user about a site they deleted.
+
+#### What the frontend needs to get right
+
+- **`status: "failed"` carries a `reason` code and a localized `message`.** Show the message; the codes are `rate_limited`, `rate_limited_failures`, `unreachable`, `dns_not_pointing`, `challenge_not_served`, `certbot_missing`, `self_sign_failed`, `unknown`. Each says what to do, because "it failed" is the least useful sentence a panel can produce about a certificate.
+  - **`rate_limited` must not offer a retry button.** Retrying is precisely what must not happen — the wait is a week. `rate_limited_failures` is an hour.
+- **`missing_domains` is the quiet failure.** A name added after issuance is served by a certificate that does not mention it: the browser refuses it, the server logs nothing, and the panel is the only place that can say so. If it is non-empty, prompt to reissue.
+- **`renewable: false`** (uploaded and self-signed) means nothing will renew it. Show the expiry as a deadline the user owns, not as a date that will take care of itself.
+- **`expiring_soon`** is computed server-side against one threshold so the rule lives in one place — certificate lifetimes are shrinking, and that threshold will move.
+- **`expires_at` is kept current after renewal.** certbot's timer replaces the file every ~60 days without telling the panel, so a daily command (`certificates:refresh-expiry`) re-reads it off disk. Without that the screen would count down from the issuance date and report "expired" on a site whose certificate renewed correctly weeks earlier. **This needs the Laravel scheduler tick to be running** — the same cron entry every other scheduled feature depends on.
+- **`reason: "file_missing"`** means the certificate the vhost points at is no longer on disk. Found by that same daily pass. It is reported rather than repaired: reissuing on a schedule would spend rate limit on a problem nobody has looked at. Offer a reissue button.
+- **Issuance needs `dns_verified: true` on the domain** (see the domains section). Requesting without it is refused with `422`, deliberately: Let's Encrypt allows five failed authorisations per hostname per hour, and guessing locks the user out of the fix for an hour.
+- **`self_signed` is the exception to that rule** — an internal or staging hostname that could never be validated publicly is the only reason it exists. Every browser will warn about it; say so in the UI rather than letting the user discover it.
+
+#### Automatic issuance on site creation
+
+When a site finishes provisioning, the panel runs the same dry run once and — **only if it passes** — issues a certificate on its own. No button, no request from the frontend.
+
+**A decline writes nothing.** No certificate row, no activity entry, `certificate: null`. This is deliberate and the frontend should rely on it: for a genuinely new domain the DNS record almost never points at the server yet, so most sites will decline. If that wrote a `failed` certificate, every new site would open on a red SSL error about something the user has not set up yet. The SSL screen simply shows its ordinary install button.
+
+Where it does fire is the case where DNS was pointed in advance — a site migrated from another server, or a record set before the site was created. For those, HTTPS is already there when the user first opens the site.
+
+- **Never for test domains** (`*.nip.io`): every certificate issued for nip.io anywhere shares one weekly limit, and spending it automatically on every site created on every install of this panel would be antisocial.
+- **Never over an existing certificate.** Provisioning can be re-run; reissuing over a working one spends rate limit to achieve nothing.
+- **Cannot fail the provision.** By the time it runs the site is created, serving and correct — a DNS timeout must not turn that into a failed application.
+- Operators can turn it off with `SV_AUTO_ISSUE_CERTIFICATES=false` (a box with no public DNS).
+- **There is no background retry.** If it declines, nothing tries again on its own; the user installs from the panel when they are ready, and the button now says precisely why if it is still not possible.
+
+#### How this works on the server, and why
+
+- **certbot runs in `certonly --webroot`, never the `--nginx` / `--apache` plugins.** The plugins work by editing the vhost — the file this panel regenerates on every domain change. Their edits would be silently wiped and HTTPS would disappear with nothing to explain it. It is also the only mode that works on **OpenLiteSpeed**, which has no certbot plugin at all: one code path, three web servers.
+- **One shared ACME challenge directory**, aliased into all nine vhost templates. Per-site document roots cannot work for node and proxy sites — they serve nothing from disk, so there is nowhere for certbot to drop the token. The alias sits ahead of the front-controller rewrite, or a WordPress site answers with its 404 page and burns an authorisation attempt.
+- **Force-HTTPS never redirects `/.well-known/acme-challenge/`.** Without that exception renewal stops working and the redirect goes on pointing confidently at a certificate that has expired.
+- **A redirect domain gets its own HTTPS listener.** `http://old` → `https://new` looks like it needs no certificate, but a browser that has seen HSTS for `old` refuses the plaintext hop and never reaches the redirect at all.
+- **certbot's post-renewal hook reloads the web server.** Without it renewal half-works: a new certificate lands on disk while the server keeps serving the old one from memory, surfacing weeks later as an expired certificate on a site whose files are fine.
+- ⚠️ **Not yet exercised against a live ACME server.** The logic and the failure classification are tested; the paths and certbot flags come from its documentation. Expect the first real issuance to need corrections.
 
 ### Git integrations (Integrations → Git)
 

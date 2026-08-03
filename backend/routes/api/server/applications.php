@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\API\Server\ApplicationController;
+use App\Http\Controllers\API\Server\ApplicationDomainController;
 use App\Http\Controllers\API\Server\ApplicationWebhookController;
+use App\Http\Controllers\API\Server\CertificateController;
+use App\Http\Controllers\API\Server\DeploymentController;
 use App\Http\Controllers\API\Server\ServerCapabilityController;
 use App\Http\Controllers\API\Server\SiteTypeController;
 use Illuminate\Support\Facades\Route;
@@ -24,7 +27,11 @@ Route::get('/applications/port-check', [ApplicationController::class, 'portCheck
 Route::get('/applications/{application}', [ApplicationController::class, 'show'])->middleware('permission:application');
 Route::put('/applications/{application}', [ApplicationController::class, 'update'])->middleware('permission:application,manage');
 Route::post('/applications/{application}/provision', [ApplicationController::class, 'provision'])->middleware('permission:application,manage');
-Route::post('/applications/{application}/deploy', [ApplicationController::class, 'deploy'])->middleware('permission:application,manage');
+// Deploy is the Deployment screen's action, so it is gated by that screen's
+// permission rather than the server-level `application` one. That also brings
+// it under the site-type check: a WordPress install has no repository, so the
+// endpoint 404s rather than running against a site that cannot deploy.
+Route::post('/applications/{application}/deploy', [ApplicationController::class, 'deploy'])->middleware('permission:app_deployment,manage');
 Route::post('/applications/{application}/process/{action}', [ApplicationController::class, 'process'])
     ->middleware('permission:application,manage');
 
@@ -35,3 +42,45 @@ Route::get('/webhook-providers', [ApplicationWebhookController::class, 'provider
 Route::put('/applications/{application}/webhook', [ApplicationWebhookController::class, 'update'])
     ->middleware('permission:application,manage');
 Route::delete('/applications/{application}', [ApplicationController::class, 'destroy'])->middleware('permission:application,manage');
+
+// Domains. Gated by `app_domain` — an application-level permission, not the
+// server-level `application`, because these are two different sidebars and
+// sharing a permission across that line is how a narrow grant turns into a
+// wide one.
+Route::get('/applications/{application}/domains', [ApplicationDomainController::class, 'index'])
+    ->middleware('permission:app_domain');
+Route::post('/applications/{application}/domains', [ApplicationDomainController::class, 'store'])
+    ->middleware('permission:app_domain,manage');
+Route::post('/applications/{application}/domains/{domain}/verify', [ApplicationDomainController::class, 'verify'])
+    ->middleware('permission:app_domain');
+Route::post('/applications/{application}/domains/{domain}/primary', [ApplicationDomainController::class, 'makePrimary'])
+    ->middleware('permission:app_domain,manage');
+Route::delete('/applications/{application}/domains/{domain}', [ApplicationDomainController::class, 'destroy'])
+    ->middleware('permission:app_domain,manage');
+
+// Certificates live under the same `app_domain` permission as the names they
+// cover. Two permissions would let someone add a domain but not secure it,
+// which is not a state anybody wants to be in — and Forge's own 2025 redesign
+// merged the two screens for the same reason.
+Route::get('/applications/{application}/certificate', [CertificateController::class, 'show'])
+    ->middleware('permission:app_domain');
+Route::post('/applications/{application}/certificate', [CertificateController::class, 'store'])
+    ->middleware('permission:app_domain,manage');
+Route::put('/applications/{application}/certificate/force-https', [CertificateController::class, 'forceHttps'])
+    ->middleware('permission:app_domain,manage');
+Route::delete('/applications/{application}/certificate', [CertificateController::class, 'destroy'])
+    ->middleware('permission:app_domain,manage');
+
+// The Deployment screen. Gated by `app_deployment`, which also brings these
+// under the site-type check — a WordPress install has no repository, so every
+// one of them 404s there rather than running against a site that cannot deploy.
+Route::get('/applications/{application}/deployments', [DeploymentController::class, 'index'])
+    ->middleware('permission:app_deployment');
+Route::post('/applications/{application}/deployments', [DeploymentController::class, 'store'])
+    ->middleware('permission:app_deployment,manage');
+Route::get('/applications/{application}/deployments/{deployment}', [DeploymentController::class, 'show'])
+    ->middleware('permission:app_deployment');
+Route::post('/applications/{application}/deployments/{deployment}/redeploy', [DeploymentController::class, 'redeploy'])
+    ->middleware('permission:app_deployment,manage');
+Route::put('/applications/{application}/deployment-settings', [DeploymentController::class, 'updateSettings'])
+    ->middleware('permission:app_deployment,manage');

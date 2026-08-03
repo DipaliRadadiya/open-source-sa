@@ -11,6 +11,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Fail2ban\Fail2banManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class Fail2banController extends Controller
 {
@@ -55,7 +56,7 @@ class Fail2banController extends Controller
             return response()->json(['message' => __('errors/fail2ban.already_installed')], 422);
         }
 
-        InstallFail2ban::dispatch();
+        InstallFail2ban::dispatch(Auth::id());
         $log->log('fail2ban.install_started');
 
         return response()->json(['message' => __('fail2ban.install_started')], 202);

@@ -435,7 +435,12 @@ describe('the driver', function () {
         expect($config)->toContain('context exp:^/\.(git|svn|hg|bzr|env) {')
             ->and($config)->not->toContain('context ~')
             // .well-known must stay reachable or certificates cannot be issued.
-            ->and($config)->not->toContain('well-known');
+            // The deny rule names the directories it blocks rather than using a
+            // lookahead, so it must not name this one — and the challenge path
+            // is served explicitly, since node and static sites have no
+            // document root for certbot to drop a token into.
+            ->and($config)->not->toContain('bzr|env|well-known')
+            ->and($config)->toContain('context /.well-known/acme-challenge {');
     });
 
     it('creates the log directory the vhost names', function () {

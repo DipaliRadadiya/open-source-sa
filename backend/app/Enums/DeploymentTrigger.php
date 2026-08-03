@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Enums;
+
+/**
+ * What started a deploy.
+ *
+ * Worth recording rather than inferring from whether an actor is present: a
+ * redeploy is also manual and also has an actor, but it is answering a
+ * different question — "we ran this again" rather than "someone pushed a
+ * button after a change".
+ */
+enum DeploymentTrigger: string
+{
+    /** Someone pressed Deploy. */
+    case Manual = 'manual';
+
+    /** A push arrived at the webhook. No actor. */
+    case Webhook = 'webhook';
+
+    /** Someone re-ran an earlier deploy. */
+    case Redeploy = 'redeploy';
+
+    public function label(): string
+    {
+        return __('deployment.trigger.'.$this->value);
+    }
+}

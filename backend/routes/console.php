@@ -17,6 +17,13 @@ Schedule::command('server:sample-metrics')->everyFiveMinutes()->withoutOverlappi
 // Per-engine DB metrics for the Query Monitor chart (same bounded-table model).
 Schedule::command('db:sample-metrics')->everyFiveMinutes()->withoutOverlapping();
 
+// The databases list reads a stored size rather than querying every schema on
+// every request. That is only the right trade if something keeps the column
+// current — without this it reported the size at creation, which is zero,
+// forever. Ten minutes is well inside "a few minutes old is fine" for a list,
+// and `show` re-measures on demand for anyone who wants the exact figure.
+Schedule::command('databases:refresh-sizes')->everyTenMinutes()->withoutOverlapping();
+
 // Automatic disk cleaner: the tick just wakes the command every minute; the
 // command self-gates on the DB schedule (enabled / due / threshold). No cron
 // file, so it can never drift with the user-managed Cronjobs feature.
@@ -27,3 +34,10 @@ Schedule::command('disk-cleaner:run')->everyMinute()->withoutOverlapping();
 // that the API never makes a network call inside a request. A box with no
 // egress simply keeps an empty cache and shows no badges, which is honest.
 Schedule::command('runtimes:refresh-lifecycle')->daily()->withoutOverlapping();
+
+// Renewal happens outside the panel — certbot's own timer swaps the file every
+// sixty days and tells nothing. Without this the SSL screen counts down from
+// the date captured at issuance and eventually reports "expired" on a site
+// whose certificate renewed correctly weeks ago. Daily, because the number it
+// maintains is measured in days.
+Schedule::command('certificates:refresh-expiry')->daily()->withoutOverlapping();

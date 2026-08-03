@@ -15,6 +15,11 @@ return [
         'no_space' => 'Le serveur n\'a plus d\'espace disque.',
         'worker' => 'L\'installation s\'est arrêtée de façon inattendue. Elle a peut-être expiré — réessayez.',
         'unknown' => 'L\'installation a échoué. Communiquez la référence ci-dessous au support.',
+        'dpkg_broken' => 'La base de paquets de ce serveur doit être réparée avant toute autre installation.',
+        'port_in_use_by_mysql' => 'MySQL est déjà installé et occupe ce port. Supprimez-le, ou continuez de vous en servir.',
+        'port_in_use_by_mariadb' => 'MariaDB est déjà installé et occupe ce port. Supprimez-le, ou continuez de vous en servir.',
+        'root_unreachable' => 'C\'est installé mais le panneau n\'a pas pu s\'y connecter. L\'accès administrateur a été modifié par rapport à la valeur par défaut ; le panneau a besoin de ces informations pour continuer.',
+        'grant_failed' => 'C\'est installé mais le panneau n\'a pas pu y créer son propre compte.',
     ],
 
     'extension_install_failed' => [
