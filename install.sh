@@ -440,6 +440,12 @@ install_node() {
     # four levels below node-versions, which is why maxdepth is 5 and not 3.
     NODE_BIN=$(find "${FNM_DIR}/node-versions" -maxdepth 5 -type f -name node -path "*v${NODE_VERSION}.*" 2>/dev/null | head -n1)
     [[ -x "${NODE_BIN:-}" ]] || die "installed Node ${NODE_VERSION} but cannot find its binary under ${FNM_DIR}"
+
+    # The installer runs as root under umask 077, but the frontend build and
+    # the panel's runtime manager execute Node as the panel account. Without
+    # this ownership hand-off, `env npm` finds the binary but cannot traverse
+    # /opt/fnm, producing a misleading "Permission denied" error.
+    run chown -R "${APP_USER}:${APP_USER}" "$FNM_DIR"
     ok "node binary: $NODE_BIN"
 }
 
