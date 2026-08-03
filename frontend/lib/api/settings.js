@@ -1,0 +1,48 @@
+import { api } from "@/lib/api/client";
+
+// Each group is written on its own — the API applies them independently, so a
+// single "save everything" call would report success for work it never did.
+// Every write returns `{ <group>: {…refreshed values…} }`.
+
+export function updateGeneralSettings(payload) {
+  return api.put("/settings/general", payload);
+}
+
+/** `size_mb: 0` disables swap (swapoff + remove the managed file). */
+export function updateSwapSettings(payload) {
+  return api.put("/settings/swap", payload);
+}
+
+/**
+ * SSH. The API runs `sshd -t` before reloading and opens the new port in the
+ * firewall first, so a bad value can't take the daemon down — but the rule for
+ * the OLD port is left behind and is the caller's to clean up.
+ *
+ * `422` on `password_authentication` means no SSH key exists to get back in with.
+ */
+export function updateSecuritySettings(payload) {
+  return api.put("/settings/security", payload);
+}
+
+export function updateUpdateSettings(payload) {
+  return api.put("/settings/updates", payload);
+}
+
+/**
+ * A recurring restart. Disabling removes the cron file outright, so only
+ * `enabled: false` needs sending in that case — the rest would describe a
+ * schedule that no longer exists.
+ */
+export function updateRebootSchedule(payload) {
+  return api.put("/settings/reboot-schedule", payload);
+}
+
+/** `404` when redis isn't installed — the group is simply absent from the read. */
+export function updateRedisSettings(payload) {
+  return api.put("/settings/redis", payload);
+}
+
+/** `delay_minutes` 0–60; `0` = now. Returns 202, the server goes away shortly after. */
+export function rebootServer(delayMinutes = 0) {
+  return api.post("/settings/reboot", { delay_minutes: delayMinutes });
+}

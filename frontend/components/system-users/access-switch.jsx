@@ -8,6 +8,7 @@ import { ShieldAlert } from "lucide-react";
 import { setSystemUserSudo, setSystemUserSsh } from "@/lib/api/system-users";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { apiMessage } from "@/lib/api/error-message";
 
 // Inline access toggle used in the table. `field` is "sudo" | "ssh". Applies
 // immediately with a toast; read-only when !canManage. Enabling sudo (a root
@@ -33,7 +34,7 @@ export function AccessSwitch({ user, field, canManage = true }) {
       }
       router.refresh();
     } catch (error) {
-      toast.error(error.response?.data?.message || t("toast.failed"));
+      toast.error(apiMessage(error, t("toast.failed")));
     } finally {
       setBusy(false);
     }

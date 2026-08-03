@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Eye, Loader2 } from "lucide-react";
 import { stopImpersonating } from "@/lib/auth/auth-actions";
 import { Button } from "@/components/ui/button";
+import { apiMessage } from "@/lib/api/error-message";
 
 // Persistent banner shown while an admin is impersonating a user. `username` is
 // the account being viewed as. "Stop" reverts to the admin and hard-navigates
@@ -20,7 +21,7 @@ export function ImpersonationBanner({ username, admin }) {
       await stopImpersonating();
       window.location.href = "/admin/users";
     } catch (error) {
-      toast.error(error.response?.data?.message || t("failed"));
+      toast.error(apiMessage(error, t("failed")));
       setStopping(false);
     }
   }

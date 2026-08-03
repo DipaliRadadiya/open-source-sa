@@ -1,0 +1,128 @@
+"use client";
+
+import { useTranslations, useFormatter } from "next-intl";
+import { Cpu, MemoryStick, HardDrive, Activity, ArrowLeftRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { StatCard, pct } from "@/components/ui/stat-card";
+
+export function StatCards({ metrics, stale = false, ratesReady = true }) {
+  const t = useTranslations("serverDashboard");
+  const format = useFormatter();
+  const loading = !metrics;
+
+  // Locale-aware numbers: hi/es use different grouping and decimal marks.
+  const percentText = (value, decimals = 0) =>
+    format.number(pct(value) / 100, {
+      style: "percent",
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  const decimal = (value) =>
+    Number.isFinite(Number(value))
+      ? format.number(Number(value), {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : "—";
+
+  const cpu = metrics?.cpu;
+  const memory = metrics?.memory;
+  const swap = metrics?.swap;
+  const disk = metrics?.disk;
+  const load = metrics?.load;
+  const cores = Number(cpu?.cores) || 0;
+
+  return (
+    // 5 cards: 1 → 2 → 5. A 3-col step would strand a single card on its own row.
+    // aria-live=polite: values refresh every 3s, so announce changes without
+    // interrupting whatever the user is doing.
+    <div
+      aria-live="polite"
+      aria-busy={loading}
+      className={cn(
+        "grid gap-4 transition-opacity sm:grid-cols-2 xl:grid-cols-5",
+        // Polling is failing: the numbers are last-known, not current.
+        stale && "opacity-60",
+      )}
+    >
+      <StatCard
+        icon={Cpu}
+        label={t("cpu")}
+        // A rate needs two samples. Until the second one lands the API returns
+        // 0, which would draw an idle machine we have no evidence for — so the
+        // card says "not measured yet" instead of a number.
+        value={ratesReady ? percentText(cpu?.percent, 1) : "—"}
+        percent={ratesReady ? cpu?.percent : null}
+        hint={cpu?.cores ? t("cores", { count: cpu.cores }) : ""}
+        loading={loading}
+      />
+      <StatCard
+        icon={MemoryStick}
+        label={t("memory")}
+        value={percentText(memory?.percent)}
+        percent={memory?.percent}
+        hint={
+          memory?.total_human
+            ? t("usedOf", { used: memory.used_human, total: memory.total_human })
+            : ""
+        }
+        sub={memory?.free_human ? t("free", { free: memory.free_human }) : ""}
+        hasSub
+        loading={loading}
+      />
+      <StatCard
+        icon={ArrowLeftRight}
+        label={t("swap")}
+        value={
+          Number(swap?.total) > 0 ? percentText(swap?.percent) : "—"
+        }
+        percent={Number(swap?.total) > 0 ? swap?.percent : null}
+        hint={
+          Number(swap?.total) > 0 && swap?.used_human && swap?.total_human
+            ? t("usedOf", { used: swap.used_human, total: swap.total_human })
+            : t("swapOff")
+        }
+        sub={
+          Number(swap?.total) > 0 && swap?.free_human
+            ? t("free", { free: swap.free_human })
+            : ""
+        }
+        hasSub
+        loading={loading}
+      />
+      <StatCard
+        icon={HardDrive}
+        label={t("disk")}
+        value={percentText(disk?.percent)}
+        percent={disk?.percent}
+        hint={
+          disk?.total_human
+            ? t("usedOf", { used: disk.used_human, total: disk.total_human })
+            : ""
+        }
+        sub={disk?.free_human ? t("free", { free: disk.free_human }) : ""}
+        hasSub
+        loading={loading}
+      />
+      <StatCard
+        icon={Activity}
+        label={t("load")}
+        value={decimal(load?.[1])}
+        // Load is only meaningful against core count: >= cores means saturated.
+        percent={
+          cores > 0 && Number.isFinite(Number(load?.[1]))
+            ? (Number(load[1]) / cores) * 100
+            : null
+        }
+        hint={cores ? t("ofCores", { count: cores }) : ""}
+        sub={
+          load
+            ? `${t("loadHint")}: ${[load[5], load[15]].map(decimal).join(" · ")}`
+            : ""
+        }
+        hasSub
+        loading={loading}
+      />
+    </div>
+  );
+}

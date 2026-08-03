@@ -9,7 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FormModal } from "@/components/ui/form-modal";
 import { getSystemUserDetail } from "@/lib/api/system-users";
 
-// Map an application status to a semantic badge variant.
 function statusVariant(status) {
   const s = (status ?? "").toLowerCase();
   if (/(active|running|online|live|deployed)/.test(s)) return "success";

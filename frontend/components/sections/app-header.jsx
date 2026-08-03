@@ -7,6 +7,7 @@ import { useUser } from "@/hooks/use-user";
 import { SidebarToggle } from "@/components/sections/sidebar-toggle";
 import { AppBreadcrumb } from "@/components/sections/app-breadcrumb";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleSwitcher } from "@/components/sections/locale-switcher";
 import { UserMenu } from "@/components/sections/user-menu";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
@@ -23,6 +24,7 @@ export function AppHeader({ items, impersonating = false }) {
       <SidebarToggle />
       <AppBreadcrumb items={items} />
       <div className="ml-auto flex items-center gap-2">
+        <LocaleSwitcher />
         <ThemeToggle />
         <UserMenu
           impersonating={impersonating}

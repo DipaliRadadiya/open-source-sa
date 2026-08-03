@@ -13,6 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { apiMessage } from "@/lib/api/error-message";
 
 export function SyncPermissionsButton() {
   const t = useTranslations("roles.sync");
@@ -28,7 +29,7 @@ export function SyncPermissionsButton() {
       setOpen(false);
       router.refresh();
     } catch (error) {
-      toast.error(error.response?.data?.message || t("failed"));
+      toast.error(apiMessage(error, t("failed")));
     } finally {
       setPending(false);
     }

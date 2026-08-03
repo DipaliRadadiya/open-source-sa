@@ -5,19 +5,18 @@ export const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 // Mirrors the backend password policy: min 10, mixed case + a number.
 const passwordField = z
   .string()
-  .min(10, "At least 10 characters")
-  .regex(/[a-z]/, "Include a lowercase letter")
-  .regex(/[A-Z]/, "Include an uppercase letter")
-  .regex(/[0-9]/, "Include a number");
+  .min(10, "min10")
+  .regex(/[a-z]/, "lowercase")
+  .regex(/[A-Z]/, "uppercase")
+  .regex(/[0-9]/, "number");
 
 const usernameField = z
   .string()
-  .min(1, "Username is required")
-  .regex(/^[a-zA-Z0-9_-]+$/, "Only letters, numbers, dashes and underscores");
+  .min(1, "required_username")
+  .regex(/^[a-zA-Z0-9_-]+$/, "usernameChars");
 
 const roleRefSchema = z.object({ id: z.number(), name: z.string() });
 
-// ---- API response shapes (resource-named envelope) ----
 export const userSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -40,31 +39,30 @@ export const usersResponseSchema = z.object({
   meta: usersMetaSchema,
 });
 
-// ---- Form schemas ----
 // Every user must hold at least one role. The account type is is_admin (grants
 // admin-area access); permissions themselves come purely from the roles.
 const roleIdsField = z
   .array(z.number())
-  .min(1, "Select at least one role");
+  .min(1, "selectRole");
 
 export const createUserSchema = z
   .object({
-    name: z.string().min(1, "Name is required"),
+    name: z.string().min(1, "required_name"),
     username: usernameField,
     password: passwordField,
-    password_confirmation: z.string().min(1, "Please confirm your password"),
+    password_confirmation: z.string().min(1, "confirmPassword"),
     is_admin: z.boolean(),
     role_ids: roleIdsField,
   })
   .refine((d) => d.password === d.password_confirmation, {
-    message: "Passwords do not match",
+    message: "passwordsMismatch",
     path: ["password_confirmation"],
   });
 
 // On edit, name/username/is_admin go to PUT /users/{id} and role_ids are synced
 // via PUT /users/{id}/roles — but we validate them together in one form.
 export const updateUserSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "required_name"),
   username: usernameField,
   is_admin: z.boolean(),
   role_ids: roleIdsField,
@@ -73,9 +71,9 @@ export const updateUserSchema = z.object({
 export const resetPasswordSchema = z
   .object({
     password: passwordField,
-    password_confirmation: z.string().min(1, "Please confirm your password"),
+    password_confirmation: z.string().min(1, "confirmPassword"),
   })
   .refine((d) => d.password === d.password_confirmation, {
-    message: "Passwords do not match",
+    message: "passwordsMismatch",
     path: ["password_confirmation"],
   });

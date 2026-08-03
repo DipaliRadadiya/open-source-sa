@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { deleteRole } from "@/lib/api/roles";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { apiMessage } from "@/lib/api/error-message";
 
 export function DeleteRoleDialog({ role, open, onOpenChange }) {
   const t = useTranslations("roles");
@@ -21,7 +22,7 @@ export function DeleteRoleDialog({ role, open, onOpenChange }) {
       onOpenChange?.(false);
       router.refresh();
     } catch (error) {
-      toast.error(error.response?.data?.message || t("toast.deleteFailed"));
+      toast.error(apiMessage(error, t("toast.deleteFailed")));
     } finally {
       setPending(false);
     }

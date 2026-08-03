@@ -26,10 +26,10 @@ export const rolesResponseSchema = z.object({
 // Client form validation (name + description). The permission matrix is managed
 // as separate component state and assembled into the request on submit.
 export const roleFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(255, "Too long"),
+  name: z.string().min(1, "required_name").max(255, "tooLong"),
   description: z
     .string()
-    .max(1000, "Too long")
+    .max(1000, "tooLong")
     .optional()
     .or(z.literal("")),
 });

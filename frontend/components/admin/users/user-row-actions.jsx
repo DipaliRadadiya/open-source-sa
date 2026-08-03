@@ -24,6 +24,7 @@ import { UserFormDialog } from "@/components/admin/users/user-form-dialog";
 import { ResetPasswordDialog } from "@/components/admin/users/reset-password-dialog";
 import { DeleteUserDialog } from "@/components/admin/users/delete-user-dialog";
 import { impersonateUser } from "@/lib/api/users";
+import { apiMessage } from "@/lib/api/error-message";
 
 export function UserRowActions({ user, roles = [], currentUserId }) {
   const t = useTranslations("users");
@@ -49,7 +50,7 @@ export function UserRowActions({ user, roles = [], currentUserId }) {
       // cookie (router.refresh would leave stale server-rendered chrome).
       window.location.href = "/dashboard";
     } catch (error) {
-      toast.error(error.response?.data?.message || t("actions.impersonateFailed"));
+      toast.error(apiMessage(error, t("actions.impersonateFailed")));
       setImpersonating(false);
     }
   }

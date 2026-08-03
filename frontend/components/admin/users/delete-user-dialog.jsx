@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { deleteUser } from "@/lib/api/users";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { apiMessage } from "@/lib/api/error-message";
 
 export function DeleteUserDialog({ user, open, onOpenChange }) {
   const t = useTranslations("users");
@@ -22,7 +23,7 @@ export function DeleteUserDialog({ user, open, onOpenChange }) {
       router.refresh();
     } catch (error) {
       // Backend blocks self-deletion (and similar) with a 422 message.
-      toast.error(error.response?.data?.message || t("toast.deleteFailed"));
+      toast.error(apiMessage(error, t("toast.deleteFailed")));
     } finally {
       setPending(false);
     }

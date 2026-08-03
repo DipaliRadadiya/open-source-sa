@@ -25,6 +25,11 @@ export async function logout() {
   await api.post("/auth/logout");
 }
 
+export async function updateProfile(values) {
+  const res = await api.put("/auth/profile", values);
+  return res.data?.user;
+}
+
 // Self password change. Backend re-issues a Bearer token, but we're cookie-
 // session auth so we ignore it — the session cookie stays valid.
 export async function changePassword(values) {

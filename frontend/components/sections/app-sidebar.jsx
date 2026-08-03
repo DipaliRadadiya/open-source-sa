@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
-import { groupBySubLevel, NAV_ITEM_CLASS } from "@/lib/navigation";
+import { groupBySubLevel, isNavActive, NAV_ITEM_CLASS } from "@/lib/navigation";
 import { Logo } from "@/components/logo";
 import { NavIcon } from "@/components/nav-icon";
 import {
@@ -53,7 +53,7 @@ export function AppSidebar({ items }) {
             )}
             <SidebarMenu className="gap-1.5">
               {groupItems.map((item) => {
-                const active = pathname === item.url;
+                const active = isNavActive(pathname, item.url);
                 return (
                   <SidebarMenuItem key={`${item.name}-${item.url}`}>
                     <SidebarMenuButton

@@ -1,0 +1,84 @@
+"use client";
+
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import {
+  RuleName,
+  ActionBadge,
+  PortText,
+  ProtocolText,
+  SourceText,
+  DeleteRuleButton,
+} from "@/components/firewall/rule-parts";
+
+/**
+ * The same rules as cards, for screens too narrow for six columns.
+ *
+ * The table scrolls sideways on a phone and puts delete off the right edge with
+ * nothing hinting at a swipe. Here the name leads, the facts sit in one line
+ * beneath it, and delete is reachable.
+ */
+export function RulesCards({
+  rules,
+  enabled,
+  canManage,
+  pending,
+  onDelete,
+  onToggle,
+  onRename,
+  labels,
+}) {
+  return (
+    <ul className="space-y-3">
+      {rules.map((rule) => (
+        <li key={rule.id} className="rounded-xl border bg-card p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 space-y-2">
+              <RuleName rule={rule} muted={!enabled} labels={labels} />
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <ActionBadge rule={rule} labels={labels} />
+                <PortText rule={rule} />
+                <ProtocolText rule={rule} labels={labels} />
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <ReasonTooltip reason={canManage ? null : labels.noPermission}>
+                <Switch
+                  checked={rule.enabled !== false}
+                  onCheckedChange={() => onToggle(rule)}
+                  disabled={!canManage || pending === rule.id}
+                  aria-label={labels.toggle}
+                />
+              </ReasonTooltip>
+              <ReasonTooltip reason={canManage ? null : labels.noPermission}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!canManage || pending === rule.id}
+                  onClick={() => onRename(rule)}
+                  aria-label={labels.rename}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+              </ReasonTooltip>
+              <DeleteRuleButton
+                rule={rule}
+                enabled={enabled}
+                canManage={canManage}
+                pending={pending === rule.id}
+                onDelete={onDelete}
+                labels={labels}
+              />
+            </div>
+          </div>
+
+          <p className="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
+            {labels.from} <SourceText rule={rule} labels={labels} />
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
+}

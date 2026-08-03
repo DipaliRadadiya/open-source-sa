@@ -4,6 +4,7 @@ export const activityEntrySchema = z.object({
   id: z.number(),
   type: z.string().nullable().optional(),
   action: z.string(),
+  scope: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   user: z
     .object({ id: z.number(), username: z.string() })
@@ -30,4 +31,11 @@ export const activityResponseSchema = z.object({
 export const activityFiltersSchema = z.object({
   types: z.array(z.string()).default([]),
   actions: z.record(z.string(), z.array(z.string())).default({}),
+  // Only the scopes the caller actually has rows in. `label` is localized by
+  // the API — never hardcode Account/Server on this side.
+  scopes: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .nullable()
+    .optional()
+    .default([]),
 });

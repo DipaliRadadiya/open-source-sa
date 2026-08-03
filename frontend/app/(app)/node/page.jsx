@@ -1,0 +1,112 @@
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { Hexagon } from "lucide-react";
+import { getPermissions } from "@/lib/permissions/get-permissions";
+import { can } from "@/lib/permissions/can";
+import { getNode } from "@/lib/node/get-node";
+import { VersionBar } from "@/components/runtime/version-bar";
+import { InstallVersionButton } from "@/components/runtime/install-version-button";
+import { VersionSummary } from "@/components/node/version-summary";
+import { SystemNodeNote } from "@/components/node/system-node-note";
+import { LoadFailed } from "@/components/data-table/load-failed";
+import { EmptyState } from "@/components/data-table/empty-state";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  const t = await getTranslations("node");
+  return { title: t("title") };
+}
+
+export default async function NodePage({ searchParams }) {
+  const sp = await searchParams;
+  const [permissions, t, { data, failed }] = await Promise.all([
+    getPermissions(),
+    getTranslations("node"),
+    getNode(),
+  ]);
+
+  if (!can(permissions, "node", "view")) redirect("/dashboard");
+  const canManage = can(permissions, "node", "manage");
+
+  if (failed || !data) return <LoadFailed description={t("loadFailed")} />;
+
+  const node = data;
+  const versions = node?.versions ?? [];
+  const lifecycleAvailable = Boolean(node?.lifecycle_available);
+
+  // The version in the URL wins so a reload keeps your place; otherwise the
+  // default, which is the one most people came to look at.
+  const selected =
+    versions.find((version) => version.version === sp?.version)?.version ??
+    node?.default ??
+    versions[0]?.version ??
+    null;
+
+  const current = versions.find((version) => version.version === selected) ?? null;
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+      </div>
+
+      {/* No managed Node is a normal state on a fresh server, not an error —
+          and the box may still have one of its own, which the note explains. */}
+      {versions.length === 0 ? (
+        <div className="max-w-5xl space-y-4">
+          <EmptyState
+            icon={Hexagon}
+            title={t("empty.title")}
+            // With nothing installable there is no button to offer, so inviting
+            // someone to install would be a dead end. Say why instead.
+            description={
+              (node?.installable ?? []).length === 0
+                ? t("empty.noneInstallable")
+                : t("empty.description")
+            }
+            action={
+              <InstallVersionButton
+                runtime="node"
+                installable={node?.installable ?? []}
+                canManage={canManage}
+                lifecycleAvailable={lifecycleAvailable}
+              />
+            }
+          />
+          <SystemNodeNote system={node?.system} />
+        </div>
+      ) : (
+        <div className="max-w-5xl space-y-4">
+          {versions.length > 1 ? (
+            <VersionBar
+              versions={versions}
+              selected={selected}
+              namespace="node"
+              lifecycleAvailable={lifecycleAvailable}
+            />
+          ) : null}
+
+          {current ? (
+            <VersionSummary
+              version={current}
+              canManage={canManage}
+              lifecycleAvailable={lifecycleAvailable}
+              installButton={
+                <InstallVersionButton
+                  runtime="node"
+                  installable={node?.installable ?? []}
+                  canManage={canManage}
+                  lifecycleAvailable={lifecycleAvailable}
+                />
+              }
+            />
+          ) : null}
+
+          <SystemNodeNote system={node?.system} />
+        </div>
+      )}
+    </div>
+  );
+}

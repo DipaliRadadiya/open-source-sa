@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { apiMessage } from "@/lib/api/error-message";
 
 // Inline, editable login-shell picker used in the table. Read-only text when
 // the caller can't manage.
@@ -36,7 +37,7 @@ export function ShellSelect({ user, canManage = true }) {
       toast.success(t("toast.shellChanged"));
       router.refresh();
     } catch (error) {
-      toast.error(error.response?.data?.message || t("toast.failed"));
+      toast.error(apiMessage(error, t("toast.failed")));
     } finally {
       setBusy(false);
     }

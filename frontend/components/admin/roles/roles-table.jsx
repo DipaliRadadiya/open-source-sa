@@ -19,6 +19,50 @@ function grantedCount(role) {
   ).length;
 }
 
+/* Cells at module level: flexRender treats a cell function's identity as the
+ * component type, and this table re-renders on every keystroke in its search
+ * box — inline cells were remounting the row actions (and their dialogs) each
+ * time. */
+
+function NameCell({ row }) {
+  const t = useTranslations("roles");
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-medium">{row.original.name}</span>
+      {row.original.is_system && (
+        <Badge variant="warning" className="font-normal">
+          {t("system")}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+function DescriptionCell({ row }) {
+  return (
+    <span className="line-clamp-1 max-w-sm text-muted-foreground">
+      {row.original.description || "—"}
+    </span>
+  );
+}
+
+function PermissionsCell({ row }) {
+  const t = useTranslations("roles");
+  return (
+    <Badge variant="secondary">
+      {t("permissionCount", { count: grantedCount(row.original) })}
+    </Badge>
+  );
+}
+
+function CreatedCell({ row }) {
+  return <span className="text-muted-foreground">{row.original.created_at_human}</span>;
+}
+
+function RowActionsCell({ row }) {
+  return <RoleRowActions role={row.original} />;
+}
+
 export function RolesTable({ data }) {
   const t = useTranslations("roles");
   // The list returns everything at once, so filter on the client — no round-trip.
@@ -35,49 +79,14 @@ export function RolesTable({ data }) {
   }, [data, query]);
 
   const columns = [
-    {
-      accessorKey: "name",
-      header: t("columns.name"),
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{row.original.name}</span>
-          {row.original.is_system && (
-            <Badge variant="warning" className="font-normal">
-              {t("system")}
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "description",
-      header: t("columns.description"),
-      cell: ({ row }) => (
-        <span className="line-clamp-1 max-w-sm text-muted-foreground">
-          {row.original.description || "—"}
-        </span>
-      ),
-    },
-    {
-      id: "permissions",
-      header: t("columns.permissions"),
-      cell: ({ row }) => (
-        <Badge variant="secondary">
-          {t("permissionCount", { count: grantedCount(row.original) })}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "created_at_human",
-      header: t("columns.created"),
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.original.created_at_human}</span>
-      ),
-    },
+    { accessorKey: "name", header: t("columns.name"), cell: NameCell },
+    { accessorKey: "description", header: t("columns.description"), cell: DescriptionCell },
+    { id: "permissions", header: t("columns.permissions"), cell: PermissionsCell },
+    { accessorKey: "created_at_human", header: t("columns.created"), cell: CreatedCell },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
-      cell: ({ row }) => <RoleRowActions role={row.original} />,
+      cell: RowActionsCell,
     },
   ];
 

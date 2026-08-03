@@ -12,34 +12,27 @@ export const SHELLS = [
 // Mirrors the backend OS-password policy: min 10, mixed case + a number.
 const passwordField = z
   .string()
-  .min(10, "At least 10 characters")
-  .regex(/[a-z]/, "Include a lowercase letter")
-  .regex(/[A-Z]/, "Include an uppercase letter")
-  .regex(/[0-9]/, "Include a number");
+  .min(10, "min10")
+  .regex(/[a-z]/, "lowercase")
+  .regex(/[A-Z]/, "uppercase")
+  .regex(/[0-9]/, "number");
 
 // Linux username rules: ^[a-z_][a-z0-9_-]{0,31}$ (backend also blocks reserved
 // names + enforces uniqueness — surfaced as a server-side error).
 const usernameField = z
   .string()
-  .min(1, "Username is required")
-  .max(32, "At most 32 characters")
-  .regex(
-    /^[a-z_][a-z0-9_-]{0,31}$/,
-    "Lowercase letters, digits, - and _; must start with a letter or _",
-  );
+  .min(1, "required_username")
+  .max(32, "max32")
+  .regex(/^[a-z_][a-z0-9_-]{0,31}$/, "linuxUsername");
 
 // Loose client check for an SSH public key; the backend does the real parse.
 const publicKeyField = z
   .string()
   .trim()
-  .regex(
-    /^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-\S+)\s+\S+/,
-    "Enter a valid SSH public key",
-  );
+  .regex(/^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-\S+)\s+\S+/, "sshKey");
 
 export const createSystemUserSchema = z.object({
   username: usernameField,
-  // Optional initial authorized key.
   public_key: z.union([z.literal(""), publicKeyField]).optional(),
 });
 
@@ -49,11 +42,11 @@ export const systemUserPasswordSchema = z
     password_confirmation: z.string(),
   })
   .refine((d) => d.password === d.password_confirmation, {
-    message: "Passwords don't match",
+    message: "passwordsMismatch",
     path: ["password_confirmation"],
   });
 
 export const sshKeySchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "required_name"),
   public_key: publicKeyField,
 });

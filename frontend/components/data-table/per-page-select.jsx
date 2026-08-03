@@ -26,7 +26,7 @@ export function PerPageSelect({ label }) {
         value={current}
         onValueChange={(v) => setQuery({ per_page: v }, { resetPage: true })}
       >
-        <SelectTrigger className="h-9 w-[4.5rem]">
+        <SelectTrigger className="w-[4.5rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

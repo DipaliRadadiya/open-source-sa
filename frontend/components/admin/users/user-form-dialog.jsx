@@ -135,7 +135,7 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
       >
         <div className="grid gap-5">
           {/* Identity */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
@@ -160,7 +160,11 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
                               try {
                                 const len = el.value.length;
                                 el.setSelectionRange(len, len);
-                              } catch {}
+                              } catch {
+                                // Input types that reject setSelectionRange
+                                // (email, number). Cursor placement is a
+                                // nicety, so there is nothing to recover.
+                              }
                             });
                           }}
                         />
@@ -185,7 +189,7 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
               </div>
 
               {!isEdit && (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid items-start gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="password"

@@ -1,0 +1,281 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { ShieldAlert, TriangleAlert, Info } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { updateFail2ban } from "@/lib/api/fail2ban";
+import { settingsPayload } from "@/lib/fail2ban/settings-payload";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { apiMessage } from "@/lib/api/error-message";
+
+/**
+ * The jails, and the guard that stops you locking yourself out.
+ *
+ * Enabling the SSH jail when your own address isn't on the ignore list can end
+ * with fail2ban banning you from your own server. The API refuses that unless
+ * you're ignored or you explicitly acknowledge — and rather than forwarding the
+ * refusal as an error, this asks first and makes **adding your IP the primary
+ * action**. The safe path should be the easy one.
+ */
+export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }) {
+  const t = useTranslations("fail2ban");
+  const router = useRouter();
+  const [pending, setPending] = useState(null);
+  const [guarding, setGuarding] = useState(null);
+  const [explaining, setExplaining] = useState(false);
+
+  const ipIgnored = Boolean(yourIp) && ignoreIps.includes(yourIp);
+
+  async function apply(jail, enabled, { addMyIp = false, acknowledged = false } = {}) {
+    setPending(jail.name);
+    try {
+      await updateFail2ban({
+        // The settings numbers ride along on every call — this endpoint rewrites
+        // the config as a unit and rejects a payload without them. Without this
+        // a jail toggle fails validation before it ever reaches fail2ban.
+        ...settingsPayload(settings, ignoreIps),
+        // Only this jail is sent: the API keeps omitted jails as they are, so a
+        // single toggle can't disturb the others.
+        jails: { [jail.name]: enabled },
+        ...(addMyIp && yourIp ? { ignore_ips: [...ignoreIps, yourIp] } : null),
+        ...(acknowledged ? { acknowledged: true } : null),
+      });
+      toast.success(
+        enabled ? t("jails.enabled", { name: jail.label }) : t("jails.disabled", { name: jail.label }),
+      );
+      setGuarding(null);
+      router.refresh();
+    } catch (error) {
+      const data = error.response?.data;
+      // The server's own lockout refusal, in case our pre-check missed a case.
+      if (data?.errors?.["fail2ban.lockout_risk"]) {
+        setGuarding({ jail, enabled });
+      } else {
+        toast.error(
+          [apiMessage(error, t("jails.failed")), data?.reference].filter(Boolean).join(" · "),
+        );
+      }
+    } finally {
+      setPending(null);
+    }
+  }
+
+  function toggle(jail, enabled) {
+    // Ask before the API has to refuse: turning ON a risky jail without your own
+    // address ignored is the move that locks people out.
+    if (enabled && jail.lockout_risk && !ipIgnored) {
+      setGuarding({ jail, enabled });
+      return;
+    }
+    apply(jail, enabled);
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">{t("jails.title")}</CardTitle>
+          <CardDescription>{t("jails.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Asked, not told. The explanation matters once — on someone's first
+              visit — and after that it is three lines of wall between them and
+              the switches. A link costs one click for the person who needs it
+              and nothing for the person who doesn't. */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setExplaining((open) => !open)}
+              aria-expanded={explaining}
+              className="flex items-center gap-1.5 rounded text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <Info className="size-3.5" />
+              {t("jails.whatIs")}
+            </button>
+            {explaining ? (
+              <p className="mt-2 rounded-lg bg-muted/60 p-3 text-sm leading-relaxed text-muted-foreground">
+                {t("jails.explainerBody")}
+              </p>
+            ) : null}
+          </div>
+
+          {/* "Nothing is switched on" used to be said here too. It fires on the
+              exact same condition as the Set up protection card above, so the
+              page said it twice — once as a warning with no action, once as a
+              card with the button. One instruction, one place. */}
+
+          {/* A grid, not a list: at full width one jail per row leaves most of
+              the row empty, and a real install has five to eight of these. */}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {jails.map((jail) => (
+              <div
+                key={jail.name}
+                className={cn(
+                  "rounded-lg border p-3",
+                  // An attack in progress is the one thing on this page that wants
+                  // to interrupt you.
+                  jail.stats?.currently_failed > 0 && "border-warning/40 bg-warning/5",
+                )}
+              >
+                {/* Name and switch on one line, stats under: in a narrow tile the
+                    switch can't sit beside a block of numbers. */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="font-medium">{jail.label}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{jail.name}</span>
+                    {jail.lockout_risk ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span tabIndex={0} className="rounded">
+                            <ShieldAlert className="size-3.5 text-warning" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-60">
+                          {t("jails.lockoutHint")}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : null}
+                  </div>
+
+                  <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+                    <Switch
+                      checked={jail.enabled}
+                      disabled={!canManage || pending === jail.name}
+                      onCheckedChange={(next) => toggle(jail, next)}
+                      aria-label={t("jails.toggle", { name: jail.label })}
+                    />
+                  </ReasonTooltip>
+                </div>
+
+                {/* One sentence, not four labelled numbers. Twelve figures
+                    across three tiles is a dashboard nobody asked for; what you
+                    need at a glance is whether this jail is doing anything and
+                    whether anything is happening to it right now. The lifetime
+                    totals are still there, one hover away, because they answer a
+                    question you only ask deliberately. */}
+                <JailState jail={jail} t={t} />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={guarding !== null} onOpenChange={(open) => !open && setGuarding(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
+                <TriangleAlert className="size-5" />
+              </span>
+              <DialogTitle>{t("lockout.title")}</DialogTitle>
+            </div>
+            <DialogDescription className="pt-1">
+              {yourIp
+                ? t("lockout.description", { ip: yourIp })
+                : t("lockout.descriptionNoIp")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:flex-col-reverse sm:space-x-0">
+            {/* Deliberate order: the risky choice is the quiet one. */}
+            <Button
+              variant="ghost"
+              disabled={pending !== null}
+              onClick={() =>
+                guarding && apply(guarding.jail, guarding.enabled, { acknowledged: true })
+              }
+            >
+              {t("lockout.anyway")}
+            </Button>
+            {yourIp ? (
+              <Button
+                disabled={pending !== null}
+                onClick={() =>
+                  guarding &&
+                  apply(guarding.jail, guarding.enabled, { addMyIp: true, acknowledged: true })
+                }
+              >
+                {t("lockout.addMyIp", { ip: yourIp })}
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/**
+ * What this jail is doing, in one line.
+ *
+ * Ordered by urgency: an attack in progress beats a standing block, which beats
+ * "quiet". A switched-off jail counts nothing at all, so it reports that rather
+ * than a row of zeroes that would read as "nothing is happening" — which is
+ * true, but only because nobody is looking.
+ */
+function JailState({ jail, t }) {
+  const failing = jail.stats?.currently_failed ?? 0;
+  const blocked = jail.stats?.currently_banned ?? 0;
+
+  let text = t("jails.stateQuiet");
+  let tone = "text-muted-foreground";
+
+  if (!jail.enabled) {
+    text = t("jails.stateOff");
+  } else if (failing > 0) {
+    text = t("jails.stateFailing", { count: failing });
+    tone = "text-warning font-medium";
+  } else if (blocked > 0) {
+    text = t("jails.stateBanned", { count: blocked });
+    tone = "text-foreground";
+  } else if (!jail.stats) {
+    text = t("jails.stateUnknown");
+  }
+
+  const line = <span className={cn("mt-2 block text-xs", tone)}>{text}</span>;
+
+  // Nothing to reveal when the jail never reported totals.
+  if (!jail.stats) return line;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="rounded">
+          {line}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        {t("jails.totalsTooltip", {
+          failed: jail.stats.total_failed ?? "—",
+          banned: jail.stats.total_banned ?? "—",
+        })}
+      </TooltipContent>
+    </Tooltip>
+  );
+}

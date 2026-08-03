@@ -9,6 +9,7 @@ import { deleteSystemUser } from "@/lib/api/system-users";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { apiMessage } from "@/lib/api/error-message";
 
 export function DeleteSystemUserDialog({ user, open, onOpenChange }) {
   const t = useTranslations("systemUsers");
@@ -35,7 +36,7 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange }) {
       router.refresh();
     } catch (error) {
       // 422 = still owns applications; show the backend's translated message.
-      toast.error(error.response?.data?.message || t("toast.failed"));
+      toast.error(apiMessage(error, t("toast.failed")));
     } finally {
       setPending(false);
     }

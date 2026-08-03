@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { ADMIN_NAV, isAdminNavActive } from "@/lib/admin-nav";
 import { SidebarToggle } from "@/components/sections/sidebar-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleSwitcher } from "@/components/sections/locale-switcher";
 import { UserMenu } from "@/components/sections/user-menu";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
@@ -42,6 +43,7 @@ export function AdminHeader() {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="ml-auto flex items-center gap-2">
+        <LocaleSwitcher />
         <ThemeToggle />
         <UserMenu
           extraItems={

@@ -33,7 +33,7 @@ export function UsersToolbar() {
             setQuery({ is_admin: v === "all" ? undefined : v }, { resetPage: true })
           }
         >
-          <SelectTrigger className="h-9 w-full sm:w-44">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

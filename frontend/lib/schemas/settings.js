@@ -1,0 +1,219 @@
+import { z } from "zod";
+
+// ---------------------------------------------------------------------------
+// Read shapes — GET /api/settings
+// ---------------------------------------------------------------------------
+
+export const generalSettingsSchema = z.object({
+  timezone: z.string(),
+  ntp: z.boolean(),
+  // Whether the clock is ACTUALLY in sync, not just whether NTP is switched on.
+  // Enabled-but-not-syncing is a silent failure: cron fires late and log
+  // timestamps lie, and the toggle alone reports intent rather than reality.
+  clock_synchronized: z.boolean().nullable().optional(),
+  hostname: z.string(),
+});
+
+// `size`/`used`/`free` are BYTES (read from /proc/meminfo), while the write
+// field is `size_mb`. Keeping the unit in the name here so the conversion at
+// the form boundary is deliberate rather than accidental.
+export const swapSettingsSchema = z.object({
+  enabled: z.boolean(),
+  path: z.string(),
+  size: z.number(),
+  size_human: z.string(),
+  used: z.number(),
+  used_human: z.string(),
+  free: z.number(),
+  free_human: z.string(),
+});
+
+export const securitySettingsSchema = z.object({
+  port: z.number(),
+  permit_root_login: z.enum(["yes", "no", "prohibit-password"]),
+  password_authentication: z.boolean(),
+  // The lockout guard, surfaced before it fires: PUT /settings/security 422s
+  // when password auth is disabled with no key present, so without this the
+  // user only learns after confirming a scary dialog.
+  has_ssh_key: z.boolean().nullable().optional(),
+});
+
+export const updateSettingsSchema = z.object({
+  security_updates_enabled: z.boolean(),
+  auto_reboot: z.boolean(),
+  reboot_time: z.string(),
+  // Whether an automatic reboot goes ahead while someone is logged in.
+  // unattended-upgrades defaults this to true; the API treats an omitted field
+  // as false, so leaving it out of the form was silently choosing for the user.
+  reboot_with_users: z.boolean().optional().default(false),
+  reboot_required: z.boolean().optional().default(false),
+  // What is actually waiting, and whether the automation is alive. The toggle
+  // above promises "security patches install automatically" and could not show
+  // the result of that promise.
+  updates_available: z.number().nullable().optional(),
+  security_updates_available: z.number().nullable().optional(),
+  lists_refreshed_at: z.string().nullable().optional(),
+  lists_refreshed_at_human: z.string().nullable().optional(),
+  unattended_last_run_at: z.string().nullable().optional(),
+  unattended_last_run_at_human: z.string().nullable().optional(),
+  // "success" | "failed" | null. Null means it has never run.
+  unattended_last_result: z.string().nullable().optional(),
+});
+
+/**
+ * A restart on a cadence — not the same thing as the `updates` auto-reboot,
+ * which only fires when a patch demands one.
+ *
+ * `timezone` is the SERVER's, because that is what cron reads. Shown rather
+ * than converted: a silent UTC conversion is how a 3am window fires at 8am.
+ */
+export const rebootScheduleSchema = z.object({
+  enabled: z.boolean().optional().default(false),
+  frequency: z.string().nullable().optional(),
+  hour: z.number().nullable().optional(),
+  day_of_week: z.number().nullable().optional(),
+  day_of_month: z.number().nullable().optional(),
+  timezone: z.string().nullable().optional(),
+  // Computed from the expression actually on disk, so there is nothing to guess.
+  next_run: z.string().nullable().optional(),
+  next_run_human: z.string().nullable().optional(),
+});
+
+// Dropdown options, localized by the API — never hardcoded here, same rule as
+// the permission sub-level titles and the activity scopes.
+const presetOption = (value) => z.object({ value, label: z.string() });
+
+export const rebootSchedulePresetsSchema = z.object({
+  frequencies: z.array(presetOption(z.string())).default([]),
+  hours: z.array(presetOption(z.number())).default([]),
+  days_of_week: z.array(presetOption(z.number())).default([]),
+});
+
+export const redisSettingsSchema = z.object({
+  maxmemory: z.string(),
+  maxmemory_policy: z.string(),
+  has_password: z.boolean(),
+  // False when the panel cannot write its own .env. The docs are explicit that
+  // the control should be disabled rather than offered and then refused.
+  password_manageable: z.boolean().optional().default(true),
+  // A memory limit means nothing without the usage it limits, and a configured
+  // Redis that is not running is a different fact from a healthy one.
+  running: z.boolean().nullable().optional(),
+  memory_used: z.number().nullable().optional(),
+  memory_used_human: z.string().nullable().optional(),
+});
+
+// Groups are detect-gated server-side: an absent group means "not installed on
+// this server", which is a different thing from "installed with no values".
+export const settingsSchema = z.object({
+  general: generalSettingsSchema.optional(),
+  swap: swapSettingsSchema.optional(),
+  security: securitySettingsSchema.optional(),
+  updates: updateSettingsSchema.optional(),
+  reboot_schedule: rebootScheduleSchema.optional(),
+  redis: redisSettingsSchema.optional(),
+});
+
+/** Who last touched each group, keyed by group name. */
+const lastChangedEntrySchema = z.object({
+  user: z.object({ id: z.number(), username: z.string() }).nullable().optional(),
+  at: z.string().nullable().optional(),
+  at_human: z.string().nullable().optional(),
+});
+
+export const settingsResponseSchema = z.object({
+  settings: settingsSchema,
+  last_changed: z.record(z.string(), lastChangedEntrySchema).nullable().optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Write shapes — one per PUT, mirroring the backend FormRequests
+// ---------------------------------------------------------------------------
+
+// Matches the backend hostname regex: letters/digits at both ends, dots and
+// hyphens in between.
+const HOSTNAME_RE = /^[a-zA-Z0-9]([a-zA-Z0-9\-.]{0,251}[a-zA-Z0-9])?$/;
+
+export const generalFormSchema = z.object({
+  hostname: z
+    .string()
+    .trim()
+    .min(1, "required")
+    .max(253, "tooLong")
+    .regex(HOSTNAME_RE, "invalidHostname"),
+  timezone: z.string().min(1, "required"),
+  ntp: z.boolean(),
+});
+
+export const SWAP_MAX_MB = 65536;
+
+export const swapFormSchema = z.object({
+  // Typed into a text input, so it arrives as a string; `0` disables.
+  size_mb: z.coerce
+    .number({ message: "invalidNumber" })
+    .int("invalidNumber")
+    .min(0, "invalidNumber")
+    .max(SWAP_MAX_MB, "swapTooLarge"),
+});
+
+export const ROOT_LOGIN_OPTIONS = ["yes", "prohibit-password", "no"];
+
+export const securityFormSchema = z.object({
+  port: z.coerce
+    .number({ message: "invalidPort" })
+    .int("invalidPort")
+    .min(1, "invalidPort")
+    .max(65535, "invalidPort"),
+  permit_root_login: z.enum(ROOT_LOGIN_OPTIONS),
+  password_authentication: z.boolean(),
+});
+
+const REBOOT_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const updatesFormSchema = z.object({
+  security_updates_enabled: z.boolean(),
+  auto_reboot: z.boolean(),
+  reboot_time: z.string().regex(REBOOT_TIME_RE, "invalidTime"),
+  reboot_with_users: z.boolean(),
+});
+
+export const REBOOT_FREQUENCIES = ["daily", "weekly", "monthly"];
+
+// The API caps this at 28 so "monthly" happens twelve times a year — the 31st
+// silently skips February and the short months.
+export const MAX_DAY_OF_MONTH = 28;
+
+export const scheduleFormSchema = z.object({
+  enabled: z.boolean(),
+  frequency: z.enum(REBOOT_FREQUENCIES),
+  hour: z.number().int().min(0, "invalidHour").max(23, "invalidHour"),
+  day_of_week: z.number().int().min(0).max(6),
+  day_of_month: z.number().int().min(1).max(MAX_DAY_OF_MONTH),
+});
+
+export const REDIS_POLICIES = [
+  "noeviction",
+  "allkeys-lru",
+  "allkeys-lfu",
+  "allkeys-random",
+  "volatile-lru",
+  "volatile-lfu",
+  "volatile-random",
+  "volatile-ttl",
+];
+
+export const redisFormSchema = z.object({
+  // "0" (unlimited) or a size like "256mb" / "1gb" — same regex the API uses.
+  maxmemory: z
+    .string()
+    .trim()
+    .regex(/^(0|\d+(kb|mb|gb|b)?)$/i, "invalidMemory"),
+  maxmemory_policy: z.enum(REDIS_POLICIES),
+  // Only sent when non-empty: the API leaves the password alone when it's absent.
+  password: z
+    .string()
+    .max(255, "tooLong")
+    .refine((v) => v === "" || v.length >= 8, "passwordTooShort"),
+});
+
+export const REBOOT_DELAY_OPTIONS = [0, 1, 5, 15];

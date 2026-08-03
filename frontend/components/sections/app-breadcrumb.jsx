@@ -1,6 +1,8 @@
 "use client";
 
 import { usePathname, useParams } from "next/navigation";
+import { findActiveNavItem } from "@/lib/navigation";
+import { usePageCrumb } from "@/components/sections/page-crumb";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,8 +16,10 @@ export function AppBreadcrumb({ items }) {
   const params = useParams();
   const panel = params?.application ? "Application" : "Server";
 
-  const current = (items || []).find((item) => item.url === pathname);
+  const current = findActiveNavItem(items, pathname);
   const title = current?.title;
+  // Set by detail pages; null everywhere else.
+  const { crumb } = usePageCrumb();
 
   return (
     <Breadcrumb>
@@ -25,7 +29,19 @@ export function AppBreadcrumb({ items }) {
           <>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>{title}</BreadcrumbPage>
+              {crumb ? (
+                <span className="text-muted-foreground">{title}</span>
+              ) : (
+                <BreadcrumbPage>{title}</BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+          </>
+        )}
+        {crumb && (
+          <>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="font-mono">{crumb}</BreadcrumbPage>
             </BreadcrumbItem>
           </>
         )}

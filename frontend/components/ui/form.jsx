@@ -8,6 +8,7 @@ import {
   useFormContext,
   useFormState,
 } from "react-hook-form"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
@@ -96,7 +97,12 @@ function FormDescription({ className, ...props }) {
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      className={cn("text-muted-foreground text-sm", className)}
+      // Smaller and lighter than the label above it. Both were text-sm, so a
+      // hint carried the same visual weight as the thing it was explaining and
+      // the form read as a wall of equal-sized lines. Colour stays at
+      // muted-foreground rather than going fainter: this is still body text
+      // someone has to read, and the token is already near the contrast floor.
+      className={cn("text-muted-foreground text-xs leading-relaxed font-normal", className)}
       {...props}
     />
   )
@@ -104,7 +110,16 @@ function FormDescription({ className, ...props }) {
 
 function FormMessage({ className, ...props }) {
   const { error, formMessageId } = useFormField()
-  const body = error ? String(error?.message ?? "") : props.children
+  const t = useTranslations("validation")
+  // Zod messages are validation keys (e.g. "min10") — translate them. Anything
+  // that isn't a known key (e.g. a backend error, already localized) renders
+  // as-is.
+  // Explicit children win over the field's own error. Settings schemas emit
+  // keys that live under `settings.validation`, not this namespace, so the
+  // form translates them itself and passes the sentence in — before this, the
+  // raw error always shadowed it and the user read "invalidHostname".
+  const raw = props.children ?? (error ? String(error?.message ?? "") : null)
+  const body = typeof raw === "string" && raw && t.has(raw) ? t(raw) : raw
 
   if (!body) {
     return null

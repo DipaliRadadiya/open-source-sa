@@ -25,6 +25,78 @@ function initials(name) {
 
 const MAX_ROLE_BADGES = 2;
 
+/* Cells at module level: flexRender treats a cell function's identity as the
+ * component type, so inline cells remount — taking the row actions' dialog
+ * state with them — every time this table re-renders. Per-table values arrive
+ * through `table.options.meta`. */
+
+function NameCell({ row, table }) {
+  const t = useTranslations("users");
+  return (
+    <div className="flex items-center gap-2.5">
+      <Avatar className="size-7">
+        <AvatarFallback className="text-xs">{initials(row.original.name)}</AvatarFallback>
+      </Avatar>
+      <span className="font-medium">{row.original.name}</span>
+      {row.original.id === table.options.meta.currentUserId ? (
+        <Badge variant="secondary" className="font-normal">
+          {t("you")}
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function UsernameCell({ row }) {
+  return <span className="text-muted-foreground">@{row.original.username}</span>;
+}
+
+function AccountTypeCell({ row }) {
+  const t = useTranslations("users");
+  const admin = row.original.is_admin;
+  return (
+    <Badge variant={admin ? "default" : "secondary"}>
+      {admin ? t("roleBadge.admin") : t("roleBadge.user")}
+    </Badge>
+  );
+}
+
+function RolesCell({ row }) {
+  const userRoles = row.original.roles ?? [];
+  if (!userRoles.length) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const shown = userRoles.slice(0, MAX_ROLE_BADGES);
+  const extra = userRoles.length - shown.length;
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {shown.map((r) => (
+        <Badge key={r.id} variant="outline" className="font-normal">
+          {r.name}
+        </Badge>
+      ))}
+      {extra > 0 ? (
+        <Badge variant="outline" className="font-normal text-muted-foreground">
+          +{extra}
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function JoinedCell({ row }) {
+  return (
+    <span className="whitespace-nowrap text-muted-foreground">
+      {row.original.created_at_human}
+    </span>
+  );
+}
+
+function RowActionsCell({ row, table }) {
+  const { roles, currentUserId } = table.options.meta;
+  return <UserRowActions user={row.original} roles={roles} currentUserId={currentUserId} />;
+}
+
 export function UsersTable({ data, roles = [], currentUserId, hasFilters }) {
   const t = useTranslations("users");
   const isPending = useNavPending();
@@ -67,89 +139,15 @@ export function UsersTable({ data, roles = [], currentUserId, hasFilters }) {
   }
 
   const columns = [
-    {
-      accessorKey: "name",
-      header: t("columns.name"),
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2.5">
-          <Avatar className="size-7">
-            <AvatarFallback className="text-xs">
-              {initials(row.original.name)}
-            </AvatarFallback>
-          </Avatar>
-          <span className="font-medium">{row.original.name}</span>
-          {row.original.id === currentUserId ? (
-            <Badge variant="secondary" className="font-normal">
-              {t("you")}
-            </Badge>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "username",
-      header: t("columns.username"),
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">@{row.original.username}</span>
-      ),
-    },
-    {
-      accessorKey: "is_admin",
-      header: t("columns.accountType"),
-      cell: ({ row }) => {
-        const admin = row.original.is_admin;
-        return (
-          <Badge variant={admin ? "default" : "secondary"}>
-            {admin ? t("roleBadge.admin") : t("roleBadge.user")}
-          </Badge>
-        );
-      },
-    },
-    {
-      id: "roles",
-      header: t("columns.roles"),
-      cell: ({ row }) => {
-        const userRoles = row.original.roles ?? [];
-        if (!userRoles.length) {
-          return <span className="text-muted-foreground">—</span>;
-        }
-        const shown = userRoles.slice(0, MAX_ROLE_BADGES);
-        const extra = userRoles.length - shown.length;
-        return (
-          <div className="flex flex-wrap items-center gap-1">
-            {shown.map((r) => (
-              <Badge key={r.id} variant="outline" className="font-normal">
-                {r.name}
-              </Badge>
-            ))}
-            {extra > 0 ? (
-              <Badge variant="outline" className="font-normal text-muted-foreground">
-                +{extra}
-              </Badge>
-            ) : null}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "created_at_human",
-      header: t("columns.joined"),
-      cell: ({ row }) => (
-        <span className="whitespace-nowrap text-muted-foreground">
-          {row.original.created_at_human}
-        </span>
-      ),
-    },
+    { accessorKey: "name", header: t("columns.name"), cell: NameCell },
+    { accessorKey: "username", header: t("columns.username"), cell: UsernameCell },
+    { accessorKey: "is_admin", header: t("columns.accountType"), cell: AccountTypeCell },
+    { id: "roles", header: t("columns.roles"), cell: RolesCell },
+    { accessorKey: "created_at_human", header: t("columns.joined"), cell: JoinedCell },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
-      cell: ({ row }) => (
-        <UserRowActions
-          user={row.original}
-          roles={roles}
-          currentUserId={currentUserId}
-        />
-      ),
+      cell: RowActionsCell,
     },
   ];
 
@@ -160,7 +158,7 @@ export function UsersTable({ data, roles = [], currentUserId, hasFilters }) {
         isPending && "pointer-events-none opacity-60",
       )}
     >
-      <DataTable columns={columns} data={data} />
+      <DataTable columns={columns} data={data} meta={{ roles, currentUserId }} />
     </div>
   );
 }

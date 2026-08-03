@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { serverLocale } from "@/lib/i18n/server-locale";
 
 /**
  * Server-side GET against the Laravel API, forwarding the Sanctum session
@@ -16,6 +17,7 @@ import { cookies } from "next/headers";
  */
 export async function serverFetch(path, { searchParams } = {}) {
   const cookieStore = await cookies();
+  const locale = await serverLocale();
 
   let qs = "";
   if (searchParams) {
@@ -32,6 +34,7 @@ export async function serverFetch(path, { searchParams } = {}) {
   return fetch(`${process.env.NEXT_PUBLIC_API_URL}/api${path}${qs}`, {
     headers: {
       Accept: "application/json",
+      "Accept-Language": locale,
       cookie: cookieStore.toString(),
       Referer: process.env.NEXT_PUBLIC_APP_URL,
       Origin: process.env.NEXT_PUBLIC_APP_URL,

@@ -13,7 +13,14 @@ import { useNavPending } from "@/components/data-table/nav-transition";
  * page 1). Shows a spinner while a navigation is pending and a clear (×) button
  * when it has a value. Reusable across any list page.
  */
-export function SearchInput({ placeholder, paramKey = "search", delay = 300 }) {
+export function SearchInput({
+  placeholder,
+  paramKey = "search",
+  delay = 300,
+  // Merged into every navigation, for params the router doesn't own (the
+  // account page keeps its active tab in the URL via history.replaceState).
+  extraQuery,
+}) {
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
   const pending = useNavPending();
@@ -28,7 +35,10 @@ export function SearchInput({ placeholder, paramKey = "search", delay = 300 }) {
       return;
     }
     const id = setTimeout(() => {
-      setQuery({ [paramKey]: value.trim() || undefined }, { resetPage: true });
+      setQuery(
+        { [paramKey]: value.trim() || undefined, ...extraQuery },
+        { resetPage: true },
+      );
     }, delay);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps

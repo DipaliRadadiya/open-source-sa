@@ -37,10 +37,13 @@ export function ConfirmDialog({
   confirmDisabled = false,
   pending = false,
   onConfirm,
+  // Widening is opt-in: a yes/no confirmation should stay narrow, but one that
+  // asks you to review a list needs the room.
+  className,
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className={className}>
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
             {Icon ? (

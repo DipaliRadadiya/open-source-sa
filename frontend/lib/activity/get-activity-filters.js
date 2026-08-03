@@ -1,19 +1,31 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { activityFiltersSchema } from "@/lib/schemas/activity";
 
+const EMPTY = { types: [], actions: {} };
+
 /**
- * Distinct type/action values for the filter dropdowns
- * (GET /admin/activity-log/filters — fully populated even on a fresh install).
+ * Distinct type/action values for the filter dropdowns. Both scopes return the
+ * same shape, so one fetcher serves both:
+ *  - admin: the full catalog, populated even on a fresh install
+ *  - own:   DISTINCT over the caller's own rows, so a user is never offered a
+ *           filter that would match nothing — empty for a user with no history
  */
-export async function getActivityFilters() {
-  const res = await serverFetch("/admin/activity-log/filters");
-  if (!res.ok) return { types: [], actions: {} };
+async function fetchFilters(path) {
+  const res = await serverFetch(path);
+  if (!res.ok) return EMPTY;
 
   try {
-    const json = await res.json();
-    const parsed = activityFiltersSchema.safeParse(json);
-    return parsed.success ? parsed.data : { types: [], actions: {} };
+    const parsed = activityFiltersSchema.safeParse(await res.json());
+    return parsed.success ? parsed.data : EMPTY;
   } catch {
-    return { types: [], actions: {} };
+    return EMPTY;
   }
+}
+
+export function getActivityFilters() {
+  return fetchFilters("/admin/activity-log/filters");
+}
+
+export function getMyActivityFilters() {
+  return fetchFilters("/activity-log/filters");
 }

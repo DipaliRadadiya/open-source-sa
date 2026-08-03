@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { apiMessage } from "@/lib/api/error-message";
 
 function initials(name) {
   if (!name) return "?";
@@ -54,7 +55,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
       // Session identity changed — hard nav so SSR re-reads the admin session.
       window.location.href = "/admin/users";
     } catch (error) {
-      toast.error(error.response?.data?.message || tImp("banner.failed"));
+      toast.error(apiMessage(error, tImp("banner.failed")));
       setLeaving(false);
     }
   }

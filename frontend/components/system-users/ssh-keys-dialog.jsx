@@ -26,6 +26,7 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
+import { apiMessage } from "@/lib/api/error-message";
 
 export function SshKeysDialog({ user, open, onOpenChange }) {
   const t = useTranslations("systemUsers");
@@ -87,7 +88,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
       setRemoving(null);
       await load();
     } catch (error) {
-      toast.error(error.response?.data?.message || t("toast.failed"));
+      toast.error(apiMessage(error, t("toast.failed")));
     } finally {
       setPending(false);
     }

@@ -45,8 +45,7 @@ function AccessCheck({ id, checked, onChange, label }) {
   );
 }
 
-// Two checkboxes = the access for one feature (or a whole group). Manage
-// implies View; clearing View clears Manage.
+// Manage implies View; clearing View clears Manage.
 function AccessToggles({ idBase, view, manage, onView, onManage, labels }) {
   return (
     <div className="flex shrink-0 items-center gap-4">
