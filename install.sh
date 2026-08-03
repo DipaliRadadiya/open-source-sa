@@ -617,17 +617,17 @@ setup_backend() {
     chmod -R 775 "${dir}/storage" "${dir}/bootstrap/cache"
 
     grep -q '^APP_KEY=base64:' "${dir}/.env" \
-        || run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${dir}/artisan" key:generate --force
+        || run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan key:generate --force' -- "$dir" "/usr/bin/php${PHP_VERSION}"
     ok "application key set"
 
-    run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${dir}/artisan" migrate --force
-    run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${dir}/artisan" db:seed --class=PermissionSeeder --force
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan migrate --force' -- "$dir" "/usr/bin/php${PHP_VERSION}"
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan db:seed --class=PermissionSeeder --force' -- "$dir" "/usr/bin/php${PHP_VERSION}"
     ok "database migrated and permissions seeded"
 
     # Tell the panel what we built. It can detect that nginx and PHP are here,
     # but not whether that was a deliberate `lemp` build or a box somebody
     # assembled by hand — and the difference matters to the setup page.
-    run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${dir}/artisan" server:record-stack "$STACK"
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan server:record-stack "$3"' -- "$dir" "/usr/bin/php${PHP_VERSION}" "$STACK"
     ok "stack recorded as ${STACK}"
 }
 
@@ -1273,8 +1273,8 @@ finish() {
 
     # Last, because it freezes whatever .env says at this moment. Anything that
     # edits .env after this must re-run it.
-    run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${backend}/artisan" config:cache
-    run sudo -u "$APP_USER" -H "/usr/bin/php${PHP_VERSION}" "${backend}/artisan" route:cache
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan config:cache' -- "$backend" "/usr/bin/php${PHP_VERSION}"
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan route:cache' -- "$backend" "/usr/bin/php${PHP_VERSION}"
     ok "configuration cached"
 
     local scheme="$SCHEME"
