@@ -115,6 +115,8 @@ return [
     'application.force_https_disabled' => 'Turned off force HTTPS for :domain',
     'application.provision_failed' => 'Failed to set up application :name (step: :step)',
     'application.deployed' => 'Deployed application :name (:branch)',
+    'application.deploy_script_updated' => 'Updated the deploy script for :name',
+    'application.deploy_settings_updated' => 'Updated deployment settings for :name',
     'application.deploy_failed' => 'Failed to deploy application :name (step: :step)',
     'application.webhook_enabled' => 'Enabled deploy-on-push for :name (:provider)',
     'application.webhook_disabled' => 'Disabled deploy-on-push for :name',

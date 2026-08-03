@@ -115,6 +115,8 @@ return [
     'application.force_https_disabled' => ':domain के लिए HTTPS बाध्य करना बंद किया',
     'application.provision_failed' => 'एप्लिकेशन :name सेट करने में विफल (चरण: :step)',
     'application.deployed' => 'एप्लिकेशन :name डिप्लॉय किया (:branch)',
+    'application.deploy_script_updated' => ':name के लिए डिप्लॉय स्क्रिप्ट अपडेट की',
+    'application.deploy_settings_updated' => ':name के लिए डिप्लॉयमेंट सेटिंग्स अपडेट कीं',
     'application.deploy_failed' => 'एप्लिकेशन :name डिप्लॉय करने में विफल (चरण: :step)',
     'application.webhook_enabled' => ':name के लिए push पर डिप्लॉय चालू किया (:provider)',
     'application.webhook_disabled' => ':name के लिए push पर डिप्लॉय बंद किया',

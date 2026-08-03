@@ -3,11 +3,14 @@
 namespace App\Jobs;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\DeploymentStatus;
+use App\Models\Deployment;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\Concerns\TracksActor;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
 use App\Services\Server\Applications\ProvisioningBudget;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
@@ -54,8 +57,16 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
      */
     public int $timeout;
 
-    public function __construct(public int $applicationId, public ?int $actorId = null)
-    {
+    /**
+     * The row is opened by whoever queues the job, not here, so the screen can
+     * show `queued` in the seconds before a worker picks it up. Null only for a
+     * deploy queued by something that predates this — the job still runs.
+     */
+    public function __construct(
+        public int $applicationId,
+        public ?int $actorId = null,
+        public ?int $deploymentId = null,
+    ) {
         $this->timeout = app(ProvisioningBudget::class)->forDeploy();
     }
 
@@ -63,11 +74,18 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
         GitDeployer $deployer,
         ApplicationProvisioner $provisioner,
         ActivityLogger $activityLogger,
+        DeploymentRecorder $recorder,
     ): void {
         $application = Application::with(['systemUser', 'gitAccount'])->find($this->applicationId);
 
         if ($application === null) {
             return;
+        }
+
+        $deployment = $this->deploymentId === null ? null : Deployment::find($this->deploymentId);
+
+        if ($deployment !== null) {
+            $recorder->resume($deployment);
         }
 
         $previousStatus = $application->status;
@@ -84,6 +102,8 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 'last_deployed_at' => now(),
             ]);
 
+            $recorder->succeed($result['commit'] ?? null, $result['message'] ?? null, $result['author'] ?? null);
+
             $activityLogger->log('application.deployed', $application, [
                 'name' => $application->name,
                 'branch' => $application->branch,
@@ -99,6 +119,8 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 'reference' => $e->reference,
             ]);
 
+            $recorder->fail($e->step, $e->reference);
+
             $activityLogger->log('application.deploy_failed', $application, [
                 'name' => $application->name,
                 'step' => $e->step,
@@ -111,5 +133,17 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
         Application::whereKey($this->applicationId)
             ->where('status', ApplicationStatus::Provisioning->value)
             ->update(['status' => ApplicationStatus::Failed->value, 'failed_step' => 'worker']);
+
+        // A crash still has to close the row. Left running, the screen shows a
+        // spinner that never stops on a deploy that is not happening.
+        if ($this->deploymentId !== null) {
+            Deployment::whereKey($this->deploymentId)
+                ->whereIn('status', [DeploymentStatus::Queued->value, DeploymentStatus::Running->value])
+                ->update([
+                    'status' => DeploymentStatus::Failed->value,
+                    'failed_step' => 'worker',
+                    'finished_at' => now(),
+                ]);
+        }
     }
 }

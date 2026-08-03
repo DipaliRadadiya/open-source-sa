@@ -115,6 +115,8 @@ return [
     'application.force_https_disabled' => 'Desativou forçar HTTPS em :domain',
     'application.provision_failed' => 'Falha ao configurar a aplicação :name (etapa: :step)',
     'application.deployed' => 'Implantou a aplicação :name (:branch)',
+    'application.deploy_script_updated' => 'Atualizou o script de implementação de :name',
+    'application.deploy_settings_updated' => 'Atualizou as definições de implementação de :name',
     'application.deploy_failed' => 'Falha ao implantar a aplicação :name (etapa: :step)',
     'application.webhook_enabled' => 'Ativou o deploy automático de :name (:provider)',
     'application.webhook_disabled' => 'Desativou o deploy automático de :name',

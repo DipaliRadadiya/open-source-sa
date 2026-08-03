@@ -289,6 +289,38 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Deployments
+    |--------------------------------------------------------------------------
+    |
+    | A site with auto-deploy on a busy repository deploys dozens of times a
+    | day, and every row carries command output. Left unbounded this is the
+    | table that quietly fills a self-hosted SQLite database, so only the newest
+    | are kept — pruned on write rather than by a scheduled command, because the
+    | growth is caused by deploying and the fix belongs where the growth is.
+    |
+    | Fifty is roughly a fortnight on an active project, which covers the only
+    | question this screen answers: what changed recently. Older deploys cannot
+    | be rolled back to (there are no release directories), and the commit
+    | history lives in git regardless.
+    |
+    */
+
+    'deployments' => [
+        'keep' => (int) env('SV_DEPLOYMENTS_KEEP', 50),
+
+        // What a new git application's deploy script starts as. A starting
+        // point rather than a policy: it is the user's file the moment they
+        // open the screen.
+        'default_scripts' => [
+            'php' => "cd {path}\ngit pull origin {branch}\n",
+            'node' => "cd {path}\ngit pull origin {branch}\nnpm ci\nnpm run build --if-present\n",
+            'static' => "cd {path}\ngit pull origin {branch}\n",
+            'proxy' => "cd {path}\ngit pull origin {branch}\n",
+        ],
+    ],
+
     'certificates' => [
         'certbot' => env('SV_CERTBOT_BIN', 'certbot'),
 

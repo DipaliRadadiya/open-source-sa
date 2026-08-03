@@ -37,6 +37,7 @@ class GitDeployer
         private NodeRuntime $node,
         private ProcessSupervisor $supervisor,
         private ProvisionProgress $progress,
+        private DeploymentRecorder $recorder,
     ) {}
 
     /**
@@ -93,8 +94,8 @@ class GitDeployer
                 $documentRoot,
             ]);
 
-            if (filled($application->build_command)) {
-                $this->runBuild($application, $documentRoot);
+            if (filled($this->script($application))) {
+                $this->runScript($application, $documentRoot);
             }
 
             // New code is only live once the process running it has been
@@ -113,7 +114,11 @@ class GitDeployer
                 $this->progress->record('restart_app');
             }
 
-            return ['steps' => $this->progress->steps(), 'commit' => $commit];
+            return [
+                'steps' => $this->progress->steps(),
+                'commit' => $commit,
+                ...$this->commitDetails($documentRoot),
+            ];
         } finally {
             // Always — a failed deploy must not leave a credential on disk.
             if ($credentialFile !== null) {
@@ -206,6 +211,11 @@ class GitDeployer
             timeout: (int) config('server.git_timeout', 300),
         );
 
+        // The deployment row gets the output; ProvisionProgress gets only the
+        // step name, because it is also used by provisioning where there is no
+        // row to write to.
+        $this->recorder->step($step, $result);
+
         if ($result->failed()) {
             throw new ProvisioningFailedException($step, $result->reference);
         }
@@ -224,22 +234,100 @@ class GitDeployer
      *
      * @throws ProvisioningFailedException
      */
-    private function runBuild(Application $application, string $documentRoot): void
+    private function runScript(Application $application, string $documentRoot): void
     {
+        // `set -e` so the script stops at the first failing line. Without it a
+        // failed `composer install` is followed cheerfully by `php artisan
+        // migrate`, and the deploy reports success on a half-updated site —
+        // which is worse than the failure it was hiding.
+        // `set -e` first, before anything else runs — including the `cd`. It
+        // makes the script stop at the first failing line; without it a failed
+        // `composer install` is followed cheerfully by `php artisan migrate`,
+        // and the deploy reports success on a half-updated site. Putting it
+        // after the `cd` would leave the one command whose failure matters most
+        // unguarded: running the rest of a deploy script in the wrong directory.
+        $script = implode("\n", [
+            'set -e',
+            $this->nodePath($application),
+            'cd '.escapeshellarg($documentRoot),
+            $this->expand($this->script($application), $application, $documentRoot),
+        ]);
+
         $result = $this->serverOps->run(
             [
                 'runuser', '-u', $application->systemUser->username, '--',
-                'sh', '-c', $this->nodePath($application).'cd '.escapeshellarg($documentRoot).' && '.$application->build_command,
+                'sh', '-c', $script,
             ],
-            ['feature' => 'application', 'op' => 'git.build', 'application' => $application->id],
+            ['feature' => 'application', 'op' => 'git.script', 'application' => $application->id],
             timeout: (int) config('server.build_timeout', 600),
         );
 
+        $this->recorder->step('script', $result);
+
         if ($result->failed()) {
-            throw new ProvisioningFailedException('build', $result->reference);
+            throw new ProvisioningFailedException('script', $result->reference);
         }
 
-        $this->progress->record('build');
+        $this->progress->record('script');
+    }
+
+    /**
+     * What to run after checkout.
+     *
+     * `deploy_script` when the user has written one, otherwise the old
+     * `build_command`. Kept as a fallback rather than migrated, so an
+     * application configured before the Deployment screen existed keeps
+     * deploying exactly as it did — a silent change to what runs on someone's
+     * production site is not an upgrade.
+     */
+    public function script(Application $application): ?string
+    {
+        return filled($application->deploy_script)
+            ? $application->deploy_script
+            : $application->build_command;
+    }
+
+    /**
+     * Substitute the placeholders the script may use.
+     *
+     * The same `{path}` convention the cron command presets already use, so a
+     * user who has met one recognises the other.
+     */
+    private function expand(string $script, Application $application, string $documentRoot): string
+    {
+        return strtr($script, [
+            '{path}' => $documentRoot,
+            '{branch}' => $application->branch ?: 'main',
+            '{domain}' => (string) $application->domain,
+        ]);
+    }
+
+    /**
+     * The commit's subject and author, for the deployment record.
+     *
+     * Read from the checkout rather than from the webhook payload: the payload
+     * describes what was pushed, this describes what is on disk, and when a
+     * deploy lands mid-push those differ.
+     *
+     * @return array{message: ?string, author: ?string}
+     */
+    public function commitDetails(string $documentRoot): array
+    {
+        $result = $this->serverOps->run(
+            ['git', '-C', $documentRoot, 'log', '-1', '--pretty=format:%s%n%an'],
+            ['feature' => 'application', 'op' => 'git.commit_details'],
+        );
+
+        if ($result->failed()) {
+            return ['message' => null, 'author' => null];
+        }
+
+        $lines = explode("\n", trim($result->output()));
+
+        return [
+            'message' => $lines[0] ?? null,
+            'author' => $lines[1] ?? null,
+        ];
     }
 
     /**

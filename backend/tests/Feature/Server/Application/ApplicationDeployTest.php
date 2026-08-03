@@ -8,6 +8,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
@@ -59,6 +60,7 @@ function runDeploy(Application $application): void
         app(GitDeployer::class),
         app(ApplicationProvisioner::class),
         app(ActivityLogger::class),
+        app(DeploymentRecorder::class),
     );
 }
 
@@ -174,7 +176,10 @@ it('runs the build command as the site user, not as the panel', function () {
         && $p->command[2] === 'deploy'
         && str_contains(end($p->command), 'composer install --no-dev'));
 
-    expect($app->fresh()->steps)->toContain('build');
+    // Recorded as `script` since the Deployment screen replaced the single
+    // build command with an editable script; `build_command` remains the
+    // fallback for applications configured before that.
+    expect($app->fresh()->steps)->toContain('script');
 });
 
 it('builds with the Node version the site pinned, not the default', function () {

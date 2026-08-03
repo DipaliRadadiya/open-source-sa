@@ -4,6 +4,7 @@ use App\Http\Controllers\API\Server\ApplicationController;
 use App\Http\Controllers\API\Server\ApplicationDomainController;
 use App\Http\Controllers\API\Server\ApplicationWebhookController;
 use App\Http\Controllers\API\Server\CertificateController;
+use App\Http\Controllers\API\Server\DeploymentController;
 use App\Http\Controllers\API\Server\ServerCapabilityController;
 use App\Http\Controllers\API\Server\SiteTypeController;
 use Illuminate\Support\Facades\Route;
@@ -69,3 +70,17 @@ Route::put('/applications/{application}/certificate/force-https', [CertificateCo
     ->middleware('permission:app_domain,manage');
 Route::delete('/applications/{application}/certificate', [CertificateController::class, 'destroy'])
     ->middleware('permission:app_domain,manage');
+
+// The Deployment screen. Gated by `app_deployment`, which also brings these
+// under the site-type check — a WordPress install has no repository, so every
+// one of them 404s there rather than running against a site that cannot deploy.
+Route::get('/applications/{application}/deployments', [DeploymentController::class, 'index'])
+    ->middleware('permission:app_deployment');
+Route::post('/applications/{application}/deployments', [DeploymentController::class, 'store'])
+    ->middleware('permission:app_deployment,manage');
+Route::get('/applications/{application}/deployments/{deployment}', [DeploymentController::class, 'show'])
+    ->middleware('permission:app_deployment');
+Route::post('/applications/{application}/deployments/{deployment}/redeploy', [DeploymentController::class, 'redeploy'])
+    ->middleware('permission:app_deployment,manage');
+Route::put('/applications/{application}/deployment-settings', [DeploymentController::class, 'updateSettings'])
+    ->middleware('permission:app_deployment,manage');

@@ -115,6 +115,8 @@ return [
     'application.force_https_disabled' => 'A désactivé le forçage HTTPS pour :domain',
     'application.provision_failed' => 'Échec de la configuration de l\'application :name (étape : :step)',
     'application.deployed' => 'A déployé l\'application :name (:branch)',
+    'application.deploy_script_updated' => 'A mis à jour le script de déploiement de :name',
+    'application.deploy_settings_updated' => 'A mis à jour les réglages de déploiement de :name',
     'application.deploy_failed' => 'Échec du déploiement de l\'application :name (étape : :step)',
     'application.webhook_enabled' => 'A activé le déploiement automatique de :name (:provider)',
     'application.webhook_disabled' => 'A désactivé le déploiement automatique de :name',

@@ -6,6 +6,7 @@ use App\Contracts\Firewall;
 use App\Contracts\PhpStack;
 use App\Models\User;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Firewall\UfwFirewall;
@@ -48,6 +49,12 @@ class AppServiceProvider extends ServiceProvider
         // installer it calls — they are recording steps of the same run, and
         // two instances would each keep half the list.
         $this->app->scoped(ProvisionProgress::class);
+
+        // Scoped for the same reason: the deployer accumulates output into it
+        // step by step, and the job reads the finished row out of it. Two
+        // instances would mean the deploy writes its log into an object nobody
+        // ever looks at.
+        $this->app->scoped(DeploymentRecorder::class);
 
         // The setup page's component list, in the order it is shown. Registered
         // here rather than discovered, because the order is a product decision:

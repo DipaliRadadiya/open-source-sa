@@ -115,6 +115,8 @@ return [
     'application.force_https_disabled' => 'Desactivó forzar HTTPS en :domain',
     'application.provision_failed' => 'Error al configurar la aplicación :name (paso: :step)',
     'application.deployed' => 'Desplegó la aplicación :name (:branch)',
+    'application.deploy_script_updated' => 'Actualizó el script de despliegue de :name',
+    'application.deploy_settings_updated' => 'Actualizó la configuración de despliegue de :name',
     'application.deploy_failed' => 'Error al desplegar la aplicación :name (paso: :step)',
     'application.webhook_enabled' => 'Activó el despliegue automático de :name (:provider)',
     'application.webhook_disabled' => 'Desactivó el despliegue automático de :name',

@@ -115,6 +115,8 @@ return [
     'application.force_https_disabled' => ':domain の HTTPS 強制を無効にしました',
     'application.provision_failed' => 'アプリケーション :name の構築に失敗しました (:step)',
     'application.deployed' => 'アプリケーション :name をデプロイしました (:branch)',
+    'application.deploy_script_updated' => ':name のデプロイスクリプトを更新しました',
+    'application.deploy_settings_updated' => ':name のデプロイ設定を更新しました',
     'application.deploy_failed' => 'アプリケーション :name のデプロイに失敗しました (:step)',
     'application.webhook_enabled' => ':name のプッシュ時デプロイを有効にしました (:provider)',
     'application.webhook_disabled' => ':name のプッシュ時デプロイを無効にしました',

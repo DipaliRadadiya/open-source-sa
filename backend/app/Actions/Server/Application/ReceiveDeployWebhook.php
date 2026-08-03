@@ -3,6 +3,8 @@
 namespace App\Actions\Server\Application;
 
 use App\Jobs\DeployApplication;
+use App\Services\Server\Applications\DeploymentRecorder;
+use App\Enums\DeploymentTrigger;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Git\Webhooks\WebhookManager;
@@ -90,7 +92,15 @@ class ReceiveDeployWebhook
         // No actor, on purpose. A git push is not a panel user, and every other
         // dispatch site now passes one — so a null here reads as "the system did
         // this", which is true, rather than "we lost track of who did".
-        DeployApplication::dispatch($application->id, null);
+        // A row with no actor: nobody pressed anything. It reads as System,
+        // the same rule the activity log follows for webhook deploys.
+        $deployment = app(DeploymentRecorder::class)->open(
+            $application,
+            DeploymentTrigger::Webhook,
+            null,
+        );
+
+        DeployApplication::dispatch($application->id, null, $deployment->id);
 
         $this->activityLogger->log('application.webhook_deployed', $application, [
             'name' => $application->name,

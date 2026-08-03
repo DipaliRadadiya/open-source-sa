@@ -115,6 +115,8 @@ return [
     'application.force_https_disabled' => 'Hat HTTPS-Zwang für :domain deaktiviert',
     'application.provision_failed' => 'Einrichtung der Anwendung :name fehlgeschlagen (Schritt: :step)',
     'application.deployed' => 'Anwendung :name ausgerollt (:branch)',
+    'application.deploy_script_updated' => 'Hat das Deploy-Skript für :name aktualisiert',
+    'application.deploy_settings_updated' => 'Hat die Deployment-Einstellungen für :name aktualisiert',
     'application.deploy_failed' => 'Ausrollen der Anwendung :name fehlgeschlagen (Schritt: :step)',
     'application.webhook_enabled' => 'Deploy-on-Push für :name aktiviert (:provider)',
     'application.webhook_disabled' => 'Deploy-on-Push für :name deaktiviert',

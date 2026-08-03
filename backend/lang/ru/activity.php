@@ -115,6 +115,8 @@ return [
     'application.force_https_disabled' => 'Отключил принудительный HTTPS для :domain',
     'application.provision_failed' => 'Не удалось настроить приложение :name (шаг: :step)',
     'application.deployed' => 'Приложение :name развёрнуто (:branch)',
+    'application.deploy_script_updated' => 'Обновил скрипт развёртывания для :name',
+    'application.deploy_settings_updated' => 'Обновил настройки развёртывания для :name',
     'application.deploy_failed' => 'Не удалось развернуть приложение :name (шаг: :step)',
     'application.webhook_enabled' => 'Включил автодеплой по push для :name (:provider)',
     'application.webhook_disabled' => 'Отключил автодеплой по push для :name',
