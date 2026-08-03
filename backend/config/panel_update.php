@@ -11,6 +11,8 @@ return [
     'shared_root' => env('PANEL_SHARED_ROOT', '/var/www/panel/shared'),
     'repository' => env('PANEL_REPOSITORY', 'https://github.com/DipaliRadadiya/open-source-sa.git'),
     'release_branch' => env('PANEL_RELEASE_BRANCH', 'main'),
+    'helper_path' => env('PANEL_UPDATE_HELPER', '/usr/local/sbin/panel-update-helper'),
+    'timeout_seconds' => (int) env('PANEL_UPDATE_TIMEOUT_SECONDS', 1800),
     'services' => [
         'php_fpm' => env('PANEL_PHP_FPM_SERVICE', 'php8.4-fpm'),
         'frontend' => env('PANEL_FRONTEND_SERVICE', 'panel-frontend'),

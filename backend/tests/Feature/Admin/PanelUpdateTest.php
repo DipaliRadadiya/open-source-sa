@@ -233,48 +233,42 @@ it('rejects a non-admin GET with 403', function () {
         ->assertForbidden();
 });
 
-it('runs the no-op worker: row goes pending → running → failed with reason=unsupported', function () {
+it('runs the configured helper and records a successful update', function () {
     $update = PanelUpdate::create([
         'user_id' => $this->admin->id,
         'status' => PanelUpdateStatus::Pending,
         'from_version' => '1.0.0',
     ]);
 
-    // Run the job inline (queue is sync in tests).
+    $runner = Mockery::mock(\App\Services\Panel\PanelUpdateRunner::class);
+    $runner->shouldReceive('run')->once()->andReturn(['version' => '1.1.0', 'commit' => str_repeat('a', 40)]);
+
     (new PerformPanelUpdate($update->id, $this->admin->id))
-        ->handle(app(\App\Services\ActivityLogger::class));
+        ->handle(app(\App\Services\ActivityLogger::class), $runner);
 
     $update->refresh();
 
+    expect($update->status)->toBe(PanelUpdateStatus::Succeeded)
+        ->and($update->to_version)->toBe('1.1.0')
+        ->and($update->to_commit)->toBe(str_repeat('a', 40))
+        ->and($update->finished_at)->not->toBeNull();
+
+    $log = ActivityLog::where('type', 'panel_update')->where('action', 'succeeded')->latest('id')->first();
+    expect($log)->not->toBeNull()->and($log->user_id)->toBe($this->admin->id);
+});
+
+it('records a translated helper failure without leaking its technical detail', function () {
+    $update = PanelUpdate::create(['user_id' => $this->admin->id, 'status' => PanelUpdateStatus::Pending]);
+    $runner = Mockery::mock(\App\Services\Panel\PanelUpdateRunner::class);
+    $runner->shouldReceive('run')->once()->andThrow(new \App\Exceptions\Admin\PanelUpdate\PanelUpdateHelperFailedException('helper-ref'));
+
+    (new PerformPanelUpdate($update->id, $this->admin->id))
+        ->handle(app(\App\Services\ActivityLogger::class), $runner);
+
+    $update->refresh();
     expect($update->status)->toBe(PanelUpdateStatus::Failed)
-        ->and($update->reason)->toBe('unsupported')
-        ->and($update->reference)->not->toBeNull()
-        ->and($update->started_at)->not->toBeNull()
-        ->and($update->finished_at)->not->toBeNull()
-        ->and($update->duration())->toBeGreaterThanOrEqual(0);
-
-    // The job explicitly does NOT shell out — assert it by listing the
-    // things the worker must never touch.
-    expect(class_exists(PerformPanelUpdate::class))->toBeTrue();
-
-    $source = file_get_contents(__DIR__.'/../../../app/Jobs/PerformPanelUpdate.php');
-    expect($source)->not->toContain('Process::')
-        ->and($source)->not->toContain('->exec(')
-        ->and($source)->not->toContain('->shell_exec(')
-        ->and($source)->not->toContain('system(')
-        ->and($source)->not->toContain('composer ')
-        ->and($source)->not->toContain('npm ')
-        ->and($source)->not->toContain('git fetch')
-        ->and($source)->not->toContain('git pull')
-        ->and($source)->not->toContain('systemctl');
-
-    // The activity log records the failure attributed to the admin who
-    // queued it, with the same reason and reference the row carries.
-    $log = ActivityLog::where('type', 'panel_update')->where('action', 'failed')->latest('id')->first();
-    expect($log)->not->toBeNull()
-        ->and($log->user_id)->toBe($this->admin->id)
-        ->and($log->properties['reason'])->toBe('unsupported')
-        ->and($log->properties['reference'])->toBe($update->reference);
+        ->and($update->reason)->toBe('helper')
+        ->and($update->reference)->toBe('helper-ref');
 });
 
 it('records worker failure via failed() hook so a crashed job does not leave the row at running', function () {
