@@ -1321,8 +1321,10 @@ main() {
     resolve_hostnames
     configure_swap
     install_packages
-    install_node
+    # fnm's shared runtime tree is owned by the panel account, so that
+    # account must exist before install_node() changes its ownership.
     create_user
+    install_node
     fetch_source
     configure_redis
     configure_fpm
