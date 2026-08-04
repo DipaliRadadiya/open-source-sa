@@ -17,8 +17,8 @@ import { ApplicationRowActions } from "@/components/applications/application-row
 
 const STATUS_VARIANTS = { active: "success", failed: "destructive", provisioning: "warning", pending: "secondary" };
 
-function NameCell({ row, preview = false }) {
-  return <div className="flex min-w-0 items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Globe2 className="size-4" /></span><div className="min-w-0"><Link href={`/applications/${row.original.id}${preview ? "?preview=1" : ""}`} className="group inline-flex max-w-full items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate">{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link><p className="truncate font-mono text-xs text-muted-foreground">{row.original.domain}</p></div></div>;
+function NameCell({ row }) {
+  return <div className="flex min-w-0 items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Globe2 className="size-4" /></span><div className="min-w-0"><Link href={`/applications/${row.original.id}`} className="group inline-flex max-w-full items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate">{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link><p className="truncate font-mono text-xs text-muted-foreground">{row.original.domain}</p></div></div>;
 }
 
 // A site can be "active" and still be in trouble: its process may have died, or
@@ -75,7 +75,7 @@ function Filters({ query, setQuery, statusFilter, setStatusFilter, typeFilter, s
   return <div className="flex flex-col gap-2 sm:flex-row"><LocalSearchInput value={query} onChange={setQuery} placeholder={t("searchPlaceholder")} /><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-full sm:w-40"><SelectValue placeholder={t("columns.status")} /></SelectTrigger><SelectContent><SelectItem value="all">{t("columns.status")}</SelectItem>{statusOptions.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select><Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger className="w-full sm:w-44"><SelectValue placeholder={t("columns.type")} /></SelectTrigger><SelectContent><SelectItem value="all">{t("columns.type")}</SelectItem>{typeOptions.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>;
 }
 
-export function ApplicationsTable({ applications = [], canManage = false, preview = false }) {
+export function ApplicationsTable({ applications = [], canManage = false }) {
   const t = useTranslations("applications");
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -84,7 +84,7 @@ export function ApplicationsTable({ applications = [], canManage = false, previe
   const statusOptions = useMemo(() => [...new Map(applications.map((application) => [application.status, application.status_title ?? application.status])).entries()], [applications]);
   const typeOptions = useMemo(() => [...new Map(applications.map((application) => [application.site_type, application.site_type_title ?? application.site_type])).entries()], [applications]);
   const hasWorkingApplication = applications.some((application) => application.status === "pending" || application.status === "provisioning");
-  useEffect(() => { if (!hasWorkingApplication || preview) return undefined; const timer = window.setInterval(() => router.refresh(), 4000); return () => window.clearInterval(timer); }, [hasWorkingApplication, preview, router]);
+  useEffect(() => { if (!hasWorkingApplication) return undefined; const timer = window.setInterval(() => router.refresh(), 4000); return () => window.clearInterval(timer); }, [hasWorkingApplication, router]);
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     return applications.filter((application) => {
@@ -94,12 +94,12 @@ export function ApplicationsTable({ applications = [], canManage = false, previe
   }, [applications, query, statusFilter, typeFilter]);
   const createButton = canManage ? <Button asChild><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button> : null;
   const columns = [
-    { accessorKey: "name", header: t("columns.name"), cell: (context) => <NameCell {...context} preview={preview} />, sortingFn: "alphanumeric" },
+    { accessorKey: "name", header: t("columns.name"), cell: NameCell, sortingFn: "alphanumeric" },
     { accessorKey: "site_type_title", header: t("columns.type"), cell: ({ row }) => <span className="text-muted-foreground">{row.original.site_type_title ?? row.original.site_type}</span> },
     { accessorKey: "status", header: t("columns.status"), cell: StatusCell },
     { id: "owner", accessorFn: (row) => row.system_user?.username ?? "", header: t("columns.owner"), cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.system_user?.username ?? "—"}</span> },
     { id: "created", accessorFn: (row) => createdTimestamp(row.created_at), header: t("columns.created"), cell: ({ row }) => <span className="whitespace-nowrap text-muted-foreground">{row.original.created_at_human ?? "—"}</span>, sortingFn: "basic" },
-    { id: "actions", header: "", cell: ({ row }) => <ApplicationRowActions application={row.original} canManage={canManage} preview={preview} /> },
+    { id: "actions", header: "", cell: ({ row }) => <ApplicationRowActions application={row.original} canManage={canManage} /> },
   ];
   const filters = <Filters query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} typeFilter={typeFilter} setTypeFilter={setTypeFilter} statusOptions={statusOptions} typeOptions={typeOptions} t={t} />;
   if (applications.length === 0) return <ApplicationEmptyState canManage={canManage} />;

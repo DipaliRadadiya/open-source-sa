@@ -8,11 +8,7 @@ import { ApplicationNav } from "@/components/sections/application-nav";
  */
 export default async function ApplicationLayout({ children, params }) {
   const { application } = await params;
-  // A fixture id has no record behind it, so the request would 422. The preview
-  // keeps the server menu it already has.
-  const items = Number.isFinite(Number(application))
-    ? await getPermissions("application", application).catch(() => null)
-    : null;
+  const items = await getPermissions("application", application).catch(() => null);
 
   return (
     <>

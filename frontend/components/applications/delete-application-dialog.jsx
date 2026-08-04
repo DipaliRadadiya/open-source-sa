@@ -20,9 +20,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  * the API. Two things people expect to happen and don't are said out loud: the
  * code on disk stays, and a database created for this site stays too.
  */
-export function DeleteApplicationDialog({ application, open, onOpenChange, redirectTo, preview = false }) {
+export function DeleteApplicationDialog({ application, open, onOpenChange, redirectTo }) {
   const t = useTranslations("applications.delete");
-  const previewNotice = useTranslations("applications.preview")("actionsDisabled");
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState("");
@@ -43,13 +42,6 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, redir
 
   async function onConfirm() {
     if (!matches) return;
-    // The dialog is worth reading on a fixture row; the request behind it is
-    // not — there is no such application to delete.
-    if (preview) {
-      toast.info(previewNotice);
-      handleOpenChange(false);
-      return;
-    }
     setPending(true);
     try {
       await deleteApplication(application.id, { removeFiles });

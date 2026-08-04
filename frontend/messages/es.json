@@ -12,7 +12,10 @@
     "collapseSidebar": "Contraer barra lateral",
     "copy": "Copiar",
     "copied": "Copiado",
-    "copyFailed": "No se pudo copiar al portapapeles"
+    "copyFailed": "No se pudo copiar al portapapeles",
+    "select": "Seleccionar…",
+    "search": "Buscar…",
+    "noResults": "Sin coincidencias."
   },
   "auth": {
     "loginTitle": "Iniciar sesión",
@@ -2448,11 +2451,28 @@
       "branchesLoading": "Cargando ramas…",
       "branchesEmpty": "No hay ramas disponibles para este repositorio.",
       "branchesFailed": "No pudimos cargar las ramas. Selecciona el repositorio de nuevo para reintentar.",
-      "branchHint": "La rama predeterminada se selecciona cuando está disponible."
-    },
-    "preview": {
-      "notice": "Datos de muestra: nada de esta página existe en tu servidor.",
-      "actionsDisabled": "Datos de muestra: las acciones están desactivadas aquí."
+      "branchHint": "La rama predeterminada se selecciona cuando está disponible.",
+      "generate": "Generar",
+      "domainHint": "Letras minúsculas, números y guiones. Debe ser único en este servidor.",
+      "portChecking": "Comprobando disponibilidad…",
+      "portFree": "El puerto {port} está libre.",
+      "portUseSuggested": "Usar {port}",
+      "repositorySearch": "Buscar repositorios…",
+      "branchSearch": "Buscar ramas…",
+      "typeSearch": "Buscar tipos de aplicación…",
+      "popular": "Popular",
+      "typeNoResults": "Ningún tipo de aplicación coincide con «{query}».",
+      "defaultsTo": "Por defecto: {value}.",
+      "startCommand": {
+        "shell": "Ejecuta un solo comando, no sintaxis de shell (sin &&, |, ; ni $( )). Apunta al archivo de entrada.",
+        "packageManager": "Usa el archivo de entrada, p. ej. node server.js — un gestor de paquetes bifurca el proceso real, así que las señales de parada no le llegan."
+      },
+      "required": "Obligatorio",
+      "submitNeedsType": "Elige un tipo de aplicación para continuar.",
+      "repositoryNeedsAccount": "Elige primero una cuenta de Git.",
+      "branchNeedsRepository": "Elige primero un repositorio.",
+      "changeType": "Cambiar",
+      "noOptions": "Aún no hay opciones disponibles."
     },
     "actions": {
       "label": "Acciones de la aplicación",
@@ -2510,6 +2530,7 @@
       "processFailed": "Proceso con error",
       "processStopped": "Proceso detenido",
       "deployFailed": "Falló el último despliegue"
-    }
+    },
+    "sourceLabel": "Origen"
   }
 }

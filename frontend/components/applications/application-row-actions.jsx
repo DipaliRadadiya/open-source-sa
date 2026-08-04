@@ -33,18 +33,15 @@ import { DeleteApplicationDialog } from "@/components/applications/delete-applic
  * Visit is only offered while the site is actually being served — a link that
  * lands on a connection error teaches people the panel is lying.
  */
-export function ApplicationRowActions({ application, canManage = false, preview = false }) {
+export function ApplicationRowActions({ application, canManage = false }) {
   const t = useTranslations("applications");
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const href = `/applications/${application.id}${preview ? "?preview=1" : ""}`;
+  const href = `/applications/${application.id}`;
   const canVisit = application.status === "active";
   const canRetry = application.status === "failed";
-  // A fixture row has no record behind it, so every write is refused up front
-  // rather than sent to the server and explained afterwards.
-  const writeHint = preview ? t("preview.actionsDisabled") : null;
 
   async function retry() {
     setRetrying(true);
@@ -92,19 +89,15 @@ export function ApplicationRowActions({ application, canManage = false, preview 
           </MenuItemHint>
 
           {canManage && canRetry ? (
-            <MenuItemHint hint={writeHint}>
-              <DropdownMenuItem disabled={preview || retrying} onSelect={retry}>
-                <RotateCw className="size-4" />
-                {retrying ? t("details.retrying") : t("details.retry")}
-              </DropdownMenuItem>
-            </MenuItemHint>
+            <DropdownMenuItem disabled={retrying} onSelect={retry}>
+              <RotateCw className="size-4" />
+              {retrying ? t("details.retrying") : t("details.retry")}
+            </DropdownMenuItem>
           ) : null}
 
           {canManage ? (
             <>
               <DropdownMenuSeparator />
-              {/* Enabled on fixture rows too: the dialog is the part worth
-                  reading, and it refuses the request itself. */}
               <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
                 <Trash2 className="size-4" />
                 {t("actions.delete")}
@@ -118,7 +111,6 @@ export function ApplicationRowActions({ application, canManage = false, preview 
         application={application}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        preview={preview}
       />
     </div>
   );

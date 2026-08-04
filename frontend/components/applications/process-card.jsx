@@ -21,9 +21,8 @@ const STATE_VARIANT = { active: "success", failed: "destructive", activating: "w
  * because the code has not arrived yet. That reads as "deploy to start", not as
  * a fault, so it is not painted red.
  */
-export function ProcessCard({ application, canManage = false, preview = false }) {
+export function ProcessCard({ application, canManage = false }) {
   const t = useTranslations("applications.process");
-  const previewNotice = useTranslations("applications.preview")("actionsDisabled");
   const router = useRouter();
   const [pending, setPending] = useState(null);
 
@@ -32,10 +31,6 @@ export function ProcessCard({ application, canManage = false, preview = false })
   const notStartedYet = state !== "active" && !application.deployed;
 
   async function run(action) {
-    if (preview) {
-      toast.info(previewNotice);
-      return;
-    }
     setPending(action);
     try {
       await controlApplicationProcess(application.id, action);

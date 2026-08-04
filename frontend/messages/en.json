@@ -15,7 +15,10 @@
     "collapseSidebar": "Collapse sidebar",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Could not copy to the clipboard"
+    "copyFailed": "Could not copy to the clipboard",
+    "select": "Select…",
+    "search": "Search…",
+    "noResults": "No matches."
   },
   "systemUsers": {
     "title": "System Users",
@@ -2448,11 +2451,28 @@
       "branchesLoading": "Loading branches…",
       "branchesEmpty": "No branches are available for this repository.",
       "branchesFailed": "We could not load branches. Select the repository again to retry.",
-      "branchHint": "The default branch is selected when available."
-    },
-    "preview": {
-      "notice": "Sample data — nothing on this page exists on your server.",
-      "actionsDisabled": "Sample data — actions are turned off here."
+      "branchHint": "The default branch is selected when available.",
+      "generate": "Generate",
+      "domainHint": "Lowercase letters, numbers and dashes. Must be unique on this server.",
+      "portChecking": "Checking availability…",
+      "portFree": "Port {port} is free.",
+      "portUseSuggested": "Use {port}",
+      "repositorySearch": "Search repositories…",
+      "branchSearch": "Search branches…",
+      "typeSearch": "Search application types…",
+      "popular": "Popular",
+      "typeNoResults": "No application types match “{query}”.",
+      "defaultsTo": "Defaults to {value}.",
+      "startCommand": {
+        "shell": "Run a single command, not shell syntax (no &&, |, ; or $( )). Point it at the entry file.",
+        "packageManager": "Use the entry file, e.g. node server.js — a package manager forks the real process, so stop signals never reach it."
+      },
+      "required": "Required",
+      "submitNeedsType": "Choose an application type to continue.",
+      "repositoryNeedsAccount": "Choose a Git account first.",
+      "branchNeedsRepository": "Choose a repository first.",
+      "changeType": "Change",
+      "noOptions": "No options available yet."
     },
     "actions": {
       "label": "Application actions",
@@ -2510,6 +2530,7 @@
       "processFailed": "Process failed",
       "processStopped": "Process stopped",
       "deployFailed": "Last deploy failed"
-    }
+    },
+    "sourceLabel": "Source"
   }
 }

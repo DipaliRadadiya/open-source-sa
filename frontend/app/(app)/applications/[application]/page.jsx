@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft, ExternalLink, FlaskConical } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
@@ -9,11 +9,6 @@ import {
   getApplicationDomains,
   getApplicationCertificate,
 } from "@/lib/applications/get-application-domains";
-import {
-  findPreviewApplication,
-  previewDomainsFor,
-  previewCertificateFor,
-} from "@/lib/applications/preview-fixture";
 import { ProvisioningCard } from "@/components/applications/provisioning-card";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { SiteFactsCard } from "@/components/applications/site-facts-card";
@@ -34,31 +29,21 @@ const STATUS_VARIANTS = {
   pending: "secondary",
 };
 
-export async function generateMetadata({ params, searchParams }) {
-  const [{ application }, sp] = await Promise.all([params, searchParams]);
-  if (sp?.preview) return { title: findPreviewApplication(application)?.name ?? "Application" };
+export async function generateMetadata({ params }) {
+  const { application } = await params;
   const result = await getApplication(application);
   return { title: result.application?.name ?? "Application" };
 }
 
-export default async function ApplicationDetailPage({ params, searchParams }) {
-  const [{ application: id }, sp] = await Promise.all([params, searchParams]);
-  const preview = Boolean(sp?.preview);
+export default async function ApplicationDetailPage({ params }) {
+  const { application: id } = await params;
   const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
     // Application-level grants live in their own catalog; deploy and domains are
     // gated there, not by the server-level `application` permission.
-    preview
-      ? Promise.resolve([])
-      : getPermissions("application", id).catch(() => []),
+    getPermissions("application", id).catch(() => []),
     getTranslations("applications"),
-    preview
-      ? Promise.resolve({
-          application: findPreviewApplication(id),
-          failed: false,
-          status: findPreviewApplication(id) ? 200 : 404,
-        })
-      : getApplication(id),
+    getApplication(id),
   ]);
 
   if (!can(permissions, "application", "view")) redirect("/dashboard");
@@ -67,43 +52,31 @@ export default async function ApplicationDetailPage({ params, searchParams }) {
 
   const application = result.application;
   const canManage = can(permissions, "application", "manage");
-  const canDeploy = preview || can(appPermissions, "app_deployment", "manage", "application");
-  const canSeeDomains = preview || can(appPermissions, "app_domain", "view", "application");
+  const canDeploy = can(appPermissions, "app_deployment", "manage", "application");
+  const canSeeDomains = can(appPermissions, "app_domain", "view", "application");
   const isGit = Boolean(application.repository || application.repository_url);
   // Only a serving site has domains, a certificate or a running process. While
   // it is still being built, saying anything about them would be invention.
   const settled = application.status === "active";
 
   const [domainList, certificate] = await Promise.all([
-    settled && canSeeDomains && !preview
+    settled && canSeeDomains
       ? getApplicationDomains(id)
-      : Promise.resolve({ domains: preview ? previewDomainsFor(application) : [], failed: false }),
-    settled && canSeeDomains && !preview
+      : Promise.resolve({ domains: [], failed: false }),
+    settled && canSeeDomains
       ? getApplicationCertificate(id)
-      : Promise.resolve({
-          certificate: preview ? previewCertificateFor(application) : null,
-          failed: false,
-        }),
+      : Promise.resolve({ certificate: null, failed: false }),
   ]);
-
-  const backHref = preview ? "/applications?preview=1" : "/applications";
 
   return (
     <div className="space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={backHref}>
+          <Link href="/applications">
             <ArrowLeft className="size-4" />
             {t("back")}
           </Link>
         </Button>
-
-        {preview ? (
-          <p className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/5 px-4 py-3 text-sm text-warning">
-            <FlaskConical className="size-4 shrink-0" />
-            {t("preview.notice")}
-          </p>
-        ) : null}
 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
@@ -147,11 +120,7 @@ export default async function ApplicationDetailPage({ params, searchParams }) {
                 </a>
               </Button>
             ) : null}
-            <ApplicationRowActions
-              application={application}
-              canManage={canManage}
-              preview={preview}
-            />
+            <ApplicationRowActions application={application} canManage={canManage} />
           </div>
         </div>
       </div>
@@ -160,14 +129,12 @@ export default async function ApplicationDetailPage({ params, searchParams }) {
           web root, a certificate and a process that do not exist yet are worse
           than nothing. */}
       {!settled ? (
-        <ProvisioningCard application={application} canManage={!preview && canManage} />
+        <ProvisioningCard application={application} canManage={canManage} />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="space-y-6">
             <SiteFactsCard application={application} />
-            {isGit ? (
-              <SourceCard application={application} canDeploy={canDeploy} preview={preview} />
-            ) : null}
+            {isGit ? <SourceCard application={application} canDeploy={canDeploy} /> : null}
           </div>
           <div className="space-y-6">
             {canSeeDomains ? (
@@ -179,11 +146,7 @@ export default async function ApplicationDetailPage({ params, searchParams }) {
               />
             ) : null}
             {application.has_process ? (
-              <ProcessCard
-                application={application}
-                canManage={canManage}
-                preview={preview}
-              />
+              <ProcessCard application={application} canManage={canManage} />
             ) : null}
           </div>
         </div>

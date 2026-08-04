@@ -18,9 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  * rather than behind the ⋯ menu. A failed redeploy leaves the old code serving,
  * so the card reports the last successful deploy, not "broken".
  */
-export function SourceCard({ application, canDeploy = false, preview = false }) {
+export function SourceCard({ application, canDeploy = false }) {
   const t = useTranslations("applications.source");
-  const previewNotice = useTranslations("applications.preview")("actionsDisabled");
   const router = useRouter();
   const [deploying, setDeploying] = useState(false);
 
@@ -35,10 +34,6 @@ export function SourceCard({ application, canDeploy = false, preview = false }) 
   const deployFailed = application.status === "active" && Boolean(application.failed_step);
 
   async function deploy() {
-    if (preview) {
-      toast.info(previewNotice);
-      return;
-    }
     setDeploying(true);
     try {
       await deployApplication(application.id);

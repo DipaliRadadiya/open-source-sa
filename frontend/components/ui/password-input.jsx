@@ -11,9 +11,17 @@ import { cn } from "@/lib/utils";
  * react-hook-form's field onto it). The toggle is outside the tab order so
  * keyboard flow moves field → next field; it's operable by mouse/touch.
  */
-export function PasswordInput({ className, ...props }) {
+export function PasswordInput({ className, show: showProp, onShowChange, ...props }) {
   const t = useTranslations("common");
-  const [show, setShow] = useState(false);
+  const [showState, setShowState] = useState(false);
+  // Controlled when a parent passes `show` (e.g. reveal right after Generate),
+  // otherwise self-managed.
+  const show = showProp ?? showState;
+  const setShow = (next) => {
+    const value = typeof next === "function" ? next(show) : next;
+    if (onShowChange) onShowChange(value);
+    else setShowState(value);
+  };
 
   return (
     <div className="relative">
