@@ -125,6 +125,16 @@ class Application extends Model
         return $this->hasMany(Deployment::class);
     }
 
+    public function backupTarget(): HasOne
+    {
+        return $this->hasOne(BackupTarget::class);
+    }
+
+    public function backups(): HasMany
+    {
+        return $this->hasMany(Backup::class);
+    }
+
     public function certificate(): HasOne
     {
         return $this->hasOne(Certificate::class);
