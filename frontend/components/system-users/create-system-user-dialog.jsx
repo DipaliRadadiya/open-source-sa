@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-export function CreateSystemUserDialog({ open, onOpenChange }) {
+export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
   const t = useTranslations("systemUsers");
   const router = useRouter();
 
@@ -35,8 +35,9 @@ export function CreateSystemUserDialog({ open, onOpenChange }) {
     const payload = { username: values.username };
     if (values.public_key?.trim()) payload.public_key = values.public_key.trim();
     try {
-      await createSystemUser(payload);
+      const { data } = await createSystemUser(payload);
       toast.success(t("toast.created"));
+      onCreated?.(data?.system_user ?? data?.user ?? null);
       onOpenChange?.(false);
       form.reset();
       router.refresh();

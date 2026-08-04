@@ -3,9 +3,20 @@ import { cookies } from "next/headers";
 import { serverLocale } from "@/lib/i18n/server-locale";
 import { fetchWithRetry } from "@/lib/api/retry";
 
-export const getPermissions = cache(async () => {
+/**
+ * `level`/`applicationId` are forwarded verbatim: `?level=application&
+ * application_id=7` returns THAT site's menu with both filters applied
+ * server-side — the user's grants and what the site type can actually do. The
+ * frontend must not re-derive the second one; it cannot.
+ */
+export const getPermissions = cache(async (level, applicationId) => {
   const cookieStore = await cookies();
   const locale = await serverLocale();
+
+  const query = new URLSearchParams();
+  if (level) query.set("level", level);
+  if (applicationId) query.set("application_id", String(applicationId));
+  const suffix = query.size ? `?${query}` : "";
 
   // An empty catalog means "this user may do nothing", which is what every
   // page gate reads. A failed request must therefore NOT degrade to [] — that
@@ -14,7 +25,7 @@ export const getPermissions = cache(async () => {
   // Retried once on a 5xx — like the session, this gates every page, so one
   // backend hiccup must not blank the app.
   const res = await fetchWithRetry(() =>
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/permissions`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/permissions${suffix}`, {
       headers: {
         Accept: "application/json",
         "Accept-Language": locale,

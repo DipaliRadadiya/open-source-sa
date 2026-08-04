@@ -565,7 +565,11 @@
     "required_host": "Enter an IP address.",
     "required_socket": "Enter the socket path.",
     "invalidPort": "Enter a port between 1 and 65535.",
-    "min8": "Use at least 8 characters."
+    "min8": "Use at least 8 characters.",
+    "applicationTypeRequired": "Choose an application type.",
+    "applicationNameRequired": "Enter a name for this application.",
+    "applicationDomainRequired": "Enter the domain this application will use.",
+    "applicationSystemUserRequired": "Choose the system user that should own this application."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -2295,6 +2299,209 @@
       "working": "Disconnecting…",
       "done": "{label} disconnected.",
       "failed": "We could not disconnect this account."
+    }
+  },
+  "applications": {
+    "title": "Applications",
+    "subtitle": "Sites and services running on this server.",
+    "loadFailed": "We could not load applications.",
+    "noPermission": "You do not have permission to manage applications.",
+    "create": "Create application",
+    "createTitle": "Create application",
+    "createSubtitle": "Choose what to run, then provide only the configuration it needs.",
+    "chooseType": "Choose an application type",
+    "unavailable": "Unavailable",
+    "requires": "Requires {runtime}",
+    "basics": "Application details",
+    "name": "Name",
+    "domain": "Domain",
+    "systemUser": "System user",
+    "systemUserPlaceholder": "Choose a system user",
+    "configuration": "Configuration",
+    "advanced": "Advanced settings",
+    "showAdvanced": "Show advanced settings",
+    "hideAdvanced": "Hide advanced settings",
+    "source": {
+      "title": "Source and deployment",
+      "repository": "Repository",
+      "branch": "Branch",
+      "lastDeploy": "Last deployed",
+      "commit": "Commit",
+      "never": "Not deployed yet",
+      "deploy": "Deploy now",
+      "deploying": "Deploying…",
+      "started": "Deployment started.",
+      "failed": "We could not start the deployment.",
+      "pushToDeploy": "Deploys on push"
+    },
+    "gitAccount": "Git account",
+    "gitAccountPlaceholder": "Choose a connected account",
+    "repository": "Repository",
+    "repositoryPlaceholder": "Choose a repository",
+    "branch": "Branch",
+    "branchPlaceholder": "Enter a branch",
+    "publicRepository": "Public repository URL",
+    "publicRepositoryHint": "Use an HTTPS URL. Public repositories do not need a connected account.",
+    "useAccount": "Use a connected account",
+    "usePublicUrl": "Use a public repository URL",
+    "noAccounts": "No Git accounts are connected. You can still use a public repository URL.",
+    "connectGit": "Connect Git",
+    "createAction": "Create application",
+    "creating": "Creating application…",
+    "created": "Application created. Provisioning has started.",
+    "cancel": "Cancel",
+    "back": "Applications",
+    "columns": {
+      "name": "Application",
+      "type": "Type",
+      "domain": "Domain",
+      "status": "Status",
+      "owner": "Owner",
+      "created": "Created"
+    },
+    "empty": {
+      "title": "Your server is ready for its first application",
+      "description": "Create a site or service in a guided flow. ServerAvatar will provision it, then show its live status here.",
+      "filteredTitle": "No matching applications",
+      "filteredDescription": "No applications match your search.",
+      "clearSearch": "Clear search",
+      "guideTitle": "From idea to a running application",
+      "steps": {
+        "choose": {
+          "title": "Choose a type",
+          "description": "Start with the software or deployment style that fits your project."
+        },
+        "configure": {
+          "title": "Add essentials",
+          "description": "Provide its domain, owner, and only the settings it needs."
+        },
+        "provision": {
+          "title": "Track provisioning",
+          "description": "Follow each server step until the application is ready."
+        }
+      }
+    },
+    "searchPlaceholder": "Search applications…",
+    "details": {
+      "title": "Application",
+      "provisioning": "Provisioning",
+      "pending": "Waiting for provisioning to start.",
+      "inProgress": "Provisioning is in progress.",
+      "active": "Application is active.",
+      "failed": "Provisioning failed at {step}.",
+      "retry": "Retry provisioning",
+      "retrying": "Retrying…",
+      "reference": "Support reference: {reference}",
+      "steps": "Completed steps",
+      "unknownStep": "Completed step",
+      "noSteps": "No provisioning steps have completed yet."
+    },
+    "port": {
+      "label": "Application port",
+      "checking": "Checking port…",
+      "available": "This port is available.",
+      "warning": "{message}",
+      "unavailable": "{message}",
+      "suggested": "Try {port}."
+    },
+    "guided": {
+      "stageType": "Choose application",
+      "stageConfigure": "Configure essentials",
+      "stageReview": "Review and create",
+      "typeHint": "Pick the starting point for your project. You can adjust advanced configuration later.",
+      "configureHint": "Only the fields required by this application are shown.",
+      "reviewTitle": "Ready to provision",
+      "reviewHint": "ServerAvatar will create the site configuration and show progress on the next screen.",
+      "creatingType": "You’re creating",
+      "softwareIncluded": "Software will be installed for you.",
+      "bringYourOwnCode": "This creates a served site. You’ll add or deploy code afterwards.",
+      "selected": "Selected",
+      "change": "Change"
+    },
+    "readiness": {
+      "needsAttention": "Needs attention",
+      "ready": "Ready",
+      "incompleteHint": "Complete these items to continue.",
+      "readyHint": "Review this configuration, then create the application.",
+      "complete": "Add {field}"
+    },
+    "form": {
+      "detailsTitle": "Application details",
+      "detailsHint": "Every application needs an owner, name, and domain.",
+      "chooseTypeHint": "Choose an application type to reveal its configuration fields.",
+      "namePlaceholder": "e.g. customer-portal",
+      "domainPlaceholder": "e.g. app.example.com",
+      "fieldPlaceholder": "Enter {field}",
+      "fieldSelectPlaceholder": "Choose {field}",
+      "requiredField": "Choose or enter {field} before creating the application.",
+      "noSystemUsers": "No system users are available. Create one before creating an application.",
+      "systemUsersUnavailable": "We couldn’t load system users. You can still create one to continue.",
+      "noSystemUserCreatePermission": "You need permission to manage system users. Ask an administrator to create one.",
+      "createSystemUser": "Create system user",
+      "repositoriesLoading": "Loading repositories…",
+      "repositoriesEmpty": "No repositories are available for this account.",
+      "repositoriesFailed": "We could not load repositories. Select the account again to retry.",
+      "repositoryHint": "Choose a repository the selected account can access.",
+      "branchesLoading": "Loading branches…",
+      "branchesEmpty": "No branches are available for this repository.",
+      "branchesFailed": "We could not load branches. Select the repository again to retry.",
+      "branchHint": "The default branch is selected when available."
+    },
+    "preview": {
+      "notice": "Sample data — nothing on this page exists on your server.",
+      "actionsDisabled": "Sample data — actions are turned off here."
+    },
+    "actions": {
+      "label": "Application actions",
+      "open": "Open dashboard",
+      "visit": "Visit site",
+      "visitHint": "The site is served once provisioning finishes.",
+      "delete": "Delete application"
+    },
+    "delete": {
+      "title": "Delete {name}?",
+      "description": "The site configuration is removed and {domain} stops being served. This cannot be undone.",
+      "removeFiles": "Also delete the site’s files",
+      "removeFilesOn": "The site’s directory and everything in it will be deleted from the server.",
+      "removeFilesOff": "The files stay on the server. Only the panel record and the site configuration are removed.",
+      "databaseNote": "A database created for this application is kept. Remove it from Databases if you no longer need it.",
+      "confirmLabel": "Type {domain} to confirm",
+      "submit": "Delete application",
+      "deleting": "Deleting…",
+      "done": "{name} was deleted.",
+      "failed": "We could not delete this application.",
+      "cancel": "Cancel"
+    },
+    "facts": {
+      "title": "Application",
+      "webRoot": "Web root",
+      "php": "PHP version",
+      "node": "Node version",
+      "port": "Port"
+    },
+    "process": {
+      "title": "Process",
+      "state": "State",
+      "since": "Running since",
+      "memory": "Memory",
+      "restarts": "Restarts",
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "started": "The process was started.",
+      "stopped": "The process was stopped.",
+      "restarted": "The process was restarted.",
+      "failed": "We could not change the process.",
+      "deployToStart": "This site starts after its first successful deployment."
+    },
+    "domains": {
+      "title": "Domains and SSL",
+      "secured": "HTTPS",
+      "noCertificate": "No certificate",
+      "counts": "{aliases, plural, =0 {No aliases} one {# alias} other {# aliases}} · {redirects, plural, =0 {no redirects} one {# redirect} other {# redirects}}",
+      "expires": "Certificate renews {when}.",
+      "manage": "Manage domains",
+      "loadFailed": "We could not load the domains for this application."
     }
   }
 }

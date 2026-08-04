@@ -15,8 +15,35 @@ export function isNavActive(pathname, url) {
 
 export function findActiveNavItem(items, pathname) {
   return (items || [])
-    .filter((item) => isNavActive(pathname, item.url))
-    .sort((a, b) => b.url.length - a.url.length)[0];
+    .filter((item) => isNavActive(pathname, item.href ?? item.url))
+    .sort((a, b) => (b.href ?? b.url).length - (a.href ?? a.url).length)[0];
+}
+
+// Application-level `url`s from the catalog are relative segments (`/domains`,
+// `""` for the dashboard), not paths. Unprefixed they either 404 or — for
+// `/settings`, `/php`, `/firewall`, `/logs` — land on the SERVER-wide screen of
+// the same name, which is the worse failure of the two.
+export function applicationNavHref(applicationId, url) {
+  return `/applications/${applicationId}${url ?? ""}`;
+}
+
+// The catalog advertises every application screen the backend supports; the
+// frontend has built the dashboard so far. Linking to the rest would promise
+// pages that do not exist, so they are held back until their route lands.
+const BUILT_APPLICATION_URLS = new Set([""]);
+
+export function isApplicationNavBuilt(url) {
+  return BUILT_APPLICATION_URLS.has(url ?? "");
+}
+
+// Resolves a catalog item for the panel it belongs to: application items get
+// the `/applications/{id}` prefix, server items are already absolute.
+export function resolveNavItems(items, applicationId) {
+  return (items || []).map((item) =>
+    item.level === "application" && applicationId
+      ? { ...item, href: applicationNavHref(applicationId, item.url) }
+      : { ...item, href: item.url },
+  );
 }
 
 // Buckets a flat, already-filtered list of nav items by their sub_level so the
