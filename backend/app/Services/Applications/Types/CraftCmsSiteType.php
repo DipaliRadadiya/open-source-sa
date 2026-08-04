@@ -2,6 +2,9 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Support\FieldOptions;
+use Illuminate\Validation\Rule;
+
 /**
  * Craft CMS — content management for developers.
  */
@@ -58,7 +61,10 @@ class CraftCmsSiteType extends AbstractSiteType
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
             $this->field('admin_email', 'email', required: true),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
-            $this->field('language', 'text', advanced: true, extra: ['default' => 'en-US']),
+            $this->field('language', 'select', advanced: true, extra: [
+                'default' => 'en-US',
+                'options' => FieldOptions::asOptions(FieldOptions::hyphenLocales()),
+            ]),
         ], $this->phpFields());
     }
 
@@ -70,7 +76,7 @@ class CraftCmsSiteType extends AbstractSiteType
             'admin_email' => ['required', 'email', 'max:255'],
             // Craft's own minimum is 6; ours is stricter.
             'admin_password' => ['required', 'string', 'min:10'],
-            'language' => ['nullable', 'string', 'max:12', 'regex:/^[A-Za-z-]+$/'],
+            'language' => ['nullable', 'string', Rule::in(FieldOptions::hyphenLocales())],
         ];
     }
 

@@ -2,6 +2,9 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Support\FieldOptions;
+use Illuminate\Validation\Rule;
+
 /**
  * Akaunting — accounting and invoicing.
  */
@@ -49,7 +52,10 @@ class AkauntingSiteType extends AbstractSiteType
             $this->field('company_email', 'email', required: true),
             $this->field('admin_email', 'email', required: true),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
-            $this->field('locale', 'text', advanced: true, extra: ['default' => 'en-GB']),
+            $this->field('locale', 'select', advanced: true, extra: [
+                'default' => 'en-GB',
+                'options' => FieldOptions::asOptions(FieldOptions::hyphenLocales()),
+            ]),
             $this->field('table_prefix', 'text', advanced: true),
         ], $this->phpFields());
     }
@@ -61,7 +67,7 @@ class AkauntingSiteType extends AbstractSiteType
             'company_email' => ['required', 'email', 'max:255'],
             'admin_email' => ['required', 'email', 'max:255'],
             'admin_password' => ['required', 'string', 'min:10'],
-            'locale' => ['nullable', 'string', 'max:12', 'regex:/^[A-Za-z-]+$/'],
+            'locale' => ['nullable', 'string', Rule::in(FieldOptions::hyphenLocales())],
             'table_prefix' => ['nullable', 'string', 'max:10', 'regex:/^[a-z0-9_]+$/'],
         ];
     }

@@ -2,6 +2,9 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Support\FieldOptions;
+use Illuminate\Validation\Rule;
+
 /**
  * WordPress — the reference one-click type, and the one with the most
  * type-specific fields. If the generic form renderer can draw this, it can
@@ -53,7 +56,10 @@ class WordPressSiteType extends AbstractSiteType
             // Offered pre-filled with a strong value so the simple path never
             // invites a weak password.
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
-            $this->field('site_language', 'select', advanced: true, extra: ['default' => 'en_US']),
+            $this->field('site_language', 'select', advanced: true, extra: [
+                'default' => 'en_US',
+                'options' => FieldOptions::asOptions(FieldOptions::wordpressLocales()),
+            ]),
             $this->field('table_prefix', 'text', advanced: true, extra: ['default' => 'wp_']),
         ], $this->phpFields());
     }
@@ -65,7 +71,7 @@ class WordPressSiteType extends AbstractSiteType
             'admin_user' => ['required', 'string', 'max:60', 'regex:/^[A-Za-z0-9._@-]+$/'],
             'admin_email' => ['required', 'email', 'max:255'],
             'admin_password' => ['required', 'string', 'min:10'],
-            'site_language' => ['nullable', 'string', 'max:20'],
+            'site_language' => ['nullable', 'string', Rule::in(FieldOptions::wordpressLocales())],
             // Goes into SQL identifiers, so keep it strictly boring.
             'table_prefix' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9_]+$/'],
         ];
