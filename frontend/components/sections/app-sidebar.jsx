@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
-import { groupBySubLevel, isNavActive, NAV_ITEM_CLASS } from "@/lib/navigation";
+import {
+  groupBySubLevel,
+  isApplicationNavBuilt,
+  isNavActive,
+  resolveNavItems,
+  NAV_ITEM_CLASS,
+} from "@/lib/navigation";
+import { useApplicationNav } from "@/components/sections/application-nav";
 import { Logo } from "@/components/logo";
 import { NavIcon } from "@/components/nav-icon";
 import {
@@ -23,12 +30,20 @@ export function AppSidebar({ items }) {
   const params = useParams();
   const { state, isMobile } = useSidebar();
 
-  const currentPanel = params?.application ? "application" : "server";
+  const applicationId = params?.application;
+  const currentPanel = applicationId ? "application" : "server";
   const iconOnly = state === "collapsed" && !isMobile;
 
-  const visible = (items || [])
+  // Inside an application, prefer the catalog its layout fetched: only that one
+  // is filtered by what this site type supports. Until it arrives, the shared
+  // catalog renders the same items minus that filter.
+  const { items: applicationItems } = useApplicationNav();
+  const source = currentPanel === "application" ? (applicationItems ?? items) : items;
+
+  const visible = resolveNavItems(source, applicationId)
     .filter((item) => item?.permissions?.view)
-    .filter((item) => item.level === currentPanel);
+    .filter((item) => item.level === currentPanel)
+    .filter((item) => currentPanel !== "application" || isApplicationNavBuilt(item.url));
 
   const groups = groupBySubLevel(visible);
 
@@ -53,16 +68,16 @@ export function AppSidebar({ items }) {
             )}
             <SidebarMenu className="gap-1.5">
               {groupItems.map((item) => {
-                const active = isNavActive(pathname, item.url);
+                const active = isNavActive(pathname, item.href);
                 return (
-                  <SidebarMenuItem key={`${item.name}-${item.url}`}>
+                  <SidebarMenuItem key={`${item.name}-${item.href}`}>
                     <SidebarMenuButton
                       asChild
                       isActive={active}
                       tooltip={item.title}
                       className={NAV_ITEM_CLASS}
                     >
-                      <Link href={item.url}>
+                      <Link href={item.href}>
                         <NavIcon name={item.icon} />
                         <span>{item.title}</span>
                       </Link>

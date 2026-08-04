@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useParams } from "next/navigation";
-import { findActiveNavItem } from "@/lib/navigation";
+import { findActiveNavItem, resolveNavItems } from "@/lib/navigation";
 import { usePageCrumb } from "@/components/sections/page-crumb";
 import {
   Breadcrumb,
@@ -16,7 +16,13 @@ export function AppBreadcrumb({ items }) {
   const params = useParams();
   const panel = params?.application ? "Application" : "Server";
 
-  const current = findActiveNavItem(items, pathname);
+  // Inside an application the server-level "Applications" item also matches the
+  // path, so match against that panel's items only — otherwise every
+  // application screen is labelled "Application".
+  const panelItems = resolveNavItems(items, params?.application).filter((item) =>
+    params?.application ? item.level === "application" : item.level !== "application",
+  );
+  const current = findActiveNavItem(panelItems, pathname);
   const title = current?.title;
   // Set by detail pages; null everywhere else.
   const { crumb } = usePageCrumb();
