@@ -7,6 +7,8 @@ export const ADMIN_NAV = [
   { key: "users", url: "/admin/users", icon: "users" },
   { key: "roles", url: "/admin/roles", icon: "shield-check" },
   { key: "activityLog", url: "/admin/activity-log", icon: "scroll-text" },
+  { key: "panelUpdate", url: "/admin/panel-update", icon: "arrow-up-circle" },
+  { key: "doctor", url: "/admin/doctor", icon: "stethoscope" },
 ];
 
 // Dashboard is the index, so it matches only exactly; the rest match by prefix
