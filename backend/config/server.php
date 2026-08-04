@@ -104,6 +104,45 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Transient failures
+    |--------------------------------------------------------------------------
+    |
+    | Some failures mean "busy, nothing happened" rather than "wrong". The
+    | account tools take a lock on /etc/passwd and apt takes one on the dpkg
+    | database, and both refuse immediately if anything else holds it — which
+    | is routine on a server that is also running unattended-upgrades, or one
+    | where the installer has only just finished.
+    |
+    | Retrying is safe precisely because the command never started: the lock
+    | is taken before any change. Only patterns with that guarantee belong
+    | here. A failure that might have half-completed must not be retried.
+    |
+    | Without this the operator sees a hard error for something that would
+    | have worked a second later, and has no way to tell the difference.
+    |
+    */
+
+    'transient' => [
+        'attempts' => (int) env('SERVER_OPS_RETRIES', 3),
+        'delay_ms' => (int) env('SERVER_OPS_RETRY_DELAY_MS', 1500),
+
+        // Matched case-insensitively against stderr.
+        'patterns' => [
+            // useradd/usermod/userdel/groupadd, when another account tool
+            // (or a package postinst) holds the passwd/group lock.
+            'cannot lock',
+            'try again later',
+            // apt/dpkg.
+            'could not get lock',
+            'unable to acquire the dpkg frontend lock',
+            'is another process using it',
+            // Generic EAGAIN from a lock file.
+            'resource temporarily unavailable',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | System user home base
     |--------------------------------------------------------------------------
     |

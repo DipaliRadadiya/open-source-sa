@@ -48,24 +48,57 @@ class ServerOps
         $exitCode = null;
         $stderr = '';
         $result = null;
+        $attempts = 0;
 
-        try {
-            $pending = Process::timeout($timeout);
-            if ($input !== null) {
-                $pending = $pending->input($input);
+        $maxAttempts = max(1, (int) config('server.transient.attempts', 1));
+
+        // A lock failure means the command refused before doing anything, so
+        // trying again is safe and usually works: the holder is normally
+        // unattended-upgrades or an install that is seconds from finishing.
+        // Without this the operator gets a hard error for something that
+        // would have succeeded on its own.
+        while ($attempts < $maxAttempts) {
+            $attempts++;
+            $ok = false;
+            $exitCode = null;
+            $stderr = '';
+            $result = null;
+
+            try {
+                $pending = Process::timeout($timeout);
+                if ($input !== null) {
+                    $pending = $pending->input($input);
+                }
+                if ($cwd !== null) {
+                    $pending = $pending->path($cwd);
+                }
+                if ($env !== []) {
+                    $pending = $pending->env($env);
+                }
+                $result = $pending->run($command);
+                $ok = $result->successful();
+                $exitCode = $result->exitCode();
+                $stderr = $result->errorOutput();
+            } catch (ProcessTimedOutException) {
+                $stderr = 'process timed out';
             }
-            if ($cwd !== null) {
-                $pending = $pending->path($cwd);
+
+            if ($ok || $attempts >= $maxAttempts || ! $this->isTransient($stderr)) {
+                break;
             }
-            if ($env !== []) {
-                $pending = $pending->env($env);
-            }
-            $result = $pending->run($command);
-            $ok = $result->successful();
-            $exitCode = $result->exitCode();
-            $stderr = $result->errorOutput();
-        } catch (ProcessTimedOutException) {
-            $stderr = 'process timed out';
+
+            // Logged at each attempt: a command that eventually succeeded
+            // after waiting is worth seeing, and a server where this happens
+            // constantly has a problem of its own.
+            Log::channel('server-ops')->warning('server operation busy, retrying', array_merge($context, [
+                'reference' => $reference,
+                'command' => implode(' ', $command),
+                'attempt' => $attempts,
+                'of' => $maxAttempts,
+                'stderr' => $stderr,
+            ]));
+
+            usleep(max(0, (int) config('server.transient.delay_ms', 1500)) * 1000);
         }
 
         Log::channel('server-ops')->{$ok ? 'info' : 'error'}('server operation', array_merge($context, [
@@ -73,11 +106,37 @@ class ServerOps
             'command' => implode(' ', $command),
             'exit_code' => $exitCode,
             'stderr' => $stderr,
+            'attempts' => $attempts,
             'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             'actor_id' => Auth::id(),
         ]));
 
-        return new ServerOpsResult($ok, $reference, $result);
+        return new ServerOpsResult($ok, $reference, $result, busy: ! $ok && $this->isTransient($stderr));
+    }
+
+    /**
+     * Whether stderr describes a "busy, nothing happened" failure.
+     *
+     * Only conditions where the command refused *before* changing anything
+     * qualify — the account tools and apt both take their lock first, so a
+     * lock failure guarantees no partial work to worry about. A failure that
+     * might have half-completed must never be retried.
+     */
+    private function isTransient(string $stderr): bool
+    {
+        if ($stderr === '') {
+            return false;
+        }
+
+        $haystack = strtolower($stderr);
+
+        foreach ((array) config('server.transient.patterns', []) as $pattern) {
+            if (str_contains($haystack, strtolower((string) $pattern))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

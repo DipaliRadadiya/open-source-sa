@@ -15,6 +15,13 @@ class ServerOpsResult
         public readonly bool $ok,
         public readonly string $reference,
         public readonly ?ProcessResult $result = null,
+        /**
+         * The failure was a lock/busy condition that survived every retry —
+         * the system was occupied, not misconfigured. Callers can use this to
+         * tell the operator to try again rather than reporting a hard error
+         * for something that will work by itself in a minute.
+         */
+        public readonly bool $busy = false,
     ) {}
 
     public function failed(): bool
