@@ -83,12 +83,73 @@ else
 fi
 
 STEP_NO=0
+# What we are doing right now, so a failure can say which part broke rather
+# than only which line number did.
+CURRENT_STEP="starting up"
 say()  { printf '%s\n' "$*"; }
-step() { STEP_NO=$((STEP_NO + 1)); printf '\n%s[%02d]%s %s%s%s\n' "$DIM" "$STEP_NO" "$RESET" "$BOLD" "$*" "$RESET"; }
+step() { STEP_NO=$((STEP_NO + 1)); CURRENT_STEP="$*"; printf '\n%s[%02d]%s %s%s%s\n' "$DIM" "$STEP_NO" "$RESET" "$BOLD" "$*" "$RESET"; }
 ok()   { printf '     %s✓%s %s\n' "$GREEN" "$RESET" "$*"; }
 skip() { printf '     %s·%s %s %s(already done)%s\n' "$DIM" "$RESET" "$*" "$DIM" "$RESET"; }
 warn() { printf '     %s!%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
-die()  { printf '\n%sInstall stopped:%s %s\n\n' "$RED" "$RESET" "$*" >&2; exit 1; }
+
+# Tail of the install log, indented, or a note saying why there isn't one.
+# Every failure path prints this: "apt failed" with no output is not a
+# diagnosis, and the log is the only place the actual output went.
+log_tail() {
+    local lines="${1:-15}"
+
+    if [[ -r "${LOG_FILE:-}" ]]; then
+        tail -n "$lines" "$LOG_FILE" 2>/dev/null | sed 's/^/       /'
+    else
+        printf '       (no log yet — the install stopped before creating %s)\n' "${LOG_FILE:-the log file}"
+    fi
+}
+
+# One place that renders a stop, so every failure looks the same and always
+# says: what broke, where, what the log holds, and what to do next.
+report_failure() {
+    local headline="$1" detail="${2:-}"
+
+    printf '\n%s%sInstall stopped%s during: %s%s%s\n\n' "$BOLD" "$RED" "$RESET" "$BOLD" "$CURRENT_STEP" "$RESET" >&2
+    printf '  %s\n' "$headline" >&2
+    [[ -n "$detail" ]] && printf '  %s%s%s\n' "$DIM" "$detail" "$RESET" >&2
+
+    # No log means we stopped in preflight, before anything was touched. Do
+    # not point the user at a file that does not exist, and do not pad the
+    # message with recovery steps for a machine that was never changed.
+    if [[ ! -r "${LOG_FILE:-}" ]]; then
+        printf '\n  %sNothing on this server was changed.%s\n\n' "$DIM" "$RESET" >&2
+
+        return
+    fi
+
+    printf '\n  %sLast lines of the log:%s\n' "$BOLD" "$RESET" >&2
+    log_tail 15 >&2
+
+    printf '\n  %sWhat to do:%s\n' "$BOLD" "$RESET" >&2
+    printf '    1. Read the full log:  sudo cat %s\n' "$LOG_FILE" >&2
+    printf '    2. Fix what it reports, then run this installer again — it is\n' >&2
+    printf '       safe to re-run and skips work that is already done.\n' >&2
+    printf '    3. Still stuck? Open an issue with the log and the line above.\n\n' >&2
+}
+
+die() { report_failure "$*"; exit 1; }
+
+# set -e kills the script on ANY failing command, including the ~200 that do
+# not go through run(). Without this trap that death is completely silent:
+# no message, no log pointer, just a non-zero exit — which reads to the user
+# as "it did nothing". This turns every one of those into a real report.
+on_error() {
+    local code="$1" line="$2" command="$3"
+
+    trap - ERR
+    report_failure \
+        "A command failed (exit ${code}) and the install cannot safely continue." \
+        "line ${line}: ${command}"
+    exit "$code"
+}
+
+trap 'on_error "$?" "$LINENO" "$BASH_COMMAND"' ERR
 
 # Runs a command, sending its noise to the log. The log path is printed on
 # failure, because "apt failed" with no output is not a diagnosis.
@@ -97,10 +158,13 @@ run() {
         printf '     %s$ %s%s\n' "$DIM" "$*" "$RESET"
         return 0
     fi
+    # The ERR trap must not also fire for this: `if !` already handles the
+    # failure, and a doubled report is worse than none.
+    # A command in an `if` condition does not fire the ERR trap, so this
+    # reports once rather than twice.
     if ! "$@" >>"$LOG_FILE" 2>&1; then
-        die "command failed: $*
-     Last lines of $LOG_FILE:
-$(tail -n 15 "$LOG_FILE" 2>/dev/null | sed 's/^/       /')"
+        report_failure "This command failed. Its output is in the log." "\$ $*"
+        exit 1
     fi
 }
 
