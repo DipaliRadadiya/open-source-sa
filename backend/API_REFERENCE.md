@@ -1462,6 +1462,82 @@ Requires the `git` permission (`view` to read, `manage` to mutate). Connected gi
 
 ---
 
+### Application PHP (App sidebar → PHP)
+
+A site's PHP version, its limits, and **its own PHP-FPM pool**. `app_php` (`manage` to write).
+
+#### Read this first: what isolation is, and why the screen leads with it
+
+Until a site is isolated, **its PHP runs as `www-data` — the same account as every other site on the server.** The panel creates a Linux user per site and gives it the files, but the code serving that site does not run as that user, so one compromised plugin can read every other site's `.env`. Isolating gives the site its own FPM pool running as its own user, which is what makes those per-site users mean anything.
+
+It also makes the rest of this screen enforceable: a shared pool means a shared `memory_limit`, so per-site limits are not a thing that can exist until the site has a pool of its own.
+
+**`GET /api/applications/{application}/php`**
+
+```jsonc
+{ "php": {
+  "php_version": "8.4",
+  "available_versions": ["8.4", "8.3", "8.2"],   // read from disk, never cached
+
+  "isolated": false,
+  "isolated_at": null,
+  "isolation_supported": true,                    // false on OpenLiteSpeed — no FPM pools exist
+  "runs_as": "www-data",                          // → "siteowner" once isolated
+
+  "managed": true,                                // false = the pool file was edited by hand
+
+  "settings": {
+    "memory_limit": "256M", "upload_max_filesize": "64M", "post_max_size": "64M",
+    "max_execution_time": 30, "max_input_time": 60, "max_input_vars": 1000,
+    "session_gc_maxlifetime": 1440,
+    "pm_type": "ondemand", "pm_max_children": 5, "pm_max_requests": 500,
+    "open_basedir_enabled": false, "disable_functions": null, "allow_url_fopen": true,
+    "php_timezone": null, "auto_prepend_file": null, "additional_directives": null
+  },
+
+  "presets": [
+    { "key": "low",      "title": "Low traffic", "description": "…", "pm_type": "ondemand", "pm_max_children": 2 },
+    { "key": "balanced", "title": "Balanced",    "description": "…", "pm_type": "ondemand", "pm_max_children": 6 },
+    { "key": "high",     "title": "High traffic","description": "…", "pm_type": "dynamic",  "pm_max_children": 12 }
+  ],
+
+  "memory": {
+    "total": 8589934592,      // the machine, read from /proc every time
+    "committed": 3650722201,  // Σ (memory_limit × max_children) across isolated sites
+    "available": 4939212391,
+    "this_site": 1342177280,  // what the settings on screen would cost
+    "sites": 5,
+    "over_committed": false
+  },
+
+  "suggested_disable_functions": "exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec"
+} }
+```
+
+**`POST /api/applications/{application}/php/isolate`** — give the site its own pool (throttle 5/min)
+**`DELETE /api/applications/{application}/php/isolate`** — put it back on the shared pool
+**`PUT /api/applications/{application}/php`** — save settings (throttle 10/min)
+
+#### Building the screen
+
+**Three pool numbers, not eight.** RunCloud exposes `pm`, `max_children` and `max_requests` and stops; the other five FPM directives have to stay consistent with `max_children`, and getting them wrong produces a pool that refuses to start. We derive them. Render the **presets** as the primary control and put the raw numbers behind "Custom".
+
+**Show the memory.** `memory.this_site` is what the current settings would cost, and `committed`/`total` is the server. **None of the panels we compared shows this** — they all let you set 50 workers × 512M on a 2 GB box and find out when the OOM killer takes a *different* site down. Render it under the preset picker as plain text, and colour it when `over_committed` is true. It is a **warning, not a block** — over-committing a dev box on purpose is allowed.
+
+**`managed: false`** means someone edited the pool file by hand. Say *"this pool has been edited outside the panel — saving here will overwrite those changes"* before they press save, not after.
+
+**Failures say whether anything changed, and that is the important part.** `422` with:
+- `config_test_failed` — **nothing was applied and nothing reloaded.** The pool is tested with `php-fpm -t` *before* any reload, because a file FPM cannot parse stops the daemon and takes down every PHP site on the box. Render this calmly; the site is fine.
+- `reload_failed` — the previous configuration was restored
+- `unsupported_stack` — OpenLiteSpeed; hide the isolate button when `isolation_supported` is false
+- `already_isolated` / `not_isolated`
+
+`additional_directives` is free text appended to the pool — **a `[section]` header is rejected**, because it would silently declare a second pool inside the file. `disable_functions` must be a comma-separated list of function names and nothing else.
+
+**Doctor** gained a `php_isolation` check: it fails when a site the panel believes is isolated has no pool file (it is silently back on the shared pool), and warns on over-commitment or sites still running as `www-data`.
+
+---
+
 ### Application workers (App sidebar → Workers)
 
 Long-running processes belonging to one site — a queue worker, Horizon, or any command that must stay alive. `app_worker` (`manage` to change one).

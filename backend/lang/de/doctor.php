@@ -2,6 +2,7 @@
 
 return [
     'checks' => [
+        'php_isolation' => 'PHP-Isolation pro Anwendung',
         'privilege' => 'Privilegierte Befehle',
         'services' => 'Dienste',
         'writable_paths' => 'Beschreibbare Pfade',
@@ -14,6 +15,9 @@ return [
         'frontend_build' => 'Oberflächen-Build',
     ],
     'fixes' => [
+        'php_isolation_missing' => 'Eine Seite, die das Panel für isoliert hält, hat keine Pool-Datei. Sie wird weiterhin aus dem gemeinsamen Pool als www-data ausgeliefert, ohne ihre eigenen Einstellungen. Öffnen Sie die PHP-Seite und isolieren Sie sie erneut.',
+        'php_isolation_memory' => 'Alle isolierten Seiten zusammen könnten mehr Speicher belegen, als der Server hat. Senken Sie die Worker-Anzahl oder das Speicherlimit der stärksten Seiten.',
+        'php_isolation_shared' => 'Diese Seiten laufen weiterhin als www-data neben allen anderen. Öffnen Sie die PHP-Seite einer Site und isolieren Sie sie.',
         'privilege' => 'Das Panel kann keine Befehle als root ausführen. Prüfen Sie, ob /etc/sudoers.d/ die Panel-Berechtigung enthält und die Datei visudo -c besteht.',
         'privilege_disabled' => 'Die Rechteerweiterung ist deaktiviert, das Panel läuft aber nicht als root. Entfernen Sie SERVER_OPS_SUDO=false aus .env.',
         'services_missing' => 'Eine erwartete Unit existiert nicht. Setzen Sie PANEL_FRONTEND_SERVICE und PANEL_QUEUE_SERVICE in .env auf die tatsächlichen Namen.',

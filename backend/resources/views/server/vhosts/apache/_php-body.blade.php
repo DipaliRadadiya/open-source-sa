@@ -29,7 +29,7 @@
     </Directory>
 
     <FilesMatch \.php$>
-        SetHandler "proxy:unix:/run/php/php{{ $phpVersion }}-fpm.sock|fcgi://localhost"
+        SetHandler "proxy:unix:{{ $phpSocket }}|fcgi://localhost"
     </FilesMatch>
 
     {{-- A .git directory inside a web root is a full source disclosure. --}}

@@ -143,4 +143,7 @@ return [
     'application.worker_start' => 'Запустил обработчик :worker в :name',
     'application.worker_stop' => 'Остановил обработчик :worker в :name',
     'application.worker_restart' => 'Перезапустил обработчик :worker в :name',
+    'application.php_isolated' => 'Выделил :name собственный пул PHP',
+    'application.php_unisolated' => 'Вернул :name в общий пул PHP',
+    'application.php_settings_updated' => 'Обновил настройки PHP для :name',
 ];

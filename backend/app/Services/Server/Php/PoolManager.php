@@ -1,0 +1,315 @@
+<?php
+
+namespace App\Services\Server\Php;
+
+use App\Models\Application;
+use App\Models\ApplicationPhpSettings;
+use App\Services\Server\ManagedFile;
+use App\Services\Server\ServerOps;
+use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\View;
+
+/**
+ * One PHP-FPM pool per application.
+ *
+ * The panel creates a Linux user per site and gives it the files — but until
+ * now the PHP that serves the site ran as www-data, the same account as every
+ * other site on the box. So one compromised plugin could read every other
+ * customer's `.env`, and the per-site users protected nothing at the point
+ * where it counts. A pool per site is what makes them mean something.
+ *
+ * Everything here is FPM-only by construction. OpenLiteSpeed has no pools at
+ * all — it spawns LSPHP itself — so the stack answers `null` for a pool path
+ * and this class is never reached.
+ */
+class PoolManager
+{
+    public function __construct(
+        private ServerOps $serverOps,
+        private ManagedFile $files,
+        private PhpStackManager $stacks,
+    ) {}
+
+    /** `sv-app-7` — from the id, because two pools sharing a name is undefined. */
+    public function poolName(Application $application): string
+    {
+        return 'sv-app-'.$application->id;
+    }
+
+    /**
+     * The socket this site's vhost should talk to.
+     *
+     * Its own pool once isolated; the server-wide one until then. Every PHP
+     * site on an un-upgraded server keeps working exactly as it did, which is
+     * what makes isolation safe to roll out one site at a time.
+     */
+    public function socketFor(Application $application): string
+    {
+        if ($application->isolated_at !== null && $this->supported()) {
+            return $this->socketPath($application);
+        }
+
+        $version = $application->php_version ?: config('server.default_php_version');
+        $dir = rtrim((string) config('server.php_socket_dir', '/run/php'), '/');
+
+        return "{$dir}/php{$version}-fpm.sock";
+    }
+
+    public function socketPath(Application $application): string
+    {
+        $dir = rtrim((string) config('server.php_socket_dir', '/run/php'), '/');
+
+        return $dir.'/'.$this->poolName($application).'.sock';
+    }
+
+    /** Null when this server's PHP stack has no pools (OpenLiteSpeed). */
+    public function poolPath(Application $application, ?string $version = null): ?string
+    {
+        $stack = $this->stacks->stack();
+
+        if ($stack->key() !== 'fpm') {
+            return null;
+        }
+
+        $version = $version ?: ($application->php_version ?: config('server.default_php_version'));
+        $root = rtrim((string) config('server.php_dir', '/etc/php'), '/');
+
+        return "{$root}/{$version}/fpm/pool.d/".$this->poolName($application).'.conf';
+    }
+
+    public function supported(): bool
+    {
+        return $this->stacks->stack()->key() === 'fpm';
+    }
+
+    /**
+     * Write the pool and make it live.
+     *
+     * The order is the safety property. `php-fpm -t` runs **before** any
+     * reload, because a pool file FPM cannot parse stops the whole daemon
+     * starting — which takes down every PHP site on the server, not just this
+     * one. A failed test removes the file and reloads nothing.
+     *
+     * @return array{ok: bool, reason: ?string, reference: ?string}
+     */
+    public function apply(Application $application, ApplicationPhpSettings $settings): array
+    {
+        $path = $this->poolPath($application);
+
+        if ($path === null) {
+            return ['ok' => false, 'reason' => 'unsupported_stack', 'reference' => null];
+        }
+
+        $version = $application->php_version ?: config('server.default_php_version');
+        $previous = $this->read($path);
+
+        $this->ensureSiteDirectories($application);
+
+        $written = $this->files->put($path, $this->render($application, $settings), $this->context($application, 'pool_write'));
+
+        if ($written->failed()) {
+            return ['ok' => false, 'reason' => 'write_failed', 'reference' => $written->reference];
+        }
+
+        $test = $this->test($version);
+
+        if ($test->failed()) {
+            // Put back exactly what was there — or remove the file if this was
+            // the first attempt. Either way nothing is reloaded, so the server
+            // is still serving what it was a moment ago.
+            $this->restore($application, $path, $previous);
+
+            return ['ok' => false, 'reason' => 'config_test_failed', 'reference' => $test->reference];
+        }
+
+        $reload = $this->reload($version);
+
+        if ($reload->failed()) {
+            $this->restore($application, $path, $previous);
+            $this->reload($version);
+
+            return ['ok' => false, 'reason' => 'reload_failed', 'reference' => $reload->reference];
+        }
+
+        return ['ok' => true, 'reason' => null, 'reference' => null];
+    }
+
+    /** Remove the pool and reload. Used when un-isolating or deleting a site. */
+    public function remove(Application $application, ?string $version = null): void
+    {
+        $path = $this->poolPath($application, $version);
+
+        if ($path === null) {
+            return;
+        }
+
+        $version = $version ?: ($application->php_version ?: config('server.default_php_version'));
+
+        $this->files->delete($path, $this->context($application, 'pool_remove'));
+        $this->reload($version);
+    }
+
+    public function exists(Application $application): bool
+    {
+        $path = $this->poolPath($application);
+
+        return $path !== null && $this->serverOps->run(
+            ['test', '-f', $path],
+            $this->context($application, 'pool_exists'),
+            timeout: 15,
+        )->ok;
+    }
+
+    /**
+     * Whether the file on disk still matches what the panel would write.
+     *
+     * Reported rather than corrected: someone who hand-edited the pool should
+     * be told their changes will be overwritten *before* they press save, not
+     * discover it afterwards.
+     */
+    public function managed(Application $application, ApplicationPhpSettings $settings): bool
+    {
+        $path = $this->poolPath($application);
+
+        if ($path === null || ! $this->exists($application)) {
+            return true;
+        }
+
+        return trim((string) $this->read($path)) === trim($this->render($application, $settings));
+    }
+
+    public function render(Application $application, ApplicationPhpSettings $settings): string
+    {
+        $effective = $settings->effective();
+        $root = $this->documentRoot($application);
+        $children = max(1, (int) $effective['pm_max_children']);
+
+        return View::make('server.pools.fpm', [
+            'pool' => $this->poolName($application),
+            'user' => $application->systemUser?->username ?? 'www-data',
+            'socket' => $this->socketPath($application),
+            'webServerUser' => (string) config('server.web_server_user', 'www-data'),
+
+            'pmType' => $effective['pm_type'],
+            'pmMaxChildren' => $children,
+            'pmMaxRequests' => (int) $effective['pm_max_requests'],
+            // Derived from max_children rather than asked for. These three have
+            // to stay consistent with it and with each other; exposing them is
+            // mostly a way to produce a pool that will not start.
+            'pmStartServers' => max(1, (int) ceil($children / 2)),
+            'pmMinSpare' => max(1, (int) ceil($children / 4)),
+            'pmMaxSpare' => max(2, (int) ceil($children * 3 / 4)),
+
+            'sessionPath' => $this->sessionPath($application),
+            'errorLog' => $this->errorLogPath($application),
+
+            'memoryLimit' => $effective['memory_limit'],
+            'uploadMaxFilesize' => $effective['upload_max_filesize'],
+            'postMaxSize' => $effective['post_max_size'],
+            'maxExecutionTime' => (int) $effective['max_execution_time'],
+            'maxInputTime' => (int) $effective['max_input_time'],
+            'maxInputVars' => (int) $effective['max_input_vars'],
+            'sessionGcMaxlifetime' => (int) $effective['session_gc_maxlifetime'],
+            'phpTimezone' => $effective['php_timezone'],
+            'autoPrependFile' => $effective['auto_prepend_file'],
+            'allowUrlFopen' => (bool) $effective['allow_url_fopen'],
+
+            // The session directory has to be inside the allowed paths or
+            // enabling this silently breaks every login on the site.
+            'openBasedir' => $effective['open_basedir_enabled']
+                ? $root.':'.$this->sessionPath($application).':/tmp'
+                : null,
+            'disableFunctions' => $effective['disable_functions'],
+            'additionalDirectives' => $effective['additional_directives'],
+        ])->render();
+    }
+
+    public function test(string $version): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['php-fpm'.$version, '-t'],
+            ['feature' => 'php', 'op' => 'pool_test', 'version' => $version],
+            timeout: 60,
+        );
+    }
+
+    public function reload(string $version): ServerOpsResult
+    {
+        // Reload, never restart: a restart drops every in-flight request on
+        // every site the daemon serves.
+        return $this->serverOps->run(
+            ['systemctl', 'reload', 'php'.$version.'-fpm'],
+            ['feature' => 'php', 'op' => 'pool_reload', 'version' => $version],
+            timeout: 60,
+        );
+    }
+
+    public function sessionPath(Application $application): string
+    {
+        return $this->documentRoot($application).'/.panel/sessions';
+    }
+
+    public function errorLogPath(Application $application): string
+    {
+        return $this->documentRoot($application).'/.panel/php-error.log';
+    }
+
+    /**
+     * The session and log directories, owned by the site.
+     *
+     * Created before the pool goes live: FPM will not start a pool whose
+     * session path does not exist, and a site that cannot write sessions logs
+     * nobody in.
+     */
+    private function ensureSiteDirectories(Application $application): void
+    {
+        $user = $application->systemUser?->username;
+        $sessions = $this->sessionPath($application);
+
+        $this->serverOps->run(['mkdir', '-p', $sessions], $this->context($application, 'pool_dirs'), timeout: 30);
+
+        if ($user !== null) {
+            $this->serverOps->run(
+                ['chown', '-R', $user.':'.$user, dirname($sessions)],
+                $this->context($application, 'pool_dirs_own'),
+                timeout: 30,
+            );
+        }
+
+        // 0700: session files are as sensitive as the cookies that name them.
+        $this->serverOps->run(['chmod', '0700', $sessions], $this->context($application, 'pool_dirs_mode'), timeout: 15);
+    }
+
+    private function restore(Application $application, string $path, ?string $previous): void
+    {
+        if ($previous === null) {
+            $this->files->delete($path, $this->context($application, 'pool_rollback_delete'));
+
+            return;
+        }
+
+        $this->files->put($path, $previous, $this->context($application, 'pool_rollback'));
+    }
+
+    private function read(string $path): ?string
+    {
+        $result = $this->serverOps->run(['cat', $path], ['feature' => 'php', 'op' => 'pool_read'], timeout: 30);
+
+        return $result->failed() ? null : $result->output();
+    }
+
+    private function documentRoot(Application $application): string
+    {
+        $home = rtrim((string) $application->systemUser?->home_path, '/');
+
+        return "{$home}/{$application->domain}";
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function context(Application $application, string $op): array
+    {
+        return ['feature' => 'php', 'op' => $op, 'application' => $application->id];
+    }
+}

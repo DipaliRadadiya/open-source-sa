@@ -55,6 +55,7 @@ use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
 use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
 use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
+use App\Services\Server\Doctor\Checks\PhpIsolationCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
 use App\Services\Server\Doctor\Checks\QueueCheck;
 use App\Services\Server\Doctor\Checks\ServicesCheck;
@@ -185,6 +186,7 @@ return [
             WritablePathsCheck::class,
             DatabaseCheck::class,
             QueueCheck::class,
+            PhpIsolationCheck::class,
             HealthEndpointCheck::class,
         ],
     ],
@@ -420,6 +422,17 @@ return [
     ],
 
     'default_php_version' => env('SERVER_DEFAULT_PHP_VERSION', '8.4'),
+
+    /*
+    | Where PHP-FPM puts its sockets, and the account the web server runs as.
+    |
+    | The web server user matters because a pool's socket has to be reachable
+    | by it: the isolation comes from the pool's `user`, not from the socket's
+    | permissions, so this is deliberately the shared account.
+    */
+
+    'php_socket_dir' => env('SERVER_PHP_SOCKET_DIR', '/run/php'),
+    'web_server_user' => env('SERVER_WEB_SERVER_USER', 'www-data'),
 
     // How a version maps to its CLI binary, so an application's own tooling
     // runs on the same PHP that will serve it.

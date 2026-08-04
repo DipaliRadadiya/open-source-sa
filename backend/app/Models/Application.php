@@ -32,6 +32,7 @@ class Application extends Model
     protected function casts(): array
     {
         return [
+            'isolated_at' => 'datetime',
             'status' => ApplicationStatus::class,
             'settings' => 'array',
             'steps' => 'array',
@@ -105,6 +106,11 @@ class Application extends Model
      *
      * @return array<int, string>
      */
+    public function phpSettings(): HasOne
+    {
+        return $this->hasOne(ApplicationPhpSettings::class);
+    }
+
     public function features(): array
     {
         return app(SiteTypeManager::class)->find($this->site_type)?->features()

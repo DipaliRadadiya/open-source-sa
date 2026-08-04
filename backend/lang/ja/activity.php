@@ -143,4 +143,7 @@ return [
     'application.worker_start' => ':name のワーカー :worker を開始しました',
     'application.worker_stop' => ':name のワーカー :worker を停止しました',
     'application.worker_restart' => ':name のワーカー :worker を再起動しました',
+    'application.php_isolated' => ':name に専用の PHP プールを割り当てました',
+    'application.php_unisolated' => ':name を共有 PHP プールに戻しました',
+    'application.php_settings_updated' => ':name の PHP 設定を更新しました',
 ];

@@ -143,4 +143,7 @@ return [
     'application.worker_start' => 'Started worker :worker on :name',
     'application.worker_stop' => 'Stopped worker :worker on :name',
     'application.worker_restart' => 'Restarted worker :worker on :name',
+    'application.php_isolated' => 'Gave :name its own PHP pool',
+    'application.php_unisolated' => 'Put :name back on the shared PHP pool',
+    'application.php_settings_updated' => 'Updated the PHP settings for :name',
 ];

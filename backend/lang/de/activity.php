@@ -143,4 +143,7 @@ return [
     'application.worker_start' => 'Worker :worker von :name gestartet',
     'application.worker_stop' => 'Worker :worker von :name gestoppt',
     'application.worker_restart' => 'Worker :worker von :name neu gestartet',
+    'application.php_isolated' => ':name einen eigenen PHP-Pool gegeben',
+    'application.php_unisolated' => ':name wieder auf den gemeinsamen PHP-Pool gelegt',
+    'application.php_settings_updated' => 'PHP-Einstellungen für :name aktualisiert',
 ];

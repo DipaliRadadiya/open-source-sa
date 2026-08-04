@@ -2,6 +2,7 @@
 
 return [
     'checks' => [
+        'php_isolation' => 'Application PHP isolation',
         'privilege' => 'Privileged commands',
         'services' => 'Services',
         'writable_paths' => 'Writable paths',
@@ -14,6 +15,9 @@ return [
         'frontend_build' => 'Interface build',
     ],
     'fixes' => [
+        'php_isolation_missing' => 'A site the panel believes is isolated has no pool file. It is still being served — from the shared pool, as www-data, with none of its own settings. Open the site’s PHP screen and isolate it again.',
+        'php_isolation_memory' => 'Every isolated site could use more memory than the server has. Lower the worker count or the memory limit on the busiest sites, or the kernel will eventually kill one of them.',
+        'php_isolation_shared' => 'These sites still run as www-data alongside every other site. Open a site’s PHP screen and isolate it to give it its own user.',
         'privilege' => 'The panel cannot run commands as root. Check /etc/sudoers.d/ contains the panel grant and that the file passes visudo -c.',
         'privilege_disabled' => 'Privilege escalation is switched off but the panel is not root. Remove SERVER_OPS_SUDO=false from .env.',
         'services_missing' => 'A unit the panel expects does not exist. Set PANEL_FRONTEND_SERVICE and PANEL_QUEUE_SERVICE in .env to the names this server actually uses.',

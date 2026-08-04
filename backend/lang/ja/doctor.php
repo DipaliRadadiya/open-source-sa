@@ -2,6 +2,7 @@
 
 return [
     'checks' => [
+        'php_isolation' => 'アプリケーションごとの PHP 分離',
         'privilege' => '特権コマンド',
         'services' => 'サービス',
         'writable_paths' => '書き込み可能なパス',
@@ -14,6 +15,9 @@ return [
         'frontend_build' => 'インターフェースのビルド',
     ],
     'fixes' => [
+        'php_isolation_missing' => 'パネルが分離済みとみなしているサイトにプール設定ファイルがありません。共有プールから www-data として、独自の設定なしで配信され続けています。サイトの PHP 画面から再度分離してください。',
+        'php_isolation_memory' => '分離済みサイトの合計がサーバーのメモリを超える可能性があります。混雑しているサイトのワーカー数かメモリ上限を下げてください。',
+        'php_isolation_shared' => 'これらのサイトは他のサイトと同じ www-data で動作しています。サイトの PHP 画面から分離して専用ユーザーを割り当ててください。',
         'privilege' => 'パネルが root としてコマンドを実行できません。/etc/sudoers.d/ にパネルの許可があり、visudo -c を通ることを確認してください。',
         'privilege_disabled' => '権限昇格が無効ですがパネルは root ではありません。.env から SERVER_OPS_SUDO=false を削除してください。',
         'services_missing' => '想定するユニットが存在しません。.env の PANEL_FRONTEND_SERVICE と PANEL_QUEUE_SERVICE をこのサーバーの実際の名前に設定してください。',

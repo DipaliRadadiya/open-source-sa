@@ -6,6 +6,7 @@ use App\Contracts\WebServerDriver;
 use App\Enums\DomainType;
 use App\Models\Application;
 use App\Services\Server\ManagedFile;
+use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\View;
@@ -92,6 +93,11 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'challengeRoot' => rtrim((string) config('server.certificates.challenge_root'), '/'),
             'documentRoot' => $documentRoot,
             'phpVersion' => $application->php_version ?: config('server.default_php_version'),
+            // Where PHP actually is for this site. An isolated site has its own
+            // pool running as its own user; everything else still shares the
+            // server-wide pool, which is what every site did before pools
+            // existed. Resolved here so no template has to know the rule.
+            'phpSocket' => app(PoolManager::class)->socketFor($application),
             // The OS account the site runs as. nginx and Apache reach PHP
             // through a pool that already knows this; OLS spawns the process
             // itself and has to be told.

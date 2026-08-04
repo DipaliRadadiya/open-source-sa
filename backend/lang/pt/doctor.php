@@ -2,6 +2,7 @@
 
 return [
     'checks' => [
+        'php_isolation' => 'Isolamento de PHP por aplicação',
         'privilege' => 'Comandos privilegiados',
         'services' => 'Serviços',
         'writable_paths' => 'Caminhos graváveis',
@@ -14,6 +15,9 @@ return [
         'frontend_build' => 'Compilação da interface',
     ],
     'fixes' => [
+        'php_isolation_missing' => 'Um site que o painel julga isolado não tem ficheiro de pool. Continua a ser servido pelo pool partilhado, como www-data e sem nenhuma das suas definições. Abra o ecrã de PHP do site e isole-o de novo.',
+        'php_isolation_memory' => 'Todos os sites isolados juntos podem usar mais memória do que o servidor tem. Reduza o número de processos ou o limite de memória nos sites mais ocupados.',
+        'php_isolation_shared' => 'Estes sites ainda correm como www-data ao lado de todos os outros. Abra o ecrã de PHP de um site e isole-o para lhe dar o seu próprio utilizador.',
         'privilege' => 'O painel não consegue executar comandos como root. Verifique se /etc/sudoers.d/ contém a permissão e se o ficheiro passa visudo -c.',
         'privilege_disabled' => 'A elevação de privilégios está desativada mas o painel não é root. Remova SERVER_OPS_SUDO=false do .env.',
         'services_missing' => 'Uma unidade esperada não existe. Defina PANEL_FRONTEND_SERVICE e PANEL_QUEUE_SERVICE no .env com os nomes reais.',

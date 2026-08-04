@@ -143,4 +143,7 @@ return [
     'application.worker_start' => ':name का वर्कर :worker शुरू किया',
     'application.worker_stop' => ':name का वर्कर :worker रोका',
     'application.worker_restart' => ':name का वर्कर :worker पुनः आरंभ किया',
+    'application.php_isolated' => ':name को अपना PHP पूल दिया',
+    'application.php_unisolated' => ':name को साझा PHP पूल पर वापस किया',
+    'application.php_settings_updated' => ':name की PHP सेटिंग्स अद्यतन कीं',
 ];
