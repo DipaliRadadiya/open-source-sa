@@ -53,6 +53,7 @@ use App\Services\Server\DiskCleaner\Targets\TmpTarget;
 use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
+use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
 use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
 use App\Services\Server\Doctor\Checks\QueueCheck;
@@ -160,6 +161,7 @@ return [
             AccountLocksCheck::class,
             ServicesCheck::class,
             WebServerCheck::class,
+            FrontendBuildCheck::class,
             WritablePathsCheck::class,
             DatabaseCheck::class,
             QueueCheck::class,

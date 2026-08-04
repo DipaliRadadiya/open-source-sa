@@ -11,6 +11,7 @@ return [
         'web_server' => 'Servidor web',
         'queue' => 'Procesador de cola',
         'account_locks' => 'Archivos de bloqueo de cuentas',
+        'frontend_build' => 'Compilación de la interfaz',
     ],
     'fixes' => [
         'privilege' => 'El panel no puede ejecutar comandos como root. Comprueba que /etc/sudoers.d/ contiene la concesión del panel y que el archivo pasa visudo -c.',
@@ -31,5 +32,7 @@ return [
         'queue_failed_jobs' => 'Algunos trabajos en segundo plano fallaron. Revisa la tabla failed_jobs: el trabajo descartado en silencio suele ser la razón de que algo pareciera no hacer nada.',
         'queue_unreadable' => 'No se pudieron leer las tablas de la cola. Ejecuta php artisan migrate --force.',
         'account_locks' => 'Un archivo de bloqueo obsoleto impide toda operación de usuarios. Comprueba que nada lo retiene (`sudo fuser /etc/passwd.lock`) y elimina los archivos indicados. Los deja un useradd interrumpido y nada los limpia.',
+        'frontend_build_missing' => 'La interfaz nunca se compiló, así que el panel no puede servirla. Ejecuta `npm ci && npm run build` en el directorio frontend.',
+        'frontend_build_stale' => 'La interfaz sirve código más antiguo que el del disco: la última compilación probablemente falló. Recompila con `npm run build` y lee la salida; una compilación fallida deja la anterior en su sitio y no avisa.',
     ],
 ];

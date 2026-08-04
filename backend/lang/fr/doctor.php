@@ -11,6 +11,7 @@ return [
         'web_server' => 'Serveur web',
         'queue' => 'Worker de file',
         'account_locks' => 'Fichiers de verrou des comptes',
+        'frontend_build' => 'Build de l’interface',
     ],
     'fixes' => [
         'privilege' => 'Le panneau ne peut pas exécuter de commandes en root. Vérifiez que /etc/sudoers.d/ contient l’autorisation et que le fichier passe visudo -c.',
@@ -31,5 +32,7 @@ return [
         'queue_failed_jobs' => 'Des tâches en arrière-plan ont échoué. Consultez la table failed_jobs — un travail silencieusement abandonné explique souvent qu’une fonction n’ait rien fait.',
         'queue_unreadable' => 'Impossible de lire les tables de file. Exécutez php artisan migrate --force.',
         'account_locks' => 'Un fichier de verrou obsolète bloque toute opération sur les utilisateurs. Vérifiez que rien ne le détient (`sudo fuser /etc/passwd.lock`), puis supprimez les fichiers listés. Ils proviennent d’un useradd interrompu et rien ne les nettoie.',
+        'frontend_build_missing' => 'L’interface n’a jamais été compilée, le panneau ne peut pas la servir. Lancez `npm ci && npm run build` dans le dossier frontend.',
+        'frontend_build_stale' => 'L’interface sert du code plus ancien que celui sur le disque — la dernière compilation a probablement échoué. Recompilez avec `npm run build` et lisez la sortie ; une compilation ratée laisse l’ancienne en place sans rien dire.',
     ],
 ];

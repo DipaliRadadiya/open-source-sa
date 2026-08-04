@@ -11,6 +11,7 @@ return [
         'web_server' => 'Servidor web',
         'queue' => 'Processador de fila',
         'account_locks' => 'Ficheiros de bloqueio de contas',
+        'frontend_build' => 'Compilação da interface',
     ],
     'fixes' => [
         'privilege' => 'O painel não consegue executar comandos como root. Verifique se /etc/sudoers.d/ contém a permissão e se o ficheiro passa visudo -c.',
@@ -31,5 +32,7 @@ return [
         'queue_failed_jobs' => 'Algumas tarefas em segundo plano falharam. Verifique a tabela failed_jobs — trabalho descartado em silêncio é muitas vezes a razão de algo parecer não ter feito nada.',
         'queue_unreadable' => 'Não foi possível ler as tabelas da fila. Execute php artisan migrate --force.',
         'account_locks' => 'Um ficheiro de bloqueio obsoleto impede todas as operações de utilizadores. Confirme que nada o retém (`sudo fuser /etc/passwd.lock`) e remova os ficheiros indicados. São deixados por um useradd interrompido e nada os limpa.',
+        'frontend_build_missing' => 'A interface nunca foi compilada, por isso o painel não a consegue servir. Execute `npm ci && npm run build` na pasta frontend.',
+        'frontend_build_stale' => 'A interface está a servir código mais antigo do que o que está em disco — a última compilação falhou provavelmente. Recompile com `npm run build` e leia a saída; uma compilação falhada deixa a anterior no lugar e não avisa.',
     ],
 ];

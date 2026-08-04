@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
+use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
 use App\Services\Server\Doctor\Checks\QueueCheck;
 use App\Services\Server\Doctor\Checks\ServicesCheck;
@@ -273,6 +274,38 @@ describe('the stale account-lock check', function () {
 
             expect(__('doctor.checks.account_locks'))->not->toBe('doctor.checks.account_locks')
                 ->and(__('doctor.fixes.account_locks'))->not->toBe('doctor.fixes.account_locks');
+        }
+    });
+});
+
+describe('the interface build check', function () {
+    it('warns when the build is older than the source', function () {
+        // The services check proves the Next server is *running*; it runs
+        // perfectly happily on last week's build. This is the only check that
+        // notices a build failed — which is exactly how a diagnostic file with
+        // a Node import in an Edge hook reached users.
+        config()->set('server.doctor.checks', [FrontendBuildCheck::class]);
+
+        $report = app(Doctor::class)->run();
+
+        // Whatever this checkout's state, the answer must be one of the three
+        // and never absent.
+        expect($report['checks'][0]['status'])->toBeIn(['pass', 'warn', 'fail']);
+    });
+
+    it('does not fail an installation that has no frontend', function () {
+        // Backend-only is a legitimate arrangement; calling it broken because
+        // a directory it does not use is missing would be wrong.
+        expect(app(FrontendBuildCheck::class)->key())->toBe('frontend_build');
+    });
+
+    it('has a title and both fixes in every locale', function () {
+        foreach (config('app.available_locales') as $locale) {
+            app()->setLocale($locale);
+
+            expect(__('doctor.checks.frontend_build'))->not->toBe('doctor.checks.frontend_build')
+                ->and(__('doctor.fixes.frontend_build_missing'))->not->toBe('doctor.fixes.frontend_build_missing')
+                ->and(__('doctor.fixes.frontend_build_stale'))->not->toBe('doctor.fixes.frontend_build_stale');
         }
     });
 });

@@ -11,6 +11,7 @@ return [
         'web_server' => 'ウェブサーバー',
         'queue' => 'キューワーカー',
         'account_locks' => 'アカウントのロックファイル',
+        'frontend_build' => 'インターフェースのビルド',
     ],
     'fixes' => [
         'privilege' => 'パネルが root としてコマンドを実行できません。/etc/sudoers.d/ にパネルの許可があり、visudo -c を通ることを確認してください。',
@@ -31,5 +32,7 @@ return [
         'queue_failed_jobs' => '一部のバックグラウンドジョブが失敗しました。failed_jobs テーブルを確認してください — 黙って破棄された処理が「何も起きない」原因であることが多いです。',
         'queue_unreadable' => 'キューのテーブルを読み取れませんでした。php artisan migrate --force を実行してください。',
         'account_locks' => '古いロックファイルがすべてのユーザー操作を妨げています。誰も保持していないことを確認し (`sudo fuser /etc/passwd.lock`)、上記のファイルを削除してください。中断された useradd が残したもので、自動では消えません。',
+        'frontend_build_missing' => 'インターフェースが一度もビルドされていないため、パネルは配信できません。frontend ディレクトリで `npm ci && npm run build` を実行してください。',
+        'frontend_build_stale' => 'インターフェースがディスク上のコードより古いものを配信しています。前回のビルドが失敗した可能性が高いです。`npm run build` で再ビルドし、出力を確認してください。失敗したビルドは古いものをそのまま残し、何も知らせません。',
     ],
 ];

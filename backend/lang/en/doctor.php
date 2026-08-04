@@ -11,6 +11,7 @@ return [
         'web_server' => 'Web server',
         'queue' => 'Queue worker',
         'account_locks' => 'Account lock files',
+        'frontend_build' => 'Interface build',
     ],
     'fixes' => [
         'privilege' => 'The panel cannot run commands as root. Check /etc/sudoers.d/ contains the panel grant and that the file passes visudo -c.',
@@ -31,5 +32,7 @@ return [
         'queue_failed_jobs' => 'Some background jobs failed. Check the failed_jobs table — work that was silently discarded is often why a feature appeared to do nothing.',
         'queue_unreadable' => 'The queue tables could not be read. Run php artisan migrate --force.',
         'account_locks' => 'A stale lock file is blocking every user operation. Confirm nothing holds it (`sudo fuser /etc/passwd.lock`), then remove the files listed above. They are left behind by an interrupted useradd and nothing cleans them up.',
+        'frontend_build_missing' => 'The interface has never been built, so the panel cannot serve it. Run `npm ci && npm run build` in the frontend directory.',
+        'frontend_build_stale' => 'The interface is serving code older than what is on disk — the last build probably failed. Rebuild with `npm run build` in the frontend directory and read the output; a failed build leaves the old one in place and says nothing.',
     ],
 ];

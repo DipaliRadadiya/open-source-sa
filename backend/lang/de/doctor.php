@@ -11,6 +11,7 @@ return [
         'web_server' => 'Webserver',
         'queue' => 'Queue-Worker',
         'account_locks' => 'Sperrdateien für Konten',
+        'frontend_build' => 'Oberflächen-Build',
     ],
     'fixes' => [
         'privilege' => 'Das Panel kann keine Befehle als root ausführen. Prüfen Sie, ob /etc/sudoers.d/ die Panel-Berechtigung enthält und die Datei visudo -c besteht.',
@@ -31,5 +32,7 @@ return [
         'queue_failed_jobs' => 'Einige Hintergrund-Jobs sind fehlgeschlagen. Prüfen Sie die Tabelle failed_jobs — stillschweigend verworfene Arbeit ist oft der Grund, warum eine Funktion nichts zu tun schien.',
         'queue_unreadable' => 'Die Queue-Tabellen konnten nicht gelesen werden. Führen Sie php artisan migrate --force aus.',
         'account_locks' => 'Eine veraltete Sperrdatei blockiert jede Benutzeroperation. Prüfen Sie, dass sie niemand hält (`sudo fuser /etc/passwd.lock`), und entfernen Sie die oben genannten Dateien. Sie stammen von einem abgebrochenen useradd und werden nie aufgeräumt.',
+        'frontend_build_missing' => 'Die Oberfläche wurde nie gebaut, das Panel kann sie nicht ausliefern. Führen Sie `npm ci && npm run build` im frontend-Verzeichnis aus.',
+        'frontend_build_stale' => 'Die Oberfläche liefert älteren Code aus als auf der Festplatte liegt — der letzte Build ist vermutlich fehlgeschlagen. Bauen Sie mit `npm run build` neu und lesen Sie die Ausgabe; ein fehlgeschlagener Build lässt den alten stehen und sagt nichts.',
     ],
 ];
