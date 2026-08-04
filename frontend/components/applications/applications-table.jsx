@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronRight, Globe2, Plus, SearchX } from "lucide-react";
+import { ChevronRight, CircleAlert, Globe2, Plus, SearchX, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -21,9 +21,46 @@ function NameCell({ row, preview = false }) {
   return <div className="flex min-w-0 items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Globe2 className="size-4" /></span><div className="min-w-0"><Link href={`/applications/${row.original.id}${preview ? "?preview=1" : ""}`} className="group inline-flex max-w-full items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate">{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link><p className="truncate font-mono text-xs text-muted-foreground">{row.original.domain}</p></div></div>;
 }
 
+// A site can be "active" and still be in trouble: its process may have died, or
+// its last deploy may have failed while the old code keeps serving. `status`
+// alone reads green in both cases, so the list would otherwise hide the two
+// things a user most needs to catch at a glance.
 function StatusCell({ row }) {
+  const t = useTranslations("applications");
   const application = row.original;
-  return <div className="space-y-1"><Badge variant={STATUS_VARIANTS[application.status] ?? "secondary"} className="font-normal">{application.status_title ?? application.status}</Badge>{(application.status === "pending" || application.status === "provisioning") && application.steps?.length ? <p className="max-w-40 truncate text-xs text-muted-foreground">{application.steps.at(-1)}</p> : null}{application.status === "failed" && application.reference ? <p className="font-mono text-xs text-destructive">{application.reference}</p> : null}</div>;
+  const processDown =
+    application.status === "active" &&
+    application.has_process &&
+    application.deployed &&
+    application.process &&
+    application.process.state !== "active" &&
+    application.process.state !== "activating";
+  const deployFailed = application.status === "active" && Boolean(application.failed_step);
+  return (
+    <div className="space-y-1">
+      <Badge variant={STATUS_VARIANTS[application.status] ?? "secondary"} className="font-normal">
+        {application.status_title ?? application.status}
+      </Badge>
+      {(application.status === "pending" || application.status === "provisioning") && application.steps?.length ? (
+        <p className="max-w-40 truncate text-xs text-muted-foreground">{application.steps.at(-1)}</p>
+      ) : null}
+      {application.status === "failed" && application.reference ? (
+        <p className="font-mono text-xs text-destructive">{application.reference}</p>
+      ) : null}
+      {processDown ? (
+        <p className="flex items-center gap-1 text-xs text-destructive">
+          <CircleAlert className="size-3 shrink-0" />
+          {application.process.state === "failed" ? t("markers.processFailed") : t("markers.processStopped")}
+        </p>
+      ) : null}
+      {deployFailed ? (
+        <p className="flex items-center gap-1 text-xs text-warning">
+          <TriangleAlert className="size-3 shrink-0" />
+          {t("markers.deployFailed")}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function createdTimestamp(value) {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft, FlaskConical } from "lucide-react";
+import { ArrowLeft, ExternalLink, FlaskConical } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
@@ -138,11 +138,21 @@ export default async function ApplicationDetailPage({ params, searchParams }) {
             </div>
           </div>
 
-          <ApplicationRowActions
-            application={application}
-            canManage={canManage}
-            preview={preview}
-          />
+          <div className="flex items-center gap-2">
+            {application.status === "active" ? (
+              <Button asChild variant="outline" size="sm">
+                <a href={`https://${application.domain}`} target="_blank" rel="noreferrer">
+                  <ExternalLink className="size-4" />
+                  {t("actions.visit")}
+                </a>
+              </Button>
+            ) : null}
+            <ApplicationRowActions
+              application={application}
+              canManage={canManage}
+              preview={preview}
+            />
+          </div>
         </div>
       </div>
 

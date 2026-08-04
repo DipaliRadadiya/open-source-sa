@@ -2332,7 +2332,10 @@
       "deploying": "Deploying…",
       "started": "Deployment started.",
       "failed": "We could not start the deployment.",
-      "pushToDeploy": "Deploys on push"
+      "pushToDeploy": "Deploys on push",
+      "failedAt": "The last deploy failed at {step}. The previous version is still being served.",
+      "reference": "Support reference: {reference}",
+      "redeploy": "Re-deploy"
     },
     "gitAccount": "Git account",
     "gitAccountPlaceholder": "Choose a connected account",
@@ -2502,6 +2505,11 @@
       "expires": "Certificate renews {when}.",
       "manage": "Manage domains",
       "loadFailed": "We could not load the domains for this application."
+    },
+    "markers": {
+      "processFailed": "Process failed",
+      "processStopped": "Process stopped",
+      "deployFailed": "Last deploy failed"
     }
   }
 }

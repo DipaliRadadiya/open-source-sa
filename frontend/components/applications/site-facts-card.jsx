@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy-button";
 
 /**
  * What this site is and where it lives. Every row is a fact the user might have
@@ -12,10 +13,12 @@ export function SiteFactsCard({ application }) {
   const facts = [
     { label: t("columns.type"), value: application.site_type_title ?? application.site_type },
     { label: t("columns.owner"), value: application.system_user?.username, mono: true },
-    { label: t("facts.webRoot"), value: application.web_root, mono: true },
+    // The paths and the port are the values people paste into configs, so they
+    // carry a copy control; the rest are just read.
+    { label: t("facts.webRoot"), value: application.web_root, mono: true, copy: true },
     { label: t("facts.php"), value: application.php_version, mono: true },
     { label: t("facts.node"), value: application.node_version, mono: true },
-    { label: t("facts.port"), value: application.app_port, mono: true },
+    { label: t("facts.port"), value: application.app_port, mono: true, copy: true },
     { label: t("columns.created"), value: application.created_at_human },
   ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");
 
@@ -28,9 +31,12 @@ export function SiteFactsCard({ application }) {
         {facts.map((fact) => (
           <div key={fact.label} className="space-y-1">
             <p className="text-xs text-muted-foreground">{fact.label}</p>
-            <p className={fact.mono ? "break-all font-mono text-xs" : "font-medium"}>
-              {fact.value}
-            </p>
+            <div className="flex items-center gap-1">
+              <p className={fact.mono ? "break-all font-mono text-xs" : "font-medium"}>
+                {fact.value}
+              </p>
+              {fact.copy ? <CopyButton value={String(fact.value)} /> : null}
+            </div>
           </div>
         ))}
       </CardContent>

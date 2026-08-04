@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { GitBranch, Loader2, Rocket, Webhook } from "lucide-react";
+import { GitBranch, Loader2, Rocket, TriangleAlert, Webhook } from "lucide-react";
 import { deployApplication } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,9 @@ export function SourceCard({ application, canDeploy = false, preview = false }) 
       : (application.last_commit?.sha ?? application.last_commit?.hash ?? null);
   const repository = application.repository ?? application.repository_url;
   const pushToDeploy = application.webhook?.enabled;
+  // The site is active, so the OLD code is still serving — this is a deploy
+  // warning, not an outage. Saying so is the whole point of the card.
+  const deployFailed = application.status === "active" && Boolean(application.failed_step);
 
   async function deploy() {
     if (preview) {
@@ -60,6 +63,23 @@ export function SourceCard({ application, canDeploy = false, preview = false }) 
         ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
+        {deployFailed ? (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 px-3 py-2.5 text-sm text-warning"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            <div className="space-y-0.5">
+              <p>{t("failedAt", { step: application.failed_step })}</p>
+              {application.reference ? (
+                <p className="font-mono text-xs opacity-90">
+                  {t("reference", { reference: application.reference })}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid gap-4 text-sm sm:grid-cols-2">
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">{t("repository")}</p>
@@ -87,9 +107,9 @@ export function SourceCard({ application, canDeploy = false, preview = false }) 
         </div>
 
         {canDeploy ? (
-          <Button onClick={deploy} disabled={deploying}>
+          <Button onClick={deploy} disabled={deploying} variant={deployFailed ? "default" : "default"}>
             {deploying ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
-            {deploying ? t("deploying") : t("deploy")}
+            {deploying ? t("deploying") : deployFailed ? t("redeploy") : t("deploy")}
           </Button>
         ) : null}
       </CardContent>

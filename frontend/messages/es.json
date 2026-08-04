@@ -2332,7 +2332,10 @@
       "deploying": "Desplegando…",
       "started": "El despliegue ha comenzado.",
       "failed": "No pudimos iniciar el despliegue.",
-      "pushToDeploy": "Despliega al hacer push"
+      "pushToDeploy": "Despliega al hacer push",
+      "failedAt": "El último despliegue falló en {step}. La versión anterior sigue sirviéndose.",
+      "reference": "Referencia de soporte: {reference}",
+      "redeploy": "Volver a desplegar"
     },
     "gitAccount": "Cuenta de Git",
     "gitAccountPlaceholder": "Elige una cuenta conectada",
@@ -2502,6 +2505,11 @@
       "expires": "El certificado se renueva {when}.",
       "manage": "Gestionar dominios",
       "loadFailed": "No pudimos cargar los dominios de esta aplicación."
+    },
+    "markers": {
+      "processFailed": "Proceso con error",
+      "processStopped": "Proceso detenido",
+      "deployFailed": "Falló el último despliegue"
     }
   }
 }
