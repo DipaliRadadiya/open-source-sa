@@ -131,4 +131,6 @@ return [
     'backup.updated' => ':name のバックアップ設定を更新しました',
     'backup.completed' => ':application をバックアップしました',
     'backup.failed' => ':application のバックアップに失敗しました (:reason)',
+    'central.connected' => 'このパネルを中央パネルに接続しました',
+    'central.disconnected' => 'このパネルと中央パネルの接続を解除しました',
 ];

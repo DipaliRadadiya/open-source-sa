@@ -15,10 +15,12 @@ class DashboardController extends Controller
     {
         return response()->json([
             'dashboard' => [
+                // People, not machine accounts — the counts here sit next to
+                // the user list, and the two disagreeing reads as a bug.
                 'users' => [
-                    'total' => User::query()->count(),
-                    'admins' => User::query()->where('is_admin', true)->count(),
-                    'non_admins' => User::query()->where('is_admin', false)->count(),
+                    'total' => User::query()->where('is_system', false)->count(),
+                    'admins' => User::query()->where('is_system', false)->where('is_admin', true)->count(),
+                    'non_admins' => User::query()->where('is_system', false)->where('is_admin', false)->count(),
                 ],
                 'roles' => [
                     'total' => Role::query()->count(),

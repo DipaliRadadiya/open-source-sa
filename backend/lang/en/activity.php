@@ -131,4 +131,6 @@ return [
     'backup.updated' => 'Updated the backup settings for :name',
     'backup.completed' => 'Backed up :application',
     'backup.failed' => 'Backup of :application failed (:reason)',
+    'central.connected' => 'Connected this panel to the central panel',
+    'central.disconnected' => 'Disconnected this panel from the central panel',
 ];

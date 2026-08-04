@@ -21,7 +21,9 @@ class UserController extends Controller
 {
     public function index(ListUsersRequest $request): JsonResponse
     {
-        $query = User::query()->with('roles:id,name')->latest();
+        // People only. The central-panel machine account is managed from its
+        // own screen and must not be editable, deletable or impersonable here.
+        $query = User::query()->where('is_system', false)->with('roles:id,name')->latest();
 
         if ($search = $request->string('search')->trim()->value()) {
             $query->where(function ($q) use ($search) {

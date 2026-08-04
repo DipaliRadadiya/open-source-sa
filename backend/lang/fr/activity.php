@@ -131,4 +131,6 @@ return [
     'backup.updated' => 'A mis à jour les réglages de sauvegarde de :name',
     'backup.completed' => 'A sauvegardé :application',
     'backup.failed' => 'Échec de la sauvegarde de :application (:reason)',
+    'central.connected' => 'A connecté ce panneau au panneau central',
+    'central.disconnected' => 'A déconnecté ce panneau du panneau central',
 ];

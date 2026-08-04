@@ -11,7 +11,10 @@ class RegisterRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return User::query()->doesntExist();
+        // Machine accounts do not count as "someone has registered" — one
+        // existing would otherwise close registration on a panel that has no
+        // administrator, with no way back in.
+        return User::query()->where('is_system', false)->doesntExist();
     }
 
     /**

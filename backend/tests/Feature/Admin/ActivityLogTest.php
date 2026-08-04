@@ -147,7 +147,7 @@ it('returns the known distinct types and actions for filter dropdowns', function
         ->getJson('/api/admin/activity-log/filters');
 
     $response->assertOk()
-        ->assertJsonPath('types', ['application', 'backup', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'role', 'server', 'service', 'setting', 'system_user', 'user'])
+        ->assertJsonPath('types', ['application', 'backup', 'central', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'role', 'server', 'service', 'setting', 'system_user', 'user'])
         // Deduped across types: backup adds `configured` and `completed`,
         // while its `failed` and `updated` already exist elsewhere.
         ->assertJsonCount(100, 'actions.all');

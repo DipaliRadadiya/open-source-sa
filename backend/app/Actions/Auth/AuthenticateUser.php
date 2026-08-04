@@ -14,7 +14,9 @@ class AuthenticateUser
     {
         $user = User::query()->where('username', $username)->first();
 
-        if (! $user || ! Hash::check($password, $user->password)) {
+        // A machine account has a random password nobody holds, but rejecting
+        // it before the hash check makes that a rule rather than a side effect.
+        if (! $user || $user->isSystem() || ! Hash::check($password, $user->password)) {
             return null;
         }
 

@@ -16,4 +16,9 @@ return [
 
     'primary_color' => env('BRANDING_PRIMARY_COLOR', '#076aff'),
 
+    // The vendor's hosted control plane, which a self-hosted panel can be
+    // connected to. Named here rather than in the code so a reseller's
+    // installation shows their own product throughout.
+    'central_name' => env('BRANDING_CENTRAL_NAME', env('BRANDING_NAME', 'ServerAvatar').' Central'),
+
 ];

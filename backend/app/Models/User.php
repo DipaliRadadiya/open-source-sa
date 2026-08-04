@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'username', 'password', 'is_admin'])]
+#[Fillable(['name', 'username', 'password', 'is_admin', 'is_system'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -26,7 +26,34 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_system' => 'boolean',
         ];
+    }
+
+    /**
+     * A machine account (the central-panel integration) rather than a person.
+     * It owns API tokens but never logs in and is not managed from the admin
+     * area — see resolveRouteBinding().
+     */
+    public function isSystem(): bool
+    {
+        return $this->is_system;
+    }
+
+    /**
+     * Only people are addressable as `/admin/users/{user}`.
+     *
+     * Enforced here rather than in each controller because "which routes take
+     * a user?" grows over time — edit, delete, reset password, set roles,
+     * impersonate — and a guard added per-route is a guard forgotten on the
+     * next one. A machine account is not a panel user, so the honest answer
+     * for all of them is 404.
+     */
+    public function resolveRouteBinding($value, $field = null): ?self
+    {
+        return $this->where($field ?? $this->getRouteKeyName(), $value)
+            ->where('is_system', false)
+            ->first();
     }
 
     /**

@@ -131,4 +131,6 @@ return [
     'backup.updated' => 'Sicherungseinstellungen für :name aktualisiert',
     'backup.completed' => ':application gesichert',
     'backup.failed' => 'Sicherung von :application fehlgeschlagen (:reason)',
+    'central.connected' => 'Dieses Panel mit dem zentralen Panel verbunden',
+    'central.disconnected' => 'Verbindung dieses Panels zum zentralen Panel getrennt',
 ];

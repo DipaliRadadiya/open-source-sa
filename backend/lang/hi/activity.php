@@ -131,4 +131,6 @@ return [
     'backup.updated' => ':name की बैकअप सेटिंग्स अद्यतन कीं',
     'backup.completed' => ':application का बैकअप लिया',
     'backup.failed' => ':application का बैकअप विफल रहा (:reason)',
+    'central.connected' => 'इस पैनल को केंद्रीय पैनल से जोड़ा',
+    'central.disconnected' => 'इस पैनल का केंद्रीय पैनल से संबंध हटाया',
 ];

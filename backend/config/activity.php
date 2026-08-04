@@ -18,6 +18,9 @@ return [
             'user',
             'role',
             'permission',
+            // Who allowed the vendor's central panel in, and who took that
+            // permission back. A consent decision, not a machine operation.
+            'central',
         ],
 
         'server' => [

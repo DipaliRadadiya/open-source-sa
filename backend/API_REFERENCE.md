@@ -246,6 +246,32 @@ Updates the panel itself: fetches a published release, switches the installation
 - On failure, `reason` is **the step that failed** (a stable key), and `reason_title` is the localized explanation. Raw stderr never reaches the client. `rolled_back: true` means the previous version was restored.
 - ⚠️ **Expect the poll to fail mid-update.** `restart_services` restarts php-fpm, and `maintenance_on`…`maintenance_off` returns `503`. Treat connection errors and `503` during a run as *normal progress*, retry with backoff, and resume polling once the panel answers again — a finished update is reconstructed from the runner's state file, so the final status is correct even though nothing was alive to report it at the time.
 
+### Central-panel connection — `GET|POST|DELETE /admin/central`
+
+Connects this self-hosted panel to the vendor's central panel. The admin turns it on, copies the key **once**, and pastes it into the central panel, which then calls this panel's API with it.
+
+The key carries **the same access an administrator has** — there is no scope picker and nothing partial to reason about. Everything else about the feature exists so that access is *consented to and revocable*: nothing is shared until an admin explicitly connects, the connection records who allowed it and when, and disconnecting deletes the token so the next request fails.
+
+**`GET /admin/central`** — status
+- Response when never connected: `{"central": {"connected": false}}`
+- Otherwise: `{"central": {"connected": bool, "connected_at", "connected_at_human", "connected_by": {"id", "username"}, "last_used_at", "last_used_at_human", "revoked_at", "revoked_at_human"}}`
+- After disconnecting this still returns the **last** connection with `connected: false` — "you connected this on the 4th and disconnected it on the 9th" is more useful than pretending it never happened.
+- `last_used_at` is when the central panel last actually called in, `null` if it never has. This is the field that distinguishes a live integration from one switched on and forgotten.
+- **The key is never in this response.** There is no endpoint that returns it again.
+
+**`POST /admin/central`** — connect (issue the key)
+- Rate limit: 5/min
+- Response `201`: `{"central": {…}, "token": "1|abc…"}` — **the only time the token is ever returned.** Only its SHA-256 hash is stored, so a database leak does not leak a working key. Show it once, with a copy button, and say plainly that it cannot be shown again.
+- `422` with `errors.central` when a connection is already live. Deliberately *not* a silent re-issue: that would kill a working integration on a stray click and nobody would connect the two events. To rotate the key, disconnect then connect.
+
+**`DELETE /admin/central`** — disconnect (revoke)
+- Response `204`. The token row is **deleted**, not flagged — there is no window in which a revoked key still works.
+- `422` with `errors.central` when nothing is connected.
+
+**The machine account.** The key belongs to a dedicated system account, not to the admin who pressed the button — otherwise deleting or demoting that person would silently kill the integration, and every action the central panel took would appear in the activity log under their name. That account is invisible to the admin area by design: it is not in `GET /admin/users`, not counted in `GET /admin/dashboard`, cannot log in, and every `/admin/users/{user}` route returns **404** for it. Frontend needs no special handling — it simply never appears.
+
+**Activity.** `central.connected` and `central.disconnected` (scope `account`) record who granted and who withdrew access. That log — plus `last_used_at` — is the answer to "what did the vendor have access to, and when".
+
 ---
 
 ## Server Panel (`Authorization: Bearer <token>`; each route gated by its feature permission)

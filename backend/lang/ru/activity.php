@@ -131,4 +131,6 @@ return [
     'backup.updated' => 'Обновил настройки резервного копирования :name',
     'backup.completed' => 'Создана резервная копия :application',
     'backup.failed' => 'Резервное копирование :application не удалось (:reason)',
+    'central.connected' => 'Подключил эту панель к центральной панели',
+    'central.disconnected' => 'Отключил эту панель от центральной панели',
 ];

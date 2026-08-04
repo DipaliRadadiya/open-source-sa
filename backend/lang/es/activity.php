@@ -131,4 +131,6 @@ return [
     'backup.updated' => 'Actualizó la configuración de copias de :name',
     'backup.completed' => 'Copia de seguridad de :application realizada',
     'backup.failed' => 'La copia de seguridad de :application falló (:reason)',
+    'central.connected' => 'Conectó este panel al panel central',
+    'central.disconnected' => 'Desconectó este panel del panel central',
 ];
