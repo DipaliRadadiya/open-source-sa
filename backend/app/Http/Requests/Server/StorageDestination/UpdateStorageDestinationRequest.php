@@ -35,7 +35,10 @@ class UpdateStorageDestinationRequest extends FormRequest
             // empty string to "clear" the column (matches the storage
             // driver's "use AWS defaults" sentinel). Tests of the create
             // path never omit `endpoint` — see StoreStorageDestinationRequest.
-            'endpoint' => ['sometimes', 'string', 'max:255', new SafeProviderHost],
+            'endpoint' => ['sometimes', 'string', 'max:255', new SafeProviderHost(
+                'storage.test.invalid_endpoint',
+                'storage.test.forbidden_host',
+            )],
             'region' => ['sometimes', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
             'bucket' => ['sometimes', 'string', 'max:255', 'regex:/^[A-Za-z0-9._-]+$/'],
             'prefix' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9._/-]*$#'],

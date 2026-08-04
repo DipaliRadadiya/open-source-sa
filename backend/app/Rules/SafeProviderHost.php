@@ -20,6 +20,17 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class SafeProviderHost implements ValidationRule
 {
+    /**
+     * The rule is shared between features, so the message keys are
+     * injectable. A storage endpoint that fails this rule must not tell the
+     * user to "enter a valid URL for the self-hosted instance" — that is
+     * git's wording, and it is meaningless on a bucket form.
+     */
+    public function __construct(
+        private string $invalidKey = 'errors/git.invalid_host',
+        private string $blockedKey = 'errors/git.blocked_host',
+    ) {}
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value) || $value === '') {
@@ -29,13 +40,13 @@ class SafeProviderHost implements ValidationRule
         $parts = parse_url($value);
 
         if (! is_array($parts) || ! isset($parts['scheme'], $parts['host'])) {
-            $fail('errors/git.invalid_host')->translate();
+            $fail($this->invalidKey)->translate();
 
             return;
         }
 
         if (strtolower($parts['scheme']) !== 'https' || isset($parts['user']) || isset($parts['pass'])) {
-            $fail('errors/git.invalid_host')->translate();
+            $fail($this->invalidKey)->translate();
 
             return;
         }
@@ -54,7 +65,7 @@ class SafeProviderHost implements ValidationRule
             ));
 
         if ($blocked) {
-            $fail('errors/git.blocked_host')->translate();
+            $fail($this->blockedKey)->translate();
         }
     }
 }

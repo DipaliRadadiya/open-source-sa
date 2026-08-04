@@ -50,6 +50,7 @@ return [
         'unreachable' => 'The destination endpoint could not be reached.',
         'mismatch' => 'The destination wrote and read back different bytes.',
         'forbidden_host' => 'That endpoint address is not allowed.',
+        'invalid_endpoint' => 'Enter a valid https:// endpoint URL for the bucket.',
     ],
 
     'delete' => [

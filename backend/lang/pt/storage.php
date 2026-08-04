@@ -1,24 +1,24 @@
 <?php
 
 /*
- * Storage destinations integration — Spanish stub. Keys mirror
- * lang/en/storage.php; values fall back to English until translated.
- * Parent agent: please translate these strings for the Spanish locale.
+ * Copy for the Storage destinations integration — S3-compatible remote
+ * targets that backups are uploaded to. The keys in this file render the
+ * connect form, the row labels and the outcome of the test-connection probe.
  */
 
 return [
     'drivers' => [
-        's3' => 'S3-compatible',
+        's3' => 'Compatível com S3',
     ],
 
     'fields' => [
-        'name' => 'Display name',
-        'endpoint' => 'Endpoint URL',
-        'region' => 'Region',
+        'name' => 'Nome de exibição',
+        'endpoint' => 'URL do endpoint',
+        'region' => 'Região',
         'bucket' => 'Bucket',
-        'prefix' => 'Key prefix (optional)',
-        'access_key' => 'Access key',
-        'secret_key' => 'Secret key',
+        'prefix' => 'Prefixo de chave (opcional)',
+        'access_key' => 'Chave de acesso',
+        'secret_key' => 'Chave secreta',
     ],
 
     'placeholders' => [
@@ -28,28 +28,29 @@ return [
     ],
 
     'help' => [
-        'name' => 'A short label so you can tell destinations apart in the integration list.',
-        'endpoint' => 'Leave default for AWS. Set for MinIO, R2, Backblaze B2, Wasabi, etc.',
-        'region' => 'Region the bucket lives in (only required for AWS).',
-        'prefix' => 'Optional path prefix inside the bucket (no leading slash).',
-        'access_key' => 'Write-only — never returned by the API.',
+        'name' => 'Um rótulo curto para distinguir os destinos na lista de integrações.',
+        'endpoint' => 'Deixe o padrão para a AWS. Defina para MinIO, R2, Backblaze B2, Wasabi, etc.',
+        'region' => 'Região onde o bucket está (necessária apenas para a AWS).',
+        'prefix' => 'Prefixo de caminho opcional dentro do bucket (sem barra inicial).',
+        'access_key' => 'Somente escrita — nunca devolvida pela API.',
     ],
 
     'status' => [
-        'connected' => 'Connected',
-        'never_tested' => 'Not yet tested',
+        'connected' => 'Conectado',
+        'never_tested' => 'Ainda não testado',
     ],
 
     'test' => [
-        'success' => 'Connection succeeded.',
-        'failure' => 'Could not connect to the destination.',
-        'invalid_credentials' => 'The destination rejected the credentials.',
-        'unreachable' => 'The destination endpoint could not be reached.',
-        'mismatch' => 'The destination wrote and read back different bytes.',
-        'forbidden_host' => 'That endpoint address is not allowed.',
+        'success' => 'Conexão estabelecida com sucesso.',
+        'failure' => 'Não foi possível conectar ao destino.',
+        'invalid_credentials' => 'O destino rejeitou as credenciais.',
+        'unreachable' => 'Não foi possível alcançar o endpoint do destino.',
+        'mismatch' => 'O destino gravou e leu de volta bytes diferentes.',
+        'forbidden_host' => 'Esse endereço de endpoint não é permitido.',
+        'invalid_endpoint' => 'Informe uma URL de endpoint https:// válida para o bucket.',
     ],
 
     'delete' => [
-        'in_use' => 'Cannot delete :name — one or more backup targets still point at this destination. Remove or repoint those targets first.',
+        'in_use' => 'Não é possível excluir :name — um ou mais destinos de backup ainda apontam para este destino. Remova-os ou redirecione-os primeiro.',
     ],
 ];

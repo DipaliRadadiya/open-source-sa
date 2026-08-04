@@ -1,24 +1,24 @@
 <?php
 
 /*
- * Storage destinations integration — Spanish stub. Keys mirror
- * lang/en/storage.php; values fall back to English until translated.
- * Parent agent: please translate these strings for the Spanish locale.
+ * Copy for the Storage destinations integration — S3-compatible remote
+ * targets that backups are uploaded to. The keys in this file render the
+ * connect form, the row labels and the outcome of the test-connection probe.
  */
 
 return [
     'drivers' => [
-        's3' => 'S3-compatible',
+        's3' => 'S3-kompatibel',
     ],
 
     'fields' => [
-        'name' => 'Display name',
-        'endpoint' => 'Endpoint URL',
+        'name' => 'Anzeigename',
+        'endpoint' => 'Endpunkt-URL',
         'region' => 'Region',
         'bucket' => 'Bucket',
-        'prefix' => 'Key prefix (optional)',
-        'access_key' => 'Access key',
-        'secret_key' => 'Secret key',
+        'prefix' => 'Schlüsselpräfix (optional)',
+        'access_key' => 'Zugriffsschlüssel',
+        'secret_key' => 'Geheimer Schlüssel',
     ],
 
     'placeholders' => [
@@ -28,28 +28,29 @@ return [
     ],
 
     'help' => [
-        'name' => 'A short label so you can tell destinations apart in the integration list.',
-        'endpoint' => 'Leave default for AWS. Set for MinIO, R2, Backblaze B2, Wasabi, etc.',
-        'region' => 'Region the bucket lives in (only required for AWS).',
-        'prefix' => 'Optional path prefix inside the bucket (no leading slash).',
-        'access_key' => 'Write-only — never returned by the API.',
+        'name' => 'Eine kurze Bezeichnung, um Ziele in der Integrationsliste zu unterscheiden.',
+        'endpoint' => 'Für AWS auf dem Standardwert lassen. Für MinIO, R2, Backblaze B2, Wasabi usw. setzen.',
+        'region' => 'Region, in der der Bucket liegt (nur für AWS erforderlich).',
+        'prefix' => 'Optionales Pfadpräfix innerhalb des Buckets (ohne führenden Schrägstrich).',
+        'access_key' => 'Nur schreibend — wird von der API nie zurückgegeben.',
     ],
 
     'status' => [
-        'connected' => 'Connected',
-        'never_tested' => 'Not yet tested',
+        'connected' => 'Verbunden',
+        'never_tested' => 'Noch nicht getestet',
     ],
 
     'test' => [
-        'success' => 'Connection succeeded.',
-        'failure' => 'Could not connect to the destination.',
-        'invalid_credentials' => 'The destination rejected the credentials.',
-        'unreachable' => 'The destination endpoint could not be reached.',
-        'mismatch' => 'The destination wrote and read back different bytes.',
-        'forbidden_host' => 'That endpoint address is not allowed.',
+        'success' => 'Verbindung erfolgreich hergestellt.',
+        'failure' => 'Verbindung zum Ziel nicht möglich.',
+        'invalid_credentials' => 'Das Ziel hat die Zugangsdaten abgelehnt.',
+        'unreachable' => 'Der Endpunkt des Ziels war nicht erreichbar.',
+        'mismatch' => 'Das Ziel hat andere Bytes zurückgelesen als geschrieben.',
+        'forbidden_host' => 'Diese Endpunkt-Adresse ist nicht zulässig.',
+        'invalid_endpoint' => 'Geben Sie eine gültige https://-Endpunkt-URL für den Bucket ein.',
     ],
 
     'delete' => [
-        'in_use' => 'Cannot delete :name — one or more backup targets still point at this destination. Remove or repoint those targets first.',
+        'in_use' => ':name kann nicht gelöscht werden — ein oder mehrere Backup-Ziele verweisen noch auf dieses Ziel. Entfernen oder ändern Sie diese zuerst.',
     ],
 ];

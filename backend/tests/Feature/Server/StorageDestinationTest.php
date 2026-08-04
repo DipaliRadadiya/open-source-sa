@@ -259,7 +259,7 @@ it('classifies a credentials failure as invalid_credentials without echoing the 
 
     $response = $this->withHeaders(storageAdminAuthHeader())->postJson("/api/integrations/storage/destinations/{$dest->id}/test");
 
-    $response->assertStatus(502);
+    $response->assertOk();
     expect($response->json('test.success'))->toBeFalse()
         ->and($response->json('test.error_class'))->toBe('invalid_credentials');
 
@@ -295,7 +295,7 @@ it('classifies an unreachable host as unreachable', function () {
 
     $response = $this->withHeaders(storageAdminAuthHeader())->postJson("/api/integrations/storage/destinations/{$dest->id}/test");
 
-    $response->assertStatus(502);
+    $response->assertOk();
     expect($response->json('test.error_class'))->toBe('unreachable');
 });
 
@@ -329,7 +329,7 @@ it('treats a write/read mismatch as a failure (no silent pass)', function () {
 
     $response = $this->withHeaders(storageAdminAuthHeader())->postJson("/api/integrations/storage/destinations/{$dest->id}/test");
 
-    $response->assertStatus(502);
+    $response->assertOk();
     expect($response->json('test.success'))->toBeFalse();
 });
 
@@ -410,4 +410,55 @@ it('returns a 404 for an unknown destination id', function () {
     $this->withHeaders(storageAdminAuthHeader())
         ->getJson('/api/integrations/storage/destinations/999999')
         ->assertNotFound();
+});
+
+/*
+ * The tests above all replace the prober's disk builder, so none of them
+ * ever execute driverConfig() — which is how `throw => false` shipped and
+ * silently turned every real failure into a "bytes did not match" message.
+ * These two assert the config itself.
+ */
+it('builds an S3 driver config that surfaces adapter errors instead of swallowing them', function () {
+    $dest = makeDestination();
+    $captured = null;
+
+    $prober = new StorageConnectionProber(
+        diskBuilder: function (array $config) use (&$captured) {
+            $captured = $config;
+
+            return test()->fakeDisk;
+        },
+    );
+
+    $prober->probe($dest);
+
+    // Without this the adapter returns null/false on failure, the probe
+    // falls into the read-back comparison, and classify() never runs.
+    expect($captured['throw'])->toBeTrue()
+        ->and($captured['driver'])->toBe('s3')
+        ->and($captured['bucket'])->toBe('backups-prod')
+        ->and($captured['root'])->toBe('app1/');
+});
+
+it('uses path-style addressing only when a custom endpoint is configured', function () {
+    $captured = [];
+
+    $prober = new StorageConnectionProber(
+        diskBuilder: function (array $config) use (&$captured) {
+            $captured[] = $config;
+
+            return test()->fakeDisk;
+        },
+    );
+
+    // Custom endpoint (MinIO, Wasabi, B2) — these route through the path.
+    $prober->probe(makeDestination(['name' => 'MinIO', 'endpoint' => 'https://minio.example.com']));
+
+    // Empty endpoint *means* AWS, where path-style is deprecated and
+    // unsupported for buckets in regions launched after 2019.
+    $prober->probe(makeDestination(['name' => 'AWS', 'endpoint' => '']));
+
+    expect($captured[0]['use_path_style_endpoint'])->toBeTrue()
+        ->and($captured[1]['use_path_style_endpoint'])->toBeFalse()
+        ->and($captured[1]['endpoint'])->toBeNull();
 });

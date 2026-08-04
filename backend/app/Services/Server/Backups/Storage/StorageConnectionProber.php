@@ -5,6 +5,7 @@ namespace App\Services\Server\Backups\Storage;
 use App\Models\StorageDestination;
 use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -68,6 +69,7 @@ class StorageConnectionProber
             // back". Treat it as a failure.
             if (! is_string($read) || ! hash_equals($payload, $read)) {
                 return $this->failure(
+                    destination: $destination,
                     durationMs: $this->elapsed($start),
                     i18nKey: 'storage.test.mismatch',
                     exception: null,
@@ -83,6 +85,7 @@ class StorageConnectionProber
             ];
         } catch (Throwable $e) {
             return $this->failure(
+                destination: $destination,
                 durationMs: $this->elapsed($start),
                 i18nKey: $this->classify($e),
                 exception: $e,
@@ -117,8 +120,22 @@ class StorageConnectionProber
             // Hidden behind the `root` so an application uploading via a
             // destination cannot escape into another tenant's prefix.
             'root' => $destination->prefix ?: '',
-            'use_path_style_endpoint' => true,
-            'throw' => false,
+
+            // Path-style only when a custom endpoint is set. MinIO, Wasabi
+            // and Backblaze B2 route through the path; real AWS S3 does not
+            // — path-style is deprecated there and unsupported for buckets
+            // in regions launched after 2019. An empty endpoint *means*
+            // AWS, so forcing it on would break the default provider.
+            'use_path_style_endpoint' => filled($destination->endpoint),
+
+            // MUST stay true. With `throw => false` the Flysystem adapter
+            // swallows every failure (FilesystemAdapter::get() returns null
+            // instead of raising), so a rejected credential or unreachable
+            // bucket would never reach the catch below — it would fall into
+            // the read-back comparison and be reported as "wrote and read
+            // back different bytes". classify() would become dead code and
+            // the user would be told the wrong thing about every failure.
+            'throw' => true,
         ];
     }
 
@@ -167,8 +184,26 @@ class StorageConnectionProber
      *     detail: string|null
      * }
      */
-    private function failure(int $durationMs, string $i18nKey, ?Throwable $exception): array
-    {
+    private function failure(
+        StorageDestination $destination,
+        int $durationMs,
+        string $i18nKey,
+        ?Throwable $exception,
+    ): array {
+        // Identify the destination by id/name/bucket only. The credentials
+        // are the one thing that must never reach a log file, and the raw
+        // SDK message can carry a partial access key — so it is logged as
+        // its own field a redactor can target, not folded into the summary.
+        Log::warning('Storage destination probe failed.', [
+            'feature' => 'storage',
+            'destination_id' => $destination->getKey(),
+            'destination_name' => $destination->name,
+            'bucket' => $destination->bucket,
+            'error_class' => $i18nKey,
+            'latency_ms' => $durationMs,
+            'detail' => $exception?->getMessage(),
+        ]);
+
         return [
             'success' => false,
             'latency_ms' => $durationMs,
@@ -179,10 +214,10 @@ class StorageConnectionProber
             'error_class' => $i18nKey === 'storage.test.invalid_credentials'
                 ? 'invalid_credentials'
                 : 'unreachable',
-            // Raw SDK error string — kept short and not currently
-            // surfaced to the operator layer, but retained for support
-            // tickets (logged server-side, not echoed in the API body).
-            // The error_class above is what the client sees.
+            // Raw SDK error string. Never echoed in the API body — the
+            // client only ever sees `error_class` and the translated
+            // `message`. It is logged (see below) so a support ticket has
+            // something concrete behind the generic user-facing wording.
             'detail' => $exception?->getMessage(),
         ];
     }

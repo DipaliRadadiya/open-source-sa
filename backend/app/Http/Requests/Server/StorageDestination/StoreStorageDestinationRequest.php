@@ -27,7 +27,10 @@ class StoreStorageDestinationRequest extends FormRequest
             // set, it must be a reachable https URL and must not point at
             // loopback or the cloud metadata range — the same SSRF surface
             // Self-hosted GitLab exposes, reused here.
-            'endpoint' => ['nullable', 'string', 'max:255', new SafeProviderHost],
+            'endpoint' => ['nullable', 'string', 'max:255', new SafeProviderHost(
+                'storage.test.invalid_endpoint',
+                'storage.test.forbidden_host',
+            )],
 
             'region' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
             'bucket' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9._-]+$/'],

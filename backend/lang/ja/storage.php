@@ -1,24 +1,24 @@
 <?php
 
 /*
- * Storage destinations integration — Spanish stub. Keys mirror
- * lang/en/storage.php; values fall back to English until translated.
- * Parent agent: please translate these strings for the Spanish locale.
+ * Copy for the Storage destinations integration — S3-compatible remote
+ * targets that backups are uploaded to. The keys in this file render the
+ * connect form, the row labels and the outcome of the test-connection probe.
  */
 
 return [
     'drivers' => [
-        's3' => 'S3-compatible',
+        's3' => 'S3 互換',
     ],
 
     'fields' => [
-        'name' => 'Display name',
-        'endpoint' => 'Endpoint URL',
-        'region' => 'Region',
-        'bucket' => 'Bucket',
-        'prefix' => 'Key prefix (optional)',
-        'access_key' => 'Access key',
-        'secret_key' => 'Secret key',
+        'name' => '表示名',
+        'endpoint' => 'エンドポイント URL',
+        'region' => 'リージョン',
+        'bucket' => 'バケット',
+        'prefix' => 'キープレフィックス (任意)',
+        'access_key' => 'アクセスキー',
+        'secret_key' => 'シークレットキー',
     ],
 
     'placeholders' => [
@@ -28,28 +28,29 @@ return [
     ],
 
     'help' => [
-        'name' => 'A short label so you can tell destinations apart in the integration list.',
-        'endpoint' => 'Leave default for AWS. Set for MinIO, R2, Backblaze B2, Wasabi, etc.',
-        'region' => 'Region the bucket lives in (only required for AWS).',
-        'prefix' => 'Optional path prefix inside the bucket (no leading slash).',
-        'access_key' => 'Write-only — never returned by the API.',
+        'name' => '連携一覧で保存先を見分けるための短いラベルです。',
+        'endpoint' => 'AWS の場合は既定のままにします。MinIO、R2、Backblaze B2、Wasabi などの場合は設定してください。',
+        'region' => 'バケットが存在するリージョン (AWS の場合のみ必要)。',
+        'prefix' => 'バケット内の任意のパスプレフィックス (先頭のスラッシュなし)。',
+        'access_key' => '書き込み専用 — API が返すことはありません。',
     ],
 
     'status' => [
-        'connected' => 'Connected',
-        'never_tested' => 'Not yet tested',
+        'connected' => '接続済み',
+        'never_tested' => '未テスト',
     ],
 
     'test' => [
-        'success' => 'Connection succeeded.',
-        'failure' => 'Could not connect to the destination.',
-        'invalid_credentials' => 'The destination rejected the credentials.',
-        'unreachable' => 'The destination endpoint could not be reached.',
-        'mismatch' => 'The destination wrote and read back different bytes.',
-        'forbidden_host' => 'That endpoint address is not allowed.',
+        'success' => '接続に成功しました。',
+        'failure' => '保存先に接続できませんでした。',
+        'invalid_credentials' => '保存先が認証情報を拒否しました。',
+        'unreachable' => '保存先のエンドポイントに到達できませんでした。',
+        'mismatch' => '保存先が書き込んだバイトと異なるバイトを返しました。',
+        'forbidden_host' => 'このエンドポイントアドレスは許可されていません。',
+        'invalid_endpoint' => 'バケットの有効な https:// エンドポイント URL を入力してください。',
     ],
 
     'delete' => [
-        'in_use' => 'Cannot delete :name — one or more backup targets still point at this destination. Remove or repoint those targets first.',
+        'in_use' => ':name を削除できません — 1 つ以上のバックアップ対象がこの保存先を参照しています。先にそれらを削除するか、参照先を変更してください。',
     ],
 ];

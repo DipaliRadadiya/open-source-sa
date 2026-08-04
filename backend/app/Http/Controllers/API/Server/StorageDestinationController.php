@@ -86,6 +86,12 @@ class StorageDestinationController extends Controller
                 // even after the page is closed.
                 'tested_at' => now()->format('d-m-Y H:i:s'),
             ],
-        ], $result['success'] ? 200 : 502);
+            // Always 200. The request itself succeeded — we asked the panel
+            // to probe a destination and it did, then told us what it found.
+            // A 5xx here would make the frontend's error interceptor treat a
+            // perfectly good answer as a server fault, and the body is not
+            // the `code`-bearing error envelope the rest of the API returns
+            // for real failures. `test.success` carries the verdict.
+        ]);
     }
 }

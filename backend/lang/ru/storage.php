@@ -1,24 +1,24 @@
 <?php
 
 /*
- * Storage destinations integration — Spanish stub. Keys mirror
- * lang/en/storage.php; values fall back to English until translated.
- * Parent agent: please translate these strings for the Spanish locale.
+ * Copy for the Storage destinations integration — S3-compatible remote
+ * targets that backups are uploaded to. The keys in this file render the
+ * connect form, the row labels and the outcome of the test-connection probe.
  */
 
 return [
     'drivers' => [
-        's3' => 'S3-compatible',
+        's3' => 'S3-совместимое',
     ],
 
     'fields' => [
-        'name' => 'Display name',
-        'endpoint' => 'Endpoint URL',
-        'region' => 'Region',
-        'bucket' => 'Bucket',
-        'prefix' => 'Key prefix (optional)',
-        'access_key' => 'Access key',
-        'secret_key' => 'Secret key',
+        'name' => 'Отображаемое имя',
+        'endpoint' => 'URL конечной точки',
+        'region' => 'Регион',
+        'bucket' => 'Бакет',
+        'prefix' => 'Префикс ключа (необязательно)',
+        'access_key' => 'Ключ доступа',
+        'secret_key' => 'Секретный ключ',
     ],
 
     'placeholders' => [
@@ -28,28 +28,29 @@ return [
     ],
 
     'help' => [
-        'name' => 'A short label so you can tell destinations apart in the integration list.',
-        'endpoint' => 'Leave default for AWS. Set for MinIO, R2, Backblaze B2, Wasabi, etc.',
-        'region' => 'Region the bucket lives in (only required for AWS).',
-        'prefix' => 'Optional path prefix inside the bucket (no leading slash).',
-        'access_key' => 'Write-only — never returned by the API.',
+        'name' => 'Короткая метка, чтобы различать хранилища в списке интеграций.',
+        'endpoint' => 'Для AWS оставьте значение по умолчанию. Укажите для MinIO, R2, Backblaze B2, Wasabi и т. д.',
+        'region' => 'Регион, в котором находится бакет (требуется только для AWS).',
+        'prefix' => 'Необязательный префикс пути внутри бакета (без начального слеша).',
+        'access_key' => 'Только для записи — API никогда его не возвращает.',
     ],
 
     'status' => [
-        'connected' => 'Connected',
-        'never_tested' => 'Not yet tested',
+        'connected' => 'Подключено',
+        'never_tested' => 'Ещё не проверялось',
     ],
 
     'test' => [
-        'success' => 'Connection succeeded.',
-        'failure' => 'Could not connect to the destination.',
-        'invalid_credentials' => 'The destination rejected the credentials.',
-        'unreachable' => 'The destination endpoint could not be reached.',
-        'mismatch' => 'The destination wrote and read back different bytes.',
-        'forbidden_host' => 'That endpoint address is not allowed.',
+        'success' => 'Подключение выполнено успешно.',
+        'failure' => 'Не удалось подключиться к хранилищу.',
+        'invalid_credentials' => 'Хранилище отклонило учётные данные.',
+        'unreachable' => 'Не удалось связаться с конечной точкой хранилища.',
+        'mismatch' => 'Хранилище вернуло байты, отличные от записанных.',
+        'forbidden_host' => 'Этот адрес конечной точки недопустим.',
+        'invalid_endpoint' => 'Введите корректный https:// URL конечной точки для бакета.',
     ],
 
     'delete' => [
-        'in_use' => 'Cannot delete :name — one or more backup targets still point at this destination. Remove or repoint those targets first.',
+        'in_use' => 'Невозможно удалить :name — одна или несколько целей резервного копирования всё ещё ссылаются на это хранилище. Сначала удалите их или измените ссылку.',
     ],
 ];
