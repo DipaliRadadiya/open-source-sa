@@ -5,9 +5,9 @@ namespace App\Actions\Server\SystemUser;
 use App\Exceptions\Server\SystemUser\SystemUserDeleteFailedException;
 use App\Models\SystemUser;
 use App\Services\ActivityLogger;
-use App\Services\Server\AccountLock;
 use App\Services\Server\CrontabManager;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class DeleteSystemUser
@@ -16,7 +16,6 @@ class DeleteSystemUser
         private ServerOps $serverOps,
         private ActivityLogger $activityLogger,
         private CrontabManager $crontab,
-        private AccountLock $accountLock,
     ) {}
 
     public function execute(SystemUser $systemUser): void
@@ -28,8 +27,7 @@ class DeleteSystemUser
             ]);
         }
 
-        // Serialize with every other account command (global /etc/passwd lock).
-        $this->accountLock->run(function () use ($systemUser) {
+        Cache::lock('system-user:delete:'.$systemUser->username, 15)->block(5, function () use ($systemUser) {
             $result = $this->serverOps->run(
                 ['userdel', '-r', $systemUser->username],
                 ['feature' => 'system_user', 'op' => 'delete', 'system_user' => $systemUser->username],

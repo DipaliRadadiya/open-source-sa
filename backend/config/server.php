@@ -238,32 +238,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Account operation serialization
-    |--------------------------------------------------------------------------
-    |
-    | The OS exposes a single lock over /etc/passwd (shared by useradd, userdel,
-    | usermod, gpasswd, chpasswd, passwd). Two of those running at once collide
-    | with "cannot lock /etc/passwd". The panel funnels every account command
-    | through one shared app-level lock so they run strictly one at a time.
-    |
-    | ttl:  hold ceiling if the holder is killed mid-command (normally released
-    |       the instant the command finishes). MUST exceed the slowest account
-    |       command including ServerOps' transient retries (command timeout x
-    |       attempts) or the lock would expire mid-command and let a queued op
-    |       collide. Raise it if you raise SERVER_OPS_RETRIES a lot.
-    | wait: how long a queued command waits for the lock before returning
-    |       503 "busy, try again" instead of running.
-    |
-    */
-
-    'account_lock' => [
-        'key' => 'account:mutation',
-        'ttl' => (int) env('SERVER_ACCOUNT_LOCK_TTL', 600),
-        'wait' => (int) env('SERVER_ACCOUNT_LOCK_WAIT', 60),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | System user home base
     |--------------------------------------------------------------------------
     |
