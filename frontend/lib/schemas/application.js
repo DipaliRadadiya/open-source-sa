@@ -86,7 +86,14 @@ export const applicationSchema = z.object({
   repository: z.string().nullish(),
   repository_url: z.string().nullish(),
   branch: z.string().nullish(),
-  settings: z.record(z.string(), z.unknown()).default({}),
+  // PHP serializes an EMPTY associative array as `[]`, not `{}` — so `settings`
+  // arrives as an array when a site has no type-specific answers. Coerce that
+  // back to an object, or the whole list fails to parse the moment a real app
+  // with empty settings exists.
+  settings: z.preprocess(
+    (value) => (Array.isArray(value) ? {} : value),
+    z.record(z.string(), z.unknown()).default({}),
+  ),
   // Declared, or Zod strips them and the dashboard renders blanks for fields
   // the API is sending — the `disk_io` bug again.
   has_process: z.boolean().default(false),
