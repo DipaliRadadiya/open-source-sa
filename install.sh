@@ -802,7 +802,20 @@ configure_nginx() {
     # The API. `^~ /api` in single-host mode so it wins over the catch-all proxy
     # to Next without a regex fight; a plain `/` when the API has its own name.
     local api_prefix="/"
-    (( SINGLE_HOST )) && api_prefix="^~ /api"
+    local sanctum_location=""
+    if (( SINGLE_HOST )); then
+        api_prefix="^~ /api"
+        # Sanctum serves its CSRF-cookie route at /sanctum/csrf-cookie — a
+        # top-level path, NOT under /api. In single-host mode the catch-all in
+        # the panel snippet proxies everything but /api to Next, so without an
+        # explicit /sanctum route the SPA's very first request
+        # (GET /sanctum/csrf-cookie) hits Next and 404s, and login never starts.
+        read -r -d '' sanctum_location <<'SANCTUM' || true
+location ^~ /sanctum {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+SANCTUM
+    fi
 
     cat >"$api_locations" <<NGINX
 # Managed by the Control panel installer.
@@ -812,6 +825,7 @@ location ${api_prefix} {
     try_files \$uri \$uri/ /index.php?\$query_string;
 }
 
+${sanctum_location}
 location ~ \.php\$ {
     include fastcgi_params;
     fastcgi_pass unix:/run/php/${PANEL_SLUG}-fpm.sock;
@@ -983,6 +997,13 @@ CONF
 ${api_block}
 
     <Location /api>
+        ProxyPass !
+    </Location>
+
+    # Sanctum's CSRF-cookie route (/sanctum/csrf-cookie) is top-level, not under
+    # /api — exclude it from the Next proxy too, or the SPA's first request 404s
+    # and login never starts.
+    <Location /sanctum>
         ProxyPass !
     </Location>
 
