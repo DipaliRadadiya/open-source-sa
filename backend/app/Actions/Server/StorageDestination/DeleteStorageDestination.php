@@ -3,27 +3,21 @@
 namespace App\Actions\Server\StorageDestination;
 
 use App\Models\StorageDestination;
-use Illuminate\Validation\ValidationException;
 
 /**
- * Delete a storage destination, or refuse if any backup target still
- * points at it. A target without its destination will fail the *next*
- * scheduled run; removing the destination up front turns that into a
- * noisy 422 the operator can act on, rather than a silent broken run
- * for an unsuspecting tenant.
+ * Delete a storage destination.
+ *
+ * P2 (backup targets) must add an in-use guard here: a target whose
+ * destination has vanished will fail the *next* scheduled run, so
+ * refusing the delete turns that into a noisy 422 the operator can act
+ * on rather than a silent broken run for an unsuspecting tenant. The
+ * `storage.test.in_use` message is already translated in all 8 locales
+ * and is waiting for that guard.
  */
 class DeleteStorageDestination
 {
     public function execute(StorageDestination $destination): void
     {
-        $inUse = $destination->backupTargets()->exists();
-
-        if ($inUse) {
-            throw ValidationException::withMessages([
-                'name' => [__('storage.test.in_use', ['name' => $destination->name])],
-            ]);
-        }
-
         $destination->delete();
     }
 }

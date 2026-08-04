@@ -4,10 +4,10 @@ namespace App\Jobs;
 
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentStatus;
-use App\Models\Deployment;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\Concerns\TracksActor;
 use App\Models\Application;
+use App\Models\Deployment;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeploymentRecorder;

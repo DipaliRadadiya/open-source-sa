@@ -2,12 +2,12 @@
 
 namespace App\Actions\Server\Application;
 
-use App\Jobs\DeployApplication;
-use App\Services\Server\Applications\DeploymentRecorder;
 use App\Enums\DeploymentTrigger;
+use App\Jobs\DeployApplication;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Git\Webhooks\WebhookManager;
+use App\Services\Server\Applications\DeploymentRecorder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;

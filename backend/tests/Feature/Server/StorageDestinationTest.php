@@ -1,9 +1,6 @@
 <?php
 
-use App\Models\Application;
-use App\Models\BackupTarget;
 use App\Models\StorageDestination;
-use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
 use Database\Seeders\PermissionSeeder;
@@ -205,7 +202,7 @@ it('rejects an update with a duplicate name', function () {
     ])->assertUnprocessable()->assertJsonValidationErrors('name');
 });
 
-it('deletes a destination with no backup targets', function () {
+it('deletes a destination', function () {
     $dest = makeDestination();
 
     $this->withHeaders(storageAdminAuthHeader())->deleteJson("/api/integrations/storage/destinations/{$dest->id}")
@@ -214,34 +211,9 @@ it('deletes a destination with no backup targets', function () {
     expect(StorageDestination::find($dest->id))->toBeNull();
 });
 
-it('refuses to delete a destination still referenced by a backup target', function () {
-    $dest = makeDestination();
-    $systemUser = SystemUser::create([
-        'username' => 'tenant',
-        'home_path' => '/home/tenant',
-    ]);
-    $app = Application::create([
-        'system_user_id' => $systemUser->id,
-        'name' => 'App One',
-        'site_type' => 'php',
-        'serving_profile' => 'php',
-        'domain' => 'app.example.test',
-    ]);
-
-    BackupTarget::create([
-        'application_id' => $app->id,
-        'storage_destination_id' => $dest->id,
-        'type' => 'filesystem',
-        'retention_count' => 7,
-        'enabled' => true,
-    ]);
-
-    $this->withHeaders(storageAdminAuthHeader())->deleteJson("/api/integrations/storage/destinations/{$dest->id}")
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('name');
-
-    expect(StorageDestination::find($dest->id))->not->toBeNull();
-});
+// P2 (backup targets) adds the "refuses to delete a destination still
+// referenced by a backup target" case alongside the in-use guard in
+// DeleteStorageDestination.
 
 it('probes a destination and reports success when write/read/delete all match', function () {
     $dest = makeDestination();

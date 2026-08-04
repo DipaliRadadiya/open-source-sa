@@ -28,8 +28,8 @@ class StorageConnectionProber
 
     /**
      * @param  null|callable(array<string, mixed>): Filesystem  $diskBuilder
-     *         Defaults to `Storage::build($config)` so production takes
-     *         the canonical ephemeral-disk path. Tests inject a fake.
+     *                                                                        Defaults to `Storage::build($config)` so production takes
+     *                                                                        the canonical ephemeral-disk path. Tests inject a fake.
      */
     public function __construct(?callable $diskBuilder = null)
     {

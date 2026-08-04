@@ -1,10 +1,14 @@
 <?php
 
 use App\Enums\PanelUpdateStatus;
+use App\Exceptions\Admin\PanelUpdate\PanelUpdateHelperFailedException;
 use App\Jobs\PerformPanelUpdate;
 use App\Models\ActivityLog;
 use App\Models\PanelUpdate;
 use App\Models\User;
+use App\Services\ActivityLogger;
+use App\Services\Panel\InstalledPanelInfo;
+use App\Services\Panel\PanelUpdateRunner;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 
@@ -240,11 +244,11 @@ it('runs the configured helper and records a successful update', function () {
         'from_version' => '1.0.0',
     ]);
 
-    $runner = Mockery::mock(\App\Services\Panel\PanelUpdateRunner::class);
+    $runner = Mockery::mock(PanelUpdateRunner::class);
     $runner->shouldReceive('run')->once()->andReturn(['version' => '1.1.0', 'commit' => str_repeat('a', 40)]);
 
     (new PerformPanelUpdate($update->id, $this->admin->id))
-        ->handle(app(\App\Services\ActivityLogger::class), $runner);
+        ->handle(app(ActivityLogger::class), $runner);
 
     $update->refresh();
 
@@ -259,11 +263,11 @@ it('runs the configured helper and records a successful update', function () {
 
 it('records a translated helper failure without leaking its technical detail', function () {
     $update = PanelUpdate::create(['user_id' => $this->admin->id, 'status' => PanelUpdateStatus::Pending]);
-    $runner = Mockery::mock(\App\Services\Panel\PanelUpdateRunner::class);
-    $runner->shouldReceive('run')->once()->andThrow(new \App\Exceptions\Admin\PanelUpdate\PanelUpdateHelperFailedException('helper-ref'));
+    $runner = Mockery::mock(PanelUpdateRunner::class);
+    $runner->shouldReceive('run')->once()->andThrow(new PanelUpdateHelperFailedException('helper-ref'));
 
     (new PerformPanelUpdate($update->id, $this->admin->id))
-        ->handle(app(\App\Services\ActivityLogger::class), $runner);
+        ->handle(app(ActivityLogger::class), $runner);
 
     $update->refresh();
     expect($update->status)->toBe(PanelUpdateStatus::Failed)
@@ -297,7 +301,7 @@ it('derives installed commit from .git/HEAD without shelling out', function () {
     // (depending on whether APP_VERSION is set), never crash. The "no
     // shell" rule is the load-bearing assertion: shelling out would break
     // tests and break the admin screen at the same time.
-    $info = app(\App\Services\Panel\InstalledPanelInfo::class)->installed();
+    $info = app(InstalledPanelInfo::class)->installed();
 
     expect($info)->toHaveKeys(['version', 'commit_hash', 'commit_short', 'source'])
         ->and(in_array($info['source'], ['config', 'git', 'unknown'], true))->toBeTrue();

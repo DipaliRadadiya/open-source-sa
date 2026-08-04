@@ -70,7 +70,7 @@ class PanelUpdate extends Model
             return null;
         }
 
-        $key = "panel_update.reason.".($this->reason ?: 'unknown');
+        $key = 'panel_update.reason.'.($this->reason ?: 'unknown');
         $replacements = ['reference' => (string) $this->reference];
 
         $rendered = __($key, $replacements);
