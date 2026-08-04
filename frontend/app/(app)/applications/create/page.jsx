@@ -1,0 +1,62 @@
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { getPermissions } from "@/lib/permissions/get-permissions";
+import { can } from "@/lib/permissions/can";
+import { getSiteTypes } from "@/lib/applications/get-applications";
+import { getSystemUserOptions } from "@/lib/system-users/get-system-users";
+import { getGitAccounts } from "@/lib/git/get-git";
+import { getPhp } from "@/lib/php/get-php";
+import { getNode } from "@/lib/node/get-node";
+import { CreateApplicationForm } from "@/components/applications/create-application-form";
+import { LoadFailed } from "@/components/data-table/load-failed";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  const t = await getTranslations("applications");
+  return { title: t("createTitle") };
+}
+
+export default async function CreateApplicationPage() {
+  const [permissions, t, types, systemUsers, accounts, php, node] = await Promise.all([
+    getPermissions(),
+    getTranslations("applications"),
+    getSiteTypes(),
+    getSystemUserOptions(),
+    getGitAccounts(),
+    getPhp(),
+    getNode(),
+  ]);
+
+  const phpVersions = (php.data?.versions ?? []).filter((version) => !version.status || version.status === "ready");
+  const nodeVersions = [
+    ...(node.data?.versions ?? []).filter((version) => !version.status || version.status === "ready"),
+    ...(node.data?.system ? [{ ...node.data.system, status: "ready" }] : []),
+  ];
+
+  if (!can(permissions, "application", "manage")) redirect("/applications");
+  if (types.failed) return <LoadFailed description={t("loadFailed")} />;
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("createTitle")}</h1>
+        <p className="text-sm text-muted-foreground">{t("createSubtitle")}</p>
+      </div>
+      <CreateApplicationForm
+        siteTypes={types.siteTypes}
+        systemUsers={systemUsers.users}
+        systemUsersFailed={systemUsers.failed}
+        canCreateSystemUser={can(permissions, "system_user", "manage")}
+        gitAccounts={accounts.accounts}
+        gitAccountsFailed={accounts.failed}
+        phpVersions={phpVersions}
+        phpDefaultVersion={php.data?.default ?? null}
+        phpVersionsFailed={php.failed}
+        nodeVersions={nodeVersions}
+        nodeDefaultVersion={node.data?.default ?? null}
+        nodeVersionsFailed={node.failed}
+      />
+    </div>
+  );
+}

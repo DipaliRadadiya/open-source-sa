@@ -144,7 +144,11 @@
     "required_host": "Introduce una dirección IP.",
     "required_socket": "Introduce la ruta del socket.",
     "invalidPort": "Introduce un puerto entre 1 y 65535.",
-    "min8": "Usa al menos 8 caracteres."
+    "min8": "Usa al menos 8 caracteres.",
+    "applicationTypeRequired": "Elige un tipo de aplicación.",
+    "applicationNameRequired": "Introduce un nombre para esta aplicación.",
+    "applicationDomainRequired": "Introduce el dominio que usará esta aplicación.",
+    "applicationSystemUserRequired": "Elige el usuario del sistema propietario de esta aplicación."
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -2295,6 +2299,209 @@
       "working": "Desconectando…",
       "done": "{label} desconectada.",
       "failed": "No pudimos desconectar esta cuenta."
+    }
+  },
+  "applications": {
+    "title": "Aplicaciones",
+    "subtitle": "Sitios y servicios que se ejecutan en este servidor.",
+    "loadFailed": "No pudimos cargar las aplicaciones.",
+    "noPermission": "No tienes permiso para gestionar aplicaciones.",
+    "create": "Crear aplicación",
+    "createTitle": "Crear aplicación",
+    "createSubtitle": "Elige qué ejecutar y proporciona solo la configuración necesaria.",
+    "chooseType": "Elige un tipo de aplicación",
+    "unavailable": "No disponible",
+    "requires": "Requiere {runtime}",
+    "basics": "Detalles de la aplicación",
+    "name": "Nombre",
+    "domain": "Dominio",
+    "systemUser": "Usuario del sistema",
+    "systemUserPlaceholder": "Elige un usuario del sistema",
+    "configuration": "Configuración",
+    "advanced": "Ajustes avanzados",
+    "showAdvanced": "Mostrar ajustes avanzados",
+    "hideAdvanced": "Ocultar ajustes avanzados",
+    "source": {
+      "title": "Origen y despliegue",
+      "repository": "Repositorio",
+      "branch": "Rama",
+      "lastDeploy": "Último despliegue",
+      "commit": "Commit",
+      "never": "Aún no desplegada",
+      "deploy": "Desplegar ahora",
+      "deploying": "Desplegando…",
+      "started": "El despliegue ha comenzado.",
+      "failed": "No pudimos iniciar el despliegue.",
+      "pushToDeploy": "Despliega al hacer push"
+    },
+    "gitAccount": "Cuenta de Git",
+    "gitAccountPlaceholder": "Elige una cuenta conectada",
+    "repository": "Repositorio",
+    "repositoryPlaceholder": "Elige un repositorio",
+    "branch": "Rama",
+    "branchPlaceholder": "Introduce una rama",
+    "publicRepository": "URL de repositorio público",
+    "publicRepositoryHint": "Usa una URL HTTPS. Los repositorios públicos no necesitan una cuenta conectada.",
+    "useAccount": "Usar una cuenta conectada",
+    "usePublicUrl": "Usar una URL de repositorio público",
+    "noAccounts": "No hay cuentas de Git conectadas. Aún puedes usar una URL de repositorio público.",
+    "connectGit": "Conectar Git",
+    "createAction": "Crear aplicación",
+    "creating": "Creando aplicación…",
+    "created": "Aplicación creada. El aprovisionamiento ha comenzado.",
+    "cancel": "Cancelar",
+    "back": "Aplicaciones",
+    "columns": {
+      "name": "Aplicación",
+      "type": "Tipo",
+      "domain": "Dominio",
+      "status": "Estado",
+      "owner": "Propietario",
+      "created": "Creada"
+    },
+    "empty": {
+      "title": "Tu servidor está listo para su primera aplicación",
+      "description": "Crea un sitio o servicio en un flujo guiado. ServerAvatar lo aprovisionará y luego mostrará aquí su estado en directo.",
+      "filteredTitle": "No hay aplicaciones coincidentes",
+      "filteredDescription": "Ninguna aplicación coincide con tu búsqueda.",
+      "clearSearch": "Limpiar búsqueda",
+      "guideTitle": "De la idea a una aplicación en marcha",
+      "steps": {
+        "choose": {
+          "title": "Elige un tipo",
+          "description": "Empieza con el software o el estilo de despliegue adecuado para tu proyecto."
+        },
+        "configure": {
+          "title": "Añade lo esencial",
+          "description": "Indica su dominio, propietario y solo los ajustes necesarios."
+        },
+        "provision": {
+          "title": "Sigue el aprovisionamiento",
+          "description": "Consulta cada paso del servidor hasta que la aplicación esté lista."
+        }
+      }
+    },
+    "searchPlaceholder": "Buscar aplicaciones…",
+    "details": {
+      "title": "Aplicación",
+      "provisioning": "Aprovisionamiento",
+      "pending": "Esperando a que comience el aprovisionamiento.",
+      "inProgress": "El aprovisionamiento está en curso.",
+      "active": "La aplicación está activa.",
+      "failed": "El aprovisionamiento falló en {step}.",
+      "retry": "Reintentar aprovisionamiento",
+      "retrying": "Reintentando…",
+      "reference": "Referencia de soporte: {reference}",
+      "steps": "Pasos completados",
+      "unknownStep": "Paso completado",
+      "noSteps": "Aún no se ha completado ningún paso."
+    },
+    "port": {
+      "label": "Puerto de aplicación",
+      "checking": "Comprobando puerto…",
+      "available": "Este puerto está disponible.",
+      "warning": "{message}",
+      "unavailable": "{message}",
+      "suggested": "Prueba {port}."
+    },
+    "guided": {
+      "stageType": "Elige una aplicación",
+      "stageConfigure": "Configura lo esencial",
+      "stageReview": "Revisa y crea",
+      "typeHint": "Elige el punto de partida para tu proyecto. Podrás ajustar la configuración avanzada más adelante.",
+      "configureHint": "Solo se muestran los campos que esta aplicación necesita.",
+      "reviewTitle": "Listo para aprovisionar",
+      "reviewHint": "ServerAvatar creará la configuración del sitio y mostrará el progreso en la siguiente pantalla.",
+      "creatingType": "Estás creando",
+      "softwareIncluded": "El software se instalará por ti.",
+      "bringYourOwnCode": "Esto crea un sitio servido. Añadirás o desplegarás código después.",
+      "selected": "Seleccionada",
+      "change": "Cambiar"
+    },
+    "readiness": {
+      "needsAttention": "Necesita atención",
+      "ready": "Listo",
+      "incompleteHint": "Completa estos elementos para continuar.",
+      "readyHint": "Revisa esta configuración y crea la aplicación.",
+      "complete": "Añade {field}"
+    },
+    "form": {
+      "detailsTitle": "Detalles de la aplicación",
+      "detailsHint": "Cada aplicación necesita un propietario, nombre y dominio.",
+      "chooseTypeHint": "Elige un tipo de aplicación para mostrar sus campos de configuración.",
+      "namePlaceholder": "p. ej., portal-cliente",
+      "domainPlaceholder": "p. ej., app.ejemplo.com",
+      "fieldPlaceholder": "Introduce {field}",
+      "fieldSelectPlaceholder": "Elige {field}",
+      "requiredField": "Elige o introduce {field} antes de crear la aplicación.",
+      "noSystemUsers": "No hay usuarios del sistema disponibles. Crea uno antes de crear una aplicación.",
+      "systemUsersUnavailable": "No pudimos cargar los usuarios del sistema. Aún puedes crear uno para continuar.",
+      "noSystemUserCreatePermission": "Necesitas permiso para administrar usuarios del sistema. Pide a un administrador que cree uno.",
+      "createSystemUser": "Crear usuario del sistema",
+      "repositoriesLoading": "Cargando repositorios…",
+      "repositoriesEmpty": "No hay repositorios disponibles para esta cuenta.",
+      "repositoriesFailed": "No pudimos cargar los repositorios. Selecciona la cuenta de nuevo para reintentar.",
+      "repositoryHint": "Elige un repositorio al que pueda acceder la cuenta seleccionada.",
+      "branchesLoading": "Cargando ramas…",
+      "branchesEmpty": "No hay ramas disponibles para este repositorio.",
+      "branchesFailed": "No pudimos cargar las ramas. Selecciona el repositorio de nuevo para reintentar.",
+      "branchHint": "La rama predeterminada se selecciona cuando está disponible."
+    },
+    "preview": {
+      "notice": "Datos de muestra: nada de esta página existe en tu servidor.",
+      "actionsDisabled": "Datos de muestra: las acciones están desactivadas aquí."
+    },
+    "actions": {
+      "label": "Acciones de la aplicación",
+      "open": "Abrir panel",
+      "visit": "Visitar sitio",
+      "visitHint": "El sitio se sirve cuando termina el aprovisionamiento.",
+      "delete": "Eliminar aplicación"
+    },
+    "delete": {
+      "title": "¿Eliminar {name}?",
+      "description": "Se elimina la configuración del sitio y {domain} deja de servirse. Esto no se puede deshacer.",
+      "removeFiles": "Eliminar también los archivos del sitio",
+      "removeFilesOn": "Se eliminará del servidor el directorio del sitio y todo su contenido.",
+      "removeFilesOff": "Los archivos permanecen en el servidor. Solo se eliminan el registro del panel y la configuración del sitio.",
+      "databaseNote": "La base de datos creada para esta aplicación se conserva. Elimínala desde Bases de datos si ya no la necesitas.",
+      "confirmLabel": "Escribe {domain} para confirmar",
+      "submit": "Eliminar aplicación",
+      "deleting": "Eliminando…",
+      "done": "{name} se eliminó.",
+      "failed": "No pudimos eliminar esta aplicación.",
+      "cancel": "Cancelar"
+    },
+    "facts": {
+      "title": "Aplicación",
+      "webRoot": "Raíz web",
+      "php": "Versión de PHP",
+      "node": "Versión de Node",
+      "port": "Puerto"
+    },
+    "process": {
+      "title": "Proceso",
+      "state": "Estado",
+      "since": "En ejecución desde",
+      "memory": "Memoria",
+      "restarts": "Reinicios",
+      "start": "Iniciar",
+      "stop": "Detener",
+      "restart": "Reiniciar",
+      "started": "El proceso se ha iniciado.",
+      "stopped": "El proceso se ha detenido.",
+      "restarted": "El proceso se ha reiniciado.",
+      "failed": "No pudimos cambiar el proceso.",
+      "deployToStart": "Este sitio se inicia tras su primer despliegue correcto."
+    },
+    "domains": {
+      "title": "Dominios y SSL",
+      "secured": "HTTPS",
+      "noCertificate": "Sin certificado",
+      "counts": "{aliases, plural, =0 {Sin alias} one {# alias} other {# alias}} · {redirects, plural, =0 {sin redirecciones} one {# redirección} other {# redirecciones}}",
+      "expires": "El certificado se renueva {when}.",
+      "manage": "Gestionar dominios",
+      "loadFailed": "No pudimos cargar los dominios de esta aplicación."
     }
   }
 }
