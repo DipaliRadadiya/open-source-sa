@@ -57,7 +57,7 @@ class StorageConnectionProber
         $key = '.probe/'.Str::uuid()->toString().'.bin';
 
         try {
-            $disk = ($this->diskBuilder)($this->driverConfig($destination));
+            $disk = ($this->diskBuilder)(app(DestinationDisk::class)->config($destination));
 
             $disk->put($key, $payload);
             $read = $disk->get($key);
@@ -91,52 +91,6 @@ class StorageConnectionProber
                 exception: $e,
             );
         }
-    }
-
-    /**
-     * Map the destination's stored columns to the S3 driver config the
-     * FilesystemManager expects. `use_path_style_endpoint` is enabled
-     * by default — MinIO, Wasabi, Backblaze B2 and other S3-compatible
-     * providers route everything through the path rather than virtual
-     * hostnames, and modern AWS endpoints accept it too.
-     *
-     * The plaintext credentials come back from the model's encrypted
-     * cast on `$destination->access_key` / `secret_key`. That string
-     * never leaves this method — it flows into a closure-local disk
-     * instance and is GC'd with it. See the class doc for why the disk
-     * itself is built on-demand rather than registered globally.
-     *
-     * @return array<string, mixed>
-     */
-    private function driverConfig(StorageDestination $destination): array
-    {
-        return [
-            'driver' => 's3',
-            'key' => $destination->access_key,
-            'secret' => $destination->secret_key,
-            'region' => $destination->region ?: 'us-east-1',
-            'bucket' => $destination->bucket,
-            'endpoint' => $destination->endpoint ?: null,
-            // Hidden behind the `root` so an application uploading via a
-            // destination cannot escape into another tenant's prefix.
-            'root' => $destination->prefix ?: '',
-
-            // Path-style only when a custom endpoint is set. MinIO, Wasabi
-            // and Backblaze B2 route through the path; real AWS S3 does not
-            // — path-style is deprecated there and unsupported for buckets
-            // in regions launched after 2019. An empty endpoint *means*
-            // AWS, so forcing it on would break the default provider.
-            'use_path_style_endpoint' => filled($destination->endpoint),
-
-            // MUST stay true. With `throw => false` the Flysystem adapter
-            // swallows every failure (FilesystemAdapter::get() returns null
-            // instead of raising), so a rejected credential or unreachable
-            // bucket would never reach the catch below — it would fall into
-            // the read-back comparison and be reported as "wrote and read
-            // back different bytes". classify() would become dead code and
-            // the user would be told the wrong thing about every failure.
-            'throw' => true,
-        ];
     }
 
     /**

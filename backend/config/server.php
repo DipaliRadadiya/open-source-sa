@@ -37,6 +37,11 @@ use App\Services\Server\Applications\Installers\PrestaShopInstaller;
 use App\Services\Server\Applications\Installers\StatamicInstaller;
 use App\Services\Server\Applications\Installers\UptimeKumaInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
+use App\Services\Server\Backups\Steps\ArchiveFiles;
+use App\Services\Server\Backups\Steps\DumpDatabase;
+use App\Services\Server\Backups\Steps\PruneOldBackups;
+use App\Services\Server\Backups\Steps\UploadArtifact;
+use App\Services\Server\Backups\Steps\VerifyArtifact;
 use App\Services\Server\Databases\Installers\MariaDbInstaller;
 use App\Services\Server\Databases\Installers\MySqlInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
@@ -108,6 +113,32 @@ return [
             'ps', 'kill', 'ss', 'curl', 'unzip',
             'tar', 'git', 'fnm', 'wp',
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Backups
+    |--------------------------------------------------------------------------
+    |
+    | Ordered steps of one backup run. Order is the safety property: prune is
+    | last and only runs after verify, so the panel never deletes an old backup
+    | to make room for one that then fails.
+    |
+    */
+
+    'backups' => [
+        'steps' => [
+            DumpDatabase::class,
+            ArchiveFiles::class,
+            UploadArtifact::class,
+            VerifyArtifact::class,
+            PruneOldBackups::class,
+        ],
+
+        // Dumps and archives are written here before upload. Under storage/
+        // rather than /tmp: /tmp is cleared on reboot and is often a small
+        // tmpfs, and a multi-gigabyte site archive would fill it.
+        'working_dir' => env('BACKUP_WORKING_DIR', storage_path('app/backups')),
     ],
 
     /*

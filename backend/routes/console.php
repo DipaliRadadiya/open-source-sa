@@ -41,3 +41,8 @@ Schedule::command('runtimes:refresh-lifecycle')->daily()->withoutOverlapping();
 // whose certificate renewed correctly weeks ago. Daily, because the number it
 // maintains is measured in days.
 Schedule::command('certificates:refresh-expiry')->daily()->withoutOverlapping();
+
+// Backups: the tick just wakes the command every minute; the command
+// self-gates on each target's DB schedule. No cron file, so it can never
+// drift with the user-managed Cronjobs feature.
+Schedule::command('backups:run-due')->everyMinute()->withoutOverlapping();
