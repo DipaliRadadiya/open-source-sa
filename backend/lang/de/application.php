@@ -49,6 +49,18 @@ return [
     ],
 
     'fields' => [
+        'company_name' => 'Firmenname',
+        'company_email' => 'Firmen-E-Mail',
+        'locale' => 'Gebietsschema',
+        'site_name' => 'Website-Name',
+        'language' => 'Sprache',
+        'admin_name' => 'Name des Administrators',
+        'admin_first_name' => 'Vorname des Administrators',
+        'admin_last_name' => 'Nachname des Administrators',
+        'short_name' => 'Kurzname',
+        'shop_name' => 'Shop-Name',
+        'country' => 'Land',
+        'timezone' => 'Zeitzone',
         'rendering_type' => 'Rendering-Typ',
         'name' => 'Name',
         'domain' => 'Domain',

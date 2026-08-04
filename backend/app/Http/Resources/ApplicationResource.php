@@ -85,7 +85,13 @@ class ApplicationResource extends JsonResource
                 'last_delivered_at_human' => $this->webhook_last_delivered_at?->diffForHumans(),
             ],
 
-            'settings' => $this->settings ?? [],
+            // Cast to an object so an application with no extra settings
+            // serializes as `{}` and not `[]`. PHP cannot tell an empty map
+            // from an empty list, so json_encode picks the array — and the
+            // shape of this field would then depend on whether it happens to
+            // be populated, forcing every consumer to handle both.
+            // `steps` below is a genuine list and correctly stays `[]`.
+            'settings' => (object) ($this->settings ?? []),
 
             // Provisioning progress, so the UI can show which stage it reached
             // instead of a bare spinner.

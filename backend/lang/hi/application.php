@@ -49,6 +49,18 @@ return [
     ],
 
     'fields' => [
+        'company_name' => 'कंपनी का नाम',
+        'company_email' => 'कंपनी का ईमेल',
+        'locale' => 'लोकेल',
+        'site_name' => 'साइट का नाम',
+        'language' => 'भाषा',
+        'admin_name' => 'व्यवस्थापक का नाम',
+        'admin_first_name' => 'व्यवस्थापक का पहला नाम',
+        'admin_last_name' => 'व्यवस्थापक का अंतिम नाम',
+        'short_name' => 'संक्षिप्त नाम',
+        'shop_name' => 'दुकान का नाम',
+        'country' => 'देश',
+        'timezone' => 'समय क्षेत्र',
         'rendering_type' => 'रेंडरिंग प्रकार',
         'name' => 'नाम',
         'domain' => 'डोमेन',

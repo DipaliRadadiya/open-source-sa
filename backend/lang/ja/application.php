@@ -49,6 +49,18 @@ return [
     ],
 
     'fields' => [
+        'company_name' => '会社名',
+        'company_email' => '会社のメールアドレス',
+        'locale' => 'ロケール',
+        'site_name' => 'サイト名',
+        'language' => '言語',
+        'admin_name' => '管理者名',
+        'admin_first_name' => '管理者の名',
+        'admin_last_name' => '管理者の姓',
+        'short_name' => '短縮名',
+        'shop_name' => 'ショップ名',
+        'country' => '国',
+        'timezone' => 'タイムゾーン',
         'rendering_type' => 'レンダリング方式',
         'name' => '名前',
         'domain' => 'ドメイン',

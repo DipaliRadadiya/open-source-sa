@@ -49,6 +49,18 @@ return [
     ],
 
     'fields' => [
+        'company_name' => 'Название компании',
+        'company_email' => 'Эл. почта компании',
+        'locale' => 'Локаль',
+        'site_name' => 'Название сайта',
+        'language' => 'Язык',
+        'admin_name' => 'Имя администратора',
+        'admin_first_name' => 'Имя администратора',
+        'admin_last_name' => 'Фамилия администратора',
+        'short_name' => 'Краткое название',
+        'shop_name' => 'Название магазина',
+        'country' => 'Страна',
+        'timezone' => 'Часовой пояс',
         'rendering_type' => 'Тип рендеринга',
         'name' => 'Название',
         'domain' => 'Домен',
