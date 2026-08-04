@@ -131,3 +131,12 @@ export const repositoriesResponseSchema = z.object({
     has_more: z.boolean().optional(),
   }).optional(),
 });
+
+export const branchSchema = z.object({
+  name: z.string(),
+  protected: z.boolean().default(false),
+});
+
+export const branchesResponseSchema = z.object({
+  branches: z.array(branchSchema).default([]),
+});
