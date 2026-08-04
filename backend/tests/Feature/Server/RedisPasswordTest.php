@@ -207,7 +207,9 @@ it('rolls back when the password cannot be persisted to redis conf', function ()
 });
 
 it('logs a traceable failure, since nothing can reach the caller by then', function () {
-    $log = storage_path('logs/server-ops.log');
+    // From config, not a hardcoded path: the suite writes this channel to its
+    // own file so it does not append to the real operations log.
+    $log = config('logging.channels.server-ops.path');
     $before = is_file($log) ? (string) File::get($log) : '';
 
     fakeRedis(failing: ['ping']);

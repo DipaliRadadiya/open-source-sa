@@ -37,6 +37,11 @@
              prefix on every one of them would assert the prefix instead.
              ServerOpsPrivilegeTest enables it and covers the prefixing. -->
         <env name="SERVER_OPS_SUDO" value="false"/>
+        <!-- Keep test runs out of the real operations log. Left alone the
+             suite appended ~570k lines to it. `single` (not daily) so a test
+             that reads the file knows its exact name. -->
+        <env name="LOG_SERVER_OPS_DRIVER" value="single"/>
+        <env name="LOG_SERVER_OPS_PATH" value="storage/framework/testing/server-ops.log"/>
         <env name="SESSION_DRIVER" value="array"/>
         <!-- Tests run on the localhost host; the real .env pins SESSION_DOMAIN
              to the deployed parent domain, which wouldn't match here and

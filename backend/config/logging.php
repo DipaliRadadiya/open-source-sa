@@ -67,9 +67,22 @@ return [
 
         // Structured log of every server operation (command, exit code,
         // stdout/stderr, duration, actor) for debugging the panel.
+        //
+        // Rotated daily, not `single`. This channel records every command the
+        // panel runs, so on a busy server it is the fastest-growing file on
+        // the box — and an unrotated one grows until the disk is full, taking
+        // the panel down along with the log you would need to work out why.
+        // 30 days is chosen to outlive a "it broke sometime last month"
+        // report while staying bounded.
+        //
+        // Driver and path are env-overridable so the test suite can write
+        // somewhere else: it shares this config, and left alone it appends
+        // hundreds of thousands of `testing.*` lines to the real operations
+        // log — 85% of this file on the dev box, which is what prompted this.
         'server-ops' => [
-            'driver' => 'single',
-            'path' => storage_path('logs/server-ops.log'),
+            'driver' => env('LOG_SERVER_OPS_DRIVER', 'daily'),
+            'path' => env('LOG_SERVER_OPS_PATH', storage_path('logs/server-ops.log')),
+            'days' => (int) env('LOG_SERVER_OPS_DAYS', 30),
             'level' => 'debug',
             'replace_placeholders' => true,
         ],
