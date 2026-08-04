@@ -7,6 +7,8 @@ import { getServerFacts } from "@/lib/server/get-server-facts";
 import { getServerHistory } from "@/lib/server/get-server-history";
 import { getServerProcesses } from "@/lib/server/get-server-processes";
 import { getServiceHealth } from "@/lib/server/get-service-health";
+import { getSetup } from "@/lib/setup/get-setup";
+import { SetupBanner } from "@/components/setup/setup-banner";
 import { LiveMetricsSection } from "@/components/server-dashboard/live-metrics-section";
 import { ServerInfoCard } from "@/components/server-dashboard/server-info-card";
 import { MetricsCharts } from "@/components/server-dashboard/metrics-charts";
@@ -24,6 +26,13 @@ export default async function DashboardPage() {
     getPermissions(),
     getTranslations("serverDashboard"),
   ]);
+
+  // Only someone who could act on setup gets the nudge, and only while the
+  // recommended set is incomplete.
+  const setupResult = can(permissions, "setting", "view") ? await getSetup() : { setup: null };
+  const setupRemaining = setupResult.setup && !setupResult.setup.complete
+    ? setupResult.setup.components.filter((c) => c.recommended && c.state !== "installed").length
+    : 0;
 
   // Dashboard is permission-gated; without `view` the page stays empty rather
   // than redirecting (it's the panel's landing route — a redirect would loop).
@@ -47,6 +56,8 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
+
+      <SetupBanner remaining={setupRemaining} />
 
       {allowed ? (
         <>

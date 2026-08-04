@@ -36,7 +36,8 @@ export function RegisterForm() {
   async function onSubmit(values) {
     try {
       await registerUser(values);
-      router.push("/dashboard");
+      // First admin lands on the setup checklist, not straight on the dashboard.
+      router.push("/setup");
       router.refresh();
     } catch (error) {
       handleValidationError(error, form);
