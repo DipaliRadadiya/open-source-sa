@@ -19,6 +19,13 @@ Pre-auth app state the frontend needs before login.
 - Response: `{"basic_info": {"registration_open": bool, "app_version": string, "locales_available": string[], "cookie_auth_enabled": bool}}`
 - `locales_available` currently `["en","es","de","fr","pt","ja","ru","hi"]` — every listed locale is fully translated (activity, auth, user, validation), so it's safe to drive a language switcher directly from this. Send the chosen one as `Accept-Language: <code>` on subsequent requests; validation/error messages come back in that language.
 
+### `GET /health`
+Liveness probe. Unauthenticated **on purpose**: the panel self-update calls this on itself right after restarting services, at which point there is no session or token to present.
+- Response: `{"health": {"status": "ok", "version": string|null}}`
+- Rate limit: 60/min
+- `version` is the running panel version, read from the `VERSION` file at the repository root (or `APP_VERSION` when pinned). `null` means neither was readable — reported honestly rather than guessing.
+- Exposes nothing else. No commit, no paths, no counts.
+
 ### `GET /branding`
 White-label branding info.
 - Response: `{"branding": {"name", "logo", "logo_dark", "icon", "icon_dark", "favicon", "primary_color"}}`
@@ -190,6 +197,45 @@ Admin-wide activity — every user's actions, not just the caller's.
 Distinct `type`/`action` values, for populating a frontend filter dropdown. Sourced from the known translation keys (`lang/activity.php`), not a `DISTINCT` query on actual log rows — so it's fully populated even on a fresh install with zero activity yet.
 - Response: `{"types": string[], "actions": {"all": string[], "<type>": string[], ...}, "scopes": [{value, label}]}` — `actions.all` is every verb (use on initial load / "any type"); `actions.<type>` is scoped to that type's verbs (use for a dependent action dropdown once a type is picked). No client-side merging needed.
 - **`scopes` always lists both** here, unlike the personal version — the admin log is the whole catalog, so an option with no rows behind it today is still the right option to offer. Labels are localized; don't hardcode them.
+
+### Panel self-update — `GET|POST /admin/panel-update`, `GET /admin/panel-update/{panelUpdate}`
+
+Updates the panel itself: fetches a published release, switches the installation to it, reinstalls dependencies, migrates, rebuilds the interface and restarts services. **The panel goes down for several minutes while this runs.** Hosted sites are unaffected — the web server serves them directly and the panel is not in their request path — so the only person who sees downtime is the admin watching the progress bar.
+
+**`GET /admin/panel-update`** — state of play. Read-only; changes nothing.
+- Query: `refresh` (bool, optional) — bypass the cached availability check for a "check now" button. Cached 60 min otherwise.
+- Rate limit: 30/min
+- Response:
+```json
+{"panel_update": {
+  "installed": {"version": "0.1.0", "commit_hash": "b474320…", "commit_short": "b474320",
+                "branch": "main"|null, "source": "file"|"env"|"unknown",
+                "is_git_checkout": true, "has_local_changes": false|null},
+  "available": {"version": "0.2.0"|null, "published_at": "2026-08-01T10:00:00Z"|null,
+                "notes": "markdown"|null, "url": "https://…"|null, "checked": true},
+  "update_available": false,
+  "preflight": {"ready": false, "checks": [{"key": "git_checkout", "passed": true, "detail": null}, …]},
+  "latest_run": {…PanelUpdate…}|null
+}}
+```
+- **`available.checked: false` is normal, not an error.** It means the release host could not be reached (no outbound network, rate limit, host down). The call still returns `200` — an informational widget must not become a `500`.
+- **`update_available` is `false` whenever either version is unknown.** Never prompt on a guess: accepting it starts a mutating operation with downtime.
+- `preflight.checks` keys, in order: `git_checkout`, `clean_working_tree`, `free_disk`, `free_memory`, `writable_path`. Render `ready` as the button's enabled state and the failing `key`s as the reason. `clean_working_tree` **fails closed when unknown** — `git checkout --force` discards uncommitted work silently, so an unprovable tree is treated as dirty.
+- `installed.branch` is `null` on an updated panel (checked out at a tag = detached HEAD). That's expected, not missing data.
+
+**`POST /admin/panel-update`** — start it
+- Query: `dry_run` (bool, optional) — runs the real script with every mutating command replaced by `echo`. Nothing is changed; the log at `<state_dir>/update-{id}.log` shows exactly what a real run would execute. **Use this first.**
+- Rate limit: 3/min
+- Response `202`: `{"panel_update": {…}}` — returns immediately. The runner is detached and the panel is about to restart itself, so there is nothing to wait on. Poll the status endpoint.
+- `422` with `errors.version` when: an update is already in flight, the panel is already newest, preflight is not `ready`, or the published version failed validation.
+
+**`GET /admin/panel-update/{panelUpdate}`** — poll progress
+- Rate limit: 120/min (it is polled every couple of seconds; deliberately cheap, and it makes no outbound call)
+- Response: `{"panel_update": {"id", "status", "status_title", "current_step", "current_step_title", "step_number", "total_steps", "from_version", "to_version", "from_commit", "to_commit", "reason", "reason_title", "rolled_back", "reference", "started_at", "started_at_human", "finished_at", "finished_at_human"}}`
+- `status`: `pending` | `running` | `succeeded` | `failed`
+- `current_step` (12 in order): `maintenance_on`, `backup_database`, `fetch_release`, `checkout_release`, `composer_install`, `migrate`, `seed_permissions`, `optimize`, `frontend_build`, `restart_services`, `maintenance_off`, `health_check` — plus `rollback` when recovering. Drive a progress bar from `step_number` / `total_steps` rather than hardcoding the list; show `current_step_title` (localized) as the label.
+- On failure, `reason` is **the step that failed** (a stable key), and `reason_title` is the localized explanation. Raw stderr never reaches the client. `rolled_back: true` means the previous version was restored.
+- ⚠️ **Expect the poll to fail mid-update.** `restart_services` restarts php-fpm, and `maintenance_on`…`maintenance_off` returns `503`. Treat connection errors and `503` during a run as *normal progress*, retry with backoff, and resume polling once the panel answers again — a finished update is reconstructed from the runner's state file, so the final status is correct even though nothing was alive to report it at the time.
 
 ---
 
@@ -1351,5 +1397,5 @@ Requires the `git` permission (`view` to read, `manage` to mutate). Connected gi
 ## Known activity-log `type`/`action` values (for filtering)
 
 Fetch these at runtime rather than hardcoding them — `GET /admin/activity-log/filters` (admin-wide, every value the system can record) or `GET /activity-log/filters` (the caller's own values only). Both return `{types: [...], actions: {all: [...], <type>: [...]}}`. For reference — `type` and `action` are separate values:
-- `types` (12): `cronjob`, `database`, `disk_cleaner`, `firewall`, `git_account`, `log`, `permission`, `role`, `service`, `setting`, `system_user`, `user`
-- `actions` (48 verbs, deduped across types): `cleaned`, `connected`, `connection_updated`, `create_failed`, `created`, `delete_failed`, `deleted`, `disabled`, `disconnected`, `downloaded`, `enabled`, `exported`, `impersonation_started`, `impersonation_stopped`, `imported`, `logged_in`, `optimized`, `password_changed`, `password_failed`, `password_reset`, `password_reset_by_admin`, `password_set`, `permissions_updated`, `process_killed`, `profile_updated`, `reboot_requested`, `registered`, `reloaded`, `repaired`, `restarted`, `role_assigned`, `rule_added`, `rule_removed`, `schedule_updated`, `shell_changed`, `ssh_disabled`, `ssh_enabled`, `ssh_key_added`, `ssh_key_removed`, `started`, `stopped`, `sudo_disabled`, `sudo_enabled`, `synced`, `updated`, `user_created`, `user_deleted`, `user_updated`
+- `types` (18): `application`, `cronjob`, `database`, `disk_cleaner`, `fail2ban`, `firewall`, `git_account`, `log`, `node`, `panel_update`, `permission`, `php`, `role`, `server`, `service`, `setting`, `system_user`, `user`
+- `actions` (98 verbs, deduped across types) — too many to be worth hardcoding; this is exactly why the endpoint exists. Notable ones for the panel-update screen: `started`, `failed`.
