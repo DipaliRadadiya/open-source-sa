@@ -1,7 +1,6 @@
 <?php
 
 return [
-    // Shown when a server operation lost a race for a system lock and never
-    // started. The answer is "try again", not "something is wrong".
     'busy' => 'सर्वर किसी अन्य सिस्टम कार्य में व्यस्त है (पैकेज इंस्टॉल या अपडेट चल रहा हो सकता है)। कुछ भी नहीं बदला गया — कुछ क्षण बाद पुनः प्रयास करें।',
+    'stale_lock' => 'एक बचा हुआ लॉक फ़ाइल इस सर्वर पर सभी उपयोगकर्ता प्रबंधन को रोक रहा है। कोई इसका उपयोग नहीं कर रहा — इसे किसी बाधित कमांड ने छोड़ा था। हटाने योग्य फ़ाइलों के लिए `php artisan panel:doctor` चलाएँ।',
 ];

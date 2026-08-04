@@ -10,6 +10,7 @@ return [
         'binaries' => 'Required tools',
         'web_server' => 'Web server',
         'queue' => 'Queue worker',
+        'account_locks' => 'Account lock files',
     ],
     'fixes' => [
         'privilege' => 'The panel cannot run commands as root. Check /etc/sudoers.d/ contains the panel grant and that the file passes visudo -c.',
@@ -29,5 +30,6 @@ return [
         'queue_stalled' => 'Jobs are queued but nothing is processing them. Restart the queue service; provisioning, deploys and installs will not finish until it runs.',
         'queue_failed_jobs' => 'Some background jobs failed. Check the failed_jobs table — work that was silently discarded is often why a feature appeared to do nothing.',
         'queue_unreadable' => 'The queue tables could not be read. Run php artisan migrate --force.',
+        'account_locks' => 'A stale lock file is blocking every user operation. Confirm nothing holds it (`sudo fuser /etc/passwd.lock`), then remove the files listed above. They are left behind by an interrupted useradd and nothing cleans them up.',
     ],
 ];

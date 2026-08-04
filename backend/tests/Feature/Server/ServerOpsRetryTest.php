@@ -156,3 +156,60 @@ it('has the busy message in every locale', function () {
         expect(__('errors/server.busy'))->not->toBe('errors/server.busy');
     }
 });
+
+describe('a lock nobody holds', function () {
+    it('reports a stale lock apart from a busy system', function () {
+        // Same stderr either way. What separates them is that this one
+        // survived every retry, which means the "holder" is a corpse: a lock
+        // file an interrupted useradd left behind, blocking all user
+        // management until someone deletes it.
+        Process::fake(['*' => Process::result(
+            errorOutput: 'useradd: cannot lock /etc/passwd; try again later.',
+            exitCode: 1,
+        )]);
+
+        $result = $this->ops->run(['useradd', '-m', 'deploy']);
+
+        expect($result->failed())->toBeTrue()
+            ->and($result->staleLock)->toBeTrue();
+    });
+
+    it('does not call an apt lock stale', function () {
+        // dpkg's lock really is held by a running apt, and really will free
+        // itself. Telling the operator to delete it would be dangerous advice.
+        Process::fake(['*' => Process::result(
+            errorOutput: 'E: Could not get lock /var/lib/dpkg/lock-frontend',
+            exitCode: 1,
+        )]);
+
+        expect($this->ops->run(['apt-get', 'install', '-y', 'nginx'])->staleLock)->toBeFalse();
+    });
+
+    it('answers 500 with a stale-lock code, not a 503 telling you to wait', function () {
+        $exception = new class('ref-1', busy: true, staleLock: true) extends ServerOperationException
+        {
+            protected function messageKey(): string
+            {
+                return 'errors/system-user.create_failed';
+            }
+        };
+
+        $response = $exception->render(request());
+        $body = $response->getData(true);
+
+        // 503 means "come back later". Nobody is coming to free this lock, so
+        // that is advice which can never come true — this is a fault on the
+        // server that needs a person.
+        expect($response->getStatusCode())->toBe(500)
+            ->and($body['code'])->toBe('server_stale_lock')
+            ->and($body['message'])->toBe(__('errors/server.stale_lock'));
+    });
+
+    it('has the stale-lock message in every locale', function () {
+        foreach (config('app.available_locales') as $locale) {
+            app()->setLocale($locale);
+
+            expect(__('errors/server.stale_lock'))->not->toBe('errors/server.stale_lock');
+        }
+    });
+});

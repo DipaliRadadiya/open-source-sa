@@ -10,6 +10,7 @@ return [
         'binaries' => 'Herramientas necesarias',
         'web_server' => 'Servidor web',
         'queue' => 'Procesador de cola',
+        'account_locks' => 'Archivos de bloqueo de cuentas',
     ],
     'fixes' => [
         'privilege' => 'El panel no puede ejecutar comandos como root. Comprueba que /etc/sudoers.d/ contiene la concesión del panel y que el archivo pasa visudo -c.',
@@ -29,5 +30,6 @@ return [
         'queue_stalled' => 'Hay trabajos en cola pero nada los procesa. Reinicia el servicio de cola; el aprovisionamiento, los despliegues y las instalaciones no terminarán hasta que funcione.',
         'queue_failed_jobs' => 'Algunos trabajos en segundo plano fallaron. Revisa la tabla failed_jobs: el trabajo descartado en silencio suele ser la razón de que algo pareciera no hacer nada.',
         'queue_unreadable' => 'No se pudieron leer las tablas de la cola. Ejecuta php artisan migrate --force.',
+        'account_locks' => 'Un archivo de bloqueo obsoleto impide toda operación de usuarios. Comprueba que nada lo retiene (`sudo fuser /etc/passwd.lock`) y elimina los archivos indicados. Los deja un useradd interrumpido y nada los limpia.',
     ],
 ];

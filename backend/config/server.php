@@ -50,6 +50,7 @@ use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\TmpTarget;
+use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
 use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
@@ -156,6 +157,7 @@ return [
         'checks' => [
             PrivilegeCheck::class,
             BinariesCheck::class,
+            AccountLocksCheck::class,
             ServicesCheck::class,
             WebServerCheck::class,
             WritablePathsCheck::class,
@@ -188,6 +190,14 @@ return [
     'transient' => [
         'attempts' => (int) env('SERVER_OPS_RETRIES', 3),
         'delay_ms' => (int) env('SERVER_OPS_RETRY_DELAY_MS', 1500),
+
+        // A lock that survives every retry is not "busy" — the holder is a
+        // corpse and no amount of waiting helps. Telling the operator to try
+        // again is advice that can never come true, so these get their own
+        // code and their own message. `panel:doctor` names the files.
+        'stale_lock_patterns' => [
+            'cannot lock',
+        ],
 
         // Matched case-insensitively against stderr.
         'patterns' => [

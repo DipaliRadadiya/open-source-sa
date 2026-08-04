@@ -22,6 +22,13 @@ class ServerOpsResult
          * for something that will work by itself in a minute.
          */
         public readonly bool $busy = false,
+        /**
+         * The lock survived every retry with nobody holding it — an interrupted
+         * tool left a lock file behind. Reported apart from `busy` because the
+         * advice is the opposite: waiting will never help, the file has to go.
+         * `panel:doctor` names the exact files.
+         */
+        public readonly bool $staleLock = false,
     ) {}
 
     public function failed(): bool

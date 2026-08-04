@@ -10,6 +10,7 @@ return [
         'binaries' => 'Outils requis',
         'web_server' => 'Serveur web',
         'queue' => 'Worker de file',
+        'account_locks' => 'Fichiers de verrou des comptes',
     ],
     'fixes' => [
         'privilege' => 'Le panneau ne peut pas exécuter de commandes en root. Vérifiez que /etc/sudoers.d/ contient l’autorisation et que le fichier passe visudo -c.',
@@ -29,5 +30,6 @@ return [
         'queue_stalled' => 'Des tâches sont en file mais rien ne les traite. Redémarrez le service de file ; les provisionnements, déploiements et installations ne se termineront pas.',
         'queue_failed_jobs' => 'Des tâches en arrière-plan ont échoué. Consultez la table failed_jobs — un travail silencieusement abandonné explique souvent qu’une fonction n’ait rien fait.',
         'queue_unreadable' => 'Impossible de lire les tables de file. Exécutez php artisan migrate --force.',
+        'account_locks' => 'Un fichier de verrou obsolète bloque toute opération sur les utilisateurs. Vérifiez que rien ne le détient (`sudo fuser /etc/passwd.lock`), puis supprimez les fichiers listés. Ils proviennent d’un useradd interrompu et rien ne les nettoie.',
     ],
 ];

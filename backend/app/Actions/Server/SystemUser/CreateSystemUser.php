@@ -34,7 +34,11 @@ class CreateSystemUser
 
             if ($result->failed()) {
                 $this->activityLogger->log('system_user.create_failed', null, ['username' => $username]);
-                throw new SystemUserCreateFailedException($result->reference, busy: $result->busy);
+                throw new SystemUserCreateFailedException(
+                    $result->reference,
+                    busy: $result->busy,
+                    staleLock: $result->staleLock,
+                );
             }
 
             $systemUser = SystemUser::create([

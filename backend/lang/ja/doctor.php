@@ -10,6 +10,7 @@ return [
         'binaries' => '必要なツール',
         'web_server' => 'ウェブサーバー',
         'queue' => 'キューワーカー',
+        'account_locks' => 'アカウントのロックファイル',
     ],
     'fixes' => [
         'privilege' => 'パネルが root としてコマンドを実行できません。/etc/sudoers.d/ にパネルの許可があり、visudo -c を通ることを確認してください。',
@@ -29,5 +30,6 @@ return [
         'queue_stalled' => 'ジョブがキューにありますが処理されていません。キューサービスを再起動してください。プロビジョニング・デプロイ・インストールは完了しません。',
         'queue_failed_jobs' => '一部のバックグラウンドジョブが失敗しました。failed_jobs テーブルを確認してください — 黙って破棄された処理が「何も起きない」原因であることが多いです。',
         'queue_unreadable' => 'キューのテーブルを読み取れませんでした。php artisan migrate --force を実行してください。',
+        'account_locks' => '古いロックファイルがすべてのユーザー操作を妨げています。誰も保持していないことを確認し (`sudo fuser /etc/passwd.lock`)、上記のファイルを削除してください。中断された useradd が残したもので、自動では消えません。',
     ],
 ];

@@ -111,7 +111,16 @@ class ServerOps
             'actor_id' => Auth::id(),
         ]));
 
-        return new ServerOpsResult($ok, $reference, $result, busy: ! $ok && $this->isTransient($stderr));
+        return new ServerOpsResult(
+            $ok,
+            $reference,
+            $result,
+            busy: ! $ok && $this->isTransient($stderr),
+            // Distinguished only after every retry is spent: the same message
+            // means "wait" while someone holds the lock and "this is broken"
+            // once nobody does.
+            staleLock: ! $ok && $this->isStaleLock($stderr),
+        );
     }
 
     /**
@@ -131,6 +140,32 @@ class ServerOps
         $haystack = strtolower($stderr);
 
         foreach ((array) config('server.transient.patterns', []) as $pattern) {
+            if (str_contains($haystack, strtolower((string) $pattern))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether the failure is a lock that outlived its holder.
+     *
+     * A lock file left by an interrupted useradd blocks every account
+     * operation permanently — `useradd` links `<file>.<pid>` to `<file>.lock`
+     * and refuses while the link exists, and nothing ever cleans it up. It
+     * looks exactly like "busy", so it survives the retries and then needs
+     * saying differently: waiting is useless, the file must be removed.
+     */
+    private function isStaleLock(string $stderr): bool
+    {
+        if ($stderr === '') {
+            return false;
+        }
+
+        $haystack = strtolower($stderr);
+
+        foreach ((array) config('server.transient.stale_lock_patterns', []) as $pattern) {
             if (str_contains($haystack, strtolower((string) $pattern))) {
                 return true;
             }

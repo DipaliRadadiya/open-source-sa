@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
@@ -255,5 +256,23 @@ describe('the checks added for "routes error after setup"', function () {
         config()->set('server.doctor.checks', [WebServerCheck::class]);
 
         expect(app(Doctor::class)->run()['checks'][0]['status'])->toBe('fail');
+    });
+});
+
+describe('the stale account-lock check', function () {
+    it('passes when there are no lock files', function () {
+        config()->set('server.doctor.checks', [AccountLocksCheck::class]);
+
+        // The suite runs on a box with no /etc/*.lock files.
+        expect(app(Doctor::class)->run()['checks'][0]['status'])->toBe('pass');
+    });
+
+    it('has a title and a fix in every locale', function () {
+        foreach (config('app.available_locales') as $locale) {
+            app()->setLocale($locale);
+
+            expect(__('doctor.checks.account_locks'))->not->toBe('doctor.checks.account_locks')
+                ->and(__('doctor.fixes.account_locks'))->not->toBe('doctor.fixes.account_locks');
+        }
     });
 });
