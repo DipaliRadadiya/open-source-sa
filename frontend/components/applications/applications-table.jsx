@@ -35,7 +35,10 @@ function StatusCell({ row }) {
     application.process &&
     application.process.state !== "active" &&
     application.process.state !== "activating";
-  const deployFailed = application.status === "active" && Boolean(application.failed_step);
+  // Deploy is git-only — a one-click install has nothing to pull — so this
+  // marker is too, even if a non-git app somehow carried a failed_step.
+  const isGit = Boolean(application.repository || application.repository_url);
+  const deployFailed = isGit && application.status === "active" && Boolean(application.failed_step);
   return (
     <div className="space-y-1">
       <Badge variant={STATUS_VARIANTS[application.status] ?? "secondary"} className="font-normal">
