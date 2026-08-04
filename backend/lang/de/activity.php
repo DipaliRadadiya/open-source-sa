@@ -133,4 +133,6 @@ return [
     'backup.failed' => 'Sicherung von :application fehlgeschlagen (:reason)',
     'central.connected' => 'Dieses Panel mit dem zentralen Panel verbunden',
     'central.disconnected' => 'Verbindung dieses Panels zum zentralen Panel getrennt',
+    'backup.restored' => ':application aus einer Sicherung wiederhergestellt',
+    'backup.restore_failed' => 'Wiederherstellung von :application fehlgeschlagen (:reason)',
 ];

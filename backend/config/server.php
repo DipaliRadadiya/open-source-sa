@@ -62,6 +62,13 @@ use App\Services\Server\Doctor\Checks\WebServerCheck;
 use App\Services\Server\Doctor\Checks\WritablePathsCheck;
 use App\Services\Server\Php\Stacks\FpmPhpStack;
 use App\Services\Server\Php\Stacks\LsphpPhpStack;
+use App\Services\Server\Restores\Steps\DownloadArtifact;
+use App\Services\Server\Restores\Steps\ExtractArchive;
+use App\Services\Server\Restores\Steps\RestartProcess;
+use App\Services\Server\Restores\Steps\RestoreDatabase;
+use App\Services\Server\Restores\Steps\SafetyBackup;
+use App\Services\Server\Restores\Steps\SwapFiles;
+use App\Services\Server\Restores\Steps\VerifyDownload;
 use App\Services\Server\WebServers\ApacheDriver;
 use App\Services\Server\WebServers\NginxDriver;
 use App\Services\Server\WebServers\OlsDriver;
@@ -135,6 +142,19 @@ return [
             UploadArtifact::class,
             VerifyArtifact::class,
             PruneOldBackups::class,
+        ],
+
+        // Restore stages, in order. Everything before `restore_database` is
+        // non-destructive on purpose: the download, the archive check and the
+        // safety backup all fail with the live application untouched.
+        'restore_steps' => [
+            DownloadArtifact::class,
+            VerifyDownload::class,
+            SafetyBackup::class,
+            ExtractArchive::class,
+            RestoreDatabase::class,
+            SwapFiles::class,
+            RestartProcess::class,
         ],
 
         // Dumps and archives are written here before upload. Under storage/
@@ -1255,7 +1275,7 @@ return [
             // showing a button that cannot work.
             'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MySqlInstaller::class],
             'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MariaDbInstaller::class],
-            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'default_port' => 27017, 'default_socket' => null, 'installer' => null],
+            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'installer' => null],
         ],
 
         // Engine installs pull a few hundred MB and run their own post-install

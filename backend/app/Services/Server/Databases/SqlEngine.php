@@ -225,6 +225,33 @@ class SqlEngine implements DatabaseEngine
         }
     }
 
+    public function restore(string $database, string $path): void
+    {
+        $client = (string) config("server.databases.engines.{$this->connection->engine}.client", 'mysql');
+        $authFile = $this->writeAuthFile();
+
+        try {
+            // `source` rather than piping the file in on stdin: a site dump is
+            // routinely larger than the whole PHP memory limit, and reading it
+            // into a string to pass as process input would kill the worker on
+            // exactly the databases that most need restoring. The path is ours
+            // (working directory + an upstream-validated database name), so
+            // nothing user-controlled reaches the client's parser.
+            $result = $this->serverOps->run(
+                [$client, '--defaults-extra-file='.$authFile, '--batch', $database,
+                    '-e', 'source '.$path],
+                ['feature' => 'database', 'engine' => $this->connection->engine, 'op' => 'restore'],
+                3600,
+            );
+
+            if ($result->failed()) {
+                throw new DatabaseOperationException($result->reference);
+            }
+        } finally {
+            @unlink($authFile);
+        }
+    }
+
     private function maintain(string $database, string $verb): void
     {
         $names = array_map(fn (array $t) => $this->ident($t['name']), $this->tables($database));

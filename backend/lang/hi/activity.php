@@ -133,4 +133,6 @@ return [
     'backup.failed' => ':application का बैकअप विफल रहा (:reason)',
     'central.connected' => 'इस पैनल को केंद्रीय पैनल से जोड़ा',
     'central.disconnected' => 'इस पैनल का केंद्रीय पैनल से संबंध हटाया',
+    'backup.restored' => ':application को बैकअप से पुनर्स्थापित किया',
+    'backup.restore_failed' => ':application की पुनर्स्थापना विफल रही (:reason)',
 ];

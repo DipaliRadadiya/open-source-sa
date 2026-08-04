@@ -86,4 +86,11 @@ interface DatabaseEngine
 
     /** Export the database to $path (mysqldump `--result-file` / mongodump `--archive`). Read-only. */
     public function dump(string $database, string $path): void;
+
+    /**
+     * Import $path into an existing database. **Destructive** — the caller is
+     * expected to have dropped and recreated the schema first, so this is the
+     * inverse of dump() rather than a merge.
+     */
+    public function restore(string $database, string $path): void;
 }

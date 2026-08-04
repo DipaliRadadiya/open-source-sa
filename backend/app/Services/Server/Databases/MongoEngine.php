@@ -229,6 +229,37 @@ class MongoEngine implements DatabaseEngine
         }
     }
 
+    public function restore(string $database, string $path): void
+    {
+        $client = (string) config('server.databases.engines.mongodb.restore_client', 'mongorestore');
+        // Same 0600 YAML config as dump() — mongorestore cannot read a
+        // defaults-file either, and the password must not reach argv.
+        $dir = rtrim((string) config('server.databases.auth_file_dir', sys_get_temp_dir()), '/');
+        $configFile = $dir.'/db-'.bin2hex(random_bytes(8)).'.yaml';
+        file_put_contents($configFile, 'password: '.json_encode((string) $this->connection->password)."\n");
+        @chmod($configFile, 0600);
+
+        try {
+            $result = $this->serverOps->run([
+                $client, '--config='.$configFile,
+                '--host='.($this->connection->host ?: '127.0.0.1'),
+                '--port='.(int) ($this->connection->port ?: 27017),
+                '--username='.(string) $this->connection->username,
+                '--authenticationDatabase='.(string) (($this->connection->options['authSource'] ?? null) ?: 'admin'),
+                // `--drop` per collection as well as the caller's drop of the
+                // database: a collection present now but absent from the
+                // archive would otherwise survive a "restore".
+                '--nsInclude='.$database.'.*', '--drop', '--gzip', '--archive='.$path,
+            ], ['feature' => 'database', 'engine' => 'mongodb', 'op' => 'restore'], 3600);
+
+            if ($result->failed()) {
+                throw new DatabaseOperationException($result->reference);
+            }
+        } finally {
+            @unlink($configFile);
+        }
+    }
+
     private function must(string $script): void
     {
         $result = $this->run($script);

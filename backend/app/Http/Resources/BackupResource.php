@@ -15,6 +15,11 @@ class BackupResource extends JsonResource
             'id' => $this->id,
             'application_id' => $this->application_id,
             'type' => $this->type->value,
+            // Taken automatically just before a restore overwrote the site.
+            // Worth marking in the list: it is the one entry someone scanning
+            // timestamps after a bad restore is actually looking for, and it
+            // is exempt from retention so it will not quietly disappear.
+            'is_safety' => (bool) $this->is_safety,
             'status' => $this->status->value,
             'status_title' => __('backup.status.'.$this->status->value),
             'type_title' => __('backup.type.'.$this->type->value),

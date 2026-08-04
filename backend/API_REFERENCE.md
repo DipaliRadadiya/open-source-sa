@@ -1419,6 +1419,46 @@ Requires the `git` permission (`view` to read, `manage` to mutate). Connected gi
 
 ---
 
+### Backups
+
+Two entry points, two permissions, on purpose. **`app_backup`** covers configuring and running backups for one application — it belongs to whoever manages that site. **`backup`** covers the cross-application history you restore *from*, because restoring overwrites live data and that deserves one screen with one set of guardrails rather than a copy inside every application.
+
+**`GET /api/backups`** — the restore list, every application (`permission:backup`)
+- Query: `filter[application_id]`, `filter[status]`, `per_page`
+- Response: `{backups: [{id, application_id, type, is_safety, status, status_title, type_title, reason, reason_title, size_bytes, reference, started_at, finished_at, verified_at, created_at, created_at_human}], meta}`
+- **`is_safety: true`** marks a backup taken automatically just before a restore overwrote the site. It is exempt from retention, so it will not quietly disappear — worth badging in the list, because after a bad restore it is the one row someone is actually hunting for.
+- `status`: `pending` | `running` | `verifying` | `verified` | `failed`. **Only `verified` can be restored.**
+
+**`GET|PUT /api/applications/{application}/backup-target`** — settings (`app_backup`, `manage` to write)
+**`POST /api/applications/{application}/backups`** — run one now (`app_backup,manage`, throttle 6/min) → `202`
+
+### Restore — `POST /api/backups/{backup}/restore`, `GET /api/restores`, `GET /api/restores/{restore}`
+
+**This is the only operation in the panel that destroys data.** It replaces a live site's files and drops-and-reimports its databases. The API is deliberately awkward about it.
+
+**`POST /api/backups/{backup}/restore`** (`permission:backup,manage`, throttle 2/min)
+- Body: `confirm` (**required** — the application's domain, typed exactly; anything else is `422`), `type` (optional: `filesystem` | `database` | `full`, defaults to whatever the backup holds)
+- Response `202`: `{"restore": {…}}` — the row exists before a worker picks it up, unlike a backup. "Nothing happened" and "it is about to overwrite my site" must not look the same.
+- `422` when: the confirmation does not match · the backup is not `verified` · its application is gone · a restore is already running for that application · the requested `type` asks for more than the archive holds (`full` from a database-only backup would swap an empty directory over a working site).
+- **The target application is taken from the backup, never from the request.** A restore cannot be aimed at a different site — that is what cloning is for, and doing it here would write one customer's database over another's.
+
+**`GET /api/restores/{restore}`** — poll (throttle 120/min)
+- `{"restore": {id, backup_id, application_id, type, type_title, status, status_title, current_step, current_step_title, step_number, total_steps, reason, reason_title, safety_backup_id, rollback_path, reference, started_at, finished_at, …}}`
+- `status`: `pending` | `running` | `succeeded` | `failed`
+- `current_step` (7, in order): `download_artifact`, `verify_download`, `safety_backup`, `extract_archive`, `restore_database`, `swap_files`, `restart_process`. Drive the bar from `step_number`/`total_steps`; show `current_step_title`.
+- On failure `reason` is the **step that failed** (a stable key), plus `missing_backup` and `crashed`. `reason_title` is the localized explanation and says whether anything was changed. Raw stderr never reaches the client.
+
+**Two things the UI should surface loudly:**
+
+1. **A safety backup is always taken first** — a full backup of the current state, before anything is overwritten. It is not a checkbox and cannot be skipped: someone choosing a restore does not yet know it is the wrong one. `safety_backup_id` on the response is the way back, and it belongs on the success screen, not buried.
+2. **The previous site directory is moved, not deleted.** `rollback_path` is where it went. A restore that "worked" but produced a wrong-looking site is still recoverable by hand while that exists.
+
+**Everything before `restore_database` is non-destructive.** A failed download, a truncated archive, a corrupt tarball or a safety backup that could not be taken all leave the application exactly as it was — the localized `reason_title` for those cases says so explicitly, and the UI should not phrase them as damage.
+
+**`GET /api/restores`** — history (`permission:backup`), paginated, same shape.
+
+---
+
 ## Enums / fixed values
 
 - `is_admin` (on `User`): boolean.

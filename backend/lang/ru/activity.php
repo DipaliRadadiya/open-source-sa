@@ -133,4 +133,6 @@ return [
     'backup.failed' => 'Резервное копирование :application не удалось (:reason)',
     'central.connected' => 'Подключил эту панель к центральной панели',
     'central.disconnected' => 'Отключил эту панель от центральной панели',
+    'backup.restored' => 'Восстановил :application из резервной копии',
+    'backup.restore_failed' => 'Восстановление :application не удалось (:reason)',
 ];

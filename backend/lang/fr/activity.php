@@ -133,4 +133,6 @@ return [
     'backup.failed' => 'Échec de la sauvegarde de :application (:reason)',
     'central.connected' => 'A connecté ce panneau au panneau central',
     'central.disconnected' => 'A déconnecté ce panneau du panneau central',
+    'backup.restored' => 'A restauré :application depuis une sauvegarde',
+    'backup.restore_failed' => 'Échec de la restauration de :application (:reason)',
 ];

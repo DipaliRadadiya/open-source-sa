@@ -43,6 +43,11 @@ class PruneOldBackups implements BackupStep
         $expired = Backup::query()
             ->where('backup_target_id', $context->target->id)
             ->where('status', BackupStatus::Verified->value)
+            // A safety backup is the only way back from a restore that turned
+            // out to be wrong. Letting retention delete one — to make room for
+            // a scheduled backup of the state the user is trying to escape —
+            // would remove the parachute at exactly the wrong moment.
+            ->where('is_safety', false)
             ->whereKeyNot($context->backup->id)
             ->orderByDesc('id')
             // Skip the ones we are keeping; everything after is surplus. The

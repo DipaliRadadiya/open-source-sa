@@ -28,6 +28,12 @@ return [
         'monthly' => 'Mensual',
     ],
     'errors' => [
+        'restore_unverified' => 'Esta copia nunca se verificó, así que no se puede restaurar.',
+        'restore_no_application' => 'La aplicación de esta copia ya no existe.',
+        'restore_confirm' => 'Escribe el dominio de la aplicación exactamente para confirmar la restauración.',
+        'restore_already_running' => 'Ya hay una restauración en curso para esta aplicación.',
+        'restore_no_database' => 'Esta copia no contiene ninguna base de datos.',
+        'restore_no_files' => 'Esta copia no contiene archivos.',
         'not_configured' => 'Las copias de seguridad aún no están configuradas para esta aplicación.',
         'already_running' => 'Ya hay una copia de seguridad en curso para esta aplicación.',
         'dump_database' => 'No se pudo volcar la base de datos, así que no se subió nada.',
@@ -36,5 +42,35 @@ return [
         'verify_artifact' => 'La subida no coincide con lo enviado, así que no se puede confiar en esta copia. No se eliminó ninguna copia antigua.',
         'unknown' => 'La copia de seguridad falló por un motivo desconocido.',
         'prune_old_backups' => 'No se pudieron eliminar las copias antiguas. La nueva copia está a salvo; el almacenamiento puede tener más copias de las configuradas.',
+    ],
+
+    'restore_status' => [
+        'pending' => 'En cola',
+        'running' => 'Restaurando',
+        'succeeded' => 'Restaurado',
+        'failed' => 'La restauración falló',
+    ],
+
+    'restore_steps' => [
+        'download_artifact' => 'Descargando la copia de seguridad',
+        'verify_download' => 'Comprobando que la copia está intacta',
+        'safety_backup' => 'Copiando primero el estado actual',
+        'extract_archive' => 'Descomprimiendo la copia',
+        'restore_database' => 'Restaurando la base de datos',
+        'swap_files' => 'Colocando los archivos',
+        'restart_process' => 'Iniciando la aplicación',
+    ],
+
+    'restore_errors' => [
+        'download_artifact' => 'No se pudo descargar la copia. No se cambió nada en el servidor.',
+        'verify_download' => 'La copia descargada está incompleta o dañada, así que no se usó. No se cambió nada en el servidor.',
+        'safety_backup' => 'No se pudo copiar el estado actual, así que se detuvo la restauración. No se sobrescribió nada.',
+        'extract_archive' => 'No se pudo descomprimir la copia. No se cambió nada en el servidor.',
+        'restore_database' => 'No se pudo restaurar la base de datos. La copia de seguridad previa conserva el estado anterior.',
+        'swap_files' => 'No se pudieron colocar los archivos. Se restauró el directorio anterior del sitio.',
+        'restart_process' => 'Se restauraron los archivos y la base de datos, pero la aplicación no arrancó. Revisa sus registros.',
+        'missing_backup' => 'La copia se eliminó antes de que pudiera empezar la restauración.',
+        'crashed' => 'La restauración se detuvo inesperadamente. Revisa la copia de seguridad antes de reintentar.',
+        'unknown' => 'La restauración falló por un motivo desconocido.',
     ],
 ];
