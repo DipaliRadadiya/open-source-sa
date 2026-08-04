@@ -336,12 +336,17 @@ return [
         'nginx' => [
             'driver' => NginxDriver::class,
             'sites_dir' => env('SERVER_NGINX_SITES_DIR', '/etc/nginx/sites-enabled'),
+            // Where the vhost templates point `access_log` / `error_log`.
+            'log_dir' => env('SERVER_NGINX_LOG_DIR', '/var/log/nginx'),
             // Which PHP stack this web server implies — see `php_stacks`.
             'php_stack' => 'fpm',
         ],
         'apache' => [
             'driver' => ApacheDriver::class,
             'sites_dir' => env('SERVER_APACHE_SITES_DIR', '/etc/apache2/sites-enabled'),
+            // `${APACHE_LOG_DIR}` in the templates, resolved — Apache expands
+            // it from envvars at start, which we cannot read.
+            'log_dir' => env('SERVER_APACHE_LOG_DIR', '/var/log/apache2'),
             'php_stack' => 'fpm',
         ],
 

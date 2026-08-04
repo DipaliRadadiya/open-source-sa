@@ -55,4 +55,18 @@ interface WebServerDriver
 
     /** Apply the configuration without dropping connections. */
     public function reload(): ServerOpsResult;
+
+    /**
+     * Where this driver writes one application's access and error logs.
+     *
+     * Belongs to the driver for the same reason configPath() does: the three
+     * web servers put them in three different places — nginx and Apache under
+     * /var/log named after the domain, OpenLiteSpeed inside the site's own
+     * directory — and the vhost template that creates them is the driver's.
+     * Anything else would be a second copy of that decision, free to drift
+     * from the template the moment either changes.
+     *
+     * @return array<string, string> keyed `access` and `error`
+     */
+    public function logPaths(Application $application): array;
 }

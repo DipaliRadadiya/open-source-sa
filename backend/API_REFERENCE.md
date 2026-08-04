@@ -1462,6 +1462,36 @@ Requires the `git` permission (`view` to read, `manage` to mutate). Connected gi
 
 ---
 
+### Application logs (App sidebar → Logs)
+
+A site's own logs. Read-only, gated by **`app_log`** — deliberately *not* the server-wide `logs` permission. A site's access log and the machine's `auth.log` are different things to be trusted with, and reusing one grant across that line would be privilege escalation wearing a filter.
+
+**`GET /api/applications/{application}/logs`** — which sources this site has
+
+```jsonc
+{ "logs": [
+  { "key": "access",      "label": "Access log",         "kind": "file",    "exists": true  },
+  { "key": "error",       "label": "Error log",          "kind": "file",    "exists": true  },
+  { "key": "application", "label": "Application output", "kind": "journal", "exists": true  }
+] }
+```
+
+- `label` is localized — render it, don't map the key yourself.
+- **`application` only appears for a site that runs a process** (Node and friends). For those, the access and error logs describe the **reverse proxy**, not the app: nginx will happily show a tidy 502 while the actual stack trace is in the journal. If you only surface two tabs, a Node user is looking at the wrong file at the worst moment.
+- `exists: false` is normal, not an error — a site nobody has visited has no access log yet.
+
+**`GET /api/applications/{application}/logs/{key}`** — read one (throttle 120/min)
+- Query: `lines` (1–5000, default 200), `grep` (≤200 chars)
+- Response: `{"log": {"key", "label", "kind", "exists", "lines": [...], "truncated": bool}}`
+- **`grep` is a literal, case-insensitive substring — not a regex.** `.*` matches the characters `.*`. A user-supplied pattern run over a multi-megabyte log is a denial of service waiting to happen, and nobody searching a log expects regex semantics by surprise.
+- `truncated: true` means there was more above the window; raise `lines` or narrow the filter.
+- Missing file → `200` with `exists: false` and no lines. Unknown key → `404`. `lines` over the cap → `422`.
+- **The client names a source by key; the path is resolved server-side** from the web-server driver, so no request can aim this at a file of its choosing.
+
+Paths differ per web server — nginx and Apache write `<domain>.access.log`/`.error.log` under `/var/log`, OpenLiteSpeed writes inside the site's own directory — which is why the driver owns them and the API only ever exposes keys.
+
+---
+
 ### Application environment (App sidebar → Environment)
 
 The site's `.env`, edited as one file. `app_environment` (`manage` to write).

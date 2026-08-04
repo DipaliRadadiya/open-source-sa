@@ -211,4 +211,21 @@ class OlsDriver extends AbstractWebServerDriver
     {
         return (array) config('server.web_server_drivers.openlitespeed.reload_command');
     }
+
+    /**
+     * OpenLiteSpeed keeps a site's logs inside the site's own directory
+     * (`$VH_ROOT/logs` in the vhost template) rather than under /var/log, so
+     * these are owned by the site's system user, not root.
+     *
+     * @return array<string, string>
+     */
+    public function logPaths(Application $application): array
+    {
+        $root = $this->vhRoot($application);
+
+        return [
+            'access' => "{$root}/logs/access.log",
+            'error' => "{$root}/logs/error.log",
+        ];
+    }
 }
