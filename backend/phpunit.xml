@@ -19,6 +19,11 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- The encrypted cast (GitAccount::token, StorageDestination::access_key + secret_key,
+             Application::webhook_secret) needs a 32-byte key. A static, fixture-only key
+             used solely inside the test env means a leaked ciphertext from a test run cannot
+             decrypt any other row, anywhere. -->
+        <env name="APP_KEY" value="base64:oJWd0mTT0XuR0Wvpr1QBpOauWIc3ZvDL0VVjBpMYDvk="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
