@@ -1,0 +1,47 @@
+<?php
+
+return [
+    'status' => [
+        'pending' => 'Wird gestartet',
+        'running' => 'Wird aktualisiert',
+        'succeeded' => 'Aktuell',
+        'failed' => 'Update fehlgeschlagen',
+    ],
+    'steps' => [
+        'maintenance_on' => 'Panel wird in den Wartungsmodus versetzt',
+        'backup_database' => 'Datenbank wird gesichert',
+        'fetch_release' => 'Version wird heruntergeladen',
+        'checkout_release' => 'Wechsel zur neuen Version',
+        'composer_install' => 'PHP-Abhängigkeiten werden installiert',
+        'migrate' => 'Datenbankschema wird aktualisiert',
+        'seed_permissions' => 'Berechtigungen werden synchronisiert',
+        'optimize' => 'Caches werden neu aufgebaut',
+        'frontend_build' => 'Oberfläche wird gebaut (das ist der langsame Teil)',
+        'restart_services' => 'Dienste werden neu gestartet',
+        'maintenance_off' => 'Wartungsmodus wird verlassen',
+        'health_check' => 'Neue Version wird überprüft',
+        'rollback' => 'Vorherige Version wird wiederhergestellt',
+    ],
+    'reasons' => [
+        'launch' => 'Das Update konnte nicht gestartet werden.',
+        'maintenance_on' => 'Das Panel konnte nicht in den Wartungsmodus versetzt werden.',
+        'backup_database' => 'Die Datenbanksicherung schlug fehl, daher wurde das Update abgebrochen, bevor etwas geändert wurde.',
+        'fetch_release' => 'Die Version konnte nicht heruntergeladen werden. Prüfen Sie die Internetverbindung des Servers.',
+        'checkout_release' => 'Die neue Version konnte nicht angewendet werden.',
+        'composer_install' => 'PHP-Abhängigkeiten konnten nicht installiert werden.',
+        'migrate' => 'Die Schemaaktualisierung schlug fehl. Die zuvor erstellte Sicherung liegt in storage/app/panel-backups.',
+        'seed_permissions' => 'Berechtigungen konnten nicht synchronisiert werden.',
+        'optimize' => 'Caches konnten nicht neu aufgebaut werden.',
+        'frontend_build' => 'Die Oberfläche konnte nicht gebaut werden. Meist fehlt dem Server Arbeitsspeicher oder Speicherplatz.',
+        'restart_services' => 'Dienste konnten nicht neu gestartet werden.',
+        'maintenance_off' => 'Der Wartungsmodus konnte nicht beendet werden.',
+        'health_check' => 'Das aktualisierte Panel antwortete nicht korrekt, daher wurde die vorherige Version wiederhergestellt.',
+        'unknown' => 'Das Update schlug aus unbekanntem Grund fehl.',
+    ],
+    'errors' => [
+        'in_progress' => 'Es läuft bereits ein Update.',
+        'no_update' => 'Das Panel ist bereits auf dem neuesten Stand.',
+        'bad_version' => 'Die veröffentlichte Version konnte nicht gelesen werden.',
+        'preflight_failed' => 'Der Server ist nicht bereit für ein Update. Prüfen Sie die Vorabprüfungen.',
+    ],
+];

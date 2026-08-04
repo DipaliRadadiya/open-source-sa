@@ -8,11 +8,18 @@ use Illuminate\Support\Facades\Route;
 |
 | Sits under the `auth:sanctum` + `can:access-admin` group in routes/api.php.
 |
-| Read-only for now: it reports installed version, published version and
-| whether an update could run here. Throttled because `?refresh=1` makes an
-| outbound call to the release host, and that budget is shared per-IP with
-| everything else on the box.
+| `show` is throttled because ?refresh=1 makes an outbound call to the release
+| host on a per-IP budget shared with everything else on the box. `store` is
+| throttled hard: it takes the panel down and rebuilds it.
 */
 
 Route::get('/panel-update', [PanelUpdateController::class, 'show'])
     ->middleware('throttle:30,1');
+
+Route::post('/panel-update', [PanelUpdateController::class, 'store'])
+    ->middleware('throttle:3,1');
+
+// Polled every few seconds while the progress bar moves, so it is deliberately
+// cheap — no release-host call, just the row and its state file.
+Route::get('/panel-update/{panelUpdate}', [PanelUpdateController::class, 'status'])
+    ->middleware('throttle:120,1');

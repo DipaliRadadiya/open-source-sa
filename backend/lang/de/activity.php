@@ -125,4 +125,6 @@ return [
     'database.engine_installed' => ':engine-Datenbank-Engine installiert',
     'database.engine_install_failed' => 'Die :engine-Datenbank-Engine konnte nicht installiert werden (:reason)',
     'php.ini_updated' => 'Konfiguration von PHP :version aktualisiert',
+    'panel_update.started' => 'Panel-Update von :from_version auf :to_version gestartet',
+    'panel_update.failed' => 'Panel-Update fehlgeschlagen (:reason)',
 ];

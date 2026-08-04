@@ -125,4 +125,6 @@ return [
     'database.engine_installed' => 'Установил движок базы данных :engine',
     'database.engine_install_failed' => 'Не удалось установить движок базы данных :engine (:reason)',
     'php.ini_updated' => 'Обновлена конфигурация PHP :version',
+    'panel_update.started' => 'Запустил обновление панели с :from_version до :to_version',
+    'panel_update.failed' => 'Обновление панели не удалось (:reason)',
 ];

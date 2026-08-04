@@ -1,0 +1,47 @@
+<?php
+
+return [
+    'status' => [
+        'pending' => 'Démarrage',
+        'running' => 'Mise à jour en cours',
+        'succeeded' => 'À jour',
+        'failed' => 'Échec de la mise à jour',
+    ],
+    'steps' => [
+        'maintenance_on' => 'Passage du panneau en mode maintenance',
+        'backup_database' => 'Sauvegarde de la base de données',
+        'fetch_release' => 'Téléchargement de la version',
+        'checkout_release' => 'Passage à la nouvelle version',
+        'composer_install' => 'Installation des dépendances PHP',
+        'migrate' => 'Mise à jour du schéma de la base de données',
+        'seed_permissions' => 'Synchronisation des permissions',
+        'optimize' => 'Reconstruction des caches',
+        'frontend_build' => 'Compilation de l’interface (c’est la partie lente)',
+        'restart_services' => 'Redémarrage des services',
+        'maintenance_off' => 'Sortie du mode maintenance',
+        'health_check' => 'Vérification de la nouvelle version',
+        'rollback' => 'Restauration de la version précédente',
+    ],
+    'reasons' => [
+        'launch' => 'La mise à jour n’a pas pu être lancée.',
+        'maintenance_on' => 'Le panneau n’a pas pu être mis en mode maintenance.',
+        'backup_database' => 'La sauvegarde de la base de données a échoué ; la mise à jour s’est arrêtée sans rien modifier.',
+        'fetch_release' => 'La version n’a pas pu être téléchargée. Vérifiez que le serveur accède à internet.',
+        'checkout_release' => 'La nouvelle version n’a pas pu être appliquée au répertoire d’installation.',
+        'composer_install' => 'Les dépendances PHP n’ont pas pu être installées.',
+        'migrate' => 'La mise à jour du schéma a échoué. La sauvegarde préalable se trouve dans storage/app/panel-backups.',
+        'seed_permissions' => 'Les permissions n’ont pas pu être synchronisées.',
+        'optimize' => 'Les caches n’ont pas pu être reconstruits.',
+        'frontend_build' => 'L’interface n’a pas pu être compilée. Cela signifie généralement un manque de mémoire ou d’espace disque.',
+        'restart_services' => 'Les services n’ont pas pu être redémarrés.',
+        'maintenance_off' => 'Le panneau n’a pas pu sortir du mode maintenance.',
+        'health_check' => 'Le panneau mis à jour n’a pas répondu correctement ; la version précédente a été restaurée.',
+        'unknown' => 'La mise à jour a échoué pour une raison inconnue.',
+    ],
+    'errors' => [
+        'in_progress' => 'Une mise à jour est déjà en cours.',
+        'no_update' => 'Le panneau est déjà à la version la plus récente.',
+        'bad_version' => 'La version publiée n’a pas pu être lue.',
+        'preflight_failed' => 'Le serveur n’est pas prêt. Consultez les vérifications préalables.',
+    ],
+];

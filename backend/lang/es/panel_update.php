@@ -1,0 +1,47 @@
+<?php
+
+return [
+    'status' => [
+        'pending' => 'Iniciando',
+        'running' => 'Actualizando',
+        'succeeded' => 'Actualizado',
+        'failed' => 'La actualización falló',
+    ],
+    'steps' => [
+        'maintenance_on' => 'Poniendo el panel en modo de mantenimiento',
+        'backup_database' => 'Copiando la base de datos',
+        'fetch_release' => 'Descargando la versión',
+        'checkout_release' => 'Cambiando a la nueva versión',
+        'composer_install' => 'Instalando dependencias PHP',
+        'migrate' => 'Actualizando el esquema de la base de datos',
+        'seed_permissions' => 'Sincronizando permisos',
+        'optimize' => 'Reconstruyendo cachés',
+        'frontend_build' => 'Compilando la interfaz (esta es la parte lenta)',
+        'restart_services' => 'Reiniciando servicios',
+        'maintenance_off' => 'Saliendo del modo de mantenimiento',
+        'health_check' => 'Verificando la nueva versión',
+        'rollback' => 'Restaurando la versión anterior',
+    ],
+    'reasons' => [
+        'launch' => 'No se pudo iniciar la actualización.',
+        'maintenance_on' => 'No se pudo poner el panel en modo de mantenimiento.',
+        'backup_database' => 'La copia de la base de datos falló, así que la actualización se detuvo sin cambiar nada.',
+        'fetch_release' => 'No se pudo descargar la versión. Comprueba que el servidor tenga acceso a internet.',
+        'checkout_release' => 'No se pudo aplicar la nueva versión al directorio de instalación.',
+        'composer_install' => 'No se pudieron instalar las dependencias PHP.',
+        'migrate' => 'La actualización del esquema falló. La copia previa está en storage/app/panel-backups.',
+        'seed_permissions' => 'No se pudieron sincronizar los permisos.',
+        'optimize' => 'No se pudieron reconstruir las cachés.',
+        'frontend_build' => 'No se pudo compilar la interfaz. Normalmente significa que el servidor se quedó sin memoria o disco.',
+        'restart_services' => 'No se pudieron reiniciar los servicios.',
+        'maintenance_off' => 'No se pudo sacar el panel del modo de mantenimiento.',
+        'health_check' => 'El panel actualizado no respondió correctamente, así que se restauró la versión anterior.',
+        'unknown' => 'La actualización falló por un motivo desconocido.',
+    ],
+    'errors' => [
+        'in_progress' => 'Ya hay una actualización en curso.',
+        'no_update' => 'El panel ya está en la versión más reciente.',
+        'bad_version' => 'No se pudo leer la versión publicada.',
+        'preflight_failed' => 'El servidor no está listo para actualizar. Revisa las comprobaciones previas.',
+    ],
+];

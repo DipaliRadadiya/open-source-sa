@@ -29,6 +29,35 @@ return [
      * + next build) is by far the heaviest step: install.sh calls it "the slow
      * part" and it is what fails first on a small VPS.
      */
+    /*
+     * Where the runner's script and state file live. Outside the repository
+     * on purpose: both would be destroyed by the checkout they are recording.
+     */
+    'state_dir' => env('PANEL_UPDATE_STATE_DIR', '/var/lib/panel-update'),
+
+    /*
+     * PHP the update shells out to. The running process cannot be asked — it
+     * is php-fpm, and the script must survive that being reloaded.
+     */
+    'php_version' => env('PANEL_PHP_VERSION', '8.4'),
+
+    /*
+     * Directory holding the node binary install.sh placed on the box. Pinned
+     * into PATH for the frontend build: npm's shebang is `env node`, so an
+     * unpinned PATH silently builds with whatever node is first.
+     */
+    'node_bin_dir' => env('PANEL_NODE_BIN_DIR', '/opt/fnm/aliases/default/bin'),
+
+    /*
+     * Units the update reloads/restarts. install.sh names them from the panel
+     * slug, so an operator who changed the slug must set these too.
+     */
+    'services' => [
+        'php_fpm' => env('PANEL_PHP_FPM_SERVICE', 'php8.4-fpm'),
+        'frontend' => env('PANEL_FRONTEND_SERVICE', 'panel-frontend.service'),
+        'queue' => env('PANEL_QUEUE_SERVICE', 'panel-queue.service'),
+    ],
+
     'preflight' => [
         'min_free_disk_mb' => (int) env('PANEL_UPDATE_MIN_DISK_MB', 2048),
         'min_free_memory_mb' => (int) env('PANEL_UPDATE_MIN_MEMORY_MB', 768),

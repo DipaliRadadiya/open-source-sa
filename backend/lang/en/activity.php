@@ -125,4 +125,6 @@ return [
     'database.engine_installed' => 'Installed the :engine database engine',
     'database.engine_install_failed' => 'Could not install the :engine database engine (:reason)',
     'php.ini_updated' => 'Updated the PHP :version configuration',
+    'panel_update.started' => 'Started a panel update from :from_version to :to_version',
+    'panel_update.failed' => 'Panel update failed (:reason)',
 ];
