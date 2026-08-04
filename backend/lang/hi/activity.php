@@ -127,4 +127,8 @@ return [
     'php.ini_updated' => 'PHP :version की कॉन्फ़िगरेशन अपडेट की',
     'panel_update.started' => ':from_version से :to_version तक पैनल अद्यतन शुरू किया',
     'panel_update.failed' => 'पैनल अद्यतन विफल (:reason)',
+    'backup.configured' => ':name के लिए बैकअप सेट किया (:frequency)',
+    'backup.updated' => ':name की बैकअप सेटिंग्स अद्यतन कीं',
+    'backup.completed' => ':application का बैकअप लिया',
+    'backup.failed' => ':application का बैकअप विफल रहा (:reason)',
 ];

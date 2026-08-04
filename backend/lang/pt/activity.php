@@ -127,4 +127,8 @@ return [
     'php.ini_updated' => 'Atualizou a configuração do PHP :version',
     'panel_update.started' => 'Iniciou uma atualização do painel de :from_version para :to_version',
     'panel_update.failed' => 'A atualização do painel falhou (:reason)',
+    'backup.configured' => 'Configurou as cópias de segurança de :name (:frequency)',
+    'backup.updated' => 'Atualizou as definições de cópia de :name',
+    'backup.completed' => 'Fez a cópia de segurança de :application',
+    'backup.failed' => 'A cópia de segurança de :application falhou (:reason)',
 ];

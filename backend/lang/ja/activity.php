@@ -127,4 +127,8 @@ return [
     'php.ini_updated' => 'PHP :version の設定を更新しました',
     'panel_update.started' => ':from_version から :to_version へのパネル更新を開始しました',
     'panel_update.failed' => 'パネルの更新に失敗しました (:reason)',
+    'backup.configured' => ':name のバックアップを設定しました (:frequency)',
+    'backup.updated' => ':name のバックアップ設定を更新しました',
+    'backup.completed' => ':application をバックアップしました',
+    'backup.failed' => ':application のバックアップに失敗しました (:reason)',
 ];

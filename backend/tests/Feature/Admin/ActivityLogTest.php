@@ -147,10 +147,10 @@ it('returns the known distinct types and actions for filter dropdowns', function
         ->getJson('/api/admin/activity-log/filters');
 
     $response->assertOk()
-        ->assertJsonPath('types', ['application', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'role', 'server', 'service', 'setting', 'system_user', 'user'])
-        // 98, not 99: panel_update adds `started` and `failed`, but `failed`
-        // is already a verb on another type and `all` is deduped.
-        ->assertJsonCount(98, 'actions.all');
+        ->assertJsonPath('types', ['application', 'backup', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'role', 'server', 'service', 'setting', 'system_user', 'user'])
+        // Deduped across types: backup adds `configured` and `completed`,
+        // while its `failed` and `updated` already exist elsewhere.
+        ->assertJsonCount(100, 'actions.all');
     // `all` = every verb; per-type keys are scoped to that type's verbs.
     expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'downloaded', 'cleaned', 'schedule_updated', 'profile_updated', 'user_created', 'connection_updated');
     expect($response->json('actions.application'))->toContain('webhook_enabled', 'webhook_disabled', 'webhook_rotated', 'webhook_deployed');

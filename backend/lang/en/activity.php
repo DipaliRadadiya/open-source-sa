@@ -127,4 +127,8 @@ return [
     'php.ini_updated' => 'Updated the PHP :version configuration',
     'panel_update.started' => 'Started a panel update from :from_version to :to_version',
     'panel_update.failed' => 'Panel update failed (:reason)',
+    'backup.configured' => 'Set up backups for :name (:frequency)',
+    'backup.updated' => 'Updated the backup settings for :name',
+    'backup.completed' => 'Backed up :application',
+    'backup.failed' => 'Backup of :application failed (:reason)',
 ];

@@ -22,6 +22,7 @@ return [
 
         'server' => [
             'application',
+            'backup',
             'cronjob',
             'database',
             'disk_cleaner',
