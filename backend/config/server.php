@@ -45,6 +45,11 @@ use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\TmpTarget;
+use App\Services\Server\Doctor\Checks\DatabaseCheck;
+use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
+use App\Services\Server\Doctor\Checks\PrivilegeCheck;
+use App\Services\Server\Doctor\Checks\ServicesCheck;
+use App\Services\Server\Doctor\Checks\WritablePathsCheck;
 use App\Services\Server\Php\Stacks\FpmPhpStack;
 use App\Services\Server\Php\Stacks\LsphpPhpStack;
 use App\Services\Server\WebServers\ApacheDriver;
@@ -99,6 +104,27 @@ return [
             'hostnamectl', 'timedatectl', 'df', 'du',
             'ps', 'kill', 'ss', 'curl', 'unzip',
             'tar', 'git', 'fnm', 'wp',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Self-check (doctor)
+    |--------------------------------------------------------------------------
+    |
+    | Checks run against the real server by `panel:doctor` and the admin
+    | self-check screen. Order is display order, cheapest and most fundamental
+    | first: if privilege fails, most of the rest is noise.
+    |
+    */
+
+    'doctor' => [
+        'checks' => [
+            PrivilegeCheck::class,
+            ServicesCheck::class,
+            WritablePathsCheck::class,
+            DatabaseCheck::class,
+            HealthEndpointCheck::class,
         ],
     ],
 

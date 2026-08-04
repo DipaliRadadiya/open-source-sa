@@ -198,6 +198,15 @@ Distinct `type`/`action` values, for populating a frontend filter dropdown. Sour
 - Response: `{"types": string[], "actions": {"all": string[], "<type>": string[], ...}, "scopes": [{value, label}]}` — `actions.all` is every verb (use on initial load / "any type"); `actions.<type>` is scoped to that type's verbs (use for a dependent action dropdown once a type is picked). No client-side merging needed.
 - **`scopes` always lists both** here, unlike the personal version — the admin log is the whole catalog, so an option with no rows behind it today is still the right option to offer. Labels are localized; don't hardcode them.
 
+### `GET /admin/doctor`
+Installation self-check. Runs each check **against the real server** — shells out to sudo and systemctl, reads the filesystem, calls the panel's own health endpoint over HTTP. Read-only: a check may never change the server to find out whether the server works.
+- Rate limit: 10/min (it is a diagnostic, not something to poll)
+- Response: `{"doctor": {"healthy": bool, "passed": int, "failed": int, "warnings": int, "checks": [{"key", "title", "status", "detail", "fix"}]}}`
+- `status`: `pass` | `warn` | `fail`. **Warnings do not make an installation unhealthy** — `healthy` is false only when something *failed*.
+- `title` and `fix` are localized; `detail` is deliberately **not** — it carries evidence (a version, a path, a unit name) for an operator, not prose for an end user. `fix` is null when the check passed.
+- Checks, in order: `privilege`, `services`, `writable_paths`, `database`, `health_endpoint`.
+- Same thing is available on the box as `php artisan panel:doctor` (add `--json` for this shape). It exits non-zero when unhealthy, and `install.sh` runs it at the end so the installer cannot report success on a panel that cannot work.
+
 ### Panel self-update — `GET|POST /admin/panel-update`, `GET /admin/panel-update/{panelUpdate}`
 
 Updates the panel itself: fetches a published release, switches the installation to it, reinstalls dependencies, migrates, rebuilds the interface and restarts services. **The panel goes down for several minutes while this runs.** Hosted sites are unaffected — the web server serves them directly and the panel is not in their request path — so the only person who sees downtime is the admin watching the progress bar.

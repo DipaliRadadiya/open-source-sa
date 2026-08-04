@@ -1374,6 +1374,24 @@ finish() {
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan route:cache' -- "$backend" "/usr/bin/php${PHP_VERSION}"
     ok "configuration cached"
 
+    # Prove the panel actually works before claiming the install succeeded.
+    # Everything above this line only shows that commands ran as *root*; the
+    # panel runs as an unprivileged account, and the gap between those two is
+    # where a whole non-functional install can hide. Run as APP_USER for that
+    # reason — as root it would pass regardless.
+    #
+    # Not fatal: the panel is installed either way, and the failures are
+    # usually fixable in place. But it is printed loudly, because an installer
+    # that says "done" over a broken panel is worse than one that fails.
+    step "Checking the installation"
+    if (( DRY_RUN )); then
+        printf '     %s$ artisan panel:doctor%s\n' "$DIM" "$RESET"
+    elif sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:doctor' -- "$backend" "/usr/bin/php${PHP_VERSION}"; then
+        ok "all checks passed"
+    else
+        warn "some checks failed — see above. The panel is installed but parts of it will not work until these are fixed."
+    fi
+
     local scheme="$SCHEME"
 
     printf '\n%s%s The control panel is installed%s\n\n' "$BOLD" "$GREEN" "$RESET"
