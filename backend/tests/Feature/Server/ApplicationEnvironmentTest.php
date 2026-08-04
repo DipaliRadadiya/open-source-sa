@@ -1,0 +1,237 @@
+<?php
+
+use App\Models\ActivityLog;
+use App\Models\Application;
+use App\Models\SystemUser;
+use App\Models\User;
+use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Process;
+
+/*
+ * The endpoint. Every file operation here goes through ServerOps because the
+ * file belongs to the site's system user and the panel account cannot open it,
+ * so the fake stands in for a real directory: `cat` returns what is "on disk",
+ * `tee` writes to it, `test` answers existence.
+ */
+
+beforeEach(function () {
+    $this->seed(PermissionSeeder::class);
+    $this->admin = User::factory()->admin()->create();
+
+    $systemUser = SystemUser::create(['username' => 'envowner', 'home_path' => '/home/envowner']);
+
+    $this->application = Application::create([
+        'system_user_id' => $systemUser->id,
+        'name' => 'Deployed Site',
+        'domain' => 'deployed.test',
+        'site_type' => 'git',            // git sites keep a .env
+        'serving_profile' => 'php',
+        'status' => 'active',
+        'web_root' => '/',
+    ]);
+
+    $this->disk = ['/home/envowner/deployed.test/.env' => "APP_ENV=production\nAPP_KEY=base64:abc\nDB_PASSWORD=hunter2\n"];
+    $this->present = ['/home/envowner/deployed.test/artisan'];
+    $this->backupNames = [];
+    $this->written = null;
+});
+
+/**
+ * A fake server with a filesystem. `$this->disk` is the file contents,
+ * `$this->present` the paths that exist but have no readable content.
+ */
+function fakeSite(): void
+{
+    Process::fake(function ($process) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        [$binary] = $args;
+
+        $disk = test()->disk;
+        $present = array_merge(test()->present, array_keys($disk));
+
+        if ($binary === 'test') {
+            return Process::result(exitCode: in_array($args[2] ?? '', $present, true) ? 0 : 1);
+        }
+
+        if ($binary === 'cat') {
+            $path = $args[1] ?? '';
+
+            return array_key_exists($path, $disk)
+                ? Process::result(output: $disk[$path])
+                : Process::result(errorOutput: 'No such file', exitCode: 1);
+        }
+
+        if ($binary === 'tee') {
+            test()->written = $process->input ?? '';
+
+            return Process::result(exitCode: 0);
+        }
+
+        if ($binary === 'find') {
+            return Process::result(output: implode("\n", test()->backupNames));
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
+
+function envUrl(string $suffix = ''): string
+{
+    return '/api/applications/'.test()->application->id.'/environment'.$suffix;
+}
+
+it('returns the file, its parsed variables and what it thinks of them', function () {
+    fakeSite();
+
+    $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
+
+    expect($response->json('environment.exists'))->toBeTrue()
+        ->and($response->json('environment.framework'))->toBe('laravel')
+        ->and($response->json('environment.framework_title'))->toBe('Laravel')
+        ->and($response->json('environment.raw'))->toContain('APP_ENV=production')
+        ->and($response->json('environment.path'))->toBe('/home/envowner/deployed.test/.env');
+
+    // The parsed view the UI renders values from, with the secret withheld.
+    $variables = collect($response->json('environment.variables'));
+    expect($variables->firstWhere('key', 'APP_ENV')['value'])->toBe('production')
+        ->and($variables->firstWhere('key', 'DB_PASSWORD')['value'])->toBeNull()
+        ->and($variables->firstWhere('key', 'DB_PASSWORD')['secret'])->toBeTrue();
+});
+
+it('never sends a secret value in any field of the response', function () {
+    fakeSite();
+
+    $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
+
+    // `raw` is the editor's content and legitimately holds it; nothing else
+    // should. This is the assertion that would catch a future field added
+    // without thinking about it.
+    $withoutRaw = $response->json('environment');
+    unset($withoutRaw['raw']);
+
+    expect(json_encode($withoutRaw))->not->toContain('hunter2');
+});
+
+it('reports that a Laravel site with a cached config needs applying', function () {
+    $this->present[] = '/home/envowner/deployed.test/bootstrap/cache/config.php';
+    fakeSite();
+
+    // Without this the panel says "Saved" and the site carries on reading the
+    // cached values — the failure has no error and no symptom.
+    expect($this->actingAs($this->admin)->getJson(envUrl())->json('environment.requires_apply'))
+        ->toBeTrue();
+});
+
+it('does not claim an apply is needed when there is no cache', function () {
+    fakeSite();
+
+    expect($this->actingAs($this->admin)->getJson(envUrl())->json('environment.requires_apply'))
+        ->toBeFalse();
+});
+
+it('saves the file and records which keys changed, never their values', function () {
+    fakeSite();
+
+    $this->actingAs($this->admin)
+        ->putJson(envUrl(), ['raw' => "APP_ENV=production\nAPP_KEY=base64:abc\nDB_PASSWORD=newsecret\nMAIL_FROM=hi@x.test\n"])
+        ->assertOk();
+
+    expect($this->written)->toContain('MAIL_FROM=hi@x.test');
+
+    $entry = ActivityLog::query()->where('action', 'environment_updated')->firstOrFail();
+
+    // A password change must appear as a changed key — comparing the parsed
+    // values would compare null to null and record nothing.
+    expect($entry->properties['keys'])->toContain('DB_PASSWORD')
+        ->and($entry->properties['keys'])->toContain('MAIL_FROM')
+        ->and(json_encode($entry->properties))->not->toContain('newsecret')
+        ->and(json_encode($entry->properties))->not->toContain('hunter2');
+});
+
+it('refuses to save a file it cannot parse', function () {
+    fakeSite();
+
+    $this->actingAs($this->admin)
+        ->putJson(envUrl(), ['raw' => "APP_ENV=production\nTHIS LINE IS BROKEN\n"])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('raw');
+
+    // Nothing written: installing a file the parser cannot read would take the
+    // site down, and the user is one keystroke from fixing it.
+    expect($this->written)->toBeNull();
+});
+
+it('saves a file with warnings, because they are the user\'s business', function () {
+    fakeSite();
+
+    // Debug mode on is worth saying loudly and not worth blocking — it is a
+    // legitimate thing to do while chasing a bug.
+    $this->actingAs($this->admin)
+        ->putJson(envUrl(), ['raw' => "APP_ENV=production\nAPP_KEY=base64:abc\nAPP_DEBUG=true\n"])
+        ->assertOk();
+
+    expect($this->written)->toContain('APP_DEBUG=true');
+});
+
+describe('site types that keep no .env', function () {
+    beforeEach(function () {
+        $this->wordpress = Application::create([
+            'system_user_id' => $this->application->system_user_id,
+            'name' => 'Blog',
+            'domain' => 'blog.test',
+            'site_type' => 'wordpress',
+            'serving_profile' => 'php',
+            'status' => 'active',
+            'web_root' => '/',
+        ]);
+    });
+
+    it('is absent from the application sidebar', function () {
+        fakeSite();
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/api/permissions?level=application&application_id='.$this->wordpress->id)
+            ->assertOk();
+
+        expect(collect($response->json('permissions'))->pluck('name'))->not->toContain('app_environment');
+    });
+
+    it('is refused at the endpoint too, not just hidden in the nav', function () {
+        fakeSite();
+
+        // A missing nav item is not access control — the URL is still typeable.
+        // 404 rather than 403, set by the shared permission middleware: for a
+        // WordPress site this screen does not exist at all, which is a
+        // different statement from "you may not have it".
+        $this->actingAs($this->admin)
+            ->getJson("/api/applications/{$this->wordpress->id}/environment")
+            ->assertNotFound();
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$this->wordpress->id}/environment", ['raw' => "A=1\n"])
+            ->assertNotFound();
+    });
+});
+
+describe('permissions', function () {
+    it('lets a viewer read but not write', function () {
+        fakeSite();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_environment', view: true, manage: false);
+
+        $this->actingAs($user)->getJson(envUrl())->assertOk();
+        $this->actingAs($user)->putJson(envUrl(), ['raw' => "A=1\n"])->assertForbidden();
+    });
+
+    it('denies a user with no grant at all', function () {
+        fakeSite();
+
+        $this->actingAs(User::factory()->create())->getJson(envUrl())->assertForbidden();
+    });
+
+    it('denies an unauthenticated caller', function () {
+        fakeSite();
+
+        $this->getJson(envUrl())->assertUnauthorized();
+    });
+});

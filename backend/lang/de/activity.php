@@ -135,4 +135,6 @@ return [
     'central.disconnected' => 'Verbindung dieses Panels zum zentralen Panel getrennt',
     'backup.restored' => ':application aus einer Sicherung wiederhergestellt',
     'backup.restore_failed' => 'Wiederherstellung von :application fehlgeschlagen (:reason)',
+    'application.environment_updated' => 'Umgebung für :name aktualisiert (:keys)',
+    'application.environment_restored' => 'Frühere Umgebungsdatei für :name wiederhergestellt',
 ];

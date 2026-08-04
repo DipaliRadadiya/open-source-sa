@@ -135,4 +135,6 @@ return [
     'central.disconnected' => 'Отключил эту панель от центральной панели',
     'backup.restored' => 'Восстановил :application из резервной копии',
     'backup.restore_failed' => 'Восстановление :application не удалось (:reason)',
+    'application.environment_updated' => 'Обновил окружение :name (:keys)',
+    'application.environment_restored' => 'Восстановил предыдущий файл окружения :name',
 ];

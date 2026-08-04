@@ -1462,6 +1462,71 @@ Requires the `git` permission (`view` to read, `manage` to mutate). Connected gi
 
 ---
 
+### Application environment (App sidebar → Environment)
+
+The site's `.env`, edited as one file. `app_environment` (`manage` to write).
+
+**Only some site types have this screen at all.** Git deployments, Node apps, Craft and Statamic keep a `.env`; WordPress, Joomla, PrestaShop, Moodle, Nextcloud, Akaunting, Mautic, phpMyAdmin, blank PHP and static sites keep their configuration elsewhere, and presenting that as ".env" would be lying about the file. `GET /api/permissions?level=application&application_id=…` simply omits `app_environment` for those, so **the frontend needs no special case — the tab is absent**. The endpoints answer **`404`** for them as well: a hidden nav item is not access control.
+
+**`GET /api/applications/{application}/environment`**
+
+One read, three shapes: the raw text for the editor, the parsed pairs for anything that needs a value, and the checks that judge the file.
+
+```jsonc
+{ "environment": {
+  "exists": true,
+  "path": "/home/siteowner/app.test/.env",
+
+  "framework": "laravel",            // detected from files on disk, not from site_type
+  "framework_title": "Laravel",      // localized
+
+  "requires_restart": false,         // true when the app runs under systemd
+  "requires_apply": true,            // true when a cached config is sitting there
+
+  "raw": "APP_ENV=production\nAPP_DEBUG=true\nDB_PASSWORD=hunter2\n",
+
+  "variables": [
+    { "key": "APP_ENV",     "value": "production", "secret": false },
+    { "key": "APP_DEBUG",   "value": "true",       "secret": false },
+    { "key": "DB_PASSWORD", "value": null,         "secret": true  }
+  ],
+
+  "checks": [
+    { "code": "app_debug_on", "severity": "warning",
+      "key": "APP_DEBUG", "value": "true", "suggested": "false",
+      "title": "Debug mode is on",
+      "detail": "Visitors who trigger an error see a full stack trace, including database credentials. Set APP_DEBUG to false on a live site." }
+  ],
+
+  "backups": [ { "name": ".env.bak-20260804-132011", "created_at": "04-08-2026 13:20:11" } ]
+} }
+```
+
+- **`framework`**: `laravel` · `craft` · `statamic` · `nextjs` · `nuxt` · `node` · `unknown`. Detected from files in the site directory, never from the site-type record — a git site is whatever the repository currently contains.
+- **`variables[].value` is `null` for secrets**, not a masked string. A `••••` in a JSON response is still copyable. `raw` is the only field that carries secret values, because it is what the editor shows.
+- **`checks[]`** carries the key, its current value, a severity (`warning` | `error`) and a `suggested` value, so the UI can render a banner and a one-click fix **without knowing what Laravel is**. Codes: `app_debug_on`, `app_env_local`, `app_key_missing`, `next_public_secret`, `duplicate_key`, `syntax_no_equals`, `syntax_bad_key`, `syntax_unbalanced_quote`, `syntax_export`. Render `title`/`detail` verbatim — both are localized. A new check is a backend change and no frontend change.
+
+**`PUT /api/applications/{application}/environment`** — body `{ "raw": "…", "restart": bool }` (throttle 20/min)
+- Response `200`: `{"environment": {…refreshed…}, "applied": bool, "restarted": bool}`
+- **`422` on `errors.raw` for syntax errors only** (a line with no `=`, a bad variable name, an unclosed quote). Warnings never block — debug mode is a legitimate thing to turn on while chasing a bug, and the file is the user's.
+- The previous file is copied to `.env.bak-<timestamp>` before every write, newest 5 kept.
+
+**The two ways a save can appear to do nothing** — both answered by the `GET`, so the button can say what it will actually do:
+
+| Field | Means | Button should say |
+|---|---|---|
+| `requires_restart: true` | systemd reads `EnvironmentFile=` **once at start**, so a Node app ignores the new file until restarted | **Save & restart** (send `restart: true`) |
+| `requires_apply: true` | Laravel/Statamic has `bootstrap/cache/config.php`, which **overrides `.env` entirely** | **Save & apply** — the panel clears it for you and reports `applied: true` |
+
+Neither has an error or a symptom if ignored: the site simply carries on with the old values. That is the whole reason both flags exist.
+
+**`POST /api/applications/{application}/environment/restore`** — body `{ "backup": ".env.bak-20260804-132011", "restart": bool }` (throttle 10/min)
+- Restoring takes a backup of the current file first, so choosing the wrong one is itself undoable.
+
+**Activity:** `application.environment_updated` records **which keys changed, never their values** — an activity log is read by more people than the file is.
+
+---
+
 ### Backups
 
 Two entry points, two permissions, on purpose. **`app_backup`** covers configuring and running backups for one application — it belongs to whoever manages that site. **`backup`** covers the cross-application history you restore *from*, because restoring overwrites live data and that deserves one screen with one set of guardrails rather than a copy inside every application.

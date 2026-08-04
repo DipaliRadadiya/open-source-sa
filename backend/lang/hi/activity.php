@@ -135,4 +135,6 @@ return [
     'central.disconnected' => 'इस पैनल का केंद्रीय पैनल से संबंध हटाया',
     'backup.restored' => ':application को बैकअप से पुनर्स्थापित किया',
     'backup.restore_failed' => ':application की पुनर्स्थापना विफल रही (:reason)',
+    'application.environment_updated' => ':name का एनवायरनमेंट अद्यतन किया (:keys)',
+    'application.environment_restored' => ':name की पिछली एनवायरनमेंट फ़ाइल पुनर्स्थापित की',
 ];

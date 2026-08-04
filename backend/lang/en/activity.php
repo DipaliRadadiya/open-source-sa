@@ -135,4 +135,6 @@ return [
     'central.disconnected' => 'Disconnected this panel from the central panel',
     'backup.restored' => 'Restored :application from a backup',
     'backup.restore_failed' => 'Restore of :application failed (:reason)',
+    'application.environment_updated' => 'Updated the environment for :name (:keys)',
+    'application.environment_restored' => 'Restored a previous environment file for :name',
 ];

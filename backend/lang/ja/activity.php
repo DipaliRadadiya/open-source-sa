@@ -135,4 +135,6 @@ return [
     'central.disconnected' => 'このパネルと中央パネルの接続を解除しました',
     'backup.restored' => ':application をバックアップから復元しました',
     'backup.restore_failed' => ':application の復元に失敗しました (:reason)',
+    'application.environment_updated' => ':name の環境変数を更新しました (:keys)',
+    'application.environment_restored' => ':name の以前の環境ファイルを復元しました',
 ];

@@ -135,4 +135,6 @@ return [
     'central.disconnected' => 'A déconnecté ce panneau du panneau central',
     'backup.restored' => 'A restauré :application depuis une sauvegarde',
     'backup.restore_failed' => 'Échec de la restauration de :application (:reason)',
+    'application.environment_updated' => 'A mis à jour l\'environnement de :name (:keys)',
+    'application.environment_restored' => 'A restauré un fichier d\'environnement précédent pour :name',
 ];
