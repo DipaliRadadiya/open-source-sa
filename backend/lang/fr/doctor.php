@@ -7,6 +7,9 @@ return [
         'writable_paths' => 'Chemins accessibles en écriture',
         'database' => 'Base de données',
         'health_endpoint' => 'Point de terminaison de santé',
+        'binaries' => 'Outils requis',
+        'web_server' => 'Serveur web',
+        'queue' => 'Worker de file',
     ],
     'fixes' => [
         'privilege' => 'Le panneau ne peut pas exécuter de commandes en root. Vérifiez que /etc/sudoers.d/ contient l’autorisation et que le fichier passe visudo -c.',
@@ -18,5 +21,13 @@ return [
         'database_pending' => 'Exécutez php artisan migrate --force. Le code a été mis à jour sans appliquer ses changements de schéma.',
         'health_unreachable' => 'Vérifiez qu’APP_URL dans .env correspond à l’adresse du panneau et que le serveur web et php-fpm tournent.',
         'health_version_mismatch' => 'Le code exécuté et la version servie diffèrent. Videz les caches avec php artisan optimize:clear et rechargez php-fpm.',
+        'binaries_required' => 'Installez les paquets manquants. Sans eux, les fonctions essentielles ne peuvent pas s’exécuter.',
+        'binaries_optional' => 'Chaque outil manquant désactive la fonction indiquée à côté. Installez-le depuis la page de configuration, ou ignorez-le si vous n’en avez pas besoin.',
+        'web_server_missing' => 'Aucun serveur web pris en charge trouvé. Installez nginx ou Apache.',
+        'web_server_undrivable' => 'Le panneau ne peut pas écrire de configuration pour ce serveur web, donc aucun site ne peut être créé. Passez à nginx ou Apache.',
+        'web_server_config' => 'La configuration du serveur web est invalide. Lancez son propre test de configuration — le prochain rechargement échouera tant que ce n’est pas corrigé.',
+        'queue_stalled' => 'Des tâches sont en file mais rien ne les traite. Redémarrez le service de file ; les provisionnements, déploiements et installations ne se termineront pas.',
+        'queue_failed_jobs' => 'Des tâches en arrière-plan ont échoué. Consultez la table failed_jobs — un travail silencieusement abandonné explique souvent qu’une fonction n’ait rien fait.',
+        'queue_unreadable' => 'Impossible de lire les tables de file. Exécutez php artisan migrate --force.',
     ],
 ];

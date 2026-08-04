@@ -45,10 +45,13 @@ use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\TmpTarget;
+use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
 use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
+use App\Services\Server\Doctor\Checks\QueueCheck;
 use App\Services\Server\Doctor\Checks\ServicesCheck;
+use App\Services\Server\Doctor\Checks\WebServerCheck;
 use App\Services\Server\Doctor\Checks\WritablePathsCheck;
 use App\Services\Server\Php\Stacks\FpmPhpStack;
 use App\Services\Server\Php\Stacks\LsphpPhpStack;
@@ -121,9 +124,12 @@ return [
     'doctor' => [
         'checks' => [
             PrivilegeCheck::class,
+            BinariesCheck::class,
             ServicesCheck::class,
+            WebServerCheck::class,
             WritablePathsCheck::class,
             DatabaseCheck::class,
+            QueueCheck::class,
             HealthEndpointCheck::class,
         ],
     ],

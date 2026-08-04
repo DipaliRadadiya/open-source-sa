@@ -7,6 +7,9 @@ return [
         'writable_paths' => 'Caminhos graváveis',
         'database' => 'Base de dados',
         'health_endpoint' => 'Endpoint de saúde',
+        'binaries' => 'Ferramentas necessárias',
+        'web_server' => 'Servidor web',
+        'queue' => 'Processador de fila',
     ],
     'fixes' => [
         'privilege' => 'O painel não consegue executar comandos como root. Verifique se /etc/sudoers.d/ contém a permissão e se o ficheiro passa visudo -c.',
@@ -18,5 +21,13 @@ return [
         'database_pending' => 'Execute php artisan migrate --force. O código foi atualizado sem aplicar as alterações de esquema.',
         'health_unreachable' => 'Verifique se APP_URL no .env corresponde ao endereço do painel e se o servidor web e o php-fpm estão a correr.',
         'health_version_mismatch' => 'O código em execução e a versão servida diferem. Limpe as caches com php artisan optimize:clear e recarregue o php-fpm.',
+        'binaries_required' => 'Instale os pacotes em falta. Sem eles as funcionalidades essenciais não funcionam.',
+        'binaries_optional' => 'Cada ferramenta em falta desativa a funcionalidade indicada ao lado. Instale-a na página de configuração ou ignore se não precisar.',
+        'web_server_missing' => 'Nenhum servidor web suportado encontrado. Instale o nginx ou o Apache.',
+        'web_server_undrivable' => 'O painel não consegue escrever configuração para este servidor web, por isso não é possível criar sites. Mude para nginx ou Apache.',
+        'web_server_config' => 'A configuração do servidor web é inválida. Execute o teste de configuração — o próximo reload vai falhar até ser corrigido.',
+        'queue_stalled' => 'Há tarefas em fila mas nada as processa. Reinicie o serviço de fila; aprovisionamentos, deploys e instalações não terminarão.',
+        'queue_failed_jobs' => 'Algumas tarefas em segundo plano falharam. Verifique a tabela failed_jobs — trabalho descartado em silêncio é muitas vezes a razão de algo parecer não ter feito nada.',
+        'queue_unreadable' => 'Não foi possível ler as tabelas da fila. Execute php artisan migrate --force.',
     ],
 ];

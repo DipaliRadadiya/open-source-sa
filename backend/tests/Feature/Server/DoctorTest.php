@@ -1,11 +1,15 @@
 <?php
 
 use App\Models\User;
+use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
+use App\Services\Server\Doctor\Checks\QueueCheck;
 use App\Services\Server\Doctor\Checks\ServicesCheck;
+use App\Services\Server\Doctor\Checks\WebServerCheck;
 use App\Services\Server\Doctor\Checks\WritablePathsCheck;
 use App\Services\Server\Doctor\Doctor;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 
@@ -150,3 +154,106 @@ it('exits non-zero so the installer can act on it', function () {
 
     $this->artisan('panel:doctor')->assertExitCode(1);
 })->skip(fn () => posix_geteuid() === 0, 'runs as root — privilege check passes trivially');
+
+describe('the checks added for "routes error after setup"', function () {
+    it('resolves binaries through sudo\'s secure_path, not the panel user\'s PATH', function () {
+        // The first run of this check reported useradd/userdel/usermod/chpasswd
+        // missing on a box where they were present and working: they live in
+        // /usr/sbin, which is not on an unprivileged PATH, but sudo finds them
+        // via secure_path. A false failure here trains people to ignore the
+        // report, which is worse than not checking.
+        $captured = [];
+
+        Process::fake(function ($process) use (&$captured) {
+            $captured[] = $process->command;
+
+            return Process::result(output: '/usr/sbin/useradd', exitCode: 0);
+        });
+
+        config()->set('server.doctor.checks', [BinariesCheck::class]);
+        app(Doctor::class)->run();
+
+        expect($captured)->not->toBeEmpty()
+            ->and($captured[0][0])->toBe('sh');
+    });
+
+    it('treats a missing optional tool as a warning naming the feature it costs', function () {
+        // A panel without ufw cannot do firewall rules but works otherwise.
+        // Calling that "broken" would be inaccurate and would bury the real
+        // failures underneath it.
+        Process::fake(function ($process) {
+            return str_contains(implode(' ', $process->command), 'ufw')
+                ? Process::result(exitCode: 1)
+                : Process::result(output: '/usr/bin/thing', exitCode: 0);
+        });
+
+        config()->set('server.doctor.checks', [BinariesCheck::class]);
+        $report = app(Doctor::class)->run();
+
+        expect($report['checks'][0]['status'])->toBe('warn')
+            ->and($report['checks'][0]['detail'])->toContain('firewall')
+            // Warnings must not make the installation unhealthy.
+            ->and($report['healthy'])->toBeTrue();
+    });
+
+    it('fails when a required tool is missing', function () {
+        Process::fake(function ($process) {
+            return str_contains(implode(' ', $process->command), 'systemctl')
+                ? Process::result(exitCode: 1)
+                : Process::result(output: '/usr/bin/thing', exitCode: 0);
+        });
+
+        config()->set('server.doctor.checks', [BinariesCheck::class]);
+        $report = app(Doctor::class)->run();
+
+        expect($report['checks'][0]['status'])->toBe('fail')
+            ->and($report['healthy'])->toBeFalse();
+    });
+
+    it('fails the queue check when jobs sit unclaimed', function () {
+        // The services check proves the worker is *running*; this proves it is
+        // *working*. A worker holding a stale config looks active while every
+        // queued deploy and install silently never happens.
+        DB::table('jobs')->insert([
+            'queue' => 'default',
+            'payload' => '{}',
+            'attempts' => 0,
+            'available_at' => time() - 3600,
+            'created_at' => time() - 3600,
+        ]);
+
+        // The suite runs QUEUE_CONNECTION=sync, where there is no backlog to
+        // inspect and the check correctly declines to guess.
+        config()->set('queue.default', 'database');
+        config()->set('server.doctor.checks', [QueueCheck::class]);
+        $report = app(Doctor::class)->run();
+
+        expect($report['checks'][0]['status'])->toBe('fail')
+            ->and($report['checks'][0]['detail'])->toContain('oldest for');
+    });
+
+    it('does not fail the queue check for a fresh backlog', function () {
+        // A busy panel has jobs waiting. Age is the signal, not depth.
+        DB::table('jobs')->insert([
+            'queue' => 'default',
+            'payload' => '{}',
+            'attempts' => 0,
+            'available_at' => time(),
+            'created_at' => time(),
+        ]);
+
+        // The suite runs QUEUE_CONNECTION=sync, where there is no backlog to
+        // inspect and the check correctly declines to guess.
+        config()->set('queue.default', 'database');
+        config()->set('server.doctor.checks', [QueueCheck::class]);
+
+        expect(app(Doctor::class)->run()['checks'][0]['status'])->toBe('pass');
+    });
+
+    it('fails when no web server the panel can drive is present', function () {
+        config()->set('server.web_servers', ['nginx' => ['/nonexistent-nginx']]);
+        config()->set('server.doctor.checks', [WebServerCheck::class]);
+
+        expect(app(Doctor::class)->run()['checks'][0]['status'])->toBe('fail');
+    });
+});

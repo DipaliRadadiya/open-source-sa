@@ -7,6 +7,9 @@ return [
         'writable_paths' => 'Beschreibbare Pfade',
         'database' => 'Datenbank',
         'health_endpoint' => 'Health-Endpunkt',
+        'binaries' => 'Benötigte Werkzeuge',
+        'web_server' => 'Webserver',
+        'queue' => 'Queue-Worker',
     ],
     'fixes' => [
         'privilege' => 'Das Panel kann keine Befehle als root ausführen. Prüfen Sie, ob /etc/sudoers.d/ die Panel-Berechtigung enthält und die Datei visudo -c besteht.',
@@ -18,5 +21,13 @@ return [
         'database_pending' => 'Führen Sie php artisan migrate --force aus. Der Code wurde ohne seine Schemaänderungen aktualisiert.',
         'health_unreachable' => 'Prüfen Sie, ob APP_URL in .env der Adresse des Panels entspricht und ob Webserver und php-fpm laufen.',
         'health_version_mismatch' => 'Laufender Code und ausgelieferte Version weichen ab. Leeren Sie die Caches mit php artisan optimize:clear und laden Sie php-fpm neu.',
+        'binaries_required' => 'Installieren Sie die fehlenden Pakete. Ohne sie funktionieren Kernfunktionen überhaupt nicht.',
+        'binaries_optional' => 'Jedes fehlende Werkzeug deaktiviert die daneben genannte Funktion. Über die Einrichtungsseite installieren oder ignorieren, wenn nicht benötigt.',
+        'web_server_missing' => 'Kein unterstützter Webserver gefunden. Installieren Sie nginx oder Apache.',
+        'web_server_undrivable' => 'Das Panel kann für diesen Webserver keine Konfiguration schreiben, daher lassen sich keine Sites anlegen. Wechseln Sie zu nginx oder Apache.',
+        'web_server_config' => 'Die Webserver-Konfiguration ist ungültig. Führen Sie deren Konfigurationstest aus — der nächste Reload schlägt fehl, bis das behoben ist.',
+        'queue_stalled' => 'Jobs stehen in der Warteschlange, aber nichts verarbeitet sie. Starten Sie den Queue-Dienst neu; Bereitstellungen, Deployments und Installationen werden sonst nie fertig.',
+        'queue_failed_jobs' => 'Einige Hintergrund-Jobs sind fehlgeschlagen. Prüfen Sie die Tabelle failed_jobs — stillschweigend verworfene Arbeit ist oft der Grund, warum eine Funktion nichts zu tun schien.',
+        'queue_unreadable' => 'Die Queue-Tabellen konnten nicht gelesen werden. Führen Sie php artisan migrate --force aus.',
     ],
 ];
