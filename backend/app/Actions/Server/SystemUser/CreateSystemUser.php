@@ -5,8 +5,8 @@ namespace App\Actions\Server\SystemUser;
 use App\Exceptions\Server\SystemUser\SystemUserCreateFailedException;
 use App\Models\SystemUser;
 use App\Services\ActivityLogger;
+use App\Services\Server\AccountLock;
 use App\Services\Server\ServerOps;
-use Illuminate\Support\Facades\Cache;
 
 class CreateSystemUser
 {
@@ -14,6 +14,7 @@ class CreateSystemUser
         private ServerOps $serverOps,
         private AddSshKey $addSshKey,
         private ActivityLogger $activityLogger,
+        private AccountLock $accountLock,
     ) {}
 
     /**
@@ -21,9 +22,10 @@ class CreateSystemUser
      */
     public function execute(array $data): SystemUser
     {
-        // App-level lock: stop two concurrent PHP-FPM workers double-running
-        // useradd for the same username (a race even though we run locally).
-        return Cache::lock('system-user:create:'.$data['username'], 15)->block(5, function () use ($data) {
+        // Serialize with every other account command: the OS lock over
+        // /etc/passwd is global, so a create of one user still collides with a
+        // usermod/passwd/create for another unless they run one at a time.
+        return $this->accountLock->run(function () use ($data) {
             $username = $data['username'];
             $homePath = rtrim((string) config('server.home_base'), '/').'/'.$username;
 
