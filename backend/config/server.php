@@ -55,6 +55,55 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Privilege escalation
+    |--------------------------------------------------------------------------
+    |
+    | php-fpm runs as the unprivileged panel account (install.sh sets
+    | `user = ${APP_USER}` on the pool), so every operation that touches the
+    | system — useradd, systemctl, ufw, apt-get, writing a vhost — has to go
+    | through sudo. install.sh grants exactly these binaries NOPASSWD in
+    | /etc/sudoers.d/<slug>; this list mirrors it and must stay in step with
+    | it, because a binary here that is not there fails at runtime, and one
+    | there but not here is a privilege granted for no reason.
+    |
+    | Prefixing happens in ServerOps, in one place, rather than at the 60+
+    | call sites. Commands stay arrays — no shell, no interpolation, so this
+    | adds no injection surface.
+    |
+    | `enabled` is false under phpunit (see phpunit.xml): the suite asserts on
+    | the commands it expects a feature to run, and a sudo prefix everywhere
+    | would test the prefix rather than the feature. ServerOpsPrivilegeTest
+    | turns it on and covers the prefixing itself.
+    |
+    */
+
+    'privilege' => [
+        'sudo' => (bool) env('SERVER_OPS_SUDO', true),
+
+        // Binaries that do not work as the panel user. Mirrors the `bins`
+        // array in install.sh's configure_sudoers().
+        'binaries' => [
+            'apt-get', 'apt-cache', 'dpkg-query',
+            'systemctl', 'journalctl',
+            'useradd', 'userdel', 'usermod', 'groupadd',
+            'chpasswd', 'gpasswd', 'getent', 'id',
+            'tee', 'mkdir', 'chown', 'chmod', 'rm',
+            'cp', 'mv', 'ln', 'install', 'truncate',
+            'find', 'tail', 'cat', 'test', 'which',
+            'runuser', 'sh', 'env',
+            'nginx', 'apachectl', 'lswsctrl',
+            'phpenmod', 'phpdismod', 'update-alternatives',
+            'mysql', 'redis-cli', 'mongosh',
+            'ufw', 'fail2ban-client',
+            'fallocate', 'mkswap', 'swapon', 'swapoff',
+            'hostnamectl', 'timedatectl', 'df', 'du',
+            'ps', 'kill', 'ss', 'curl', 'unzip',
+            'tar', 'git', 'fnm', 'wp',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | System user home base
     |--------------------------------------------------------------------------
     |

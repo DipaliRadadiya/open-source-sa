@@ -39,6 +39,8 @@ class ServerOps
      */
     public function run(array $command, array $context = [], int $timeout = 60, ?string $input = null, ?string $cwd = null, array $env = []): ServerOpsResult
     {
+        $command = $this->elevate($command);
+
         $reference = (string) Str::uuid();
         $startedAt = microtime(true);
 
@@ -76,5 +78,47 @@ class ServerOps
         ]));
 
         return new ServerOpsResult($ok, $reference, $result);
+    }
+
+    /**
+     * Put `sudo -n` in front of commands that cannot work as the panel user.
+     *
+     * This is the whole reason the sudoers file install.sh writes has any
+     * effect: php-fpm runs unprivileged, so without this every useradd,
+     * systemctl, ufw and apt-get call fails with "Permission denied" — the
+     * panel installs cleanly and then cannot do its job.
+     *
+     * `-n` is deliberate. A missing grant must fail immediately and visibly;
+     * without it sudo waits for a password on a terminal that does not exist
+     * and the operation hangs until the timeout, reported as something else
+     * entirely.
+     *
+     * Escalation is skipped when already root (an operator running artisan
+     * by hand, or a container that runs as root) — sudo would work, but
+     * requiring it to be installed to run as root is a gratuitous dependency.
+     *
+     * @param  array<int, string>  $command
+     * @return array<int, string>
+     */
+    private function elevate(array $command): array
+    {
+        if ($command === [] || ! config('server.privilege.sudo', true)) {
+            return $command;
+        }
+
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            return $command;
+        }
+
+        // Match on the binary name only. Callers pass bare names ('useradd'),
+        // sudo resolves them through secure_path, and the sudoers rule matches
+        // the resolved absolute path — so both spellings land on the same rule.
+        $binary = basename($command[0]);
+
+        if (! in_array($binary, (array) config('server.privilege.binaries', []), true)) {
+            return $command;
+        }
+
+        return array_merge(['sudo', '-n'], $command);
     }
 }

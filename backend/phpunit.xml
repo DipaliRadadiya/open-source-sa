@@ -33,6 +33,10 @@
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!-- Feature tests assert on the exact command a feature runs. A sudo
+             prefix on every one of them would assert the prefix instead.
+             ServerOpsPrivilegeTest enables it and covers the prefixing. -->
+        <env name="SERVER_OPS_SUDO" value="false"/>
         <env name="SESSION_DRIVER" value="array"/>
         <!-- Tests run on the localhost host; the real .env pins SESSION_DOMAIN
              to the deployed parent domain, which wouldn't match here and
