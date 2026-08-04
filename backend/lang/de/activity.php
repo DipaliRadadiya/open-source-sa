@@ -137,4 +137,10 @@ return [
     'backup.restore_failed' => 'Wiederherstellung von :application fehlgeschlagen (:reason)',
     'application.environment_updated' => 'Umgebung für :name aktualisiert (:keys)',
     'application.environment_restored' => 'Frühere Umgebungsdatei für :name wiederhergestellt',
+    'application.worker_created' => 'Worker :worker zu :name hinzugefügt',
+    'application.worker_updated' => 'Worker :worker von :name aktualisiert',
+    'application.worker_deleted' => 'Worker :worker von :name entfernt',
+    'application.worker_start' => 'Worker :worker von :name gestartet',
+    'application.worker_stop' => 'Worker :worker von :name gestoppt',
+    'application.worker_restart' => 'Worker :worker von :name neu gestartet',
 ];

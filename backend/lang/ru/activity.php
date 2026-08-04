@@ -137,4 +137,10 @@ return [
     'backup.restore_failed' => 'Восстановление :application не удалось (:reason)',
     'application.environment_updated' => 'Обновил окружение :name (:keys)',
     'application.environment_restored' => 'Восстановил предыдущий файл окружения :name',
+    'application.worker_created' => 'Добавил обработчик :worker в :name',
+    'application.worker_updated' => 'Обновил обработчик :worker в :name',
+    'application.worker_deleted' => 'Удалил обработчик :worker из :name',
+    'application.worker_start' => 'Запустил обработчик :worker в :name',
+    'application.worker_stop' => 'Остановил обработчик :worker в :name',
+    'application.worker_restart' => 'Перезапустил обработчик :worker в :name',
 ];

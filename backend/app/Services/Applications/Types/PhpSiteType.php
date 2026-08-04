@@ -29,6 +29,21 @@ class PhpSiteType extends AbstractSiteType
         return 'developer';
     }
 
+    /**
+     * A worker is "keep this command running as this user" — nothing about it
+     * is framework-specific. Someone who uploaded their own PHP and wants a
+     * long-running script supervised has exactly the same need as a Laravel
+     * site, and cron is the wrong tool for a process that should never stop.
+     *
+     * Not `app_environment` though: a hand-rolled site has no framework that
+     * reads a `.env`, so offering one would be inventing a convention on the
+     * user's behalf.
+     */
+    public function features(): array
+    {
+        return [...parent::features(), 'app_worker'];
+    }
+
     public function icon(): string
     {
         return 'code';

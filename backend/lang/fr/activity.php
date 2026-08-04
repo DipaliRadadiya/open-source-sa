@@ -137,4 +137,10 @@ return [
     'backup.restore_failed' => 'Échec de la restauration de :application (:reason)',
     'application.environment_updated' => 'A mis à jour l\'environnement de :name (:keys)',
     'application.environment_restored' => 'A restauré un fichier d\'environnement précédent pour :name',
+    'application.worker_created' => 'A ajouté le worker :worker à :name',
+    'application.worker_updated' => 'A mis à jour le worker :worker de :name',
+    'application.worker_deleted' => 'A supprimé le worker :worker de :name',
+    'application.worker_start' => 'A démarré le worker :worker de :name',
+    'application.worker_stop' => 'A arrêté le worker :worker de :name',
+    'application.worker_restart' => 'A redémarré le worker :worker de :name',
 ];

@@ -76,6 +76,8 @@ class StatamicSiteType extends AbstractSiteType
      */
     public function features(): array
     {
-        return [...parent::features(), 'app_environment'];
+        // And Laravel's queue with it — being installed in one click does not
+        // mean the application has no background work.
+        return [...parent::features(), 'app_environment', 'app_worker'];
     }
 }

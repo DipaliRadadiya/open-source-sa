@@ -4,11 +4,14 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Models\Worker;
 use App\Services\Git\GitProviderManager;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Fetches an application's code with git.
@@ -112,6 +115,15 @@ class GitDeployer
                 $this->supervisor->apply($application, $documentRoot);
 
                 $this->progress->record('restart_app');
+            }
+
+            // And the workers, for exactly the same reason but worse: a queue
+            // worker holds the old code in memory indefinitely, so without
+            // this the site serves the new version while its background jobs
+            // quietly keep running last week's — with nothing anywhere to
+            // connect the two.
+            if ($this->restartWorkers($application) > 0) {
+                $this->progress->record('restart_workers');
             }
 
             return [
@@ -370,5 +382,38 @@ class GitDeployer
         );
 
         return $result->ok ? (trim($result->output()) ?: null) : null;
+    }
+
+    /**
+     * Restart every worker that asked to be restarted on deploy.
+     *
+     * Failures are logged, not thrown: the deploy itself has already
+     * succeeded, and turning "one worker would not come back" into "the
+     * deploy failed" would send someone rolling back a release that is fine.
+     * The worker's own state reports it honestly on the next screen load.
+     */
+    private function restartWorkers(Application $application): int
+    {
+        $workers = Worker::query()
+            ->with('application.systemUser')
+            ->where('application_id', $application->id)
+            ->where('restart_on_deploy', true)
+            ->where('enabled', true)
+            ->get();
+
+        foreach ($workers as $worker) {
+            try {
+                app(WorkerSupervisor::class)->restart($worker);
+            } catch (Throwable $e) {
+                Log::channel('server-ops')->warning('worker restart after deploy failed', [
+                    'feature' => 'application',
+                    'application' => $application->id,
+                    'worker' => $worker->id,
+                    'detail' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $workers->count();
     }
 }

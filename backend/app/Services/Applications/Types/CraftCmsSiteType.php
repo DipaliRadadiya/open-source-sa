@@ -88,6 +88,9 @@ class CraftCmsSiteType extends AbstractSiteType
      */
     public function features(): array
     {
-        return [...parent::features(), 'app_environment'];
+        // Workers for the same reason: Craft ships a queue (`craft
+        // queue/listen`), and a site that can configure a queue in .env but
+        // cannot run one is only half a panel.
+        return [...parent::features(), 'app_environment', 'app_worker'];
     }
 }

@@ -137,4 +137,10 @@ return [
     'backup.restore_failed' => ':application की पुनर्स्थापना विफल रही (:reason)',
     'application.environment_updated' => ':name का एनवायरनमेंट अद्यतन किया (:keys)',
     'application.environment_restored' => ':name की पिछली एनवायरनमेंट फ़ाइल पुनर्स्थापित की',
+    'application.worker_created' => ':name में वर्कर :worker जोड़ा',
+    'application.worker_updated' => ':name का वर्कर :worker अद्यतन किया',
+    'application.worker_deleted' => ':name से वर्कर :worker हटाया',
+    'application.worker_start' => ':name का वर्कर :worker शुरू किया',
+    'application.worker_stop' => ':name का वर्कर :worker रोका',
+    'application.worker_restart' => ':name का वर्कर :worker पुनः आरंभ किया',
 ];

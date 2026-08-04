@@ -1462,6 +1462,68 @@ Requires the `git` permission (`view` to read, `manage` to mutate). Connected gi
 
 ---
 
+### Application workers (App sidebar → Workers)
+
+Long-running processes belonging to one site — a queue worker, Horizon, or any command that must stay alive. `app_worker` (`manage` to change one).
+
+**Which sites have it:** git deployments, Node apps, Craft, Statamic, **and blank PHP** — anything whose code the user controls. A worker is "keep this command running as this user"; nothing about it is framework-specific. Excluded: WordPress, Joomla, Moodle, PrestaShop, Nextcloud, Akaunting, Mautic, phpMyAdmin (marketplace apps manage their own background work through their own cron) and static sites (nothing to run). Endpoints answer **404** for those.
+
+**`GET /api/applications/{application}/workers`**
+
+```jsonc
+{
+  "workers": [
+    { "id": 3, "name": "Queue worker",
+      "command": "php8.4 artisan queue:work --sleep=3 --tries=3 --max-time=3600",
+      "kind": "queue", "kind_title": "Queue worker",
+      "processes": 4, "running": 3,
+      "state": "degraded", "state_title": "Partly running",
+      "directory": null, "stop_wait_seconds": 30,
+      "auto_restart": true, "restart_on_deploy": true, "enabled": true,
+      "log_identifier": "sv-worker-3",
+      "created_at": "04-08-2026 14:12:00", "created_at_human": "5 minutes ago" }
+  ],
+
+  "presets": [
+    { "key": "queue", "kind": "queue", "title": "Queue worker",
+      "description": "Processes queued jobs. The usual choice.",
+      "command": "php8.4 artisan queue:work --sleep=3 --tries=3 --max-time=3600" },
+    { "key": "horizon", "kind": "horizon", "title": "Horizon", "description": "…", "command": "php8.4 artisan horizon" },
+    { "key": "custom", "kind": "custom", "title": "Custom command", "description": "…", "command": "" }
+  ],
+
+  "checks": [
+    { "code": "cache_driver_array", "severity": "warning",
+      "title": "Workers cannot be restarted automatically",
+      "detail": "This application uses the \"array\" cache driver…" }
+  ]
+}
+```
+
+- **`presets` is the empty state.** Render them as the first thing on a screen with no workers — one click to a working queue worker beats a blank command box. They come from the detected framework, so a Node site only gets `custom`.
+- **`state`: `running` | `degraded` | `stopped`**, with `running` / `processes` as the numbers. **`degraded` is its own state on purpose** — "3 of 4" is real, easy to miss, and a green dot would hide it. Show it as a warning colour, not success.
+- Status is read from systemd on **every** request. Nothing is cached, so no refresh button is needed beyond re-fetching.
+- `log_identifier` is the journal tag, for linking to the logs screen without building a unit name.
+
+**`POST` / `PUT /api/applications/{application}/workers[/{worker}]`** (throttle 20/min)
+- Body: `name` · `command` · `kind` (`queue`|`horizon`|`custom`) · `processes` (1–16) · `directory` (optional, defaults to the document root) · `stop_wait_seconds` · `auto_restart` · `restart_on_deploy` · `enabled`
+- **`422` on `command`** for shell syntax — `|`, `;`, `&`, backticks, `$`, redirects. systemd execs the command directly rather than through a shell, so a pipe would be passed to the binary as a literal argument instead of doing what it looks like. Refusing is clearer than running something else.
+- **`422` on `kind`** when adding Horizon to a site that already has a queue worker, or vice versa. Horizon supervises its own workers, so both together means every job is handled twice — and neither tool can see the other, so the panel is the only thing able to say so.
+- **`500`** when the worker starts and immediately dies. `systemctl start` returns success for that, so the panel verifies with `is-active` and refuses rather than listing a worker that isn't running.
+
+**`POST /api/applications/{application}/workers/{worker}/{start|stop|restart}`** (throttle 30/min)
+
+**Restart is graceful where the tool supports it:** a queue worker gets `queue:restart` (finish the job in hand, then exit — a unit restart could kill it mid-payment), Horizon gets `horizon:terminate`, anything else gets a unit restart.
+
+**`DELETE`** removes the units first, then the row — the other order would leave processes running that nothing in the panel knows about.
+
+#### The two things worth surfacing in the UI
+
+1. **`restart_on_deploy` defaults to true, and should stay that way.** A queue worker holds the old code in memory indefinitely: without this a deploy updates the site while background jobs quietly keep running last week's code, with nothing anywhere to connect the two.
+2. **The `cache_driver_array` check.** `queue:restart` works by leaving a flag in the cache for running workers to read. On the `array` driver that cache does not survive the process that wrote it, so the command **succeeds, prints nothing, and no worker restarts**. Render this warning prominently on the workers screen — it is the difference between automatic restarts working and only appearing to.
+
+---
+
 ### Application logs (App sidebar → Logs)
 
 A site's own logs. Read-only, gated by **`app_log`** — deliberately *not* the server-wide `logs` permission. A site's access log and the machine's `auth.log` are different things to be trusted with, and reusing one grant across that line would be privilege escalation wearing a filter.
