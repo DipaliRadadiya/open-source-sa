@@ -125,6 +125,4 @@ return [
     'database.engine_installed' => ':engine データベースエンジンをインストールしました',
     'database.engine_install_failed' => ':engine データベースエンジンをインストールできませんでした (:reason)',
     'php.ini_updated' => 'PHP :version の設定を更新しました',
-    'panel_update.queued' => ':from_version からのパネル更新をキューに入れました',
-    'panel_update.failed' => 'パネルの更新に失敗しました (理由: :reason)',
 ];

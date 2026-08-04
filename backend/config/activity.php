@@ -30,7 +30,6 @@ return [
             'git_account',
             'log',
             'node',
-            'panel_update',
             'php',
             'server',
             'service',
