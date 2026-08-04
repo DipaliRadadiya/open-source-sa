@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { signedOutPath } from "@/lib/auth/signed-out-path";
 import { AuthProvider } from "@/components/auth-provider";
 import { AdminSidebar } from "@/components/sections/admin-sidebar";
 import { AdminHeader } from "@/components/sections/admin-header";
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 // Real enforcement is the Laravel Policies/Gates — this is the UX guard.
 export default async function AdminLayout({ children }) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(await signedOutPath());
   if (!user.is_admin) redirect("/dashboard");
 
   return (

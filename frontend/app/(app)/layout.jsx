@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, getImpersonator } from "@/lib/auth/get-current-user";
+import { signedOutPath } from "@/lib/auth/signed-out-path";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppSidebar } from "@/components/sections/app-sidebar";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(await signedOutPath());
 
   const permissions = await getPermissions();
   const impersonatedBy = await getImpersonator();
