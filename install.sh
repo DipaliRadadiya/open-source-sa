@@ -46,6 +46,9 @@ PANEL_SLUG="${PANEL_SLUG:-panel}"
 
 APP_DIR="${APP_DIR:-/var/www/${PANEL_SLUG}}"
 APP_USER="${APP_USER:-${PANEL_SLUG}}"
+# Self-update writes its runner script and progress here. Deliberately outside
+# APP_DIR: both would be destroyed by the checkout whose progress they record.
+UPDATE_STATE_DIR="${UPDATE_STATE_DIR:-/var/lib/${PANEL_SLUG}-update}"
 PHP_VERSION="${PHP_VERSION:-8.4}"
 NODE_VERSION="${NODE_VERSION:-24}"
 FRONTEND_PORT="${FRONTEND_PORT:-3100}"
@@ -621,6 +624,19 @@ setup_backend() {
         set_env "${dir}/.env" REDIS_PORT 6379
     fi
 
+    # Self-update needs to know what this installer named things. The config
+    # defaults assume PANEL_SLUG=panel and a default fnm alias; an install that
+    # used neither would restart units that do not exist and build with the
+    # wrong node. The installer is the only thing that knows the real answers,
+    # so it writes them rather than leaving the admin to discover them after a
+    # failed update.
+    set_env "${dir}/.env" PANEL_UPDATE_STATE_DIR "$UPDATE_STATE_DIR"
+    set_env "${dir}/.env" PANEL_PHP_VERSION "$PHP_VERSION"
+    set_env "${dir}/.env" PANEL_PHP_FPM_SERVICE "php${PHP_VERSION}-fpm"
+    set_env "${dir}/.env" PANEL_FRONTEND_SERVICE "${PANEL_SLUG}-frontend.service"
+    set_env "${dir}/.env" PANEL_QUEUE_SERVICE "${PANEL_SLUG}-queue.service"
+    set_env "${dir}/.env" PANEL_NODE_BIN_DIR "$(dirname "$NODE_BIN")"
+
     chown -R "${APP_USER}:${APP_USER}" "$dir"
     chmod -R 775 "${dir}/storage" "${dir}/bootstrap/cache"
 
@@ -945,6 +961,15 @@ install_services() {
     step "Installing services"
 
     local backend="${APP_DIR}/backend"
+
+    # The panel writes its update runner and progress state here as the panel
+    # account, so the directory has to exist and belong to it before the first
+    # update rather than being created by whoever happens to run first. 0750:
+    # the script it holds is executable and names service units.
+    run mkdir -p "$UPDATE_STATE_DIR"
+    run chown "${APP_USER}:${APP_USER}" "$UPDATE_STATE_DIR"
+    run chmod 750 "$UPDATE_STATE_DIR"
+    ok "update state directory: ${UPDATE_STATE_DIR}"
 
     cat >/etc/systemd/system/${PANEL_SLUG}-frontend.service <<UNIT
 [Unit]
