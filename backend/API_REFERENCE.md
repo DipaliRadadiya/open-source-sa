@@ -272,6 +272,49 @@ The key carries **the same access an administrator has** — there is no scope p
 
 **Activity.** `central.connected` and `central.disconnected` (scope `account`) record who granted and who withdrew access. That log — plus `last_used_at` — is the answer to "what did the vendor have access to, and when".
 
+#### Building the screen
+
+Exactly three states, decided by two fields:
+
+| `central.connected` | `central.connected_at` | Screen |
+|---|---|---|
+| — (key absent) | — | **Never connected** — explanation + Connect button |
+| `true` | set | **Connected** — connected by/when, last used, Disconnect button |
+| `false` | set | **Disconnected** — same as never-connected, plus "last connected … , disconnected …" |
+
+Concrete responses:
+
+```jsonc
+// GET /api/admin/central — never connected
+{ "central": { "connected": false } }
+
+// GET /api/admin/central — connected
+{ "central": {
+  "connected": true,
+  "connected_at": "04-08-2026 12:19:07",
+  "connected_at_human": "3 hours ago",
+  "connected_by": { "id": 1, "username": "smit" },
+  "last_used_at": "04-08-2026 15:02:44",   // null = the far end has never called
+  "last_used_at_human": "4 minutes ago",
+  "revoked_at": null,
+  "revoked_at_human": null
+} }
+
+// POST /api/admin/central — 201. The ONLY response that ever carries the key.
+{ "central": { "connected": true, "connected_at": "04-08-2026 12:19:07", … },
+  "token": "17|Xq2f8yTn0pR4vB6cL9dK1sW3eG5hJ7mA" }
+
+// POST while already connected — 422
+{ "message": "This panel is already connected. Disconnect it first to issue a new key.",
+  "errors": { "central": ["This panel is already connected. Disconnect it first to issue a new key."] } }
+```
+
+**The one thing that must not be got wrong:** `token` appears once, in the `POST` response, and no endpoint returns it again. Render it immediately in a copy-to-clipboard field with an explicit "this will not be shown again" line. If the user closes the dialog without copying, their only recovery is Disconnect → Connect, which invalidates the key they may already have pasted elsewhere — so say that on the dialog rather than letting them find out.
+
+`DELETE` returns `204` with no body — refetch `GET /admin/central` after it rather than assuming the shape.
+
+**Copy suggestion for the disconnect confirmation:** it stops the central panel reading or managing this server on its next request. It does not delete anything already collected there.
+
 ---
 
 ## Server Panel (`Authorization: Bearer <token>`; each route gated by its feature permission)
@@ -1456,6 +1499,60 @@ Two entry points, two permissions, on purpose. **`app_backup`** covers configuri
 **Everything before `restore_database` is non-destructive.** A failed download, a truncated archive, a corrupt tarball or a safety backup that could not be taken all leave the application exactly as it was — the localized `reason_title` for those cases says so explicitly, and the UI should not phrase them as damage.
 
 **`GET /api/restores`** — history (`permission:backup`), paginated, same shape.
+
+#### Building the screen
+
+```jsonc
+// POST /api/backups/12/restore   body: { "confirm": "shop.example.com", "type": "full" }
+// 202
+{ "restore": {
+  "id": 3, "backup_id": 12, "application_id": 4,
+  "type": "full", "type_title": "Files and database",
+  "status": "pending", "status_title": "Queued",
+  "current_step": null, "current_step_title": null,
+  "step_number": null, "total_steps": 7,
+  "reason": null, "reason_title": null,
+  "safety_backup_id": null, "rollback_path": null,
+  "reference": "5f0c…", "started_at": null, "finished_at": null
+} }
+
+// GET /api/restores/3 — mid-run
+{ "restore": { "id": 3, "status": "running", "status_title": "Restoring",
+  "current_step": "safety_backup",
+  "current_step_title": "Backing up the current state first",
+  "step_number": 3, "total_steps": 7, … } }
+
+// GET /api/restores/3 — done
+{ "restore": { "id": 3, "status": "succeeded", "status_title": "Restored",
+  "current_step": null, "step_number": null,
+  "safety_backup_id": 27,
+  "rollback_path": "/home/siteowner/.rollback-3",
+  "started_at": "04-08-2026 15:10:02", "finished_at": "04-08-2026 15:13:48" } }
+
+// GET /api/restores/3 — failed, nothing was changed
+{ "restore": { "id": 3, "status": "failed", "status_title": "Restore failed",
+  "reason": "verify_download",
+  "reason_title": "The downloaded backup is incomplete or corrupt, so it was not used. Nothing on the server was changed.",
+  "safety_backup_id": null, "rollback_path": null, … } }
+
+// POST with the wrong confirmation — 422
+{ "message": "Type the application domain exactly to confirm the restore.",
+  "errors": { "confirm": ["Type the application domain exactly to confirm the restore."] } }
+```
+
+**Flow:** `POST` → `202` → poll `GET /api/restores/{id}` every ~2s until `status` is `succeeded` or `failed`. Drive the bar off `step_number`/`total_steps` and label it with `current_step_title`; do not hardcode the seven keys, they are config.
+
+**The confirm field.** Show the domain next to the input and label it *type `shop.example.com` to confirm* — the check is an exact string match on the application's `domain`, so a paste-the-name pattern works and anything else is a `422` on `errors.confirm`. Disabling the button until the input matches is the friendlier version of the same rule.
+
+**Branch on `reason`, never on prose.** The keys are the seven step names plus `missing_backup` and `crashed`. `reason_title` is already localised and already states whether anything was changed — render it verbatim rather than writing your own copy, because the distinction between "nothing was touched" and "the previous state is in the safety backup" is the whole point of the message.
+
+**On success, surface two fields prominently:**
+- `safety_backup_id` — "we backed up what was there first" with a link into `/backups`. This is the undo, and it belongs on the success screen, not in a details drawer.
+- `rollback_path` — the previous site directory, still on disk. Worth showing as a monospace path for someone who needs to reach for it over SSH.
+
+**Restorable rows only.** In the backups list, offer Restore on `status: "verified"` and nothing else; anything else is a `422`. Backups with `is_safety: true` are restorable like any other and are worth badging — after a bad restore, that row is what someone is looking for.
+
+**One restore at a time per application.** A second `POST` while one is running is `422` on `errors.backup`; keep the button disabled while a poll shows `pending` or `running`.
 
 ---
 
