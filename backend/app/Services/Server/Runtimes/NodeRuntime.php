@@ -247,9 +247,16 @@ class NodeRuntime implements Runtime
      */
     public function npmVersion(string $version): ?string
     {
+        // npm is a Node script (`#!/usr/bin/env node`), so it needs `node` on
+        // PATH even when run by absolute path. On a fresh box no default is
+        // linked into /usr/local/bin, so point PATH at this version's own bin
+        // dir — which is also the correct node for this version's npm.
+        $binDir = dirname($this->binaryPath($version));
+
         $result = $this->serverOps->run(
-            [dirname($this->binaryPath($version)).'/npm', '-v'],
+            ["{$binDir}/npm", '-v'],
             ['feature' => 'runtime', 'op' => 'npm_version', 'version' => $version],
+            env: ['PATH' => "{$binDir}:/usr/local/bin:/usr/bin:/bin"],
         );
 
         $npm = trim($result->output());
