@@ -29,6 +29,9 @@ Route::get('/applications/{application}/files/content', [ApplicationFileControll
 Route::put('/applications/{application}/files/content', [ApplicationFileController::class, 'update'])
     ->middleware(['permission:app_file,manage', 'throttle:20,1']);
 
+Route::post('/applications/{application}/files/content/restore', [ApplicationFileController::class, 'restoreBackup'])
+    ->middleware(['permission:app_file,manage', 'throttle:10,1']);
+
 Route::post('/applications/{application}/files/upload', [ApplicationFileController::class, 'upload'])
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);
 
@@ -49,6 +52,9 @@ Route::post('/applications/{application}/files/copy', [ApplicationFileController
 
 Route::post('/applications/{application}/files/compress', [ApplicationFileController::class, 'compress'])
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);
+
+Route::put('/applications/{application}/files/permissions', [ApplicationFileController::class, 'chmod'])
+    ->middleware(['permission:app_file,manage', 'throttle:20,1']);
 
 Route::delete('/applications/{application}/files', [ApplicationFileController::class, 'destroy'])
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);

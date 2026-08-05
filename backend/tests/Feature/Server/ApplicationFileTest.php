@@ -264,6 +264,30 @@ function fakeFileBrowserServer(): void
             return Process::result(output: $lines === [] ? '' : implode("\n", $lines)."\n");
         }
 
+        if ($binary === 'find' && ($inner[2] ?? null) === '-maxdepth' && ($inner[3] ?? null) === '1') {
+            // FileBrowser::backups(): find <dir> -maxdepth 1 -name '<file>.bak-*' -printf '%f\n'
+            $dirRel = $relative($inner[1]);
+            $pattern = $inner[5] ?? '';
+            $prefix = rtrim($pattern, '*');
+            $names = [];
+
+            foreach (FileBrowserFake::$fs as $path => $entry) {
+                $parent = str_contains($path, '/') ? substr($path, 0, (int) strrpos($path, '/')) : '';
+
+                if ($parent !== $dirRel) {
+                    continue;
+                }
+
+                $name = str_contains($path, '/') ? substr($path, (int) strrpos($path, '/') + 1) : $path;
+
+                if (str_starts_with($name, $prefix)) {
+                    $names[] = $name;
+                }
+            }
+
+            return Process::result(output: $names === [] ? '' : implode("\n", $names)."\n");
+        }
+
         if ($binary === 'cat') {
             $entry = FileBrowserFake::$fs[$relative($inner[1])] ?? null;
 
@@ -358,8 +382,16 @@ function fakeFileBrowserServer(): void
             return Process::result(exitCode: 0);
         }
 
+        if ($binary === 'chmod') {
+            $rel = $relative($inner[2]);
+            FileBrowserFake::$fs[$rel]['mode'] = $inner[1];
+
+            return Process::result(exitCode: 0);
+        }
+
         if ($binary === 'mkdir') {
-            FileBrowserFake::$fs[$relative($inner[1])] = ['type' => 'd'];
+            $dir = $inner[1] === '-p' ? $inner[2] : $inner[1];
+            FileBrowserFake::$fs[$relative($dir)] = ['type' => 'd'];
 
             return Process::result(exitCode: 0);
         }
@@ -531,6 +563,34 @@ describe('browsing', function () {
         $this->actingAs($this->admin)
             ->putJson(filesUrl('/content'), ['path' => 'new.txt', 'content' => 'hello'])
             ->assertNotFound();
+    });
+
+    it('backs up the previous content before overwriting, in .panel/backups', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'new content'])
+            ->assertOk();
+
+        $backupKeys = array_filter(
+            array_keys(FileBrowserFake::$fs),
+            fn (string $k) => str_starts_with($k, '.panel/backups/index.php.bak-'),
+        );
+
+        expect($backupKeys)->toHaveCount(1);
+        expect(FileBrowserFake::$fs[array_values($backupKeys)[0]]['content'])->toBe('<?php echo "hi";');
+    });
+
+    it('lists a file\'s backups alongside its content', function () {
+        fakeFileBrowserServer();
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'v2'])
+            ->assertOk();
+
+        $response = $this->actingAs($this->admin)->getJson(filesUrl('/content?path=index.php'))->assertOk();
+
+        expect($response->json('backups'))->toHaveCount(1)
+            ->and($response->json('backups.0.name'))->toStartWith('index.php.bak-');
     });
 
     it('downloads a file with attachment headers, never sniffed content-type', function () {
@@ -1150,6 +1210,137 @@ describe('deleting', function () {
 
         $this->actingAs($user)
             ->deleteJson(filesUrl(), ['path' => 'old.txt', 'confirm' => true])
+            ->assertForbidden();
+    });
+});
+
+describe('restoring a backup', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'size' => 20, 'content' => 'v2'];
+        FileBrowserFake::$fs['.panel/backups'] = ['type' => 'd'];
+        FileBrowserFake::$fs['.panel/backups/index.php.bak-20260805-090000'] = ['type' => 'f', 'content' => 'v1'];
+    });
+
+    it('puts a previous save back, and itself backs up what was there first', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/content/restore'), ['path' => 'index.php', 'backup' => 'index.php.bak-20260805-090000'])
+            ->assertOk();
+
+        // The fake's `cat` normalises output to end with one newline, same
+        // as everywhere else this file asserts on read-then-write content.
+        expect(FileBrowserFake::$fs['index.php']['content'])->toBe("v1\n")
+            ->and(ActivityLog::where('action', 'file_restored')->exists())->toBeTrue();
+
+        // Restoring is itself a write, so it backs up what "v2" was before
+        // being replaced — restoring the wrong one is itself undoable.
+        $backupKeys = array_filter(
+            array_keys(FileBrowserFake::$fs),
+            fn (string $k) => str_starts_with($k, '.panel/backups/index.php.bak-') && $k !== '.panel/backups/index.php.bak-20260805-090000',
+        );
+        expect($backupKeys)->toHaveCount(1);
+    });
+
+    it('refuses a name that is not shaped like a backup of this file — refused, not sanitised', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/content/restore'), ['path' => 'index.php', 'backup' => '../../../etc/passwd'])
+            ->assertStatus(422);
+    });
+
+    it('refuses a backup name belonging to a different file', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['other.php'] = ['type' => 'f', 'content' => 'x'];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/content/restore'), ['path' => 'other.php', 'backup' => 'index.php.bak-20260805-090000'])
+            ->assertStatus(422);
+    });
+
+    it('404s when the named backup does not exist on disk', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/content/restore'), ['path' => 'index.php', 'backup' => 'index.php.bak-20260101-000000'])
+            ->assertNotFound();
+    });
+
+    it('refuses a viewer who cannot manage', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)
+            ->postJson(filesUrl('/content/restore'), ['path' => 'index.php', 'backup' => 'index.php.bak-20260805-090000'])
+            ->assertForbidden();
+    });
+});
+
+describe('setting permissions on one file', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'content' => 'x'];
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+    });
+
+    it('sets the mode on a file as the site\'s own user', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/permissions'), ['path' => 'index.php', 'mode' => '600'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['index.php']['mode'])->toBe('600')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- chmod 600')))->toBeTrue()
+            ->and(ActivityLog::where('action', 'file_chmod')->exists())->toBeTrue();
+    });
+
+    it('sets the mode on a directory', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/permissions'), ['path' => 'wp-content', 'mode' => '755'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['wp-content']['mode'])->toBe('755');
+    });
+
+    it('refuses a mode with a fourth digit', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/permissions'), ['path' => 'index.php', 'mode' => '4755'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('mode');
+    });
+
+    it('refuses a mode with an out-of-range digit', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/permissions'), ['path' => 'index.php', 'mode' => '899'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('mode');
+    });
+
+    it('404s when the path does not exist', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/permissions'), ['path' => 'nope.txt', 'mode' => '644'])
+            ->assertNotFound();
+    });
+
+    it('refuses a viewer who cannot manage', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)
+            ->putJson(filesUrl('/permissions'), ['path' => 'index.php', 'mode' => '644'])
             ->assertForbidden();
     });
 });

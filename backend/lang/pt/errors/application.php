@@ -31,5 +31,6 @@ return [
     'path_exists' => 'Já existe algo nesse caminho.',
     'cannot_delete_root' => 'A pasta raiz do site não pode ser eliminada.',
     'target_not_zip' => 'O nome do novo arquivo deve terminar em .zip.',
+    'unknown_backup' => 'Essa não é uma cópia de segurança conhecida deste ficheiro.',
 
 ];

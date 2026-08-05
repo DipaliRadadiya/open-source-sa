@@ -49,6 +49,10 @@ class FileBrowser
      * passes a byte-size check but not an entry-count one. */
     public const MAX_ARCHIVE_ENTRIES = 10000;
 
+    /** Backups kept per file. Mirrors `ApplicationEnvironment::KEEP_BACKUPS`
+     * — enough to undo a mistake, bounded. */
+    public const KEEP_BACKUPS = 5;
+
     private const BINARY_SNIFF_BYTES = 8192;
 
     public function __construct(
@@ -104,7 +108,7 @@ class FileBrowser
     }
 
     /**
-     * @return array{content: string, size: int, binary: bool}
+     * @return array{content: string, size: int, binary: bool, backups: array<int, array{name: string, created_at: string}>}
      */
     public function read(Application $application, string $path): array
     {
@@ -119,6 +123,7 @@ class FileBrowser
             'content' => $content,
             'size' => $size,
             'binary' => str_contains(substr($content, 0, self::BINARY_SNIFF_BYTES), "\0"),
+            'backups' => $this->backups($application, $target),
         ];
     }
 
@@ -133,6 +138,15 @@ class FileBrowser
         return $this->run($application, ['cat', $target], 'download')->output();
     }
 
+    /**
+     * Overwrites an existing file, keeping a copy of what was there —
+     * mirrors `ApplicationEnvironment::write()`'s backup-before-write, just
+     * generalised to any file rather than only `.env`.
+     *
+     * The backup comes first and its failure is fatal: this is the whole
+     * safety story for "edit", and a save that silently skipped the copy
+     * would be the one time that promise mattered.
+     */
     public function write(Application $application, string $path, string $content): void
     {
         $target = $this->resolve($application, $path);
@@ -141,7 +155,115 @@ class FileBrowser
         // everywhere else in the panel.
         $this->assertType($application, $target, 'f');
 
+        $this->backup($application, $target);
+
         $this->run($application, ['tee', $target], 'write', input: $content);
+    }
+
+    /**
+     * Previous saves for one file, newest first.
+     *
+     * Stored under `.panel/backups/`, not beside the file — a name like
+     * `plugin.php.bak-...` sitting next to `plugin.php` would be reachable
+     * over HTTP unless every vhost template happens to block that exact
+     * pattern. `.panel/` is already outside every vhost's served paths (see
+     * `PoolManager`'s session/log paths), so backups live there instead of
+     * inventing a second thing for the web server to be told to ignore.
+     *
+     * @return array<int, array{name: string, created_at: string}>
+     */
+    public function backups(Application $application, string $target): array
+    {
+        $result = $this->serverOps->run(
+            $this->asUser($application, [
+                'find', $this->backupsDirectory($target), '-maxdepth', '1',
+                '-name', basename($target).'.bak-*', '-printf', '%f\n',
+            ]),
+            ['feature' => 'application', 'op' => 'file_backups', 'application' => $application->id],
+            timeout: 15,
+        );
+
+        if ($result->failed()) {
+            return [];
+        }
+
+        $names = array_values(array_filter(array_map('trim', explode("\n", $result->output()))));
+        rsort($names);
+
+        return array_map(fn (string $name): array => [
+            'name' => $name,
+            'created_at' => $this->timestampFromBackupName($name),
+        ], $names);
+    }
+
+    /**
+     * Puts a previous save back — taking a backup of the current content
+     * first, so restoring the wrong one is itself undoable.
+     */
+    public function restoreBackup(Application $application, string $path, string $name): void
+    {
+        $target = $this->resolve($application, $path);
+        $this->assertType($application, $target, 'f');
+
+        $prefix = basename($target).'.bak-';
+
+        abort_unless(
+            str_starts_with($name, $prefix) && preg_match('/^\d{8}-\d{6}$/', substr($name, strlen($prefix))) === 1,
+            422,
+            __('errors/application.unknown_backup'),
+        );
+
+        $source = "{$this->backupsDirectory($target)}/{$name}";
+        $stat = $this->stat($application, $source);
+        abort_if($stat === null, 404);
+
+        $content = $this->run($application, ['cat', $source], 'read_backup')->output();
+
+        $this->write($application, $path, $content);
+    }
+
+    private function backupsDirectory(string $target): string
+    {
+        return dirname($target).'/.panel/backups';
+    }
+
+    private function backup(Application $application, string $target): void
+    {
+        if ($this->stat($application, $target) === null) {
+            // Nothing to back up yet — write() is about to create the file
+            // for the first time (unreachable via the HTTP endpoint today,
+            // since write() always requires an existing file first, but this
+            // method stays correct if that ever changes).
+            return;
+        }
+
+        $directory = $this->backupsDirectory($target);
+        $this->run($application, ['mkdir', '-p', $directory], 'backup_dir');
+
+        $name = basename($target).'.bak-'.now()->format('Ymd-His');
+
+        $this->run($application, ['cp', '-p', $target, "{$directory}/{$name}"], 'backup');
+
+        $this->pruneBackups($application, $target);
+    }
+
+    private function pruneBackups(Application $application, string $target): void
+    {
+        $surplus = array_slice($this->backups($application, $target), self::KEEP_BACKUPS);
+
+        foreach ($surplus as $backup) {
+            $this->run($application, ['rm', '-f', "{$this->backupsDirectory($target)}/{$backup['name']}"], 'backup_prune');
+        }
+    }
+
+    /** `plugin.php.bak-20260804-132011` → `04-08-2026 13:20:11`, the panel's timestamp format. */
+    private function timestampFromBackupName(string $name): string
+    {
+        if (preg_match('/(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/', $name, $m) !== 1) {
+            return '';
+        }
+
+        return "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}:{$m[5]}:{$m[6]}";
     }
 
     /**
@@ -284,6 +406,28 @@ class FileBrowser
         $command = $stat['type'] === 'd' ? ['rm', '-rf', $target] : ['rm', '-f', $target];
 
         $this->run($application, $command, 'delete');
+    }
+
+    /**
+     * Sets the mode on a single file or directory — the counterpart to
+     * `PermissionFixer::fix()`'s whole-site reset, for the one-off case of
+     * "this one file needs to be different".
+     *
+     * Exactly 3 octal digits (owner/group/other rwx), nothing else: no
+     * setuid/setgid/sticky bit. Not because a site's own user setting those
+     * on their own file is some grave danger, but because a plain three-digit
+     * mode is the entire vocabulary every other permissions surface in this
+     * panel uses (`0755`/`0644`/`0600`/`0700`) — a fourth digit would be a
+     * new kind of input this feature alone accepts, for a case nobody asked
+     * for.
+     */
+    public function chmod(Application $application, string $path, string $mode): void
+    {
+        $target = $this->resolve($application, $path);
+        $stat = $this->stat($application, $target);
+        abort_if($stat === null || ! in_array($stat['type'], ['f', 'd'], true), 404);
+
+        $this->run($application, ['chmod', $mode, $target], 'chmod');
     }
 
     /**

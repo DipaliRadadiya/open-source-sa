@@ -1667,21 +1667,26 @@ The one high-value action a full file manager buries: reset a site's ownership a
 - `404` for a path that does not exist or is not a directory.
 
 **`GET /api/applications/{application}/files/content?path=`** — read a text file, throttle 60/min
-- `200`: `{"path", "content", "size"}`
+- `200`: `{"path", "content", "size", "backups"}` — `backups` is the same list `POST .../content/restore` (below) can restore from, newest first.
 - `422` if the file is **larger than 5 MB** (`errors/application.file_too_large`) or **looks binary** (a null byte in the first 8 KB — `errors/application.file_not_text`). Both point at SFTP for anything this doesn't cover.
 - `404` for a path that does not exist or is not a regular file.
 
 **`PUT /api/applications/{application}/files/content`** — save a file, throttle 20/min
 - Body: `{"path", "content"}` (`content` capped at 5 MB)
 - **Edits an existing file only — this is not a create.** A path that does not already resolve to a regular file is `404`, same distinction "edit" carries everywhere else in the panel.
-- No automatic backup-before-write (unlike `.env`'s rotation) — noted as a reasonable follow-up, not built in this pass.
+- **Backs up the previous content before overwriting** — mirrors `.env`'s 5-revision rotation, generalised to any file. Stored under `.panel/backups/<name>.bak-<timestamp>`, not beside the file: a `plugin.php.bak-...` sitting next to `plugin.php` would be web-reachable unless every vhost template happened to block that exact pattern, while `.panel/` is already outside everything a vhost serves.
+
+**`POST /api/applications/{application}/files/content/restore`** — throttle 10/min
+- Body: `{"path", "backup"}` — `backup` must be one of the names `backups` returned for that exact file; anything else is `422` (refused, not sanitised — same rule `.env`'s restore uses).
+- **Restoring itself takes a backup of what was there first**, so restoring the wrong one is itself undoable.
+- `404` if the named backup no longer exists on disk.
+
+**Activity:** `application.file_edited` (path only, never content) / `application.file_restored`.
 
 **`GET /api/applications/{application}/files/download?path=`** — download a file, throttle 20/min
 - Streams the raw bytes with `Content-Disposition: attachment`.
 - **`Content-Type` is always `application/octet-stream`, never sniffed from the file.** Serving an arbitrary downloaded file as, say, `text/html` would let its content run as a script in the browser — forcing a download sidesteps that whole class of risk.
 - `404` for a directory or a symlink; `422` above the 5 MB cap.
-
-**Activity:** `application.file_edited` (path only, never content).
 
 **`POST /api/applications/{application}/files/upload`** — multipart, throttle 10/min
 - Fields: `path` (the **full target path**, e.g. `wp-content/plugins/thing.zip` — not a directory) + `file`
@@ -1738,6 +1743,12 @@ The one high-value action a full file manager buries: reset a site's ownership a
 - `404` if `path` doesn't exist, or isn't a file/directory.
 
 **Activity:** `application.files_compressed`.
+
+**`PUT /api/applications/{application}/files/permissions`** — one file/folder, throttle 20/min
+- Body: `{"path", "mode"}` — `mode` is exactly **3 octal digits** (`600`, `644`, `755`, …), `422` for anything else, including a 4th digit (no setuid/setgid/sticky). The counterpart to `POST .../fix-permissions` above, for the one-off case of "this one file needs to be different" rather than a whole-site reset.
+- `404` if `path` doesn't exist, or isn't a file/directory.
+
+**Activity:** `application.file_chmod`.
 
 **`DELETE /api/applications/{application}/files`** — throttle 10/min
 - Body: `{"path", "confirm": true}` — **`confirm: true` is required.** A deliberate second field, not just hitting the URL, as a floor against firing this by accident.

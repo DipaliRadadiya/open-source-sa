@@ -31,5 +31,6 @@ return [
     'path_exists' => 'Something already exists at that path.',
     'cannot_delete_root' => 'The site\'s own root folder cannot be deleted.',
     'target_not_zip' => 'The new archive\'s name must end in .zip.',
+    'unknown_backup' => 'That is not a known backup of this file.',
 
 ];

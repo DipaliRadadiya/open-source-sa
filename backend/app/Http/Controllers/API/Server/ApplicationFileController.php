@@ -4,12 +4,14 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\BrowseFilesRequest;
+use App\Http\Requests\Server\Application\ChmodFileRequest;
 use App\Http\Requests\Server\Application\CompressFileRequest;
 use App\Http\Requests\Server\Application\CopyFileRequest;
 use App\Http\Requests\Server\Application\CreateDirectoryRequest;
 use App\Http\Requests\Server\Application\DeleteFileRequest;
 use App\Http\Requests\Server\Application\ExtractFileRequest;
 use App\Http\Requests\Server\Application\RenameFileRequest;
+use App\Http\Requests\Server\Application\RestoreFileBackupRequest;
 use App\Http\Requests\Server\Application\SaveFileRequest;
 use App\Http\Requests\Server\Application\UploadFileRequest;
 use App\Models\Application;
@@ -55,6 +57,7 @@ class ApplicationFileController extends Controller
             'path' => $request->targetPath(),
             'content' => $file['content'],
             'size' => $file['size'],
+            'backups' => $file['backups'],
         ]);
     }
 
@@ -72,6 +75,22 @@ class ApplicationFileController extends Controller
         ]);
 
         return response()->json(['saved' => true]);
+    }
+
+    public function restoreBackup(
+        RestoreFileBackupRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->restoreBackup($application, $request->targetPath(), $request->backupName());
+
+        $activity->log('application.file_restored', $application, [
+            'name' => $application->name,
+            'path' => $request->targetPath(),
+        ]);
+
+        return response()->json(['restored' => true]);
     }
 
     public function upload(
@@ -172,6 +191,23 @@ class ApplicationFileController extends Controller
         ]);
 
         return response()->json(['compressed' => true]);
+    }
+
+    public function chmod(
+        ChmodFileRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->chmod($application, $request->targetPath(), $request->mode());
+
+        $activity->log('application.file_chmod', $application, [
+            'name' => $application->name,
+            'path' => $request->targetPath(),
+            'mode' => $request->mode(),
+        ]);
+
+        return response()->json(['chmoded' => true]);
     }
 
     public function destroy(

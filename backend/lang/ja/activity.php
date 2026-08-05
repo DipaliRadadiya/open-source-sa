@@ -145,6 +145,8 @@ return [
     'application.file_renamed' => ':name の :path を :target に名前変更しました',
     'application.file_copied' => ':name の :path を :target にコピーしました',
     'application.files_compressed' => ':name の :path を :target に圧縮しました',
+    'application.file_restored' => ':name の :path の以前の保存を復元しました',
+    'application.file_chmod' => ':name の :path の権限を :mode に設定しました',
     'application.file_deleted' => ':name の :path を削除しました',
     'application.worker_created' => ':name にワーカー :worker を追加しました',
     'application.worker_updated' => ':name のワーカー :worker を更新しました',
