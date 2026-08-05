@@ -140,6 +140,7 @@ return [
     'application.permissions_fixed' => 'Dateiberechtigungen für :name zurückgesetzt',
     'application.file_edited' => ':path auf :name bearbeitet',
     'application.file_uploaded' => ':path auf :name hochgeladen',
+    'application.files_extracted' => ':path auf :name nach :target entpackt',
     'application.worker_created' => 'Worker :worker zu :name hinzugefügt',
     'application.worker_updated' => 'Worker :worker von :name aktualisiert',
     'application.worker_deleted' => 'Worker :worker von :name entfernt',

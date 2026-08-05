@@ -18,39 +18,50 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * This is the one thing standing between a client-supplied string and a
  * server command run as the site's own Linux user — get it wrong and the
  * user-scoping in FileBrowser is the only thing left holding the line.
+ *
+ * `isSafe()` is exposed as a static method because it is also the check
+ * applied to archive entry names during extraction (`FileBrowser::extract()`)
+ * — a zip archive's own internal paths are just as attacker-influenced as a
+ * request field, and need exactly the same rule, not a second hand-rolled one
+ * that could quietly drift from this one.
  */
 class SafeRelativePath implements ValidationRule
 {
-    public function validate(string $attribute, mixed $value, Closure $fail): void
+    public static function isSafe(string $value): bool
     {
-        if (! is_string($value) || $value === '') {
-            return;
+        if ($value === '') {
+            return true;
         }
 
         if (str_contains($value, "\0")) {
-            $fail('errors/application.unsafe_path')->translate();
-
-            return;
+            return false;
         }
 
         if (str_starts_with($value, '/') || str_contains($value, '\\')) {
-            $fail('errors/application.unsafe_path')->translate();
-
-            return;
+            return false;
         }
 
         foreach (explode('/', $value) as $segment) {
             if ($segment === '' || $segment === '.' || $segment === '..') {
-                $fail('errors/application.unsafe_path')->translate();
-
-                return;
+                return false;
             }
 
             if (preg_match('/^[A-Za-z0-9._\- ]+$/', $segment) !== 1) {
-                $fail('errors/application.unsafe_path')->translate();
-
-                return;
+                return false;
             }
+        }
+
+        return true;
+    }
+
+    public function validate(string $attribute, mixed $value, Closure $fail): void
+    {
+        if (! is_string($value)) {
+            return;
+        }
+
+        if (! self::isSafe($value)) {
+            $fail('errors/application.unsafe_path')->translate();
         }
     }
 }

@@ -4,14 +4,15 @@ use App\Http\Controllers\API\Server\ApplicationFileController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| A site's own files: reset permissions, and a read/edit-only browser. No
-| create, delete, rename, upload or extract — see the file-manager research
-| this repo's memory holds for why the rest is a deliberately separate
-| decision, not an oversight.
+| A site's own files: reset permissions, a read/edit-only browser, upload and
+| extract. No create, delete or rename — see the file-manager research this
+| repo's memory holds for why the rest is a deliberately separate decision,
+| not an oversight.
 |
-| Every browse/read/write command runs as the site's own Linux user
+| Every browse/read/write/extract command runs as the site's own Linux user
 | (`runuser -u`, in FileBrowser), never as the panel's root — that is what
-| makes accepting a client-supplied path safe here.
+| makes accepting a client-supplied path (and, for extract, a client-supplied
+| archive) safe here.
 */
 
 Route::post('/applications/{application}/fix-permissions', [ApplicationFileController::class, 'fixPermissions'])
@@ -31,3 +32,6 @@ Route::post('/applications/{application}/files/upload', [ApplicationFileControll
 
 Route::get('/applications/{application}/files/download', [ApplicationFileController::class, 'download'])
     ->middleware(['permission:app_file', 'throttle:20,1']);
+
+Route::post('/applications/{application}/files/extract', [ApplicationFileController::class, 'extract'])
+    ->middleware(['permission:app_file,manage', 'throttle:5,1']);

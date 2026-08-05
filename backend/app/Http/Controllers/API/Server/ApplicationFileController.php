@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\BrowseFilesRequest;
+use App\Http\Requests\Server\Application\ExtractFileRequest;
 use App\Http\Requests\Server\Application\SaveFileRequest;
 use App\Http\Requests\Server\Application\UploadFileRequest;
 use App\Models\Application;
@@ -82,6 +83,23 @@ class ApplicationFileController extends Controller
         ]);
 
         return response()->json(['uploaded' => true]);
+    }
+
+    public function extract(
+        ExtractFileRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->extract($application, $request->archivePath(), $request->targetPath());
+
+        $activity->log('application.files_extracted', $application, [
+            'name' => $application->name,
+            'path' => $request->archivePath(),
+            'target' => $request->targetPath(),
+        ]);
+
+        return response()->json(['extracted' => true]);
     }
 
     public function download(BrowseFilesRequest $request, Application $application, FileBrowser $files): Response

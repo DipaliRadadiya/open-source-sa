@@ -140,6 +140,7 @@ return [
     'application.permissions_fixed' => ':name की फ़ाइल अनुमतियाँ रीसेट कीं',
     'application.file_edited' => ':name पर :path संपादित की',
     'application.file_uploaded' => ':name पर :path अपलोड की',
+    'application.files_extracted' => ':name पर :path को :target में निकाला',
     'application.worker_created' => ':name में वर्कर :worker जोड़ा',
     'application.worker_updated' => ':name का वर्कर :worker अद्यतन किया',
     'application.worker_deleted' => ':name से वर्कर :worker हटाया',

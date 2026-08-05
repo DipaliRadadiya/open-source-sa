@@ -182,10 +182,20 @@ class FileBrowserFake
     /** @var array<int, string> every command the panel ran, runuser prefix included */
     public static array $ran = [];
 
+    /**
+     * Registered "zip contents" keyed by the archive's path relative to the
+     * site root — a real zip is never written to disk for these tests, only
+     * the `unzip -Z`/`unzip -o` output it would produce.
+     *
+     * @var array<string, array<int, array{type: string, size: int, name: string}>>
+     */
+    public static array $archives = [];
+
     public static function reset(): void
     {
         self::$fs = ['' => ['type' => 'd']];
         self::$ran = [];
+        self::$archives = [];
     }
 }
 
@@ -261,6 +271,45 @@ function fakeFileBrowserServer(): void
                 ...(FileBrowserFake::$fs[$rel] ?? []),
                 'content' => $process->input ?? '',
             ];
+
+            return Process::result(exitCode: 0);
+        }
+
+        if ($binary === 'unzip' && ($inner[1] ?? null) === '-Z') {
+            $archiveRel = $relative($inner[2]);
+            $entries = FileBrowserFake::$archives[$archiveRel] ?? null;
+
+            if ($entries === null) {
+                return Process::result(exitCode: 1, errorOutput: 'cannot find or open zipfile');
+            }
+
+            $lines = ['Archive:  x.zip', 'Zip file size: 1 bytes, number of entries: '.count($entries)];
+
+            foreach ($entries as $e) {
+                $perm = $e['type'].str_repeat('-', 9);
+                $lines[] = "{$perm}  3.0 unx {$e['size']} tx stor 26-Aug-05 08:53 {$e['name']}";
+            }
+
+            $lines[] = count($entries).' files, 0 bytes uncompressed, 0 bytes compressed:  0.0%';
+
+            return Process::result(output: implode("\n", $lines));
+        }
+
+        if ($binary === 'unzip' && ($inner[1] ?? null) === '-o') {
+            // ['unzip', '-o', '-d', $target, $archive]
+            $targetRel = $relative($inner[3]);
+            $archiveRel = $relative($inner[4]);
+
+            foreach (FileBrowserFake::$archives[$archiveRel] ?? [] as $e) {
+                $name = rtrim($e['name'], '/');
+
+                if ($name === '') {
+                    continue;
+                }
+
+                $entryRel = $targetRel === '' ? $name : "{$targetRel}/{$name}";
+                FileBrowserFake::$fs[$entryRel] = ['type' => $e['type'] === 'd' ? 'd' : 'f', 'size' => $e['size'], 'content' => 'extracted'];
+            }
 
             return Process::result(exitCode: 0);
         }
@@ -505,6 +554,150 @@ describe('uploading', function () {
 
         $this->actingAs($user)
             ->post(filesUrl('/upload'), ['path' => 'wp-content/plugins/thing.zip', 'file' => $file])
+            ->assertForbidden();
+    });
+});
+
+/*
+ * Extract is where an untrusted archive meets the filesystem — the panel's
+ * own Restores\Steps\ExtractArchive gets to run as root because it only ever
+ * unpacks the panel's own backups; this one takes a file a client uploaded,
+ * so every entry is listed and judged before anything is written.
+ */
+
+describe('extracting', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/plugins'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/plugins/thing.zip'] = ['type' => 'f', 'size' => 100];
+    });
+
+    function extractPayload(string $path = 'wp-content/plugins/thing.zip', string $target = 'wp-content/plugins'): array
+    {
+        return ['path' => $path, 'target' => $target];
+    }
+
+    it('extracts a well-formed archive in place, as the site\'s own user', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => 'd', 'size' => 0, 'name' => 'my-plugin/'],
+            ['type' => '-', 'size' => 12, 'name' => 'my-plugin/plugin.php'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('wp-content/plugins/my-plugin/plugin.php')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- unzip -o')))->toBeTrue()
+            ->and(ActivityLog::where('type', 'application')->where('action', 'files_extracted')->exists())->toBeTrue();
+    });
+
+    it('overwrites an existing file at the extracted path', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/plugins/my-plugin/plugin.php'] = ['type' => 'f', 'content' => 'old'];
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => '-', 'size' => 12, 'name' => 'my-plugin/plugin.php'],
+        ];
+
+        $this->actingAs($this->admin)->postJson(filesUrl('/extract'), extractPayload())->assertOk();
+
+        expect(FileBrowserFake::$fs['wp-content/plugins/my-plugin/plugin.php']['content'])->toBe('extracted');
+    });
+
+    it('refuses a zip-slip entry before extracting anything', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => '-', 'size' => 4, 'name' => '../../etc/evil.txt'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertStatus(422);
+
+        expect(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- unzip -o')))->toBeFalse();
+    });
+
+    it('refuses an archive entry that is a symlink', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => 'l', 'size' => 5, 'name' => 'leak'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertStatus(422);
+    });
+
+    it('refuses an archive that would be too large once extracted', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => '-', 'size' => 300 * 1024 * 1024, 'name' => 'huge.bin'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertStatus(422);
+    });
+
+    it('refuses an archive with too many entries', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = array_map(
+            fn (int $i) => ['type' => '-', 'size' => 1, 'name' => "file{$i}.txt"],
+            range(1, 10001),
+        );
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertStatus(422);
+    });
+
+    it('refuses an unreadable or corrupt archive', function () {
+        fakeFileBrowserServer();
+        // Deliberately not registered in FileBrowserFake::$archives.
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertStatus(422);
+    });
+
+    it('refuses anything that is not a .zip by extension', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/plugins/thing.tar.gz'] = ['type' => 'f', 'size' => 100];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload('wp-content/plugins/thing.tar.gz'))
+            ->assertStatus(422);
+    });
+
+    it('404s when the target directory does not exist', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => '-', 'size' => 4, 'name' => 'file.txt'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload(target: 'no-such-dir'))
+            ->assertNotFound();
+    });
+
+    it('rejects a target path that escapes the site root', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload(target: '../../etc'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('target');
+    });
+
+    it('refuses a viewer who cannot manage', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)
+            ->postJson(filesUrl('/extract'), extractPayload())
             ->assertForbidden();
     });
 });

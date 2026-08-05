@@ -140,6 +140,7 @@ return [
     'application.permissions_fixed' => ':name のファイル権限をリセットしました',
     'application.file_edited' => ':name の :path を編集しました',
     'application.file_uploaded' => ':name に :path をアップロードしました',
+    'application.files_extracted' => ':name の :target に :path を展開しました',
     'application.worker_created' => ':name にワーカー :worker を追加しました',
     'application.worker_updated' => ':name のワーカー :worker を更新しました',
     'application.worker_deleted' => ':name からワーカー :worker を削除しました',

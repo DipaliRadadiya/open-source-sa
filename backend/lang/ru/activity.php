@@ -140,6 +140,7 @@ return [
     'application.permissions_fixed' => 'Сбросил права доступа к файлам :name',
     'application.file_edited' => 'Изменил :path на :name',
     'application.file_uploaded' => 'Загрузил :path в :name',
+    'application.files_extracted' => 'Распаковал :path в :target на :name',
     'application.worker_created' => 'Добавил обработчик :worker в :name',
     'application.worker_updated' => 'Обновил обработчик :worker в :name',
     'application.worker_deleted' => 'Удалил обработчик :worker из :name',

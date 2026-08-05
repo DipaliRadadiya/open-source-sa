@@ -20,4 +20,12 @@ return [
     'file_not_text' => 'Ce fichier ne semble pas être du texte et ne peut pas être ouvert ici.',
     'file_operation_failed' => 'L\'opération sur le fichier a échoué sur le serveur.',
 
+    'file_not_archive' => 'Seules les archives .zip peuvent être extraites ici.',
+    'archive_unreadable' => 'Cette archive n\'a pas pu être lue. Elle est peut-être corrompue.',
+    'archive_empty' => 'Cette archive ne contient rien.',
+    'archive_too_many_entries' => 'Cette archive contient trop de fichiers pour être extraite ici.',
+    'archive_too_large' => 'Cette archive serait trop volumineuse une fois extraite.',
+    'archive_has_symlink' => 'Cette archive contient un lien symbolique, ce qui n\'est pas autorisé.',
+    'archive_unsafe_entry' => 'Cette archive contient un chemin de fichier qui n\'est pas autorisé.',
+
 ];

@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\FileOperationException;
 use App\Models\Application;
+use App\Rules\SafeRelativePath;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Support\Bytes;
@@ -22,8 +23,8 @@ use Illuminate\Support\Carbon;
  * site's own user means that attack, if it slipped through, gains nothing:
  * the user already cannot read anything outside what they own.
  *
- * No create, delete, rename or extract — deliberately smaller than a full
- * file manager. See this repo's file-manager research for why the rest is
+ * No create, delete or rename — deliberately smaller than a full file
+ * manager. See this repo's file-manager research for why the rest is
  * deferred rather than an oversight.
  */
 class FileBrowser
@@ -38,6 +39,15 @@ class FileBrowser
      * this is buffered through a PHP process the same as everything else
      * here, not streamed. */
     public const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
+
+    /** Total *uncompressed* size an archive is allowed to expand to — the
+     * zip-bomb guard, checked from the listing before a single byte is
+     * extracted. */
+    public const MAX_UNCOMPRESSED_BYTES = 250 * 1024 * 1024;
+
+    /** A second, independent bomb guard: a bomb built from many tiny files
+     * passes a byte-size check but not an entry-count one. */
+    public const MAX_ARCHIVE_ENTRIES = 10000;
 
     private const BINARY_SNIFF_BYTES = 8192;
 
@@ -155,6 +165,101 @@ class FileBrowser
         $this->assertType($application, $directory, 'd');
 
         $this->run($application, ['tee', $target], 'upload', input: $contents);
+    }
+
+    /**
+     * Extracts a `.zip` already sitting in the site into an existing
+     * directory, in place, overwriting anything that collides — the same
+     * "drop a file here" expectation `upload()` carries, and what installing
+     * or updating a plugin actually needs.
+     *
+     * The archive is untrusted content, unlike `Restores\Steps\ExtractArchive`
+     * (which unpacks the panel's own backups). Every entry is listed and
+     * validated *before* anything is written: no `.`/`..`/absolute entries
+     * (zip-slip), no symlink entries (a zip can plant one that a later static
+     * request might follow — `unzip` itself never resolves it during
+     * extraction, but the web server serving the finished site would), and a
+     * cap on total uncompressed bytes and entry count (zip-bomb). Extraction
+     * then runs as the site's own user, same as everything else here — the
+     * validation above is the primary control, running as the site's user is
+     * the backstop if it is ever wrong.
+     */
+    public function extract(Application $application, string $path, string $targetPath): void
+    {
+        $archive = $this->resolve($application, $path);
+        $this->assertType($application, $archive, 'f');
+
+        abort_unless(str_ends_with(strtolower($path), '.zip'), 422, __('errors/application.file_not_archive'));
+
+        $target = $this->resolve($application, $targetPath);
+        $this->assertType($application, $target, 'd');
+
+        $entries = $this->listArchiveEntries($application, $archive);
+
+        abort_if($entries === [], 422, __('errors/application.archive_empty'));
+        abort_if(count($entries) > self::MAX_ARCHIVE_ENTRIES, 422, __('errors/application.archive_too_many_entries'));
+
+        $appRoot = rtrim($this->provisioner->documentRoot($application), '/');
+        $totalBytes = 0;
+
+        foreach ($entries as $entry) {
+            abort_if($entry['type'] === 'l', 422, __('errors/application.archive_has_symlink'));
+
+            $name = rtrim($entry['name'], '/');
+
+            if ($name === '') {
+                continue;
+            }
+
+            abort_unless(SafeRelativePath::isSafe($name), 422, __('errors/application.archive_unsafe_entry'));
+
+            $entryTarget = "{$target}/{$name}";
+            abort_unless(
+                $entryTarget === $appRoot || str_starts_with($entryTarget, "{$appRoot}/"),
+                422,
+                __('errors/application.archive_unsafe_entry'),
+            );
+
+            $totalBytes += $entry['size'];
+        }
+
+        abort_if($totalBytes > self::MAX_UNCOMPRESSED_BYTES, 422, __('errors/application.archive_too_large'));
+
+        $this->run($application, ['unzip', '-o', '-d', $target, $archive], 'extract');
+    }
+
+    /**
+     * One line per archive entry: permission string (first character is the
+     * type — `d`/`l`/`-`), size, and name. A single `unzip -Z` pass gives
+     * name+type+size together, so listing and the size total come from the
+     * same read rather than two commands that could disagree.
+     *
+     * @return array<int, array{name: string, type: string, size: int}>
+     */
+    private function listArchiveEntries(Application $application, string $archive): array
+    {
+        $result = $this->serverOps->run(
+            $this->asUser($application, ['unzip', '-Z', $archive]),
+            ['feature' => 'application', 'op' => 'file_archive_list', 'application' => $application->id],
+            timeout: 30,
+        );
+
+        // A failed listing means the archive could not be read — corrupt or
+        // not really a zip despite the extension. That is the caller's input
+        // being wrong, not a server operation failing.
+        abort_if($result->failed(), 422, __('errors/application.archive_unreadable'));
+
+        $entries = [];
+
+        foreach (explode("\n", $result->output()) as $line) {
+            if (preg_match('/^([-dl])[-rwxsSt]{9}\s+\S+\s+\S+\s+(\d+)\s+\S+\s+\S+\s+\S+\s+\S+\s+(.*)$/', $line, $m) !== 1) {
+                continue;
+            }
+
+            $entries[] = ['type' => $m[1], 'size' => (int) $m[2], 'name' => $m[3]];
+        }
+
+        return $entries;
     }
 
     private function resolve(Application $application, string $path): string

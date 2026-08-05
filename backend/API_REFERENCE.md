@@ -1692,7 +1692,21 @@ The one high-value action a full file manager buries: reset a site's ownership a
 
 **Activity:** `application.file_uploaded`.
 
-**Extract is not built yet** — the zip-slip/zip-bomb half of the file-manager research, deliberately sequenced after upload rather than shipped together.
+**`POST /api/applications/{application}/files/extract`** — throttle 5/min
+- Body: `{"path", "target"}` — `path` an existing `.zip` already on the site (e.g. uploaded via the endpoint above), `target` an existing directory to extract into.
+- **Zip only** in this pass — not `.tar.gz`. `path` not ending in `.zip` (case-insensitive) is `422`.
+- **In-place, overwrite allowed** — matches "install/update a plugin into `wp-content/plugins/`", the actual real-world case. No staging, no rollback: if an extract makes a mess, the file browser (list/view/edit/download above) and Fix Permissions are the cleanup path.
+- **Every entry is listed and judged before a single byte is written.** Rejected, all `422`, none of them reach `unzip`:
+  - `archive_unreadable` — the archive could not be read (corrupt, or not really a zip despite the extension)
+  - `archive_unsafe_entry` — an entry contains `..`, an absolute path, or resolves outside **this application's own document root** (relevant because one system user can own several applications — the check is against this app's root specifically, not just "somewhere the site's user owns")
+  - `archive_has_symlink` — an entry is a symbolic link. `unzip` itself never follows a symlink entry during extraction, but the web server serving the finished site might; the panel refuses to plant one at all
+  - `archive_too_large` — total **uncompressed** size over 250 MB
+  - `archive_too_many_entries` — over 10,000 entries (a second, independent bomb guard — many tiny files pass a byte-size check but not a count one)
+  - `archive_empty` — nothing to extract
+- Extraction itself runs as the site's own Linux user, same as everything else in this feature — the validation above is the real control; this is the backstop if it's ever wrong.
+- `404` if `target` does not already exist as a directory (no implicit `mkdir`) or `path` is not an existing regular file.
+
+**Activity:** `application.files_extracted`.
 
 ---
 

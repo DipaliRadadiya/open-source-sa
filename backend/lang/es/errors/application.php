@@ -20,4 +20,12 @@ return [
     'file_not_text' => 'Ese archivo no parece texto y no se puede abrir aquí.',
     'file_operation_failed' => 'La operación de archivo falló en el servidor.',
 
+    'file_not_archive' => 'Aquí solo se pueden extraer archivos .zip.',
+    'archive_unreadable' => 'No se pudo leer ese archivo. Puede estar dañado.',
+    'archive_empty' => 'Ese archivo no contiene nada.',
+    'archive_too_many_entries' => 'Ese archivo tiene demasiados archivos para extraerlo aquí.',
+    'archive_too_large' => 'Ese archivo sería demasiado grande una vez extraído.',
+    'archive_has_symlink' => 'Ese archivo contiene un enlace simbólico, lo cual no está permitido.',
+    'archive_unsafe_entry' => 'Ese archivo contiene una ruta de archivo que no está permitida.',
+
 ];

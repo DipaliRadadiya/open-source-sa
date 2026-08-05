@@ -20,4 +20,12 @@ return [
     'file_not_text' => 'このファイルはテキストではないようで、ここでは開けません。',
     'file_operation_failed' => 'サーバー上でのファイル操作に失敗しました。',
 
+    'file_not_archive' => 'ここでは .zip アーカイブのみ展開できます。',
+    'archive_unreadable' => 'そのアーカイブを読み込めませんでした。破損している可能性があります。',
+    'archive_empty' => 'そのアーカイブには何も含まれていません。',
+    'archive_too_many_entries' => 'そのアーカイブはファイル数が多すぎて、ここでは展開できません。',
+    'archive_too_large' => 'そのアーカイブは展開すると大きくなりすぎます。',
+    'archive_has_symlink' => 'そのアーカイブにはシンボリックリンクが含まれており、許可されていません。',
+    'archive_unsafe_entry' => 'そのアーカイブには許可されていないファイルパスが含まれています。',
+
 ];

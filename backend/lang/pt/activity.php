@@ -140,6 +140,7 @@ return [
     'application.permissions_fixed' => 'Redefiniu as permissões de ficheiro de :name',
     'application.file_edited' => 'Editou :path em :name',
     'application.file_uploaded' => 'Carregou :path para :name',
+    'application.files_extracted' => 'Extraiu :path para :target em :name',
     'application.worker_created' => 'Adicionou o worker :worker a :name',
     'application.worker_updated' => 'Atualizou o worker :worker de :name',
     'application.worker_deleted' => 'Removeu o worker :worker de :name',
