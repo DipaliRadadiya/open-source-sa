@@ -16,17 +16,24 @@ import { settingsResponseSchema } from "@/lib/schemas/settings";
 export const getSettings = cache(async function getSettings() {
   try {
     const res = await serverFetch("/settings");
-    if (!res.ok) return { data: null, lastChanged: null, failed: true };
+    if (!res.ok) {
+      console.error("getSettings: /settings failed", res.status, await res.text());
+      return { data: null, lastChanged: null, failed: true };
+    }
 
     const parsed = settingsResponseSchema.safeParse(await res.json());
-    return parsed.success
-      ? {
-          data: parsed.data.settings,
-          lastChanged: parsed.data.last_changed ?? null,
-          failed: false,
-        }
-      : { data: null, lastChanged: null, failed: true };
-  } catch {
+    if (!parsed.success) {
+      console.error("getSettings: response failed schema validation", parsed.error);
+      return { data: null, lastChanged: null, failed: true };
+    }
+
+    return {
+      data: parsed.data.settings,
+      lastChanged: parsed.data.last_changed ?? null,
+      failed: false,
+    };
+  } catch (error) {
+    console.error("getSettings: request threw", error);
     return { data: null, lastChanged: null, failed: true };
   }
 });
