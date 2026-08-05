@@ -2,12 +2,15 @@
 
 namespace App\Services\Server;
 
+use App\Exceptions\Server\SystemUser\SystemUserSshFailedException;
 use App\Models\SystemUser;
-use Illuminate\Support\Facades\File;
 
 class SshKeyManager
 {
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private ManagedFile $files,
+    ) {}
 
     /**
      * OpenSSH-style SHA256 fingerprint of a public key.
@@ -42,21 +45,37 @@ class SshKeyManager
 
     /**
      * Rewrite the user's authorized_keys from the DB rows (the source of
-     * truth), then re-assert ownership (privileged — runs as root on a real
-     * server; the file content itself is written here).
+     * truth), then re-assert ownership.
+     *
+     * Every step goes through ServerOps/ManagedFile, not PHP's own File
+     * facade: $systemUser's home directory belongs to THEM, not to whatever
+     * account php-fpm runs as, so a raw mkdir()/file_put_contents() here
+     * fails with a bare "Permission denied" and no reference to trace it by
+     * — the exact failure ManagedFile exists to prevent, just missed here.
      */
     public function sync(SystemUser $systemUser): void
     {
         $sshDir = rtrim($systemUser->home_path, '/').'/.ssh';
         $keys = $systemUser->sshKeys()->pluck('public_key')->implode("\n");
+        $context = ['feature' => 'system_user', 'op' => 'ssh_keys.sync', 'system_user' => $systemUser->username];
 
-        File::ensureDirectoryExists($sshDir, 0700);
-        File::put($sshDir.'/authorized_keys', $keys === '' ? '' : $keys."\n");
-        File::chmod($sshDir.'/authorized_keys', 0600);
+        $steps = [
+            fn () => $this->serverOps->run(['mkdir', '-p', $sshDir], $context),
+            fn () => $this->serverOps->run(['chmod', '0700', $sshDir], $context),
+            fn () => $this->files->put($sshDir.'/authorized_keys', $keys === '' ? '' : $keys."\n", $context),
+            fn () => $this->serverOps->run(['chmod', '0600', $sshDir.'/authorized_keys'], $context),
+            fn () => $this->serverOps->run(['chown', '-R', $systemUser->username.':'.$systemUser->username, $sshDir], $context),
+        ];
 
-        $this->serverOps->run(
-            ['chown', '-R', $systemUser->username.':'.$systemUser->username, $sshDir],
-            ['feature' => 'system_user', 'op' => 'ssh_keys.sync', 'system_user' => $systemUser->username],
-        );
+        foreach ($steps as $step) {
+            $result = $step();
+
+            if ($result->failed()) {
+                // The reference from whichever step failed — the one the
+                // operator sees, correlated to the one line in the
+                // server-ops log that has the real stderr.
+                throw new SystemUserSshFailedException($result->reference);
+            }
+        }
     }
 }

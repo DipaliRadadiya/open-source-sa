@@ -15,7 +15,28 @@ const TEST_KEY_2 = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyFo
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
-    Process::fake();
+
+    // sync() now writes through ServerOps/ManagedFile (mkdir, tee) rather than
+    // File::put, so the fake has to perform the ones that produce state the
+    // tests assert on — otherwise authorized_keys never appears and the
+    // assertions below would be checking nothing at all.
+    Process::fake(function ($process) {
+        $cmd = $process->command;
+        $bin = $cmd[0] ?? '';
+
+        if ($bin === 'mkdir') {
+            File::ensureDirectoryExists(end($cmd), 0700);
+
+            return Process::result(exitCode: 0);
+        }
+        if ($bin === 'tee') {
+            File::put($cmd[1], (string) $process->input);
+
+            return Process::result(exitCode: 0);
+        }
+
+        return Process::result(exitCode: 0);
+    });
     // writable home so authorized_keys sync actually runs
     config(['server.home_base' => storage_path('framework/testing/home')]);
     $this->admin = User::factory()->admin()->create();
