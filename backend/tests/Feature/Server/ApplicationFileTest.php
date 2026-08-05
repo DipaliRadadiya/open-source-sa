@@ -376,6 +376,23 @@ function fakeFileBrowserServer(): void
             return Process::result(exitCode: 0);
         }
 
+        if ($binary === 'cp') {
+            // ['cp', '-r', $source, $target]
+            $sourceRel = $relative($inner[2]);
+            $targetRel = $relative($inner[3]);
+
+            foreach (FileBrowserFake::$fs as $path => $entry) {
+                if ($path === $sourceRel) {
+                    FileBrowserFake::$fs[$targetRel] = $entry;
+                } elseif (str_starts_with($path, "{$sourceRel}/")) {
+                    $copied = $targetRel.substr($path, strlen($sourceRel));
+                    FileBrowserFake::$fs[$copied] = $entry;
+                }
+            }
+
+            return Process::result(exitCode: 0);
+        }
+
         if ($binary === 'rm') {
             $target = $inner[1] === '-rf' || $inner[1] === '-f' ? $inner[2] : $inner[1];
             $targetRel = $relative($target);
@@ -927,6 +944,70 @@ describe('renaming', function () {
 
         $this->actingAs($user)
             ->putJson(filesUrl('/rename'), ['path' => 'old.txt', 'target' => 'new.txt'])
+            ->assertForbidden();
+    });
+});
+
+describe('copying', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'content' => 'hello'];
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+    });
+
+    it('copies a file as the site\'s own user, keeping the original', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), ['path' => 'old.txt', 'target' => 'new.txt'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('old.txt')
+            ->and(FileBrowserFake::$fs['old.txt']['content'])->toBe('hello')
+            ->and(FileBrowserFake::$fs['new.txt']['content'])->toBe('hello')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- cp -r')))->toBeTrue()
+            ->and(ActivityLog::where('action', 'file_copied')->exists())->toBeTrue();
+    });
+
+    it('copies a directory into a different directory', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['a-folder'] = ['type' => 'd'];
+        FileBrowserFake::$fs['a-folder/inside.txt'] = ['type' => 'f', 'content' => 'x'];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), ['path' => 'a-folder', 'target' => 'wp-content/a-folder'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('a-folder/inside.txt')
+            ->and(FileBrowserFake::$fs)->toHaveKey('wp-content/a-folder/inside.txt');
+    });
+
+    it('refuses when the destination already exists — same non-overwrite default as rename', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['new.txt'] = ['type' => 'f', 'content' => 'do not touch me'];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), ['path' => 'old.txt', 'target' => 'new.txt'])
+            ->assertStatus(422);
+
+        expect(FileBrowserFake::$fs['new.txt']['content'])->toBe('do not touch me');
+    });
+
+    it('404s when the source does not exist', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), ['path' => 'nope.txt', 'target' => 'new.txt'])
+            ->assertNotFound();
+    });
+
+    it('refuses a viewer who cannot manage', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)
+            ->postJson(filesUrl('/copy'), ['path' => 'old.txt', 'target' => 'new.txt'])
             ->assertForbidden();
     });
 });

@@ -143,6 +143,7 @@ return [
     'application.files_extracted' => 'Extracted :path into :target on :name',
     'application.directory_created' => 'Created :path on :name',
     'application.file_renamed' => 'Renamed :path to :target on :name',
+    'application.file_copied' => 'Copied :path to :target on :name',
     'application.file_deleted' => 'Deleted :path on :name',
     'application.worker_created' => 'Added worker :worker to :name',
     'application.worker_updated' => 'Updated worker :worker on :name',

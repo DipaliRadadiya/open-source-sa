@@ -213,6 +213,27 @@ class FileBrowser
     }
 
     /**
+     * Copies a file or directory (recursively) to a new path — same shape as
+     * `rename()`, source untouched instead of moved.
+     *
+     * Same non-overwrite default as `rename()`, for the same reason: a
+     * typo'd destination silently clobbering something is a worse failure
+     * mode than refusing and asking again.
+     */
+    public function copy(Application $application, string $path, string $targetPath): void
+    {
+        $source = $this->resolve($application, $path);
+        $sourceStat = $this->stat($application, $source);
+        abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
+
+        $target = $this->resolve($application, $targetPath);
+        abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
+        $this->assertType($application, dirname($target), 'd');
+
+        $this->run($application, ['cp', '-r', $source, $target], 'copy');
+    }
+
+    /**
      * Deletes a file or a directory (recursively). The one destructive
      * operation in this feature — no trash, no undo, same stated limitation
      * as `extract()`'s lack of rollback. The site root itself can never be

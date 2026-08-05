@@ -143,6 +143,7 @@ return [
     'application.files_extracted' => ':name पर :path को :target में निकाला',
     'application.directory_created' => ':name पर :path बनाई',
     'application.file_renamed' => ':name पर :path का नाम बदलकर :target किया',
+    'application.file_copied' => ':name पर :path को :target में कॉपी किया',
     'application.file_deleted' => ':name पर :path हटाई',
     'application.worker_created' => ':name में वर्कर :worker जोड़ा',
     'application.worker_updated' => ':name का वर्कर :worker अद्यतन किया',

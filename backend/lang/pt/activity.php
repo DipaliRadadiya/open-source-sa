@@ -143,6 +143,7 @@ return [
     'application.files_extracted' => 'Extraiu :path para :target em :name',
     'application.directory_created' => 'Criou :path em :name',
     'application.file_renamed' => 'Renomeou :path para :target em :name',
+    'application.file_copied' => 'Copiou :path para :target em :name',
     'application.file_deleted' => 'Eliminou :path em :name',
     'application.worker_created' => 'Adicionou o worker :worker a :name',
     'application.worker_updated' => 'Atualizou o worker :worker de :name',

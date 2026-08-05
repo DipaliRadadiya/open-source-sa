@@ -1722,6 +1722,13 @@ The one high-value action a full file manager buries: reset a site's ownership a
 
 **Activity:** `application.file_renamed`.
 
+**`POST /api/applications/{application}/files/copy`** — throttle 10/min
+- Body: `{"path", "target"}` — same shape as rename, but the source is kept, not moved (`cp -r`).
+- Same non-overwrite default as rename: `target` must not already exist — `422` if it does.
+- `404` if `path` doesn't exist, or isn't a file/directory (symlinks excluded, same as the rest of this feature).
+
+**Activity:** `application.file_copied`.
+
 **`DELETE /api/applications/{application}/files`** — throttle 10/min
 - Body: `{"path", "confirm": true}` — **`confirm: true` is required.** A deliberate second field, not just hitting the URL, as a floor against firing this by accident.
 - Recursive for a directory. **No trash, no undo** — same stated limitation as extract's lack of rollback.

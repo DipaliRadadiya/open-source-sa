@@ -143,6 +143,7 @@ return [
     'application.files_extracted' => ':name の :target に :path を展開しました',
     'application.directory_created' => ':name に :path を作成しました',
     'application.file_renamed' => ':name の :path を :target に名前変更しました',
+    'application.file_copied' => ':name の :path を :target にコピーしました',
     'application.file_deleted' => ':name の :path を削除しました',
     'application.worker_created' => ':name にワーカー :worker を追加しました',
     'application.worker_updated' => ':name のワーカー :worker を更新しました',

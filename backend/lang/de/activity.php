@@ -143,6 +143,7 @@ return [
     'application.files_extracted' => ':path auf :name nach :target entpackt',
     'application.directory_created' => ':path auf :name erstellt',
     'application.file_renamed' => ':path auf :name in :target umbenannt',
+    'application.file_copied' => ':path auf :name nach :target kopiert',
     'application.file_deleted' => ':path auf :name gelöscht',
     'application.worker_created' => 'Worker :worker zu :name hinzugefügt',
     'application.worker_updated' => 'Worker :worker von :name aktualisiert',

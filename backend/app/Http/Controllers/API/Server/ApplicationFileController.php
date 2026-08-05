@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\BrowseFilesRequest;
+use App\Http\Requests\Server\Application\CopyFileRequest;
 use App\Http\Requests\Server\Application\CreateDirectoryRequest;
 use App\Http\Requests\Server\Application\DeleteFileRequest;
 use App\Http\Requests\Server\Application\ExtractFileRequest;
@@ -136,6 +137,23 @@ class ApplicationFileController extends Controller
         ]);
 
         return response()->json(['renamed' => true]);
+    }
+
+    public function copy(
+        CopyFileRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->copy($application, $request->sourcePath(), $request->targetPath());
+
+        $activity->log('application.file_copied', $application, [
+            'name' => $application->name,
+            'path' => $request->sourcePath(),
+            'target' => $request->targetPath(),
+        ]);
+
+        return response()->json(['copied' => true]);
     }
 
     public function destroy(
