@@ -53,7 +53,7 @@ return [
      * slug, so an operator who changed the slug must set these too.
      */
     'services' => [
-        'php_fpm' => env('PANEL_PHP_FPM_SERVICE', 'php8.4-fpm'),
+        'php_fpm' => env('PANEL_PHP_FPM_SERVICE', 'panel-fpm.service'),
         'frontend' => env('PANEL_FRONTEND_SERVICE', 'panel-frontend.service'),
         'queue' => env('PANEL_QUEUE_SERVICE', 'panel-queue.service'),
     ],

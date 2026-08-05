@@ -696,7 +696,7 @@ setup_backend() {
     # failed update.
     set_env "${dir}/.env" PANEL_UPDATE_STATE_DIR "$UPDATE_STATE_DIR"
     set_env "${dir}/.env" PANEL_PHP_VERSION "$PHP_VERSION"
-    set_env "${dir}/.env" PANEL_PHP_FPM_SERVICE "php${PHP_VERSION}-fpm"
+    set_env "${dir}/.env" PANEL_PHP_FPM_SERVICE "${PANEL_SLUG}-fpm.service"
     set_env "${dir}/.env" PANEL_FRONTEND_SERVICE "${PANEL_SLUG}-frontend.service"
     set_env "${dir}/.env" PANEL_QUEUE_SERVICE "${PANEL_SLUG}-queue.service"
     set_env "${dir}/.env" PANEL_NODE_BIN_DIR "$(dirname "$NODE_BIN")"
@@ -755,10 +755,37 @@ build_frontend() {
 configure_fpm() {
     step "Configuring PHP-FPM"
 
+    # The panel runs under its OWN php-fpm master, not the distro's shared
+    # php${PHP_VERSION}-fpm.service. Two reasons, both load-bearing:
+    #
+    #   1. The panel runs privileged host commands (useradd, writing webserver
+    #      configs, ...) synchronously via `sudo` from its PHP workers. The
+    #      distro unit ships ProtectSystem=full, which mounts /etc, /usr and
+    #      /boot read-only for the master and every child it spawns — so
+    #      `sudo useradd` dies with "cannot lock /etc/passwd". ReadWritePaths=
+    #      does not reliably punch back through ProtectSystem, so the panel's
+    #      master simply must not be sandboxed that way.
+    #
+    #   2. ProtectSystem is a property of the fpm *master* and is shared by
+    #      every pool under it. Relaxing the shared unit would strip that
+    #      protection from every hosted site too. A dedicated master confines
+    #      the relaxation to the panel alone; hosted-site pools stay on the
+    #      distro unit (PoolManager writes them into its pool.d) with their
+    #      hardening intact.
+    local pool_dir="/etc/php/${PHP_VERSION}/fpm/${PANEL_SLUG}-pool.d"
+    local master_conf="/etc/php/${PHP_VERSION}/fpm/php-fpm-${PANEL_SLUG}.conf"
+
+    run mkdir -p "$pool_dir"
+
+    # Migrate away from the old layout: a pool left in the distro's shared
+    # pool.d by an earlier install would be loaded by the hardened shared
+    # master too, racing the dedicated master for the same socket.
+    run rm -f "/etc/php/${PHP_VERSION}/fpm/pool.d/${PANEL_SLUG}.conf"
+
     # Its own pool on its own socket, owned by the panel's user. `ondemand`
     # because a control panel is idle most of the time and a 1 GB box has
     # better uses for the memory than parked PHP workers.
-    cat >"/etc/php/${PHP_VERSION}/fpm/pool.d/${PANEL_SLUG}.conf" <<POOL
+    cat >"${pool_dir}/${PANEL_SLUG}.conf" <<POOL
 [${PANEL_SLUG}]
 user = ${APP_USER}
 group = ${APP_USER}
@@ -773,9 +800,44 @@ php_admin_value[error_log] = /var/log/php-${PANEL_SLUG}.log
 php_admin_flag[log_errors] = on
 POOL
 
+    # A minimal master config that loads only the panel pool. Kept separate
+    # from the distro's php-fpm.conf so a package upgrade never pulls the panel
+    # pool back under the shared, hardened master.
+    cat >"$master_conf" <<GLOBAL
+[global]
+pid = /run/php/php${PHP_VERSION}-fpm-${PANEL_SLUG}.pid
+error_log = /var/log/php${PHP_VERSION}-fpm-${PANEL_SLUG}.log
+daemonize = no
+include = ${pool_dir}/*.conf
+GLOBAL
+
+    # Deliberately NOT sandboxed with ProtectSystem/ReadWritePaths: the panel
+    # legitimately writes /etc, /usr and more as root via sudo. It is isolated
+    # from hosted sites by being its own master, and the only account with sudo
+    # here is the panel's own — hosted pools run as www-data with no sudo — so
+    # this master carries no extra tenant risk.
+    cat >/etc/systemd/system/${PANEL_SLUG}-fpm.service <<UNIT
+[Unit]
+Description=Control panel PHP-FPM (dedicated master)
+After=network.target
+
+[Service]
+Type=notify
+PIDFile=/run/php/php${PHP_VERSION}-fpm-${PANEL_SLUG}.pid
+ExecStart=/usr/sbin/php-fpm${PHP_VERSION} --nodaemonize --fpm-config ${master_conf}
+ExecReload=/bin/kill -USR2 \$MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+    # The distro unit is left enabled for hosted-site pools, but the panel no
+    # longer rides on it.
     run systemctl enable "php${PHP_VERSION}-fpm"
-    run systemctl restart "php${PHP_VERSION}-fpm"
-    ok "pool listening on /run/php/${PANEL_SLUG}-fpm.sock"
+    run systemctl daemon-reload
+    run systemctl enable --now "${PANEL_SLUG}-fpm.service"
+    ok "panel pool on /run/php/${PANEL_SLUG}-fpm.sock (dedicated master ${PANEL_SLUG}-fpm.service)"
 }
 
 # ─── nginx ───────────────────────────────────────────────────────────────────
