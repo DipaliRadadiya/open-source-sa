@@ -137,6 +137,7 @@ return [
     'backup.restore_failed' => ':application の復元に失敗しました (:reason)',
     'application.environment_updated' => ':name の環境変数を更新しました (:keys)',
     'application.environment_restored' => ':name の以前の環境ファイルを復元しました',
+    'application.permissions_fixed' => ':name のファイル権限をリセットしました',
     'application.worker_created' => ':name にワーカー :worker を追加しました',
     'application.worker_updated' => ':name のワーカー :worker を更新しました',
     'application.worker_deleted' => ':name からワーカー :worker を削除しました',

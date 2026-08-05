@@ -1630,6 +1630,25 @@ Paths differ per web server — nginx and Apache write `<domain>.access.log`/`.e
 
 ---
 
+### Application files (App sidebar → Files)
+
+**`POST /api/applications/{application}/fix-permissions`** — `app_file` (`manage`), throttle 5/min
+
+The one high-value action a full file manager buries: reset a site's ownership and modes after they drift. Browsing, editing and upload are separate, deliberate decisions — not built here.
+
+```jsonc
+{ "fixed": true }
+```
+
+- Resets ownership recursively to the site's own Linux user, and modes to **directories `0755` / files `0644`** — not tighter. nginx and Apache serve static assets straight off disk as their own user (`try_files`), and that user is not a member of the site's group; a tighter default would make every image, CSS and JS file on the site unreadable. Ownership is the isolation boundary here, not read access.
+- **Re-tightens what the bulk reset just loosened**, if present: `.env` back to `0600`, and (once the site is PHP-isolated) `.panel/sessions` back to `0700`.
+- **No path is ever accepted from the request** — the target is always the application's own resolved document root.
+- `500` with `code: server_operation_failed` (or `server_busy` / `server_stale_lock`) on a server-side failure, same shape as every other server-operation endpoint.
+
+**Activity:** `application.permissions_fixed`.
+
+---
+
 ### Application environment (App sidebar → Environment)
 
 The site's `.env`, edited as one file. `app_environment` (`manage` to write).

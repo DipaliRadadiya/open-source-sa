@@ -13,4 +13,6 @@ return [
 
     'webhook_not_a_git_application' => 'Le déploiement automatique n\'est disponible que pour les applications déployées depuis un dépôt git.',
 
+    'permissions_fix_failed' => 'La réinitialisation des permissions de fichiers a échoué sur le serveur.',
+
 ];

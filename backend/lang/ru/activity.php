@@ -137,6 +137,7 @@ return [
     'backup.restore_failed' => 'Восстановление :application не удалось (:reason)',
     'application.environment_updated' => 'Обновил окружение :name (:keys)',
     'application.environment_restored' => 'Восстановил предыдущий файл окружения :name',
+    'application.permissions_fixed' => 'Сбросил права доступа к файлам :name',
     'application.worker_created' => 'Добавил обработчик :worker в :name',
     'application.worker_updated' => 'Обновил обработчик :worker в :name',
     'application.worker_deleted' => 'Удалил обработчик :worker из :name',

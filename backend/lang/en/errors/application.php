@@ -13,4 +13,6 @@ return [
 
     'webhook_not_a_git_application' => 'Deploy-on-push is only available for applications deployed from a git repository.',
 
+    'permissions_fix_failed' => 'Resetting file permissions failed on the server.',
+
 ];

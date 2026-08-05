@@ -13,4 +13,6 @@ return [
 
     'webhook_not_a_git_application' => 'El despliegue automático solo está disponible para aplicaciones desplegadas desde un repositorio git.',
 
+    'permissions_fix_failed' => 'No se pudieron restablecer los permisos de archivo en el servidor.',
+
 ];

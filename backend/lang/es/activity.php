@@ -137,6 +137,7 @@ return [
     'backup.restore_failed' => 'La restauración de :application falló (:reason)',
     'application.environment_updated' => 'Actualizó el entorno de :name (:keys)',
     'application.environment_restored' => 'Restauró un archivo de entorno anterior de :name',
+    'application.permissions_fixed' => 'Restableció los permisos de archivo de :name',
     'application.worker_created' => 'Añadió el worker :worker a :name',
     'application.worker_updated' => 'Actualizó el worker :worker de :name',
     'application.worker_deleted' => 'Eliminó el worker :worker de :name',

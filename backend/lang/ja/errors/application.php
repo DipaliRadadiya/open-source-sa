@@ -13,4 +13,6 @@ return [
 
     'webhook_not_a_git_application' => 'プッシュ時デプロイは、git リポジトリからデプロイされたアプリケーションでのみ利用できます。',
 
+    'permissions_fix_failed' => 'サーバー上でのファイル権限のリセットに失敗しました。',
+
 ];

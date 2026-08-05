@@ -13,4 +13,6 @@ return [
 
     'webhook_not_a_git_application' => 'Deploy-on-Push ist nur für Anwendungen verfügbar, die aus einem Git-Repository bereitgestellt werden.',
 
+    'permissions_fix_failed' => 'Das Zurücksetzen der Dateiberechtigungen ist auf dem Server fehlgeschlagen.',
+
 ];
