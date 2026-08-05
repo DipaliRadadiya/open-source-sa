@@ -36,6 +36,15 @@ class ApplicationResource extends JsonResource
             'is_disabled' => $this->disabled_at !== null,
             'disabled_at' => $this->disabled_at?->format('d-m-Y H:i:s'),
 
+            // Whole-site HTTP Basic Auth. The username is shown because the
+            // Security screen needs to display "currently protected as
+            // :username" without asking the user to remember what they set;
+            // the password hash never leaves the server — there is nothing
+            // useful it could tell the frontend, and it is one bcrypt hash
+            // closer to a credential no API response should carry.
+            'basic_auth_enabled' => (bool) $this->basic_auth_enabled,
+            'basic_auth_username' => $this->basic_auth_enabled ? $this->basic_auth_username : null,
+
             'system_user' => $this->whenLoaded('systemUser', fn () => $this->systemUser ? [
                 'id' => $this->systemUser->id,
                 'username' => $this->systemUser->username,

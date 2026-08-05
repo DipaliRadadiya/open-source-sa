@@ -42,6 +42,19 @@
 
     RequestHeader set X-Forwarded-Proto "%{REQUEST_SCHEME}s"
 
+@if ($basicAuth)
+    {{-- A node app has no `<Directory>` of its own to attach this to — it
+         serves nothing from disk — so this is scoped by URL instead, with
+         the ACME path excluded by the same regex the dotfile-deny rule below
+         uses, rather than a second `<Location>` turning it back off. --}}
+    <LocationMatch "^/(?!\.well-known/acme-challenge/)">
+        AuthType Basic
+        AuthName "Restricted"
+        AuthUserFile {{ $basicAuth['htpasswdPath'] }}
+        Require valid-user
+    </LocationMatch>
+@endif
+
     {{-- A .git directory inside a served tree is a full source disclosure. --}}
     <DirectoryMatch "/\.(?!well-known)">
         Require all denied

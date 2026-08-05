@@ -159,4 +159,6 @@ return [
     'application.php_isolated' => ':name に専用の PHP プールを割り当てました',
     'application.php_unisolated' => ':name を共有 PHP プールに戻しました',
     'application.php_settings_updated' => ':name の PHP 設定を更新しました',
+    'application.basic_auth_enabled' => ':name のパスワード保護を有効にしました',
+    'application.basic_auth_disabled' => ':name のパスワード保護を無効にしました',
 ];

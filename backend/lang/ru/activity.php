@@ -159,4 +159,6 @@ return [
     'application.php_isolated' => 'Выделил :name собственный пул PHP',
     'application.php_unisolated' => 'Вернул :name в общий пул PHP',
     'application.php_settings_updated' => 'Обновил настройки PHP для :name',
+    'application.basic_auth_enabled' => 'Включил защиту паролем для :name',
+    'application.basic_auth_disabled' => 'Отключил защиту паролем для :name',
 ];

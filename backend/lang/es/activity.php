@@ -159,4 +159,6 @@ return [
     'application.php_isolated' => 'Dio a :name su propio pool de PHP',
     'application.php_unisolated' => 'Devolvió :name al pool de PHP compartido',
     'application.php_settings_updated' => 'Actualizó la configuración de PHP de :name',
+    'application.basic_auth_enabled' => 'Habilitó la protección con contraseña de :name',
+    'application.basic_auth_disabled' => 'Deshabilitó la protección con contraseña de :name',
 ];

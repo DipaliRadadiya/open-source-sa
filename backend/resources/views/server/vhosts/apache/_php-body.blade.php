@@ -25,7 +25,14 @@
     <Directory {{ $documentRoot }}>
         Options -Indexes +FollowSymLinks
         AllowOverride All
+@if ($basicAuth)
+        AuthType Basic
+        AuthName "Restricted"
+        AuthUserFile {{ $basicAuth['htpasswdPath'] }}
+        Require valid-user
+@else
         Require all granted
+@endif
     </Directory>
 
     <FilesMatch \.php$>

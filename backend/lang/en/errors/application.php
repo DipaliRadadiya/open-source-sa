@@ -16,6 +16,7 @@ return [
     'already_disabled' => 'This application is already disabled.',
     'not_disabled' => 'This application is not disabled.',
     'availability_failed' => 'Changing the application\'s availability failed on the server.',
+    'basic_auth_failed' => 'Changing password protection failed on the server.',
 
     'permissions_fix_failed' => 'Resetting file permissions failed on the server.',
 

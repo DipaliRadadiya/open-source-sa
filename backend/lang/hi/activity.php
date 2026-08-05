@@ -159,4 +159,6 @@ return [
     'application.php_isolated' => ':name को अपना PHP पूल दिया',
     'application.php_unisolated' => ':name को साझा PHP पूल पर वापस किया',
     'application.php_settings_updated' => ':name की PHP सेटिंग्स अद्यतन कीं',
+    'application.basic_auth_enabled' => ':name के लिए पासवर्ड सुरक्षा सक्षम की',
+    'application.basic_auth_disabled' => ':name के लिए पासवर्ड सुरक्षा अक्षम की',
 ];

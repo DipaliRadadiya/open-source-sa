@@ -36,6 +36,27 @@ context /.well-known/acme-challenge {
   addDefaultCharset       off
 }
 
+@if ($basicAuth)
+{{-- Best-effort: OLS's realm/userDB syntax has not been exercised against
+     real hardware, unlike the nginx and Apache blocks above (see the
+     project's other OLS notes on this same gap). `context /` is declared
+     explicitly only when protection is on, so an unprotected site's config
+     is byte-for-byte what it always was — the ACME context above is more
+     specific and matches first, so it is never affected either way. --}}
+context / {
+  location                {{ $documentRoot }}
+  allowBrowse             1
+  realm                   {{ $basicAuth['realm'] }}
+}
+
+realm {{ $basicAuth['realm'] }} {
+  userDB {
+    location               {{ $basicAuth['htpasswdPath'] }}
+    userNameSeparator      :
+  }
+}
+@endif
+
 errorlog $VH_ROOT/logs/error.log {
   useServer               0
   logLevel                WARN

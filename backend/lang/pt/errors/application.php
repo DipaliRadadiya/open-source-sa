@@ -16,6 +16,7 @@ return [
     'already_disabled' => 'Esta aplicação já está desativada.',
     'not_disabled' => 'Esta aplicação não está desativada.',
     'availability_failed' => 'Não foi possível alterar a disponibilidade da aplicação no servidor.',
+    'basic_auth_failed' => 'Não foi possível alterar a proteção por senha no servidor.',
 
     'permissions_fix_failed' => 'Falha ao redefinir as permissões de arquivo no servidor.',
 

@@ -16,6 +16,7 @@ return [
     'already_disabled' => 'Esta aplicación ya está deshabilitada.',
     'not_disabled' => 'Esta aplicación no está deshabilitada.',
     'availability_failed' => 'No se pudo cambiar la disponibilidad de la aplicación en el servidor.',
+    'basic_auth_failed' => 'No se pudo cambiar la protección con contraseña en el servidor.',
 
     'permissions_fix_failed' => 'No se pudieron restablecer los permisos de archivo en el servidor.',
 

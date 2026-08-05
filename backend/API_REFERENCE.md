@@ -1199,6 +1199,7 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   "serving_profile": "php", "rendering_type": "php",
   "status": "pending", "status_title": "Not deployed yet", "deployed": false,
   "is_disabled": false, "disabled_at": null,
+  "basic_auth_enabled": false, "basic_auth_username": null,
   "system_user": { "id": 3, "username": "deploy" },
   "php_version": "8.4", "node_version": null, "app_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
@@ -1224,6 +1225,18 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
 - `422` disabling an already-disabled site, or enabling one that is not disabled — `already_disabled` / `not_disabled` on `errors/application`.
 - **The swap is tested before it is trusted, both directions.** A failed config test rolls the vhost straight back to whatever was serving before the request — a disable or enable can never leave a site's config pointed at nothing. A `500 {message, reference}` from either endpoint means the vhost is unchanged from before the call.
 - Render the button from `is_disabled`, not from `status` — a `failed` or `pending` application can be `is_disabled: false` and vice versa; they are independent.
+
+### Password Protection — whole-site Basic Auth (`app_security`, its own screen)
+
+**`PUT /api/applications/{id}/security`** (`manage`) — one save action, on/off plus the credential in one call.
+- Body to enable/change: `{ enabled: true, username, password }` — both required whenever `enabled` is `true`. `password` min 8 chars; `username` may not contain `:` (it becomes the `htpasswd` separator).
+- Body to disable: `{ enabled: false }` — `username`/`password` not required and ignored.
+- `200 {application}` with `basic_auth_enabled`/`basic_auth_username` refreshed. **The password is never returned** — not on this call, not on any other read of the application — it is bcrypt-hashed on arrival and only ever written into the site's own credential file.
+- **Its own permission**, unlike enable/disable: `app_security` has a dedicated screen (`Password Protection`, sidebar icon `lock`), so it does not reuse `application,manage`.
+- One shared username/password per site, not a table of users — enabling again with a new username/password simply replaces the old credential; there is no "add another login".
+- Mechanically: the credential is written to `.panel/.htpasswd` inside the site's own document root (already excluded from every vhost's served paths by the same dotfile-deny rule that protects `.env`), then the vhost is re-rendered with the auth block, config-tested, and reloaded — the same apply → test → reload → rollback sequence Enable/disable uses. A failed config test restores the previous protected/unprotected state before failing; a `500 {message, reference}` means the site's protection state and vhost are both unchanged from before the call.
+- The ACME challenge path is always excluded from the auth block on all three web servers, so turning protection on never breaks certificate renewal.
+- OpenLiteSpeed's realm/htpasswd block has not been exercised against real OLS hardware — flagged the same way the rest of this project's OLS support is; nginx and Apache are the tested paths.
 
 **`GET /api/applications/port-check?port=8080[&application_id=3]`** (`view`) — ask before submitting, so the user is warned as they type rather than refused after.
 ```json

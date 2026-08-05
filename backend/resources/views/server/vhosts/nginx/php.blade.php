@@ -19,6 +19,9 @@ server {
     location ^~ /.well-known/acme-challenge/ {
         root {{ $challengeRoot }};
         default_type "text/plain";
+@if ($basicAuth)
+        auth_basic off;
+@endif
     }
 
     location / {
@@ -61,6 +64,10 @@ server {
 @endif
 
     server_name {{ implode(' ', $serverNames) }};
+@if ($basicAuth)
+    auth_basic           "Restricted";
+    auth_basic_user_file {{ $basicAuth['htpasswdPath'] }};
+@endif
 
     {{-- Served from one shared directory rather than the site's own document
          root: node and proxy sites serve nothing from disk, so there would be
@@ -71,6 +78,9 @@ server {
     location ^~ /.well-known/acme-challenge/ {
         root {{ $challengeRoot }};
         default_type "text/plain";
+@if ($basicAuth)
+        auth_basic off;
+@endif
     }
 
     root {{ $documentRoot }};
@@ -126,6 +136,9 @@ server {
     location ^~ /.well-known/acme-challenge/ {
         root {{ $challengeRoot }};
         default_type "text/plain";
+@if ($basicAuth)
+        auth_basic off;
+@endif
     }
 
     location / {

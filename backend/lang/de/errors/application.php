@@ -16,6 +16,7 @@ return [
     'already_disabled' => 'Diese Anwendung ist bereits deaktiviert.',
     'not_disabled' => 'Diese Anwendung ist nicht deaktiviert.',
     'availability_failed' => 'Das Ändern der Verfügbarkeit der Anwendung ist auf dem Server fehlgeschlagen.',
+    'basic_auth_failed' => 'Das Ändern des Passwortschutzes ist auf dem Server fehlgeschlagen.',
 
     'permissions_fix_failed' => 'Das Zurücksetzen der Dateiberechtigungen ist auf dem Server fehlgeschlagen.',
 

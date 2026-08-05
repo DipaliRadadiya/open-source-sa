@@ -108,6 +108,14 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // second quietly overwrite the first.
             'appPort' => $application->app_port,
             'appName' => 'sv-app-'.$application->id,
+            // Null when off, so every template gates the whole block behind
+            // one `@if` instead of re-checking `basic_auth_enabled` itself.
+            // The credential file lives inside `.panel/`, which every profile
+            // already denies serving over HTTP — nothing new to hide here.
+            'basicAuth' => $application->basic_auth_enabled ? [
+                'realm' => 'sv-app-'.$application->id,
+                'htpasswdPath' => $documentRoot.'/.panel/.htpasswd',
+            ] : null,
         ];
     }
 

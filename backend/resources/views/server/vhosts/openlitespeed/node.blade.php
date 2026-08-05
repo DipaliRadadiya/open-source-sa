@@ -69,7 +69,23 @@ context / {
   type                    proxy
   handler                 {{ $appName }}
   addDefaultCharset       off
+@if ($basicAuth)
+  realm                   {{ $basicAuth['realm'] }}
+@endif
 }
+
+@if ($basicAuth)
+{{-- Best-effort: OLS's realm/userDB syntax has not been exercised against
+     real hardware, unlike the nginx and Apache blocks above (see the
+     project's other OLS notes on this same gap). The ACME context above is
+     more specific and matches first, so it is unaffected either way. --}}
+realm {{ $basicAuth['realm'] }} {
+  userDB {
+    location               {{ $basicAuth['htpasswdPath'] }}
+    userNameSeparator      :
+  }
+}
+@endif
 
 {{-- WebSockets are a separate block in OpenLiteSpeed, not a header dance:
      traffic carrying the upgrade request is matched here and everything else

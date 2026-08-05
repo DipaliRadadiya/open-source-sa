@@ -159,4 +159,6 @@ return [
     'application.php_isolated' => ':name einen eigenen PHP-Pool gegeben',
     'application.php_unisolated' => ':name wieder auf den gemeinsamen PHP-Pool gelegt',
     'application.php_settings_updated' => 'PHP-Einstellungen für :name aktualisiert',
+    'application.basic_auth_enabled' => 'Passwortschutz für :name aktiviert',
+    'application.basic_auth_disabled' => 'Passwortschutz für :name deaktiviert',
 ];

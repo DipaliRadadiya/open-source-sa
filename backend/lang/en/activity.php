@@ -159,4 +159,6 @@ return [
     'application.php_isolated' => 'Gave :name its own PHP pool',
     'application.php_unisolated' => 'Put :name back on the shared PHP pool',
     'application.php_settings_updated' => 'Updated the PHP settings for :name',
+    'application.basic_auth_enabled' => 'Enabled password protection for :name',
+    'application.basic_auth_disabled' => 'Disabled password protection for :name',
 ];

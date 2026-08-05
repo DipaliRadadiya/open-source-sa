@@ -16,6 +16,7 @@ return [
     'already_disabled' => 'Cette application est déjà désactivée.',
     'not_disabled' => 'Cette application n\'est pas désactivée.',
     'availability_failed' => 'La modification de la disponibilité de l\'application a échoué sur le serveur.',
+    'basic_auth_failed' => 'La modification de la protection par mot de passe a échoué sur le serveur.',
 
     'permissions_fix_failed' => 'La réinitialisation des permissions de fichiers a échoué sur le serveur.',
 

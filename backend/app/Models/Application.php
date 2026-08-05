@@ -34,6 +34,7 @@ class Application extends Model
         return [
             'isolated_at' => 'datetime',
             'disabled_at' => 'datetime',
+            'basic_auth_enabled' => 'boolean',
             'status' => ApplicationStatus::class,
             'settings' => 'array',
             'steps' => 'array',
