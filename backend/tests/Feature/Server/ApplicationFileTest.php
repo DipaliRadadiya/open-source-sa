@@ -314,6 +314,81 @@ function fakeFileBrowserServer(): void
             return Process::result(exitCode: 0);
         }
 
+        if ($binary === 'tar' && ($inner[1] ?? null) === '-tvzf') {
+            $archiveRel = $relative($inner[2]);
+            $entries = FileBrowserFake::$archives[$archiveRel] ?? null;
+
+            if ($entries === null) {
+                return Process::result(exitCode: 1, errorOutput: 'not a gzip file');
+            }
+
+            $lines = [];
+
+            foreach ($entries as $e) {
+                $perm = $e['type'].str_repeat('-', 9);
+                $name = $e['type'] === 'l' ? "{$e['name']} -> elsewhere" : $e['name'];
+                $lines[] = "{$perm} root/root {$e['size']} 26-08-05 08:53 {$name}";
+            }
+
+            return Process::result(output: implode("\n", $lines));
+        }
+
+        if ($binary === 'tar' && ($inner[1] ?? null) === '-xzf') {
+            // ['tar', '-xzf', $archive, '-C', $target]
+            $archiveRel = $relative($inner[2]);
+            $targetRel = $relative($inner[4]);
+
+            foreach (FileBrowserFake::$archives[$archiveRel] ?? [] as $e) {
+                $name = rtrim($e['name'], '/');
+
+                if ($name === '') {
+                    continue;
+                }
+
+                $entryRel = $targetRel === '' ? $name : "{$targetRel}/{$name}";
+                FileBrowserFake::$fs[$entryRel] = ['type' => $e['type'] === 'd' ? 'd' : 'f', 'size' => $e['size'], 'content' => 'extracted'];
+            }
+
+            return Process::result(exitCode: 0);
+        }
+
+        if ($binary === 'mkdir') {
+            FileBrowserFake::$fs[$relative($inner[1])] = ['type' => 'd'];
+
+            return Process::result(exitCode: 0);
+        }
+
+        if ($binary === 'mv') {
+            $sourceRel = $relative($inner[1]);
+            $targetRel = $relative($inner[2]);
+
+            foreach (FileBrowserFake::$fs as $path => $entry) {
+                if ($path === $sourceRel) {
+                    FileBrowserFake::$fs[$targetRel] = $entry;
+                    unset(FileBrowserFake::$fs[$path]);
+                } elseif (str_starts_with($path, "{$sourceRel}/")) {
+                    $moved = $targetRel.substr($path, strlen($sourceRel));
+                    FileBrowserFake::$fs[$moved] = $entry;
+                    unset(FileBrowserFake::$fs[$path]);
+                }
+            }
+
+            return Process::result(exitCode: 0);
+        }
+
+        if ($binary === 'rm') {
+            $target = $inner[1] === '-rf' || $inner[1] === '-f' ? $inner[2] : $inner[1];
+            $targetRel = $relative($target);
+
+            foreach (array_keys(FileBrowserFake::$fs) as $path) {
+                if ($path === $targetRel || str_starts_with($path, "{$targetRel}/")) {
+                    unset(FileBrowserFake::$fs[$path]);
+                }
+            }
+
+            return Process::result(exitCode: 0);
+        }
+
         return Process::result(exitCode: 0);
     });
 }
@@ -698,6 +773,230 @@ describe('extracting', function () {
 
         $this->actingAs($user)
             ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertForbidden();
+    });
+
+    it('also extracts a .tar.gz archive, in place, as the site\'s own user', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/plugins/thing.tar.gz'] = ['type' => 'f', 'size' => 100];
+        FileBrowserFake::$archives['wp-content/plugins/thing.tar.gz'] = [
+            ['type' => '-', 'size' => 12, 'name' => 'my-plugin/plugin.php'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload('wp-content/plugins/thing.tar.gz'))
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('wp-content/plugins/my-plugin/plugin.php')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- tar -xzf')))->toBeTrue();
+    });
+
+    it('refuses a zip-slip entry in a .tar.gz the same way as in a .zip', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/plugins/thing.tgz'] = ['type' => 'f', 'size' => 100];
+        FileBrowserFake::$archives['wp-content/plugins/thing.tgz'] = [
+            ['type' => '-', 'size' => 4, 'name' => '../../etc/evil.txt'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload('wp-content/plugins/thing.tgz'))
+            ->assertStatus(422);
+    });
+
+    it('refuses a symlink entry in a .tar.gz', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/plugins/thing.tar.gz'] = ['type' => 'f', 'size' => 100];
+        FileBrowserFake::$archives['wp-content/plugins/thing.tar.gz'] = [
+            ['type' => 'l', 'size' => 0, 'name' => 'leak'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload('wp-content/plugins/thing.tar.gz'))
+            ->assertStatus(422);
+    });
+});
+
+describe('creating a directory', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+    });
+
+    it('creates a new directory as the site\'s own user', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/directories'), ['path' => 'wp-content/uploads'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['wp-content/uploads']['type'])->toBe('d')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- mkdir')))->toBeTrue()
+            ->and(ActivityLog::where('action', 'directory_created')->exists())->toBeTrue();
+    });
+
+    it('is a no-op if the directory already exists', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/uploads'] = ['type' => 'd'];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/directories'), ['path' => 'wp-content/uploads'])
+            ->assertOk();
+    });
+
+    it('refuses when a file already sits at that path', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/uploads'] = ['type' => 'f', 'content' => 'x'];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/directories'), ['path' => 'wp-content/uploads'])
+            ->assertStatus(422);
+    });
+
+    it('404s when the containing directory does not exist', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/directories'), ['path' => 'no-such-dir/uploads'])
+            ->assertNotFound();
+    });
+
+    it('refuses a viewer who cannot manage', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)
+            ->postJson(filesUrl('/directories'), ['path' => 'wp-content/uploads'])
+            ->assertForbidden();
+    });
+});
+
+describe('renaming', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'content' => 'hello'];
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+    });
+
+    it('renames a file as the site\'s own user', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'old.txt', 'target' => 'new.txt'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->not->toHaveKey('old.txt')
+            ->and(FileBrowserFake::$fs['new.txt']['content'])->toBe('hello')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- mv')))->toBeTrue()
+            ->and(ActivityLog::where('action', 'file_renamed')->exists())->toBeTrue();
+    });
+
+    it('moves a file into a different directory', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'old.txt', 'target' => 'wp-content/old.txt'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('wp-content/old.txt');
+    });
+
+    it('refuses when the destination already exists — unlike upload, this never overwrites', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['new.txt'] = ['type' => 'f', 'content' => 'do not touch me'];
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'old.txt', 'target' => 'new.txt'])
+            ->assertStatus(422);
+
+        expect(FileBrowserFake::$fs['new.txt']['content'])->toBe('do not touch me');
+    });
+
+    it('404s when the source does not exist', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'nope.txt', 'target' => 'new.txt'])
+            ->assertNotFound();
+    });
+
+    it('refuses a viewer who cannot manage', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)
+            ->putJson(filesUrl('/rename'), ['path' => 'old.txt', 'target' => 'new.txt'])
+            ->assertForbidden();
+    });
+});
+
+describe('deleting', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'content' => 'hello'];
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/uploads'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/uploads/photo.jpg'] = ['type' => 'f'];
+    });
+
+    it('deletes a file as the site\'s own user, with confirm: true', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'old.txt', 'confirm' => true])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->not->toHaveKey('old.txt')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- rm')))->toBeTrue()
+            ->and(ActivityLog::where('action', 'file_deleted')->exists())->toBeTrue();
+    });
+
+    it('deletes a directory recursively', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'wp-content/uploads', 'confirm' => true])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->not->toHaveKey('wp-content/uploads')
+            ->and(FileBrowserFake::$fs)->not->toHaveKey('wp-content/uploads/photo.jpg');
+    });
+
+    it('refuses without confirm: true', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'old.txt'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('confirm');
+
+        expect(FileBrowserFake::$fs)->toHaveKey('old.txt');
+    });
+
+    it('refuses to delete the site root', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => '', 'confirm' => true])
+            ->assertStatus(422);
+    });
+
+    it('404s when the path does not exist', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'nope.txt', 'confirm' => true])
+            ->assertNotFound();
+    });
+
+    it('refuses a viewer who cannot manage', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)
+            ->deleteJson(filesUrl(), ['path' => 'old.txt', 'confirm' => true])
             ->assertForbidden();
     });
 });

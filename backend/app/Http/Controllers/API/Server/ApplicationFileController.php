@@ -4,7 +4,10 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\BrowseFilesRequest;
+use App\Http\Requests\Server\Application\CreateDirectoryRequest;
+use App\Http\Requests\Server\Application\DeleteFileRequest;
 use App\Http\Requests\Server\Application\ExtractFileRequest;
+use App\Http\Requests\Server\Application\RenameFileRequest;
 use App\Http\Requests\Server\Application\SaveFileRequest;
 use App\Http\Requests\Server\Application\UploadFileRequest;
 use App\Models\Application;
@@ -100,6 +103,55 @@ class ApplicationFileController extends Controller
         ]);
 
         return response()->json(['extracted' => true]);
+    }
+
+    public function createDirectory(
+        CreateDirectoryRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->createDirectory($application, $request->targetPath());
+
+        $activity->log('application.directory_created', $application, [
+            'name' => $application->name,
+            'path' => $request->targetPath(),
+        ]);
+
+        return response()->json(['created' => true]);
+    }
+
+    public function rename(
+        RenameFileRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->rename($application, $request->sourcePath(), $request->targetPath());
+
+        $activity->log('application.file_renamed', $application, [
+            'name' => $application->name,
+            'path' => $request->sourcePath(),
+            'target' => $request->targetPath(),
+        ]);
+
+        return response()->json(['renamed' => true]);
+    }
+
+    public function destroy(
+        DeleteFileRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->delete($application, $request->targetPath());
+
+        $activity->log('application.file_deleted', $application, [
+            'name' => $application->name,
+            'path' => $request->targetPath(),
+        ]);
+
+        return response()->json(['deleted' => true]);
     }
 
     public function download(BrowseFilesRequest $request, Application $application, FileBrowser $files): Response

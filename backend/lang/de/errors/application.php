@@ -20,12 +20,15 @@ return [
     'file_not_text' => 'Diese Datei scheint kein Text zu sein und kann hier nicht geöffnet werden.',
     'file_operation_failed' => 'Der Dateivorgang ist auf dem Server fehlgeschlagen.',
 
-    'file_not_archive' => 'Hier können nur .zip-Archive entpackt werden.',
+    'file_not_archive' => 'Hier können nur .zip- und .tar.gz-Archive entpackt werden.',
     'archive_unreadable' => 'Dieses Archiv konnte nicht gelesen werden. Es ist möglicherweise beschädigt.',
     'archive_empty' => 'Dieses Archiv enthält nichts.',
     'archive_too_many_entries' => 'Dieses Archiv enthält zu viele Dateien, um es hier zu entpacken.',
     'archive_too_large' => 'Dieses Archiv wäre entpackt zu groß.',
     'archive_has_symlink' => 'Dieses Archiv enthält einen symbolischen Link, der nicht zulässig ist.',
     'archive_unsafe_entry' => 'Dieses Archiv enthält einen Dateipfad, der nicht zulässig ist.',
+
+    'path_exists' => 'An diesem Pfad existiert bereits etwas.',
+    'cannot_delete_root' => 'Der Stammordner der Website kann nicht gelöscht werden.',
 
 ];

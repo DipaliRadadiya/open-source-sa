@@ -20,12 +20,15 @@ return [
     'file_not_text' => 'Esse ficheiro não parece ser texto e não pode ser aberto aqui.',
     'file_operation_failed' => 'A operação de ficheiro falhou no servidor.',
 
-    'file_not_archive' => 'Apenas arquivos .zip podem ser extraídos aqui.',
+    'file_not_archive' => 'Apenas arquivos .zip e .tar.gz podem ser extraídos aqui.',
     'archive_unreadable' => 'Esse arquivo não pôde ser lido. Pode estar corrompido.',
     'archive_empty' => 'Esse arquivo não contém nada.',
     'archive_too_many_entries' => 'Esse arquivo tem demasiados ficheiros para extrair aqui.',
     'archive_too_large' => 'Esse arquivo seria demasiado grande depois de extraído.',
     'archive_has_symlink' => 'Esse arquivo contém uma ligação simbólica, o que não é permitido.',
     'archive_unsafe_entry' => 'Esse arquivo contém um caminho de ficheiro que não é permitido.',
+
+    'path_exists' => 'Já existe algo nesse caminho.',
+    'cannot_delete_root' => 'A pasta raiz do site não pode ser eliminada.',
 
 ];

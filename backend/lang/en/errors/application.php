@@ -20,12 +20,15 @@ return [
     'file_not_text' => 'That file does not look like text and cannot be opened here.',
     'file_operation_failed' => 'The file operation failed on the server.',
 
-    'file_not_archive' => 'Only .zip archives can be extracted here.',
+    'file_not_archive' => 'Only .zip and .tar.gz archives can be extracted here.',
     'archive_unreadable' => 'That archive could not be read. It may be corrupt.',
     'archive_empty' => 'That archive has nothing in it.',
     'archive_too_many_entries' => 'That archive has too many files to extract here.',
     'archive_too_large' => 'That archive would be too large once extracted.',
     'archive_has_symlink' => 'That archive contains a symbolic link, which is not allowed.',
     'archive_unsafe_entry' => 'That archive contains a file path that is not allowed.',
+
+    'path_exists' => 'Something already exists at that path.',
+    'cannot_delete_root' => 'The site\'s own root folder cannot be deleted.',
 
 ];

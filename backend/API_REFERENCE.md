@@ -1693,13 +1693,13 @@ The one high-value action a full file manager buries: reset a site's ownership a
 **Activity:** `application.file_uploaded`.
 
 **`POST /api/applications/{application}/files/extract`** — throttle 5/min
-- Body: `{"path", "target"}` — `path` an existing `.zip` already on the site (e.g. uploaded via the endpoint above), `target` an existing directory to extract into.
-- **Zip only** in this pass — not `.tar.gz`. `path` not ending in `.zip` (case-insensitive) is `422`.
+- Body: `{"path", "target"}` — `path` an existing `.zip` or `.tar.gz`/`.tgz` already on the site (e.g. uploaded via the endpoint above), `target` an existing directory to extract into.
+- `path` not ending in `.zip`, `.tar.gz` or `.tgz` (case-insensitive) is `422`.
 - **In-place, overwrite allowed** — matches "install/update a plugin into `wp-content/plugins/`", the actual real-world case. No staging, no rollback: if an extract makes a mess, the file browser (list/view/edit/download above) and Fix Permissions are the cleanup path.
-- **Every entry is listed and judged before a single byte is written.** Rejected, all `422`, none of them reach `unzip`:
-  - `archive_unreadable` — the archive could not be read (corrupt, or not really a zip despite the extension)
+- **Every entry is listed and judged before a single byte is written**, for both formats, through one shared validation routine so the rules can't drift between them. Rejected, all `422`, none of them reach `unzip`/`tar`:
+  - `archive_unreadable` — the archive could not be read (corrupt, or not really that format despite the extension)
   - `archive_unsafe_entry` — an entry contains `..`, an absolute path, or resolves outside **this application's own document root** (relevant because one system user can own several applications — the check is against this app's root specifically, not just "somewhere the site's user owns")
-  - `archive_has_symlink` — an entry is a symbolic link. `unzip` itself never follows a symlink entry during extraction, but the web server serving the finished site might; the panel refuses to plant one at all
+  - `archive_has_symlink` — an entry is a symbolic link. Neither `unzip` nor `tar` follows a symlink entry during extraction, but the web server serving the finished site might; the panel refuses to plant one at all
   - `archive_too_large` — total **uncompressed** size over 250 MB
   - `archive_too_many_entries` — over 10,000 entries (a second, independent bomb guard — many tiny files pass a byte-size check but not a count one)
   - `archive_empty` — nothing to extract
@@ -1707,6 +1707,28 @@ The one high-value action a full file manager buries: reset a site's ownership a
 - `404` if `target` does not already exist as a directory (no implicit `mkdir`) or `path` is not an existing regular file.
 
 **Activity:** `application.files_extracted`.
+
+**`POST /api/applications/{application}/files/directories`** — create a folder, throttle 20/min
+- Body: `{"path"}`
+- **Idempotent** — if `path` already exists as a directory, succeeds as a no-op (`422` if something else is already there).
+- `404` if the containing directory does not exist — no implicit `mkdir -p`.
+
+**Activity:** `application.directory_created`.
+
+**`PUT /api/applications/{application}/files/rename`** — rename or move, throttle 20/min
+- Body: `{"path", "target"}` — one endpoint for both, since `mv` doesn't distinguish them.
+- **The opposite default from upload: `target` must not already exist — `422` if it does, never overwrites.** A mistyped rename silently destroying an unrelated file is a much easier accident than upload's deliberate "replace this specific thing."
+- `404` if `path` doesn't exist, or isn't a file/directory (symlinks excluded, same as the rest of this feature).
+
+**Activity:** `application.file_renamed`.
+
+**`DELETE /api/applications/{application}/files`** — throttle 10/min
+- Body: `{"path", "confirm": true}` — **`confirm: true` is required.** A deliberate second field, not just hitting the URL, as a floor against firing this by accident.
+- Recursive for a directory. **No trash, no undo** — same stated limitation as extract's lack of rollback.
+- `path` cannot be empty — the site's own root can never be the target of this endpoint.
+- `404` if `path` doesn't exist.
+
+**Activity:** `application.file_deleted`. **The only destructive endpoint in this feature.**
 
 ---
 
