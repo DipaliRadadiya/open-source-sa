@@ -15,4 +15,9 @@ return [
 
     'permissions_fix_failed' => 'No se pudieron restablecer los permisos de archivo en el servidor.',
 
+    'unsafe_path' => 'Esa ruta no está permitida.',
+    'file_too_large' => 'Ese archivo es demasiado grande para abrirlo aquí. Usa SFTP para archivos grandes.',
+    'file_not_text' => 'Ese archivo no parece texto y no se puede abrir aquí.',
+    'file_operation_failed' => 'La operación de archivo falló en el servidor.',
+
 ];

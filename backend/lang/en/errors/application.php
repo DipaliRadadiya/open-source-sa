@@ -15,4 +15,9 @@ return [
 
     'permissions_fix_failed' => 'Resetting file permissions failed on the server.',
 
+    'unsafe_path' => 'That path is not allowed.',
+    'file_too_large' => 'That file is too large to open here. Use SFTP for large files.',
+    'file_not_text' => 'That file does not look like text and cannot be opened here.',
+    'file_operation_failed' => 'The file operation failed on the server.',
+
 ];

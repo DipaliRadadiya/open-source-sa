@@ -168,3 +168,251 @@ describe('permissions', function () {
         $this->postJson(fixUrl())->assertUnauthorized();
     });
 });
+
+/**
+ * A tiny virtual filesystem for the browse/view/edit/download endpoints,
+ * keyed by path relative to the site root (`''` is the root itself).
+ */
+class FileBrowserFake
+{
+    /** @var array<string, array{type: string, size?: int, content?: string}> */
+    public static array $fs = [];
+
+    /** @var array<int, string> every command the panel ran, runuser prefix included */
+    public static array $ran = [];
+
+    public static function reset(): void
+    {
+        self::$fs = ['' => ['type' => 'd']];
+        self::$ran = [];
+    }
+}
+
+/*
+ * A file browser is the first feature in this codebase to accept a
+ * client-supplied path at all — everything else (logs, .env) uses a fixed or
+ * keyed path precisely to avoid this surface. Two things make it safe: the
+ * validator refuses anything that isn't a plain relative path, and every
+ * command against the result runs as the site's own Linux user rather than
+ * the panel's root — so the tests that matter are exactly those two.
+ */
+
+function fakeFileBrowserServer(): void
+{
+    $root = '/home/siteowner/shop.test';
+
+    Process::fake(function ($process) use ($root) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        FileBrowserFake::$ran[] = implode(' ', $args);
+
+        // Every browser command is wrapped as `runuser -u siteowner --`;
+        // unwrap it here to work out what was actually asked for.
+        $inner = ($args[0] ?? null) === 'runuser' ? array_slice($args, 4) : $args;
+        $binary = $inner[0] ?? null;
+
+        $relative = fn (string $target): string => $target === $root ? '' : ltrim(substr($target, strlen($root)), '/');
+
+        if ($binary === 'find' && ($inner[2] ?? null) === '-maxdepth' && ($inner[3] ?? null) === '0') {
+            $rel = $relative($inner[1]);
+
+            if (! array_key_exists($rel, FileBrowserFake::$fs)) {
+                return Process::result(exitCode: 1, errorOutput: 'No such file or directory');
+            }
+
+            $entry = FileBrowserFake::$fs[$rel];
+
+            return Process::result(output: $entry['type']."\t".($entry['size'] ?? 0));
+        }
+
+        if ($binary === 'find' && ($inner[2] ?? null) === '-mindepth') {
+            $rel = $relative($inner[1]);
+            $lines = [];
+
+            foreach (FileBrowserFake::$fs as $path => $entry) {
+                if ($path === '') {
+                    continue;
+                }
+
+                $parent = str_contains($path, '/') ? substr($path, 0, (int) strrpos($path, '/')) : '';
+
+                if ($parent !== $rel) {
+                    continue;
+                }
+
+                $name = str_contains($path, '/') ? substr($path, (int) strrpos($path, '/') + 1) : $path;
+                $lines[] = "{$name}\t{$entry['type']}\t".($entry['size'] ?? 0)."\t1700000000";
+            }
+
+            return Process::result(output: $lines === [] ? '' : implode("\n", $lines)."\n");
+        }
+
+        if ($binary === 'cat') {
+            $entry = FileBrowserFake::$fs[$relative($inner[1])] ?? null;
+
+            return Process::result(output: $entry['content'] ?? '');
+        }
+
+        if ($binary === 'tee') {
+            $rel = $relative($inner[1]);
+            FileBrowserFake::$fs[$rel]['content'] = $process->input ?? '';
+
+            return Process::result(exitCode: 0);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
+
+function filesUrl(string $suffix = ''): string
+{
+    return '/api/applications/'.test()->application->id.'/files'.$suffix;
+}
+
+describe('browsing', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'size' => 20, 'content' => '<?php echo "hi";'];
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/uploads'] = ['type' => 'd'];
+        FileBrowserFake::$fs['shortcut'] = ['type' => 'l'];
+    });
+
+    it('lists a directory with directories first, then alphabetically', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)->getJson(filesUrl())->assertOk();
+
+        expect($response->json('files.*.name'))->toBe(['wp-content', 'index.php', 'shortcut']);
+        expect($response->json('files.0.type'))->toBe('dir')
+            ->and($response->json('files.2.type'))->toBe('symlink');
+    });
+
+    it('runs every command as the site\'s own user, never as root', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)->getJson(filesUrl())->assertOk();
+
+        expect(FileBrowserFake::$ran)->each->toStartWith('runuser -u siteowner --');
+    });
+
+    it('rejects a path that escapes the site root before touching the server', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('?path=../../etc/passwd'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('path');
+
+        expect(FileBrowserFake::$ran)->toBe([]);
+    });
+
+    it('rejects an absolute path', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('?path=/etc/passwd'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('path');
+    });
+
+    it('reads a text file', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(filesUrl('/content?path=index.php'))
+            ->assertOk();
+
+        // The test Process fake normalises fake output to end with exactly
+        // one newline, same as a real `cat` would for a file that has one.
+        expect($response->json('content'))->toBe("<?php echo \"hi\";\n");
+    });
+
+    it('refuses a file larger than the size cap', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['big.log'] = ['type' => 'f', 'size' => 10 * 1024 * 1024, 'content' => 'irrelevant'];
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('/content?path=big.log'))
+            ->assertStatus(422);
+    });
+
+    it('refuses a binary file for viewing', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['photo.png'] = ['type' => 'f', 'size' => 4, 'content' => "\x00\x01\x02\x03"];
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('/content?path=photo.png'))
+            ->assertStatus(422);
+    });
+
+    it('404s for a path that does not exist', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('/content?path=nope.txt'))
+            ->assertNotFound();
+    });
+
+    it('saves an edit to an existing file as the site user', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => '<?php echo "bye";'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['index.php']['content'])->toBe('<?php echo "bye";')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- tee')))->toBeTrue()
+            ->and(ActivityLog::where('type', 'application')->where('action', 'file_edited')->exists())->toBeTrue();
+    });
+
+    it('refuses to edit a path that does not exist — this is edit, not create', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'new.txt', 'content' => 'hello'])
+            ->assertNotFound();
+    });
+
+    it('downloads a file with attachment headers, never sniffed content-type', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(filesUrl('/download?path=index.php'))
+            ->assertOk();
+
+        expect($response->headers->get('Content-Type'))->toStartWith('application/octet-stream')
+            ->and($response->headers->get('Content-Disposition'))->toContain('attachment')
+            ->and($response->headers->get('Content-Disposition'))->toContain('index.php')
+            ->and($response->getContent())->toBe("<?php echo \"hi\";\n");
+    });
+
+    it('refuses to download a directory', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('/download?path=wp-content'))
+            ->assertNotFound();
+    });
+
+    describe('permissions', function () {
+        it('lets a viewer browse, view and download but not edit', function () {
+            fakeFileBrowserServer();
+            $user = User::factory()->create();
+            grantPermission($user, 'app_file', view: true, manage: false);
+
+            $this->actingAs($user)->getJson(filesUrl())->assertOk();
+            $this->actingAs($user)->getJson(filesUrl('/content?path=index.php'))->assertOk();
+            $this->actingAs($user)->getJson(filesUrl('/download?path=index.php'))->assertOk();
+            $this->actingAs($user)
+                ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'x'])
+                ->assertForbidden();
+        });
+
+        it('denies an unauthenticated caller', function () {
+            fakeFileBrowserServer();
+
+            $this->getJson(filesUrl())->assertUnauthorized();
+        });
+    });
+});

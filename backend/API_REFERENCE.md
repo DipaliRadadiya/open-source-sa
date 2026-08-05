@@ -1647,6 +1647,42 @@ The one high-value action a full file manager buries: reset a site's ownership a
 
 **Activity:** `application.permissions_fixed`.
 
+**Browsing, viewing, editing text files and downloading — `app_file` (`manage` to edit).** Deliberately *not* a full file manager: no create, delete, rename, upload or extract. See this repo's file-manager research for why the rest is a separate, deliberate decision rather than an oversight.
+
+**Every command runs as the site's own Linux user (`runuser -u`), never as the panel's root.** That is what makes accepting a client-supplied path safe: `path` is validated at the edges (relative only, no `.`/`..` segments, no leading slash, conservative charset — `App\Rules\SafeRelativePath`), but validation only catches tricks someone thought to name. A symlink inside the site pointing outside it is not a `..` in the string. Running every read/write as the site's own user means that, even if a check were missed, the command can only ever see what that user could already see.
+
+**`GET /api/applications/{application}/files?path=`** — list a directory (`path` omitted or empty = site root)
+
+```jsonc
+{ "path": "wp-content", "files": [
+  { "name": "uploads", "type": "dir", "size": 4096, "size_human": "4 KB",
+    "modified_at": "04-08-2026 13:20:11", "modified_at_human": "1 day ago" },
+  { "name": "index.php", "type": "file", "size": 28, "size_human": "28 B",
+    "modified_at": "04-08-2026 13:20:11", "modified_at_human": "1 day ago" }
+] }
+```
+
+- `type`: `dir` | `file` | `symlink`. **Symlinks are listed, not hidden** — but refused by view/edit/download, since a symlink's target is outside this feature's contract either way.
+- Sorted directories first, then alphabetically.
+- `404` for a path that does not exist or is not a directory.
+
+**`GET /api/applications/{application}/files/content?path=`** — read a text file, throttle 60/min
+- `200`: `{"path", "content", "size"}`
+- `422` if the file is **larger than 5 MB** (`errors/application.file_too_large`) or **looks binary** (a null byte in the first 8 KB — `errors/application.file_not_text`). Both point at SFTP for anything this doesn't cover.
+- `404` for a path that does not exist or is not a regular file.
+
+**`PUT /api/applications/{application}/files/content`** — save a file, throttle 20/min
+- Body: `{"path", "content"}` (`content` capped at 5 MB)
+- **Edits an existing file only — this is not a create.** A path that does not already resolve to a regular file is `404`, same distinction "edit" carries everywhere else in the panel.
+- No automatic backup-before-write (unlike `.env`'s rotation) — noted as a reasonable follow-up, not built in this pass.
+
+**`GET /api/applications/{application}/files/download?path=`** — download a file, throttle 20/min
+- Streams the raw bytes with `Content-Disposition: attachment`.
+- **`Content-Type` is always `application/octet-stream`, never sniffed from the file.** Serving an arbitrary downloaded file as, say, `text/html` would let its content run as a script in the browser — forcing a download sidesteps that whole class of risk.
+- `404` for a directory or a symlink; `422` above the 5 MB cap.
+
+**Activity:** `application.file_edited` (path only, never content).
+
 ---
 
 ### Application environment (App sidebar → Environment)

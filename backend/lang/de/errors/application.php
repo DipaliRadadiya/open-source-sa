@@ -15,4 +15,9 @@ return [
 
     'permissions_fix_failed' => 'Das Zurücksetzen der Dateiberechtigungen ist auf dem Server fehlgeschlagen.',
 
+    'unsafe_path' => 'Dieser Pfad ist nicht zulässig.',
+    'file_too_large' => 'Diese Datei ist zu groß, um sie hier zu öffnen. Nutze SFTP für große Dateien.',
+    'file_not_text' => 'Diese Datei scheint kein Text zu sein und kann hier nicht geöffnet werden.',
+    'file_operation_failed' => 'Der Dateivorgang ist auf dem Server fehlgeschlagen.',
+
 ];

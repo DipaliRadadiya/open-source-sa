@@ -138,6 +138,7 @@ return [
     'application.environment_updated' => 'Umgebung für :name aktualisiert (:keys)',
     'application.environment_restored' => 'Frühere Umgebungsdatei für :name wiederhergestellt',
     'application.permissions_fixed' => 'Dateiberechtigungen für :name zurückgesetzt',
+    'application.file_edited' => ':path auf :name bearbeitet',
     'application.worker_created' => 'Worker :worker zu :name hinzugefügt',
     'application.worker_updated' => 'Worker :worker von :name aktualisiert',
     'application.worker_deleted' => 'Worker :worker von :name entfernt',

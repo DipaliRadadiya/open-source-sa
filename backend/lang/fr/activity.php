@@ -138,6 +138,7 @@ return [
     'application.environment_updated' => 'A mis à jour l\'environnement de :name (:keys)',
     'application.environment_restored' => 'A restauré un fichier d\'environnement précédent pour :name',
     'application.permissions_fixed' => 'A réinitialisé les permissions de fichiers de :name',
+    'application.file_edited' => 'A modifié :path sur :name',
     'application.worker_created' => 'A ajouté le worker :worker à :name',
     'application.worker_updated' => 'A mis à jour le worker :worker de :name',
     'application.worker_deleted' => 'A supprimé le worker :worker de :name',
