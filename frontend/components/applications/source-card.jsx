@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { GitBranch, Loader2, Rocket, TriangleAlert, Webhook } from "lucide-react";
+import { GitBranch, Loader2, Rocket, Settings2, TriangleAlert, Webhook } from "lucide-react";
 import { deployApplication } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
@@ -101,12 +102,20 @@ export function SourceCard({ application, canDeploy = false }) {
           ) : null}
         </div>
 
-        {canDeploy ? (
-          <Button onClick={deploy} disabled={deploying} variant={deployFailed ? "default" : "default"}>
-            {deploying ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
-            {deploying ? t("deploying") : deployFailed ? t("redeploy") : t("deploy")}
+        <div className="flex flex-wrap gap-2">
+          {canDeploy ? (
+            <Button onClick={deploy} disabled={deploying}>
+              {deploying ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
+              {deploying ? t("deploying") : deployFailed ? t("redeploy") : t("deploy")}
+            </Button>
+          ) : null}
+          <Button variant="outline" asChild>
+            <Link href={`/applications/${application.id}/deployment`}>
+              <Settings2 className="size-4" />
+              {t("manage")}
+            </Link>
           </Button>
-        ) : null}
+        </div>
       </CardContent>
     </Card>
   );

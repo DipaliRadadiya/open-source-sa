@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import {
   groupBySubLevel,
   isApplicationNavBuilt,
@@ -28,6 +30,7 @@ import {
 export function AppSidebar({ items }) {
   const pathname = usePathname();
   const params = useParams();
+  const t = useTranslations("common");
   const { state, isMobile } = useSidebar();
 
   const applicationId = params?.application;
@@ -40,10 +43,12 @@ export function AppSidebar({ items }) {
   const { items: applicationItems } = useApplicationNav();
   const source = currentPanel === "application" ? (applicationItems ?? items) : items;
 
+  // Every application screen the catalog advertises is shown, so the sidebar is
+  // the site's full feature map. The ones whose route hasn't shipped yet render
+  // as non-clickable "Soon" rows rather than being hidden or 404ing.
   const visible = resolveNavItems(source, applicationId)
     .filter((item) => item?.permissions?.view)
-    .filter((item) => item.level === currentPanel)
-    .filter((item) => currentPanel !== "application" || isApplicationNavBuilt(item.url));
+    .filter((item) => item.level === currentPanel);
 
   const groups = groupBySubLevel(visible);
 
@@ -73,7 +78,34 @@ export function AppSidebar({ items }) {
             )}
             <SidebarMenu className="gap-1.5">
               {groupItems.map((item) => {
+                const built =
+                  currentPanel !== "application" ||
+                  isApplicationNavBuilt(item.url);
                 const active = item === activeItem;
+
+                if (!built) {
+                  return (
+                    <SidebarMenuItem key={`${item.name}-${item.href}`}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={`${item.title} · ${t("soon")}`}
+                        className={cn(
+                          NAV_ITEM_CLASS,
+                          "cursor-default text-muted-foreground/55 hover:bg-transparent hover:text-muted-foreground/55",
+                        )}
+                      >
+                        <span aria-disabled="true">
+                          <NavIcon name={item.icon} />
+                          <span>{item.title}</span>
+                          <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
+                            {t("soon")}
+                          </span>
+                        </span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                }
+
                 return (
                   <SidebarMenuItem key={`${item.name}-${item.href}`}>
                     <SidebarMenuButton

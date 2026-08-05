@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { findActiveNavItem, resolveNavItems } from "@/lib/navigation";
 import { usePageCrumb } from "@/components/sections/page-crumb";
 import {
@@ -27,27 +28,45 @@ export function AppBreadcrumb({ items }) {
   // Set by detail pages; null everywhere else.
   const { crumb } = usePageCrumb();
 
+  // Which level is the deepest one present — the only crumb kept on a phone,
+  // where there is no room to show ancestors beside the header controls.
+  const last = crumb ? "crumb" : title ? "title" : "panel";
+
   return (
-    <Breadcrumb>
-      <BreadcrumbList>
-        <BreadcrumbItem className="text-muted-foreground">{panel}</BreadcrumbItem>
+    // Never wrap: a wrapped trail doubles the header height on mobile. Ancestors
+    // are hidden below `sm` (see per-item classes); the full trail returns at sm+.
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="flex-nowrap">
+        <BreadcrumbItem
+          className={cn(
+            "text-muted-foreground",
+            last !== "panel" && "hidden sm:inline-flex",
+          )}
+        >
+          {panel}
+        </BreadcrumbItem>
         {title && (
           <>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
+            <BreadcrumbSeparator className="hidden sm:block" />
+            <BreadcrumbItem
+              className={cn(
+                "min-w-0",
+                last !== "title" && "hidden sm:inline-flex",
+              )}
+            >
               {crumb ? (
-                <span className="text-muted-foreground">{title}</span>
+                <span className="truncate text-muted-foreground">{title}</span>
               ) : (
-                <BreadcrumbPage>{title}</BreadcrumbPage>
+                <BreadcrumbPage className="truncate">{title}</BreadcrumbPage>
               )}
             </BreadcrumbItem>
           </>
         )}
         {crumb && (
           <>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="font-mono">{crumb}</BreadcrumbPage>
+            <BreadcrumbSeparator className="hidden sm:block" />
+            <BreadcrumbItem className="min-w-0">
+              <BreadcrumbPage className="truncate font-mono">{crumb}</BreadcrumbPage>
             </BreadcrumbItem>
           </>
         )}

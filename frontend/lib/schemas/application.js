@@ -59,6 +59,7 @@ const webhookSchema = z.object({
   enabled: z.boolean().default(false),
   provider: z.string().nullish(),
   url: z.string().nullish(),
+  secret: z.string().nullish(),
   verification: z.string().nullish(),
   last_delivered_at: z.string().nullish(),
   last_delivered_at_human: z.string().nullish(),
