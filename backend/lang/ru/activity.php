@@ -163,4 +163,6 @@ return [
     'application.basic_auth_disabled' => 'Отключил защиту паролем для :name',
     'application.ai_bot_policy_updated' => 'Установил политику блокировки ИИ-ботов для :name на :policy',
     'application.waf_updated' => 'Обновил настройки брандмауэра для :name',
+    'application.staging_created' => 'Создал staging-сайт для :name',
+    'application.staging_pushed' => 'Отправил staging на :name (:mode)',
 ];

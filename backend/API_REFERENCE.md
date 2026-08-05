@@ -1203,6 +1203,7 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   "ai_bot_policy": "allow_all", "ai_bot_policy_title": "Allow all AI bots",
   "waf_enabled": false, "waf_mode": "detect", "waf_mode_title": "Just watch, don't block",
   "waf_categories": ["query_string", "request_uri", "user_agent", "referrer", "cookie", "method"],
+  "is_staging": false, "production_application_id": null,
   "system_user": { "id": 3, "username": "deploy" },
   "php_version": "8.4", "node_version": null, "app_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
@@ -1298,6 +1299,30 @@ A curated port of Jeff Starr's [8G Firewall](https://perishablepress.com/8g-fire
 - **A blocked request is checked before the AI Bot Blocker and Basic Auth** — the most fundamental gate runs first, so a request that looks like an exploit attempt gets a flat 403 without ever being evaluated as a bot or offered a login prompt.
 - **nginx needs one server-wide shared file** (`config('server.waf.nginx_maps_path')`, default `/etc/nginx/conf.d/00-8g-firewall-maps.conf`) — nginx's `map` directive only works in the `http` context, so the six rule-category maps are declared once for the whole server rather than per site (a pattern xCloud and GridPane's own production 7G/8G ports use for the same reason). Harmless when unused; only sites that turn the firewall on ever reference the variables it defines. **Apache** needs no such restriction — its ruleset lives in one shared file too (`config('server.waf.apache_setenvif_path')`, default `/etc/apache2/waf/8g-apache-setenvif.conf`) purely to avoid duplicating ~15KB of regex into every site's own vhost, and each WAF-enabled site just `Include`s it.
 - **OpenLiteSpeed is not supported by this feature yet** — deliberately, not an oversight: the ruleset is ~150 regex patterns across six categories, and this project has no way to locally verify OpenLiteSpeed's rewrite-engine syntax the way nginx (`nginx -t`, exercised directly against a live instance while building this) and Apache's directive syntax could be checked by inspection. Shipping ~150 untested regex patterns as a *security* feature was judged worse than shipping none for this one driver. The `app_firewall` screen still exists on OLS servers; the 8G section simply has no effect there until a follow-up verifies it against real hardware.
+
+### Staging Area (`app_staging`, WordPress only for now)
+
+A staging site is **just another application row** — `production_application_id` points back at the site it was cloned from, and it gets a real vhost/document root/database through the exact same provisioning path any new application uses. Nothing about it is a bespoke parallel structure, so every per-app feature shipped this week (Basic Auth, Bot Blocker, WAF) works on a staging site for free.
+
+**Framework, not a WordPress-only pile of code:** which site types can stage at all is decided by `App\Contracts\SiteType::stagingStrategy()` — `null` means no recipe exists yet (every type except WordPress today), and the route 404s for those, the same "this screen does not exist here" guard every other `app_`-prefixed permission already gets. Adding staging for git-deployed apps later is a new class implementing `App\Contracts\StagingStrategy`'s two methods and one line on that site type — zero changes to the orchestration below.
+
+**`GET /api/applications/{id}/staging`** (`view`) — `{ staging: {...} | null }`, the staging site's own `ApplicationResource` shape (its own `id`, `domain`, `status`, etc.) or `null` if none exists yet.
+
+**`POST /api/applications/{id}/staging`** (`manage`) — body `{ domain }`. `201 { staging: {...} }`.
+- One staging site per production application — a second call 500s.
+- Flow: create the staging `Application` row → provision it (real vhost, real document root, its own database) → `rsync` production's files across (sensible excludes hardcoded — `wp-content/cache/`, `.git/`, `node_modules/`, `*.log`, `wp-content/upgrade/`, `.panel/`; not user-editable in v1) → the WordPress strategy dumps production's database, restores it into the staging database, rewrites `wp-config.php` to point at the new database with `WP_HOME`/`WP_SITEURL` pinned to the staging domain, `WP_ENVIRONMENT_TYPE=staging`, `DISABLE_WP_CRON=true` — → a serialization-safe `wp search-replace` (`--all-tables --precise --recurse-objects --skip-columns=guid --skip-plugins --skip-themes`) rewrites the production domain to the staging one everywhere, including inside serialized widget/page-builder data → a must-use plugin (`wp-content/mu-plugins/panel-staging-mail-trap.php`) short-circuits `wp_mail()` so nothing a clone inherited (WooCommerce order emails, drip campaigns) can ever reach a real customer → caches/transients flushed.
+- **`--skip-plugins --skip-themes` on every `wp` call** — a broken plugin/theme on the production site must not also break staging it.
+
+**`POST /api/applications/{id}/staging/push`** (`manage`) — body `{ mode }`, one of `files | full`.
+- **`files`** (the safe default) — copies the staging site's files back onto production. The production database is never touched; this cannot lose data.
+- **`full`** — also dumps the staging database and restores it into production's, replacing production's data, then reverses the URL rewrite (staging domain → production domain) on the production site now that its database physically contains staging's rows. **A local safety dump of the production database is taken first** (`.panel/staging-backups/pre-push-{timestamp}.sql` inside production's own document root, kept rather than pruned) — not a substitute for the full Backups feature, which needs a configured external storage destination that may not exist; a same-box safety net for the one irreversible part of a push.
+- **Maintenance mode**: production is `disable()`d for the width of the push and `enable()`d again in a `finally` — reuses Enable/disable's existing vhost swap verbatim, so a visitor never sees a half-pushed site, and production is re-enabled even if the push fails partway.
+- **Deleting a staging site is not a separate endpoint** — it is just another application, removed the same way any application is (`DELETE /api/applications/{id}`).
+
+**Explicitly deferred, stated not hidden:**
+- **WP-less fallback** — if WordPress itself won't boot (broken core/`wp-config.php`), every `wp` call in this flow fails outright. A serialized-safe rewrite that works without booting WordPress is a real follow-up, not built yet.
+- **Atomic docroot-symlink swap for push** — `documentRoot()` is a plain directory everywhere else in this codebase; push writes directly into the live docroot during the maintenance-mode window instead of introducing symlink semantics for one feature.
+- **User-editable file/table excludes**, **selective DB sync preserving production's own transactional tables on a full push** (`wp_users`, orders) — hardcoded excludes and a full overwrite only, for v1.
 
 **`GET /api/applications/port-check?port=8080[&application_id=3]`** (`view`) — ask before submitting, so the user is warned as they type rather than refused after.
 ```json

@@ -3,6 +3,7 @@
 namespace App\Services\Applications\Types;
 
 use App\Contracts\SiteType;
+use App\Contracts\StagingStrategy;
 
 /**
  * Shared defaults and field helpers, so a concrete site type is mostly just
@@ -133,6 +134,16 @@ abstract class AbstractSiteType implements SiteType
     public function defaultWebRoot(): string
     {
         return '/';
+    }
+
+    /**
+     * No recipe by default — a type overrides this only once one has
+     * actually been built for it, matching how `app_staging` itself only
+     * ever appears in the feature list a type declares.
+     */
+    public function stagingStrategy(): ?StagingStrategy
+    {
+        return null;
     }
 
     /**

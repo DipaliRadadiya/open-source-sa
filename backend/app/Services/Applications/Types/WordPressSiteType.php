@@ -2,6 +2,8 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Contracts\StagingStrategy;
+use App\Services\Server\Applications\Staging\WordPressStagingStrategy;
 use App\Support\FieldOptions;
 use Illuminate\Validation\Rule;
 
@@ -91,5 +93,10 @@ class WordPressSiteType extends AbstractSiteType
     public function features(): array
     {
         return [...parent::features(), 'app_staging'];
+    }
+
+    public function stagingStrategy(): ?StagingStrategy
+    {
+        return app(WordPressStagingStrategy::class);
     }
 }

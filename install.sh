@@ -423,7 +423,7 @@ install_packages() {
     # pending and security updates. Without it the Settings page cannot tell the
     # difference between "nothing waiting" and "could not look", so it reports
     # neither. Cheap, and it is the same source Ubuntu's own MOTD uses.
-    run apt-get install -y software-properties-common curl git unzip zip ca-certificates gnupg update-notifier-common
+    run apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common
 
     # The panel offers PHP versions by asking apt what it can install. Without
     # this repository that answer is "only the one Ubuntu ships", and the whole
@@ -1238,6 +1238,7 @@ configure_sudoers() {
         /usr/bin/hostnamectl /usr/bin/timedatectl /usr/sbin/shutdown /usr/bin/df /usr/bin/du
         /usr/bin/ps /usr/bin/kill /usr/bin/ss /usr/bin/curl /usr/bin/unzip /usr/bin/zip
         /usr/bin/tar /usr/bin/git /usr/local/bin/fnm /usr/local/bin/wp
+        /usr/bin/rsync
     )
 
     local list

@@ -19,6 +19,7 @@ return [
     'basic_auth_failed' => 'Das Ändern des Passwortschutzes ist auf dem Server fehlgeschlagen.',
     'bot_blocker_failed' => 'Das Ändern der KI-Bot-Blocker-Richtlinie ist auf dem Server fehlgeschlagen.',
     'waf_failed' => 'Das Ändern der Firewall-Einstellungen ist auf dem Server fehlgeschlagen.',
+    'staging_failed' => 'Der Staging-Vorgang ist auf dem Server fehlgeschlagen.',
 
     'permissions_fix_failed' => 'Das Zurücksetzen der Dateiberechtigungen ist auf dem Server fehlgeschlagen.',
 

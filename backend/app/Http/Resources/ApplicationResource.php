@@ -62,6 +62,15 @@ class ApplicationResource extends JsonResource
             'waf_exceptions' => $this->whenLoaded('wafRules', fn () => $this->wafRules->where('type', 'exception')->pluck('value')->values()),
             'waf_custom_rules' => $this->whenLoaded('wafRules', fn () => $this->wafRules->where('type', 'block')->pluck('value')->values()),
 
+            // Staging is just another application row — `is_staging` is the
+            // whole marker. `has_staging` lets the production site's own
+            // dashboard show "Create staging" vs "View staging" without a
+            // second request; it is only computed when `staging` is loaded,
+            // the same `whenLoaded` discipline every relation here follows.
+            'is_staging' => $this->isStaging(),
+            'production_application_id' => $this->production_application_id,
+            'has_staging' => $this->whenLoaded('staging', fn () => $this->staging !== null),
+
             'system_user' => $this->whenLoaded('systemUser', fn () => $this->systemUser ? [
                 'id' => $this->systemUser->id,
                 'username' => $this->systemUser->username,

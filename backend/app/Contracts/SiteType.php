@@ -75,4 +75,13 @@ interface SiteType
      * @return array<string, mixed>
      */
     public function rules(): array;
+
+    /**
+     * How to clone/push a staging site of this type, or null when this type
+     * has no staging recipe. Null is the honest default — most site types
+     * (marketplace PHP apps other than WordPress, admin tools like
+     * phpMyAdmin) have no recipe defined yet, and offering the feature
+     * without one would fail at the first click rather than never appearing.
+     */
+    public function stagingStrategy(): ?StagingStrategy;
 }

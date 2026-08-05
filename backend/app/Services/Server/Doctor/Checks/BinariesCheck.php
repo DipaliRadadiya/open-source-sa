@@ -41,6 +41,7 @@ class BinariesCheck implements DoctorCheck
         'hostnamectl' => 'hostname setting',
         'timedatectl' => 'timezone setting',
         'zip' => 'compressing files in the Files feature',
+        'rsync' => 'the Staging Area feature',
     ];
 
     public function key(): string

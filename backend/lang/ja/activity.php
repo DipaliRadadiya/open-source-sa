@@ -163,4 +163,6 @@ return [
     'application.basic_auth_disabled' => ':name のパスワード保護を無効にしました',
     'application.ai_bot_policy_updated' => ':name のAIボットブロッカーポリシーを :policy に設定しました',
     'application.waf_updated' => ':name のファイアウォール設定を更新しました',
+    'application.staging_created' => ':name のステージングサイトを作成しました',
+    'application.staging_pushed' => ':name にステージングをプッシュしました (:mode)',
 ];

@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * phases — a record here only means "the user asked for this".
  */
 #[Fillable([
-    'system_user_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
+    'system_user_id', 'production_application_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
     'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
     'build_command', 'deploy_script', 'start_command',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
@@ -123,6 +123,23 @@ class Application extends Model
     public function wafRules(): HasMany
     {
         return $this->hasMany(ApplicationWafRule::class);
+    }
+
+    /** Set only on a staging site — the production site it was cloned from. */
+    public function production(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'production_application_id');
+    }
+
+    /** One staging site per production application, enforced at create time. */
+    public function staging(): HasOne
+    {
+        return $this->hasOne(self::class, 'production_application_id');
+    }
+
+    public function isStaging(): bool
+    {
+        return $this->production_application_id !== null;
     }
 
     public function features(): array

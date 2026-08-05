@@ -19,6 +19,7 @@ return [
     'basic_auth_failed' => 'No se pudo cambiar la protección con contraseña en el servidor.',
     'bot_blocker_failed' => 'No se pudo cambiar la política del bloqueador de bots de IA en el servidor.',
     'waf_failed' => 'No se pudo cambiar la configuración del firewall en el servidor.',
+    'staging_failed' => 'La operación de staging falló en el servidor.',
 
     'permissions_fix_failed' => 'No se pudieron restablecer los permisos de archivo en el servidor.',
 

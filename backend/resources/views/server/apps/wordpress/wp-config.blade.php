@@ -21,6 +21,23 @@ $table_prefix = '{{ $prefix }}';
 define('WP_DEBUG', false);
 define('DISALLOW_FILE_EDIT', true);
 
+{{-- Staging-only, all null/false on a normal install so this changes nothing
+     for it. `WP_HOME`/`WP_SITEURL` pin the site to its own domain regardless
+     of what got copied into the database; `DISABLE_WP_CRON` is the one
+     non-negotiable staging safeguard — without it, scheduled tasks a clone
+     inherited (WooCommerce emails, drip campaigns) fire against real
+     customers from a site nobody is meant to be treating as live. --}}
+@if ($home ?? null)
+define('WP_HOME', '{{ $home }}');
+define('WP_SITEURL', '{{ $siteUrl ?? $home }}');
+@endif
+@if ($environmentType ?? null)
+define('WP_ENVIRONMENT_TYPE', '{{ $environmentType }}');
+@endif
+@if ($disableCron ?? false)
+define('DISABLE_WP_CRON', true);
+@endif
+
 if (! defined('ABSPATH')) {
     define('ABSPATH', __DIR__ . '/');
 }

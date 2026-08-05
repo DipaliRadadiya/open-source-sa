@@ -113,7 +113,7 @@ return [
             'tee', 'mkdir', 'chown', 'chmod', 'rm',
             'cp', 'mv', 'ln', 'install', 'truncate',
             'find', 'tail', 'cat', 'test', 'which',
-            'runuser', 'sh', 'env',
+            'runuser', 'sh', 'env', 'rsync',
             'nginx', 'apachectl', 'lswsctrl',
             'phpenmod', 'phpdismod', 'update-alternatives',
             'mysql', 'redis-cli', 'mongosh',
