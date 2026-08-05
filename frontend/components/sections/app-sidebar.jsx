@@ -5,7 +5,7 @@ import { usePathname, useParams } from "next/navigation";
 import {
   groupBySubLevel,
   isApplicationNavBuilt,
-  isNavActive,
+  findActiveNavItem,
   resolveNavItems,
   NAV_ITEM_CLASS,
 } from "@/lib/navigation";
@@ -47,6 +47,11 @@ export function AppSidebar({ items }) {
 
   const groups = groupBySubLevel(visible);
 
+  // Longest match wins: the application Dashboard's href (`/applications/{id}`)
+  // is a prefix of every sub-page, so a per-item prefix check lights it up
+  // everywhere. Pick the single deepest-matching item instead.
+  const activeItem = findActiveNavItem(visible, pathname);
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-16 justify-center border-b px-3">
@@ -68,7 +73,7 @@ export function AppSidebar({ items }) {
             )}
             <SidebarMenu className="gap-1.5">
               {groupItems.map((item) => {
-                const active = isNavActive(pathname, item.href);
+                const active = item === activeItem;
                 return (
                   <SidebarMenuItem key={`${item.name}-${item.href}`}>
                     <SidebarMenuButton
