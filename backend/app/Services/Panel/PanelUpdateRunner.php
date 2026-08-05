@@ -4,6 +4,7 @@ namespace App\Services\Panel;
 
 use App\Enums\PanelUpdateStatus;
 use App\Models\PanelUpdate;
+use App\Services\ActivityLogger;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -20,7 +21,10 @@ use Illuminate\Support\Facades\Log;
  */
 class PanelUpdateRunner
 {
-    public function __construct(private UpdateScript $script) {}
+    public function __construct(
+        private UpdateScript $script,
+        private ActivityLogger $activity,
+    ) {}
 
     /**
      * Write the script somewhere the checkout cannot reach and exec it detached.
@@ -97,6 +101,18 @@ class PanelUpdateRunner
             $attributes['status'] = PanelUpdateStatus::Succeeded;
             $attributes['finished_at'] = now();
             $attributes['to_commit'] = $state['commit'] ?? null;
+
+            // This is the only place the outcome of a run is ever recorded
+            // anywhere other than the row itself. The script that produced it
+            // runs detached, outside any request — by the time anyone is here
+            // to read the state file, the original request that started the
+            // update is long gone, so this is the sole opportunity to put the
+            // result somewhere a person can find it without knowing to query
+            // the panel_updates table directly.
+            $this->activity->log('panel_update.succeeded', $update, [
+                'from_version' => $update->from_version,
+                'to_version' => $update->to_version,
+            ], actor: $update->user);
         }
 
         if ($state['status'] === 'failed') {
@@ -107,6 +123,13 @@ class PanelUpdateRunner
             $attributes['reason'] = (string) ($state['reason'] ?: 'unknown');
             // The script's ERR trap always puts the old commit back.
             $attributes['rolled_back'] = true;
+
+            $this->activity->log('panel_update.failed', $update, [
+                'from_version' => $update->from_version,
+                'to_version' => $update->to_version,
+                'reason' => $attributes['reason'],
+                'rolled_back' => true,
+            ], actor: $update->user);
         }
 
         $update->update($attributes);

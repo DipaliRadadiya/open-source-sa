@@ -43,7 +43,7 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
 
   if (run.status === "failed") {
     return (
-      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
+      <div className="flex flex-col items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
         <div className="flex items-start gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
             <CircleX className="size-6 text-destructive" aria-hidden />
@@ -63,6 +63,10 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
             ) : null}
           </div>
         </div>
+        <Button onClick={onFinish} variant="outline" className="ml-14">
+          <RotateCcw className="size-4" />
+          {t("dismiss")}
+        </Button>
       </div>
     );
   }

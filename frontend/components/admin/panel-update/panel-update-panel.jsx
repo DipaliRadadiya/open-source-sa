@@ -26,8 +26,12 @@ export function PanelUpdatePanel({ initialState }) {
   const router = useRouter();
 
   const [state, setState] = useState(initialState);
-  // Resume a run that was already in flight when the page loaded.
-  const [run, setRun] = useState(isActive(initialState.latest_run) ? initialState.latest_run : null);
+  // Seed with the latest run regardless of whether it is still active: a real
+  // update takes minutes and its own copy says it's safe to leave, so the
+  // common case is loading this page well after a run has already settled.
+  // Without this, a finished run is invisible — no success card, no failure
+  // card — until the tab that watched it live is the one still open.
+  const [run, setRun] = useState(initialState.latest_run ?? null);
   const [dryRun, setDryRun] = useState(false);
   const [checking, setChecking] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -93,15 +97,19 @@ export function PanelUpdatePanel({ initialState }) {
   }
 
   function onFinish() {
-    if (dryRun) {
-      // Nothing changed — just drop the run and re-read fresh state.
-      setRun(null);
-      setDryRun(false);
-      router.refresh();
-    } else {
-      // The panel rebuilt and restarted; the running client is stale.
+    // A hard reload is only warranted when the code actually changed under
+    // this client. A dry run never touches anything, and a failed real run
+    // has already been rolled back by the script's own ERR trap — in both
+    // cases the running code is exactly what it was before, so reloading
+    // would just replay the same page pointlessly.
+    if (!dryRun && run?.status === "succeeded") {
       window.location.reload();
+      return;
     }
+
+    setRun(null);
+    setDryRun(false);
+    router.refresh();
   }
 
   const publishedLabel = (() => {

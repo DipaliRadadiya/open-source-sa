@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\PanelUpdateStatus;
+use App\Models\ActivityLog;
 use App\Models\PanelUpdate;
 use App\Models\User;
 use App\Services\Panel\PanelUpdateRunner;
@@ -172,9 +173,11 @@ describe('starting an update', function () {
 });
 
 describe('progress reconciliation', function () {
-    it('reads a completed run out of the state file', function () {
+    it('reads a completed run out of the state file and logs it', function () {
         $update = PanelUpdate::create([
+            'user_id' => $this->admin->id,
             'status' => PanelUpdateStatus::Running,
+            'from_version' => '1.0.0',
             'to_version' => '99.0.0',
         ]);
 
@@ -194,12 +197,23 @@ describe('progress reconciliation', function () {
             ->and($reconciled->to_commit)->toBe('ffffffffffffffffffffffffffffffffffffffff')
             ->and($reconciled->finished_at)->not->toBeNull();
 
+        // The row itself is not where an admin looks to find out what
+        // happened — the activity log is, and reconcile() is the only place
+        // that ever runs once the process that started the update is gone.
+        $log = ActivityLog::where('type', 'panel_update')->where('action', 'succeeded')->first();
+        expect($log)->not->toBeNull()
+            ->and($log->user_id)->toBe($this->admin->id)
+            ->and($log->subject_id)->toBe($update->id)
+            ->and($log->properties['to_version'])->toBe('99.0.0');
+
         @unlink($path);
     });
 
-    it('records the failed step as the reason and marks the rollback', function () {
+    it('records the failed step as the reason, marks the rollback, and logs it', function () {
         $update = PanelUpdate::create([
+            'user_id' => $this->admin->id,
             'status' => PanelUpdateStatus::Running,
+            'from_version' => '1.0.0',
             'to_version' => '99.0.0',
         ]);
 
@@ -216,6 +230,31 @@ describe('progress reconciliation', function () {
         expect($reconciled->status)->toBe(PanelUpdateStatus::Failed)
             ->and($reconciled->reason)->toBe('frontend_build')
             ->and($reconciled->rolled_back)->toBeTrue();
+
+        $log = ActivityLog::where('type', 'panel_update')->where('action', 'failed')->first();
+        expect($log)->not->toBeNull()
+            ->and($log->user_id)->toBe($this->admin->id)
+            ->and($log->subject_id)->toBe($update->id)
+            ->and($log->properties['reason'])->toBe('frontend_build')
+            ->and($log->properties['rolled_back'])->toBeTrue();
+
+        @unlink($path);
+    });
+
+    it('does not log again once a run has already settled', function () {
+        $update = PanelUpdate::create([
+            'user_id' => $this->admin->id,
+            'status' => PanelUpdateStatus::Succeeded,
+            'to_version' => '99.0.0',
+        ]);
+
+        $path = app(UpdateScript::class)->statePath($update);
+        @mkdir(dirname($path), 0750, true);
+        file_put_contents($path, json_encode(['step' => 'health_check', 'status' => 'succeeded']));
+
+        app(PanelUpdateRunner::class)->reconcile($update);
+
+        expect(ActivityLog::where('type', 'panel_update')->where('action', 'succeeded')->count())->toBe(0);
 
         @unlink($path);
     });
