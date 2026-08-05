@@ -37,7 +37,12 @@ class SettingController extends Controller
 
         return response()->json([
             'settings' => $values,
-            'last_changed' => $changes->forGroups(array_keys($values)),
+            // Cast, not left as an array: json_encode() cannot tell an empty
+            // associative array from an empty list and emits `[]` either way,
+            // which a client expecting an object (a map keyed by group) then
+            // rejects. A box where nothing has been changed yet — every fresh
+            // install — hits this on the very first request.
+            'last_changed' => (object) $changes->forGroups(array_keys($values)),
         ]);
     }
 
