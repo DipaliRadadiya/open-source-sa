@@ -122,6 +122,8 @@ return [
     'application.webhook_disabled' => 'Desativou o deploy automático de :name',
     'application.webhook_rotated' => 'Substituiu o segredo de deploy automático de :name (:provider)',
     'application.webhook_deployed' => 'Implantou :name após um push para :branch',
+    'application.disabled' => 'Desativou a aplicação :name',
+    'application.enabled' => 'Ativou a aplicação :name',
     'database.engine_installed' => 'Instalou o motor de banco de dados :engine',
     'database.engine_install_failed' => 'Não foi possível instalar o motor de banco de dados :engine (:reason)',
     'php.ini_updated' => 'Atualizou a configuração do PHP :version',

@@ -13,6 +13,10 @@ return [
 
     'webhook_not_a_git_application' => 'Deploy-on-push is only available for applications deployed from a git repository.',
 
+    'already_disabled' => 'This application is already disabled.',
+    'not_disabled' => 'This application is not disabled.',
+    'availability_failed' => 'Changing the application\'s availability failed on the server.',
+
     'permissions_fix_failed' => 'Resetting file permissions failed on the server.',
 
     'unsafe_path' => 'That path is not allowed.',

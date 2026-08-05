@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications;
 
 use App\Actions\Server\Application\AutoIssueCertificate;
+use App\Exceptions\Server\Application\ApplicationAvailabilityException;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
@@ -201,6 +202,99 @@ class ApplicationProvisioner
         if ($driver->test()->ok) {
             $driver->reload();
         }
+    }
+
+    /**
+     * Takes a site offline without deleting it: swaps its vhost to a small
+     * built-in "unavailable" page, reversible via `enable()`. Nothing else —
+     * files, database, a supervised process — is touched. This is a
+     * web-facing pause, not a deprovision.
+     *
+     * Reuses the site's own *static* vhost template rather than writing a
+     * fourth one per web server: `serving_profile` is temporarily set to
+     * `static` in memory only (never persisted) for the duration of the
+     * render, so the existing template's SSL, ACME-challenge and redirect
+     * handling keep working for free instead of being reimplemented.
+     */
+    public function disable(Application $application): void
+    {
+        abort_if($application->disabled_at !== null, 422, __('errors/application.already_disabled'));
+
+        $this->ensureDisabledPage();
+
+        $driver = $this->webServers->driver();
+        $realProfile = $application->serving_profile;
+
+        $application->serving_profile = 'static';
+        $applied = $driver->apply($application, $this->disabledPageRoot());
+        $application->serving_profile = $realProfile;
+
+        if ($applied->failed()) {
+            throw new ApplicationAvailabilityException($applied->reference);
+        }
+
+        if ($driver->test()->failed()) {
+            // Put the real vhost back before failing — a disable must never
+            // leave a live site's config pointed nowhere useful.
+            $restored = $driver->apply($application, $this->documentRoot($application));
+
+            throw new ApplicationAvailabilityException($restored->reference);
+        }
+
+        $driver->reload();
+
+        $application->disabled_at = now();
+        $application->save();
+    }
+
+    public function enable(Application $application): void
+    {
+        abort_if($application->disabled_at === null, 422, __('errors/application.not_disabled'));
+
+        $driver = $this->webServers->driver();
+        $documentRoot = $this->documentRoot($application);
+
+        $applied = $driver->apply($application, $documentRoot);
+
+        if ($applied->failed()) {
+            throw new ApplicationAvailabilityException($applied->reference);
+        }
+
+        if ($driver->test()->failed()) {
+            // Put the disabled page back before failing, for the same reason
+            // disable()'s rollback exists — never strand the vhost mid-swap.
+            $realProfile = $application->serving_profile;
+            $application->serving_profile = 'static';
+            $restored = $driver->apply($application, $this->disabledPageRoot());
+            $application->serving_profile = $realProfile;
+
+            throw new ApplicationAvailabilityException($restored->reference);
+        }
+
+        $driver->reload();
+
+        $application->disabled_at = null;
+        $application->save();
+    }
+
+    private function disabledPageRoot(): string
+    {
+        return rtrim((string) config('server.disabled_page_root'), '/');
+    }
+
+    /** Idempotent — safe to call on every disable(), cheap when it already exists. */
+    private function ensureDisabledPage(): void
+    {
+        $root = $this->disabledPageRoot();
+
+        $this->serverOps->run(['mkdir', '-p', $root], ['feature' => 'application', 'op' => 'ensure_disabled_page']);
+
+        $this->serverOps->run(
+            ['tee', "{$root}/index.html"],
+            ['feature' => 'application', 'op' => 'ensure_disabled_page'],
+            input: '<!doctype html><meta charset="utf-8"><title>Unavailable</title>'
+                ."<h1>This site is temporarily unavailable</h1>\n",
+        );
     }
 
     private function placeholderPath(Application $application, string $documentRoot): string

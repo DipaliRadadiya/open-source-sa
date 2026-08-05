@@ -1198,6 +1198,7 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   "site_type": "git", "site_type_title": "From Git repo",
   "serving_profile": "php", "rendering_type": "php",
   "status": "pending", "status_title": "Not deployed yet", "deployed": false,
+  "is_disabled": false, "disabled_at": null,
   "system_user": { "id": 3, "username": "deploy" },
   "php_version": "8.4", "node_version": null, "app_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
@@ -1210,6 +1211,19 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
 - `deployed` is the honest flag — true only when `status` is `active`. In P1 it is always `false`.
 - `git_account_id: null` with a `repository_url` = a public repository, cloned without credentials.
 - `settings` holds the type-specific answers (WordPress admin email, table prefix, …), shaped by that type's field schema.
+- `is_disabled` is a separate axis from `status` — a healthy, fully-provisioned site can still be paused. See **Enable / disable** below.
+
+### Enable / disable (Dashboard action, not a separate screen)
+
+**`POST /api/applications/{id}/disable`** (`manage`) — take a site offline without deleting it. `200 {application}` with `is_disabled: true`.
+**`POST /api/applications/{id}/enable`** (`manage`) — put it back. `200 {application}` with `is_disabled: false`.
+
+- Same `application` permission as everything else on this resource — **no separate permission was added**, since this belongs on the application dashboard rather than its own page.
+- **Only the web-facing vhost is touched.** Files, the database, environment variables and a supervised process are all left exactly as they were — disabling is reversible with no side effects to undo.
+- Disabling swaps the site's vhost for a small built-in "this site is temporarily unavailable" page; the real config is restored byte-for-byte on enable — nothing about the site's own configuration is regenerated or guessed at in between.
+- `422` disabling an already-disabled site, or enabling one that is not disabled — `already_disabled` / `not_disabled` on `errors/application`.
+- **The swap is tested before it is trusted, both directions.** A failed config test rolls the vhost straight back to whatever was serving before the request — a disable or enable can never leave a site's config pointed at nothing. A `500 {message, reference}` from either endpoint means the vhost is unchanged from before the call.
+- Render the button from `is_disabled`, not from `status` — a `failed` or `pending` application can be `is_disabled: false` and vice versa; they are independent.
 
 **`GET /api/applications/port-check?port=8080[&application_id=3]`** (`view`) — ask before submitting, so the user is warned as they type rather than refused after.
 ```json

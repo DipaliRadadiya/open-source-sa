@@ -122,6 +122,8 @@ return [
     'application.webhook_disabled' => 'A désactivé le déploiement automatique de :name',
     'application.webhook_rotated' => 'A remplacé le secret de déploiement automatique de :name (:provider)',
     'application.webhook_deployed' => 'A déployé :name après un push sur :branch',
+    'application.disabled' => 'A désactivé l\'application :name',
+    'application.enabled' => 'A activé l\'application :name',
     'database.engine_installed' => 'A installé le moteur de base de données :engine',
     'database.engine_install_failed' => 'N\'a pas pu installer le moteur de base de données :engine (:reason)',
     'php.ini_updated' => 'A mis à jour la configuration de PHP :version',

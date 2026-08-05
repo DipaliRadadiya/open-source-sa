@@ -13,6 +13,10 @@ return [
 
     'webhook_not_a_git_application' => 'El despliegue automático solo está disponible para aplicaciones desplegadas desde un repositorio git.',
 
+    'already_disabled' => 'Esta aplicación ya está deshabilitada.',
+    'not_disabled' => 'Esta aplicación no está deshabilitada.',
+    'availability_failed' => 'No se pudo cambiar la disponibilidad de la aplicación en el servidor.',
+
     'permissions_fix_failed' => 'No se pudieron restablecer los permisos de archivo en el servidor.',
 
     'unsafe_path' => 'Esa ruta no está permitida.',

@@ -29,6 +29,12 @@ class ApplicationResource extends JsonResource
             // P1 never provisions, so make the gap explicit rather than
             // letting a "pending" badge imply the site is reachable.
             'deployed' => $this->status->value === 'active',
+            // A separate axis from `status`: a healthy site can still be
+            // paused (vhost swapped to the "unavailable" page) without its
+            // provisioning state changing. The dashboard's enable/disable
+            // action switches on this, not on `status`.
+            'is_disabled' => $this->disabled_at !== null,
+            'disabled_at' => $this->disabled_at?->format('d-m-Y H:i:s'),
 
             'system_user' => $this->whenLoaded('systemUser', fn () => $this->systemUser ? [
                 'id' => $this->systemUser->id,

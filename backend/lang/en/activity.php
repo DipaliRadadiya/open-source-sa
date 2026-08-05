@@ -122,6 +122,8 @@ return [
     'application.webhook_disabled' => 'Disabled deploy-on-push for :name',
     'application.webhook_rotated' => 'Replaced the deploy-on-push secret for :name (:provider)',
     'application.webhook_deployed' => 'Deployed :name from a push to :branch',
+    'application.disabled' => 'Disabled application :name',
+    'application.enabled' => 'Enabled application :name',
     'database.engine_installed' => 'Installed the :engine database engine',
     'database.engine_install_failed' => 'Could not install the :engine database engine (:reason)',
     'php.ini_updated' => 'Updated the PHP :version configuration',

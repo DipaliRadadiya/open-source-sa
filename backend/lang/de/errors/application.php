@@ -13,6 +13,10 @@ return [
 
     'webhook_not_a_git_application' => 'Deploy-on-Push ist nur für Anwendungen verfügbar, die aus einem Git-Repository bereitgestellt werden.',
 
+    'already_disabled' => 'Diese Anwendung ist bereits deaktiviert.',
+    'not_disabled' => 'Diese Anwendung ist nicht deaktiviert.',
+    'availability_failed' => 'Das Ändern der Verfügbarkeit der Anwendung ist auf dem Server fehlgeschlagen.',
+
     'permissions_fix_failed' => 'Das Zurücksetzen der Dateiberechtigungen ist auf dem Server fehlgeschlagen.',
 
     'unsafe_path' => 'Dieser Pfad ist nicht zulässig.',

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Application\CreateApplication;
 use App\Actions\Server\Application\DeleteApplication;
 use App\Actions\Server\Application\DeprovisionApplication;
+use App\Actions\Server\Application\DisableApplication;
+use App\Actions\Server\Application\EnableApplication;
 use App\Actions\Server\Application\RunApplicationProcess;
 use App\Actions\Server\Application\UpdateApplication;
 use App\Enums\ApplicationStatus;
@@ -167,6 +169,29 @@ class ApplicationController extends Controller
                 'reference' => $result->reference,
             ], 500);
         }
+
+        return response()->json([
+            'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
+        ]);
+    }
+
+    /**
+     * Take a site offline without deleting it — a vhost swap to a small
+     * "unavailable" page. Everything else (files, database, a supervised
+     * process) is left alone; see `enable()` for the reverse.
+     */
+    public function disable(Application $application, DisableApplication $action): JsonResponse
+    {
+        $action->execute($application);
+
+        return response()->json([
+            'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
+        ]);
+    }
+
+    public function enable(Application $application, EnableApplication $action): JsonResponse
+    {
+        $action->execute($application);
 
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),

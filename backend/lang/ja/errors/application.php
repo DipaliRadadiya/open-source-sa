@@ -13,6 +13,10 @@ return [
 
     'webhook_not_a_git_application' => 'プッシュ時デプロイは、git リポジトリからデプロイされたアプリケーションでのみ利用できます。',
 
+    'already_disabled' => 'このアプリケーションはすでに無効になっています。',
+    'not_disabled' => 'このアプリケーションは無効になっていません。',
+    'availability_failed' => 'アプリケーションの可用性の変更がサーバーで失敗しました。',
+
     'permissions_fix_failed' => 'サーバー上でのファイル権限のリセットに失敗しました。',
 
     'unsafe_path' => 'そのパスは許可されていません。',

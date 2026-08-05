@@ -35,6 +35,14 @@ Route::post('/applications/{application}/deploy', [ApplicationController::class,
 Route::post('/applications/{application}/process/{action}', [ApplicationController::class, 'process'])
     ->middleware('permission:application,manage');
 
+// Enable/disable: a Dashboard action, not a separate screen, so it stays on
+// the same `application` permission as the rest of this resource rather than
+// a new one.
+Route::post('/applications/{application}/disable', [ApplicationController::class, 'disable'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+Route::post('/applications/{application}/enable', [ApplicationController::class, 'enable'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+
 // Deploy-on-push. The delivery endpoint itself is unauthenticated and lives in
 // routes/api/webhooks.php; these two only configure it.
 Route::get('/webhook-providers', [ApplicationWebhookController::class, 'providers'])

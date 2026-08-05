@@ -122,6 +122,8 @@ return [
     'application.webhook_disabled' => ':name のプッシュ時デプロイを無効にしました',
     'application.webhook_rotated' => ':name のプッシュ時デプロイのシークレットを再発行しました (:provider)',
     'application.webhook_deployed' => ':branch へのプッシュにより :name をデプロイしました',
+    'application.disabled' => 'アプリケーション :name を無効にしました',
+    'application.enabled' => 'アプリケーション :name を有効にしました',
     'database.engine_installed' => ':engine データベースエンジンをインストールしました',
     'database.engine_install_failed' => ':engine データベースエンジンをインストールできませんでした (:reason)',
     'php.ini_updated' => 'PHP :version の設定を更新しました',

@@ -277,6 +277,12 @@ return [
 
     'home_base' => env('SERVER_HOME_BASE', '/home'),
 
+    // One shared "site unavailable" page, served in place of a disabled
+    // application's real vhost — same reasoning as the ACME challenge_root
+    // above: a single directory works for every serving profile, including
+    // node/proxy sites that have no document root of their own.
+    'disabled_page_root' => env('SERVER_DISABLED_PAGE_ROOT', '/var/www/.disabled-site'),
+
     /*
     |--------------------------------------------------------------------------
     | Cron.d directory

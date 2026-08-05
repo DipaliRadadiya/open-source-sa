@@ -13,6 +13,10 @@ return [
 
     'webhook_not_a_git_application' => 'O deploy automático está disponível apenas para aplicações implantadas a partir de um repositório git.',
 
+    'already_disabled' => 'Esta aplicação já está desativada.',
+    'not_disabled' => 'Esta aplicação não está desativada.',
+    'availability_failed' => 'Não foi possível alterar a disponibilidade da aplicação no servidor.',
+
     'permissions_fix_failed' => 'Falha ao redefinir as permissões de arquivo no servidor.',
 
     'unsafe_path' => 'Esse caminho não é permitido.',
