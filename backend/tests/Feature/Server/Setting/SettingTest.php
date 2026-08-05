@@ -196,9 +196,10 @@ it('writes the ssh drop-in, tests then reloads', function () {
         ->assertOk()
         ->assertJsonPath('security.port', 22); // read is re-run via fake (still 22)
 
-    $dropIn = File::get($this->dir.'/99-panel.conf');
+    $dropIn = File::get($this->dir.'/00-panel.conf');
     expect($dropIn)->toContain('Port 2222')->toContain('PermitRootLogin no')->toContain('PasswordAuthentication yes');
     Process::assertRan(fn ($p) => $p->command === ['sshd', '-t']);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', $this->dir.'/99-panel.conf']);
     Process::assertRan(fn ($p) => $p->command === ['systemctl', 'reload', 'ssh']);
 });
 

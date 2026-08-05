@@ -21,6 +21,19 @@ class SecuritySettings implements SettingGroup
 {
     private const ROOT_LOGIN = ['yes', 'no', 'prohibit-password'];
 
+    // sshd's Include takes the FIRST value seen for each keyword — the
+    // opposite of systemd-style drop-ins, where the last file wins. Cloud
+    // images commonly ship /etc/ssh/sshd_config.d/50-cloud-init.conf, which
+    // sets PasswordAuthentication itself; a file named 99-panel.conf would
+    // load after it and be silently overridden for every keyword both files
+    // set. A low number sorts first, so the panel's values always win.
+    private const DROP_IN = '00-panel.conf';
+
+    // The name this used before that was understood. Removed on every write
+    // so an upgraded box does not keep both — two files setting the same
+    // keyword is exactly the failure mode above, just against ourselves.
+    private const LEGACY_DROP_IN = '99-panel.conf';
+
     public function __construct(
         private ServerOps $serverOps,
         private Firewall $firewall,
@@ -79,8 +92,10 @@ class SecuritySettings implements SettingGroup
             ."PermitRootLogin {$rootLogin}\n"
             .'PasswordAuthentication '.($data['password_authentication'] ? 'yes' : 'no')."\n";
 
+        $dir = rtrim((string) config('server.sshd_config_dir'), '/');
+
         $write = $this->files->put(
-            rtrim((string) config('server.sshd_config_dir'), '/').'/99-panel.conf',
+            $dir.'/'.self::DROP_IN,
             $config,
             ['feature' => 'setting', 'group' => 'security'],
         );
@@ -93,6 +108,17 @@ class SecuritySettings implements SettingGroup
         $test = $this->serverOps->run(['sshd', '-t'], ['feature' => 'setting', 'group' => 'security', 'op' => 'test']);
         if ($test->failed()) {
             throw new SettingOperationException($test->reference);
+        }
+
+        // Only once the new file is known to parse: drop the legacy name so
+        // it cannot keep outvoting this one on a box that wrote it before.
+        $cleanup = $this->files->delete(
+            $dir.'/'.self::LEGACY_DROP_IN,
+            ['feature' => 'setting', 'group' => 'security'],
+        );
+
+        if ($cleanup->failed()) {
+            throw new SettingOperationException($cleanup->reference);
         }
 
         // Firewall port sync: open the new SSH port BEFORE the daemon moves to

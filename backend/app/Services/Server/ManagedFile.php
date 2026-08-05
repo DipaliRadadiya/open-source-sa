@@ -7,7 +7,7 @@ namespace App\Services\Server;
  *
  * Not `File::put`. Three settings groups used to write straight to
  * /etc with PHP's filesystem functions, which meant a failure escaped as a
- * raw `file_put_contents(/etc/ssh/sshd_config.d/99-panel.conf): Failed to
+ * raw `file_put_contents(/etc/ssh/sshd_config.d/00-panel.conf): Failed to
  * open stream` — an internal path handed to the API consumer, with no
  * reference and nothing in the server-ops log to trace. Every other write on
  * the server side goes through ServerOps; these did not, and only because
