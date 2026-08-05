@@ -119,6 +119,13 @@ scripthandler {
        it the rule rewrites index.php to itself. --}}
 rewrite {
   enable                  1
+@if ($botBlock)
+  {{-- Checked first, ahead of HTTPS-force/redirects/the front controller —
+       a blocked bot gets [F] (403) immediately. Apache mod_rewrite syntax,
+       which OLS implements here, not nginx's. --}}
+  RewriteCond %{HTTP_USER_AGENT} ({{ $botBlock }}) [NC]
+  RewriteRule ^ - [F,L]
+@endif
 @if ($readsHtaccess)
   {{-- On for WordPress, because LiteSpeed Cache has no other way in: the
        plugin writes its cache rules to .htaccess and OpenLiteSpeed's cache

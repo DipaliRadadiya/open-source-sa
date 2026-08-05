@@ -161,4 +161,5 @@ return [
     'application.php_settings_updated' => 'Atualizou as definições de PHP de :name',
     'application.basic_auth_enabled' => 'Ativou a proteção por senha de :name',
     'application.basic_auth_disabled' => 'Desativou a proteção por senha de :name',
+    'application.ai_bot_policy_updated' => 'Definiu a política do Bloqueador de Bots de IA de :name para :policy',
 ];

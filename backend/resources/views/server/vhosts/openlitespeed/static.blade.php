@@ -84,12 +84,20 @@ context exp:^/\.(git|svn|hg|bzr|env) {
   allowBrowse             0
 }
 
-{{-- A rewrite block only when there is a redirect to serve. OLS routes these
-     names here as aliases, so they must be sent on explicitly or they would
-     serve the site under a second name. --}}
-@if ($redirects->isNotEmpty() || $forceHttps)
+{{-- A rewrite block only when there is something to rewrite — a redirect,
+     HTTPS-force, or an active bot policy. OLS routes redirect names here as
+     aliases, so they must be sent on explicitly or they would serve the
+     site under a second name. --}}
+@if ($redirects->isNotEmpty() || $forceHttps || $botBlock)
 rewrite {
   enable                  1
+@if ($botBlock)
+  {{-- Checked first — a blocked bot gets [F] (403) immediately, ahead of
+       HTTPS-force or any redirect. Apache mod_rewrite syntax, which OLS
+       implements here, not nginx's. --}}
+  RewriteCond %{HTTP_USER_AGENT} ({{ $botBlock }}) [NC]
+  RewriteRule ^ - [F,L]
+@endif
 @if ($forceHttps)
   {{-- Force HTTPS. The ACME exclusion is not optional: without it renewal
        stops working, and the redirect goes on pointing confidently at a

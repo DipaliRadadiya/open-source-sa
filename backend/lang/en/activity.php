@@ -161,4 +161,5 @@ return [
     'application.php_settings_updated' => 'Updated the PHP settings for :name',
     'application.basic_auth_enabled' => 'Enabled password protection for :name',
     'application.basic_auth_disabled' => 'Disabled password protection for :name',
+    'application.ai_bot_policy_updated' => 'Set the AI Bot Blocker policy for :name to :policy',
 ];

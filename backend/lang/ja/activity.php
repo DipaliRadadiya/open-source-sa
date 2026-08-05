@@ -161,4 +161,5 @@ return [
     'application.php_settings_updated' => ':name の PHP 設定を更新しました',
     'application.basic_auth_enabled' => ':name のパスワード保護を有効にしました',
     'application.basic_auth_disabled' => ':name のパスワード保護を無効にしました',
+    'application.ai_bot_policy_updated' => ':name のAIボットブロッカーポリシーを :policy に設定しました',
 ];

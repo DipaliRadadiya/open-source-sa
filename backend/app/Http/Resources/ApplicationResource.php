@@ -45,6 +45,13 @@ class ApplicationResource extends JsonResource
             'basic_auth_enabled' => (bool) $this->basic_auth_enabled,
             'basic_auth_username' => $this->basic_auth_enabled ? $this->basic_auth_username : null,
 
+            // Which AI crawlers are 403'd for this site. `title` is the same
+            // plain-language label the Bot Blocker screen's radio option
+            // uses, so a dashboard badge and the settings screen never say
+            // two different things for the same value.
+            'ai_bot_policy' => $this->ai_bot_policy->value,
+            'ai_bot_policy_title' => $this->ai_bot_policy->title(),
+
             'system_user' => $this->whenLoaded('systemUser', fn () => $this->systemUser ? [
                 'id' => $this->systemUser->id,
                 'username' => $this->systemUser->username,

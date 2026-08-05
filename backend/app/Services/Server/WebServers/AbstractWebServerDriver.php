@@ -3,6 +3,7 @@
 namespace App\Services\Server\WebServers;
 
 use App\Contracts\WebServerDriver;
+use App\Enums\AiBotPolicy;
 use App\Enums\DomainType;
 use App\Models\Application;
 use App\Services\Server\ManagedFile;
@@ -116,7 +117,25 @@ abstract class AbstractWebServerDriver implements WebServerDriver
                 'realm' => 'sv-app-'.$application->id,
                 'htpasswdPath' => $documentRoot.'/.panel/.htpasswd',
             ] : null,
+            // A single regex-ready, alternation-joined string — already
+            // escaped — or null when the policy blocks nothing. Resolved
+            // here, once, so no template re-implements "which bots does this
+            // policy block" against `config/ai_bots.php` itself.
+            'botBlock' => $this->botBlockPattern($application),
         ];
+    }
+
+    private function botBlockPattern(Application $application): ?string
+    {
+        $bots = $application->ai_bot_policy instanceof AiBotPolicy
+            ? $application->ai_bot_policy->blockedBots()
+            : [];
+
+        if ($bots === []) {
+            return null;
+        }
+
+        return implode('|', array_map(fn (string $bot) => preg_quote($bot, '/'), $bots));
     }
 
     public function test(): ServerOpsResult

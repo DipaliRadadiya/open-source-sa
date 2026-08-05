@@ -1200,6 +1200,7 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   "status": "pending", "status_title": "Not deployed yet", "deployed": false,
   "is_disabled": false, "disabled_at": null,
   "basic_auth_enabled": false, "basic_auth_username": null,
+  "ai_bot_policy": "allow_all", "ai_bot_policy_title": "Allow all AI bots",
   "system_user": { "id": 3, "username": "deploy" },
   "php_version": "8.4", "node_version": null, "app_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
@@ -1237,6 +1238,29 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
 - Mechanically: the credential is written to `.panel/.htpasswd` inside the site's own document root (already excluded from every vhost's served paths by the same dotfile-deny rule that protects `.env`), then the vhost is re-rendered with the auth block, config-tested, and reloaded — the same apply → test → reload → rollback sequence Enable/disable uses. A failed config test restores the previous protected/unprotected state before failing; a `500 {message, reference}` means the site's protection state and vhost are both unchanged from before the call.
 - The ACME challenge path is always excluded from the auth block on all three web servers, so turning protection on never breaks certificate renewal.
 - OpenLiteSpeed's realm/htpasswd block has not been exercised against real OLS hardware — flagged the same way the rest of this project's OLS support is; nginx and Apache are the tested paths.
+
+### AI Bot Blocker — whole-site crawler control (`app_bot_blocker`, its own screen)
+
+Three plain-language choices, not a switch — a blunt on/off would block AI *search* crawlers (ChatGPT search, Perplexity, …) exactly as hard as the crawlers that only scrape for model training and never send a visitor back. `config/ai_bots.php` is the one place that classifies a bot name as `training` or `retrieval`; nothing else in this feature — not the vhost template, not the API response — keeps its own copy.
+
+**`GET /api/ai-bot-policies`** (`view`) — the catalog: all three policies, each with its resolved bot list, for the screen's transparency panel ("23 bots blocked under this option").
+```json
+{
+  "ai_bot_policies": {
+    "allow_all": {"title": "Allow all AI bots", "description": "No AI crawler is blocked.", "blocked_bots": [], "blocked_count": 0},
+    "block_training": {"title": "Block AI training bots", "description": "…", "blocked_bots": ["GPTBot", "ClaudeBot", "…"], "blocked_count": 23},
+    "block_all": {"title": "Block all AI bots", "description": "…", "blocked_bots": ["GPTBot", "…", "OAI-SearchBot", "PerplexityBot", "…"], "blocked_count": 30}
+  }
+}
+```
+- Render the UI from this response, not a hardcoded label/list on the frontend — the count and names are always exactly what the vhost enforces, because both read the same config file.
+
+**`PUT /api/applications/{id}/bot-blocker`** (`manage`) — body `{ policy }`, one of `allow_all | block_training | block_all`. `200 {application}` with `ai_bot_policy`/`ai_bot_policy_title` refreshed.
+- **Default for every new site is `allow_all`** — blocking anything is an action the site owner takes, not something the panel decides for them.
+- Mechanically: same apply → test → reload → rollback sequence as Password Protection and Enable/disable — a failed config test restores the previous policy before failing, so a bad change never leaves the vhost half-applied.
+- **Enforcement is the vhost-level user-agent block only** — nginx `if ($http_user_agent ~* …) { return 403; }`, Apache `SetEnvIfNoCase` + `<RequireAll><Require not env …></RequireAll>` (chosen over `mod_rewrite` so it can never collide with a site's own `.htaccess` rewrite rules), OpenLiteSpeed via its existing `rewrite{}` block. **No `robots.txt` is written or modified** — plenty of sites already ship their own (SEO plugins, a `Sitemap:` line), and generating one risks silently overwriting it; `robots.txt` is voluntary anyway; the enforced 403 is what actually blocks a bot that ignores it.
+- **A blocked bot is checked first**, ahead of Basic Auth — it gets a flat 403 and never sees the login prompt, on every driver.
+- Known limitation, stated rather than hidden: the bot list can only change for a given site the next time its vhost is re-rendered (this endpoint, a deploy, a certificate renewal, …) — a policy shipped in a future panel update does not retroactively reach an already-configured site that never gets touched again.
 
 **`GET /api/applications/port-check?port=8080[&application_id=3]`** (`view`) — ask before submitting, so the user is warned as they type rather than refused after.
 ```json

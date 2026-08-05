@@ -17,6 +17,7 @@ return [
     'not_disabled' => 'このアプリケーションは無効になっていません。',
     'availability_failed' => 'アプリケーションの可用性の変更がサーバーで失敗しました。',
     'basic_auth_failed' => 'パスワード保護の変更がサーバーで失敗しました。',
+    'bot_blocker_failed' => 'AIボットブロッカーのポリシー変更がサーバーで失敗しました。',
 
     'permissions_fix_failed' => 'サーバー上でのファイル権限のリセットに失敗しました。',
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AiBotPolicy;
 use App\Enums\ApplicationStatus;
 use App\Enums\DomainType;
 use App\Services\Applications\SiteTypeManager;
@@ -35,6 +36,7 @@ class Application extends Model
             'isolated_at' => 'datetime',
             'disabled_at' => 'datetime',
             'basic_auth_enabled' => 'boolean',
+            'ai_bot_policy' => AiBotPolicy::class,
             'status' => ApplicationStatus::class,
             'settings' => 'array',
             'steps' => 'array',

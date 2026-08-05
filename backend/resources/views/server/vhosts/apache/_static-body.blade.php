@@ -22,17 +22,30 @@
 @endif
     DocumentRoot {{ $documentRoot }}
 
+@if ($botBlock)
+    {{-- `SetEnvIfNoCase` rather than mod_rewrite: it needs no `RewriteEngine`
+         of its own, so it cannot conflict with a user's own rewrite rules in
+         a `.htaccess` this vhost already allows (`AllowOverride All`). --}}
+    SetEnvIfNoCase User-Agent "^({{ $botBlock }})" ai_bot_blocked
+@endif
     <Directory {{ $documentRoot }}>
         Options -Indexes +FollowSymLinks
         AllowOverride All
-@if ($basicAuth)
-        AuthType Basic
-        AuthName "Restricted"
-        AuthUserFile {{ $basicAuth['htpasswdPath'] }}
-        Require valid-user
-@else
-        Require all granted
+        {{-- `RequireAll` so a blocked bot fails here regardless of Basic
+             Auth — it never reaches the login prompt below. --}}
+        <RequireAll>
+@if ($botBlock)
+            Require not env ai_bot_blocked
 @endif
+@if ($basicAuth)
+            AuthType Basic
+            AuthName "Restricted"
+            AuthUserFile {{ $basicAuth['htpasswdPath'] }}
+            Require valid-user
+@else
+            Require all granted
+@endif
+        </RequireAll>
     </Directory>
 
     <DirectoryMatch "/\.(?!well-known)">
