@@ -563,6 +563,16 @@ fetch_source() {
     # the first write to vendor/ or node_modules/.
     run chown -R "${APP_USER}:${APP_USER}" "$APP_DIR"
     ok "owned by ${APP_USER}"
+
+    # setup_backend() below chmod -R 775's storage/ and bootstrap/cache/,
+    # which includes the tracked .gitignore placeholders that keep those
+    # otherwise-empty directories in git. That flips their mode from the
+    # repo's 644 to 775, and with core.fileMode on (git's default) that reads
+    # as an uncommitted change forever after — which the panel-update
+    # preflight's clean-working-tree check takes at face value and refuses to
+    # update on, despite there being nothing to lose.
+    run git -C "$APP_DIR" config core.fileMode false
+    ok "git mode tracking disabled (storage permissions are not source control)"
 }
 
 # Sets a key in an .env file, preserving every other line — comments, ordering
