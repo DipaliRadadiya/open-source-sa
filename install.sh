@@ -1245,6 +1245,18 @@ SUDOERS
         die "the generated sudoers file did not validate and has been removed"
     fi
     ok "sudoers rule installed for ${APP_USER}"
+
+    # The security page reads effective sshd config with `sudo -n sshd -T`, and
+    # sshd refuses to run without its privilege-separation directory /run/sshd.
+    # That lives on a tmpfs and is only created by ssh.service — on a
+    # socket-activated ssh (Ubuntu 24.04+ default) it may be absent at rest and
+    # is wiped on every reboot, so the read fails with "Missing privilege
+    # separation directory". A tmpfiles rule recreates it at boot regardless.
+    cat >/etc/tmpfiles.d/${PANEL_SLUG}-sshd.conf <<TMPFILES
+d /run/sshd 0755 root root -
+TMPFILES
+    run systemd-tmpfiles --create /etc/tmpfiles.d/${PANEL_SLUG}-sshd.conf
+    ok "sshd runtime directory (/run/sshd) guaranteed at boot"
 }
 
 # ─── Firewall ────────────────────────────────────────────────────────────────
