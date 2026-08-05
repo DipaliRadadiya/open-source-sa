@@ -6,6 +6,7 @@ import { SearchX, CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { KillProcessButton } from "@/components/server-dashboard/kill-process-button";
 
@@ -90,13 +91,25 @@ function ActionsCell({ row, table }) {
 }
 
 function CommandCell({ row }) {
+  if (!row.original.command) {
+    return (
+      <span className="block w-full truncate font-mono text-xs text-muted-foreground">—</span>
+    );
+  }
   return (
-    <span
-      className="block w-full truncate font-mono text-xs text-muted-foreground"
-      title={row.original.command}
-    >
-      {row.original.command || "—"}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className="block w-full truncate font-mono text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {row.original.command}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm font-mono text-xs break-all">
+        {row.original.command}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

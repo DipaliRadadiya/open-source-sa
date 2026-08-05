@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/ui/copy-button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Card,
   CardContent,
@@ -28,12 +29,23 @@ function Field({ icon: Icon, label, value, mono, copyLabel }) {
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
           {label}
         </p>
-        <p
-          className={`truncate text-sm font-medium ${mono ? "font-mono text-[13px]" : ""}`}
-          title={value || undefined}
-        >
-          {value || "—"}
-        </p>
+        {value ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p
+                tabIndex={0}
+                className={`truncate text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${mono ? "font-mono text-[13px]" : ""}`}
+              >
+                {value}
+              </p>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-sm break-all">{value}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <p className={`truncate text-sm font-medium ${mono ? "font-mono text-[13px]" : ""}`}>
+            —
+          </p>
+        )}
       </div>
       {/* Always visible, not hover-revealed: this is the value people came to
           the card to take away, and a control you have to discover isn't one.
@@ -84,9 +96,23 @@ export async function ServerInfoCard({ facts, health }) {
             <Server className="size-5" />
           </span>
           <div className="min-w-0">
-            <p className="truncate font-mono text-sm font-semibold" title={facts?.hostname}>
-              {facts?.hostname || "—"}
-            </p>
+            {facts?.hostname ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p
+                    tabIndex={0}
+                    className="truncate font-mono text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {facts.hostname}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-sm break-all font-mono">
+                  {facts.hostname}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <p className="truncate font-mono text-sm font-semibold">—</p>
+            )}
             <p className="truncate text-xs text-muted-foreground">
               {[facts?.os, facts?.uptime?.human, facts?.timezone]
                 .filter(Boolean)

@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavTransition } from "@/components/data-table/nav-transition";
 
 /**
@@ -23,17 +24,26 @@ export function RefreshButton() {
   const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="icon"
-      className="size-9 shrink-0"
-      onClick={refresh}
-      disabled={pending}
-      aria-label={t("refresh")}
-      title={t("refresh")}
-    >
-      <RefreshCw className={cn("size-4", pending && "animate-spin")} />
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {/* Same disabled-safe wrapper as WorkerActions/ServiceActions — a
+            disabled button swallows pointer events, so hover needs a span to
+            hang off during the brief pending state. */}
+        <span tabIndex={pending ? 0 : -1} className="inline-flex">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-9 shrink-0"
+            onClick={refresh}
+            disabled={pending}
+            aria-label={t("refresh")}
+          >
+            <RefreshCw className={cn("size-4", pending && "animate-spin")} />
+          </Button>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{t("refresh")}</TooltipContent>
+    </Tooltip>
   );
 }

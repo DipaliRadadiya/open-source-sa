@@ -155,7 +155,13 @@
     "applicationTypeRequired": "Elige un tipo de aplicación.",
     "applicationNameRequired": "Introduce un nombre para esta aplicación.",
     "applicationDomainRequired": "Introduce el dominio que usará esta aplicación.",
-    "applicationSystemUserRequired": "Elige el usuario del sistema propietario de esta aplicación."
+    "applicationSystemUserRequired": "Elige el usuario del sistema propietario de esta aplicación.",
+    "max2000": "Debe tener 2000 caracteres o menos",
+    "max500": "Debe tener 500 caracteres o menos",
+    "min1": "Debe ser al menos 1",
+    "max16": "Debe ser 16 o menos",
+    "max300": "Debe ser 300 o menos",
+    "shellMetacharacters": "No se admiten tuberías, redirecciones ni operadores de shell (| ; & $ ` > <): este comando se ejecuta directamente, no a través de un shell"
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -2771,6 +2777,115 @@
         "offBody": "El despliegue automático está desactivado. Actívalo para desplegar con cada push a {branch}: se conservan tu URL de webhook y el secreto."
       },
       "cancel": "Cancelar"
+    },
+    "workers": {
+      "pageTitle": "Workers",
+      "pageSubtitle": "Mantén en ejecución los procesos de larga duración de este sitio: workers de cola, Horizon o tu propio comando.",
+      "back": "Volver a Aplicaciones",
+      "loadFailed": "No se pudieron cargar los workers.",
+      "provisioning": "Este sitio todavía se está configurando. Los workers estarán disponibles cuando esté en funcionamiento.",
+      "addWorker": "Añadir worker",
+      "noPermission": "No tienes permiso para gestionar workers.",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "empty": {
+        "title": "Todavía no hay workers",
+        "description": "Añade un worker de cola, Horizon o un comando personalizado para mantenerlo en ejecución en segundo plano.",
+        "starters": "O empieza desde una plantilla"
+      },
+      "columns": {
+        "name": "Nombre",
+        "command": "Comando",
+        "status": "Estado",
+        "actions": "Acciones"
+      },
+      "state": {
+        "running": "En ejecución",
+        "degraded": "Parcialmente en ejecución",
+        "stopped": "Detenido"
+      },
+      "processCount": "{running}/{total}",
+      "disabledTag": "No se iniciará al arrancar",
+      "noRestartOnDeployTag": "No se reiniciará tras el despliegue",
+      "noAutoRestartTag": "No se reiniciará si se detiene",
+      "addedAgo": "Añadido {time}",
+      "customDirectoryTooltip": "Se ejecuta desde {path} en lugar del directorio raíz del sitio.",
+      "busy": {
+        "start": "Iniciando…",
+        "stop": "Deteniendo…",
+        "restart": "Reiniciando…"
+      },
+      "actions": {
+        "label": "Acciones",
+        "start": "Iniciar",
+        "stop": "Detener",
+        "restart": "Reiniciar",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "viewLogs": "Ver registros"
+      },
+      "toast": {
+        "start": "Iniciando {name}…",
+        "stop": "Deteniendo {name}…",
+        "restart": "Reiniciando {name}…",
+        "created": "Worker creado.",
+        "updated": "Worker actualizado.",
+        "deleted": "Worker eliminado.",
+        "deleteFailed": "No se pudo eliminar el worker."
+      },
+      "error": {
+        "start": "No se pudo iniciar {name}.",
+        "stop": "No se pudo detener {name}.",
+        "restart": "No se pudo reiniciar {name}."
+      },
+      "confirm": {
+        "stop": {
+          "title": "¿Detener {name}?",
+          "description": "Nada se procesará mientras esté detenido: lo que esté en cola espera hasta que vuelvas a iniciarlo."
+        }
+      },
+      "create": {
+        "title": "Añadir un worker",
+        "subtitle": "Elige una plantilla para empezar o escribe tu propio comando.",
+        "submit": "Añadir worker"
+      },
+      "edit": {
+        "title": "Editar worker",
+        "subtitle": "Los cambios se aplican la próxima vez que este worker se reinicie.",
+        "submit": "Guardar cambios"
+      },
+      "delete": {
+        "title": "¿Eliminar este worker?",
+        "description": "«{name}» se detiene y se elimina. Esto no se puede deshacer.",
+        "cancel": "Cancelar",
+        "confirm": "Eliminar",
+        "deleting": "Eliminando…"
+      },
+      "form": {
+        "name": "Nombre",
+        "namePlaceholder": "Worker de cola",
+        "useTemplate": "Usar plantilla",
+        "command": "Comando",
+        "commandHint": "Se ejecuta como el propio usuario de este sitio. No se admiten tuberías, redirecciones ni operadores de shell (| ; & $ ` > <): systemd ejecuta este comando directamente, no a través de un shell.",
+        "processes": "Procesos",
+        "processesHint": "Cuántas copias ejecutar a la vez, para procesar más trabajos en paralelo.",
+        "restartOnDeploy": "Reiniciar tras el despliegue",
+        "restartOnDeployHint": "Evita que este worker siga ejecutando código antiguo tras un despliegue. Déjalo activado salvo que tengas un motivo para no hacerlo.",
+        "autoRestart": "Reiniciar automáticamente si se detiene",
+        "autoRestartHint": "Vuelve a ponerlo en marcha por sí solo si el proceso falla o el servidor se reinicia.",
+        "enabled": "Activado",
+        "enabledHint": "Desactívalo para mantener el worker configurado pero sin ejecutarse.",
+        "advanced": "Ajustes avanzados",
+        "directory": "Directorio de trabajo",
+        "directoryPlaceholder": "Por defecto, el directorio raíz del sitio",
+        "directoryHint": "Desde dónde se ejecuta el comando. Déjalo vacío para usar el directorio raíz del sitio.",
+        "stopWaitSeconds": "Tiempo de espera al detener (segundos)",
+        "stopWaitSecondsHint": "Cuánto tiempo dejarlo terminar lo que está haciendo antes de forzar su detención.",
+        "conflict": {
+          "queue": "Ya tienes un worker de cola: Horizon gestiona los suyos propios.",
+          "horizon": "Ya tienes Horizon: gestiona sus propios workers de cola."
+        }
+      }
     }
   },
   "panelUpdate": {

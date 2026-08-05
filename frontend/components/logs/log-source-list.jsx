@@ -135,7 +135,6 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
       type="button"
       disabled={!source.readable}
       aria-current={selected ? "true" : undefined}
-      title={writtenAt ? t("lastWritten", { time: writtenAt }) : undefined}
       onClick={() => onSelect(source.key)}
       className={cn(
         "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors",
@@ -174,7 +173,15 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
     </button>
   );
 
-  if (source.readable) return button;
+  if (source.readable) {
+    if (!writtenAt) return button;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent>{t("lastWritten", { time: writtenAt })}</TooltipContent>
+      </Tooltip>
+    );
+  }
 
   // A disabled control swallows pointer events, so the tooltip needs a wrapper
   // to hang off — otherwise the one item that most needs an explanation is the

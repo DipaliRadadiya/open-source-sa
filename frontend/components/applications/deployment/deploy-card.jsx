@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Backend writes raw step keys ("set_ownership"); no frontend catalog exists for
 // them, so humanise rather than risk a missing-message throw.
@@ -122,12 +123,23 @@ export function DeployCard({ application, deploying, canManage, onDeploy }) {
         {/* Four facts across the full width instead of two hugging the left. */}
         <dl className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2 md:grid-cols-4">
           <Fact label={t("deploy.repository")}>
-            <span
-              className="block truncate font-mono text-xs"
-              title={repository ?? undefined}
-            >
-              {repository ?? "—"}
-            </span>
+            {repository ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    tabIndex={0}
+                    className="block truncate font-mono text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {repository}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-sm font-mono text-xs break-all">
+                  {repository}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <span className="block truncate font-mono text-xs">—</span>
+            )}
           </Fact>
           <Fact label={t("deploy.branch")}>
             <span className="inline-flex items-center gap-1.5 font-mono text-xs">
@@ -140,16 +152,20 @@ export function DeployCard({ application, deploying, canManage, onDeploy }) {
               <span className="flex flex-wrap items-center gap-1.5">
                 <GitCommitHorizontal className="size-3.5 text-muted-foreground" />
                 {commitHref ? (
-                  <a
-                    href={commitHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-mono text-xs text-primary underline-offset-2 hover:underline"
-                    title={t("deploy.viewCommit")}
-                  >
-                    {commit.slice(0, 10)}
-                    <SquareArrowOutUpRight className="size-3" />
-                  </a>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <a
+                        href={commitHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-mono text-xs text-primary underline-offset-2 hover:underline"
+                      >
+                        {commit.slice(0, 10)}
+                        <SquareArrowOutUpRight className="size-3" />
+                      </a>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("deploy.viewCommit")}</TooltipContent>
+                  </Tooltip>
                 ) : (
                   <span className="font-mono text-xs">{commit.slice(0, 10)}</span>
                 )}
@@ -160,14 +176,21 @@ export function DeployCard({ application, deploying, canManage, onDeploy }) {
             )}
           </Fact>
           <Fact label={t("deploy.lastDeploy")}>
-            <span
-              className="text-sm font-medium"
-              title={application.last_deployed_at ?? undefined}
-            >
-              {application.last_deployed_at_human ??
-                application.last_deployed_at ??
-                t("deploy.never")}
-            </span>
+            {application.last_deployed_at ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    tabIndex={0}
+                    className="text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {application.last_deployed_at_human ?? application.last_deployed_at}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{application.last_deployed_at}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <span className="text-sm font-medium">{t("deploy.never")}</span>
+            )}
           </Fact>
         </dl>
 

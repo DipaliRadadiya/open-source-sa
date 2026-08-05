@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText } from "lucide-react";
+import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText, SquareArrowOutUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,9 +48,17 @@ export function CronjobRowActions({
               so the item says so rather than opening an empty viewer. */}
           {job.log_key ? (
             <DropdownMenuItem asChild>
-              <Link href={`/logs?source=${encodeURIComponent(job.log_key)}`}>
+              {/* New tab — this leaves the server-wide Logs page, not another
+                  spot in Cron Jobs, so navigating in place would lose the job
+                  list. */}
+              <Link
+                href={`/logs?source=${encodeURIComponent(job.log_key)}`}
+                target="_blank"
+                rel="noreferrer"
+              >
                 <ScrollText className="size-4" />
                 {t("actions.viewOutput")}
+                <SquareArrowOutUpRight className="ml-auto size-3.5 text-muted-foreground" />
               </Link>
             </DropdownMenuItem>
           ) : (

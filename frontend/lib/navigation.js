@@ -36,6 +36,7 @@ const BUILT_APPLICATION_URLS = new Set([
   "/deployment",
   "/environment",
   "/logs",
+  "/workers",
 ]);
 
 export function isApplicationNavBuilt(url) {

@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChoiceField } from "@/components/ui/choice-field";
 import {
   Collapsible,
@@ -96,13 +97,18 @@ function fieldLabel(config) {
 function RequiredMark() {
   const t = useTranslations("applications");
   return (
-    <span
-      className="ml-0.5 text-destructive"
-      title={t("form.required")}
-      aria-label={t("form.required")}
-    >
-      *
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className="ml-0.5 text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          aria-label={t("form.required")}
+        >
+          *
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{t("form.required")}</TooltipContent>
+    </Tooltip>
   );
 }
 

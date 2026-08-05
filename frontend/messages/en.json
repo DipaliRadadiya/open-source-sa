@@ -578,7 +578,13 @@
     "applicationTypeRequired": "Choose an application type.",
     "applicationNameRequired": "Enter a name for this application.",
     "applicationDomainRequired": "Enter the domain this application will use.",
-    "applicationSystemUserRequired": "Choose the system user that should own this application."
+    "applicationSystemUserRequired": "Choose the system user that should own this application.",
+    "max2000": "Must be 2000 characters or fewer",
+    "max500": "Must be 500 characters or fewer",
+    "min1": "Must be at least 1",
+    "max16": "Must be 16 or fewer",
+    "max300": "Must be 300 or fewer",
+    "shellMetacharacters": "Pipes, redirects and shell operators (| ; & $ ` > <) aren't supported — this command runs directly, not through a shell"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -2771,6 +2777,115 @@
         "offBody": "Auto-deploy is off. Turn it on to deploy on every push to {branch} — your webhook URL and secret are kept."
       },
       "cancel": "Cancel"
+    },
+    "workers": {
+      "pageTitle": "Workers",
+      "pageSubtitle": "Keep long-running processes — queue workers, Horizon, or your own command — running for this site.",
+      "back": "Back to Applications",
+      "loadFailed": "Workers could not be loaded.",
+      "provisioning": "This site is still being set up. Workers will be available once it's running.",
+      "addWorker": "Add worker",
+      "noPermission": "You don't have permission to manage workers.",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "empty": {
+        "title": "No workers yet",
+        "description": "Add a queue worker, Horizon, or a custom command to keep it running in the background.",
+        "starters": "Or start from a template"
+      },
+      "columns": {
+        "name": "Name",
+        "command": "Command",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "state": {
+        "running": "Running",
+        "degraded": "Partly running",
+        "stopped": "Stopped"
+      },
+      "processCount": "{running}/{total}",
+      "disabledTag": "Won't start on boot",
+      "noRestartOnDeployTag": "Won't restart after deploy",
+      "noAutoRestartTag": "Won't restart if it stops",
+      "addedAgo": "Added {time}",
+      "customDirectoryTooltip": "Runs from {path} instead of the site's document root.",
+      "busy": {
+        "start": "Starting…",
+        "stop": "Stopping…",
+        "restart": "Restarting…"
+      },
+      "actions": {
+        "label": "Actions",
+        "start": "Start",
+        "stop": "Stop",
+        "restart": "Restart",
+        "edit": "Edit",
+        "delete": "Delete",
+        "viewLogs": "View logs"
+      },
+      "toast": {
+        "start": "Starting {name}…",
+        "stop": "Stopping {name}…",
+        "restart": "Restarting {name}…",
+        "created": "Worker created.",
+        "updated": "Worker updated.",
+        "deleted": "Worker deleted.",
+        "deleteFailed": "Couldn't delete the worker."
+      },
+      "error": {
+        "start": "Couldn't start {name}.",
+        "stop": "Couldn't stop {name}.",
+        "restart": "Couldn't restart {name}."
+      },
+      "confirm": {
+        "stop": {
+          "title": "Stop {name}?",
+          "description": "Nothing will process while it's stopped — anything queued waits until you start it again."
+        }
+      },
+      "create": {
+        "title": "Add a worker",
+        "subtitle": "Pick a template to start, or write your own command.",
+        "submit": "Add worker"
+      },
+      "edit": {
+        "title": "Edit worker",
+        "subtitle": "Changes apply the next time this worker restarts.",
+        "submit": "Save changes"
+      },
+      "delete": {
+        "title": "Delete this worker?",
+        "description": "\"{name}\" stops and is removed. This can't be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete",
+        "deleting": "Deleting…"
+      },
+      "form": {
+        "name": "Name",
+        "namePlaceholder": "Queue worker",
+        "useTemplate": "Use template",
+        "command": "Command",
+        "commandHint": "Runs as this site's own user. Pipes, redirects, and shell operators (| ; & $ ` > <) aren't supported — systemd runs this command directly, not through a shell.",
+        "processes": "Processes",
+        "processesHint": "How many copies to run at once, for handling more jobs in parallel.",
+        "restartOnDeploy": "Restart after deploy",
+        "restartOnDeployHint": "Keeps this worker from running old code after a deploy. Leave this on unless you have a reason not to.",
+        "autoRestart": "Restart automatically if it stops",
+        "autoRestartHint": "Bring it back up on its own if the process crashes or the server reboots.",
+        "enabled": "Enabled",
+        "enabledHint": "Turn off to keep the worker configured but not running.",
+        "advanced": "Advanced settings",
+        "directory": "Working directory",
+        "directoryPlaceholder": "Defaults to the site's document root",
+        "directoryHint": "Where the command runs from. Leave empty to use the site's document root.",
+        "stopWaitSeconds": "Stop timeout (seconds)",
+        "stopWaitSecondsHint": "How long to let it finish what it's doing before forcing it to stop.",
+        "conflict": {
+          "queue": "You already have a queue worker — Horizon manages its own.",
+          "horizon": "You already have Horizon — it manages its own queue workers."
+        }
+      }
     }
   },
   "panelUpdate": {

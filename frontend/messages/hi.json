@@ -155,7 +155,13 @@
     "applicationTypeRequired": "ऐप्लिकेशन का प्रकार चुनें।",
     "applicationNameRequired": "इस ऐप्लिकेशन के लिए नाम दर्ज करें।",
     "applicationDomainRequired": "इस ऐप्लिकेशन के लिए उपयोग होने वाला डोमेन दर्ज करें।",
-    "applicationSystemUserRequired": "इस ऐप्लिकेशन के मालिक सिस्टम उपयोगकर्ता को चुनें।"
+    "applicationSystemUserRequired": "इस ऐप्लिकेशन के मालिक सिस्टम उपयोगकर्ता को चुनें।",
+    "max2000": "2000 वर्णों या उससे कम का होना चाहिए",
+    "max500": "500 वर्णों या उससे कम का होना चाहिए",
+    "min1": "कम से कम 1 होना चाहिए",
+    "max16": "16 या उससे कम होना चाहिए",
+    "max300": "300 या उससे कम होना चाहिए",
+    "shellMetacharacters": "पाइप, रीडायरेक्ट और शेल ऑपरेटर (| ; & $ ` > <) समर्थित नहीं हैं — यह कमांड सीधे चलता है, किसी शेल के ज़रिए नहीं"
   },
   "admin": {
     "switchToAdmin": "एडमिन पैनल",
@@ -2771,6 +2777,115 @@
         "offBody": "स्वचालित डिप्लॉय बंद है। {branch} पर हर push पर डिप्लॉय के लिए इसे चालू करें — आपका webhook URL और secret सुरक्षित रखे गए हैं।"
       },
       "cancel": "रद्द करें"
+    },
+    "workers": {
+      "pageTitle": "Workers",
+      "pageSubtitle": "इस साइट की लंबे समय तक चलने वाली प्रक्रियाओं — queue worker, Horizon, या आपके अपने कमांड — को चालू रखें।",
+      "back": "एप्लिकेशन पर वापस जाएं",
+      "loadFailed": "Workers लोड नहीं किए जा सके।",
+      "provisioning": "यह साइट अभी भी सेट अप हो रही है। साइट के चालू होते ही Workers उपलब्ध होंगे।",
+      "addWorker": "Worker जोड़ें",
+      "noPermission": "आपको workers प्रबंधित करने की अनुमति नहीं है।",
+      "cancel": "रद्द करें",
+      "saving": "सहेजा जा रहा है…",
+      "empty": {
+        "title": "अभी तक कोई worker नहीं",
+        "description": "इसे बैकग्राउंड में चालू रखने के लिए एक queue worker, Horizon, या कोई कस्टम कमांड जोड़ें।",
+        "starters": "या एक टेम्पलेट से शुरू करें"
+      },
+      "columns": {
+        "name": "नाम",
+        "command": "कमांड",
+        "status": "स्थिति",
+        "actions": "क्रियाएं"
+      },
+      "state": {
+        "running": "चल रहा है",
+        "degraded": "आंशिक रूप से चल रहा है",
+        "stopped": "रुका हुआ"
+      },
+      "processCount": "{running}/{total}",
+      "disabledTag": "बूट पर शुरू नहीं होगा",
+      "noRestartOnDeployTag": "डिप्लॉय के बाद पुनः आरंभ नहीं होगा",
+      "noAutoRestartTag": "रुकने पर पुनः आरंभ नहीं होगा",
+      "addedAgo": "{time} जोड़ा गया",
+      "customDirectoryTooltip": "साइट की document root के बजाय {path} से चलता है।",
+      "busy": {
+        "start": "शुरू हो रहा है…",
+        "stop": "रोका जा रहा है…",
+        "restart": "पुनः आरंभ हो रहा है…"
+      },
+      "actions": {
+        "label": "क्रियाएं",
+        "start": "शुरू करें",
+        "stop": "रोकें",
+        "restart": "पुनः आरंभ करें",
+        "edit": "संपादित करें",
+        "delete": "हटाएं",
+        "viewLogs": "लॉग देखें"
+      },
+      "toast": {
+        "start": "{name} शुरू हो रहा है…",
+        "stop": "{name} रोका जा रहा है…",
+        "restart": "{name} पुनः आरंभ हो रहा है…",
+        "created": "Worker बनाया गया।",
+        "updated": "Worker अपडेट किया गया।",
+        "deleted": "Worker हटाया गया।",
+        "deleteFailed": "Worker हटाया नहीं जा सका।"
+      },
+      "error": {
+        "start": "{name} शुरू नहीं हो सका।",
+        "stop": "{name} रोका नहीं जा सका।",
+        "restart": "{name} पुनः आरंभ नहीं हो सका।"
+      },
+      "confirm": {
+        "stop": {
+          "title": "{name} रोकें?",
+          "description": "जब तक यह रुका रहेगा, कुछ भी प्रोसेस नहीं होगा — जो भी कतार में है वह आपके इसे फिर से शुरू करने तक प्रतीक्षा करेगा।"
+        }
+      },
+      "create": {
+        "title": "Worker जोड़ें",
+        "subtitle": "शुरू करने के लिए एक टेम्पलेट चुनें, या अपना कमांड लिखें।",
+        "submit": "Worker जोड़ें"
+      },
+      "edit": {
+        "title": "Worker संपादित करें",
+        "subtitle": "बदलाव अगली बार इस worker के पुनः आरंभ होने पर लागू होंगे।",
+        "submit": "बदलाव सहेजें"
+      },
+      "delete": {
+        "title": "इस worker को हटाएं?",
+        "description": "\"{name}\" रुक जाएगा और हटा दिया जाएगा। इसे पूर्ववत नहीं किया जा सकता।",
+        "cancel": "रद्द करें",
+        "confirm": "हटाएं",
+        "deleting": "हटाया जा रहा है…"
+      },
+      "form": {
+        "name": "नाम",
+        "namePlaceholder": "Queue worker",
+        "useTemplate": "टेम्पलेट का उपयोग करें",
+        "command": "कमांड",
+        "commandHint": "यह इस साइट के अपने उपयोगकर्ता के रूप में चलता है। Pipe, redirect और shell operator (| ; & $ ` > <) समर्थित नहीं हैं — systemd इस कमांड को सीधे चलाता है, किसी shell के ज़रिए नहीं।",
+        "processes": "प्रोसेस",
+        "processesHint": "समानांतर में अधिक काम संभालने के लिए एक साथ कितनी कॉपी चलानी हैं।",
+        "restartOnDeploy": "डिप्लॉय के बाद पुनः आरंभ करें",
+        "restartOnDeployHint": "डिप्लॉय के बाद इस worker को पुराना कोड चलाने से रोकता है। कोई खास वजह न हो तो इसे चालू रखें।",
+        "autoRestart": "रुकने पर स्वतः पुनः आरंभ करें",
+        "autoRestartHint": "अगर प्रोसेस क्रैश हो जाए या सर्वर रीबूट हो, तो इसे अपने आप वापस चालू कर देता है।",
+        "enabled": "सक्षम",
+        "enabledHint": "worker को कॉन्फ़िगर रखने पर भी चलाना बंद रखने के लिए इसे बंद करें।",
+        "advanced": "उन्नत सेटिंग्स",
+        "directory": "वर्किंग डायरेक्टरी",
+        "directoryPlaceholder": "डिफ़ॉल्ट रूप से साइट की document root",
+        "directoryHint": "कमांड कहां से चलता है। साइट की document root उपयोग करने के लिए इसे खाली छोड़ दें।",
+        "stopWaitSeconds": "रोकने का समय-सीमा (सेकंड)",
+        "stopWaitSecondsHint": "इसे रोकने के लिए मजबूर करने से पहले इसे अपना काम पूरा करने के लिए कितना समय देना है।",
+        "conflict": {
+          "queue": "आपके पास पहले से ही एक queue worker है — Horizon अपने खुद के worker संभालता है।",
+          "horizon": "आपके पास पहले से ही Horizon है — यह अपने खुद के queue worker संभालता है।"
+        }
+      }
     }
   },
   "panelUpdate": {
