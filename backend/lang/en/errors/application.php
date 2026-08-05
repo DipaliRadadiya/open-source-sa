@@ -21,6 +21,7 @@ return [
     'waf_failed' => 'Changing the firewall settings failed on the server.',
     'staging_failed' => 'The staging operation failed on the server.',
     'clone_failed' => 'The clone operation failed on the server.',
+    'fail2ban_failed' => 'The fail2ban operation failed on the server.',
 
     'permissions_fix_failed' => 'Resetting file permissions failed on the server.',
 

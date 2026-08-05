@@ -21,6 +21,7 @@ return [
     'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
     'staging_failed' => 'L\'opération de staging a échoué sur le serveur.',
     'clone_failed' => 'L\'opération de clonage a échoué sur le serveur.',
+    'fail2ban_failed' => 'L\'opération fail2ban a échoué sur le serveur.',
 
     'permissions_fix_failed' => 'La réinitialisation des permissions de fichiers a échoué sur le serveur.',
 

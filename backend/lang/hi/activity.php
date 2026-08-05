@@ -166,4 +166,6 @@ return [
     'application.staging_created' => ':name के लिए स्टेजिंग साइट बनाई',
     'application.staging_pushed' => ':name पर स्टेजिंग पुश की (:mode)',
     'application.cloned' => ':name को :domain पर क्लोन किया',
+    'application.fail2ban_enabled' => ':name के लिए fail2ban सक्षम किया',
+    'application.fail2ban_disabled' => ':name के लिए fail2ban अक्षम किया',
 ];

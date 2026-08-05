@@ -25,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
     'steps', 'failed_step', 'reference', 'last_commit', 'last_deployed_at',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
-    'webhook_last_delivered_at',
+    'webhook_last_delivered_at', 'fail2ban_enabled',
 ])]
 class Application extends Model
 {
@@ -42,6 +42,7 @@ class Application extends Model
             'waf_enabled' => 'boolean',
             'waf_mode' => WafMode::class,
             'waf_categories' => 'array',
+            'fail2ban_enabled' => 'boolean',
             'status' => ApplicationStatus::class,
             'settings' => 'array',
             'steps' => 'array',

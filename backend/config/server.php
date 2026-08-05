@@ -878,6 +878,48 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Per-application fail2ban
+    |--------------------------------------------------------------------------
+    |
+    | A different feature from `fail2ban` above, not a filtered view of it —
+    | this watches one site's own access log, which only exists once the
+    | application does. A separate drop-in from the server-level one, so
+    | disabling one never touches the other.
+    |
+    | Two jail templates, not one: a generic access log has no reliable way
+    | to tell a failed login from a successful one for an arbitrary
+    | application (most apps answer 200 either way), so the generic jail
+    | only ever rate-limits raw request volume from one address — real
+    | flood/scraping protection that needs no assumption about what the
+    | request meant. WordPress gets a second, stricter jail on top, because
+    | its login endpoints are fixed, well-known targets (the same "rate the
+    | login attempts themselves" approach published fail2ban configs for
+    | WordPress — e.g. "wordpress-hard" — already use).
+    |
+    */
+    'fail2ban_apps' => [
+        'jail_d' => env('SERVER_FAIL2BAN_JAIL_D', '/etc/fail2ban/jail.d'),
+        'drop_in' => env('SERVER_FAIL2BAN_APPS_DROP_IN', 'panel-apps.local'),
+        'filter_d' => env('SERVER_FAIL2BAN_FILTER_D', '/etc/fail2ban/filter.d'),
+
+        'jails' => [
+            'generic' => [
+                'filter' => 'panel-app-generic',
+                'bantime' => 3600,
+                'findtime' => 60,
+                'maxretry' => 300,
+            ],
+            'wordpress' => [
+                'filter' => 'panel-app-wplogin',
+                'bantime' => 3600,
+                'findtime' => 600,
+                'maxretry' => 5,
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Firewall
     |--------------------------------------------------------------------------
     |

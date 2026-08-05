@@ -21,6 +21,7 @@ return [
     'waf_failed' => 'Das Ändern der Firewall-Einstellungen ist auf dem Server fehlgeschlagen.',
     'staging_failed' => 'Der Staging-Vorgang ist auf dem Server fehlgeschlagen.',
     'clone_failed' => 'Der Klonvorgang ist auf dem Server fehlgeschlagen.',
+    'fail2ban_failed' => 'Der Fail2ban-Vorgang ist auf dem Server fehlgeschlagen.',
 
     'permissions_fix_failed' => 'Das Zurücksetzen der Dateiberechtigungen ist auf dem Server fehlgeschlagen.',
 

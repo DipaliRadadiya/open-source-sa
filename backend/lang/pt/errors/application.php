@@ -21,6 +21,7 @@ return [
     'waf_failed' => 'Não foi possível alterar as definições da firewall no servidor.',
     'staging_failed' => 'A operação de staging falhou no servidor.',
     'clone_failed' => 'A operação de clonagem falhou no servidor.',
+    'fail2ban_failed' => 'A operação do fail2ban falhou no servidor.',
 
     'permissions_fix_failed' => 'Falha ao redefinir as permissões de arquivo no servidor.',
 

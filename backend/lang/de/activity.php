@@ -166,4 +166,6 @@ return [
     'application.staging_created' => 'Staging-Site für :name erstellt',
     'application.staging_pushed' => 'Staging auf :name gepusht (:mode)',
     'application.cloned' => ':name nach :domain geklont',
+    'application.fail2ban_enabled' => 'Fail2ban für :name aktiviert',
+    'application.fail2ban_disabled' => 'Fail2ban für :name deaktiviert',
 ];

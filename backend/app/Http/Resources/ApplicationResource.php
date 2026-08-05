@@ -62,6 +62,11 @@ class ApplicationResource extends JsonResource
             'waf_exceptions' => $this->whenLoaded('wafRules', fn () => $this->wafRules->where('type', 'exception')->pluck('value')->values()),
             'waf_custom_rules' => $this->whenLoaded('wafRules', fn () => $this->wafRules->where('type', 'block')->pluck('value')->values()),
 
+            // Live jail state (banned IPs, counters) is deliberately not
+            // here — it needs a live fail2ban-client call per request, which
+            // this resource is not the place for. See GET .../fail2ban.
+            'fail2ban_enabled' => (bool) $this->fail2ban_enabled,
+
             // Staging is just another application row — `is_staging` is the
             // whole marker. `has_staging` lets the production site's own
             // dashboard show "Create staging" vs "View staging" without a

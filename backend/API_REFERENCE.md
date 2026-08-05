@@ -1204,6 +1204,7 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   "waf_enabled": false, "waf_mode": "detect", "waf_mode_title": "Just watch, don't block",
   "waf_categories": ["query_string", "request_uri", "user_agent", "referrer", "cookie", "method"],
   "is_staging": false, "production_application_id": null, "cloned_from_application_id": null,
+  "fail2ban_enabled": false,
   "system_user": { "id": 3, "username": "deploy" },
   "php_version": "8.4", "node_version": null, "app_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
@@ -1337,6 +1338,26 @@ Duplicate any application to a brand-new domain as a fully independent site — 
 - **Webhook identity is never copied** — `webhook_enabled` stays `false` and `webhook_identifier`/`webhook_secret`/`webhook_provider` stay unset on the clone. `webhook_identifier` has a unique database constraint, so copying it verbatim would fail the insert outright; even without that, two applications answering to one deploy-on-push identity is exactly the ambiguity a clone must not introduce. Repository metadata (`repository`, `repository_url`, `branch`) is still copied, for reference.
 - **A node app gets a fresh port**, not the source's — reuses the existing `PortAllocator` (the same one one-click app creation uses).
 - **Provisioning skips the marketplace installer and starting the process** (`ApplicationProvisioner::provision($clone, skipInstaller: true)`) — a genuinely new parameter added this feature, defaulting `false` everywhere else. Without it, provisioning a WordPress clone would run a fresh `wp core install` that fights the rsync copy landing moments later, and a node clone's process would be started against an empty directory before its files arrive. The process is started manually, after the rsync, if the clone has one.
+
+### Per-application fail2ban (`app_fail2ban`)
+
+A different feature from the server-level `fail2ban` (below) — this watches **one site's own access log**, not system auth logs, so it only exists once the application does. Same conventions as the server-level feature: **no database table beyond one `fail2ban_enabled` column** — live state (banned IPs, counters) always comes from `fail2ban-client`, never cached; `reload`, never `restart` (a restart forgets every active ban); fully independent of the Firewall/UFW feature, for the same reason the server-level one is — two features each claiming to protect the server must not let one silently disable the other.
+
+**The real design problem, not glossed over:** a generic access log can't reliably tell a failed login from a successful one for an arbitrary application — most apps answer `200` either way. So this is two layers, not one:
+- **A generic jail, every enabled application gets it** — rate-limits raw request volume from one address (any request counts, regardless of what it was for). Real flood/scraping protection that needs no assumption about what a request meant.
+- **A second, stricter jail, WordPress only** — matches repeated `POST` requests to `wp-login.php`/`xmlrpc.php`, the actual fixed brute-force targets, using the same "rate the attempt, not the outcome" approach commonly published as `wordpress-hard` fail2ban configs.
+
+**`GET /api/applications/{id}/fail2ban`** (`view`) — `{ fail2ban_enabled, jails: [...] }`, one entry per jail this application has (one for most types, two for WordPress) with live `banned`/`stats`.
+
+**`PUT /api/applications/{id}/fail2ban`** (`manage`) — body `{ enabled }`. `200 {application}` with `fail2ban_enabled` refreshed.
+- Rewrites one shared drop-in (`/etc/fail2ban/jail.d/panel-apps.local` by default) from **every** enabled application, not just this one — the same "regenerate the whole file, don't patch it" approach `Waf8GManager` uses for its shared nginx maps.
+- **No dry-run available before rollback matters**: `fail2ban-client` has no `-t`-equivalent the way nginx/Apache do, so unlike every other feature this week there's no apply-then-test-then-reload sequence to verify against. If `reload` fails, the `fail2ban_enabled` column is explicitly reverted in a catch block instead — the only way to avoid the database claiming a state the server never reached.
+
+**`POST /api/applications/{id}/fail2ban/ban`** (`manage`) — body `{ ip }`. Bans an address in the application's generic jail.
+
+**`DELETE /api/applications/{id}/fail2ban/ban/{ip}`** (`manage`) — releases the address from whichever of the application's jails currently holds it.
+
+**Honestly flagged**: fail2ban isn't installed in the environment this was built in, so unlike the WAF work (verified against a live local nginx instance), the two filter definitions (`resources/fail2ban/panel-app-generic.conf`, `panel-app-wplogin.conf`) have not been run through `fail2ban-regex` against a real access log. Verify before relying on them in production.
 
 **`GET /api/applications/port-check?port=8080[&application_id=3]`** (`view`) — ask before submitting, so the user is warned as they type rather than refused after.
 ```json
