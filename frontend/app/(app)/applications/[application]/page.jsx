@@ -143,6 +143,7 @@ export default async function ApplicationDetailPage({ params }) {
                 domains={domainList.domains}
                 certificate={certificate.certificate}
                 failed={domainList.failed || certificate.failed}
+                href={`/applications/${id}/domains`}
               />
             ) : null}
             {application.has_process ? (

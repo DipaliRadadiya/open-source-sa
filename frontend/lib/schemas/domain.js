@@ -43,6 +43,7 @@ export const certificateSchema = z.object({
   expiring_soon: z.boolean().default(false),
   reason: z.string().nullish(),
   message: z.string().nullish(),
+  reference: z.string().nullish(),
 }).passthrough();
 
 // `null` is a normal answer — "this site has no certificate" is a state to
@@ -50,3 +51,26 @@ export const certificateSchema = z.object({
 export const certificateResponseSchema = z.object({
   certificate: certificateSchema.nullable(),
 });
+
+// Redirect targets used by the add-domain form.
+export const REDIRECT_STATUSES = [301, 302, 307, 308];
+
+// Add-domain form. Messages are `validation`-namespace keys (FormMessage
+// translates them); the backend does the authoritative hostname/uniqueness
+// check and its 422 is mapped onto the field. `primary` is intentionally not an
+// option — promoting a name is a separate endpoint.
+export const addDomainFormSchema = z
+  .object({
+    domain: z
+      .string()
+      .trim()
+      .min(1, "domainRequired")
+      .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/, "hostnameInvalid"),
+    type: z.enum(["alias", "redirect"]).default("alias"),
+    redirect_to: z.string().trim().optional().default(""),
+    redirect_status: z.coerce.number().refine((n) => REDIRECT_STATUSES.includes(n)).default(301),
+  })
+  .refine((v) => v.type !== "redirect" || v.redirect_to.length > 0, {
+    path: ["redirect_to"],
+    message: "redirectTargetRequired",
+  });

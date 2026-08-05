@@ -30,7 +30,7 @@ export function applicationNavHref(applicationId, url) {
 // The catalog advertises every application screen the backend supports; the
 // frontend has built the dashboard so far. Linking to the rest would promise
 // pages that do not exist, so they are held back until their route lands.
-const BUILT_APPLICATION_URLS = new Set([""]);
+const BUILT_APPLICATION_URLS = new Set(["", "/domains"]);
 
 export function isApplicationNavBuilt(url) {
   return BUILT_APPLICATION_URLS.has(url ?? "");
