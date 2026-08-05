@@ -2,9 +2,23 @@
 
 namespace Database\Seeders;
 
+use App\Enums\BackupStatus;
+use App\Enums\BackupType;
+use App\Enums\DeploymentStatus;
+use App\Enums\DeploymentTrigger;
 use App\Models\Application;
+use App\Models\ApplicationPhpSettings;
 use App\Models\ApplicationWafRule;
+use App\Models\Backup;
+use App\Models\BackupTarget;
+use App\Models\Cronjob;
+use App\Models\Database;
+use App\Models\DatabaseUser;
+use App\Models\Deployment;
+use App\Models\FirewallRule;
+use App\Models\StorageDestination;
 use App\Models\SystemUser;
+use App\Models\Worker;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use RuntimeException;
@@ -77,8 +91,218 @@ class DemoDataSeeder extends Seeder
 
         $this->seedStaging($web->id);
         $this->seedWafRules();
+        $this->seedDatabases();
+        $this->seedBackups();
+        $this->seedWorkers();
+        $this->seedCronjobs($web->id, $apps->id);
+        $this->seedDeployments();
+        $this->seedFirewallRules();
+        $this->seedPhpSettings();
 
         $this->command?->info('Demo data seeded. Remove it with: Application::where("domain", "like", "%'.self::DOMAIN_SUFFIX.'")->delete()');
+    }
+
+    /**
+     * Databases feature: one WordPress site with a real Database +
+     * DatabaseUser row, so the Databases screen (both the per-app card and
+     * the server-wide list) has something in it.
+     */
+    private function seedDatabases(): void
+    {
+        $blog = Application::where('domain', 'blog'.self::DOMAIN_SUFFIX)->first();
+
+        if ($blog === null) {
+            return;
+        }
+
+        $database = Database::firstOrCreate(
+            ['name' => 'demo_blog_db', 'engine' => 'mysql'],
+            ['application_id' => $blog->id, 'charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci', 'size_bytes' => 18_874_368],
+        );
+
+        DatabaseUser::firstOrCreate(
+            ['database_id' => $database->id, 'username' => 'demo_blog_user', 'host' => 'localhost'],
+            ['password' => 'demo-db-password-not-real', 'connection_preference' => 'localhost'],
+        );
+    }
+
+    /**
+     * Backups feature: a storage destination + a backup target for "Company
+     * Blog", plus a short history spanning the statuses the Backups screen
+     * actually renders differently (verified, failed, running).
+     */
+    private function seedBackups(): void
+    {
+        $blog = Application::where('domain', 'blog'.self::DOMAIN_SUFFIX)->first();
+
+        if ($blog === null) {
+            return;
+        }
+
+        $destination = StorageDestination::firstOrCreate(
+            ['name' => 'Demo S3 Bucket'],
+            [
+                'endpoint' => 'https://s3.us-east-1.amazonaws.com',
+                'region' => 'us-east-1',
+                'bucket' => 'demo-panel-backups',
+                'prefix' => 'demo',
+                'access_key' => 'DEMOACCESSKEYNOTREAL',
+                'secret_key' => 'demo-secret-key-not-real',
+            ],
+        );
+
+        $target = BackupTarget::firstOrCreate(
+            ['application_id' => $blog->id],
+            [
+                'storage_destination_id' => $destination->id,
+                'type' => BackupType::Full,
+                'retention_count' => 7,
+                'file_excludes' => ['wp-content/cache/', '.git/'],
+                'database_excludes' => [],
+                'enabled' => true,
+                'frequency' => 'daily',
+                'last_run_at' => now()->subDay(),
+            ],
+        );
+
+        $history = [
+            ['status' => BackupStatus::Verified, 'started_at' => now()->subDay(), 'finished_at' => now()->subDay()->addMinutes(4), 'verified_at' => now()->subDay()->addMinutes(5), 'size_bytes' => 41_943_040],
+            ['status' => BackupStatus::Failed, 'started_at' => now()->subDays(2), 'finished_at' => now()->subDays(2)->addMinutes(1), 'reason' => 'storage destination unreachable'],
+            ['status' => BackupStatus::Running, 'started_at' => now()->subMinutes(3), 'finished_at' => null],
+        ];
+
+        foreach ($history as $index => $attributes) {
+            Backup::firstOrCreate(
+                ['backup_target_id' => $target->id, 'reference' => 'demo-backup-'.($index + 1)],
+                array_merge([
+                    'application_id' => $blog->id,
+                    'type' => BackupType::Full,
+                    'is_safety' => false,
+                ], $attributes),
+            );
+        }
+    }
+
+    /**
+     * Workers feature: a queue worker on the git-deployed app — the one
+     * demo row where `ProcessSupervisor::runs()` and a real worker list
+     * both have something to show.
+     */
+    private function seedWorkers(): void
+    {
+        $api = Application::where('domain', 'api'.self::DOMAIN_SUFFIX)->first();
+
+        if ($api === null) {
+            return;
+        }
+
+        Worker::firstOrCreate(
+            ['application_id' => $api->id, 'name' => 'queue-worker'],
+            [
+                'command' => 'php artisan queue:work --sleep=3 --tries=3',
+                'kind' => Worker::KIND_QUEUE,
+                'processes' => 2,
+                'auto_restart' => true,
+                'restart_on_deploy' => true,
+                'enabled' => true,
+            ],
+        );
+    }
+
+    /**
+     * Cronjobs are server-level, not per-app — `system_user_id` only, no
+     * `application_id` (that gap is still open; see the 2026-07-27 memory
+     * note). One active job, one disabled, on different demo system users.
+     */
+    private function seedCronjobs(int $webUserId, int $appsUserId): void
+    {
+        $jobs = [
+            ['name' => 'Nightly backup verification', 'username' => 'demoweb', 'system_user_id' => $webUserId, 'command' => '/usr/bin/php /home/demoweb/verify-backups.php', 'expression' => '0 2 * * *', 'active' => true],
+            ['name' => 'Disk cache cleanup', 'username' => 'demoapps', 'system_user_id' => $appsUserId, 'command' => 'find /tmp/app-cache -mtime +7 -delete', 'expression' => '30 3 * * 0', 'active' => false],
+        ];
+
+        foreach ($jobs as $attributes) {
+            Cronjob::firstOrCreate(
+                ['name' => $attributes['name']],
+                array_merge($attributes, ['slug' => Cronjob::uniqueSlug($attributes['name'])]),
+            );
+        }
+    }
+
+    /**
+     * Deployment history for "Internal API" — the only demo row with a
+     * repository — spanning the states the Deployments screen renders
+     * differently (succeeded, failed, in progress).
+     */
+    private function seedDeployments(): void
+    {
+        $api = Application::where('domain', 'api'.self::DOMAIN_SUFFIX)->first();
+
+        if ($api === null) {
+            return;
+        }
+
+        $runs = [
+            ['status' => DeploymentStatus::Succeeded, 'commit_hash' => '9f2c1ab4d7e35608b1c0f4a29d8e7b3c5a1049fe', 'commit_message' => 'Bump dependencies', 'started_at' => now()->subHours(6), 'finished_at' => now()->subHours(6)->addMinutes(2)],
+            ['status' => DeploymentStatus::Failed, 'commit_hash' => '3ab7f10c9e2d4b6a8f1c5d3e7b9a2c4f6d8e0b1a', 'commit_message' => 'Add search endpoint', 'failed_step' => 'run_migrations', 'started_at' => now()->subDay(), 'finished_at' => now()->subDay()->addMinutes(1)],
+            ['status' => DeploymentStatus::Running, 'commit_hash' => 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0', 'commit_message' => 'Refactor auth middleware', 'started_at' => now()->subMinutes(1), 'finished_at' => null],
+        ];
+
+        foreach ($runs as $index => $attributes) {
+            Deployment::firstOrCreate(
+                ['application_id' => $api->id, 'commit_hash' => $attributes['commit_hash']],
+                array_merge([
+                    'trigger' => DeploymentTrigger::Manual,
+                    'branch' => 'main',
+                    'commit_author' => 'demo-dev',
+                    'reference' => 'demo-deploy-'.($index + 1),
+                ], $attributes),
+            );
+        }
+    }
+
+    /**
+     * Server-level Firewall (UFW): a couple of rules so the screen isn't
+     * empty on a fresh dev box, including one system-seeded (not user-made)
+     * row to exercise the delete-protection badge.
+     */
+    private function seedFirewallRules(): void
+    {
+        FirewallRule::firstOrCreate(
+            ['port_from' => 22],
+            ['protocol' => 'tcp', 'action' => 'allow', 'description' => 'SSH', 'origin' => 'default', 'enabled' => true],
+        );
+
+        FirewallRule::firstOrCreate(
+            ['port_from' => 51820],
+            ['protocol' => 'udp', 'action' => 'allow', 'source_ip' => '203.0.113.10', 'description' => 'Office VPN', 'origin' => 'user', 'enabled' => true],
+        );
+    }
+
+    /**
+     * PHP Settings: one demo app with an explicit tuning row, rather than
+     * always falling back to `ApplicationPhpSettings::defaults()`.
+     */
+    private function seedPhpSettings(): void
+    {
+        $blog = Application::where('domain', 'blog'.self::DOMAIN_SUFFIX)->first();
+
+        if ($blog === null) {
+            return;
+        }
+
+        ApplicationPhpSettings::firstOrCreate(
+            ['application_id' => $blog->id],
+            [
+                'memory_limit' => '256M',
+                'upload_max_filesize' => '64M',
+                'post_max_size' => '64M',
+                'max_execution_time' => 60,
+                'pm_type' => 'dynamic',
+                'pm_max_children' => 10,
+                'open_basedir_enabled' => true,
+            ],
+        );
     }
 
     /**
@@ -230,6 +454,9 @@ class DemoDataSeeder extends Seeder
             ],
 
             // ── Static profile — most sidebar sections should be hidden ──
+            // Also `disabled_at` set: the only demo row showing the
+            // Enable/disable "site paused" state (independent of `status`,
+            // which stays `active` — a healthy site can still be paused).
             [
                 'system_user_id' => $webUserId,
                 'name' => 'Docs',
@@ -239,6 +466,7 @@ class DemoDataSeeder extends Seeder
                 'rendering_type' => 'static',
                 'status' => 'active',
                 'web_root' => '/dist',
+                'disabled_at' => now()->subDays(3),
             ],
 
             // ── Non-active states ────────────────────────────────────────
