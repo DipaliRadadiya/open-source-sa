@@ -68,6 +68,11 @@ export default async function ApplicationDetailPage({ params }) {
       : Promise.resolve({ certificate: null, failed: false }),
   ]);
 
+  // Link over https only when a certificate is actually serving — otherwise
+  // https lands on a browser security warning; the site is still on http.
+  const secured = certificate.certificate?.status === "active";
+  const siteUrl = `${secured ? "https" : "http"}://${application.domain}`;
+
   return (
     <div className="space-y-6">
       <div className="space-y-3">
@@ -95,7 +100,7 @@ export default async function ApplicationDetailPage({ params }) {
             <div className="flex items-center gap-1">
               {application.status === "active" ? (
                 <a
-                  href={`https://${application.domain}`}
+                  href={siteUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="font-mono text-sm text-primary underline-offset-4 hover:underline"
@@ -114,13 +119,17 @@ export default async function ApplicationDetailPage({ params }) {
           <div className="flex items-center gap-2">
             {application.status === "active" ? (
               <Button asChild variant="outline" size="sm">
-                <a href={`https://${application.domain}`} target="_blank" rel="noreferrer">
+                <a href={siteUrl} target="_blank" rel="noreferrer">
                   <ExternalLink className="size-4" />
                   {t("actions.visit")}
                 </a>
               </Button>
             ) : null}
-            <ApplicationRowActions application={application} canManage={canManage} />
+            <ApplicationRowActions
+              application={application}
+              canManage={canManage}
+              showNavigation={false}
+            />
           </div>
         </div>
       </div>

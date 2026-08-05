@@ -33,7 +33,13 @@ import { DeleteApplicationDialog } from "@/components/applications/delete-applic
  * Visit is only offered while the site is actually being served — a link that
  * lands on a connection error teaches people the panel is lying.
  */
-export function ApplicationRowActions({ application, canManage = false }) {
+export function ApplicationRowActions({
+  application,
+  canManage = false,
+  // On the application's own dashboard page, "Open dashboard" points at the
+  // current page and "Visit" duplicates the header button — hide both there.
+  showNavigation = true,
+}) {
   const t = useTranslations("applications");
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
@@ -42,6 +48,10 @@ export function ApplicationRowActions({ application, canManage = false }) {
   const href = `/applications/${application.id}`;
   const canVisit = application.status === "active";
   const canRetry = application.status === "failed";
+  const showRetry = canManage && canRetry;
+
+  // Nothing to offer (view-only, on the detail page) → no empty ⋯ trigger.
+  if (!showNavigation && !showRetry && !canManage) return null;
 
   async function retry() {
     setRetrying(true);
@@ -65,30 +75,34 @@ export function ApplicationRowActions({ application, canManage = false }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52" onCloseAutoFocus={(e) => e.preventDefault()}>
-          <DropdownMenuItem asChild>
-            <Link href={href}>
-              <LayoutDashboard className="size-4" />
-              {t("actions.open")}
-            </Link>
-          </DropdownMenuItem>
+          {showNavigation ? (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href={href}>
+                  <LayoutDashboard className="size-4" />
+                  {t("actions.open")}
+                </Link>
+              </DropdownMenuItem>
 
-          <MenuItemHint hint={canVisit ? null : t("actions.visitHint")}>
-            <DropdownMenuItem asChild={canVisit} disabled={!canVisit}>
-              {canVisit ? (
-                <a href={`https://${application.domain}`} target="_blank" rel="noreferrer">
-                  <ExternalLink className="size-4" />
-                  {t("actions.visit")}
-                </a>
-              ) : (
-                <>
-                  <ExternalLink className="size-4" />
-                  {t("actions.visit")}
-                </>
-              )}
-            </DropdownMenuItem>
-          </MenuItemHint>
+              <MenuItemHint hint={canVisit ? null : t("actions.visitHint")}>
+                <DropdownMenuItem asChild={canVisit} disabled={!canVisit}>
+                  {canVisit ? (
+                    <a href={`https://${application.domain}`} target="_blank" rel="noreferrer">
+                      <ExternalLink className="size-4" />
+                      {t("actions.visit")}
+                    </a>
+                  ) : (
+                    <>
+                      <ExternalLink className="size-4" />
+                      {t("actions.visit")}
+                    </>
+                  )}
+                </DropdownMenuItem>
+              </MenuItemHint>
+            </>
+          ) : null}
 
-          {canManage && canRetry ? (
+          {showRetry ? (
             <DropdownMenuItem disabled={retrying} onSelect={retry}>
               <RotateCw className="size-4" />
               {retrying ? t("details.retrying") : t("details.retry")}
@@ -97,7 +111,7 @@ export function ApplicationRowActions({ application, canManage = false }) {
 
           {canManage ? (
             <>
-              <DropdownMenuSeparator />
+              {showNavigation || showRetry ? <DropdownMenuSeparator /> : null}
               <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
                 <Trash2 className="size-4" />
                 {t("actions.delete")}

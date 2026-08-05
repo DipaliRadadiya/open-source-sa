@@ -6,11 +6,31 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowRight, CheckCircle2, ChevronDown, CircleAlert, Loader2, Sparkles, TriangleAlert, Wand2 } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ChevronDown,
+  CircleAlert,
+  Loader2,
+  Sparkles,
+  TriangleAlert,
+  Wand2,
+} from "lucide-react";
 import { toast } from "sonner";
-import { createApplicationSchema, portCheckResponseSchema } from "@/lib/schemas/application";
-import { branchesResponseSchema, repositoriesResponseSchema } from "@/lib/schemas/git";
-import { createApplication, checkApplicationPort, getBranches, getRepositories } from "@/lib/api/applications";
+import {
+  createApplicationSchema,
+  portCheckResponseSchema,
+} from "@/lib/schemas/application";
+import {
+  branchesResponseSchema,
+  repositoriesResponseSchema,
+} from "@/lib/schemas/git";
+import {
+  createApplication,
+  checkApplicationPort,
+  getBranches,
+  getRepositories,
+} from "@/lib/api/applications";
 import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Button } from "@/components/ui/button";
@@ -19,21 +39,42 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ChoiceField } from "@/components/ui/choice-field";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
 import { CreateReadinessPanel } from "@/components/applications/create-readiness-panel";
 import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
 
-const TOP_LEVEL_FIELDS = new Set([
-  "web_root", "build_command", "rendering_type", "start_command", "app_port",
-  "branch", "repository", "repository_url", "php_version", "node_version",
-]);
 const COMMON_FIELD_NAMES = new Set([
-  "site_type", "name", "domain", "system_user_id", "git_source", "git_account_id",
-  "repository", "repository_url", "branch",
+  "site_type",
+  "name",
+  "domain",
+  "system_user_id",
+  "git_source",
+  "git_account_id",
+  "repository",
+  "repository_url",
+  "branch",
 ]);
 
 // The API is meant to send a display-ready `label`, but for some one-click app
@@ -54,7 +95,15 @@ function fieldLabel(config) {
 // form is submitted rather than discovered through a red error afterwards.
 function RequiredMark() {
   const t = useTranslations("applications");
-  return <span className="ml-0.5 text-destructive" title={t("form.required")} aria-label={t("form.required")}>*</span>;
+  return (
+    <span
+      className="ml-0.5 text-destructive"
+      title={t("form.required")}
+      aria-label={t("form.required")}
+    >
+      *
+    </span>
+  );
 }
 
 // On a long form a validation error can land off-screen, so a click on Create
@@ -68,18 +117,36 @@ function scrollToFirstError(formEl) {
       formEl.querySelector('[data-slot="form-message"]');
     if (!target) return;
     target.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (typeof target.focus === "function") target.focus({ preventScroll: true });
+    if (typeof target.focus === "function")
+      target.focus({ preventScroll: true });
   });
 }
 
 function SectionHeading({ number, title, description }) {
-  return <div className="flex items-start gap-3"><span className="flex size-6 shrink-0 items-center justify-center rounded-full border bg-background text-xs font-semibold text-muted-foreground">{number}</span><div className="space-y-0.5"><h2 className="text-base font-semibold tracking-tight">{title}</h2><p className="text-sm leading-5 text-muted-foreground">{description}</p></div></div>;
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full border bg-background text-xs font-semibold text-muted-foreground">
+        {number}
+      </span>
+      <div className="space-y-0.5">
+        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+        <p className="text-sm leading-5 text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
 }
 
 function PickerStatus({ state, messages }) {
-  if (state === "loading") return <FormDescription>{messages.loading}</FormDescription>;
-  if (state === "empty") return <FormDescription>{messages.empty}</FormDescription>;
-  if (state === "error") return <FormDescription className="text-destructive">{messages.error}</FormDescription>;
+  if (state === "loading")
+    return <FormDescription>{messages.loading}</FormDescription>;
+  if (state === "empty")
+    return <FormDescription>{messages.empty}</FormDescription>;
+  if (state === "error")
+    return (
+      <FormDescription className="text-destructive">
+        {messages.error}
+      </FormDescription>
+    );
   return null;
 }
 
@@ -93,48 +160,92 @@ function PortField({ field, config, placeholder }) {
   useEffect(() => {
     const raw = String(field.value ?? "").trim();
     const port = Number(raw);
-    const valid = Boolean(raw) && Number.isInteger(port) && port >= 1024 && port <= 65535;
+    const valid =
+      Boolean(raw) && Number.isInteger(port) && port >= 1024 && port <= 65535;
     let cancelled = false;
     // Every state write lives in the deferred callback, never synchronously in
     // the effect body (react-hooks/set-state-in-effect).
-    const id = setTimeout(() => {
-      if (cancelled) return;
-      if (!valid) {
-        setCheck(null);
-        return;
-      }
-      setCheck({ state: "checking" });
-      checkApplicationPort(port)
-        .then(({ data }) => {
-          if (cancelled) return;
-          const parsed = portCheckResponseSchema.safeParse(data);
-          if (!parsed.success) return setCheck(null);
-          const r = parsed.data.port_check;
-          setCheck({
-            state: r.available ? (r.reason ? "warn" : "free") : "taken",
-            message: r.message ?? (r.available ? t("form.portFree", { port }) : null),
-            suggested: r.suggested_port ?? null,
+    const id = setTimeout(
+      () => {
+        if (cancelled) return;
+        if (!valid) {
+          setCheck(null);
+          return;
+        }
+        setCheck({ state: "checking" });
+        checkApplicationPort(port)
+          .then(({ data }) => {
+            if (cancelled) return;
+            const parsed = portCheckResponseSchema.safeParse(data);
+            if (!parsed.success) return setCheck(null);
+            const r = parsed.data.port_check;
+            setCheck({
+              state: r.available ? (r.reason ? "warn" : "free") : "taken",
+              message:
+                r.message ??
+                (r.available ? t("form.portFree", { port }) : null),
+              suggested: r.suggested_port ?? null,
+            });
+          })
+          .catch(() => {
+            if (!cancelled) setCheck(null);
           });
-        })
-        .catch(() => { if (!cancelled) setCheck(null); });
-    }, valid ? 500 : 0);
-    return () => { cancelled = true; clearTimeout(id); };
+      },
+      valid ? 500 : 0,
+    );
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
   }, [field.value, t]);
 
   return (
     <>
       <FormControl>
-        <Input type="number" inputMode="numeric" placeholder={placeholder} {...field} value={field.value ?? ""} />
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder={placeholder}
+          {...field}
+          value={field.value ?? ""}
+        />
       </FormControl>
       {check?.state === "checking" ? (
-        <FormDescription className="flex items-center gap-1.5"><Loader2 className="size-3 animate-spin" />{t("form.portChecking")}</FormDescription>
+        <FormDescription className="flex items-center gap-1.5">
+          <Loader2 className="size-3 animate-spin" />
+          {t("form.portChecking")}
+        </FormDescription>
       ) : check?.state === "free" ? (
-        <FormDescription className="flex items-center gap-1.5 text-success"><CheckCircle2 className="size-3.5" />{check.message}</FormDescription>
+        <FormDescription className="flex items-center gap-1.5 text-success">
+          <CheckCircle2 className="size-3.5" />
+          {check.message}
+        </FormDescription>
       ) : check?.state === "warn" ? (
-        <FormDescription className="flex items-start gap-1.5 text-warning"><TriangleAlert className="mt-0.5 size-3.5 shrink-0" />{check.message}</FormDescription>
+        <FormDescription className="flex items-start gap-1.5 text-warning">
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+          {check.message}
+        </FormDescription>
       ) : check?.state === "taken" ? (
-        <FormDescription className="flex flex-wrap items-center gap-x-2 gap-y-1 text-destructive"><span className="flex items-start gap-1.5"><CircleAlert className="mt-0.5 size-3.5 shrink-0" />{check.message}</span>{check.suggested ? <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => field.onChange(String(check.suggested))}>{t("form.portUseSuggested", { port: check.suggested })}</Button> : null}</FormDescription>
-      ) : config.help ? <FormDescription>{config.help}</FormDescription> : null}
+        <FormDescription className="flex flex-wrap items-center gap-x-2 gap-y-1 text-destructive">
+          <span className="flex items-start gap-1.5">
+            <CircleAlert className="mt-0.5 size-3.5 shrink-0" />
+            {check.message}
+          </span>
+          {check.suggested ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-xs"
+              onClick={() => field.onChange(String(check.suggested))}
+            >
+              {t("form.portUseSuggested", { port: check.suggested })}
+            </Button>
+          ) : null}
+        </FormDescription>
+      ) : config.help ? (
+        <FormDescription>{config.help}</FormDescription>
+      ) : null}
     </>
   );
 }
@@ -149,12 +260,31 @@ function startCommandProblem(value) {
   return null;
 }
 
-function ConfigField({ config, form, accounts, phpVersions, phpVersionsFailed, nodeVersions, nodeVersionsFailed }) {
+function ConfigField({
+  config,
+  form,
+  accounts,
+  phpVersions,
+  phpVersionsFailed,
+  nodeVersions,
+  nodeVersionsFailed,
+}) {
   const t = useTranslations("applications");
   const isAccount = config.source === "git_accounts";
-  const runtimeVersions = config.source === "php_versions" ? phpVersions : config.source === "node_versions" ? nodeVersions : [];
-  const runtimeFailed = config.source === "php_versions" ? phpVersionsFailed : config.source === "node_versions" ? nodeVersionsFailed : false;
-  const isRuntime = config.source === "php_versions" || config.source === "node_versions";
+  const runtimeVersions =
+    config.source === "php_versions"
+      ? phpVersions
+      : config.source === "node_versions"
+        ? nodeVersions
+        : [];
+  const runtimeFailed =
+    config.source === "php_versions"
+      ? phpVersionsFailed
+      : config.source === "node_versions"
+        ? nodeVersionsFailed
+        : false;
+  const isRuntime =
+    config.source === "php_versions" || config.source === "node_versions";
   const isPassword = config.type === "password";
   const isPort = config.name === "app_port";
   const isStartCommand = config.name === "start_command";
@@ -162,58 +292,183 @@ function ConfigField({ config, form, accounts, phpVersions, phpVersionsFailed, n
   // options arrive, so it never silently degrades to a free-text box.
   const isChoice = ["select", "enum", "dropdown"].includes(config.type);
   const [reveal, setReveal] = useState(false);
-  const options = config.options?.length ? config.options : runtimeVersions.map((version) => ({ value: version.version, label: version.version }));
-  const runtimeDefault = isRuntime ? options.find((option) => option.is_default)?.value ?? options[0]?.value : undefined;
+  const options = config.options?.length
+    ? config.options
+    : runtimeVersions.map((version) => ({
+        value: version.version,
+        label: version.version,
+      }));
+  const runtimeDefault = isRuntime
+    ? (options.find((option) => option.is_default)?.value ?? options[0]?.value)
+    : undefined;
   const isChooser = options.length > 0 || isRuntime || isChoice;
   // Long enumerations (countries ~250, timezones ~400, languages) get a
   // searchable Combobox per the house rule; short lists stay a plain Select.
   const useCombobox = options.length > 10;
   const label = fieldLabel(config);
-  const placeholder = config.placeholder ?? t("form.fieldPlaceholder", { field: label });
+  const placeholder =
+    config.placeholder ?? t("form.fieldPlaceholder", { field: label });
 
-  return <FormField control={form.control} name={config.name} defaultValue={runtimeDefault} render={({ field }) => <FormItem className="min-w-0 self-start">
-    {/* Fixed row height so the input below starts at the same Y whether or not
+  return (
+    <FormField
+      control={form.control}
+      name={config.name}
+      defaultValue={runtimeDefault}
+      render={({ field }) => (
+        <FormItem className="min-w-0 self-start">
+          {/* Fixed row height so the input below starts at the same Y whether or not
         the label carries Generate/copy actions — otherwise a field with them
         sits lower than its neighbour in the two-column grid. */}
-    <div className="flex min-h-6 items-center justify-between gap-2">
-      {/* Truncate rather than wrap: a wrapped label is taller and drops the
+          <div className="flex min-h-6 items-center justify-between gap-2">
+            {/* Truncate rather than wrap: a wrapped label is taller and drops the
           input below its neighbour in the two-column grid on narrow widths. */}
-      <FormLabel className="min-w-0 truncate">{label}{config.required ? <RequiredMark /> : null}</FormLabel>
-      <div className="flex shrink-0 items-center gap-2">
-        {/* A generated password is shown once and never again — a copy control
+            <FormLabel className="min-w-0 truncate">
+              {label}
+              {config.required ? <RequiredMark /> : null}
+            </FormLabel>
+            <div className="flex shrink-0 items-center gap-2">
+              {/* A generated password is shown once and never again — a copy control
             beside it means it can be saved without hand-selecting the field. */}
-        {isPassword && field.value ? <CopyButton value={String(field.value)} className="size-6" /> : null}
-        {/* Fields the schema marks generatable (WordPress admin password, DB
+              {isPassword && field.value ? (
+                <CopyButton value={String(field.value)} className="size-6" />
+              ) : null}
+              {/* Fields the schema marks generatable (WordPress admin password, DB
             passwords) get a one-click strong value, revealed so it can be
             copied before it is submitted. */}
-        {isPassword && config.generate ? (
-          <button type="button" onClick={() => { form.setValue(config.name, generatePassword(), { shouldDirty: true, shouldValidate: true }); setReveal(true); }} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-            <Wand2 className="size-3" />{t("form.generate")}
-          </button>
-        ) : null}
-      </div>
-    </div>
-    {isAccount ? <Select onValueChange={field.onChange} value={field.value ? String(field.value) : ""}><FormControl><SelectTrigger className="w-full"><SelectValue placeholder={t("gitAccountPlaceholder")} /></SelectTrigger></FormControl><SelectContent className="max-h-64">{accounts.map((account) => <SelectItem key={account.id} value={String(account.id)}>{account.label} · {account.provider_title}</SelectItem>)}</SelectContent></Select>
-      : isChooser ? (useCombobox
-          ? <FormControl><Combobox options={options} value={field.value ? String(field.value) : ""} onChange={field.onChange} placeholder={t("form.fieldSelectPlaceholder", { field: label })} disabled={!options.length} /></FormControl>
-          : <Select onValueChange={field.onChange} value={field.value ? String(field.value) : ""} disabled={!options.length}><FormControl><SelectTrigger className="w-full"><SelectValue placeholder={options.length ? t("form.fieldSelectPlaceholder", { field: label }) : t("form.noOptions")} /></SelectTrigger></FormControl><SelectContent className="max-h-64">{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select>)
-        : isPort ? <PortField field={field} config={config} placeholder={placeholder} />
-          : isPassword ? <FormControl><PasswordInput placeholder={placeholder} show={reveal} onShowChange={setReveal} {...field} value={field.value ?? ""} /></FormControl>
-            : <FormControl><Input type={config.type === "number" ? "number" : "text"} placeholder={placeholder} {...field} value={field.value ?? ""} /></FormControl>}
-    {isPort ? null
-      : runtimeFailed ? <FormDescription className="text-destructive">{t("loadFailed")}</FormDescription>
-      : isStartCommand && startCommandProblem(field.value) ? <FormDescription className="flex items-start gap-1.5 text-warning"><TriangleAlert className="mt-0.5 size-3.5 shrink-0" />{t(`form.startCommand.${startCommandProblem(field.value)}`)}</FormDescription>
-      : config.help ? <FormDescription>{config.help}</FormDescription>
-      // Only for plain text inputs (web root: /public, or /web for Craft) —
-      // a select already shows its default as the chosen value, so repeating it
-      // there is noise.
-      : config.default && !isRuntime && !options.length && !isAccount && !isPassword ? <FormDescription>{t("form.defaultsTo", { value: String(config.default) })}</FormDescription>
-      : null}
-    <FormMessage />
-  </FormItem>} />;
+              {isPassword && config.generate ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    form.setValue(config.name, generatePassword(), {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                    setReveal(true);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <Wand2 className="size-3" />
+                  {t("form.generate")}
+                </button>
+              ) : null}
+            </div>
+          </div>
+          {isAccount ? (
+            <Select
+              onValueChange={field.onChange}
+              value={field.value ? String(field.value) : ""}
+            >
+              <FormControl>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("gitAccountPlaceholder")} />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent className="max-h-64">
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={String(account.id)}>
+                    {account.label} · {account.provider_title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : isChooser ? (
+            useCombobox ? (
+              <FormControl>
+                <Combobox
+                  options={options}
+                  value={field.value ? String(field.value) : ""}
+                  onChange={field.onChange}
+                  placeholder={t("form.fieldSelectPlaceholder", {
+                    field: label,
+                  })}
+                  disabled={!options.length}
+                />
+              </FormControl>
+            ) : (
+              <Select
+                onValueChange={field.onChange}
+                value={field.value ? String(field.value) : ""}
+                disabled={!options.length}
+              >
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue
+                      placeholder={
+                        options.length
+                          ? t("form.fieldSelectPlaceholder", { field: label })
+                          : t("form.noOptions")
+                      }
+                    />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="max-h-64">
+                  {options.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )
+          ) : isPort ? (
+            <PortField
+              field={field}
+              config={config}
+              placeholder={placeholder}
+            />
+          ) : isPassword ? (
+            <FormControl>
+              <PasswordInput
+                placeholder={placeholder}
+                show={reveal}
+                onShowChange={setReveal}
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+          ) : (
+            <FormControl>
+              <Input
+                type={config.type === "number" ? "number" : "text"}
+                placeholder={placeholder}
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
+          )}
+          {isPort ? null : runtimeFailed ? (
+            <FormDescription className="text-destructive">
+              {t("loadFailed")}
+            </FormDescription>
+          ) : isStartCommand && startCommandProblem(field.value) ? (
+            <FormDescription className="flex items-start gap-1.5 text-warning">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+              {t(`form.startCommand.${startCommandProblem(field.value)}`)}
+            </FormDescription>
+          ) : config.help ? (
+            <FormDescription>{config.help}</FormDescription>
+          ) : null}
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
 }
 
-export function CreateApplicationForm({ siteTypes = [], systemUsers = [], systemUsersFailed = false, canCreateSystemUser = false, gitAccounts = [], gitAccountsFailed = false, phpVersions = [], phpDefaultVersion = null, phpVersionsFailed = false, nodeVersions = [], nodeDefaultVersion = null, nodeVersionsFailed = false }) {
+export function CreateApplicationForm({
+  siteTypes = [],
+  systemUsers = [],
+  systemUsersFailed = false,
+  canCreateSystemUser = false,
+  gitAccounts = [],
+  gitAccountsFailed = false,
+  phpVersions = [],
+  phpDefaultVersion = null,
+  phpVersionsFailed = false,
+  nodeVersions = [],
+  nodeDefaultVersion = null,
+  nodeVersionsFailed = false,
+}) {
   const t = useTranslations("applications");
   const router = useRouter();
   const [gitSource, setGitSource] = useState("account");
@@ -228,43 +483,140 @@ export function CreateApplicationForm({ siteTypes = [], systemUsers = [], system
     resolver: zodResolver(createApplicationSchema),
     mode: "onBlur",
     reValidateMode: "onChange",
-    defaultValues: { site_type: "", name: "", domain: "", system_user_id: "", git_account_id: "", repository: "", branch: "" },
+    defaultValues: {
+      site_type: "",
+      name: "",
+      domain: "",
+      system_user_id: "",
+      git_account_id: "",
+      repository: "",
+      branch: "",
+    },
   });
   const values = useWatch({ control: form.control });
   const selectedName = useWatch({ control: form.control, name: "site_type" });
-  const gitAccountId = useWatch({ control: form.control, name: "git_account_id" });
+  const gitAccountId = useWatch({
+    control: form.control,
+    name: "git_account_id",
+  });
   const repository = useWatch({ control: form.control, name: "repository" });
-  const renderingType = useWatch({ control: form.control, name: "rendering_type" });
+  const renderingType = useWatch({
+    control: form.control,
+    name: "rendering_type",
+  });
   const name = useWatch({ control: form.control, name: "name" });
   const domain = useWatch({ control: form.control, name: "domain" });
-  const systemUserId = useWatch({ control: form.control, name: "system_user_id" });
+  const systemUserId = useWatch({
+    control: form.control,
+    name: "system_user_id",
+  });
   const branch = useWatch({ control: form.control, name: "branch" });
   const phpVersion = useWatch({ control: form.control, name: "php_version" });
   const nodeVersion = useWatch({ control: form.control, name: "node_version" });
-  const selected = useMemo(() => siteTypes.find((type) => type.name === selectedName), [siteTypes, selectedName]);
+  const selected = useMemo(
+    () => siteTypes.find((type) => type.name === selectedName),
+    [siteTypes, selectedName],
+  );
   const isGit = selected?.method === "git" || selected?.name === "git";
-  const typeFields = (selected?.fields ?? []).filter((config) => !COMMON_FIELD_NAMES.has(config.name));
-  const visibleFields = typeFields.filter((config) => config.depends_on !== "rendering_type" || renderingType === "ssr");
+  const typeFields = (selected?.fields ?? []).filter(
+    (config) => !COMMON_FIELD_NAMES.has(config.name),
+  );
+  const visibleFields = typeFields.filter(
+    (config) =>
+      config.depends_on !== "rendering_type" || renderingType === "ssr",
+  );
   const standardFields = visibleFields.filter((config) => !config.advanced);
   const advancedFields = visibleFields.filter((config) => config.advanced);
-  const availableSystemUsers = [...systemUsers, ...createdSystemUsers.filter((created) => !systemUsers.some((user) => user.id === created.id))];
+  const availableSystemUsers = [
+    ...systemUsers,
+    ...createdSystemUsers.filter(
+      (created) => !systemUsers.some((user) => user.id === created.id),
+    ),
+  ];
   const runtimeSummaryItems = visibleFields
-    .filter((config) => config.source === "php_versions" || config.source === "node_versions")
+    .filter(
+      (config) =>
+        config.source === "php_versions" || config.source === "node_versions",
+    )
     .map((config) => {
-      const versions = config.source === "php_versions" ? phpVersions : nodeVersions;
-      const value = values?.[config.name] ?? form.getValues(config.name) ?? versions[0]?.version;
-      return value ? { key: `runtime-${config.name}`, label: fieldLabel(config), value: String(value), ready: true } : null;
+      const versions =
+        config.source === "php_versions" ? phpVersions : nodeVersions;
+      const value =
+        values?.[config.name] ??
+        form.getValues(config.name) ??
+        versions[0]?.version;
+      return value
+        ? {
+            key: `runtime-${config.name}`,
+            label: fieldLabel(config),
+            value: String(value),
+            ready: true,
+          }
+        : null;
     })
     .filter(Boolean);
   const advancedSummaryItems = advancedFields
     .filter((config) => String(values?.[config.name] ?? "").trim())
-    .map((config) => ({ key: `advanced-${config.name}`, label: fieldLabel(config), value: String(values[config.name]), ready: true }));
+    .map((config) => ({
+      key: `advanced-${config.name}`,
+      label: fieldLabel(config),
+      value: String(values[config.name]),
+      ready: true,
+    }));
   const readinessItems = [
-    { key: "type", label: t("chooseType"), value: selected?.title ?? t("form.chooseTypeHint"), ready: Boolean(selected) },
-    { key: "name", label: t("name"), value: name || "—", ready: Boolean(name?.trim()) },
-    { key: "domain", label: t("domain"), value: domain || "—", ready: Boolean(domain?.trim()) },
-    { key: "user", label: t("systemUser"), value: availableSystemUsers.find((user) => String(user.id) === String(systemUserId))?.username ?? "—", ready: Boolean(systemUserId) },
-    ...(isGit ? [{ key: "source", label: t("sourceLabel"), value: gitSource === "account" ? [gitAccounts.find((account) => String(account.id) === String(gitAccountId))?.label, repository, branch].filter(Boolean).join(" · ") || "—" : [form.getValues("repository_url"), branch].filter(Boolean).join(" · ") || "—", ready: gitSource === "account" ? Boolean(gitAccountId && repository && branch) : Boolean(form.getValues("repository_url") && branch) }] : []),
+    {
+      key: "type",
+      label: t("chooseType"),
+      value: selected?.title ?? t("form.chooseTypeHint"),
+      ready: Boolean(selected),
+    },
+    {
+      key: "name",
+      label: t("name"),
+      value: name || "—",
+      ready: Boolean(name?.trim()),
+    },
+    {
+      key: "domain",
+      label: t("domain"),
+      value: domain || "—",
+      ready: Boolean(domain?.trim()),
+    },
+    {
+      key: "user",
+      label: t("systemUser"),
+      value:
+        availableSystemUsers.find(
+          (user) => String(user.id) === String(systemUserId),
+        )?.username ?? "—",
+      ready: Boolean(systemUserId),
+    },
+    ...(isGit
+      ? [
+          {
+            key: "source",
+            label: t("sourceLabel"),
+            value:
+              gitSource === "account"
+                ? [
+                    gitAccounts.find(
+                      (account) => String(account.id) === String(gitAccountId),
+                    )?.label,
+                    repository,
+                    branch,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "—"
+                : [form.getValues("repository_url"), branch]
+                    .filter(Boolean)
+                    .join(" · ") || "—",
+            ready:
+              gitSource === "account"
+                ? Boolean(gitAccountId && repository && branch)
+                : Boolean(form.getValues("repository_url") && branch),
+          },
+        ]
+      : []),
     ...runtimeSummaryItems,
     ...advancedSummaryItems,
   ];
@@ -288,19 +640,72 @@ export function CreateApplicationForm({ siteTypes = [], systemUsers = [], system
 
   useEffect(() => {
     if (!selected) return;
-    const phpField = selected.fields?.find((field) => field.source === "php_versions");
-    const nodeField = selected.fields?.find((field) => field.source === "node_versions");
+    const phpField = selected.fields?.find(
+      (field) => field.source === "php_versions",
+    );
+    const nodeField = selected.fields?.find(
+      (field) => field.source === "node_versions",
+    );
     if (phpField && !form.getValues(phpField.name)) {
-      const candidates = [phpDefaultVersion, phpVersions.find((item) => item.is_default)?.version, phpVersions[0]?.version];
-      const version = candidates.find((candidate) => candidate && phpVersions.some((item) => item.version === candidate));
-      if (version) form.setValue(phpField.name, version, { shouldDirty: true, shouldValidate: true });
+      const candidates = [
+        phpDefaultVersion,
+        phpVersions.find((item) => item.is_default)?.version,
+        phpVersions[0]?.version,
+      ];
+      const version = candidates.find(
+        (candidate) =>
+          candidate && phpVersions.some((item) => item.version === candidate),
+      );
+      if (version)
+        form.setValue(phpField.name, version, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
     }
     if (nodeField && !form.getValues(nodeField.name)) {
-      const candidates = [nodeDefaultVersion, nodeVersions.find((item) => item.is_default)?.version, nodeVersions[0]?.version];
-      const version = candidates.find((candidate) => candidate && nodeVersions.some((item) => item.version === candidate));
-      if (version) form.setValue(nodeField.name, version, { shouldDirty: true, shouldValidate: true });
+      const candidates = [
+        nodeDefaultVersion,
+        nodeVersions.find((item) => item.is_default)?.version,
+        nodeVersions[0]?.version,
+      ];
+      const version = candidates.find(
+        (candidate) =>
+          candidate && nodeVersions.some((item) => item.version === candidate),
+      );
+      if (version)
+        form.setValue(nodeField.name, version, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
     }
-  }, [form, nodeDefaultVersion, nodeVersions, phpDefaultVersion, phpVersions, selected]);
+    // Pre-fill declared defaults (web_root "/web", admin_username "admin", …) so
+    // a required field that has a default isn't shown empty with a "Defaults to
+    // …" hint the user then has to retype. Passwords and the runtime selects are
+    // handled elsewhere; common fields are separate inputs.
+    for (const field of selected.fields ?? []) {
+      if (
+        COMMON_FIELD_NAMES.has(field.name) ||
+        field.type === "password" ||
+        field.source === "php_versions" ||
+        field.source === "node_versions" ||
+        field.default == null ||
+        field.default === "" ||
+        form.getValues(field.name)
+      )
+        continue;
+      form.setValue(field.name, String(field.default), {
+        shouldDirty: false,
+        shouldValidate: true,
+      });
+    }
+  }, [
+    form,
+    nodeDefaultVersion,
+    nodeVersions,
+    phpDefaultVersion,
+    phpVersions,
+    selected,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -312,16 +717,23 @@ export function CreateApplicationForm({ siteTypes = [], systemUsers = [], system
         if (!parsed.success) throw new Error("Invalid repository response");
         if (cancelled) return;
         setRepositories(parsed.data.repositories);
-        setRepositoriesState(parsed.data.repositories.length ? "ready" : "empty");
+        setRepositoriesState(
+          parsed.data.repositories.length ? "ready" : "empty",
+        );
       })
-      .catch(() => { if (!cancelled) setRepositoriesState("error"); });
+      .catch(() => {
+        if (!cancelled) setRepositoriesState("error");
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [form, gitAccountId, gitSource, isGit]);
 
   useEffect(() => {
     let cancelled = false;
-    if (!isGit || gitSource !== "account" || !gitAccountId || !repository) return undefined;
+    if (!isGit || gitSource !== "account" || !gitAccountId || !repository)
+      return undefined;
 
     getBranches(gitAccountId, repository)
       .then(({ data }) => {
@@ -330,12 +742,22 @@ export function CreateApplicationForm({ siteTypes = [], systemUsers = [], system
         if (cancelled) return;
         setBranches(parsed.data.branches);
         setBranchesState(parsed.data.branches.length ? "ready" : "empty");
-        const defaultBranch = repositories.find((item) => item.full_name === repository)?.default_branch;
-        if (defaultBranch && parsed.data.branches.some((item) => item.name === defaultBranch)) form.setValue("branch", defaultBranch);
+        const defaultBranch = repositories.find(
+          (item) => item.full_name === repository,
+        )?.default_branch;
+        if (
+          defaultBranch &&
+          parsed.data.branches.some((item) => item.name === defaultBranch)
+        )
+          form.setValue("branch", defaultBranch);
       })
-      .catch(() => { if (!cancelled) setBranchesState("error"); });
+      .catch(() => {
+        if (!cancelled) setBranchesState("error");
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [form, gitAccountId, gitSource, isGit, repository, repositories]);
 
   // Zod validation failed — react-hook-form marked the fields; bring the first
@@ -345,86 +767,546 @@ export function CreateApplicationForm({ siteTypes = [], systemUsers = [], system
   }
 
   async function onSubmit(values) {
-    const missingFields = visibleFields.filter((config) => config.required && !String(values[config.name] ?? "").trim());
-    const missingGitFields = isGit && gitSource === "account"
-      ? [{ name: "git_account_id", label: t("gitAccount") }, { name: "repository", label: t("repository") }].filter((field) => !String(values[field.name] ?? "").trim())
-      : isGit && !String(values.repository_url ?? "").trim() ? [{ name: "repository_url", label: t("publicRepository") }] : [];
+    const missingFields = visibleFields.filter(
+      (config) => config.required && !String(values[config.name] ?? "").trim(),
+    );
+    const missingGitFields =
+      isGit && gitSource === "account"
+        ? [
+            { name: "git_account_id", label: t("gitAccount") },
+            { name: "repository", label: t("repository") },
+          ].filter((field) => !String(values[field.name] ?? "").trim())
+        : isGit && !String(values.repository_url ?? "").trim()
+          ? [{ name: "repository_url", label: t("publicRepository") }]
+          : [];
     if (missingFields.length || missingGitFields.length) {
-      [...missingFields, ...missingGitFields].forEach((field) => form.setError(field.name, { type: "manual", message: t("form.requiredField", { field: field.label }) }));
+      [...missingFields, ...missingGitFields].forEach((field) =>
+        form.setError(field.name, {
+          type: "manual",
+          message: t("form.requiredField", { field: field.label }),
+        }),
+      );
       scrollToFirstError(formRef.current);
       return;
     }
-    const payload = { site_type: values.site_type, name: values.name.trim(), domain: values.domain.trim(), system_user_id: Number(values.system_user_id) };
-    const settings = {};
-    for (const config of selected?.fields ?? []) {
+    const payload = {
+      site_type: values.site_type,
+      name: values.name.trim(),
+      domain: values.domain.trim(),
+      system_user_id: Number(values.system_user_id),
+    };
+    // Every field the chosen type declares is validated at the TOP LEVEL on
+    // create — the backend generates the rules from that same schema, so a
+    // WordPress admin_email or a Node-RED admin_username is a top-level key.
+    // `settings` is only a merge bag on the UPDATE endpoint; nesting create
+    // fields there made required ones read as missing ("field is required").
+    //
+    // Iterate VISIBLE fields, not every declared field: a start_command typed
+    // while rendering_type was "ssr" must not be sent once it's switched to
+    // "php" — the field is hidden and would create a unit nothing routes to.
+    for (const config of visibleFields) {
       const value = values[config.name];
-      if (value === undefined || value === "" || COMMON_FIELD_NAMES.has(config.name)) continue;
-      if (TOP_LEVEL_FIELDS.has(config.name)) payload[config.name] = config.type === "number" ? Number(value) : value;
-      else settings[config.name] = value;
+      if (value === undefined || value === "") continue;
+      payload[config.name] = config.type === "number" ? Number(value) : value;
     }
     if (isGit) {
       payload.git_source = gitSource;
-      if (gitSource === "account") { payload.git_account_id = Number(values.git_account_id); payload.repository = values.repository; }
-      else payload.repository_url = values.repository_url?.trim();
+      if (gitSource === "account") {
+        payload.git_account_id = Number(values.git_account_id);
+        payload.repository = values.repository;
+      } else payload.repository_url = values.repository_url?.trim();
       if (values.branch?.trim()) payload.branch = values.branch.trim();
     }
-    if (Object.keys(settings).length) payload.settings = settings;
 
     try {
       const { data } = await createApplication(payload);
       toast.success(t("created"));
-      router.push(data?.application?.id ? `/applications/${data.application.id}` : "/applications");
+      router.push(
+        data?.application?.id
+          ? `/applications/${data.application.id}`
+          : "/applications",
+      );
       router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }
   }
 
-  return <Form {...form}>
-    <form ref={formRef} onSubmit={(event) => form.handleSubmit(onSubmit, onInvalidSubmit)(event)} noValidate className="mx-auto max-w-6xl">
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0 space-y-6">
-      <section className="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5" aria-labelledby="application-type-heading">
-        <SectionHeading number="1" title={t("guided.stageType")} description={t("guided.typeHint")} />
-        <FormField control={form.control} name="site_type" render={({ field }) => <FormItem><div id="application-type-heading"><SiteTypePicker types={siteTypes} value={field.value} onChange={field.onChange} /></div><FormMessage /></FormItem>} />
-      </section>
+  return (
+    <Form {...form}>
+      <form
+        ref={formRef}
+        onSubmit={(event) =>
+          form.handleSubmit(onSubmit, onInvalidSubmit)(event)
+        }
+        noValidate
+        className="mx-auto max-w-6xl"
+      >
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="min-w-0 space-y-6">
+            <section
+              className="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+              aria-labelledby="application-type-heading"
+            >
+              <SectionHeading
+                number="1"
+                title={t("guided.stageType")}
+                description={t("guided.typeHint")}
+              />
+              <FormField
+                control={form.control}
+                name="site_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <div id="application-type-heading">
+                      <SiteTypePicker
+                        types={siteTypes}
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </section>
 
-      <section className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5" aria-labelledby="application-details-heading">
-        <SectionHeading number="2" title={t("form.detailsTitle")} description={t("form.detailsHint")} />
-        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-          <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>{t("name")}<RequiredMark /></FormLabel><FormControl><Input autoComplete="off" placeholder={t("form.namePlaceholder")} {...field} /></FormControl><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="domain" render={({ field }) => <FormItem><FormLabel>{t("domain")}<RequiredMark /></FormLabel><FormControl><Input inputMode="url" autoComplete="url" placeholder={t("form.domainPlaceholder")} {...field} onChange={(event) => { field.onChange(event); if (!form.getValues("name")?.trim()) { const label = event.target.value.trim().split(".")[0]; if (label) form.setValue("name", label); } }} /></FormControl><FormDescription>{t("form.domainHint")}</FormDescription><FormMessage /></FormItem>} />
-          <FormField control={form.control} name="system_user_id" render={({ field }) => <FormItem className="md:col-span-2"><FormLabel>{t("systemUser")}<RequiredMark /></FormLabel><FormControl><Combobox options={availableSystemUsers.map((user) => ({ value: String(user.id), label: user.username }))} value={field.value === undefined ? "" : String(field.value)} onChange={field.onChange} placeholder={t("systemUserPlaceholder")} disabled={availableSystemUsers.length === 0} /></FormControl>{availableSystemUsers.length === 0 ? <div className="flex flex-wrap items-center justify-between gap-2"><FormDescription className={systemUsersFailed ? "text-destructive" : undefined}>{systemUsersFailed ? t("form.systemUsersUnavailable") : t("form.noSystemUsers")}</FormDescription>{canCreateSystemUser ? <Button type="button" size="sm" variant="outline" onClick={() => setSystemUserDialogOpen(true)}>{t("form.createSystemUser")}</Button> : <FormDescription className="text-destructive">{t("form.noSystemUserCreatePermission")}</FormDescription>}</div> : null}<FormMessage /></FormItem>} />
+            <section
+              className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+              aria-labelledby="application-details-heading"
+            >
+              <SectionHeading
+                number="2"
+                title={t("form.detailsTitle")}
+                description={t("form.detailsHint")}
+              />
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {t("name")}
+                        <RequiredMark />
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          autoComplete="off"
+                          placeholder={t("form.namePlaceholder")}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="domain"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {t("domain")}
+                        <RequiredMark />
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          inputMode="url"
+                          autoComplete="url"
+                          placeholder={t("form.domainPlaceholder")}
+                          {...field}
+                          onChange={(event) => {
+                            field.onChange(event);
+                            if (!form.getValues("name")?.trim()) {
+                              const label = event.target.value
+                                .trim()
+                                .split(".")[0];
+                              if (label) form.setValue("name", label);
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>{t("form.domainHint")}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="system_user_id"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>
+                        {t("systemUser")}
+                        <RequiredMark />
+                      </FormLabel>
+                      <FormControl>
+                        <Combobox
+                          options={availableSystemUsers.map((user) => ({
+                            value: String(user.id),
+                            label: user.username,
+                          }))}
+                          value={
+                            field.value === undefined ? "" : String(field.value)
+                          }
+                          onChange={field.onChange}
+                          placeholder={t("systemUserPlaceholder")}
+                          disabled={availableSystemUsers.length === 0}
+                        />
+                      </FormControl>
+                      {availableSystemUsers.length === 0 ? (
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <FormDescription
+                            className={
+                              systemUsersFailed ? "text-destructive" : undefined
+                            }
+                          >
+                            {systemUsersFailed
+                              ? t("form.systemUsersUnavailable")
+                              : t("form.noSystemUsers")}
+                          </FormDescription>
+                          {canCreateSystemUser ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSystemUserDialogOpen(true)}
+                            >
+                              {t("form.createSystemUser")}
+                            </Button>
+                          ) : (
+                            <FormDescription className="text-destructive">
+                              {t("form.noSystemUserCreatePermission")}
+                            </FormDescription>
+                          )}
+                        </div>
+                      ) : null}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </section>
+
+            <section
+              className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+              aria-labelledby="application-configure-heading"
+            >
+              <SectionHeading
+                number="3"
+                title={t("guided.stageConfigure")}
+                description={
+                  selected
+                    ? t("guided.configureHint")
+                    : t("form.chooseTypeHint")
+                }
+              />
+              {selected ? (
+                <div className="space-y-5" id="application-configure-heading">
+                  {isGit ? (
+                    <div className="space-y-4 border-b pb-5">
+                      <div>
+                        <p className="font-medium">{t("sourceLabel")}</p>
+                        <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                          {t("form.repositoryHint")}
+                        </p>
+                      </div>
+                      <ChoiceField
+                        value={gitSource}
+                        onChange={setGitSource}
+                        options={[
+                          { value: "account", label: t("useAccount") },
+                          { value: "public_url", label: t("usePublicUrl") },
+                        ]}
+                      />
+                      {gitSource === "account" ? (
+                        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                          <FormField
+                            control={form.control}
+                            name="git_account_id"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("gitAccount")}</FormLabel>
+                                <FormControl>
+                                  <Combobox
+                                    options={gitAccounts.map((account) => ({
+                                      value: String(account.id),
+                                      label: account.label,
+                                      hint: account.provider_title,
+                                    }))}
+                                    value={
+                                      field.value === undefined
+                                        ? ""
+                                        : String(field.value)
+                                    }
+                                    onChange={handleGitAccountChange}
+                                    placeholder={t("gitAccountPlaceholder")}
+                                    disabled={!gitAccounts.length}
+                                  />
+                                </FormControl>
+                                {gitAccountsFailed ? (
+                                  <FormDescription className="text-destructive">
+                                    {t("loadFailed")}
+                                  </FormDescription>
+                                ) : !gitAccounts.length ? (
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <FormDescription className="text-destructive">
+                                      {t("noAccounts")}
+                                    </FormDescription>
+                                    <Button size="sm" variant="outline" asChild>
+                                      <Link
+                                        href="/integrations/git"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                      >
+                                        {t("connectGit")}
+                                      </Link>
+                                    </Button>
+                                  </div>
+                                ) : null}
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="repository"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("repository")}</FormLabel>
+                                <ReasonTooltip
+                                  reason={
+                                    !gitAccountId
+                                      ? t("form.repositoryNeedsAccount")
+                                      : null
+                                  }
+                                  className="block w-full"
+                                >
+                                  <FormControl>
+                                    <Combobox
+                                      options={repositories.map((item) => ({
+                                        value: item.full_name,
+                                        label: item.full_name,
+                                      }))}
+                                      value={field.value ?? ""}
+                                      onChange={handleRepositoryChange}
+                                      placeholder={t("repositoryPlaceholder")}
+                                      searchPlaceholder={t(
+                                        "form.repositorySearch",
+                                      )}
+                                      disabled={
+                                        !gitAccountId ||
+                                        repositoriesState !== "ready"
+                                      }
+                                    />
+                                  </FormControl>
+                                </ReasonTooltip>
+                                <PickerStatus
+                                  state={repositoriesState}
+                                  messages={{
+                                    loading: t("form.repositoriesLoading"),
+                                    empty: t("form.repositoriesEmpty"),
+                                    error: t("form.repositoriesFailed"),
+                                  }}
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="branch"
+                            render={({ field }) => (
+                              <FormItem className="md:col-span-2">
+                                <FormLabel>{t("branch")}</FormLabel>
+                                <ReasonTooltip
+                                  reason={
+                                    !repository
+                                      ? t("form.branchNeedsRepository")
+                                      : null
+                                  }
+                                  className="block w-full"
+                                >
+                                  <FormControl>
+                                    <Combobox
+                                      options={branches.map((item) => ({
+                                        value: item.name,
+                                        label: item.name,
+                                      }))}
+                                      value={field.value ?? ""}
+                                      onChange={field.onChange}
+                                      placeholder={t("branchPlaceholder")}
+                                      searchPlaceholder={t("form.branchSearch")}
+                                      disabled={
+                                        !repository || branchesState !== "ready"
+                                      }
+                                    />
+                                  </FormControl>
+                                </ReasonTooltip>
+                                <PickerStatus
+                                  state={branchesState}
+                                  messages={{
+                                    loading: t("form.branchesLoading"),
+                                    empty: t("form.branchesEmpty"),
+                                    error: t("form.branchesFailed"),
+                                  }}
+                                />
+                                {branchesState === "ready" ? (
+                                  <FormDescription>
+                                    {t("form.branchHint")}
+                                  </FormDescription>
+                                ) : null}
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                          <FormField
+                            control={form.control}
+                            name="repository_url"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("publicRepository")}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="url"
+                                    placeholder="https://github.com/owner/repository.git"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  {t("publicRepositoryHint")}
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="branch"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("branch")}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder={t("branchPlaceholder")}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                  {standardFields.length ? (
+                    <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                      {standardFields.map((config) => (
+                        <ConfigField
+                          key={config.name}
+                          config={config}
+                          form={form}
+                          accounts={gitAccounts}
+                          phpVersions={phpVersions}
+                          phpVersionsFailed={phpVersionsFailed}
+                          nodeVersions={nodeVersions}
+                          nodeVersionsFailed={nodeVersionsFailed}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  {advancedFields.length ? (
+                    <Collapsible className="border-t pt-4">
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="w-full justify-between rounded-lg px-3 hover:bg-muted/60 data-[state=open]:bg-muted/60"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Sparkles className="size-4 text-primary" />
+                            {t("advanced")}
+                          </span>
+                          <ChevronDown className="size-4" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="grid grid-cols-1 items-start gap-4 pt-4 md:grid-cols-2">
+                        {advancedFields.map((config) => (
+                          <ConfigField
+                            key={config.name}
+                            config={config}
+                            form={form}
+                            accounts={gitAccounts}
+                            phpVersions={phpVersions}
+                            phpVersionsFailed={phpVersionsFailed}
+                            nodeVersions={nodeVersions}
+                            nodeVersionsFailed={nodeVersionsFailed}
+                          />
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ) : null}
+                </div>
+              ) : (
+                <p
+                  id="application-configure-heading"
+                  className="rounded-lg border border-dashed bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground"
+                >
+                  {t("form.chooseTypeHint")}
+                </p>
+              )}
+            </section>
+
+            <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                {selected ? t("guided.reviewHint") : t("form.chooseTypeHint")}
+              </p>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" asChild>
+                  <Link href="/applications">{t("cancel")}</Link>
+                </Button>
+                <ReasonTooltip
+                  reason={!selected ? t("form.submitNeedsType") : null}
+                >
+                  <Button
+                    type="submit"
+                    disabled={!selected || form.formState.isSubmitting}
+                  >
+                    {form.formState.isSubmitting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="size-4" />
+                    )}
+                    {form.formState.isSubmitting
+                      ? t("creating")
+                      : t("createAction")}
+                  </Button>
+                </ReasonTooltip>
+              </div>
+            </div>
+          </div>
+          <aside className="lg:sticky lg:top-20">
+            {selected ? <CreateReadinessPanel items={readinessItems} /> : null}
+          </aside>
         </div>
-      </section>
-
-      <section className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5" aria-labelledby="application-configure-heading">
-        <SectionHeading number="3" title={t("guided.stageConfigure")} description={selected ? t("guided.configureHint") : t("form.chooseTypeHint")} />
-        {selected ? <div className="space-y-5" id="application-configure-heading">
-          {isGit ? <div className="space-y-4 border-b pb-5"><div><p className="font-medium">{t("sourceLabel")}</p><p className="mt-1 text-sm leading-5 text-muted-foreground">{t("form.repositoryHint")}</p></div><ChoiceField value={gitSource} onChange={setGitSource} options={[{ value: "account", label: t("useAccount") }, { value: "public_url", label: t("usePublicUrl") }]} />
-            {gitSource === "account" ? <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2"><FormField control={form.control} name="git_account_id" render={({ field }) => <FormItem><FormLabel>{t("gitAccount")}</FormLabel><FormControl><Combobox options={gitAccounts.map((account) => ({ value: String(account.id), label: account.label, hint: account.provider_title }))} value={field.value === undefined ? "" : String(field.value)} onChange={handleGitAccountChange} placeholder={t("gitAccountPlaceholder")} disabled={!gitAccounts.length} /></FormControl>{gitAccountsFailed ? <FormDescription className="text-destructive">{t("loadFailed")}</FormDescription> : !gitAccounts.length ? <div className="flex flex-wrap items-center justify-between gap-2"><FormDescription className="text-destructive">{t("noAccounts")}</FormDescription><Button size="sm" variant="outline" asChild><Link href="/integrations/git" target="_blank" rel="noreferrer">{t("connectGit")}</Link></Button></div> : null}<FormMessage /></FormItem>} />
-              <FormField control={form.control} name="repository" render={({ field }) => <FormItem><FormLabel>{t("repository")}</FormLabel><ReasonTooltip reason={!gitAccountId ? t("form.repositoryNeedsAccount") : null} className="block w-full"><FormControl><Combobox options={repositories.map((item) => ({ value: item.full_name, label: item.full_name }))} value={field.value ?? ""} onChange={handleRepositoryChange} placeholder={t("repositoryPlaceholder")} searchPlaceholder={t("form.repositorySearch")} disabled={!gitAccountId || repositoriesState !== "ready"} /></FormControl></ReasonTooltip><PickerStatus state={repositoriesState} messages={{ loading: t("form.repositoriesLoading"), empty: t("form.repositoriesEmpty"), error: t("form.repositoriesFailed") }} /><FormMessage /></FormItem>} />
-              <FormField control={form.control} name="branch" render={({ field }) => <FormItem className="md:col-span-2"><FormLabel>{t("branch")}</FormLabel><ReasonTooltip reason={!repository ? t("form.branchNeedsRepository") : null} className="block w-full"><FormControl><Combobox options={branches.map((item) => ({ value: item.name, label: item.name }))} value={field.value ?? ""} onChange={field.onChange} placeholder={t("branchPlaceholder")} searchPlaceholder={t("form.branchSearch")} disabled={!repository || branchesState !== "ready"} /></FormControl></ReasonTooltip><PickerStatus state={branchesState} messages={{ loading: t("form.branchesLoading"), empty: t("form.branchesEmpty"), error: t("form.branchesFailed") }} />{branchesState === "ready" ? <FormDescription>{t("form.branchHint")}</FormDescription> : null}<FormMessage /></FormItem>} />
-            </div> : <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2"><FormField control={form.control} name="repository_url" render={({ field }) => <FormItem><FormLabel>{t("publicRepository")}</FormLabel><FormControl><Input type="url" placeholder="https://github.com/owner/repository.git" {...field} /></FormControl><FormDescription>{t("publicRepositoryHint")}</FormDescription><FormMessage /></FormItem>} /><FormField control={form.control} name="branch" render={({ field }) => <FormItem><FormLabel>{t("branch")}</FormLabel><FormControl><Input placeholder={t("branchPlaceholder")} {...field} /></FormControl><FormMessage /></FormItem>} /></div>}
-          </div> : null}
-          {standardFields.length ? <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">{standardFields.map((config) => <ConfigField key={config.name} config={config} form={form} accounts={gitAccounts} phpVersions={phpVersions} phpVersionsFailed={phpVersionsFailed} nodeVersions={nodeVersions} nodeVersionsFailed={nodeVersionsFailed} />)}</div> : null}
-          {advancedFields.length ? <Collapsible className="border-t pt-4"><CollapsibleTrigger asChild><Button type="button" variant="ghost" className="w-full justify-between rounded-lg px-3 hover:bg-muted/60 data-[state=open]:bg-muted/60"><span className="flex items-center gap-2"><Sparkles className="size-4 text-primary" />{t("advanced")}</span><ChevronDown className="size-4" /></Button></CollapsibleTrigger><CollapsibleContent className="grid grid-cols-1 items-start gap-4 pt-4 md:grid-cols-2">{advancedFields.map((config) => <ConfigField key={config.name} config={config} form={form} accounts={gitAccounts} phpVersions={phpVersions} phpVersionsFailed={phpVersionsFailed} nodeVersions={nodeVersions} nodeVersionsFailed={nodeVersionsFailed} />)}</CollapsibleContent></Collapsible> : null}
-        </div> : <p id="application-configure-heading" className="rounded-lg border border-dashed bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">{t("form.chooseTypeHint")}</p>}
-      </section>
-
-      <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-muted-foreground">{selected ? t("guided.reviewHint") : t("form.chooseTypeHint")}</p><div className="flex gap-2"><Button type="button" variant="outline" asChild><Link href="/applications">{t("cancel")}</Link></Button><ReasonTooltip reason={!selected ? t("form.submitNeedsType") : null}><Button type="submit" disabled={!selected || form.formState.isSubmitting}>{form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}{form.formState.isSubmitting ? t("creating") : t("createAction")}</Button></ReasonTooltip></div></div>
-        </div>
-        <aside className="lg:sticky lg:top-20">{selected ? <CreateReadinessPanel items={readinessItems} /> : null}</aside>
-      </div>
-    </form>
-    <CreateSystemUserDialog
-      open={systemUserDialogOpen}
-      onOpenChange={setSystemUserDialogOpen}
-      onCreated={(user) => {
-        if (!user?.id) return;
-        setCreatedSystemUsers((current) => [...current, user]);
-        form.setValue("system_user_id", String(user.id), { shouldDirty: true, shouldValidate: true });
-      }}
-    />
-  </Form>;
+      </form>
+      <CreateSystemUserDialog
+        open={systemUserDialogOpen}
+        onOpenChange={setSystemUserDialogOpen}
+        onCreated={(user) => {
+          if (!user?.id) return;
+          setCreatedSystemUsers((current) => [...current, user]);
+          form.setValue("system_user_id", String(user.id), {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }}
+      />
+    </Form>
+  );
 }

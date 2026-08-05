@@ -71,7 +71,7 @@ export default async function ApplicationDomainsPage({ params }) {
     <div className="space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/applications/${id}`}>
+          <Link href="/applications">
             <ArrowLeft className="size-4" />
             {t("back")}
           </Link>
