@@ -20,13 +20,13 @@ abstract class AbstractSiteType implements SiteType
     public function features(): array
     {
         // True of every site: it has a name, it is served, it is logged, it
-        // can be backed up, cloned, protected and configured.
+        // can be backed up, cloned and protected. No `app_setting` — there is
+        // no dedicated Settings screen; enable/disable lives on the Dashboard.
         $features = [
             'app_dashboard',
             'app_domain',
             'app_log',
             'app_backup',
-            'app_setting',
             'app_file',
             'app_security',
             'app_firewall',

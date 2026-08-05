@@ -115,7 +115,7 @@ class Application extends Model
     public function features(): array
     {
         return app(SiteTypeManager::class)->find($this->site_type)?->features()
-            ?? ['app_dashboard', 'app_domain', 'app_log', 'app_setting'];
+            ?? ['app_dashboard', 'app_domain', 'app_log'];
     }
 
     public function supports(string $feature): bool

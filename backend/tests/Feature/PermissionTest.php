@@ -13,7 +13,7 @@ it('creates the Administrator system role with every permission, idempotently', 
     expect($admin)->toHaveCount(1);
     expect($admin->first()->is_system)->toBeTrue();
     // holds every permission at both levels, view+manage
-    expect($admin->first()->permissions()->count())->toBe(33);
+    expect($admin->first()->permissions()->count())->toBe(32);
     foreach ($admin->first()->permissions as $permission) {
         expect((bool) $permission->pivot->view)->toBeTrue();
         expect((bool) $permission->pivot->manage)->toBeTrue();
@@ -23,9 +23,9 @@ it('creates the Administrator system role with every permission, idempotently', 
 it('seeds the server and application permission items in order', function () {
     $this->seed(PermissionSeeder::class);
 
-    expect(Permission::count())->toBe(33);
+    expect(Permission::count())->toBe(32);
     expect(Permission::where('level', 'server')->count())->toBe(17);
-    expect(Permission::where('level', 'application')->count())->toBe(16);
+    expect(Permission::where('level', 'application')->count())->toBe(15);
 
     $server = Permission::where('level', 'server')->orderBy('order');
     expect($server->pluck('name')->first())->toBe('dashboard');
@@ -93,7 +93,7 @@ it('shows an admin every permission with full view+manage access', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions');
 
-    $response->assertOk()->assertJsonCount(33, 'permissions');
+    $response->assertOk()->assertJsonCount(32, 'permissions');
     foreach ($response->json('permissions') as $permission) {
         expect($permission['permissions']['view'])->toBeTrue();
         expect($permission['permissions']['manage'])->toBeTrue();
@@ -157,7 +157,7 @@ it('filters the check endpoint by level', function () {
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions/check?level=application')
         ->assertOk()
-        ->assertJsonCount(16, 'permissions')
+        ->assertJsonCount(15, 'permissions')
         ->assertJsonPath('permissions.0.name', 'app_dashboard');
 });
 

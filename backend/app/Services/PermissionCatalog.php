@@ -109,7 +109,10 @@ class PermissionCatalog
             ['name' => 'app_file', 'title' => 'Files', 'icon' => 'folder', 'url' => '/files'],
             ['name' => 'app_log', 'title' => 'Logs', 'icon' => 'file-text', 'url' => '/logs'],
             ['name' => 'app_backup', 'title' => 'Backups', 'icon' => 'archive', 'url' => '/backups'],
-            ['name' => 'app_setting', 'title' => 'Settings', 'icon' => 'settings', 'url' => '/settings'],
+            // No `app_setting` — there is no dedicated Settings screen.
+            // Enable/disable lives directly on the Dashboard, gated by the
+            // same `application` permission every other write on this
+            // resource already uses, not a per-app permission of its own.
             ['name' => 'app_php', 'title' => 'PHP Settings', 'icon' => 'file-code', 'url' => '/php'],
             ['name' => 'app_security', 'title' => 'Password Protection', 'icon' => 'lock', 'url' => '/security'],
             ['name' => 'app_firewall', 'title' => 'Firewall', 'icon' => 'shield', 'url' => '/firewall'],

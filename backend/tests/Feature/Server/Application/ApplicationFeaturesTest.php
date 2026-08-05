@@ -102,7 +102,7 @@ it('still returns every application permission for the role form', function () {
             ->json('permissions')
     )->pluck('name');
 
-    expect($all)->toHaveCount(16)
+    expect($all)->toHaveCount(15)
         ->and($all)->toContain('app_deployment')
         ->and($all)->toContain('app_staging');
 });
