@@ -1729,6 +1729,16 @@ The one high-value action a full file manager buries: reset a site's ownership a
 
 **Activity:** `application.file_copied`.
 
+**`POST /api/applications/{application}/files/compress`** — throttle 10/min
+- Body: `{"path", "target"}` — packages `path` (file or directory) into a new `.zip` at `target`. The reverse of extract.
+- `target` must end in `.zip` and must not already exist (`422` either way).
+- Unlike extract, no zip-slip validation is needed on this side — the panel is archiving files it already trusts from this site's own filesystem, not accepting someone else's archive.
+- Runs `zip -r` with the source's *parent directory* as the working directory, so the archive holds relative paths (`my-plugin/plugin.php`) rather than the full server path.
+- Requires the `zip` binary — surfaced by `panel:doctor`'s optional binaries check (`compressing files in the Files feature`) if missing; install.sh installs it alongside `unzip`.
+- `404` if `path` doesn't exist, or isn't a file/directory.
+
+**Activity:** `application.files_compressed`.
+
 **`DELETE /api/applications/{application}/files`** — throttle 10/min
 - Body: `{"path", "confirm": true}` — **`confirm: true` is required.** A deliberate second field, not just hitting the URL, as a floor against firing this by accident.
 - Recursive for a directory. **No trash, no undo** — same stated limitation as extract's lack of rollback.

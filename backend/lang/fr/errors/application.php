@@ -30,5 +30,6 @@ return [
 
     'path_exists' => 'Quelque chose existe déjà à ce chemin.',
     'cannot_delete_root' => 'Le dossier racine du site ne peut pas être supprimé.',
+    'target_not_zip' => 'Le nom de la nouvelle archive doit se terminer par .zip.',
 
 ];

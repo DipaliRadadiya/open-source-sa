@@ -234,6 +234,39 @@ class FileBrowser
     }
 
     /**
+     * Packages a file or directory into a new `.zip` elsewhere in the site —
+     * the reverse of `extract()`.
+     *
+     * Unlike extract, there is no zip-slip surface here: the panel is
+     * archiving files it already trusts from this site's own filesystem, not
+     * accepting someone else's archive. `zip -r` runs with the source's
+     * *parent* directory as `cwd` and the source's own basename as the
+     * argument, so the archive contains relative paths (`my-folder/file.txt`)
+     * rather than the full server path — the same reason every archiver
+     * defaults to relative paths when you "compress this folder" in a
+     * desktop file manager.
+     */
+    public function compress(Application $application, string $path, string $targetPath): void
+    {
+        $source = $this->resolve($application, $path);
+        $sourceStat = $this->stat($application, $source);
+        abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
+
+        abort_unless(str_ends_with(strtolower($targetPath), '.zip'), 422, __('errors/application.target_not_zip'));
+
+        $target = $this->resolve($application, $targetPath);
+        abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
+        $this->assertType($application, dirname($target), 'd');
+
+        $this->run(
+            $application,
+            ['zip', '-r', $target, basename($source)],
+            'compress',
+            cwd: dirname($source),
+        );
+    }
+
+    /**
      * Deletes a file or a directory (recursively). The one destructive
      * operation in this feature — no trash, no undo, same stated limitation
      * as `extract()`'s lack of rollback. The site root itself can never be
@@ -459,13 +492,14 @@ class FileBrowser
     /**
      * @param  array<int, string>  $command
      */
-    private function run(Application $application, array $command, string $op, ?string $input = null): ServerOpsResult
+    private function run(Application $application, array $command, string $op, ?string $input = null, ?string $cwd = null): ServerOpsResult
     {
         $result = $this->serverOps->run(
             $this->asUser($application, $command),
             ['feature' => 'application', 'op' => "file_{$op}", 'application' => $application->id],
             timeout: 60,
             input: $input,
+            cwd: $cwd,
         );
 
         if ($result->failed()) {

@@ -120,7 +120,7 @@ return [
             'ufw', 'fail2ban-client', 'sshd',
             'fallocate', 'mkswap', 'swapon', 'swapoff',
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',
-            'ps', 'kill', 'ss', 'curl', 'unzip',
+            'ps', 'kill', 'ss', 'curl', 'unzip', 'zip',
             'tar', 'git', 'fnm', 'wp',
         ],
     ],

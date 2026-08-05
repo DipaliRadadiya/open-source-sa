@@ -191,11 +191,16 @@ class FileBrowserFake
      */
     public static array $archives = [];
 
+    // The cwd every command ran with, index-aligned with $ran.
+    /** @var array<int, string> */
+    public static array $cwds = [];
+
     public static function reset(): void
     {
         self::$fs = ['' => ['type' => 'd']];
         self::$ran = [];
         self::$archives = [];
+        self::$cwds = [];
     }
 }
 
@@ -216,6 +221,7 @@ function fakeFileBrowserServer(): void
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         FileBrowserFake::$ran[] = implode(' ', $args);
+        FileBrowserFake::$cwds[] = $process->path;
 
         // Every browser command is wrapped as `runuser -u siteowner --`;
         // unwrap it here to work out what was actually asked for.
@@ -389,6 +395,13 @@ function fakeFileBrowserServer(): void
                     FileBrowserFake::$fs[$copied] = $entry;
                 }
             }
+
+            return Process::result(exitCode: 0);
+        }
+
+        if ($binary === 'zip') {
+            // ['zip', '-r', $target, $basename] — cwd is the source's parent.
+            FileBrowserFake::$fs[$relative($inner[2])] = ['type' => 'f', 'size' => 1, 'content' => 'zipped'];
 
             return Process::result(exitCode: 0);
         }
@@ -1008,6 +1021,65 @@ describe('copying', function () {
 
         $this->actingAs($user)
             ->postJson(filesUrl('/copy'), ['path' => 'old.txt', 'target' => 'new.txt'])
+            ->assertForbidden();
+    });
+});
+
+describe('compressing', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['my-plugin'] = ['type' => 'd'];
+        FileBrowserFake::$fs['my-plugin/plugin.php'] = ['type' => 'f', 'content' => 'x'];
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+    });
+
+    it('packages a folder into a new zip, running with the source\'s parent as cwd', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.zip'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('wp-content/backup.zip')
+            // The archive contains relative paths (my-plugin/...), not the
+            // full server path — that's what running with cwd set achieves.
+            ->and(FileBrowserFake::$cwds)->toContain('/home/siteowner/shop.test')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- zip -r')))->toBeTrue()
+            ->and(ActivityLog::where('action', 'files_compressed')->exists())->toBeTrue();
+    });
+
+    it('refuses a target that does not end in .zip', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.tar'])
+            ->assertStatus(422);
+    });
+
+    it('refuses when the destination already exists', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/backup.zip'] = ['type' => 'f', 'content' => 'already here'];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.zip'])
+            ->assertStatus(422);
+    });
+
+    it('404s when the source does not exist', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), ['path' => 'nope', 'target' => 'wp-content/backup.zip'])
+            ->assertNotFound();
+    });
+
+    it('refuses a viewer who cannot manage', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)
+            ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.zip'])
             ->assertForbidden();
     });
 });

@@ -30,5 +30,6 @@ return [
 
     'path_exists' => 'そのパスにはすでに何かが存在します。',
     'cannot_delete_root' => 'サイトのルートフォルダは削除できません。',
+    'target_not_zip' => '新しいアーカイブの名前は .zip で終わる必要があります。',
 
 ];

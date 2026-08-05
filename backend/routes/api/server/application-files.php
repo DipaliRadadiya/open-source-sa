@@ -47,5 +47,8 @@ Route::put('/applications/{application}/files/rename', [ApplicationFileControlle
 Route::post('/applications/{application}/files/copy', [ApplicationFileController::class, 'copy'])
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);
 
+Route::post('/applications/{application}/files/compress', [ApplicationFileController::class, 'compress'])
+    ->middleware(['permission:app_file,manage', 'throttle:10,1']);
+
 Route::delete('/applications/{application}/files', [ApplicationFileController::class, 'destroy'])
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);

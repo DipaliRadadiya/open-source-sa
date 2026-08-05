@@ -144,6 +144,7 @@ return [
     'application.directory_created' => 'A créé :path sur :name',
     'application.file_renamed' => 'A renommé :path en :target sur :name',
     'application.file_copied' => 'A copié :path vers :target sur :name',
+    'application.files_compressed' => 'A compressé :path dans :target sur :name',
     'application.file_deleted' => 'A supprimé :path sur :name',
     'application.worker_created' => 'A ajouté le worker :worker à :name',
     'application.worker_updated' => 'A mis à jour le worker :worker de :name',

@@ -144,6 +144,7 @@ return [
     'application.directory_created' => 'Создал :path на :name',
     'application.file_renamed' => 'Переименовал :path в :target на :name',
     'application.file_copied' => 'Скопировал :path в :target на :name',
+    'application.files_compressed' => 'Сжал :path в :target на :name',
     'application.file_deleted' => 'Удалил :path на :name',
     'application.worker_created' => 'Добавил обработчик :worker в :name',
     'application.worker_updated' => 'Обновил обработчик :worker в :name',

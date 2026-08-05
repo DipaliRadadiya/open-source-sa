@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\BrowseFilesRequest;
+use App\Http\Requests\Server\Application\CompressFileRequest;
 use App\Http\Requests\Server\Application\CopyFileRequest;
 use App\Http\Requests\Server\Application\CreateDirectoryRequest;
 use App\Http\Requests\Server\Application\DeleteFileRequest;
@@ -154,6 +155,23 @@ class ApplicationFileController extends Controller
         ]);
 
         return response()->json(['copied' => true]);
+    }
+
+    public function compress(
+        CompressFileRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->compress($application, $request->sourcePath(), $request->targetPath());
+
+        $activity->log('application.files_compressed', $application, [
+            'name' => $application->name,
+            'path' => $request->sourcePath(),
+            'target' => $request->targetPath(),
+        ]);
+
+        return response()->json(['compressed' => true]);
     }
 
     public function destroy(

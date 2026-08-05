@@ -40,6 +40,7 @@ class BinariesCheck implements DoctorCheck
         'phpenmod' => 'PHP extension toggles',
         'hostnamectl' => 'hostname setting',
         'timedatectl' => 'timezone setting',
+        'zip' => 'compressing files in the Files feature',
     ];
 
     public function key(): string

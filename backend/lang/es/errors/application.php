@@ -30,5 +30,6 @@ return [
 
     'path_exists' => 'Ya existe algo en esa ruta.',
     'cannot_delete_root' => 'No se puede eliminar la carpeta raíz del sitio.',
+    'target_not_zip' => 'El nombre del nuevo archivo debe terminar en .zip.',
 
 ];
