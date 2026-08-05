@@ -3,6 +3,8 @@
 namespace App\Services\Server\Settings;
 
 use App\Contracts\SettingGroup;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Aggregates the setting groups. `GET /settings` returns every available
@@ -42,14 +44,29 @@ class SettingsManager
     /**
      * Current values for every available group, keyed by group.
      *
+     * Each group is isolated: one throwing (a bad `available()` probe, a
+     * `read()` that hits an unexpected state) must not take the other five
+     * down with it, and the response would otherwise look identical to every
+     * group failing — the caller gets a full page failure to debug instead of
+     * "the one group that changed recently is missing." Logged with the full
+     * exception, because that gap is exactly what turned a real bug into a
+     * silent one previously.
+     *
      * @return array<string, array<string, mixed>>
      */
     public function all(): array
     {
         $settings = [];
         foreach ($this->groups() as $group) {
-            if ($group->available()) {
-                $settings[$group->key()] = $group->read();
+            try {
+                if ($group->available()) {
+                    $settings[$group->key()] = $group->read();
+                }
+            } catch (Throwable $e) {
+                Log::error('settings group failed to read', [
+                    'group' => $group->key(),
+                    'exception' => $e,
+                ]);
             }
         }
 
