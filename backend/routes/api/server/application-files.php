@@ -26,5 +26,8 @@ Route::get('/applications/{application}/files/content', [ApplicationFileControll
 Route::put('/applications/{application}/files/content', [ApplicationFileController::class, 'update'])
     ->middleware(['permission:app_file,manage', 'throttle:20,1']);
 
+Route::post('/applications/{application}/files/upload', [ApplicationFileController::class, 'upload'])
+    ->middleware(['permission:app_file,manage', 'throttle:10,1']);
+
 Route::get('/applications/{application}/files/download', [ApplicationFileController::class, 'download'])
     ->middleware(['permission:app_file', 'throttle:20,1']);

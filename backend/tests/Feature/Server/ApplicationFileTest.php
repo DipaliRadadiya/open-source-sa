@@ -5,6 +5,7 @@ use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -255,7 +256,11 @@ function fakeFileBrowserServer(): void
 
         if ($binary === 'tee') {
             $rel = $relative($inner[1]);
-            FileBrowserFake::$fs[$rel]['content'] = $process->input ?? '';
+            FileBrowserFake::$fs[$rel] = [
+                'type' => 'f',
+                ...(FileBrowserFake::$fs[$rel] ?? []),
+                'content' => $process->input ?? '',
+            ];
 
             return Process::result(exitCode: 0);
         }
@@ -414,5 +419,92 @@ describe('browsing', function () {
 
             $this->getJson(filesUrl())->assertUnauthorized();
         });
+    });
+});
+
+describe('uploading', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/plugins'] = ['type' => 'd'];
+    });
+
+    it('writes an uploaded file as the site\'s own user', function () {
+        fakeFileBrowserServer();
+        $file = UploadedFile::fake()->createWithContent('thing.zip', 'zip-bytes');
+
+        $this->actingAs($this->admin)
+            ->post(filesUrl('/upload'), ['path' => 'wp-content/plugins/thing.zip', 'file' => $file])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['wp-content/plugins/thing.zip']['content'])->toBe('zip-bytes')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- tee')))->toBeTrue()
+            ->and(ActivityLog::where('type', 'application')->where('action', 'file_uploaded')->exists())->toBeTrue();
+    });
+
+    it('never builds the target from the uploaded file\'s own name', function () {
+        fakeFileBrowserServer();
+        // The client picks the target path; the file's own (client-supplied,
+        // equally untrusted) original name must never leak into it.
+        $file = UploadedFile::fake()->createWithContent('../../etc/evil.php', 'x');
+
+        $this->actingAs($this->admin)
+            ->post(filesUrl('/upload'), ['path' => 'wp-content/plugins/safe-name.txt', 'file' => $file])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('wp-content/plugins/safe-name.txt')
+            ->and(FileBrowserFake::$fs)->not->toHaveKey('etc/evil.php');
+    });
+
+    it('rejects a target path that escapes the site root', function () {
+        fakeFileBrowserServer();
+        $file = UploadedFile::fake()->createWithContent('thing.zip', 'x');
+
+        $this->actingAs($this->admin)
+            ->post(filesUrl('/upload'), ['path' => '../../etc/passwd', 'file' => $file])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('path');
+    });
+
+    it('refuses to upload into a directory that does not exist', function () {
+        fakeFileBrowserServer();
+        $file = UploadedFile::fake()->createWithContent('thing.zip', 'x');
+
+        $this->actingAs($this->admin)
+            ->post(filesUrl('/upload'), ['path' => 'no-such-dir/thing.zip', 'file' => $file])
+            ->assertNotFound();
+    });
+
+    it('overwrites an existing file at that path', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['wp-content/plugins/thing.zip'] = ['type' => 'f', 'content' => 'old'];
+        $file = UploadedFile::fake()->createWithContent('thing.zip', 'new');
+
+        $this->actingAs($this->admin)
+            ->post(filesUrl('/upload'), ['path' => 'wp-content/plugins/thing.zip', 'file' => $file])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['wp-content/plugins/thing.zip']['content'])->toBe('new');
+    });
+
+    it('refuses a file above the upload size cap', function () {
+        fakeFileBrowserServer();
+        $file = UploadedFile::fake()->create('thing.zip', (50 * 1024) + 1);
+
+        $this->actingAs($this->admin)
+            ->post(filesUrl('/upload'), ['path' => 'wp-content/plugins/thing.zip', 'file' => $file])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('file');
+    });
+
+    it('refuses a viewer who cannot manage', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+        $file = UploadedFile::fake()->createWithContent('thing.zip', 'x');
+
+        $this->actingAs($user)
+            ->post(filesUrl('/upload'), ['path' => 'wp-content/plugins/thing.zip', 'file' => $file])
+            ->assertForbidden();
     });
 });

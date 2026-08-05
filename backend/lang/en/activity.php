@@ -139,6 +139,7 @@ return [
     'application.environment_restored' => 'Restored a previous environment file for :name',
     'application.permissions_fixed' => 'Reset file permissions for :name',
     'application.file_edited' => 'Edited :path on :name',
+    'application.file_uploaded' => 'Uploaded :path to :name',
     'application.worker_created' => 'Added worker :worker to :name',
     'application.worker_updated' => 'Updated worker :worker on :name',
     'application.worker_deleted' => 'Removed worker :worker from :name',

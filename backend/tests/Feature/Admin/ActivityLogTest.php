@@ -150,7 +150,7 @@ it('returns the known distinct types and actions for filter dropdowns', function
         ->assertJsonPath('types', ['application', 'backup', 'central', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'role', 'server', 'service', 'setting', 'system_user', 'user'])
         // Deduped across types: backup adds `configured` and `completed`,
         // while its `failed` and `updated` already exist elsewhere.
-        ->assertJsonCount(115, 'actions.all');
+        ->assertJsonCount(116, 'actions.all');
     // `all` = every verb; per-type keys are scoped to that type's verbs.
     expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'downloaded', 'cleaned', 'schedule_updated', 'profile_updated', 'user_created', 'connection_updated');
     expect($response->json('actions.application'))->toContain('webhook_enabled', 'webhook_disabled', 'webhook_rotated', 'webhook_deployed');

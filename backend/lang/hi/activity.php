@@ -139,6 +139,7 @@ return [
     'application.environment_restored' => ':name की पिछली एनवायरनमेंट फ़ाइल पुनर्स्थापित की',
     'application.permissions_fixed' => ':name की फ़ाइल अनुमतियाँ रीसेट कीं',
     'application.file_edited' => ':name पर :path संपादित की',
+    'application.file_uploaded' => ':name पर :path अपलोड की',
     'application.worker_created' => ':name में वर्कर :worker जोड़ा',
     'application.worker_updated' => ':name का वर्कर :worker अद्यतन किया',
     'application.worker_deleted' => ':name से वर्कर :worker हटाया',

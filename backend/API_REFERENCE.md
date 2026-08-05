@@ -1683,6 +1683,17 @@ The one high-value action a full file manager buries: reset a site's ownership a
 
 **Activity:** `application.file_edited` (path only, never content).
 
+**`POST /api/applications/{application}/files/upload`** — multipart, throttle 10/min
+- Fields: `path` (the **full target path**, e.g. `wp-content/plugins/thing.zip` — not a directory) + `file`
+- **The uploaded file's own client-supplied name is never used to build the target.** `path` is the whole answer to "where does this go"; a filename is exactly as attacker-controlled as any other client input, and stitching a validated directory to an unvalidated name would reopen the traversal surface `SafeRelativePath` exists to close.
+- Requires the **containing directory** to already exist — no implicit `mkdir`. The file itself is what upload is allowed to create.
+- Overwrites an existing file at that path.
+- Capped at **50 MB** (`422` above it) — bigger than the 5 MB view/edit cap since a plugin zip is bigger than something you'd read in a browser, but still buffered through a PHP process, not streamed.
+
+**Activity:** `application.file_uploaded`.
+
+**Extract is not built yet** — the zip-slip/zip-bomb half of the file-manager research, deliberately sequenced after upload rather than shipped together.
+
 ---
 
 ### Application environment (App sidebar → Environment)

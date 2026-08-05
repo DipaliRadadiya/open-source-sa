@@ -22,8 +22,8 @@ use Illuminate\Support\Carbon;
  * site's own user means that attack, if it slipped through, gains nothing:
  * the user already cannot read anything outside what they own.
  *
- * No create, delete, rename, upload or extract — this is the read/view/edit
- * slice on purpose. See this repo's file-manager research for why the rest is
+ * No create, delete, rename or extract — deliberately smaller than a full
+ * file manager. See this repo's file-manager research for why the rest is
  * deferred rather than an oversight.
  */
 class FileBrowser
@@ -32,6 +32,12 @@ class FileBrowser
      * for exactly this reason — buffering a big file through a PHP process is
      * how a download becomes a memory exhaustion bug. */
     public const MAX_BYTES = 5 * 1024 * 1024;
+
+    /** Bigger than MAX_BYTES on purpose — an uploaded plugin zip is larger
+     * than anything reasonable to open in a text editor, but still bounded:
+     * this is buffered through a PHP process the same as everything else
+     * here, not streamed. */
+    public const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 
     private const BINARY_SNIFF_BYTES = 8192;
 
@@ -126,6 +132,29 @@ class FileBrowser
         $this->assertType($application, $target, 'f');
 
         $this->run($application, ['tee', $target], 'write', input: $content);
+    }
+
+    /**
+     * Writes a new file at `path`, or overwrites one that is already there.
+     *
+     * The original client-supplied filename is never used to build the
+     * target — `$path` is the whole answer to "where does this go", validated
+     * the same way as everything else here. A filename is exactly as
+     * attacker-controlled as any other client input, and stitching a
+     * validated directory to an unvalidated name would reopen the traversal
+     * surface `SafeRelativePath` exists to close.
+     */
+    public function upload(Application $application, string $path, string $contents): void
+    {
+        $target = $this->resolve($application, $path);
+        $directory = dirname($target);
+
+        // The directory has to already exist — no implicit `mkdir`, the same
+        // restraint the rest of this feature keeps. The file itself is what
+        // upload is allowed to create; the folder structure is not.
+        $this->assertType($application, $directory, 'd');
+
+        $this->run($application, ['tee', $target], 'upload', input: $contents);
     }
 
     private function resolve(Application $application, string $path): string
