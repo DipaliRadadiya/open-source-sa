@@ -71,7 +71,7 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
+        className="w-(--radix-popover-trigger-width) p-0"
         align="start"
         onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -85,7 +85,7 @@ export function Combobox({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={searchPlaceholder ?? t("search")}
-            className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
+            className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
           />
         </div>
         <div className="max-h-64 overflow-y-auto p-1">

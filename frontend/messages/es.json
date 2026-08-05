@@ -883,7 +883,8 @@
     "readFailed": {
       "title": "No se pudo leer este registro",
       "body": "El servidor no respondió. Puede que el archivo esté bien: inténtalo de nuevo."
-    }
+    },
+    "clearSearch": "Borrar filtro"
   },
   "services": {
     "title": "Servicios",
@@ -2310,6 +2311,22 @@
     }
   },
   "applications": {
+    "logs": {
+      "pageTitle": "Registros",
+      "pageSubtitle": "Consulta los registros de acceso, error y aplicación de este sitio.",
+      "back": "Volver a Aplicaciones",
+      "provisioning": "Los registros estarán disponibles cuando el sitio termine de aprovisionarse.",
+      "loadFailed": "No pudimos cargar los registros.",
+      "sourcesLabel": "Fuente de registro",
+      "proxyHint": "Estos son los registros del proxy inverso — la salida de tu app está en «Salida de la aplicación».",
+      "empty": {
+        "badge": "vacío"
+      },
+      "noSources": {
+        "title": "Sin registros para este sitio",
+        "body": "Este sitio aún no tiene fuentes de registro legibles."
+      }
+    },
     "environment": {
       "pageTitle": "Entorno",
       "pageSubtitle": "Edita el archivo .env de este sitio.",
@@ -2512,7 +2529,8 @@
       "repositoryNeedsAccount": "Elige primero una cuenta de Git.",
       "branchNeedsRepository": "Elige primero un repositorio.",
       "changeType": "Cambiar",
-      "noOptions": "Aún no hay opciones disponibles."
+      "noOptions": "Aún no hay opciones disponibles.",
+      "typePlaceholder": "Busca y selecciona un tipo de aplicación…"
     },
     "actions": {
       "label": "Acciones de la aplicación",

@@ -883,7 +883,8 @@
     "readFailed": {
       "title": "This log could not be read",
       "body": "The server did not answer. The file may still be fine — try again."
-    }
+    },
+    "clearSearch": "Clear filter"
   },
   "services": {
     "title": "Services",
@@ -2310,6 +2311,22 @@
     }
   },
   "applications": {
+    "logs": {
+      "pageTitle": "Logs",
+      "pageSubtitle": "Read this site's access, error and application logs.",
+      "back": "Back to Applications",
+      "provisioning": "Logs become available once the site finishes provisioning.",
+      "loadFailed": "We couldn't load the logs.",
+      "sourcesLabel": "Log source",
+      "proxyHint": "These are the reverse proxy's logs — your app's own output is under \"Application output\".",
+      "empty": {
+        "badge": "empty"
+      },
+      "noSources": {
+        "title": "No logs for this site",
+        "body": "This site has no readable log sources yet."
+      }
+    },
     "environment": {
       "pageTitle": "Environment",
       "pageSubtitle": "Edit this site's .env file.",
@@ -2512,7 +2529,8 @@
       "repositoryNeedsAccount": "Choose a Git account first.",
       "branchNeedsRepository": "Choose a repository first.",
       "changeType": "Change",
-      "noOptions": "No options available yet."
+      "noOptions": "No options available yet.",
+      "typePlaceholder": "Search and select an application type…"
     },
     "actions": {
       "label": "Application actions",

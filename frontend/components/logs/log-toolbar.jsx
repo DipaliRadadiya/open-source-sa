@@ -1,7 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { RotateCw, Download, WrapText, Radio, Loader2, Copy } from "lucide-react";
+import {
+  RotateCw,
+  Download,
+  WrapText,
+  Radio,
+  Loader2,
+  Copy,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +56,8 @@ export function LogToolbar({
   onReload,
   onCopyVisible,
   downloadUrl,
+  // App logs have no download endpoint, so the action is hidden there.
+  showDownload = true,
   busy,
   disabled,
   searchRef,
@@ -159,15 +169,30 @@ export function LogToolbar({
           view pushed right. Row one keeps nothing but identity and the tail
           mode, which is what gives the heading room to breathe. */}
       <div className="flex flex-wrap items-center gap-2">
-        <Input
-          ref={searchRef}
-          value={term}
-          onChange={(e) => onTermChange(e.target.value)}
-          placeholder={t("searchPlaceholder")}
-          disabled={disabled}
-          className="w-full min-w-40 flex-1 sm:max-w-sm"
-          aria-label={t("searchPlaceholder")}
-        />
+        <div className="relative w-full min-w-40 flex-1 sm:max-w-sm">
+          <Input
+            ref={searchRef}
+            value={term}
+            onChange={(e) => onTermChange(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            disabled={disabled}
+            className={cn("w-full", term && "pr-8")}
+            aria-label={t("searchPlaceholder")}
+          />
+          {term ? (
+            <button
+              type="button"
+              onClick={() => {
+                onTermChange("");
+                searchRef.current?.focus();
+              }}
+              aria-label={t("clearSearch")}
+              className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
+        </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
           {/* Severity is a display filter over the loaded buffer, which is why it
@@ -177,7 +202,7 @@ export function LogToolbar({
           <div
             role="group"
             aria-label={t("severityLabel")}
-            className="flex items-center overflow-hidden rounded-lg border divide-x"
+            className="flex h-9 items-center overflow-hidden rounded-lg border divide-x"
           >
             {SEVERITY_FILTERS.map((key) => (
               <button
@@ -187,7 +212,7 @@ export function LogToolbar({
                 disabled={disabled}
                 aria-pressed={severity === key}
                 className={cn(
-                  "px-3 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50",
+                  "flex h-full items-center px-3.5 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50",
                   "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
                   severity === key
                     ? "bg-secondary font-medium text-secondary-foreground"
@@ -204,10 +229,7 @@ export function LogToolbar({
             onValueChange={(v) => onLinesChange(Number(v))}
             disabled={disabled}
           >
-            <SelectTrigger
-              aria-label={t("linesLabel")}
-              className="w-40"
-            >
+            <SelectTrigger aria-label={t("linesLabel")} className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper">
@@ -235,13 +257,20 @@ export function LogToolbar({
               onClick={onCopyVisible}
               disabled={disabled}
             />
-            <IconAction icon={RotateCw} label={t("reload")} onClick={onReload} disabled={disabled} />
             <IconAction
-              icon={Download}
-              label={t("download")}
-              href={downloadUrl}
+              icon={RotateCw}
+              label={t("reload")}
+              onClick={onReload}
               disabled={disabled}
             />
+            {showDownload ? (
+              <IconAction
+                icon={Download}
+                label={t("download")}
+                href={downloadUrl}
+                disabled={disabled}
+              />
+            ) : null}
           </div>
         </div>
       </div>
