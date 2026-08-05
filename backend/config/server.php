@@ -285,6 +285,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | 8G Firewall
+    |--------------------------------------------------------------------------
+    |
+    | nginx's `map` directive only works in the `http` context, so the six
+    | rule-category maps live in one shared, server-wide file rather than a
+    | per-site vhost — see App\Services\Server\Applications\Waf8GManager.
+    | Apache needs no equivalent: SetEnvIfExpr is an ordinary per-vhost
+    | directive, so its ruleset is `Include`d straight from resources/waf/
+    | into each site's own <Directory> block, only when that site turns it on.
+    |
+    */
+    'waf' => [
+        'nginx_maps_path' => env('SERVER_WAF_NGINX_MAPS_PATH', '/etc/nginx/conf.d/00-8g-firewall-maps.conf'),
+        // Apache's SetEnvIfExpr/SetEnvIfNoCase are ordinary per-vhost
+        // directives, so this isn't required to live anywhere in
+        // particular — one shared path avoids duplicating ~15KB of regex
+        // into every site's own vhost file, and each site just `Include`s
+        // it, matching the official 8G Apache port's own install method.
+        'apache_setenvif_path' => env('SERVER_WAF_APACHE_SETENVIF_PATH', '/etc/apache2/waf/8g-apache-setenvif.conf'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Cron.d directory
     |--------------------------------------------------------------------------
     |

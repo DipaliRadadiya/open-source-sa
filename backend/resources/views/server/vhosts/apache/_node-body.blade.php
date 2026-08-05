@@ -42,20 +42,62 @@
 
     RequestHeader set X-Forwarded-Proto "%{REQUEST_SCHEME}s"
 
+@if ($waf)
+    Include {{ config('server.waf.apache_setenvif_path') }}
+@foreach ($waf['exceptions'] as $exception)
+    SetEnvIfNoCase Request_URI "{{ $exception }}" waf_exception
+    SetEnvIfNoCase Query_String "{{ $exception }}" waf_exception
+    SetEnvIfNoCase User-Agent "{{ $exception }}" waf_exception
+@endforeach
+@foreach ($waf['customRules'] as $rule)
+    SetEnvIfNoCase Request_URI "{{ $rule }}" waf_custom
+    SetEnvIfNoCase Query_String "{{ $rule }}" waf_custom
+@endforeach
+@endif
 @if ($botBlock)
     SetEnvIfNoCase User-Agent "^({{ $botBlock }})" ai_bot_blocked
 @endif
-@if ($botBlock || $basicAuth)
-    {{-- A node app has no `<Directory>` of its own to attach either check
-         to — it serves nothing from disk — so both are scoped by URL
-         instead, with the ACME path excluded by the same regex the
-         dotfile-deny rule below uses. One `RequireAll` so a blocked bot
-         fails here regardless of Basic Auth, the same as the php/static
-         `<Directory>` blocks. --}}
+@if ($botBlock || $basicAuth || ($waf && $waf['mode'] === 'enforce'))
+    {{-- A node app has no `<Directory>` of its own to attach any of these
+         checks to — it serves nothing from disk — so all three are scoped
+         by URL instead, with the ACME path excluded by the same regex the
+         dotfile-deny rule below uses. One `RequireAll` so a blocked bot or
+         WAF match fails here regardless of Basic Auth, the same as the
+         php/static `<Directory>` blocks. --}}
     <LocationMatch "^/(?!\.well-known/acme-challenge/)">
         <RequireAll>
 @if ($botBlock)
             Require not env ai_bot_blocked
+@endif
+@if ($waf && $waf['mode'] === 'enforce')
+            <RequireAny>
+                Require env waf_exception
+                <RequireNone>
+                    <RequireAny>
+@if (in_array('query_string', $waf['categories'], true))
+                        Require env waf_query
+@endif
+@if (in_array('request_uri', $waf['categories'], true))
+                        Require env waf_uri
+@endif
+@if (in_array('user_agent', $waf['categories'], true))
+                        Require env waf_agent
+@endif
+@if (in_array('referrer', $waf['categories'], true))
+                        Require env waf_referer
+@endif
+@if (in_array('cookie', $waf['categories'], true))
+                        Require env waf_cookie
+@endif
+@if (in_array('method', $waf['categories'], true))
+                        Require env waf_method
+@endif
+@if ($waf['customRules'] !== [])
+                        Require env waf_custom
+@endif
+                    </RequireAny>
+                </RequireNone>
+            </RequireAny>
 @endif
 @if ($basicAuth)
             AuthType Basic
@@ -73,3 +115,26 @@
     <DirectoryMatch "/\.(?!well-known)">
         Require all denied
     </DirectoryMatch>
+@if ($waf && $waf['mode'] === 'detect')
+@if (in_array('query_string', $waf['categories'], true))
+    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_query
+@endif
+@if (in_array('request_uri', $waf['categories'], true))
+    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_uri
+@endif
+@if (in_array('user_agent', $waf['categories'], true))
+    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_agent
+@endif
+@if (in_array('referrer', $waf['categories'], true))
+    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_referer
+@endif
+@if (in_array('cookie', $waf['categories'], true))
+    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_cookie
+@endif
+@if (in_array('method', $waf['categories'], true))
+    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_method
+@endif
+@if ($waf['customRules'] !== [])
+    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_custom
+@endif
+@endif

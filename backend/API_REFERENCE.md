@@ -1201,6 +1201,8 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   "is_disabled": false, "disabled_at": null,
   "basic_auth_enabled": false, "basic_auth_username": null,
   "ai_bot_policy": "allow_all", "ai_bot_policy_title": "Allow all AI bots",
+  "waf_enabled": false, "waf_mode": "detect", "waf_mode_title": "Just watch, don't block",
+  "waf_categories": ["query_string", "request_uri", "user_agent", "referrer", "cookie", "method"],
   "system_user": { "id": 3, "username": "deploy" },
   "php_version": "8.4", "node_version": null, "app_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
@@ -1261,6 +1263,41 @@ Three plain-language choices, not a switch — a blunt on/off would block AI *se
 - **Enforcement is the vhost-level user-agent block only** — nginx `if ($http_user_agent ~* …) { return 403; }`, Apache `SetEnvIfNoCase` + `<RequireAll><Require not env …></RequireAll>` (chosen over `mod_rewrite` so it can never collide with a site's own `.htaccess` rewrite rules), OpenLiteSpeed via its existing `rewrite{}` block. **No `robots.txt` is written or modified** — plenty of sites already ship their own (SEO plugins, a `Sitemap:` line), and generating one risks silently overwriting it; `robots.txt` is voluntary anyway; the enforced 403 is what actually blocks a bot that ignores it.
 - **A blocked bot is checked first**, ahead of Basic Auth — it gets a flat 403 and never sees the login prompt, on every driver.
 - Known limitation, stated rather than hidden: the bot list can only change for a given site the next time its vhost is re-rendered (this endpoint, a deploy, a certificate renewal, …) — a policy shipped in a future panel update does not retroactively reach an already-configured site that never gets touched again.
+
+### Firewall — 8G Firewall (`app_firewall`, its own screen)
+
+A curated port of Jeff Starr's [8G Firewall](https://perishablepress.com/8g-firewall/) v1.5 (2025-10-06) — the same ruleset RunCloud/xCloud/GridPane ship under this name — split into **six independently switchable categories** rather than one on/off switch (GridPane's own production port does the same, for the same reason: a single false positive, like the documented Tapatalk `mobiquo` case or `phpinfo()` getting caught, shouldn't force giving up every category to fix one).
+
+**`GET /api/waf-options`** (`view`) — the six categories and two modes, for the screen's own labels.
+```json
+{
+  "waf_categories": [
+    {"value": "query_string", "title": "Bad search terms"},
+    {"value": "request_uri", "title": "Bad web addresses"},
+    {"value": "user_agent", "title": "Bad visitors"},
+    {"value": "referrer", "title": "Bad links"},
+    {"value": "cookie", "title": "Bad cookies"},
+    {"value": "method", "title": "Bad request types"}
+  ],
+  "waf_modes": [
+    {"value": "detect", "title": "Just watch, don't block"},
+    {"value": "enforce", "title": "Actually block"}
+  ]
+}
+```
+
+**`GET /api/applications/{id}/waf`** (`view`) — current state, including `waf_exceptions`/`waf_custom_rules`.
+
+**`PUT /api/applications/{id}/waf`** (`manage`) — body `{ enabled, mode, categories: [...], exceptions: [...], custom_rules: [...] }`. `200 {application}` with `waf_enabled`/`waf_mode`/`waf_mode_title`/`waf_categories` refreshed.
+- **`categories`** omitted or empty defaults to all six — turning the firewall on should protect everything by default, not start from an empty set.
+- **`exceptions`** — plain strings (no regex), each one exempts a request from every category check if it appears in the request URI, query string, or user agent. This is the fix for the documented real-world false positives (a forum plugin's own request path, `phpinfo()`) — the site owner adds one word, not a regex.
+- **`custom_rules`** — plain strings, the opposite direction: always block a request containing this, even if none of the six built-in categories would have caught it. Checked against the request URI and query string.
+- **`mode: "detect"`** logs what *would* have been blocked (to `.panel/waf-detect.log` inside the site's own document root — nginx via a conditional `access_log`, Apache via `CustomLog ... env=...`) without ever returning a 403. **`mode: "enforce"`** actually blocks. New/changed configurations are safest started in `detect` given the ruleset's own documented false-positive history.
+- Mechanically: same apply → test → reload → rollback sequence as Password Protection, the AI Bot Blocker, and Enable/disable.
+- **The exceptions/custom-rules list is never written to the database until the config test passes** — a failed test leaves both the toggle state and the rule list exactly as they were before the call, not a half-applied mix.
+- **A blocked request is checked before the AI Bot Blocker and Basic Auth** — the most fundamental gate runs first, so a request that looks like an exploit attempt gets a flat 403 without ever being evaluated as a bot or offered a login prompt.
+- **nginx needs one server-wide shared file** (`config('server.waf.nginx_maps_path')`, default `/etc/nginx/conf.d/00-8g-firewall-maps.conf`) — nginx's `map` directive only works in the `http` context, so the six rule-category maps are declared once for the whole server rather than per site (a pattern xCloud and GridPane's own production 7G/8G ports use for the same reason). Harmless when unused; only sites that turn the firewall on ever reference the variables it defines. **Apache** needs no such restriction — its ruleset lives in one shared file too (`config('server.waf.apache_setenvif_path')`, default `/etc/apache2/waf/8g-apache-setenvif.conf`) purely to avoid duplicating ~15KB of regex into every site's own vhost, and each WAF-enabled site just `Include`s it.
+- **OpenLiteSpeed is not supported by this feature yet** — deliberately, not an oversight: the ruleset is ~150 regex patterns across six categories, and this project has no way to locally verify OpenLiteSpeed's rewrite-engine syntax the way nginx (`nginx -t`, exercised directly against a live instance while building this) and Apache's directive syntax could be checked by inspection. Shipping ~150 untested regex patterns as a *security* feature was judged worse than shipping none for this one driver. The `app_firewall` screen still exists on OLS servers; the 8G section simply has no effect there until a follow-up verifies it against real hardware.
 
 **`GET /api/applications/port-check?port=8080[&application_id=3]`** (`view`) — ask before submitting, so the user is warned as they type rather than refused after.
 ```json

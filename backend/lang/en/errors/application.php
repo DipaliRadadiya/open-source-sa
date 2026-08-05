@@ -18,6 +18,7 @@ return [
     'availability_failed' => 'Changing the application\'s availability failed on the server.',
     'basic_auth_failed' => 'Changing password protection failed on the server.',
     'bot_blocker_failed' => 'Changing the AI Bot Blocker policy failed on the server.',
+    'waf_failed' => 'Changing the firewall settings failed on the server.',
 
     'permissions_fix_failed' => 'Resetting file permissions failed on the server.',
 

@@ -52,6 +52,16 @@ class ApplicationResource extends JsonResource
             'ai_bot_policy' => $this->ai_bot_policy->value,
             'ai_bot_policy_title' => $this->ai_bot_policy->title(),
 
+            // The 8G Firewall. `waf_categories` is null-resolved to "all six"
+            // here too, so the frontend never has to know that null means
+            // the same thing as the full list — one place decides that.
+            'waf_enabled' => (bool) $this->waf_enabled,
+            'waf_mode' => $this->waf_mode->value,
+            'waf_mode_title' => $this->waf_mode->title(),
+            'waf_categories' => $this->wafActiveCategories(),
+            'waf_exceptions' => $this->whenLoaded('wafRules', fn () => $this->wafRules->where('type', 'exception')->pluck('value')->values()),
+            'waf_custom_rules' => $this->whenLoaded('wafRules', fn () => $this->wafRules->where('type', 'block')->pluck('value')->values()),
+
             'system_user' => $this->whenLoaded('systemUser', fn () => $this->systemUser ? [
                 'id' => $this->systemUser->id,
                 'username' => $this->systemUser->username,

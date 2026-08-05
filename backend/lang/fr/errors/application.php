@@ -18,6 +18,7 @@ return [
     'availability_failed' => 'La modification de la disponibilité de l\'application a échoué sur le serveur.',
     'basic_auth_failed' => 'La modification de la protection par mot de passe a échoué sur le serveur.',
     'bot_blocker_failed' => 'La modification de la politique du bloqueur de robots IA a échoué sur le serveur.',
+    'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
 
     'permissions_fix_failed' => 'La réinitialisation des permissions de fichiers a échoué sur le serveur.',
 

@@ -162,4 +162,5 @@ return [
     'application.basic_auth_enabled' => ':name के लिए पासवर्ड सुरक्षा सक्षम की',
     'application.basic_auth_disabled' => ':name के लिए पासवर्ड सुरक्षा अक्षम की',
     'application.ai_bot_policy_updated' => ':name के लिए AI बॉट ब्लॉकर नीति को :policy पर सेट किया',
+    'application.waf_updated' => ':name के लिए फ़ायरवॉल सेटिंग्स अद्यतन कीं',
 ];

@@ -162,4 +162,5 @@ return [
     'application.basic_auth_enabled' => 'Passwortschutz für :name aktiviert',
     'application.basic_auth_disabled' => 'Passwortschutz für :name deaktiviert',
     'application.ai_bot_policy_updated' => 'AI-Bot-Blocker-Richtlinie für :name auf :policy gesetzt',
+    'application.waf_updated' => 'Firewall-Einstellungen für :name aktualisiert',
 ];

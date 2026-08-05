@@ -64,6 +64,54 @@ server {
 @endif
 
     server_name {{ implode(' ', $serverNames) }};
+@if ($waf)
+    {{-- 8G Firewall: checked before the AI bot block and Basic Auth — a
+         request that looks like an exploit attempt should get a flat 403
+         without ever being evaluated as a bot or being offered a login
+         prompt. `$waf_block`/`$waf_exception` use the concatenation trick
+         (`$waf_decision = "10"` means blocked-and-not-excepted) because
+         nginx's `if` has no boolean AND — the same idiom used to restrict
+         a staging site to one IP in every worked nginx example of it. --}}
+    set $waf_block "0";
+    set $waf_exception "0";
+@foreach ($waf['exceptions'] as $exception)
+    if ($request_uri ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
+    if ($args ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
+    if ($http_user_agent ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
+@endforeach
+@if (in_array('query_string', $waf['categories'], true))
+    if ($bad_querystring_ng) { set $waf_block "1"; }
+@endif
+@if (in_array('request_uri', $waf['categories'], true))
+    if ($bad_request_ng) { set $waf_block "1"; }
+@endif
+@if (in_array('user_agent', $waf['categories'], true))
+    if ($bad_bot_ng) { set $waf_block "1"; }
+@endif
+@if (in_array('referrer', $waf['categories'], true))
+    if ($bad_referer_ng) { set $waf_block "1"; }
+@endif
+@if (in_array('cookie', $waf['categories'], true))
+    if ($bad_cookie_ng) { set $waf_block "1"; }
+@endif
+@if (in_array('method', $waf['categories'], true))
+    if ($not_allowed_method_ng) { set $waf_block "1"; }
+@endif
+@foreach ($waf['customRules'] as $rule)
+    if ($request_uri ~* "{{ preg_quote($rule, '/') }}") { set $waf_block "1"; }
+    if ($args ~* "{{ preg_quote($rule, '/') }}") { set $waf_block "1"; }
+@endforeach
+    set $waf_decision "${waf_block}${waf_exception}";
+@if ($waf['mode'] === 'enforce')
+    if ($waf_decision = "10") {
+        return 403;
+    }
+@else
+    set $waf_would_block "0";
+    if ($waf_decision = "10") { set $waf_would_block "1"; }
+    access_log {{ $waf['detectLogPath'] }} combined if=$waf_would_block;
+@endif
+@endif
 @if ($botBlock)
     {{-- Blocked before auth_basic is evaluated, so a blocked bot gets a
          flat 403 and never sees the Basic Auth login prompt. --}}

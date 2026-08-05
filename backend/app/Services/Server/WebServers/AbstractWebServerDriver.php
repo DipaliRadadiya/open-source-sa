@@ -5,6 +5,7 @@ namespace App\Services\Server\WebServers;
 use App\Contracts\WebServerDriver;
 use App\Enums\AiBotPolicy;
 use App\Enums\DomainType;
+use App\Enums\WafMode;
 use App\Models\Application;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\PoolManager;
@@ -122,6 +123,43 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // here, once, so no template re-implements "which bots does this
             // policy block" against `config/ai_bots.php` itself.
             'botBlock' => $this->botBlockPattern($application),
+            'waf' => $this->wafViewData($application, $documentRoot),
+        ];
+    }
+
+    /**
+     * Null unless the firewall is on and actually has something to check —
+     * zero categories and zero custom rules means nothing would ever be
+     * blocked, so the template renders no block at all rather than an
+     * `<RequireAny>`/`if` chain with nothing inside it.
+     *
+     * @return array{mode: string, categories: array<int, string>, exceptions: array<int, string>, customRules: array<int, string>, detectLogPath: string}|null
+     */
+    private function wafViewData(Application $application, string $documentRoot): ?array
+    {
+        if (! $application->waf_enabled) {
+            return null;
+        }
+
+        $categories = $application->wafActiveCategories();
+        // `wafRules` lazy-loads from the database if not already set on the
+        // model — which also means a caller can pre-set it in memory (see
+        // Waf8GManager::apply()) to render against not-yet-saved rules
+        // without a second query silently overwriting them.
+        $customRules = $application->wafRules->where('type', 'block')->pluck('value')->all();
+
+        if ($categories === [] && $customRules === []) {
+            return null;
+        }
+
+        $exceptions = $application->wafRules->where('type', 'exception')->pluck('value')->all();
+
+        return [
+            'mode' => $application->waf_mode instanceof WafMode ? $application->waf_mode->value : (string) $application->waf_mode,
+            'categories' => $categories,
+            'exceptions' => $exceptions,
+            'customRules' => $customRules,
+            'detectLogPath' => $documentRoot.'/.panel/waf-detect.log',
         ];
     }
 

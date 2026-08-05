@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\AiBotPolicy;
 use App\Enums\ApplicationStatus;
 use App\Enums\DomainType;
+use App\Enums\WafCategory;
+use App\Enums\WafMode;
 use App\Services\Applications\SiteTypeManager;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +39,9 @@ class Application extends Model
             'disabled_at' => 'datetime',
             'basic_auth_enabled' => 'boolean',
             'ai_bot_policy' => AiBotPolicy::class,
+            'waf_enabled' => 'boolean',
+            'waf_mode' => WafMode::class,
+            'waf_categories' => 'array',
             'status' => ApplicationStatus::class,
             'settings' => 'array',
             'steps' => 'array',
@@ -115,6 +120,11 @@ class Application extends Model
         return $this->hasOne(ApplicationPhpSettings::class);
     }
 
+    public function wafRules(): HasMany
+    {
+        return $this->hasMany(ApplicationWafRule::class);
+    }
+
     public function features(): array
     {
         return app(SiteTypeManager::class)->find($this->site_type)?->features()
@@ -124,6 +134,18 @@ class Application extends Model
     public function supports(string $feature): bool
     {
         return in_array($feature, $this->features(), true);
+    }
+
+    /**
+     * Which of the six 8G categories are active. Null (never touched this
+     * screen) means all of them — turning the firewall on should protect
+     * everything by default, not start from an empty set.
+     *
+     * @return array<int, string>
+     */
+    public function wafActiveCategories(): array
+    {
+        return $this->waf_categories ?? WafCategory::values();
     }
 
     /**
