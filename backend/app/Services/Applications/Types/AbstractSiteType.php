@@ -2,6 +2,7 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Contracts\CloneStrategy;
 use App\Contracts\SiteType;
 use App\Contracts\StagingStrategy;
 
@@ -142,6 +143,11 @@ abstract class AbstractSiteType implements SiteType
      * ever appears in the feature list a type declares.
      */
     public function stagingStrategy(): ?StagingStrategy
+    {
+        return null;
+    }
+
+    public function cloneStrategy(): ?CloneStrategy
     {
         return null;
     }

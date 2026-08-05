@@ -165,4 +165,5 @@ return [
     'application.waf_updated' => ':name のファイアウォール設定を更新しました',
     'application.staging_created' => ':name のステージングサイトを作成しました',
     'application.staging_pushed' => ':name にステージングをプッシュしました (:mode)',
+    'application.cloned' => ':name を :domain に複製しました',
 ];

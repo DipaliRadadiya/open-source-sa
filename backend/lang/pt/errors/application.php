@@ -20,6 +20,7 @@ return [
     'bot_blocker_failed' => 'Não foi possível alterar a política do Bloqueador de Bots de IA no servidor.',
     'waf_failed' => 'Não foi possível alterar as definições da firewall no servidor.',
     'staging_failed' => 'A operação de staging falhou no servidor.',
+    'clone_failed' => 'A operação de clonagem falhou no servidor.',
 
     'permissions_fix_failed' => 'Falha ao redefinir as permissões de arquivo no servidor.',
 

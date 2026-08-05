@@ -8,7 +8,9 @@ it('seeds demo system users and applications', function () {
     $this->seed(DemoDataSeeder::class);
 
     expect(SystemUser::count())->toBe(2)
-        ->and(Application::count())->toBe(9);
+        // 9 hand-picked rows plus one staging counterpart ("Company Blog
+        // (Staging)"), created by the seeder's own seedStaging() step.
+        ->and(Application::count())->toBe(10);
 
     // Every serving profile is represented, so the sidebar's profile
     // branches all have a row to render against.

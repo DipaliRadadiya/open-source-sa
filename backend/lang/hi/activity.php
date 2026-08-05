@@ -165,4 +165,5 @@ return [
     'application.waf_updated' => ':name के लिए फ़ायरवॉल सेटिंग्स अद्यतन कीं',
     'application.staging_created' => ':name के लिए स्टेजिंग साइट बनाई',
     'application.staging_pushed' => ':name पर स्टेजिंग पुश की (:mode)',
+    'application.cloned' => ':name को :domain पर क्लोन किया',
 ];

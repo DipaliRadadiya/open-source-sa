@@ -1203,7 +1203,7 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
   "ai_bot_policy": "allow_all", "ai_bot_policy_title": "Allow all AI bots",
   "waf_enabled": false, "waf_mode": "detect", "waf_mode_title": "Just watch, don't block",
   "waf_categories": ["query_string", "request_uri", "user_agent", "referrer", "cookie", "method"],
-  "is_staging": false, "production_application_id": null,
+  "is_staging": false, "production_application_id": null, "cloned_from_application_id": null,
   "system_user": { "id": 3, "username": "deploy" },
   "php_version": "8.4", "node_version": null, "app_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
@@ -1323,6 +1323,20 @@ A staging site is **just another application row** — `production_application_i
 - **WP-less fallback** — if WordPress itself won't boot (broken core/`wp-config.php`), every `wp` call in this flow fails outright. A serialized-safe rewrite that works without booting WordPress is a real follow-up, not built yet.
 - **Atomic docroot-symlink swap for push** — `documentRoot()` is a plain directory everywhere else in this codebase; push writes directly into the live docroot during the maintenance-mode window instead of introducing symlink semantics for one feature.
 - **User-editable file/table excludes**, **selective DB sync preserving production's own transactional tables on a full push** (`wp_users`, orders) — hardcoded excludes and a full overwrite only, for v1.
+
+### Site Clone (`app_clone`)
+
+Duplicate any application to a brand-new domain as a fully independent site — **no ongoing relationship to the source**, unlike Staging. `cloned_from_application_id` is informational only (shown on the clone's own dashboard, nothing reads it to decide behavior); there is no push, no maintenance-mode window, no mandatory pre-clone backup — nothing is at risk on the source, since it's only ever read from.
+
+**`app_clone` is in every site type's default feature list** — unlike Staging, this permission never 404s on type alone. A source that needs a database and has no clone recipe built refuses with a clear error from inside `CloneManager` instead.
+
+**`POST /api/applications/{id}/clone`** (`manage`) — body `{ domain }`. `201 { clone: {...} }`.
+- **Generic for any site type with no database** (static, blank PHP, node, git without a database) — files are copied via `rsync` (same hardcoded excludes as Staging) and nothing else is needed.
+- **A source needing a database** (`SiteType::needsDatabase()`) additionally needs that type's `CloneStrategy` — **only WordPress has one today**, same boundary as Staging and for the same reason (most marketplace apps store URLs baked into database content, and only WordPress has the "give it a fresh database and rewrite the URLs a serialization-safe way" recipe built). A source of a different database-needing type (Joomla, Moodle, NodeBB, …) refuses outright rather than producing a clone whose config still points at the source's own database.
+- **The WordPress recipe clones the database** (dump → fresh database → restore) and writes a **fresh `wp-config.php`** — the same template Staging extended, but with none of staging's safeguards (no `DISABLE_WP_CRON`, no mail trap, no `WP_ENVIRONMENT_TYPE`) — a clone is meant to become its own real site, not a safe sandbox, so treating it like one would leave it silently unable to send order emails until someone noticed. The same serialization-safe `wp search-replace` rewrites the source's URLs to the clone's.
+- **Webhook identity is never copied** — `webhook_enabled` stays `false` and `webhook_identifier`/`webhook_secret`/`webhook_provider` stay unset on the clone. `webhook_identifier` has a unique database constraint, so copying it verbatim would fail the insert outright; even without that, two applications answering to one deploy-on-push identity is exactly the ambiguity a clone must not introduce. Repository metadata (`repository`, `repository_url`, `branch`) is still copied, for reference.
+- **A node app gets a fresh port**, not the source's — reuses the existing `PortAllocator` (the same one one-click app creation uses).
+- **Provisioning skips the marketplace installer and starting the process** (`ApplicationProvisioner::provision($clone, skipInstaller: true)`) — a genuinely new parameter added this feature, defaulting `false` everywhere else. Without it, provisioning a WordPress clone would run a fresh `wp core install` that fights the rsync copy landing moments later, and a node clone's process would be started against an empty directory before its files arrive. The process is started manually, after the rsync, if the clone has one.
 
 **`GET /api/applications/port-check?port=8080[&application_id=3]`** (`view`) — ask before submitting, so the user is warned as they type rather than refused after.
 ```json

@@ -165,4 +165,5 @@ return [
     'application.waf_updated' => 'Atualizou as definições da firewall de :name',
     'application.staging_created' => 'Criou um site de staging para :name',
     'application.staging_pushed' => 'Enviou o staging para :name (:mode)',
+    'application.cloned' => 'Clonou :name para :domain',
 ];

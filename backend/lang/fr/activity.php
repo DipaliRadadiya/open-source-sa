@@ -165,4 +165,5 @@ return [
     'application.waf_updated' => 'A mis à jour les paramètres du pare-feu de :name',
     'application.staging_created' => 'A créé un site de staging pour :name',
     'application.staging_pushed' => 'A poussé le staging vers :name (:mode)',
+    'application.cloned' => 'A cloné :name vers :domain',
 ];

@@ -84,4 +84,13 @@ interface SiteType
      * without one would fail at the first click rather than never appearing.
      */
     public function stagingStrategy(): ?StagingStrategy;
+
+    /**
+     * Only meaningful when `needsDatabase()` is true — null there means
+     * Site Clone refuses to clone this type rather than produce a clone
+     * whose config still points at the source's database. A type with no
+     * database needs no strategy at all; `CloneManager` copies its files
+     * generically.
+     */
+    public function cloneStrategy(): ?CloneStrategy;
 }

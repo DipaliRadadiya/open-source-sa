@@ -165,4 +165,5 @@ return [
     'application.waf_updated' => 'Обновил настройки брандмауэра для :name',
     'application.staging_created' => 'Создал staging-сайт для :name',
     'application.staging_pushed' => 'Отправил staging на :name (:mode)',
+    'application.cloned' => 'Клонировал :name на :domain',
 ];

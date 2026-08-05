@@ -2,7 +2,9 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Contracts\CloneStrategy;
 use App\Contracts\StagingStrategy;
+use App\Services\Server\Applications\Cloning\WordPressCloneStrategy;
 use App\Services\Server\Applications\Staging\WordPressStagingStrategy;
 use App\Support\FieldOptions;
 use Illuminate\Validation\Rule;
@@ -98,5 +100,10 @@ class WordPressSiteType extends AbstractSiteType
     public function stagingStrategy(): ?StagingStrategy
     {
         return app(WordPressStagingStrategy::class);
+    }
+
+    public function cloneStrategy(): ?CloneStrategy
+    {
+        return app(WordPressCloneStrategy::class);
     }
 }

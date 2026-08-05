@@ -165,4 +165,5 @@ return [
     'application.waf_updated' => 'Firewall-Einstellungen für :name aktualisiert',
     'application.staging_created' => 'Staging-Site für :name erstellt',
     'application.staging_pushed' => 'Staging auf :name gepusht (:mode)',
+    'application.cloned' => ':name nach :domain geklont',
 ];

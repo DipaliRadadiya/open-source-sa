@@ -70,6 +70,10 @@ class ApplicationResource extends JsonResource
             'is_staging' => $this->isStaging(),
             'production_application_id' => $this->production_application_id,
             'has_staging' => $this->whenLoaded('staging', fn () => $this->staging !== null),
+            // Informational only — unlike `production_application_id`,
+            // nothing reads this to decide behavior. It only answers "where
+            // did this come from" on the clone's own dashboard.
+            'cloned_from_application_id' => $this->cloned_from_application_id,
 
             'system_user' => $this->whenLoaded('systemUser', fn () => $this->systemUser ? [
                 'id' => $this->systemUser->id,

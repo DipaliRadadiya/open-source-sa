@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * phases — a record here only means "the user asked for this".
  */
 #[Fillable([
-    'system_user_id', 'production_application_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
+    'system_user_id', 'production_application_id', 'cloned_from_application_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
     'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
     'build_command', 'deploy_script', 'start_command',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
@@ -140,6 +140,12 @@ class Application extends Model
     public function isStaging(): bool
     {
         return $this->production_application_id !== null;
+    }
+
+    /** Set only on a clone — the application it was cloned from. Informational only. */
+    public function clonedFrom(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'cloned_from_application_id');
     }
 
     public function features(): array

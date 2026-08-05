@@ -66,11 +66,22 @@ class ApplicationProvisioner
      * collected and written at the end — the user is watching this happen, and
      * a failure halfway should leave behind how far it got.
      *
+     * @param  bool  $skipInstaller  True for Site Clone: the vhost is written
+     *                               and tested here same as any new site, but
+     *                               the marketplace installer and starting
+     *                               the process both need real files first —
+     *                               a clone's files arrive afterward, via
+     *                               `CloneManager`'s own rsync, not a fresh
+     *                               install. Running either here would fight
+     *                               that rsync or start a process against an
+     *                               empty directory, the same failure mode
+     *                               `startProcess()` already avoids for a
+     *                               brand-new git application.
      * @return array<int, string> the steps completed, in order
      *
      * @throws ProvisioningFailedException
      */
-    public function provision(Application $application): array
+    public function provision(Application $application, bool $skipInstaller = false): array
     {
         $driver = $this->webServers->driver();
         $user = $application->systemUser;
@@ -114,19 +125,21 @@ class ApplicationProvisioner
 
         $this->step('reload', fn () => $driver->reload());
 
-        // Marketplace apps install once the site is actually being served —
-        // WordPress writes its own URL into the database during setup, so it
-        // needs the vhost live first. Site types with no installer (git,
-        // blank PHP, static) record nothing here.
-        $this->installers->install($application, $documentRoot);
+        if (! $skipInstaller) {
+            // Marketplace apps install once the site is actually being served
+            // — WordPress writes its own URL into the database during setup,
+            // so it needs the vhost live first. Site types with no installer
+            // (git, blank PHP, static) record nothing here.
+            $this->installers->install($application, $documentRoot);
 
-        // The process last, because until the installer has run there is
-        // nothing to start. Starting first was wrong in both directions: a
-        // one-click Node app would be launched against an empty directory,
-        // and a git application has no code at all until its first deploy —
-        // `systemctl start` succeeds, the process dies immediately, and
-        // provisioning fails on a site that is otherwise fine.
-        $this->startProcess($application, $documentRoot);
+            // The process last, because until the installer has run there is
+            // nothing to start. Starting first was wrong in both directions: a
+            // one-click Node app would be launched against an empty directory,
+            // and a git application has no code at all until its first deploy —
+            // `systemctl start` succeeds, the process dies immediately, and
+            // provisioning fails on a site that is otherwise fine.
+            $this->startProcess($application, $documentRoot);
+        }
 
         // Last, and unable to fail the provision. The site is created, serving
         // and correct by this point; a DNS timeout must not turn that into a
