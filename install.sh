@@ -700,6 +700,10 @@ setup_backend() {
     set_env "${dir}/.env" PANEL_FRONTEND_SERVICE "${PANEL_SLUG}-frontend.service"
     set_env "${dir}/.env" PANEL_QUEUE_SERVICE "${PANEL_SLUG}-queue.service"
     set_env "${dir}/.env" PANEL_NODE_BIN_DIR "$(dirname "$NODE_BIN")"
+    # Node is installed under fnm, not on the panel process's PATH, so a bare
+    # `node` invocation (e.g. the dashboard runtime probe) fails with
+    # "node: not found". Pin the absolute binary for server.node_binary.
+    set_env "${dir}/.env" SERVER_NODE_BINARY "$NODE_BIN"
 
     chown -R "${APP_USER}:${APP_USER}" "$dir"
     chmod -R 775 "${dir}/storage" "${dir}/bootstrap/cache"

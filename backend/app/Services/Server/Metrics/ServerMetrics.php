@@ -486,7 +486,7 @@ class ServerMetrics
     {
         return [
             'php' => $this->version(['php', '-r', 'echo PHP_VERSION;']),
-            'node' => $this->version(['node', '-v']),
+            'node' => $this->version([(string) config('server.node_binary', 'node'), '-v']),
             'nginx' => $this->version(['nginx', '-v']),
             'redis' => $this->version(['redis-server', '--version']),
             'mysql' => $this->version(['mysql', '--version']),
