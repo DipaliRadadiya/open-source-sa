@@ -148,7 +148,7 @@ export function ScheduleField({ form, presets, timezone }) {
           name="expression"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("form.expression")}</FormLabel>
+              <FormLabel required>{t("form.expression")}</FormLabel>
               <FormControl>
                 <Input
                   className="font-mono"

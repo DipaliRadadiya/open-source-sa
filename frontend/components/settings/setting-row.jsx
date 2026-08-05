@@ -22,10 +22,12 @@ const ROW =
 
 const ROW_WIDE = "flex flex-col gap-2 py-3.5";
 
-function RowLabel({ as: As, label, hint }) {
+function RowLabel({ as: As, label, hint, required }) {
   return (
     <div className="min-w-0 space-y-1">
-      <As className="text-sm font-medium">{label}</As>
+      <As className="text-sm font-medium" required={required}>
+        {label}
+      </As>
       {hint ? (
         <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
       ) : null}
@@ -33,10 +35,10 @@ function RowLabel({ as: As, label, hint }) {
   );
 }
 
-export function Row({ label, hint, error, children, className, wide = false }) {
+export function Row({ label, hint, error, children, className, wide = false, required = false }) {
   return (
     <FormItem className={cn(wide ? ROW_WIDE : ROW, className)}>
-      <RowLabel as={FormLabel} label={label} hint={hint} />
+      <RowLabel as={FormLabel} label={label} hint={hint} required={required} />
       <div className="space-y-1.5">
         {children}
         <FormMessage>{error}</FormMessage>

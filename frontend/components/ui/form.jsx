@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const Form = FormProvider
 
@@ -60,7 +61,31 @@ function FormItem({ className, ...props }) {
   )
 }
 
-function FormLabel({ className, ...props }) {
+// The asterisk-tooltip itself, exported standalone for the handful of forms
+// that label a field with a plain <Label> instead of the FormField/FormLabel
+// trio (no react-hook-form field context to read `required` off of there) —
+// one implementation either way, not a second copy.
+function RequiredMark() {
+  const t = useTranslations("common")
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className="ml-0.5 text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          aria-label={t("required")}
+        >
+          *
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{t("required")}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+// `required` marks a mandatory field with the same asterisk-tooltip
+// everywhere, instead of every form re-implementing (or forgetting) it.
+function FormLabel({ className, required, children, ...props }) {
   const { error, formItemId } = useFormField()
 
   return (
@@ -70,7 +95,10 @@ function FormLabel({ className, ...props }) {
       className={cn("data-[error=true]:text-destructive", className)}
       htmlFor={formItemId}
       {...props}
-    />
+    >
+      {children}
+      {required ? <RequiredMark /> : null}
+    </Label>
   )
 }
 
@@ -145,5 +173,6 @@ export {
   FormDescription,
   FormMessage,
   FormField,
+  RequiredMark,
   useFormField,
 }

@@ -10,6 +10,7 @@ import { Loader2, Pencil } from "lucide-react";
 import { labelSchema } from "@/lib/schemas/git";
 import { updateAccount } from "@/lib/api/git";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormModal } from "@/components/ui/form-modal";
@@ -76,7 +77,7 @@ export function EditDialog({ account, open, onOpenChange }) {
         open={open}
         onOpenChange={onOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={Pencil}
         title={t("title")}
         description={t("subtitle")}
@@ -102,7 +103,7 @@ export function EditDialog({ account, open, onOpenChange }) {
           name="label"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("nameLabel")}</FormLabel>
+              <FormLabel required>{t("nameLabel")}</FormLabel>
               <FormControl>
                 <Input autoComplete="off" {...field} />
               </FormControl>

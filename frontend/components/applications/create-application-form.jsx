@@ -33,12 +33,12 @@ import {
 } from "@/lib/api/applications";
 import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChoiceField } from "@/components/ui/choice-field";
 import {
   Collapsible,
@@ -92,41 +92,6 @@ function fieldLabel(config) {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : label;
 }
 
-// A required field is marked, so mandatory vs optional is legible before the
-// form is submitted rather than discovered through a red error afterwards.
-function RequiredMark() {
-  const t = useTranslations("applications");
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          tabIndex={0}
-          className="ml-0.5 text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          aria-label={t("form.required")}
-        >
-          *
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{t("form.required")}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-// On a long form a validation error can land off-screen, so a click on Create
-// looks like it did nothing. Bring the first invalid field into view and focus
-// it. Runs a tick late so react-hook-form has marked the fields aria-invalid.
-function scrollToFirstError(formEl) {
-  if (!formEl) return;
-  requestAnimationFrame(() => {
-    const target =
-      formEl.querySelector('[aria-invalid="true"]') ??
-      formEl.querySelector('[data-slot="form-message"]');
-    if (!target) return;
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (typeof target.focus === "function")
-      target.focus({ preventScroll: true });
-  });
-}
 
 function SectionHeading({ number, title, description }) {
   return (
@@ -328,9 +293,8 @@ function ConfigField({
           <div className="flex min-h-6 items-center justify-between gap-2">
             {/* Truncate rather than wrap: a wrapped label is taller and drops the
           input below its neighbour in the two-column grid on narrow widths. */}
-            <FormLabel className="min-w-0 truncate">
+            <FormLabel className="min-w-0 truncate" required={config.required}>
               {label}
-              {config.required ? <RequiredMark /> : null}
             </FormLabel>
             <div className="flex shrink-0 items-center gap-2">
               {/* A generated password is shown once and never again — a copy control
@@ -892,10 +856,7 @@ export function CreateApplicationForm({
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        {t("name")}
-                        <RequiredMark />
-                      </FormLabel>
+                      <FormLabel required>{t("name")}</FormLabel>
                       <FormControl>
                         <Input
                           autoComplete="off"
@@ -912,10 +873,7 @@ export function CreateApplicationForm({
                   name="domain"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        {t("domain")}
-                        <RequiredMark />
-                      </FormLabel>
+                      <FormLabel required>{t("domain")}</FormLabel>
                       <FormControl>
                         <Input
                           inputMode="url"
@@ -943,10 +901,7 @@ export function CreateApplicationForm({
                   name="system_user_id"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>
-                        {t("systemUser")}
-                        <RequiredMark />
-                      </FormLabel>
+                      <FormLabel required>{t("systemUser")}</FormLabel>
                       <FormControl>
                         <Combobox
                           options={availableSystemUsers.map((user) => ({

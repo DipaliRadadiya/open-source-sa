@@ -9,6 +9,7 @@ import { Loader2, KeyRound } from "lucide-react";
 import { systemUserPasswordSchema } from "@/lib/schemas/system-user";
 import { setSystemUserPassword } from "@/lib/api/system-users";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { FormModal } from "@/components/ui/form-modal";
@@ -58,7 +59,7 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={KeyRound}
         title={`${t("password.title")} — ${user?.username ?? ""}`}
         description={t("password.subtitle", { username: user?.username ?? "" })}
@@ -95,7 +96,7 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("password.new")}</FormLabel>
+                <FormLabel required>{t("password.new")}</FormLabel>
                 <FormControl>
                   <PasswordInput
                     placeholder={t("password.newPlaceholder")}
@@ -112,7 +113,7 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
             name="password_confirmation"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("password.confirm")}</FormLabel>
+                <FormLabel required>{t("password.confirm")}</FormLabel>
                 <FormControl>
                   <PasswordInput
                     placeholder={t("password.confirmPlaceholder")}

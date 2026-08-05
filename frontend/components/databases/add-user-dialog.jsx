@@ -10,6 +10,7 @@ import { Loader2, UserRoundPlus } from "lucide-react";
 import { databaseUserFormSchema } from "@/lib/schemas/database";
 import { createDatabaseUser } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form } from "@/components/ui/form";
@@ -89,7 +90,7 @@ export function AddUserDialog({ database, open, onOpenChange }) {
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={UserRoundPlus}
         title={t("addTitle", { name: database?.name ?? "" })}
         description={t("addSubtitle")}

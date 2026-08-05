@@ -11,6 +11,7 @@ import { passwordFormSchema } from "@/lib/schemas/database";
 import { randomPassword } from "@/lib/databases/random";
 import { updateUserPassword } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -77,7 +78,7 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={KeyRound}
         title={t("passwordTitle", { username: user?.username ?? "" })}
         description={t("passwordSubtitle")}
@@ -123,7 +124,7 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("newPassword")}</FormLabel>
+                  <FormLabel required>{t("newPassword")}</FormLabel>
                   {/* Creating a database generates a strong password for you;
                       changing one used to leave you to invent it, which is
                       where "password123" comes from. */}

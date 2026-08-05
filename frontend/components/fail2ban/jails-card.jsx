@@ -202,8 +202,10 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
             </DialogDescription>
           </DialogHeader>
 
-          <DialogFooter className="gap-2 sm:flex-col-reverse sm:space-x-0">
-            {/* Deliberate order: the risky choice is the quiet one. */}
+          <DialogFooter>
+            {/* Deliberate order: the risky choice is the quiet one. In the
+                default footer layout this reads left-to-right as quiet →
+                primary, same as Cancel-then-Confirm everywhere else. */}
             <Button
               variant="ghost"
               disabled={pending !== null}

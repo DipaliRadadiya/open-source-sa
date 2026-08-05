@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { changePasswordSchema } from "@/lib/schemas/account";
 import { changePassword } from "@/lib/auth/auth-actions";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import {
@@ -58,7 +59,10 @@ export function ChangePasswordForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-3xl space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
+        className="max-w-3xl space-y-6"
+      >
         <Card>
           <CardHeader>
             <CardTitle>{t("password.title")}</CardTitle>
@@ -70,7 +74,7 @@ export function ChangePasswordForm() {
               name="current_password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("password.current")}</FormLabel>
+                  <FormLabel required>{t("password.current")}</FormLabel>
                   <FormControl>
                     <PasswordInput
                       autoComplete="current-password"
@@ -88,7 +92,7 @@ export function ChangePasswordForm() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("password.new")}</FormLabel>
+                    <FormLabel required>{t("password.new")}</FormLabel>
                     <FormControl>
                       <PasswordInput
                         autoComplete="new-password"
@@ -123,7 +127,7 @@ export function ChangePasswordForm() {
                 name="password_confirmation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("password.confirm")}</FormLabel>
+                    <FormLabel required>{t("password.confirm")}</FormLabel>
                     <FormControl>
                       <PasswordInput
                         autoComplete="new-password"

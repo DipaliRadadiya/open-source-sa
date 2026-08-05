@@ -10,6 +10,7 @@ import { Loader2, TriangleAlert } from "lucide-react";
 import { roleFormSchema } from "@/lib/schemas/role";
 import { createRole, updateRole } from "@/lib/api/roles";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { PermissionMatrix, permKey } from "@/components/admin/roles/permission-matrix";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -131,7 +132,10 @@ export function RoleForm({ mode = "create", role, catalog }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
+        className="space-y-6"
+      >
         <Card>
           <CardHeader>
             <CardTitle>{t("form.details")}</CardTitle>
@@ -142,7 +146,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("form.name")}</FormLabel>
+                  <FormLabel required>{t("form.name")}</FormLabel>
                   <FormControl>
                     <Input placeholder={t("form.namePlaceholder")} {...field} />
                   </FormControl>

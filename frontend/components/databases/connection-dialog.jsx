@@ -10,6 +10,7 @@ import { CircleCheck, CircleX, Loader2, Plug } from "lucide-react";
 import { connectionFormSchema } from "@/lib/schemas/database";
 import { updateConnection, testConnection } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,7 +131,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={Plug}
         title={t("title", { name: tc(`engines.${engine?.engine ?? "mysql"}`) })}
         description={t("subtitle")}
@@ -193,7 +194,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
             name="socket"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("socketPath")}</FormLabel>
+                <FormLabel required>{t("socketPath")}</FormLabel>
                 <FormControl>
                   <Input
                     className="font-mono"
@@ -214,7 +215,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
               name="host"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("host")}</FormLabel>
+                  <FormLabel required>{t("host")}</FormLabel>
                   <FormControl>
                     <Input
                       className="font-mono"
@@ -233,7 +234,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
               name="port"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("port")}</FormLabel>
+                  <FormLabel required>{t("port")}</FormLabel>
                   <FormControl>
                     <Input
                       className="font-mono"
@@ -255,7 +256,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("username")}</FormLabel>
+              <FormLabel required>{t("username")}</FormLabel>
               <FormControl>
                 <Input
                   className="font-mono"

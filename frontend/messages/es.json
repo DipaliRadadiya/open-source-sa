@@ -16,7 +16,8 @@
     "select": "Seleccionar…",
     "search": "Buscar…",
     "noResults": "Sin coincidencias.",
-    "soon": "Pronto"
+    "soon": "Pronto",
+    "required": "Obligatorio"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",
@@ -2532,7 +2533,6 @@
         "shell": "Ejecuta un solo comando, no sintaxis de shell (sin &&, |, ; ni $( )). Apunta al archivo de entrada.",
         "packageManager": "Usa el archivo de entrada, p. ej. node server.js — un gestor de paquetes bifurca el proceso real, así que las señales de parada no le llegan."
       },
-      "required": "Obligatorio",
       "submitNeedsType": "Elige un tipo de aplicación para continuar.",
       "repositoryNeedsAccount": "Elige primero una cuenta de Git.",
       "branchNeedsRepository": "Elige primero un repositorio.",

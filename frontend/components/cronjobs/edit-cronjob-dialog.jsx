@@ -10,6 +10,7 @@ import { Loader2, CalendarCog } from "lucide-react";
 import { updateCronjobSchema } from "@/lib/schemas/cronjob";
 import { updateCronjob } from "@/lib/api/cronjobs";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -87,7 +88,7 @@ export function EditCronjobDialog({
         open={open}
         onOpenChange={onOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={CalendarCog}
         title={t("edit.title")}
         description={t("edit.subtitle")}
@@ -113,7 +114,7 @@ export function EditCronjobDialog({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("form.name")}</FormLabel>
+              <FormLabel required>{t("form.name")}</FormLabel>
               <FormControl>
                 <Input autoComplete="off" {...field} />
               </FormControl>

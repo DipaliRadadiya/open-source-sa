@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { createFirewallRule, updateFirewallRule } from "@/lib/api/firewall";
 import { riskyExposure } from "@/lib/firewall/exposure";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import {
   createFirewallRuleSchema,
   parsePorts,
@@ -28,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RequiredMark } from "@/components/ui/form";
 import { FormModal } from "@/components/ui/form-modal";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -229,7 +231,7 @@ export function AddRuleDialog({
         title={editing ? t("edit.title") : t("add.title")}
         description={editing ? t("edit.description") : t("add.description")}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="sm:max-w-xl"
         footer={
           <>
@@ -310,7 +312,10 @@ export function AddRuleDialog({
               lopsided pair looks like one of them is more important than it is. */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="fw-ports">{t("add.portsLabel")}</Label>
+              <Label htmlFor="fw-ports">
+                {t("add.portsLabel")}
+                <RequiredMark />
+              </Label>
               <Input
                 id="fw-ports"
                 // The first thing you came here to type. Opening a dialog and

@@ -10,6 +10,7 @@ import { Loader2, CalendarPlus } from "lucide-react";
 import { createCronjobSchema, OTHER_USER } from "@/lib/schemas/cronjob";
 import { createCronjob } from "@/lib/api/cronjobs";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -107,7 +108,7 @@ export function CreateCronjobDialog({
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={CalendarPlus}
         title={t("create.title")}
         description={t("create.subtitle")}
@@ -133,7 +134,7 @@ export function CreateCronjobDialog({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("form.name")}</FormLabel>
+              <FormLabel required>{t("form.name")}</FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("form.namePlaceholder")}
@@ -151,7 +152,7 @@ export function CreateCronjobDialog({
           name="run_as"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("form.runAs")}</FormLabel>
+              <FormLabel required>{t("form.runAs")}</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   {/* SelectTrigger defaults to w-fit and h-8. The height lives
@@ -182,7 +183,7 @@ export function CreateCronjobDialog({
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("form.username")}</FormLabel>
+                <FormLabel required>{t("form.username")}</FormLabel>
                 <FormControl>
                   <Input
                     className="font-mono"

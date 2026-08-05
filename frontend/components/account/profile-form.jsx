@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { updateProfileSchema } from "@/lib/schemas/account";
 import { updateProfile } from "@/lib/auth/auth-actions";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -61,7 +62,10 @@ export function ProfileForm({ user, onDirtyChange }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-3xl space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
+        className="max-w-3xl space-y-6"
+      >
         <Card>
           <CardHeader>
             <CardTitle>{t("profile.title")}</CardTitle>
@@ -73,7 +77,7 @@ export function ProfileForm({ user, onDirtyChange }) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("profile.name")}</FormLabel>
+                  <FormLabel required>{t("profile.name")}</FormLabel>
                   <FormControl>
                     <Input
                       autoComplete="name"
@@ -90,7 +94,7 @@ export function ProfileForm({ user, onDirtyChange }) {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("profile.username")}</FormLabel>
+                  <FormLabel required>{t("profile.username")}</FormLabel>
                   <FormControl>
                     <Input
                       autoComplete="username"

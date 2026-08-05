@@ -9,6 +9,7 @@ import { Loader2, UserRoundPlus } from "lucide-react";
 import { createSystemUserSchema } from "@/lib/schemas/system-user";
 import { createSystemUser } from "@/lib/api/system-users";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,7 +60,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={UserRoundPlus}
         title={t("create.title")}
         description={t("create.subtitle")}
@@ -85,7 +86,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("create.username")}</FormLabel>
+              <FormLabel required>{t("create.username")}</FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("create.usernamePlaceholder")}

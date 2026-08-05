@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { loginSchema } from "@/lib/schemas/auth";
 import { login } from "@/lib/auth/auth-actions";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -42,13 +43,16 @@ export function LoginForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
+        className="grid gap-4"
+      >
         <FormField
           control={form.control}
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("fields.username")}</FormLabel>
+              <FormLabel required>{t("fields.username")}</FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("fields.usernamePlaceholder")}
@@ -66,7 +70,7 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("fields.password")}</FormLabel>
+              <FormLabel required>{t("fields.password")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   placeholder={t("fields.passwordPlaceholder")}

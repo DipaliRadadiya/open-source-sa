@@ -10,6 +10,7 @@ import { HardDriveDownload } from "lucide-react";
 import { swapFormSchema } from "@/lib/schemas/settings";
 import { updateSwapSettings } from "@/lib/api/settings";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { validationMessage } from "@/lib/settings/validation-message";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -100,7 +101,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
         <Section
           icon={HardDriveDownload}
           title={t("swap.title")}

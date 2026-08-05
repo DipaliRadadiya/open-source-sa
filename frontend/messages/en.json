@@ -19,7 +19,8 @@
     "select": "Select…",
     "search": "Search…",
     "noResults": "No matches.",
-    "soon": "Soon"
+    "soon": "Soon",
+    "required": "Required"
   },
   "systemUsers": {
     "title": "System Users",
@@ -2532,7 +2533,6 @@
         "shell": "Run a single command, not shell syntax (no &&, |, ; or $( )). Point it at the entry file.",
         "packageManager": "Use the entry file, e.g. node server.js — a package manager forks the real process, so stop signals never reach it."
       },
-      "required": "Required",
       "submitNeedsType": "Choose an application type to continue.",
       "repositoryNeedsAccount": "Choose a Git account first.",
       "branchNeedsRepository": "Choose a repository first.",

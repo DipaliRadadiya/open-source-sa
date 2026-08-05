@@ -11,6 +11,7 @@ import { redisFormSchema, REDIS_POLICIES } from "@/lib/schemas/settings";
 import { updateRedisSettings } from "@/lib/api/settings";
 import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { validationMessage } from "@/lib/settings/validation-message";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -90,7 +91,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
         <Section
           icon={Database}
           title={t("redis.title")}
@@ -120,6 +121,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
             render={({ field }) => (
               <Row
                 label={t("redis.maxmemory")}
+                required
                 hint={
                   redis?.memory_used_human
                     ? (redis.maxmemory && redis.maxmemory !== "0"

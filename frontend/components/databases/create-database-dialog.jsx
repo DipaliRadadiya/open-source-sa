@@ -11,6 +11,7 @@ import { createDatabaseSchema } from "@/lib/schemas/database";
 import { randomUsername } from "@/lib/databases/random";
 import { createDatabase } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -157,7 +158,7 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={DatabasePlus}
         title={t("create.title")}
         description={t("create.subtitle")}
@@ -183,7 +184,7 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("create.name")}</FormLabel>
+              <FormLabel required>{t("create.name")}</FormLabel>
               <FormControl>
                 <Input
                   autoComplete="off"
@@ -210,7 +211,7 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
             name="engine"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("create.engine")}</FormLabel>
+                <FormLabel required>{t("create.engine")}</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -259,7 +260,7 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("create.username")}</FormLabel>
+                  <FormLabel required>{t("create.username")}</FormLabel>
                   <FormControl>
                     <Input
                       autoComplete="off"
@@ -317,7 +318,7 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
                 name="host"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("create.host")}</FormLabel>
+                    <FormLabel required>{t("create.host")}</FormLabel>
                     <FormControl>
                       <Input
                         autoComplete="off"

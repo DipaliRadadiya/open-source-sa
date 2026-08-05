@@ -86,7 +86,7 @@ export function CommandField({ form, presets, placeholder = "{path}", starterKey
         render={({ field }) => (
           <FormItem>
             <div className="flex items-center justify-between gap-2">
-              <FormLabel>{t("form.command")}</FormLabel>
+              <FormLabel required>{t("form.command")}</FormLabel>
               {presets.length > 0 ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -136,7 +136,7 @@ export function CommandField({ form, presets, placeholder = "{path}", starterKey
 
       {needsPath ? (
         <FormItem>
-          <FormLabel>{t("form.path")}</FormLabel>
+          <FormLabel required>{t("form.path")}</FormLabel>
           <FormControl>
             <Input
               className="font-mono"

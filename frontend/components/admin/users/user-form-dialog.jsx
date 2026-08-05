@@ -10,6 +10,7 @@ import { Loader2, ShieldCheck, UserRoundPlus, UserRoundPen, KeyRound } from "luc
 import { createUserSchema, updateUserSchema } from "@/lib/schemas/user";
 import { createUser, updateUser, syncUserRoles } from "@/lib/api/users";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { RolesField } from "@/components/admin/users/roles-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,7 +107,7 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={isEdit ? UserRoundPen : UserRoundPlus}
         title={isEdit ? t("form.editTitle") : t("form.createTitle")}
         description={
@@ -141,7 +142,7 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("form.name")}</FormLabel>
+                      <FormLabel required>{t("form.name")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("form.namePlaceholder")}
@@ -178,7 +179,7 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("form.username")}</FormLabel>
+                      <FormLabel required>{t("form.username")}</FormLabel>
                       <FormControl>
                         <Input placeholder={t("form.usernamePlaceholder")} autoComplete="off" {...field} />
                       </FormControl>
@@ -195,7 +196,7 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("form.password")}</FormLabel>
+                        <FormLabel required>{t("form.password")}</FormLabel>
                         <FormControl>
                           <PasswordInput
                             placeholder={t("form.passwordPlaceholder")}
@@ -212,7 +213,7 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
                     name="password_confirmation"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("form.confirmPassword")}</FormLabel>
+                        <FormLabel required>{t("form.confirmPassword")}</FormLabel>
                         <FormControl>
                           <PasswordInput
                             placeholder={t("form.confirmPasswordPlaceholder")}
@@ -241,7 +242,7 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
                 render={({ field }) => (
                   <FormItem className="space-y-2">
                     <div className="space-y-1">
-                      <FormLabel>{t("form.roles")}</FormLabel>
+                      <FormLabel required>{t("form.roles")}</FormLabel>
                       <FormDescription>{t("form.rolesHint")}</FormDescription>
                     </div>
                     <FormControl>

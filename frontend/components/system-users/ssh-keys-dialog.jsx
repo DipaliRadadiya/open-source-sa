@@ -13,6 +13,7 @@ import {
   deleteSystemUserSshKey,
 } from "@/lib/api/system-users";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -102,7 +103,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onAdd)}
+        onSubmit={form.handleSubmit(onAdd, () => scrollToFirstError())}
         icon={KeySquare}
         title={`${t("detail.sshKeys")} — ${user?.username ?? ""}`}
         description={t("sshForm.subtitle", { username: user?.username ?? "" })}
@@ -212,7 +213,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("sshForm.name")}</FormLabel>
+                      <FormLabel required>{t("sshForm.name")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("sshForm.namePlaceholder")}
@@ -229,7 +230,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                   name="public_key"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("sshForm.publicKey")}</FormLabel>
+                      <FormLabel required>{t("sshForm.publicKey")}</FormLabel>
                       <FormControl>
                         <Textarea
                           rows={2}

@@ -25,7 +25,7 @@ export function UserFields({ form, access, lockUsername = false }) {
         name="username"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("create.username")}</FormLabel>
+            <FormLabel required>{t("create.username")}</FormLabel>
             <FormControl>
               <Input
                 className="font-mono"
@@ -85,7 +85,7 @@ export function UserFields({ form, access, lockUsername = false }) {
           name="host"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("create.host")}</FormLabel>
+              <FormLabel required>{t("create.host")}</FormLabel>
               <FormControl>
                 <Input
                   className="font-mono"

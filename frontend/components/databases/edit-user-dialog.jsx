@@ -9,6 +9,7 @@ import { Loader2, Pencil, Sparkles } from "lucide-react";
 import { databaseUserFormSchema } from "@/lib/schemas/database";
 import { updateDatabaseUser } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { randomPassword } from "@/lib/databases/random";
@@ -94,7 +95,7 @@ export function EditUserDialog({ database, user, open, onOpenChange }) {
         open={open}
         onOpenChange={onOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={Pencil}
         title={t("editTitle", { username: user?.username ?? "" })}
         description={t("editSubtitle")}
@@ -137,7 +138,7 @@ export function EditUserDialog({ database, user, open, onOpenChange }) {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("newPasswordRequired")}</FormLabel>
+                  <FormLabel required>{t("newPasswordRequired")}</FormLabel>
                   <div className="flex items-start gap-2">
                     <FormControl>
                       <PasswordInput

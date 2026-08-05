@@ -9,6 +9,7 @@ import { Loader2, KeyRound } from "lucide-react";
 import { resetPasswordSchema } from "@/lib/schemas/user";
 import { resetUserPassword } from "@/lib/api/users";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { FormModal } from "@/components/ui/form-modal";
@@ -56,7 +57,7 @@ export function ResetPasswordDialog({ user, open, onOpenChange }) {
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={KeyRound}
         title={t("resetPassword.title")}
         description={t("resetPassword.description", { name: user?.name ?? "" })}
@@ -82,7 +83,7 @@ export function ResetPasswordDialog({ user, open, onOpenChange }) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("resetPassword.newPassword")}</FormLabel>
+              <FormLabel required>{t("resetPassword.newPassword")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   placeholder={t("form.passwordPlaceholder")}
@@ -99,7 +100,7 @@ export function ResetPasswordDialog({ user, open, onOpenChange }) {
           name="password_confirmation"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("resetPassword.confirm")}</FormLabel>
+              <FormLabel required>{t("resetPassword.confirm")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   placeholder={t("form.confirmPasswordPlaceholder")}

@@ -11,6 +11,7 @@ import { replaceTokenSchema } from "@/lib/schemas/git";
 import { updateAccount } from "@/lib/api/git";
 import { createTokenUrl } from "@/lib/git/provider-links";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -72,7 +73,7 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
         open={open}
         onOpenChange={onOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={KeyRound}
         title={t("title", { label: account?.label ?? "" })}
         description={t("subtitle", { provider: account?.provider_title ?? "" })}
@@ -107,7 +108,7 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
           name="token"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("tokenLabel")}</FormLabel>
+              <FormLabel required>{t("tokenLabel")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   autoComplete="off"

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { generalFormSchema } from "@/lib/schemas/settings";
 import { updateGeneralSettings } from "@/lib/api/settings";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { validationMessage } from "@/lib/settings/validation-message";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -51,7 +52,7 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
         <Section
           icon={Server}
           title={t("title")}
@@ -75,6 +76,7 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
               <Row
                 label={t("hostname")}
                 hint={t("hostnameHint")}
+                required
                 error={validationMessage(
                   tv,
                   form.formState.errors.hostname?.message,

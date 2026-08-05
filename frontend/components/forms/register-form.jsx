@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { registerSchema } from "@/lib/schemas/auth";
 import { register as registerUser } from "@/lib/auth/auth-actions";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -48,13 +49,16 @@ export function RegisterForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
+        className="grid gap-4"
+      >
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("fields.name")}</FormLabel>
+              <FormLabel required>{t("fields.name")}</FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("fields.namePlaceholder")}
@@ -72,7 +76,7 @@ export function RegisterForm() {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("fields.username")}</FormLabel>
+              <FormLabel required>{t("fields.username")}</FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("fields.chooseUsernamePlaceholder")}
@@ -89,7 +93,7 @@ export function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("fields.password")}</FormLabel>
+              <FormLabel required>{t("fields.password")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   placeholder={t("fields.newPasswordPlaceholder")}
@@ -106,7 +110,7 @@ export function RegisterForm() {
           name="password_confirmation"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("fields.confirmPassword")}</FormLabel>
+              <FormLabel required>{t("fields.confirmPassword")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   placeholder={t("fields.confirmPasswordPlaceholder")}

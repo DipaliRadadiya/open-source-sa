@@ -10,6 +10,7 @@ import { Loader2, Cog, ChevronDown } from "lucide-react";
 import { workerFormSchema, WORKER_FORM_DEFAULTS } from "@/lib/schemas/worker";
 import { createWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -103,7 +104,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={Cog}
         title={t("create.title")}
         description={t("create.subtitle")}
@@ -129,7 +130,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("form.name")}</FormLabel>
+              <FormLabel required>{t("form.name")}</FormLabel>
               <FormControl>
                 <Input placeholder={t("form.namePlaceholder")} autoComplete="off" {...field} />
               </FormControl>
@@ -145,7 +146,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
           name="processes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("form.processes")}</FormLabel>
+              <FormLabel required>{t("form.processes")}</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -250,7 +251,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
               name="stop_wait_seconds"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("form.stopWaitSeconds")}</FormLabel>
+                  <FormLabel required>{t("form.stopWaitSeconds")}</FormLabel>
                   <FormControl>
                     <Input type="number" inputMode="numeric" min={1} max={300} className="w-24" {...field} />
                   </FormControl>

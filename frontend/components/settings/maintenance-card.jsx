@@ -30,6 +30,7 @@ import {
   rebootServer,
 } from "@/lib/api/settings";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { validationMessage } from "@/lib/settings/validation-message";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
@@ -195,7 +196,7 @@ function UpdatesSection({ updates, canManage }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
         <Section
           icon={ShieldCheck}
           title={t("updates.title")}
@@ -264,6 +265,7 @@ function UpdatesSection({ updates, canManage }) {
                   <Row
                     label={t("updates.rebootTime")}
                     hint={t("updates.rebootTimeHint")}
+                    required
                     error={validationMessage(
                       tv,
                       form.formState.errors.reboot_time?.message,
@@ -347,7 +349,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
         <Section
           icon={CalendarClock}
           title={t("schedule.title")}

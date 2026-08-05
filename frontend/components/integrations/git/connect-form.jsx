@@ -11,6 +11,7 @@ import { connectFormSchema } from "@/lib/schemas/git";
 import { connectAccount } from "@/lib/api/git";
 import { createTokenUrl } from "@/lib/git/provider-links";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,7 +111,7 @@ export function ConnectForm({
         open={open}
         onOpenChange={onOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={HeaderIcon}
         title={t("title", { provider: provider.title })}
         description={t("subtitle")}
@@ -151,7 +152,7 @@ export function ConnectForm({
           name="label"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("nameLabel")}</FormLabel>
+              <FormLabel required>{t("nameLabel")}</FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("namePlaceholder", { provider: provider.title })}
@@ -172,7 +173,7 @@ export function ConnectForm({
             name={spec.name}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>
+                <FormLabel required={spec.required}>
                   {spec.label}
                   {spec.required ? null : (
                     <span className="ml-1 text-xs font-normal text-muted-foreground">

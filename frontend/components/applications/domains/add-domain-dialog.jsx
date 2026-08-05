@@ -9,6 +9,7 @@ import { Loader2, Globe, Info } from "lucide-react";
 import { addDomainFormSchema, REDIRECT_STATUSES } from "@/lib/schemas/domain";
 import { addDomain } from "@/lib/api/domains";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +71,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null }) 
         open={open}
         onOpenChange={handleOpenChange}
         asForm
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={Globe}
         title={t("add.title")}
         description={t("add.subtitle")}
@@ -91,7 +92,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null }) 
           name="domain"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("add.domain")}</FormLabel>
+              <FormLabel required>{t("add.domain")}</FormLabel>
               <FormControl>
                 <Input placeholder="example.com" autoComplete="off" spellCheck={false} {...field} />
               </FormControl>
@@ -134,7 +135,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null }) 
               name="redirect_to"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("add.redirectTo")}</FormLabel>
+                  <FormLabel required>{t("add.redirectTo")}</FormLabel>
                   <FormControl>
                     <Input placeholder="https://example.com" autoComplete="off" spellCheck={false} {...field} />
                   </FormControl>

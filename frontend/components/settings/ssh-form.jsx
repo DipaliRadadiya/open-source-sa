@@ -11,6 +11,7 @@ import { securityFormSchema, ROOT_LOGIN_OPTIONS } from "@/lib/schemas/settings";
 import { updateSecuritySettings } from "@/lib/api/settings";
 import { updateFirewallRule } from "@/lib/api/firewall";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { validationMessage } from "@/lib/settings/validation-message";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -139,7 +140,7 @@ export function SshForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
         <Section
           icon={KeyRound}
           title={t("title")}
@@ -243,6 +244,7 @@ export function SshForm({
             render={({ field }) => (
               <Row
                 label={t("port.label")}
+                required
                 hint={t("port.hint")}
                 error={validationMessage(
                   tv,
