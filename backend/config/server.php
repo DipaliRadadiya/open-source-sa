@@ -78,6 +78,24 @@ use App\Services\Server\WebServers\OlsDriver;
 return [
 
     /*
+     * The wildcard-DNS service behind the temporary hostname a new site can be
+     * given before its real domain points here. `nip.io` resolves
+     * `<anything>.<ip>.nip.io` to that address with no DNS setup at all.
+     *
+     * Configurable because it is somebody else's free service: if it goes
+     * away, or an operator runs their own, this is a config change rather
+     * than a code change.
+     */
+    'temporary_domain_suffix' => env('TEMPORARY_DOMAIN_SUFFIX', 'nip.io'),
+
+    /*
+     * Every suffix recognised as temporary when deciding whether a name may go
+     * on a certificate. Broader than the one offered above: a user can paste an
+     * `sslip.io` name themselves, and it carries the same shared rate limit.
+     */
+    'temporary_domain_suffixes' => ['nip.io', 'sslip.io'],
+
+    /*
     |--------------------------------------------------------------------------
     | Privilege escalation
     |--------------------------------------------------------------------------

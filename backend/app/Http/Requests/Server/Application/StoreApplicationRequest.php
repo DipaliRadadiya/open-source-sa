@@ -2,12 +2,14 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Enums\DomainOrigin;
 use App\Rules\AvailablePort;
 use App\Rules\StartCommand;
 use App\Services\Applications\SiteTypeManager;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 /**
  * Validation is driven by the chosen site type's own field schema, so the form
@@ -37,6 +39,15 @@ class StoreApplicationRequest extends FormRequest
             // the first with nothing anywhere saying so.
             'name' => ['required', 'string', 'max:255', Rule::unique('applications', 'name')],
             'domain' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/'],
+            // Whether the hostname above is one the user owns or the temporary
+            // `<name>.<ip>.nip.io` the panel offers. The name itself is sent
+            // either way — only its provenance differs, and that is what
+            // decides whether it may ever go on a certificate.
+            //
+            // Optional so a caller that predates the create form's toggle keeps
+            // working; an unlabelled name is treated as the user's own, and a
+            // wildcard-DNS suffix is caught regardless of the label.
+            'domain_type' => ['sometimes', new Enum(DomainOrigin::class)],
             'system_user_id' => ['required', 'integer', 'exists:system_users,id'],
             // Both versions become path segments and, for PHP, part of an
             // executed binary path. `max:10` alone let a newline through.

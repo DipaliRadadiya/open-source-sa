@@ -34,6 +34,10 @@ class AddDomain
             'type' => $data['type'] ?? DomainType::Alias->value,
             'redirect_to' => $data['redirect_to'] ?? null,
             'redirect_status' => $data['redirect_status'] ?? 301,
+            // Never set before, which meant the flag the certificate actions
+            // filter on was always false — so the guard against spending the
+            // shared nip.io rate limit had never once fired.
+            'is_test' => ApplicationDomain::looksTemporary((string) $data['domain']),
         ]);
 
         $this->dns->verify($domain);

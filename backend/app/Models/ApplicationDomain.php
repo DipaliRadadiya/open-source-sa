@@ -42,6 +42,29 @@ class ApplicationDomain extends Model
      * reaches the redirect at all. The old name has to answer on HTTPS to be
      * able to send anyone anywhere.
      */
+    /**
+     * Whether a hostname is one of the wildcard-DNS services that resolve any
+     * name to an address encoded in it.
+     *
+     * Used to flag a domain as temporary even when the caller said otherwise.
+     * The client tells us which kind it is, but a `nip.io` name mislabelled as
+     * the user's own would go on a certificate request and spend from a weekly
+     * limit shared with the entire internet — a claim worth checking rather
+     * than taking on trust.
+     */
+    public static function looksTemporary(string $domain): bool
+    {
+        $domain = strtolower(trim($domain));
+
+        foreach ((array) config('server.temporary_domain_suffixes', ['nip.io', 'sslip.io']) as $suffix) {
+            if (str_ends_with($domain, '.'.strtolower((string) $suffix))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function certifiable(): bool
     {
         return ! $this->is_test && $this->dns_verified_at !== null;

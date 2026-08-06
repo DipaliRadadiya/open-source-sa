@@ -3,8 +3,11 @@
 namespace App\Actions\Server\Application;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\DomainOrigin;
+use App\Enums\DomainType;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
+use App\Models\ApplicationDomain;
 use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
@@ -66,6 +69,26 @@ class CreateApplication
             'repository_url' => $data['repository_url'] ?? null,
             'branch' => $data['branch'] ?? null,
             'settings' => $this->typeSettings($type->fields(), $data),
+        ]);
+
+        // The domains table is the list the Domains screen reads, and until now
+        // nothing wrote to it at create time — only the migration that
+        // introduced the table backfilled the sites that existed then. So every
+        // application made since came up with an empty Domains section while
+        // plainly answering on a domain.
+        //
+        // `applications.domain` stays the mirror of whichever row is primary;
+        // this is the row it mirrors.
+        $origin = DomainOrigin::tryFrom((string) ($data['domain_type'] ?? '')) ?? DomainOrigin::Custom;
+
+        $application->domains()->create([
+            'domain' => strtolower(trim((string) $application->domain)),
+            'type' => DomainType::Primary,
+            // Trusted from the client, but not only: a wildcard-DNS name
+            // mislabelled as the user's own would be sent to Let's Encrypt and
+            // spend from a weekly limit shared with the whole internet.
+            'is_test' => $origin->isTemporary()
+                || ApplicationDomain::looksTemporary((string) $application->domain),
         ]);
 
         $this->activityLogger->log('application.created', $application, [
