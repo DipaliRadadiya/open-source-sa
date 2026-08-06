@@ -585,7 +585,13 @@
     "min1": "Must be at least 1",
     "max16": "Must be 16 or fewer",
     "max300": "Must be 300 or fewer",
-    "shellMetacharacters": "Pipes, redirects and shell operators (| ; & $ ` > <) aren't supported — this command runs directly, not through a shell"
+    "shellMetacharacters": "Pipes, redirects and shell operators (| ; & $ ` > <) aren't supported — this command runs directly, not through a shell",
+    "invalidName": "Use only letters, numbers, dots, dashes and underscores",
+    "noSlashes": "This field is a name, not a path — no / characters",
+    "required_target": "Enter a path",
+    "invalidPath": "Enter a valid path",
+    "mustEndInZip": "The target must end in .zip",
+    "invalidMode": "Enter exactly 3 octal digits, e.g. 644"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -2777,6 +2783,190 @@
         "offBody": "Auto-deploy is off. Turn it on to deploy on every push to {branch} — your webhook URL and secret are kept."
       },
       "cancel": "Cancel"
+    },
+    "files": {
+      "pageTitle": "Files",
+      "pageSubtitle": "Browse, view and edit this site's files.",
+      "back": "Back to Applications",
+      "loadFailed": "Files could not be loaded.",
+      "provisioning": "This site is still being set up. Files will be available once it's running.",
+      "noPermission": "You don't have permission to manage files.",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "breadcrumbLabel": "Folder path",
+      "root": "Site root",
+      "symlinkHint": "Symbolic links aren't supported by this feature.",
+      "notProvisioned": {
+        "title": "No files here",
+        "description": "We couldn't find any files for this application yet."
+      },
+      "pathNotFound": {
+        "title": "This folder is gone",
+        "description": "It may have been deleted or renamed since you last viewed it.",
+        "action": "Back to root"
+      },
+      "columns": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified",
+        "permissions": "Permissions",
+        "worldWritableHint": "World-writable — anyone with a login on this server can modify this file, not just its owner."
+      },
+      "actions": {
+        "label": "Actions",
+        "download": "Download",
+        "copyPath": "Copy path",
+        "pathCopied": "Path copied.",
+        "rename": "Rename / Move",
+        "copy": "Copy",
+        "compress": "Compress",
+        "extract": "Extract",
+        "permissions": "Permissions",
+        "delete": "Delete"
+      },
+      "empty": {
+        "title": "This folder is empty",
+        "description": "Upload a file, or create a new file or folder to get started.",
+        "filteredTitle": "No matching files",
+        "filteredDescription": "No files or folders in this directory match your search."
+      },
+      "searchPlaceholder": "Search this folder…",
+      "itemCount": "{count, plural, =0 {No items} one {# item} other {# items}}",
+      "itemCountFiltered": "{shown} of {total} items",
+      "siteSearch": {
+        "action": "Search entire site for \"{query}\"",
+        "noResults": "Nothing on this site matches \"{query}\".",
+        "failed": "Site search failed.",
+        "inFolder": "in {folder}"
+      },
+      "imagePreview": {
+        "subtitle": "Preview only — download to edit or use this file.",
+        "loadFailed": "This image could not be loaded."
+      },
+      "newFolder": {
+        "action": "New folder",
+        "title": "New folder",
+        "subtitle": "Created inside the folder you're currently viewing.",
+        "name": "Folder name",
+        "submit": "Create folder",
+        "created": "\"{name}\" created.",
+        "failed": "Couldn't create the folder."
+      },
+      "newFile": {
+        "action": "New file",
+        "title": "New file",
+        "subtitle": "Created empty, inside the folder you're currently viewing.",
+        "name": "File name",
+        "submit": "Create file",
+        "created": "\"{name}\" created.",
+        "failed": "Couldn't create the file."
+      },
+      "uploadDialog": {
+        "action": "Upload",
+        "title": "Upload files",
+        "subtitle": "Uploaded into the folder you're currently viewing. An existing file at the same name is overwritten.",
+        "dropHint": "Drag files here, or click to browse",
+        "dropOverlay": "Drop to upload here",
+        "remove": "Remove",
+        "submit": "Upload",
+        "itemFailed": "Couldn't upload this file."
+      },
+      "editor": {
+        "subtitle": "Changes are backed up automatically before each save.",
+        "readOnly": "You have view-only access to this file.",
+        "tooLarge": "This file is larger than 5 MB and can't be previewed here — download it instead.",
+        "notText": "This file looks like it isn't text and can't be previewed here — download it instead.",
+        "loadFailed": "Couldn't open this file.",
+        "saved": "File saved.",
+        "saveFailed": "Couldn't save this file.",
+        "save": "Save",
+        "copy": "Copy contents",
+        "discardTitle": "Discard unsaved changes?",
+        "discardDescription": "Your edits to this file haven't been saved. Closing now will lose them.",
+        "keepEditing": "Keep editing",
+        "discardConfirm": "Discard changes"
+      },
+      "restore": {
+        "action": "Restore",
+        "title": "Restore a previous version",
+        "subtitle": "Restoring backs up the current content first, so picking the wrong version is itself undoable.",
+        "done": "Restored.",
+        "failed": "Couldn't restore that version."
+      },
+      "targetDialog": {
+        "pathLabel": "Path",
+        "rootPlaceholder": "Site root"
+      },
+      "rename": {
+        "title": "Rename or move \"{name}\"",
+        "subtitle": "Edit just the name to rename, or the whole path to move it elsewhere.",
+        "submit": "Save",
+        "done": "\"{name}\" renamed.",
+        "failed": "Couldn't rename or move this item."
+      },
+      "copyDialog": {
+        "title": "Copy \"{name}\"",
+        "subtitle": "The original stays where it is.",
+        "submit": "Copy",
+        "done": "\"{name}\" copied.",
+        "failed": "Couldn't copy this item."
+      },
+      "compressDialog": {
+        "title": "Compress \"{name}\"",
+        "subtitle": "Packages this into a new .zip archive.",
+        "submit": "Compress",
+        "done": "\"{name}\" compressed.",
+        "failed": "Couldn't compress this item."
+      },
+      "extractDialog": {
+        "title": "Extract \"{name}\"",
+        "subtitle": "Extracts a .zip, .tar.gz or .tgz archive into the folder below.",
+        "submit": "Extract",
+        "done": "\"{name}\" extracted.",
+        "failed": "Couldn't extract this archive.",
+        "warning": "Extraction happens in place and can overwrite existing files — there's no undo."
+      },
+      "permissionsDialog": {
+        "title": "Permissions for \"{name}\"",
+        "subtitle": "Who can read, write and execute this file or folder.",
+        "subtitleWithCurrent": "Currently {mode}. Who can read, write and execute this file or folder.",
+        "currentBadge": "Current",
+        "preset644": "Read-only — the usual choice for files",
+        "preset755": "Standard — the usual choice for folders and scripts",
+        "preset600": "Private — only the owner can read or write",
+        "custom": "Custom",
+        "customHint": "Exactly 3 octal digits, e.g. 644 or 755.",
+        "read": "read",
+        "write": "write",
+        "execute": "run it",
+        "noAccess": "no access",
+        "describeSimple": "Owner: {owner}. Everyone else: {rest}.",
+        "describeFull": "Owner: {owner}. Group: {group}. Others: {other}.",
+        "submit": "Save",
+        "done": "Permissions updated for \"{name}\".",
+        "failed": "Couldn't update permissions."
+      },
+      "delete": {
+        "title": "Delete \"{name}\"?",
+        "description": "This can't be undone.",
+        "descriptionDir": "This deletes the folder and everything inside it. This can't be undone.",
+        "confirm": "Delete",
+        "done": "\"{name}\" deleted.",
+        "failed": "Couldn't delete this item."
+      },
+      "fixPermissions": {
+        "action": "Fix permissions",
+        "title": "Reset this site's file permissions?",
+        "description": "Resets every file and folder's owner and permissions back to the standard defaults.",
+        "foldersLabel": "Folders",
+        "filesLabel": "Files",
+        "protectedLabel": "Stays protected",
+        "protectedValue": ".env & sessions",
+        "whenToUse": "Use this when uploads, plugins, or a deploy have left files owned by the wrong user.",
+        "confirm": "Fix permissions",
+        "done": "Permissions reset.",
+        "failed": "Couldn't reset permissions."
+      }
     },
     "workers": {
       "pageTitle": "Workers",

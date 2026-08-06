@@ -37,6 +37,7 @@ const BUILT_APPLICATION_URLS = new Set([
   "/environment",
   "/logs",
   "/workers",
+  "/files",
 ]);
 
 export function isApplicationNavBuilt(url) {

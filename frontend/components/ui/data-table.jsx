@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { cloneElement, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useNavPending } from "@/components/data-table/nav-transition";
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 
 const SORT_ICONS = { asc: ArrowUp, desc: ArrowDown };
@@ -47,6 +48,16 @@ function SortableHeader({ header, label }) {
  * Both default off so server-driven callers are unaffected.
  * `rowClassName(row)` styles rows by their data (e.g. de-emphasising a paused
  * record) — it receives the original row object.
+ * `fixedLayout` switches to `table-layout: fixed` so each column's
+ * `meta.className` width (e.g. `w-[35%]`) is actually respected, instead of
+ * the browser's default `auto` layout treating it as a soft hint and still
+ * dumping any leftover width into whichever column lacks an explicit one.
+ * The table stays full width either way — this only changes how that width
+ * is divided, not whether the table fills its container. Off by default so
+ * every existing table's column sizing is unaffected.
+ * `contextMenu(row)` opts a row into right-click support — return the menu's
+ * `<ContextMenuItem>`s (or a falsy value to skip that row). Undefined by
+ * default, so every other table's rows behave exactly as before.
  */
 export function DataTable({
   columns,
@@ -56,6 +67,8 @@ export function DataTable({
   stickyHeader = false,
   defaultSorting = [],
   rowClassName,
+  fixedLayout = false,
+  contextMenu,
   // Passed straight to TanStack and readable from any cell as
   // `table.options.meta`. It's how a cell gets per-table context without
   // closing over it — a closure would change identity every render, and
@@ -97,7 +110,7 @@ export function DataTable({
         pending && "pointer-events-none opacity-60",
       )}
     >
-      <Table>
+      <Table className={fixedLayout ? "table-fixed" : undefined}>
         <TableHeader className={cn(stickyHeader && "sticky top-0 z-10 shadow-sm")}>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="bg-muted/40 hover:bg-muted/40">
@@ -138,15 +151,27 @@ export function DataTable({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className={rowClassName?.(row.original)}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            table.getRowModel().rows.map((row) => {
+              const tableRow = (
+                <TableRow className={rowClassName?.(row.original)}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+              const menuContent = contextMenu?.(row.original);
+              if (!menuContent) return cloneElement(tableRow, { key: row.id });
+              return (
+                <ContextMenu key={row.id}>
+                  <ContextMenuTrigger asChild>{tableRow}</ContextMenuTrigger>
+                  <ContextMenuContent className="w-48" onCloseAutoFocus={(e) => e.preventDefault()}>
+                    {menuContent}
+                  </ContextMenuContent>
+                </ContextMenu>
+              );
+            })
           ) : (
             <TableRow className="hover:bg-transparent">
               <TableCell

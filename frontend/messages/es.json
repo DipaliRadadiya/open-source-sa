@@ -162,7 +162,13 @@
     "min1": "Debe ser al menos 1",
     "max16": "Debe ser 16 o menos",
     "max300": "Debe ser 300 o menos",
-    "shellMetacharacters": "No se admiten tuberías, redirecciones ni operadores de shell (| ; & $ ` > <): este comando se ejecuta directamente, no a través de un shell"
+    "shellMetacharacters": "No se admiten tuberías, redirecciones ni operadores de shell (| ; & $ ` > <): este comando se ejecuta directamente, no a través de un shell",
+    "invalidName": "Usa solo letras, números, puntos, guiones y guiones bajos",
+    "noSlashes": "Este campo es un nombre, no una ruta — sin caracteres /",
+    "required_target": "Introduce una ruta",
+    "invalidPath": "Introduce una ruta válida",
+    "mustEndInZip": "El destino debe terminar en .zip",
+    "invalidMode": "Introduce exactamente 3 dígitos octales, p. ej. 644"
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -2777,6 +2783,190 @@
         "offBody": "El despliegue automático está desactivado. Actívalo para desplegar con cada push a {branch}: se conservan tu URL de webhook y el secreto."
       },
       "cancel": "Cancelar"
+    },
+    "files": {
+      "pageTitle": "Archivos",
+      "pageSubtitle": "Explora, visualiza y edita los archivos de este sitio.",
+      "back": "Volver a Aplicaciones",
+      "loadFailed": "No se pudieron cargar los archivos.",
+      "provisioning": "Este sitio todavía se está configurando. Los archivos estarán disponibles cuando esté en funcionamiento.",
+      "noPermission": "No tienes permiso para gestionar archivos.",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "breadcrumbLabel": "Ruta de la carpeta",
+      "root": "Raíz del sitio",
+      "symlinkHint": "Los enlaces simbólicos no son compatibles con esta función.",
+      "notProvisioned": {
+        "title": "No hay archivos aquí",
+        "description": "Todavía no encontramos ningún archivo para esta aplicación."
+      },
+      "pathNotFound": {
+        "title": "Esta carpeta ya no existe",
+        "description": "Puede que se haya eliminado o renombrado desde la última vez que la viste.",
+        "action": "Volver a la raíz"
+      },
+      "columns": {
+        "name": "Nombre",
+        "size": "Tamaño",
+        "modified": "Modificado",
+        "permissions": "Permisos",
+        "worldWritableHint": "Editable por cualquiera — cualquier usuario con acceso a este servidor puede modificar este archivo, no solo su propietario."
+      },
+      "actions": {
+        "label": "Acciones",
+        "download": "Descargar",
+        "copyPath": "Copiar ruta",
+        "pathCopied": "Ruta copiada.",
+        "rename": "Renombrar / Mover",
+        "copy": "Copiar",
+        "compress": "Comprimir",
+        "extract": "Extraer",
+        "permissions": "Permisos",
+        "delete": "Eliminar"
+      },
+      "empty": {
+        "title": "Esta carpeta está vacía",
+        "description": "Sube un archivo, o crea un archivo o carpeta nuevos para empezar.",
+        "filteredTitle": "Sin archivos coincidentes",
+        "filteredDescription": "Ningún archivo o carpeta de este directorio coincide con tu búsqueda."
+      },
+      "searchPlaceholder": "Buscar en esta carpeta…",
+      "itemCount": "{count, plural, =0 {Sin elementos} one {# elemento} other {# elementos}}",
+      "itemCountFiltered": "{shown} de {total} elementos",
+      "siteSearch": {
+        "action": "Buscar «{query}» en todo el sitio",
+        "noResults": "Nada en este sitio coincide con «{query}».",
+        "failed": "La búsqueda en el sitio falló.",
+        "inFolder": "en {folder}"
+      },
+      "imagePreview": {
+        "subtitle": "Solo vista previa — descarga para editar o usar este archivo.",
+        "loadFailed": "No se pudo cargar esta imagen."
+      },
+      "newFolder": {
+        "action": "Nueva carpeta",
+        "title": "Nueva carpeta",
+        "subtitle": "Se crea dentro de la carpeta que estás viendo actualmente.",
+        "name": "Nombre de la carpeta",
+        "submit": "Crear carpeta",
+        "created": "«{name}» creada.",
+        "failed": "No se pudo crear la carpeta."
+      },
+      "newFile": {
+        "action": "Nuevo archivo",
+        "title": "Nuevo archivo",
+        "subtitle": "Se crea vacío, dentro de la carpeta que estás viendo actualmente.",
+        "name": "Nombre del archivo",
+        "submit": "Crear archivo",
+        "created": "«{name}» creado.",
+        "failed": "No se pudo crear el archivo."
+      },
+      "uploadDialog": {
+        "action": "Subir",
+        "title": "Subir archivos",
+        "subtitle": "Se suben a la carpeta que estás viendo actualmente. Un archivo existente con el mismo nombre se sobrescribe.",
+        "dropHint": "Arrastra archivos aquí, o haz clic para buscarlos",
+        "dropOverlay": "Suelta aquí para subir",
+        "remove": "Quitar",
+        "submit": "Subir",
+        "itemFailed": "No se pudo subir este archivo."
+      },
+      "editor": {
+        "subtitle": "Los cambios se respaldan automáticamente antes de cada guardado.",
+        "readOnly": "Tienes acceso de solo lectura a este archivo.",
+        "tooLarge": "Este archivo pesa más de 5 MB y no se puede previsualizar aquí — descárgalo en su lugar.",
+        "notText": "Este archivo no parece ser texto y no se puede previsualizar aquí — descárgalo en su lugar.",
+        "loadFailed": "No se pudo abrir este archivo.",
+        "saved": "Archivo guardado.",
+        "saveFailed": "No se pudo guardar este archivo.",
+        "save": "Guardar",
+        "copy": "Copiar contenido",
+        "discardTitle": "¿Descartar los cambios sin guardar?",
+        "discardDescription": "Tus ediciones a este archivo no se han guardado. Cerrar ahora las perderá.",
+        "keepEditing": "Seguir editando",
+        "discardConfirm": "Descartar cambios"
+      },
+      "restore": {
+        "action": "Restaurar",
+        "title": "Restaurar una versión anterior",
+        "subtitle": "Restaurar respalda primero el contenido actual, así que elegir la versión equivocada también se puede deshacer.",
+        "done": "Restaurado.",
+        "failed": "No se pudo restaurar esa versión."
+      },
+      "targetDialog": {
+        "pathLabel": "Ruta",
+        "rootPlaceholder": "Raíz del sitio"
+      },
+      "rename": {
+        "title": "Renombrar o mover «{name}»",
+        "subtitle": "Edita solo el nombre para renombrar, o toda la ruta para moverlo a otro lugar.",
+        "submit": "Guardar",
+        "done": "«{name}» renombrado.",
+        "failed": "No se pudo renombrar o mover este elemento."
+      },
+      "copyDialog": {
+        "title": "Copiar «{name}»",
+        "subtitle": "El original se queda donde está.",
+        "submit": "Copiar",
+        "done": "«{name}» copiado.",
+        "failed": "No se pudo copiar este elemento."
+      },
+      "compressDialog": {
+        "title": "Comprimir «{name}»",
+        "subtitle": "Lo empaqueta en un nuevo archivo .zip.",
+        "submit": "Comprimir",
+        "done": "«{name}» comprimido.",
+        "failed": "No se pudo comprimir este elemento."
+      },
+      "extractDialog": {
+        "title": "Extraer «{name}»",
+        "subtitle": "Extrae un archivo .zip, .tar.gz o .tgz en la carpeta indicada abajo.",
+        "submit": "Extraer",
+        "done": "«{name}» extraído.",
+        "failed": "No se pudo extraer este archivo.",
+        "warning": "La extracción ocurre en el mismo lugar y puede sobrescribir archivos existentes — no se puede deshacer."
+      },
+      "permissionsDialog": {
+        "title": "Permisos de «{name}»",
+        "subtitle": "Quién puede leer, escribir y ejecutar este archivo o carpeta.",
+        "subtitleWithCurrent": "Actualmente {mode}. Quién puede leer, escribir y ejecutar este archivo o carpeta.",
+        "currentBadge": "Actual",
+        "preset644": "Solo lectura — la opción habitual para archivos",
+        "preset755": "Estándar — la opción habitual para carpetas y scripts",
+        "preset600": "Privado — solo el propietario puede leer o escribir",
+        "custom": "Personalizado",
+        "customHint": "Exactamente 3 dígitos octales, p. ej. 644 o 755.",
+        "read": "leer",
+        "write": "escribir",
+        "execute": "ejecutarlo",
+        "noAccess": "sin acceso",
+        "describeSimple": "Propietario: {owner}. Todos los demás: {rest}.",
+        "describeFull": "Propietario: {owner}. Grupo: {group}. Otros: {other}.",
+        "submit": "Guardar",
+        "done": "Permisos actualizados para «{name}».",
+        "failed": "No se pudieron actualizar los permisos."
+      },
+      "delete": {
+        "title": "¿Eliminar «{name}»?",
+        "description": "Esto no se puede deshacer.",
+        "descriptionDir": "Esto elimina la carpeta y todo su contenido. Esto no se puede deshacer.",
+        "confirm": "Eliminar",
+        "done": "«{name}» eliminado.",
+        "failed": "No se pudo eliminar este elemento."
+      },
+      "fixPermissions": {
+        "action": "Corregir permisos",
+        "title": "¿Restablecer los permisos de archivos de este sitio?",
+        "description": "Restablece el propietario y los permisos de cada archivo y carpeta a los valores predeterminados.",
+        "foldersLabel": "Carpetas",
+        "filesLabel": "Archivos",
+        "protectedLabel": "Se mantiene protegido",
+        "protectedValue": ".env y sesiones",
+        "whenToUse": "Úsalo cuando subidas, plugins o un despliegue hayan dejado archivos con un propietario incorrecto.",
+        "confirm": "Corregir permisos",
+        "done": "Permisos restablecidos.",
+        "failed": "No se pudieron restablecer los permisos."
+      }
     },
     "workers": {
       "pageTitle": "Workers",
