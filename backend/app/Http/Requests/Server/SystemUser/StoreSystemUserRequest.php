@@ -6,6 +6,7 @@ use App\Services\Server\SshKeyManager;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class StoreSystemUserRequest extends FormRequest
 {
@@ -46,6 +47,13 @@ class StoreSystemUserRequest extends FormRequest
                     }
                 },
             ],
+            // All optional, defaulting to the same values CreateSystemUser
+            // already used before these existed — the fast path (username
+            // only) stays exactly as fast.
+            'shell' => ['sometimes', 'string', Rule::in(ChangeShellRequest::SHELLS)],
+            'sudo' => ['sometimes', 'boolean'],
+            'ssh_access' => ['sometimes', 'boolean'],
+            'password' => ['sometimes', 'string', Password::min(10)->mixedCase()->numbers()],
         ];
     }
 

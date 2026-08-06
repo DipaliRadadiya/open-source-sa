@@ -333,6 +333,8 @@ Requires `system_user` permission (`view` to read, `manage` to mutate). No updat
 
 **`POST /api/system-users`** — create (runs `useradd`)
 - Body: `username` (required — Linux rules `^[a-z_][a-z0-9_-]{0,31}$`, not a reserved system name, unique), `public_key` (optional — a valid SSH public key added as the initial authorized key)
+- Also optional, all defaulting to the same values creation always used before these existed (adding them at creation avoids a create-then-edit round trip for the common cases): `shell` (one of `/bin/bash`, `/bin/sh`, `/usr/bin/zsh`, `/usr/sbin/nologin`, `/bin/false` — default `/bin/bash`), `sudo` (bool, default `false`), `ssh_access` (bool, default `false`), `password` (min 10 + mixed case + numbers — default unset/`null`, same as never calling the password endpoint).
+- `sudo`/`ssh_access` are applied via `useradd -G` at creation time (not a separate `usermod` after), so the account never briefly exists without the access it was created with.
 - Response `201`: `{"system_user": {...}}`
 
 **`DELETE /api/system-users/{systemUser}`** — delete (runs `userdel -r`)

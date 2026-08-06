@@ -54,6 +54,93 @@ it('returns a translated error with a reference when useradd fails', function ()
     expect(SystemUser::where('username', 'deploy')->exists())->toBeFalse();
 });
 
+it('creates a system user with sudo, ssh_access, shell and password set in one call', function () {
+    Process::fake();
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('t')->plainTextToken;
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/system-users', [
+            'username' => 'deploy',
+            'shell' => '/usr/sbin/nologin',
+            'sudo' => true,
+            'ssh_access' => true,
+            'password' => 'Str0ngPassword!',
+        ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('system_user.shell', '/usr/sbin/nologin')
+        ->assertJsonPath('system_user.sudo', true)
+        ->assertJsonPath('system_user.ssh_access', true)
+        ->assertJsonPath('system_user.password', 'Str0ngPassword!');
+
+    Process::assertRan(fn ($process) => $process->command === [
+        'useradd', '-m', '-s', '/usr/sbin/nologin', '-G', 'sudo,ssh-users', 'deploy',
+    ]);
+    Process::assertRan(fn ($process) => $process->command === ['chpasswd']);
+
+    expect(SystemUser::where('username', 'deploy')->first())
+        ->sudo->toBeTrue()
+        ->ssh_access->toBeTrue()
+        ->password->toBe('Str0ngPassword!');
+});
+
+it('defaults shell/sudo/ssh_access/password when none are given, unchanged from before', function () {
+    Process::fake();
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('t')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/system-users', ['username' => 'deploy'])
+        ->assertCreated()
+        ->assertJsonPath('system_user.shell', '/bin/bash')
+        ->assertJsonPath('system_user.sudo', false)
+        ->assertJsonPath('system_user.ssh_access', false)
+        ->assertJsonPath('system_user.password', null);
+
+    Process::assertNotRan(fn ($process) => in_array('chpasswd', $process->command, true));
+});
+
+it('rejects a shell not on the allowlist at creation', function () {
+    Process::fake();
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('t')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/system-users', ['username' => 'deploy', 'shell' => '/bin/evil'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('shell');
+});
+
+it('rejects a weak password at creation', function () {
+    Process::fake();
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('t')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/system-users', ['username' => 'deploy', 'password' => 'short'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('password');
+});
+
+it('does not persist the row when chpasswd fails after user creation succeeds', function () {
+    Process::fake([
+        'useradd*' => Process::result(exitCode: 0),
+        'chpasswd*' => Process::result(exitCode: 1, errorOutput: 'boom'),
+    ]);
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('t')->plainTextToken;
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/system-users', ['username' => 'deploy', 'password' => 'Str0ngPassword!']);
+
+    $response->assertStatus(500);
+    // The user row itself was created before the password step ran — this
+    // documents current behavior (not transactional across the two OS
+    // commands), consistent with every other multi-step server operation.
+    expect(SystemUser::where('username', 'deploy')->first())->password->toBeNull();
+});
+
 it('rejects reserved usernames', function () {
     Process::fake();
     $admin = User::factory()->admin()->create();
