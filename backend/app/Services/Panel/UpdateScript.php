@@ -33,6 +33,7 @@ class UpdateScript
         'composer_install',
         'migrate',
         'seed_permissions',
+        'resync_site_configs',
         'optimize',
         'frontend_build',
         'restart_services',
@@ -129,6 +130,15 @@ class UpdateScript
         # catalogue so permissions added by this release reach administrators.
         note seed_permissions
         {$run}{$php} {$backend}/artisan db:seed --class=PermissionSeeder --force
+
+        # A vhost is a rendered file, so the AI bot list, the 8G ruleset and
+        # the templates shipped in this release do not reach an existing site
+        # until its config is written again. Without this the panel reports
+        # the new list while sites still enforce the old one, and neither
+        # side can tell. Never fails the update: a site that could not be
+        # re-rendered was rolled back and is still serving.
+        note resync_site_configs
+        {$run}{$php} {$backend}/artisan sites:resync
 
         note optimize
         {$run}{$php} {$backend}/artisan optimize:clear
