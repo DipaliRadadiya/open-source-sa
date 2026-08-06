@@ -1,11 +1,13 @@
 <?php
 
+use App\Actions\Server\Application\CreateApplication;
 use App\Enums\DomainType;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Applications\SiteTypeManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Testing\TestResponse;
@@ -165,4 +167,64 @@ it('does not mistake a real domain for a temporary one', function () {
         // Not a suffix match: a real domain that merely contains the string.
         ->and(ApplicationDomain::looksTemporary('nip.io.example.com'))->toBeFalse()
         ->and(ApplicationDomain::looksTemporary('mysslip.io'))->toBeFalse();
+});
+
+it('records the primary domain for every site type', function () {
+    // Asked rather than assumed. The domain row is written in one place, but
+    // "one place" is what the placeholder and the vhost looked like too, and
+    // each of those turned out to behave differently per site type. A one-type
+    // test would have proved nothing about the other sixteen.
+    $types = app(SiteTypeManager::class)->names();
+
+    expect($types)->not->toBeEmpty();
+
+    foreach ($types as $index => $type) {
+        $application = app(CreateApplication::class)->execute([
+            'system_user_id' => $this->su->id,
+            'name' => 'Site '.$type,
+            'domain' => $type.'-'.$index.'.example.com',
+            'site_type' => $type,
+            'domain_type' => 'custom',
+        ]);
+
+        $primary = $application->domains()->where('type', DomainType::Primary->value)->first();
+
+        expect($primary)->not->toBeNull("{$type} created no primary domain")
+            ->and($primary->domain)->toBe($type.'-'.$index.'.example.com')
+            ->and($application->domains()->count())->toBe(1, "{$type} created more than one domain");
+    }
+});
+
+it('serves every site type under the domain it was created with', function () {
+    // The vhost renders `server_name` from the domains relation, falling back
+    // to the mirrored column. Now that the rows exist, the relation is what
+    // answers — so this checks the two agree rather than trusting the fallback
+    // to keep hiding a disagreement.
+    foreach (app(SiteTypeManager::class)->names() as $index => $type) {
+        $application = app(CreateApplication::class)->execute([
+            'system_user_id' => $this->su->id,
+            'name' => 'Served '.$type,
+            'domain' => $type.'-served-'.$index.'.example.com',
+            'site_type' => $type,
+        ]);
+
+        expect($application->load('domains')->serverNames())
+            ->toContain($type.'-served-'.$index.'.example.com');
+    }
+});
+
+it('returns the domain from the endpoint the Domains screen calls', function () {
+    createSite(['domain' => 'shop.example.com', 'domain_type' => 'custom'])->assertCreated();
+
+    $application = Application::first();
+
+    // End to end through HTTP, because that is what the screen does. The rows
+    // existing in the database is necessary and not sufficient — the resource
+    // has to expose them too.
+    test()->withHeaders(['Authorization' => 'Bearer '.test()->admin->createToken('t4')->plainTextToken])
+        ->getJson("/api/applications/{$application->id}/domains")
+        ->assertOk()
+        ->assertJsonCount(1, 'domains')
+        ->assertJsonPath('domains.0.domain', 'shop.example.com')
+        ->assertJsonPath('domains.0.type', 'primary');
 });
