@@ -162,6 +162,7 @@ return [
     'application.basic_auth_enabled' => 'A activé la protection par mot de passe de :name',
     'application.basic_auth_disabled' => 'A désactivé la protection par mot de passe de :name',
     'application.ai_bot_policy_updated' => 'A défini la politique du bloqueur de robots IA de :name sur :policy',
+    'application.bot_rules_updated' => 'A mis à jour les règles de robots personnalisées de :name (:blocked bloqués, :allowed autorisés)',
     'application.web_root_changed' => 'A changé la racine web de :name en :web_root',
     'application.waf_updated' => 'A mis à jour les paramètres du pare-feu de :name',
     'application.staging_created' => 'A créé un site de staging pour :name',

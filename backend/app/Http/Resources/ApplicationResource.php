@@ -51,6 +51,12 @@ class ApplicationResource extends JsonResource
             // two different things for the same value.
             'ai_bot_policy' => $this->ai_bot_policy->value,
             'ai_bot_policy_title' => $this->ai_bot_policy->title(),
+            // This site's own additions to, and exemptions from, that list.
+            // `bot_allowed` holds agents the built-in list would block and
+            // this site does not want blocked, so the screen can show them
+            // as exemptions rather than as a second block list.
+            'bot_blocked' => $this->whenLoaded('botRules', fn () => $this->botRules->where('type', 'block')->pluck('value')->values()),
+            'bot_allowed' => $this->whenLoaded('botRules', fn () => $this->botRules->where('type', 'allow')->pluck('value')->values()),
 
             // The 8G Firewall. `waf_categories` is null-resolved to "all six"
             // here too, so the frontend never has to know that null means

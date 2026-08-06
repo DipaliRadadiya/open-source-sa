@@ -126,6 +126,12 @@ class Application extends Model
         return $this->hasMany(ApplicationWafRule::class);
     }
 
+    /** Per-site additions to, and exemptions from, the built-in AI bot list. */
+    public function botRules(): HasMany
+    {
+        return $this->hasMany(ApplicationBotRule::class);
+    }
+
     /** Set only on a staging site — the production site it was cloned from. */
     public function production(): BelongsTo
     {

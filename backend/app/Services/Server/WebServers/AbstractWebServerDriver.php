@@ -163,11 +163,37 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         ];
     }
 
+    /**
+     * The policy's built-in list, plus this site's own additions, minus its
+     * own exemptions.
+     *
+     * Exemptions are subtracted last and case-insensitively, so "allow this
+     * one" wins over both the built-in list and a contradictory custom block
+     * — a rule that says allow and a rule that says block can only have one
+     * safe resolution, and the one that keeps traffic flowing is it.
+     *
+     * `botRules` lazy-loads if not already set, which also lets a caller
+     * pre-set it in memory (see BotBlockerManager::apply()) to render against
+     * not-yet-saved rules without a second query overwriting them.
+     */
     private function botBlockPattern(Application $application): ?string
     {
         $bots = $application->ai_bot_policy instanceof AiBotPolicy
             ? $application->ai_bot_policy->blockedBots()
             : [];
+
+        $rules = $application->botRules;
+
+        $bots = array_merge($bots, $rules->where('type', 'block')->pluck('value')->all());
+
+        $allowed = $rules->where('type', 'allow')
+            ->map(fn ($rule) => mb_strtolower((string) $rule->value))
+            ->all();
+
+        $bots = array_values(array_filter(
+            array_unique($bots),
+            fn (string $bot) => ! in_array(mb_strtolower($bot), $allowed, true),
+        ));
 
         if ($bots === []) {
             return null;

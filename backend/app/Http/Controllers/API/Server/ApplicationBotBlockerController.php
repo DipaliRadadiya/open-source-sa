@@ -34,10 +34,10 @@ class ApplicationBotBlockerController extends Controller
 
     public function update(UpdateBotBlockerRequest $request, Application $application, UpdateApplicationBotBlocker $action): JsonResponse
     {
-        $action->execute($application, $request->policy());
+        $action->execute($application, $request->policy(), $request->blocked(), $request->allowed());
 
         return response()->json([
-            'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
+            'application' => ApplicationResource::make($application->fresh(['systemUser', 'botRules']))->resolve(),
         ]);
     }
 }
