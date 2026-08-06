@@ -97,6 +97,19 @@ class GitSiteType extends AbstractSiteType
                 'help' => __('application.help.rendering_type'),
             ]),
         ], $this->commonFields(), $this->phpFields(), [
+            // Not `nodeFields()` — that also carries `app_port`, which this
+            // card already declares below with its own `rendering_type`
+            // depends_on. `node_version` is genuinely optional (nullable at
+            // the top level in StoreApplicationRequest, same as php_version):
+            // leaving it unset runs the build and the process on whatever
+            // `node` resolves to on PATH, exactly as before this field
+            // existed. Restricted to ssr/csr for the same reason as
+            // package_manager — a PHP or static repository has no Node
+            // runtime to pin.
+            $this->field('node_version', 'select', extra: [
+                'depends_on' => 'node_rendering',
+                'source' => 'node_versions',
+            ]),
             // Only a Node app installs dependencies with one of these — a PHP
             // repository uses composer, a static site generator has no
             // package manager of its own to pick. `node_rendering` is a
