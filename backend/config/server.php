@@ -116,7 +116,7 @@ return [
             'runuser', 'sh', 'env', 'rsync',
             'nginx', 'apachectl', 'lswsctrl',
             'phpenmod', 'phpdismod', 'update-alternatives',
-            'mysql', 'redis-cli', 'mongosh',
+            'mysql', 'mariadb', 'mariadb-dump', 'redis-cli', 'mongosh',
             'ufw', 'fail2ban-client', 'sshd',
             'fallocate', 'mkswap', 'swapon', 'swapoff',
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',

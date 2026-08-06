@@ -1255,7 +1255,7 @@ configure_sudoers() {
         /usr/bin/runuser /usr/bin/sh /usr/bin/env
         /usr/sbin/nginx /usr/sbin/apachectl /usr/bin/lswsctrl
         /usr/sbin/phpenmod /usr/sbin/phpdismod /usr/bin/update-alternatives
-        /usr/bin/mysql /usr/bin/redis-cli /usr/bin/mongosh
+        /usr/bin/mysql /usr/bin/mariadb /usr/bin/mariadb-dump /usr/bin/redis-cli /usr/bin/mongosh
         /usr/sbin/ufw /usr/bin/fail2ban-client /usr/sbin/sshd
         /usr/bin/fallocate /usr/sbin/mkswap /usr/sbin/swapon /usr/sbin/swapoff
         /usr/bin/hostnamectl /usr/bin/timedatectl /usr/sbin/shutdown /usr/bin/df /usr/bin/du
