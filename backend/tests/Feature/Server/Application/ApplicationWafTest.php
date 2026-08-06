@@ -209,3 +209,98 @@ it('refuses without manage permission', function () {
         ->putJson(wafUrl(), ['enabled' => true, 'mode' => 'enforce', 'categories' => ['method']])
         ->assertStatus(403);
 });
+
+it('describes every category, not just names it', function () {
+    $response = $this->withHeaders(wafHeaders())->getJson('/api/waf-options')->assertOk();
+
+    foreach ($response->json('waf_categories') as $category) {
+        // "Bad cookies" is not enough to decide whether switching a category
+        // off is safe, and switching one off to fix a false positive is the
+        // documented normal use of this screen.
+        expect($category['description'])->not->toBeEmpty()
+            ->and($category['description'])->not->toBe($category['title']);
+    }
+});
+
+it('leaves the stored categories alone when the request does not mention them', function () {
+    fakeWafWebServer();
+
+    $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
+        'enabled' => true,
+        'mode' => 'enforce',
+        'categories' => ['request_uri'],
+    ])->assertOk();
+
+    // Changing only the mode must not silently switch the other five back on
+    // — including the one the user turned off to fix a false positive.
+    $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
+        'enabled' => true,
+        'mode' => 'detect',
+    ])->assertOk();
+
+    expect($this->application->fresh()->waf_categories)->toBe(['request_uri']);
+});
+
+it('switches every category off when an empty list is sent', function () {
+    fakeWafWebServer();
+
+    $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
+        'enabled' => true,
+        'mode' => 'enforce',
+        'categories' => [],
+    ])->assertOk();
+
+    // Absent and empty are two different intentions and must not collapse.
+    expect($this->application->fresh()->waf_categories)->toBe([]);
+});
+
+it('leaves the stored rules alone when the request does not mention them', function () {
+    fakeWafWebServer();
+
+    $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
+        'enabled' => true,
+        'mode' => 'enforce',
+        'exceptions' => ['mobiquo'],
+        'custom_rules' => ['evilbot'],
+    ])->assertOk();
+
+    $before = ApplicationWafRule::orderBy('id')->pluck('id')->all();
+
+    $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
+        'enabled' => true,
+        'mode' => 'detect',
+    ])->assertOk();
+
+    // Same rows, not rewritten ones: re-creating them would reset their
+    // timestamps and make "when did this rule appear" unanswerable.
+    expect(ApplicationWafRule::orderBy('id')->pluck('id')->all())->toBe($before);
+});
+
+it('offers the detect log only while the firewall is watching', function () {
+    fakeWafWebServer();
+
+    $keys = fn () => collect(
+        $this->withHeaders(wafHeaders())
+            ->getJson('/api/applications/'.$this->application->id.'/logs')
+            ->json('logs')
+    )->pluck('key')->all();
+
+    // Off: nothing writes it.
+    expect($keys())->not->toContain('waf_detect');
+
+    $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
+        'enabled' => true, 'mode' => 'detect',
+    ])->assertOk();
+
+    // Watching: this is the whole point of detect mode, and until now the
+    // evidence it produced was unreachable from the panel.
+    expect($keys())->toContain('waf_detect');
+
+    $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
+        'enabled' => true, 'mode' => 'enforce',
+    ])->assertOk();
+
+    // Enforcing returns 403 and writes nothing here, so listing it would show
+    // an empty file that reads as broken rather than as "not this mode".
+    expect($keys())->not->toContain('waf_detect');
+});

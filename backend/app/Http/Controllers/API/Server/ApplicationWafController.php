@@ -20,6 +20,10 @@ class ApplicationWafController extends Controller
             'waf_categories' => collect(WafCategory::cases())->map(fn (WafCategory $category) => [
                 'value' => $category->value,
                 'title' => $category->title(),
+                // What it inspects, in one sentence. "Bad cookies" is not
+                // enough to decide whether switching it off is safe, and
+                // switching one off is what this screen is for.
+                'description' => $category->description(),
             ]),
             'waf_modes' => collect(WafMode::cases())->map(fn (WafMode $mode) => [
                 'value' => $mode->value,

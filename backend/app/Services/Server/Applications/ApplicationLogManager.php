@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Enums\WafMode;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
 use App\Services\Server\WebServers\WebServerManager;
@@ -30,6 +31,7 @@ class ApplicationLogManager
         private ServerOps $serverOps,
         private WebServerManager $webServers,
         private ProcessSupervisor $processes,
+        private ApplicationProvisioner $provisioner,
     ) {}
 
     /**
@@ -130,6 +132,25 @@ class ApplicationLogManager
         // useless at exactly the moment it is needed.
         if ($this->processes->runs($application)) {
             $catalog[] = ['key' => 'application', 'kind' => 'journal', 'path' => ''];
+        }
+
+        // The firewall's detect-mode log: the requests that *would* have been
+        // blocked. Offering "just watch and see what happens" while giving the
+        // user no way to see what happened made detect mode close to
+        // pointless.
+        //
+        // Only in detect mode, because only detect mode writes it — an
+        // enforcing site returns 403 and logs nothing here, so listing it
+        // there would show an empty file that reads as broken rather than as
+        // "this mode does not produce one".
+        if ($application->waf_enabled && $application->waf_mode === WafMode::Detect) {
+            $catalog[] = [
+                'key' => 'waf_detect',
+                'kind' => 'file',
+                // Inside `.panel/`, which every vhost template already denies
+                // over HTTP — nothing new has to keep it unreadable.
+                'path' => $this->provisioner->documentRoot($application).'/.panel/waf-detect.log',
+            ];
         }
 
         return $catalog;

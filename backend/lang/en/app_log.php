@@ -13,6 +13,7 @@ return [
         'access' => 'Access log',
         'error' => 'Error log',
         'application' => 'Application output',
+        'waf_detect' => 'Firewall detections',
     ],
 
     'errors' => [

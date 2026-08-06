@@ -25,6 +25,20 @@ enum WafCategory: string
     }
 
     /**
+     * One sentence saying what this category actually inspects.
+     *
+     * The titles are deliberately plain ("Bad cookies"), which reads well in a
+     * list and says nothing on its own — nobody can decide whether to switch
+     * off "Bad cookies" from those two words. The description is what makes
+     * the toggle an informed choice rather than a coin flip, and turning one
+     * off to fix a false positive is the documented normal use of this screen.
+     */
+    public function description(): string
+    {
+        return __('app_firewall.waf.category_descriptions.'.$this->value);
+    }
+
+    /**
      * @return array<int, self>
      */
     public static function all(): array

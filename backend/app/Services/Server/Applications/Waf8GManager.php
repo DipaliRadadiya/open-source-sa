@@ -35,27 +35,36 @@ class Waf8GManager
     ) {}
 
     /**
-     * @param  array<int, string>  $categories
-     * @param  array<int, string>  $exceptions
-     * @param  array<int, string>  $customRules
+     * @param  array<int, string>|null  $categories  null leaves the stored list alone
+     * @param  array<int, string>|null  $exceptions  null leaves the stored list alone
+     * @param  array<int, string>|null  $customRules  null leaves the stored list alone
      */
     public function apply(
         Application $application,
         bool $enabled,
         WafMode $mode,
-        array $categories,
-        array $exceptions,
-        array $customRules,
+        ?array $categories = null,
+        ?array $exceptions = null,
+        ?array $customRules = null,
     ): void {
         $this->ensureSharedMaps();
+
+        $application->loadMissing('wafRules');
 
         $previousEnabled = $application->waf_enabled;
         $previousMode = $application->waf_mode;
         $previousCategories = $application->waf_categories;
 
+        // A partial update must not decide anything it did not mention. Absent
+        // once meant "all six on", which silently re-enabled the category a
+        // user had switched off to fix a false positive.
+        $rulesChange = $exceptions !== null || $customRules !== null;
+        $exceptions ??= $application->wafRules->where('type', 'exception')->pluck('value')->all();
+        $customRules ??= $application->wafRules->where('type', 'block')->pluck('value')->all();
+
         $application->waf_enabled = $enabled;
         $application->waf_mode = $mode;
-        $application->waf_categories = $categories;
+        $application->waf_categories = $categories ?? $application->waf_categories;
 
         // Rendered against the new rules before either is ever written to
         // the database — see class docblock.
@@ -81,6 +90,14 @@ class Waf8GManager
         $this->webServers->driver()->reload();
 
         $application->save();
+
+        // Only when the request actually carried a list. Rewriting the rows to
+        // the same values on every save would churn the table and, worse,
+        // reset their timestamps so "when did this rule appear" stops being
+        // answerable.
+        if (! $rulesChange) {
+            return;
+        }
 
         $application->wafRules()->delete();
 

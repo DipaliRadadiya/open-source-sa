@@ -15,19 +15,19 @@ class UpdateApplicationWaf
     ) {}
 
     /**
-     * @param  array<int, string>  $categories
-     * @param  array<int, string>  $exceptions
-     * @param  array<int, string>  $customRules
+     * @param  array<int, string>|null  $categories  null leaves the stored list alone
+     * @param  array<int, string>|null  $exceptions  null leaves the stored list alone
+     * @param  array<int, string>|null  $customRules  null leaves the stored list alone
      */
     public function execute(
         Application $application,
         bool $enabled,
         WafMode $mode,
-        array $categories,
-        array $exceptions,
-        array $customRules,
+        ?array $categories = null,
+        ?array $exceptions = null,
+        ?array $customRules = null,
     ): void {
-        $application->load('systemUser');
+        $application->load('systemUser', 'wafRules');
 
         $this->waf->apply($application, $enabled, $mode, $categories, $exceptions, $customRules);
 

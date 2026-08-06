@@ -5,6 +5,7 @@ return [
         'access' => 'Zugriffsprotokoll',
         'error' => 'Fehlerprotokoll',
         'application' => 'Anwendungsausgabe',
+        'waf_detect' => 'Firewall-Erkennungen',
     ],
 
     'errors' => [

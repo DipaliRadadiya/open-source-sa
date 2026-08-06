@@ -5,6 +5,7 @@ return [
         'access' => 'एक्सेस लॉग',
         'error' => 'त्रुटि लॉग',
         'application' => 'ऐप्लिकेशन आउटपुट',
+        'waf_detect' => 'फ़ायरवॉल पहचान',
     ],
 
     'errors' => [

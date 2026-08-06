@@ -46,26 +46,42 @@ class UpdateWafRequest extends FormRequest
     }
 
     /**
-     * @return array<int, string>
+     * Null means "leave the stored categories alone", which is not the same
+     * as `[]` — that means "switch every category off".
+     *
+     * Absent used to mean "turn all six on", and that is a genuine footgun: a
+     * caller sending a partial update to change only the mode would silently
+     * re-enable every category the user had switched off, including the one
+     * they turned off to fix a false positive. Nothing in the payload said so
+     * and nothing failed. Same contract as the bot blocker's block/allow
+     * lists, so the two screens behave identically.
+     *
+     * @return array<int, string>|null
      */
-    public function categories(): array
+    public function categories(): ?array
     {
-        return $this->validated('categories') ?? WafCategory::values();
+        return $this->has('categories') ? (array) $this->validated('categories') : null;
     }
 
     /**
-     * @return array<int, string>
+     * Same contract as categories(): absent leaves the stored list alone,
+     * `[]` clears it.
+     *
+     * @return array<int, string>|null
      */
-    public function exceptions(): array
+    public function exceptions(): ?array
     {
-        return $this->validated('exceptions') ?? [];
+        return $this->has('exceptions') ? (array) $this->validated('exceptions') : null;
     }
 
     /**
-     * @return array<int, string>
+     * Same contract as categories(): absent leaves the stored list alone,
+     * `[]` clears it.
+     *
+     * @return array<int, string>|null
      */
-    public function customRules(): array
+    public function customRules(): ?array
     {
-        return $this->validated('custom_rules') ?? [];
+        return $this->has('custom_rules') ? (array) $this->validated('custom_rules') : null;
     }
 }
