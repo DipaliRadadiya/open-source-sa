@@ -112,6 +112,32 @@ class BasicAuthManager
         );
     }
 
+    /**
+     * Write the credential file at the application's *current* document root,
+     * reusing the stored hash rather than asking for the password again.
+     *
+     * Needed when the document root moves under a protected site: the file is
+     * addressed by document root, so a moved root would leave the vhost
+     * pointing at a credential file that is not there. That fails closed
+     * rather than open, but the site is still down — and a webroot change
+     * silently switching protection off would be worse.
+     */
+    public function publish(Application $application): void
+    {
+        if (! $application->basic_auth_enabled) {
+            return;
+        }
+
+        $username = (string) $application->basic_auth_username;
+        $hash = (string) $application->basic_auth_password;
+
+        if ($username === '' || $hash === '') {
+            return;
+        }
+
+        $this->writeCredentialsFile($application, $username, $hash);
+    }
+
     private function writeCredentialsFile(Application $application, string $username, string $hash): void
     {
         $path = $this->credentialsPath($application);

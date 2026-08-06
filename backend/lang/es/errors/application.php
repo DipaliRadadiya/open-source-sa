@@ -18,6 +18,7 @@ return [
     'availability_failed' => 'No se pudo cambiar la disponibilidad de la aplicación en el servidor.',
     'basic_auth_failed' => 'No se pudo cambiar la protección con contraseña en el servidor.',
     'bot_blocker_failed' => 'No se pudo cambiar la política del bloqueador de bots de IA en el servidor.',
+    'web_root_failed' => 'No se pudo cambiar la raíz web en el servidor.',
     'waf_failed' => 'No se pudo cambiar la configuración del firewall en el servidor.',
     'staging_failed' => 'La operación de staging falló en el servidor.',
     'clone_failed' => 'La operación de clonación falló en el servidor.',

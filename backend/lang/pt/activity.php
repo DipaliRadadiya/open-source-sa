@@ -162,6 +162,7 @@ return [
     'application.basic_auth_enabled' => 'Ativou a proteção por senha de :name',
     'application.basic_auth_disabled' => 'Desativou a proteção por senha de :name',
     'application.ai_bot_policy_updated' => 'Definiu a política do Bloqueador de Bots de IA de :name para :policy',
+    'application.web_root_changed' => 'Alterou a raiz web de :name para :web_root',
     'application.waf_updated' => 'Atualizou as definições da firewall de :name',
     'application.staging_created' => 'Criou um site de staging para :name',
     'application.staging_pushed' => 'Enviou o staging para :name (:mode)',

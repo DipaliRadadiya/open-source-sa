@@ -9,7 +9,10 @@ use App\Services\Applications\SiteTypeManager;
 
 class UpdateApplication
 {
-    public function __construct(private ActivityLogger $activityLogger) {}
+    public function __construct(
+        private ActivityLogger $activityLogger,
+        private UpdateApplicationWebRoot $webRootAction,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -42,7 +45,20 @@ class UpdateApplication
             }
         }
 
+        // The web root is not a plain column write: it moves the directory the
+        // site is served from, so it goes through the manager that also
+        // rewrites the vhost, the pool and the unit. Left here rather than
+        // rejected, so an existing caller sending the whole application form
+        // gets the change applied instead of stored and ignored.
+        $webRoot = $data['web_root'] ?? null;
+        $changesWebRoot = array_key_exists('web_root', $data);
+        unset($data['web_root']);
+
         $application->update($data);
+
+        if ($changesWebRoot) {
+            $this->webRootAction->execute($application, $webRoot);
+        }
 
         $this->activityLogger->log('application.updated', $application, [
             'name' => $application->name,

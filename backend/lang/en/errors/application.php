@@ -18,6 +18,7 @@ return [
     'availability_failed' => 'Changing the application\'s availability failed on the server.',
     'basic_auth_failed' => 'Changing password protection failed on the server.',
     'bot_blocker_failed' => 'Changing the AI Bot Blocker policy failed on the server.',
+    'web_root_failed' => 'Changing the web root failed on the server.',
     'waf_failed' => 'Changing the firewall settings failed on the server.',
     'staging_failed' => 'The staging operation failed on the server.',
     'clone_failed' => 'The clone operation failed on the server.',

@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\Server\ApplicationController;
 use App\Http\Controllers\API\Server\ApplicationDomainController;
 use App\Http\Controllers\API\Server\ApplicationWebhookController;
+use App\Http\Controllers\API\Server\ApplicationWebRootController;
 use App\Http\Controllers\API\Server\CertificateController;
 use App\Http\Controllers\API\Server\DeploymentController;
 use App\Http\Controllers\API\Server\ServerCapabilityController;
@@ -41,6 +42,13 @@ Route::post('/applications/{application}/process/{action}', [ApplicationControll
 Route::post('/applications/{application}/disable', [ApplicationController::class, 'disable'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 Route::post('/applications/{application}/enable', [ApplicationController::class, 'enable'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+
+// Web root. Its own endpoint rather than a field on the generic update,
+// because it is a server mutation — it creates a directory, rewrites the
+// vhost and reloads — and needs the throttle and the failure envelope that
+// go with one, not the plain-record semantics of `PUT /applications/{id}`.
+Route::put('/applications/{application}/web-root', [ApplicationWebRootController::class, 'update'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 
 // Deploy-on-push. The delivery endpoint itself is unauthenticated and lives in

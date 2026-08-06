@@ -162,6 +162,7 @@ return [
     'application.basic_auth_enabled' => 'Passwortschutz für :name aktiviert',
     'application.basic_auth_disabled' => 'Passwortschutz für :name deaktiviert',
     'application.ai_bot_policy_updated' => 'AI-Bot-Blocker-Richtlinie für :name auf :policy gesetzt',
+    'application.web_root_changed' => 'Web-Root von :name auf :web_root geändert',
     'application.waf_updated' => 'Firewall-Einstellungen für :name aktualisiert',
     'application.staging_created' => 'Staging-Site für :name erstellt',
     'application.staging_pushed' => 'Staging auf :name gepusht (:mode)',
