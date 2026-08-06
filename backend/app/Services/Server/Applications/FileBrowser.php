@@ -53,6 +53,11 @@ class FileBrowser
      * — enough to undo a mistake, bounded. */
     public const KEEP_BACKUPS = 5;
 
+    /** Recursive search is heavier than a flat listing and has no natural
+     * page size — capped the same way `LogManager` bounds a tail read,
+     * with a `truncated` flag so the caller knows there's more. */
+    public const MAX_SEARCH_RESULTS = 200;
+
     private const BINARY_SNIFF_BYTES = 8192;
 
     public function __construct(
@@ -69,7 +74,7 @@ class FileBrowser
         $this->assertType($application, $target, 'd');
 
         $result = $this->run($application, [
-            'find', $target, '-mindepth', '1', '-maxdepth', '1', '-printf', "%f\t%y\t%s\t%T@\n",
+            'find', $target, '-mindepth', '1', '-maxdepth', '1', '-printf', "%f\t%y\t%s\t%T@\t%m\t%u\t%g\n",
         ], 'list');
 
         $entries = [];
@@ -79,21 +84,9 @@ class FileBrowser
                 continue;
             }
 
-            [$name, $type, $size, $mtime] = explode("\t", $line, 4);
-            $modifiedAt = Carbon::createFromTimestamp((int) (float) $mtime);
+            [$name, $type, $size, $mtime, $mode, $owner, $group] = explode("\t", $line, 7);
 
-            $entries[] = [
-                'name' => $name,
-                'type' => match ($type) {
-                    'd' => 'dir',
-                    'l' => 'symlink',
-                    default => 'file',
-                },
-                'size' => (int) $size,
-                'size_human' => Bytes::human((int) $size),
-                'modified_at' => $modifiedAt->format('d-m-Y H:i:s'),
-                'modified_at_human' => $modifiedAt->diffForHumans(),
-            ];
+            $entries[] = $this->buildEntry($name, $type, $size, $mtime, $mode, $owner, $group);
         }
 
         // Directories first, then alphabetical — how every file manager in
@@ -105,6 +98,118 @@ class FileBrowser
         });
 
         return $entries;
+    }
+
+    /**
+     * Recursively searches a subtree (default: the whole site) by filename,
+     * case-insensitively. Flat across every matched depth, unlike `list()` —
+     * a result's `path` (relative to the site root, not to `$scopePath`) is
+     * what tells the caller where it actually lives.
+     *
+     * Capped at `MAX_SEARCH_RESULTS`; `truncated` tells the caller there was
+     * more than that so the UI can say so rather than silently showing a
+     * partial list as if it were complete.
+     *
+     * @return array{entries: array<int, array<string, mixed>>, truncated: bool}
+     */
+    public function search(Application $application, string $scopePath, string $query): array
+    {
+        $target = $this->resolve($application, $scopePath);
+        $this->assertType($application, $target, 'd');
+
+        // `-iname`'s pattern is find's own glob syntax, not a literal
+        // substring — a query containing `*`/`?`/`[` must be escaped or it
+        // would be interpreted as a wildcard instead of matched literally.
+        $pattern = '*'.$this->escapeFindPattern($query).'*';
+
+        $result = $this->run($application, [
+            'find', $target, '-mindepth', '1', '-iname', $pattern, '-printf', "%P\t%y\t%s\t%T@\t%m\t%u\t%g\n",
+        ], 'search');
+
+        $entries = [];
+
+        foreach (explode("\n", trim($result->output())) as $line) {
+            if ($line === '') {
+                continue;
+            }
+
+            // `%P` is relative to $target (the search scope), not the site
+            // root — rejoined with $scopePath so a result's `path` is always
+            // usable directly against every other endpoint here, regardless
+            // of which subtree was searched.
+            [$relativeToScope, $type, $size, $mtime, $mode, $owner, $group] = explode("\t", $line, 7);
+            $relativePath = $scopePath === '' ? $relativeToScope : "{$scopePath}/{$relativeToScope}";
+
+            $entries[] = ['path' => $relativePath] + $this->buildEntry(basename($relativePath), $type, $size, $mtime, $mode, $owner, $group);
+        }
+
+        usort($entries, fn (array $a, array $b): int => strcasecmp($a['path'], $b['path']));
+
+        $truncated = count($entries) > self::MAX_SEARCH_RESULTS;
+
+        return [
+            'entries' => $truncated ? array_slice($entries, 0, self::MAX_SEARCH_RESULTS) : $entries,
+            'truncated' => $truncated,
+        ];
+    }
+
+    /**
+     * Total size of a directory's contents — deliberately not part of
+     * `list()`. A recursive walk over an entry with thousands of files (a
+     * WordPress `uploads` folder, say) would make every listing as slow as
+     * its heaviest subfolder; this is its own on-demand call instead, made
+     * only when a user actually asks for one folder's size.
+     *
+     * @return array{size: int, size_human: string}
+     */
+    public function folderSize(Application $application, string $path): array
+    {
+        $target = $this->resolve($application, $path);
+        $this->assertType($application, $target, 'd');
+
+        $output = trim($this->run($application, ['du', '-sb', $target], 'folder_size')->output());
+        [$bytes] = explode("\t", $output, 2);
+        $bytes = (int) $bytes;
+
+        return ['size' => $bytes, 'size_human' => Bytes::human($bytes)];
+    }
+
+    /**
+     * @return array{name: string, type: string, size: int, size_human: string, modified_at: string, modified_at_human: string, mode: ?string, owner: ?string, group: ?string}
+     */
+    private function buildEntry(string $name, string $type, string $size, string $mtime, string $mode, string $owner, string $group): array
+    {
+        $entryType = match ($type) {
+            'd' => 'dir',
+            'l' => 'symlink',
+            default => 'file',
+        };
+
+        $modifiedAt = Carbon::createFromTimestamp((int) (float) $mtime);
+
+        // A symlink's own mode/ownership (`lrwxrwxrwx`, always) isn't a
+        // meaningful permission to show or set — omitted the same way size
+        // is uninteresting for it, rather than showing a constant that never
+        // varies.
+        $isSymlink = $entryType === 'symlink';
+
+        return [
+            'name' => $name,
+            'type' => $entryType,
+            'size' => (int) $size,
+            'size_human' => Bytes::human((int) $size),
+            'modified_at' => $modifiedAt->format('d-m-Y H:i:s'),
+            'modified_at_human' => $modifiedAt->diffForHumans(),
+            'mode' => $isSymlink ? null : $mode,
+            'owner' => $isSymlink ? null : $owner,
+            'group' => $isSymlink ? null : $group,
+        ];
+    }
+
+    /** Escapes find's own glob metacharacters so a search query is matched literally, not as a wildcard pattern. */
+    private function escapeFindPattern(string $value): string
+    {
+        return str_replace(['\\', '*', '?', '['], ['\\\\', '\\*', '\\?', '\\['], $value);
     }
 
     /**

@@ -13,6 +13,7 @@ use App\Http\Requests\Server\Application\ExtractFileRequest;
 use App\Http\Requests\Server\Application\RenameFileRequest;
 use App\Http\Requests\Server\Application\RestoreFileBackupRequest;
 use App\Http\Requests\Server\Application\SaveFileRequest;
+use App\Http\Requests\Server\Application\SearchFilesRequest;
 use App\Http\Requests\Server\Application\UploadFileRequest;
 use App\Models\Application;
 use App\Services\ActivityLogger;
@@ -42,6 +43,29 @@ class ApplicationFileController extends Controller
         return response()->json([
             'path' => $request->targetPath(),
             'files' => $files->list($application, $request->targetPath()),
+        ]);
+    }
+
+    public function search(SearchFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
+    {
+        $result = $files->search($application, $request->targetPath(), $request->searchQuery());
+
+        return response()->json([
+            'path' => $request->targetPath(),
+            'query' => $request->searchQuery(),
+            'files' => $result['entries'],
+            'truncated' => $result['truncated'],
+        ]);
+    }
+
+    public function folderSize(BrowseFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
+    {
+        $result = $files->folderSize($application, $request->targetPath());
+
+        return response()->json([
+            'path' => $request->targetPath(),
+            'size' => $result['size'],
+            'size_human' => $result['size_human'],
         ]);
     }
 

@@ -242,7 +242,15 @@ function fakeFileBrowserServer(): void
             return Process::result(output: $entry['type']."\t".($entry['size'] ?? 0));
         }
 
-        if ($binary === 'find' && ($inner[2] ?? null) === '-mindepth') {
+        $statLine = function (string $name, array $entry): string {
+            $mode = $entry['mode'] ?? ($entry['type'] === 'd' ? '755' : '644');
+            $owner = $entry['owner'] ?? 'siteowner';
+            $group = $entry['group'] ?? 'siteowner';
+
+            return "{$name}\t{$entry['type']}\t".($entry['size'] ?? 0)."\t1700000000\t{$mode}\t{$owner}\t{$group}";
+        };
+
+        if ($binary === 'find' && ($inner[2] ?? null) === '-mindepth' && ($inner[4] ?? null) === '-maxdepth') {
             $rel = $relative($inner[1]);
             $lines = [];
 
@@ -258,10 +266,52 @@ function fakeFileBrowserServer(): void
                 }
 
                 $name = str_contains($path, '/') ? substr($path, (int) strrpos($path, '/') + 1) : $path;
-                $lines[] = "{$name}\t{$entry['type']}\t".($entry['size'] ?? 0)."\t1700000000";
+                $lines[] = $statLine($name, $entry);
             }
 
             return Process::result(output: $lines === [] ? '' : implode("\n", $lines)."\n");
+        }
+
+        if ($binary === 'find' && ($inner[2] ?? null) === '-mindepth' && ($inner[4] ?? null) === '-iname') {
+            // ['find', $target, '-mindepth', '1', '-iname', $pattern, '-printf', $fmt]
+            $rel = $relative($inner[1]);
+            $needle = strtolower(stripcslashes(trim($inner[5] ?? '', '*')));
+            $lines = [];
+
+            foreach (FileBrowserFake::$fs as $path => $entry) {
+                if ($path === '') {
+                    continue;
+                }
+
+                if ($rel !== '' && $path !== $rel && ! str_starts_with($path, "{$rel}/")) {
+                    continue;
+                }
+
+                $name = str_contains($path, '/') ? substr($path, (int) strrpos($path, '/') + 1) : $path;
+
+                if ($needle !== '' && ! str_contains(strtolower($name), $needle)) {
+                    continue;
+                }
+
+                // %P: relative to the search root, matching what real find prints.
+                $relativeToScope = $rel === '' ? $path : substr($path, strlen($rel) + 1);
+                $lines[] = $statLine($relativeToScope, $entry);
+            }
+
+            return Process::result(output: $lines === [] ? '' : implode("\n", $lines)."\n");
+        }
+
+        if ($binary === 'du' && ($inner[1] ?? null) === '-sb') {
+            $rel = $relative($inner[2]);
+            $total = 0;
+
+            foreach (FileBrowserFake::$fs as $path => $entry) {
+                if ($path === $rel || ($rel === '' && $path !== '') || str_starts_with($path, "{$rel}/")) {
+                    $total += $entry['size'] ?? 0;
+                }
+            }
+
+            return Process::result(output: "{$total}\t{$inner[2]}\n");
         }
 
         if ($binary === 'find' && ($inner[2] ?? null) === '-maxdepth' && ($inner[3] ?? null) === '1') {
@@ -479,6 +529,20 @@ describe('browsing', function () {
             ->and($response->json('files.2.type'))->toBe('symlink');
     });
 
+    it('returns mode, owner and group for files and directories, but not for symlinks', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)->getJson(filesUrl())->assertOk();
+
+        expect($response->json('files.0.mode'))->toBe('755') // wp-content, a dir
+            ->and($response->json('files.0.owner'))->toBe('siteowner')
+            ->and($response->json('files.0.group'))->toBe('siteowner')
+            ->and($response->json('files.1.mode'))->toBe('644') // index.php, a file
+            ->and($response->json('files.2.mode'))->toBeNull() // shortcut, a symlink
+            ->and($response->json('files.2.owner'))->toBeNull()
+            ->and($response->json('files.2.group'))->toBeNull();
+    });
+
     it('runs every command as the site\'s own user, never as root', function () {
         fakeFileBrowserServer();
 
@@ -633,6 +697,119 @@ describe('browsing', function () {
 
             $this->getJson(filesUrl())->assertUnauthorized();
         });
+    });
+});
+
+describe('searching', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'size' => 20];
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/plugins'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/plugins/hello.php'] = ['type' => 'f', 'size' => 10];
+        FileBrowserFake::$fs['wp-content/themes'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/themes/hello-theme'] = ['type' => 'd'];
+    });
+
+    it('finds matches anywhere in the tree, case-insensitively, with full relative paths', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(filesUrl('/search?q=HELLO'))
+            ->assertOk();
+
+        expect($response->json('files.*.path'))->toBe(['wp-content/plugins/hello.php', 'wp-content/themes/hello-theme'])
+            ->and($response->json('truncated'))->toBeFalse();
+    });
+
+    it('scopes the search to a subtree when path is given', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(filesUrl('/search?q=hello&path=wp-content/plugins'))
+            ->assertOk();
+
+        expect($response->json('files.*.path'))->toBe(['wp-content/plugins/hello.php']);
+    });
+
+    it('rejects a scope path that escapes the site root before touching the server', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('/search?q=hello&path=../../etc'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('path');
+
+        expect(FileBrowserFake::$ran)->toBe([]);
+    });
+
+    it('requires a non-empty query', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('/search?q='))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('q');
+    });
+
+    it('refuses a viewer with no app_file permission at all', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->getJson(filesUrl('/search?q=hello'))->assertForbidden();
+    });
+
+    it('lets a view-only user search', function () {
+        fakeFileBrowserServer();
+        $user = User::factory()->create();
+        grantPermission($user, 'app_file', view: true, manage: false);
+
+        $this->actingAs($user)->getJson(filesUrl('/search?q=hello'))->assertOk();
+    });
+});
+
+describe('folder size', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/uploads'] = ['type' => 'd'];
+        FileBrowserFake::$fs['wp-content/uploads/photo.jpg'] = ['type' => 'f', 'size' => 1024];
+        FileBrowserFake::$fs['wp-content/uploads/photo2.jpg'] = ['type' => 'f', 'size' => 2048];
+    });
+
+    it('sums the size of everything under the given folder', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(filesUrl('/size?path=wp-content/uploads'))
+            ->assertOk();
+
+        expect($response->json('size'))->toBe(3072);
+    });
+
+    it('404s for a path that does not exist', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('/size?path=no-such-dir'))
+            ->assertNotFound();
+    });
+
+    it('rejects a path that escapes the site root before touching the server', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('/size?path=../../etc'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('path');
+
+        expect(FileBrowserFake::$ran)->toBe([]);
+    });
+
+    it('denies an unauthenticated caller', function () {
+        fakeFileBrowserServer();
+
+        $this->getJson(filesUrl('/size?path=wp-content/uploads'))->assertUnauthorized();
     });
 });
 

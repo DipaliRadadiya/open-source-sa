@@ -5,7 +5,8 @@ use Illuminate\Support\Facades\Route;
 
 /*
 | A site's own files: reset permissions, browse/view/edit/download, upload,
-| extract (.zip/.tar.gz), create a folder, rename/move, delete.
+| extract (.zip/.tar.gz), create a folder, rename/move, delete, recursive
+| search, and on-demand folder size.
 |
 | Every command runs as the site's own Linux user (`runuser -u`, in
 | FileBrowser), never as the panel's root — that is what makes accepting a
@@ -22,6 +23,12 @@ Route::post('/applications/{application}/fix-permissions', [ApplicationFileContr
 
 Route::get('/applications/{application}/files', [ApplicationFileController::class, 'index'])
     ->middleware('permission:app_file');
+
+Route::get('/applications/{application}/files/search', [ApplicationFileController::class, 'search'])
+    ->middleware(['permission:app_file', 'throttle:10,1']);
+
+Route::get('/applications/{application}/files/size', [ApplicationFileController::class, 'folderSize'])
+    ->middleware(['permission:app_file', 'throttle:20,1']);
 
 Route::get('/applications/{application}/files/content', [ApplicationFileController::class, 'show'])
     ->middleware(['permission:app_file', 'throttle:60,1']);
