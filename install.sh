@@ -554,6 +554,17 @@ fetch_source() {
         ok "updated to the latest ${REPO_BRANCH}"
     else
         mkdir -p "$(dirname "$APP_DIR")"
+        if [[ -e "$APP_DIR" ]]; then
+            # A previous attempt can leave APP_DIR behind without a valid
+            # .git — an interrupted clone, or something else pre-creating
+            # the path. git then either refuses to clone into it or, worse,
+            # leaves it in a state where later plumbing (git config, fetch)
+            # fails with a cryptic "not in a git directory". APP_DIR is
+            # entirely owned by this installer (see UPDATE_STATE_DIR above),
+            # so clearing it before a fresh clone is safe.
+            warn "${APP_DIR} exists but is not a git checkout (leftover from an interrupted attempt) — removing before cloning"
+            run rm -rf "$APP_DIR"
+        fi
         run git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$APP_DIR"
         ok "cloned into ${APP_DIR}"
     fi
