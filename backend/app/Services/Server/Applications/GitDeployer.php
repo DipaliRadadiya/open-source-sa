@@ -77,7 +77,7 @@ class GitDeployer
                 $this->run('checkout', null, [
                     'git', '-C', $documentRoot, 'reset', '--hard', "origin/{$branch}",
                 ]);
-            } else {
+            } elseif ($this->isEmpty($documentRoot)) {
                 $this->run('clone', $credentialFile, [
                     'git', 'clone', '--depth', '1', '--branch', $branch, $remote, $documentRoot,
                 ]);
@@ -85,6 +85,40 @@ class GitDeployer
                 // Store the remote without any credential in it, so nothing
                 // sensitive is written into .git/config.
                 $this->run('clone', null, [
+                    'git', '-C', $documentRoot, 'remote', 'set-url', 'origin', $remote,
+                ]);
+            } else {
+                // `git clone` refuses a destination that is not empty, which is
+                // the normal case rather than the exception: a site that was
+                // provisioned has a placeholder, and a server migrated from
+                // another panel has the user's actual files. Cloning was the
+                // reason the first deploy of a git application failed.
+                //
+                // init + fetch + hard reset reaches the same end state and
+                // works in a directory that already has content. The reset is
+                // what makes it equivalent: the working tree ends up matching
+                // the branch exactly, not merged with whatever was there.
+                $this->run('init', null, [
+                    'git', 'init', '--quiet', '--initial-branch', $branch, $documentRoot,
+                ]);
+
+                // `remote add` fails if a previous attempt already added it,
+                // so set-url after add-or-nothing is the idempotent form.
+                $this->serverOps->run(
+                    ['git', '-C', $documentRoot, 'remote', 'add', 'origin', $remote],
+                    ['feature' => 'application', 'op' => 'git.remote_add'],
+                );
+
+                $this->run('fetch', $credentialFile, [
+                    'git', '-C', $documentRoot, 'fetch', '--depth', '1', $remote, $branch,
+                ]);
+
+                $this->run('checkout', null, [
+                    'git', '-C', $documentRoot, 'reset', '--hard', 'FETCH_HEAD',
+                ]);
+
+                // Never with a credential in it — same reason as the clone path.
+                $this->run('checkout', null, [
                     'git', '-C', $documentRoot, 'remote', 'set-url', 'origin', $remote,
                 ]);
             }
@@ -372,6 +406,39 @@ class GitDeployer
             ['test', '-d', "{$documentRoot}/.git"],
             ['feature' => 'application', 'op' => 'git.detect'],
         )->ok;
+    }
+
+    /**
+     * Whether `git clone` would accept this directory as a destination.
+     *
+     * Git allows a target that does not exist or is empty; anything else is a
+     * fatal error before a single object is fetched. Asked rather than assumed
+     * because both non-empty cases are ordinary: our own placeholder, and a
+     * migrated server's existing files.
+     */
+    private function isEmpty(string $documentRoot): bool
+    {
+        // `find`, not `ls`, for one unglamorous reason: `ls` is not in the
+        // panel's sudoers allowlist and `find` is. An unlisted binary fails
+        // every time on a real server while passing every faked test, and
+        // adding one to `install.sh` would only reach fresh installs — the
+        // sudoers file is written at install time and an update never rewrites
+        // it. This is the same shape as the bug that left the whole panel
+        // inert behind a sudoers file nothing invoked.
+        //
+        // `-mindepth 1` excludes the directory itself and dotfiles are
+        // included by default, which matters: a directory holding only `.env`
+        // is not empty as far as git is concerned, and treating it as empty
+        // would turn a clean refusal into a half-deployed site. `-print -quit`
+        // stops at the first entry rather than walking a large tree.
+        $result = $this->serverOps->run(
+            ['find', $documentRoot, '-mindepth', '1', '-maxdepth', '1', '-print', '-quit'],
+            ['feature' => 'application', 'op' => 'git.detect_empty'],
+        );
+
+        // Unreadable or missing: let the clone path run and report git's own
+        // error rather than guessing at a workaround.
+        return $result->failed() || trim($result->output()) === '';
     }
 
     private function currentCommit(string $documentRoot): ?string

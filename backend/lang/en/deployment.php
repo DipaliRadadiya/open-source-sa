@@ -16,6 +16,7 @@ return [
         'manual' => 'Manual',
         'webhook' => 'Push',
         'redeploy' => 'Re-run',
+        'initial' => 'First deploy',
     ],
 
 ];

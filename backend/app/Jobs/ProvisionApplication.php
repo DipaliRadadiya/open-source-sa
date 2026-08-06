@@ -3,11 +3,13 @@
 namespace App\Jobs;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\DeploymentTrigger;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\Concerns\TracksActor;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisioningBudget;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -65,6 +67,8 @@ class ProvisionApplication implements ShouldQueue
             $activityLogger->log('application.provisioned', $application, [
                 'name' => $application->name,
             ], actor: $this->actor());
+
+            $this->deployInitialCode($application);
         } catch (ProvisioningFailedException $e) {
             // The step that broke is useful to the user; the raw stderr is not,
             // and lives only in the server-ops log under this reference.
@@ -79,6 +83,35 @@ class ProvisionApplication implements ShouldQueue
                 'step' => $e->step,
             ], actor: $this->actor());
         }
+    }
+
+    /**
+     * Fetch a git application's code once the site is serving.
+     *
+     * Provisioning deliberately builds the directory, vhost and unit without
+     * any code, because the code has to arrive over the network and that is a
+     * different kind of failure. But nothing then asked for it: a user who
+     * pasted a repository URL got a provisioned site showing a placeholder,
+     * with no indication that a second, manual step existed. "Create a site
+     * from this repository" plainly includes fetching the repository.
+     *
+     * Recorded as a real deployment so it shows up in the history with its own
+     * trigger, and dispatched rather than run inline so a slow clone cannot
+     * time out the provisioning job.
+     */
+    private function deployInitialCode(Application $application): void
+    {
+        if ($application->site_type !== 'git') {
+            return;
+        }
+
+        $deployment = app(DeploymentRecorder::class)->open(
+            $application,
+            DeploymentTrigger::Initial,
+            $this->actorId,
+        );
+
+        DeployApplication::dispatch($application->id, $this->actorId, $deployment->id);
     }
 
     /**

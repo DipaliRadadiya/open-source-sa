@@ -150,7 +150,7 @@ describe('live progress', function () {
 
         expect($app->status->value)->toBe('failed');
         expect($app->failed_step)->toBe('placeholder');
-        expect($app->steps)->toBe(['create_directory', 'set_ownership']);
+        expect($app->steps)->toBe(['create_directory']);
     });
 
     it('starts a retry from an empty list rather than the previous attempt', function () {

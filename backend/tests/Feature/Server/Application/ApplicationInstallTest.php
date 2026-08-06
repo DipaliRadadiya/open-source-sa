@@ -99,7 +99,7 @@ it('installs wordpress end to end after the site is serving', function () {
     // one and never emitted, because the step lists were assembled by hand in
     // each installer and the database is created by the manager above them.
     expect($app->steps)->toBe([
-        'create_directory', 'set_ownership', 'placeholder', 'write_config', 'test_config', 'reload',
+        'create_directory', 'placeholder', 'set_ownership', 'write_config', 'test_config', 'reload',
         'create_database', 'download', 'extract', 'configure', 'install_app',
     ]);
 
@@ -289,7 +289,7 @@ it('skips the installer entirely for site types that have none', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'create_directory', 'set_ownership', 'placeholder', 'write_config', 'test_config', 'reload',
+        'create_directory', 'placeholder', 'set_ownership', 'write_config', 'test_config', 'reload',
     ]);
     expect(Database::where('application_id', $app->id)->count())->toBe(0);
     Process::assertNotRan(fn ($p) => $p->command[0] === 'curl');

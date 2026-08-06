@@ -16,6 +16,7 @@ return [
         'manual' => 'मैनुअल',
         'webhook' => 'पुश',
         'redeploy' => 'पुनः चलाया',
+        'initial' => 'पहला डिप्लॉय',
     ],
 
 ];

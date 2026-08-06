@@ -16,6 +16,7 @@ return [
         'manual' => '手動',
         'webhook' => 'プッシュ',
         'redeploy' => '再実行',
+        'initial' => '初回デプロイ',
     ],
 
 ];

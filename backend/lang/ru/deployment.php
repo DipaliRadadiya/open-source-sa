@@ -16,6 +16,7 @@ return [
         'manual' => 'Вручную',
         'webhook' => 'Push',
         'redeploy' => 'Повтор',
+        'initial' => 'Первое развёртывание',
     ],
 
 ];

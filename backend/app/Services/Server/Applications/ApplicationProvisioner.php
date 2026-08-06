@@ -94,15 +94,23 @@ class ApplicationProvisioner
             ['feature' => 'application', 'op' => 'mkdir', 'application' => $application->id],
         ));
 
+        // Written *before* ownership is set, not after. `tee` runs elevated,
+        // so a placeholder written after the `chown` is a root-owned file
+        // sitting in the site user's own directory: the File Manager runs as
+        // that user and could list it but never edit, rename or delete it —
+        // and on a blank site it is the one file they immediately want to
+        // replace.
+        if ($this->wantsPlaceholder($application, $skipInstaller)) {
+            $this->step('placeholder', fn () => $this->serverOps->run(
+                ['tee', $this->placeholderPath($application, $documentRoot)],
+                ['feature' => 'application', 'op' => 'placeholder', 'application' => $application->id],
+                input: $this->placeholderContents($application),
+            ));
+        }
+
         $this->step('set_ownership', fn () => $this->serverOps->run(
             ['chown', '-R', "{$user->username}:{$user->username}", $documentRoot],
             ['feature' => 'application', 'op' => 'chown', 'application' => $application->id],
-        ));
-
-        $this->step('placeholder', fn () => $this->serverOps->run(
-            ['tee', $this->placeholderPath($application, $documentRoot)],
-            ['feature' => 'application', 'op' => 'placeholder', 'application' => $application->id],
-            input: $this->placeholderContents($application),
         ));
 
         $this->step('write_config', fn () => $driver->apply($application, $documentRoot));
@@ -308,6 +316,23 @@ class ApplicationProvisioner
             input: '<!doctype html><meta charset="utf-8"><title>Unavailable</title>'
                 ."<h1>This site is temporarily unavailable</h1>\n",
         );
+    }
+
+    /**
+     * A placeholder is a courtesy for a site with nothing in it yet. Two kinds
+     * of site must not get one:
+     *
+     *  - a git site, whose content arrives from the repository. `git clone`
+     *    refuses a non-empty destination outright, so a placeholder here does
+     *    not merely sit there looking untidy — it breaks the first deploy of
+     *    every git application, which is the only deploy that matters for a
+     *    site nobody has used yet.
+     *  - a clone target, which is about to have another site's files rsynced
+     *    over it.
+     */
+    private function wantsPlaceholder(Application $application, bool $skipInstaller): bool
+    {
+        return ! $skipInstaller && $application->site_type !== 'git';
     }
 
     private function placeholderPath(Application $application, string $documentRoot): string

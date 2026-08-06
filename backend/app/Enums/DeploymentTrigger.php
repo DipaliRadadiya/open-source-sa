@@ -21,6 +21,15 @@ enum DeploymentTrigger: string
     /** Someone re-ran an earlier deploy. */
     case Redeploy = 'redeploy';
 
+    /**
+     * The first fetch, run automatically once the site was provisioned.
+     *
+     * Recorded separately rather than as `manual`: nobody pressed anything,
+     * and a deploy history that claims they did is the kind of small lie that
+     * makes the rest of the history untrustworthy.
+     */
+    case Initial = 'initial';
+
     public function label(): string
     {
         return __('deployment.trigger.'.$this->value);

@@ -58,7 +58,7 @@ it('creates the directory, writes a tested config and reloads', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'create_directory', 'set_ownership', 'placeholder', 'write_config', 'test_config', 'reload',
+        'create_directory', 'placeholder', 'set_ownership', 'write_config', 'test_config', 'reload',
     ]);
 
     Process::assertRan(fn ($p) => $p->command === ['mkdir', '-p', '/home/deploy/shop.example.com']);
