@@ -1158,6 +1158,29 @@ The application resource carries a `webhook` block:
 
 Two provider behaviours worth telling users about: GitLab sends **no webhook at all** for a push touching more than 3 branches or tags, and both GitLab and GitHub time out around 10s — which this endpoint is well inside, since it only queues.
 
+#### One repository, several deployable projects (monorepo frontend + backend)
+
+**Status: this is a documented pattern using existing fields, not a dedicated feature.** No new endpoint, field or concept exists for "one repo, multiple deploy targets" — the current model is strictly one Application = one clone = one process = one vhost. A monorepo containing e.g. `frontend/` (a Next.js app) and `backend/` (an Express API) as two independently-deployable projects is handled by creating **two applications against the same repository**, not one.
+
+This already works today because of three things that happen to compose correctly, even though none of them were built with this in mind:
+
+- **No uniqueness constraint on `repository`/`repository_url`.** Only `app_port` and `webhook_identifier` are unique on `applications` — nothing stops two applications from pointing at the identical repo and branch.
+- **`web_root` is not just the vhost's docroot.** Per `WebRootManager`, it also drives the PHP-FPM pool's paths *and* **a Node application's systemd `WorkingDirectory`**. So an application with `rendering_type: ssr`, `web_root: /backend`, `start_command: node server.js` runs that command from `<clone>/backend`, not the repo root.
+- **Each application does its own independent build.** `build_command`/`package_manager` are per-application, so the frontend app's build (`cd` implied by its own `web_root`) and the backend app's build never interfere.
+
+**The setup, as it stands today:**
+1. Create application A — `rendering_type: csr` (or `ssr`), `web_root: /frontend`, its own domain/subdomain, its own `build_command`/`package_manager`.
+2. Create application B — `rendering_type: ssr`, `web_root: /backend`, a different domain/subdomain (and a different `app_port`, since that column is globally unique), its own `build_command`/`start_command`/`package_manager`.
+3. Both point at the same `repository`/`repository_url` + `branch`.
+4. Deploy-on-push: each application has its **own** `webhook_identifier`/URL (`PUT /api/applications/{id}/webhook` per application). Most providers (GitHub, GitLab, Bitbucket) support registering more than one webhook on the same repository, so the user adds two webhook URLs in their git provider — one per application. There's no "linked deploy" concept that fans a single push out to both from one webhook.
+
+**Known rough edges, not yet addressed:**
+- **Duplicate clones.** Each application clones the *whole* repository independently — for a large monorepo (big `node_modules`, checked-in assets, etc.) that's the same bytes fetched and stored twice, not shared.
+- **No UI guidance.** The create-application form doesn't currently suggest or explain this pattern — a user has to already know it's possible. Nothing prevents it, but nothing points to it either.
+- **No atomicity across the pair.** A push can deploy application A successfully and fail on application B (or arrive at each webhook at slightly different times) — there's no coordination that treats "frontend + backend" as one unit that succeeds or fails together.
+
+Closing any of the three rough edges above — shared clones, UI-level "add another app from this repository," or atomic multi-target deploys — would be new work, not a fix to something broken. Not started; needs its own scoping before any of it is implemented.
+
 **`DELETE /api/applications/{application}`** (`manage`) → `{ deleted: true }`. Also **removes the site config and reloads**, so the domain stops being served. The site's **files are kept** unless you pass `?remove_files=true` — deleting a panel record must not silently destroy someone's code. An application still at `pending` touches nothing on the server.
 
 #### Provisioning status
