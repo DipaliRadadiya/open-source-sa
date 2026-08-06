@@ -53,6 +53,7 @@ use App\Services\Server\DiskCleaner\Targets\TmpTarget;
 use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
+use App\Services\Server\Doctor\Checks\DriverContentionCheck;
 use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
 use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
 use App\Services\Server\Doctor\Checks\PhpIsolationCheck;
@@ -186,6 +187,7 @@ return [
             WritablePathsCheck::class,
             DatabaseCheck::class,
             QueueCheck::class,
+            DriverContentionCheck::class,
             PhpIsolationCheck::class,
             HealthEndpointCheck::class,
         ],

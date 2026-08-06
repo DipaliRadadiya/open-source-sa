@@ -13,6 +13,7 @@ return [
         'queue' => 'Queue worker',
         'account_locks' => 'Account lock files',
         'frontend_build' => 'Interface build',
+        'driver_contention' => 'Driver contention',
     ],
     'fixes' => [
         'php_isolation_missing' => 'A site the panel believes is isolated has no pool file. It is still being served — from the shared pool, as www-data, with none of its own settings. Open the site’s PHP screen and isolate it again.',
@@ -33,6 +34,8 @@ return [
         'web_server_undrivable' => 'The panel cannot write configuration for this web server, so sites cannot be created. Switch to nginx or Apache.',
         'web_server_config' => 'The web server configuration is invalid. Run its own config test to see why — the next reload will fail until it is fixed.',
         'queue_stalled' => 'Jobs are queued but nothing is processing them. Restart the queue service; provisioning, deploys and installs will not finish until it runs.',
+        'drivers_on_sqlite' => 'The queue or sessions are stored in SQLite, which allows only one writer — this is what causes intermittent "database is locked" errors. Redis is available: run `php artisan panel:configure-services`, then restart php-fpm and the queue worker.',
+        'drivers_no_redis' => 'The queue or sessions are stored in SQLite, which allows only one writer — this is what causes intermittent "database is locked" errors. Install and start Redis, then run `php artisan panel:configure-services`.',
         'queue_failed_jobs' => 'Some background jobs failed. Check the failed_jobs table — work that was silently discarded is often why a feature appeared to do nothing.',
         'queue_unreadable' => 'The queue tables could not be read. Run php artisan migrate --force.',
         'account_locks' => 'A stale lock file is blocking every user operation. Confirm nothing holds it (`sudo fuser /etc/passwd.lock`), then remove the files listed above. They are left behind by an interrupted useradd and nothing cleans them up.',

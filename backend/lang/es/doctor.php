@@ -13,6 +13,7 @@ return [
         'queue' => 'Procesador de cola',
         'account_locks' => 'Archivos de bloqueo de cuentas',
         'frontend_build' => 'Compilación de la interfaz',
+        'driver_contention' => 'Contención de controladores',
     ],
     'fixes' => [
         'php_isolation_missing' => 'Un sitio que el panel cree aislado no tiene archivo de pool. Se sigue sirviendo desde el pool compartido, como www-data y sin ninguna de sus opciones. Abre la pantalla PHP del sitio y vuelve a aislarlo.',
@@ -33,6 +34,8 @@ return [
         'web_server_undrivable' => 'El panel no puede escribir configuración para este servidor web, así que no se pueden crear sitios. Cambia a nginx o Apache.',
         'web_server_config' => 'La configuración del servidor web no es válida. Ejecuta su prueba de configuración para ver por qué; la próxima recarga fallará hasta que se corrija.',
         'queue_stalled' => 'Hay trabajos en cola pero nada los procesa. Reinicia el servicio de cola; el aprovisionamiento, los despliegues y las instalaciones no terminarán hasta que funcione.',
+        'drivers_on_sqlite' => 'La cola o las sesiones se guardan en SQLite, que solo admite un escritor: esto causa los errores intermitentes "database is locked". Redis está disponible: ejecute `php artisan panel:configure-services` y reinicie php-fpm y el worker de la cola.',
+        'drivers_no_redis' => 'La cola o las sesiones se guardan en SQLite, que solo admite un escritor: esto causa los errores intermitentes "database is locked". Instale e inicie Redis y luego ejecute `php artisan panel:configure-services`.',
         'queue_failed_jobs' => 'Algunos trabajos en segundo plano fallaron. Revisa la tabla failed_jobs: el trabajo descartado en silencio suele ser la razón de que algo pareciera no hacer nada.',
         'queue_unreadable' => 'No se pudieron leer las tablas de la cola. Ejecuta php artisan migrate --force.',
         'account_locks' => 'Un archivo de bloqueo obsoleto impide toda operación de usuarios. Comprueba que nada lo retiene (`sudo fuser /etc/passwd.lock`) y elimina los archivos indicados. Los deja un useradd interrumpido y nada los limpia.',

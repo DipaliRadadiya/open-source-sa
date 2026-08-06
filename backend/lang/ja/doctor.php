@@ -13,6 +13,7 @@ return [
         'queue' => 'キューワーカー',
         'account_locks' => 'アカウントのロックファイル',
         'frontend_build' => 'インターフェースのビルド',
+        'driver_contention' => 'ドライバ競合',
     ],
     'fixes' => [
         'php_isolation_missing' => 'パネルが分離済みとみなしているサイトにプール設定ファイルがありません。共有プールから www-data として、独自の設定なしで配信され続けています。サイトの PHP 画面から再度分離してください。',
@@ -33,6 +34,8 @@ return [
         'web_server_undrivable' => 'このウェブサーバー用の設定をパネルが書き出せないため、サイトを作成できません。nginx か Apache に切り替えてください。',
         'web_server_config' => 'ウェブサーバーの設定が不正です。設定テストを実行してください — 修正するまで次のリロードは失敗します。',
         'queue_stalled' => 'ジョブがキューにありますが処理されていません。キューサービスを再起動してください。プロビジョニング・デプロイ・インストールは完了しません。',
+        'drivers_on_sqlite' => 'キューまたはセッションが SQLite に保存されています。SQLite は同時に1つしか書き込めないため、断続的な "database is locked" が発生します。Redis が利用可能です: `php artisan panel:configure-services` を実行し、php-fpm とキューワーカーを再起動してください。',
+        'drivers_no_redis' => 'キューまたはセッションが SQLite に保存されています。SQLite は同時に1つしか書き込めないため、断続的な "database is locked" が発生します。Redis をインストールして起動し、`php artisan panel:configure-services` を実行してください。',
         'queue_failed_jobs' => '一部のバックグラウンドジョブが失敗しました。failed_jobs テーブルを確認してください — 黙って破棄された処理が「何も起きない」原因であることが多いです。',
         'queue_unreadable' => 'キューのテーブルを読み取れませんでした。php artisan migrate --force を実行してください。',
         'account_locks' => '古いロックファイルがすべてのユーザー操作を妨げています。誰も保持していないことを確認し (`sudo fuser /etc/passwd.lock`)、上記のファイルを削除してください。中断された useradd が残したもので、自動では消えません。',

@@ -33,6 +33,7 @@ class UpdateScript
         'composer_install',
         'migrate',
         'seed_permissions',
+        'configure_services',
         'resync_site_configs',
         'optimize',
         'frontend_build',
@@ -130,6 +131,16 @@ class UpdateScript
         # catalogue so permissions added by this release reach administrators.
         note seed_permissions
         {$run}{$php} {$backend}/artisan db:seed --class=PermissionSeeder --force
+
+        # Existing installs were written with the queue and sessions on the
+        # database, which for a SQLite panel means the worker polls the same
+        # single-writer file every request writes to — "database is locked" on
+        # an idle box. The installer can only fix that for new installs, and
+        # an update never rewrites .env, so it is fixed here. Proves Redis
+        # answers first and changes nothing if it does not; must run before
+        # `optimize`, which caches the config this rewrites.
+        note configure_services
+        {$run}{$php} {$backend}/artisan panel:configure-services
 
         # A vhost is a rendered file, so the AI bot list, the 8G ruleset and
         # the templates shipped in this release do not reach an existing site

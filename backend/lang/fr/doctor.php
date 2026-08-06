@@ -13,6 +13,7 @@ return [
         'queue' => 'Worker de file',
         'account_locks' => 'Fichiers de verrou des comptes',
         'frontend_build' => 'Build de l’interface',
+        'driver_contention' => 'Contention des pilotes',
     ],
     'fixes' => [
         'php_isolation_missing' => 'Un site que le panneau croit isolé n\'a pas de fichier de pool. Il est toujours servi depuis le pool partagé, en www-data, sans aucun de ses réglages. Ouvrez l\'écran PHP du site et isolez-le à nouveau.',
@@ -33,6 +34,8 @@ return [
         'web_server_undrivable' => 'Le panneau ne peut pas écrire de configuration pour ce serveur web, donc aucun site ne peut être créé. Passez à nginx ou Apache.',
         'web_server_config' => 'La configuration du serveur web est invalide. Lancez son propre test de configuration — le prochain rechargement échouera tant que ce n’est pas corrigé.',
         'queue_stalled' => 'Des tâches sont en file mais rien ne les traite. Redémarrez le service de file ; les provisionnements, déploiements et installations ne se termineront pas.',
+        'drivers_on_sqlite' => 'La file ou les sessions sont stockées dans SQLite, qui n\'accepte qu\'un seul écrivain — d\'où les erreurs intermittentes "database is locked". Redis est disponible : lancez `php artisan panel:configure-services`, puis redémarrez php-fpm et le worker.',
+        'drivers_no_redis' => 'La file ou les sessions sont stockées dans SQLite, qui n\'accepte qu\'un seul écrivain — d\'où les erreurs intermittentes "database is locked". Installez et démarrez Redis, puis lancez `php artisan panel:configure-services`.',
         'queue_failed_jobs' => 'Des tâches en arrière-plan ont échoué. Consultez la table failed_jobs — un travail silencieusement abandonné explique souvent qu’une fonction n’ait rien fait.',
         'queue_unreadable' => 'Impossible de lire les tables de file. Exécutez php artisan migrate --force.',
         'account_locks' => 'Un fichier de verrou obsolète bloque toute opération sur les utilisateurs. Vérifiez que rien ne le détient (`sudo fuser /etc/passwd.lock`), puis supprimez les fichiers listés. Ils proviennent d’un useradd interrompu et rien ne les nettoie.',

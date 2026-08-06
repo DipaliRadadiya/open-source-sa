@@ -13,6 +13,7 @@ return [
         'queue' => 'Queue-Worker',
         'account_locks' => 'Sperrdateien für Konten',
         'frontend_build' => 'Oberflächen-Build',
+        'driver_contention' => 'Treiber-Konkurrenz',
     ],
     'fixes' => [
         'php_isolation_missing' => 'Eine Seite, die das Panel für isoliert hält, hat keine Pool-Datei. Sie wird weiterhin aus dem gemeinsamen Pool als www-data ausgeliefert, ohne ihre eigenen Einstellungen. Öffnen Sie die PHP-Seite und isolieren Sie sie erneut.',
@@ -33,6 +34,8 @@ return [
         'web_server_undrivable' => 'Das Panel kann für diesen Webserver keine Konfiguration schreiben, daher lassen sich keine Sites anlegen. Wechseln Sie zu nginx oder Apache.',
         'web_server_config' => 'Die Webserver-Konfiguration ist ungültig. Führen Sie deren Konfigurationstest aus — der nächste Reload schlägt fehl, bis das behoben ist.',
         'queue_stalled' => 'Jobs stehen in der Warteschlange, aber nichts verarbeitet sie. Starten Sie den Queue-Dienst neu; Bereitstellungen, Deployments und Installationen werden sonst nie fertig.',
+        'drivers_on_sqlite' => 'Warteschlange oder Sitzungen liegen in SQLite, das nur einen Schreiber zulässt — daher die sporadischen "database is locked"-Fehler. Redis ist verfügbar: Führen Sie `php artisan panel:configure-services` aus und starten Sie php-fpm und den Queue-Worker neu.',
+        'drivers_no_redis' => 'Warteschlange oder Sitzungen liegen in SQLite, das nur einen Schreiber zulässt — daher die sporadischen "database is locked"-Fehler. Installieren und starten Sie Redis und führen Sie dann `php artisan panel:configure-services` aus.',
         'queue_failed_jobs' => 'Einige Hintergrund-Jobs sind fehlgeschlagen. Prüfen Sie die Tabelle failed_jobs — stillschweigend verworfene Arbeit ist oft der Grund, warum eine Funktion nichts zu tun schien.',
         'queue_unreadable' => 'Die Queue-Tabellen konnten nicht gelesen werden. Führen Sie php artisan migrate --force aus.',
         'account_locks' => 'Eine veraltete Sperrdatei blockiert jede Benutzeroperation. Prüfen Sie, dass sie niemand hält (`sudo fuser /etc/passwd.lock`), und entfernen Sie die oben genannten Dateien. Sie stammen von einem abgebrochenen useradd und werden nie aufgeräumt.',

@@ -13,6 +13,7 @@ return [
         'queue' => 'Processador de fila',
         'account_locks' => 'Ficheiros de bloqueio de contas',
         'frontend_build' => 'Compilação da interface',
+        'driver_contention' => 'Contenção de controladores',
     ],
     'fixes' => [
         'php_isolation_missing' => 'Um site que o painel julga isolado não tem ficheiro de pool. Continua a ser servido pelo pool partilhado, como www-data e sem nenhuma das suas definições. Abra o ecrã de PHP do site e isole-o de novo.',
@@ -33,6 +34,8 @@ return [
         'web_server_undrivable' => 'O painel não consegue escrever configuração para este servidor web, por isso não é possível criar sites. Mude para nginx ou Apache.',
         'web_server_config' => 'A configuração do servidor web é inválida. Execute o teste de configuração — o próximo reload vai falhar até ser corrigido.',
         'queue_stalled' => 'Há tarefas em fila mas nada as processa. Reinicie o serviço de fila; aprovisionamentos, deploys e instalações não terminarão.',
+        'drivers_on_sqlite' => 'A fila ou as sessões estão em SQLite, que só permite um escritor — daí os erros intermitentes "database is locked". O Redis está disponível: execute `php artisan panel:configure-services` e reinicie o php-fpm e o worker da fila.',
+        'drivers_no_redis' => 'A fila ou as sessões estão em SQLite, que só permite um escritor — daí os erros intermitentes "database is locked". Instale e inicie o Redis e execute `php artisan panel:configure-services`.',
         'queue_failed_jobs' => 'Algumas tarefas em segundo plano falharam. Verifique a tabela failed_jobs — trabalho descartado em silêncio é muitas vezes a razão de algo parecer não ter feito nada.',
         'queue_unreadable' => 'Não foi possível ler as tabelas da fila. Execute php artisan migrate --force.',
         'account_locks' => 'Um ficheiro de bloqueio obsoleto impede todas as operações de utilizadores. Confirme que nada o retém (`sudo fuser /etc/passwd.lock`) e remova os ficheiros indicados. São deixados por um useradd interrompido e nada os limpa.',

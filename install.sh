@@ -703,8 +703,17 @@ setup_backend() {
     set_env "${dir}/.env" SANCTUM_STATEFUL_DOMAINS "$PANEL_HOST"
     set_env "${dir}/.env" DB_CONNECTION sqlite
     set_env "${dir}/.env" DB_DATABASE "$db"
-    set_env "${dir}/.env" QUEUE_CONNECTION database
-    set_env "${dir}/.env" SESSION_DRIVER database
+    # All three follow whether Redis actually answered, not whether it was
+    # installed — configure_redis sets CACHE_STORE to "database" when the probe
+    # fails, and the other two have to agree with it or the panel is pointed at
+    # a Redis it already proved it cannot reach.
+    #
+    # They matter more than they look on a SQLite panel: SQLite allows exactly
+    # one writer, so a database queue means the worker polls the same file every
+    # request writes to, and a database session driver adds a write per request.
+    # That is how an idle single-user panel produces "database is locked".
+    set_env "${dir}/.env" QUEUE_CONNECTION "$CACHE_STORE"
+    set_env "${dir}/.env" SESSION_DRIVER "$CACHE_STORE"
     set_env "${dir}/.env" CACHE_STORE "$CACHE_STORE"
 
     # Leading dot so the cookie covers both hosts under the shared parent. With

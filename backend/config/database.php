@@ -58,7 +58,11 @@ return [
              * can lose the last transactions to a power cut, but never
              * corrupts the database.
              */
-            'busy_timeout' => env('DB_BUSY_TIMEOUT', 5000),
+            // 15s rather than 5s. A cushion, not a fix: the real cost is a
+            // writer holding the single write lock for seconds at a time, and
+            // 5s was short enough that an ordinary `ufw` reload could outlast
+            // it and fail an unrelated request with "database is locked".
+            'busy_timeout' => env('DB_BUSY_TIMEOUT', 15000),
             'journal_mode' => env('DB_JOURNAL_MODE', 'WAL'),
             'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL'),
             'transaction_mode' => 'DEFERRED',
