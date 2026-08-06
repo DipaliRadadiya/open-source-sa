@@ -97,6 +97,28 @@ class GitSiteType extends AbstractSiteType
                 'help' => __('application.help.rendering_type'),
             ]),
         ], $this->commonFields(), $this->phpFields(), [
+            // Only a Node app installs dependencies with one of these — a PHP
+            // repository uses composer, a static site generator has no
+            // package manager of its own to pick. `node_rendering` is a
+            // second `depends_on` sentinel alongside `rendering_type`: this
+            // field belongs to both ssr (runs a process) and csr (built to
+            // files), not just the ssr-only fields below it.
+            $this->field('package_manager', 'select', extra: [
+                'depends_on' => 'node_rendering',
+                'default' => 'npm',
+                'options' => [
+                    ['value' => 'npm', 'label' => __('application.package_manager.npm')],
+                    ['value' => 'yarn', 'label' => __('application.package_manager.yarn')],
+                    ['value' => 'pnpm', 'label' => __('application.package_manager.pnpm')],
+                    ['value' => 'bun', 'label' => __('application.package_manager.bun')],
+                ],
+                // Handed to the frontend rather than hardcoded there, the same
+                // way the cron/deploy-script placeholders already are — one
+                // source of truth for what each tool's install+build looks
+                // like.
+                'build_templates' => (array) config('server.deployments.package_manager_scripts', []),
+                'help' => __('application.help.package_manager'),
+            ]),
             $this->field('build_command', 'text', advanced: true, extra: [
                 'help' => __('application.help.build_command'),
             ]),
@@ -141,6 +163,15 @@ class GitSiteType extends AbstractSiteType
             ],
             'branch' => ['required', 'string', 'max:255'],
             'build_command' => ['nullable', 'string', 'max:500'],
+
+            // Required for a Node app (it has to install dependencies
+            // somehow), refused otherwise — a PHP or static site has no
+            // package manager of its own for the field to name.
+            'package_manager' => [
+                Rule::requiredIf(fn () => in_array(request()->input('rendering_type'), ['ssr', 'csr'], true)),
+                Rule::excludeIf(fn () => ! in_array(request()->input('rendering_type'), ['ssr', 'csr'], true)),
+                Rule::in(['npm', 'yarn', 'pnpm', 'bun']),
+            ],
 
             // `php` covers the common case this card is used for — a Laravel
             // or plain-PHP repository — which is neither built to files nor

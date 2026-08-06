@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[Fillable([
     'system_user_id', 'production_application_id', 'cloned_from_application_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
     'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
-    'build_command', 'deploy_script', 'start_command',
+    'build_command', 'deploy_script', 'start_command', 'package_manager',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
     'steps', 'failed_step', 'reference', 'last_commit', 'last_deployed_at',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',

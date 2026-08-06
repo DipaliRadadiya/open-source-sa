@@ -48,6 +48,7 @@ function renderPayload(array $overrides = []): array
         'branch' => 'main',
         'rendering_type' => 'ssr',
         'start_command' => 'node server.js',
+        'package_manager' => 'npm',
     ], $overrides);
 }
 

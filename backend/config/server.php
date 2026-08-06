@@ -575,6 +575,24 @@ return [
             'static' => "cd {path}\ngit pull origin {branch}\n",
             'proxy' => "cd {path}\ngit pull origin {branch}\n",
         ],
+
+        // Install + build for each package manager a Node application can
+        // record. Used two ways: as-is for the create-form's build_command
+        // (the checkout already happened by then), and prefixed with the
+        // `cd`/`git pull` above for the deploy-script default once an
+        // application has a package_manager on record.
+        //
+        // `--if-present` is npm's own flag (bun matches it); yarn has never
+        // had an equivalent and pnpm removed the one it briefly shipped
+        // (github.com/pnpm/pnpm/issues/2200), so those two check the script
+        // exists before calling it rather than relying on a flag that would
+        // fail immediately with "Unknown option".
+        'package_manager_scripts' => [
+            'npm' => "npm ci\nnpm run build --if-present\n",
+            'yarn' => "yarn install --frozen-lockfile\ngrep -q '\"build\"' package.json && yarn build\n",
+            'pnpm' => "pnpm install --frozen-lockfile\ngrep -q '\"build\"' package.json && pnpm build\n",
+            'bun' => "bun install --frozen-lockfile\nbun run build --if-present\n",
+        ],
     ],
 
     'certificates' => [

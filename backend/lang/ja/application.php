@@ -71,6 +71,7 @@ return [
         'web_root' => 'ウェブルート',
         'build_command' => 'ビルドコマンド',
         'start_command' => '起動コマンド',
+        'package_manager' => 'パッケージマネージャー',
         'git_source' => 'ソース',
         'git_account_id' => 'Gitアカウント',
         'repository' => 'リポジトリ',
@@ -91,6 +92,7 @@ return [
         'rendering_type' => 'サーバーサイドレンダリングはアプリを実行してプロキシします。他の 2 つは Web サーバーが直接配信するファイルにビルドします — 高速で、常駐させるものがありません。',
         'repository_url' => '公開リポジトリ — アカウント不要。https:// のアドレスを指定してください。',
         'build_command' => 'コード取得後に実行されます。例: composer install --no-dev',
+        'package_manager' => '依存関係のインストールとビルドに使うツールです。下のビルドコマンドを自動入力します — 後から自由に編集できます。',
     ],
 
     'steps' => [
@@ -127,6 +129,13 @@ return [
         'ssr' => 'サーバーサイドレンダリング（プロセスを実行）',
         'csr' => 'クライアントサイドレンダリング（ファイルにビルド）',
         'static' => '静的サイト（ファイルにビルド）',
+    ],
+
+    'package_manager' => [
+        'npm' => 'npm',
+        'yarn' => 'Yarn',
+        'pnpm' => 'pnpm',
+        'bun' => 'Bun',
     ],
 
 ];

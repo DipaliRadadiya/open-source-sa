@@ -133,6 +133,17 @@ class DeploymentController extends Controller
 
     private function defaultScript(Application $application): string
     {
+        // A Node application with a recorded package manager gets that
+        // tool's own install+build, not the npm-only fallback below — the
+        // whole point of recording the choice at deploy time.
+        if ($application->package_manager) {
+            $perManager = (array) config('server.deployments.package_manager_scripts', []);
+
+            if (isset($perManager[$application->package_manager])) {
+                return "cd {path}\ngit pull origin {branch}\n".$perManager[$application->package_manager];
+            }
+        }
+
         $scripts = (array) config('server.deployments.default_scripts', []);
 
         return (string) ($scripts[$application->serving_profile] ?? $scripts['php'] ?? '');

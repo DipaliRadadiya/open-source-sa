@@ -474,6 +474,10 @@ export function CreateApplicationForm({
     control: form.control,
     name: "rendering_type",
   });
+  const packageManager = useWatch({
+    control: form.control,
+    name: "package_manager",
+  });
   const name = useWatch({ control: form.control, name: "name" });
   const domain = useWatch({ control: form.control, name: "domain" });
   const systemUserId = useWatch({
@@ -493,7 +497,9 @@ export function CreateApplicationForm({
   );
   const visibleFields = typeFields.filter(
     (config) =>
-      config.depends_on !== "rendering_type" || renderingType === "ssr",
+      (config.depends_on !== "rendering_type" || renderingType === "ssr") &&
+      (config.depends_on !== "node_rendering" ||
+        ["ssr", "csr"].includes(renderingType)),
   );
   const standardFields = visibleFields.filter((config) => !config.advanced);
   const advancedFields = visibleFields.filter((config) => config.advanced);
@@ -676,6 +682,24 @@ export function CreateApplicationForm({
     phpVersions,
     selected,
   ]);
+
+  // A starting point, not a policy: switching package manager fills in the
+  // matching install+build commands, but only while build_command is still
+  // untouched — the moment the user edits it themselves, their text wins and
+  // changing the dropdown again must not clobber it out from under them.
+  useEffect(() => {
+    if (!packageManager || form.getValues("build_command")) return;
+    const field = selected?.fields?.find(
+      (item) => item.name === "package_manager",
+    );
+    const template = field?.build_templates?.[packageManager];
+    if (template) {
+      form.setValue("build_command", template, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [form, packageManager, selected]);
 
   useEffect(() => {
     let cancelled = false;

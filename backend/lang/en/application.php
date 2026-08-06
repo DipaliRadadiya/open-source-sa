@@ -76,6 +76,7 @@ return [
         'web_root' => 'Web root',
         'build_command' => 'Build command',
         'start_command' => 'Start command',
+        'package_manager' => 'Package manager',
         'git_source' => 'Source',
         'git_account_id' => 'Git account',
         'repository' => 'Repository',
@@ -96,6 +97,7 @@ return [
         'rendering_type' => 'Server-side rendering runs your app and proxies to it. The other two build to files the web server hands out directly — faster, and nothing to keep running.',
         'repository_url' => 'A public repository — no account needed. Must be an https:// address.',
         'build_command' => 'Run after the code is fetched, e.g. composer install --no-dev',
+        'package_manager' => 'What installs and builds your dependencies. Fills in the build command below — edit it freely afterward.',
     ],
 
     'steps' => [
@@ -132,6 +134,13 @@ return [
         'ssr' => 'Server-side rendering (runs a process)',
         'csr' => 'Client-side rendering (built to files)',
         'static' => 'Static site (built to files)',
+    ],
+
+    'package_manager' => [
+        'npm' => 'npm',
+        'yarn' => 'Yarn',
+        'pnpm' => 'pnpm',
+        'bun' => 'Bun',
     ],
 
 ];

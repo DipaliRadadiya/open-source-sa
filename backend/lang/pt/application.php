@@ -71,6 +71,7 @@ return [
         'web_root' => 'Raiz web',
         'build_command' => 'Comando de build',
         'start_command' => 'Comando de início',
+        'package_manager' => 'Gestor de pacotes',
         'git_source' => 'Origem',
         'git_account_id' => 'Conta do Git',
         'repository' => 'Repositório',
@@ -91,6 +92,7 @@ return [
         'rendering_type' => 'A renderização no servidor executa a sua app e faz proxy para ela. As outras duas compilam ficheiros que o servidor web entrega diretamente — mais rápido e sem nada a manter em execução.',
         'repository_url' => 'Um repositório público — sem necessidade de conta. Deve ser um endereço https://.',
         'build_command' => 'Executado após baixar o código, ex.: composer install --no-dev',
+        'package_manager' => 'O que instala e compila as suas dependências. Preenche o comando de build abaixo — edite livremente depois.',
     ],
 
     'steps' => [
@@ -127,6 +129,13 @@ return [
         'ssr' => 'Renderização no servidor (executa um processo)',
         'csr' => 'Renderização no cliente (compilado em ficheiros)',
         'static' => 'Site estático (compilado em ficheiros)',
+    ],
+
+    'package_manager' => [
+        'npm' => 'npm',
+        'yarn' => 'Yarn',
+        'pnpm' => 'pnpm',
+        'bun' => 'Bun',
     ],
 
 ];

@@ -71,6 +71,7 @@ return [
         'web_root' => 'Web-Root',
         'build_command' => 'Build-Befehl',
         'start_command' => 'Startbefehl',
+        'package_manager' => 'Paketmanager',
         'git_source' => 'Quelle',
         'git_account_id' => 'Git-Konto',
         'repository' => 'Repository',
@@ -91,6 +92,7 @@ return [
         'rendering_type' => 'Server-Rendering führt deine App aus und leitet an sie weiter. Die anderen beiden bauen Dateien, die der Webserver direkt ausliefert – schneller, und nichts muss laufen.',
         'repository_url' => 'Ein öffentliches Repository — kein Konto nötig. Muss eine https://-Adresse sein.',
         'build_command' => 'Läuft nach dem Abrufen des Codes, z. B. composer install --no-dev',
+        'package_manager' => 'Was deine Abhängigkeiten installiert und baut. Füllt den Build-Befehl unten aus – danach frei bearbeitbar.',
     ],
 
     'steps' => [
@@ -127,6 +129,13 @@ return [
         'ssr' => 'Server-Rendering (führt einen Prozess aus)',
         'csr' => 'Client-Rendering (zu Dateien gebaut)',
         'static' => 'Statische Seite (zu Dateien gebaut)',
+    ],
+
+    'package_manager' => [
+        'npm' => 'npm',
+        'yarn' => 'Yarn',
+        'pnpm' => 'pnpm',
+        'bun' => 'Bun',
     ],
 
 ];
