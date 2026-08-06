@@ -10,12 +10,15 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * AI Bot Blocker: three plain-language policies, each resolved server-side
- * from `config/ai_bots.php`. What matters here: `block_training` never
- * touches the retrieval/citation bots (that's the whole point of the
- * feature over a blunt on/off toggle), the vhost swap is reversible the
- * same way Basic Auth's and enable/disable's are, and the catalog endpoint
- * never drifts from what the vhost actually blocks.
+ * AI Bot Blocker: four plain-language policies, each resolved server-side
+ * from `config/ai_bots.php`'s three buckets — training, search and agent.
+ *
+ * What matters here: neither `block_training` nor `block_agents` ever
+ * touches the search/citation bots (that's the whole point of the feature
+ * over a blunt on/off toggle), `block_agents` sits between the two by
+ * blocking live assistants while keeping the site citable, the vhost swap is
+ * reversible the same way Basic Auth's and enable/disable's are, and the
+ * catalog endpoint never drifts from what the vhost actually blocks.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -99,7 +102,7 @@ it('sets the policy, re-renders the vhost, and logs the change', function () {
     Process::assertRan(fn ($p) => ($p->command[0] ?? '') === 'nginx' && ($p->command[1] ?? '') === '-t');
 });
 
-it('writes the training bot names into the rendered vhost, not the retrieval ones', function () {
+it('writes the training bot names into the rendered vhost, not the search ones', function () {
     Process::fake(function ($process) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
@@ -117,6 +120,45 @@ it('writes the training bot names into the rendered vhost, not the retrieval one
     $this->withHeaders(botBlockerHeaders())
         ->putJson(botBlockerUrl(), ['policy' => 'block_training'])
         ->assertOk();
+});
+
+it('blocks live AI assistants but keeps the search crawlers under block_agents', function () {
+    // The reason this policy exists: an assistant fetch costs a request and
+    // returns nothing, while a search crawl is how the site gets cited. One
+    // bucket for both made this position unexpressible.
+    $bots = AiBotPolicy::BlockAgents->blockedBots();
+
+    expect($bots)->toContain('ChatGPT-User', 'Claude-User', 'Perplexity-User')
+        ->and($bots)->toContain('GPTBot', 'ClaudeBot')
+        ->and($bots)->not->toContain('OAI-SearchBot', 'Claude-SearchBot', 'PerplexityBot');
+});
+
+it('keeps the three bot buckets disjoint', function () {
+    // A name in two buckets makes "which policy blocks this?" ambiguous and
+    // silently widens whichever policy the duplicate leaks into.
+    $training = (array) config('ai_bots.training');
+    $search = (array) config('ai_bots.search');
+    $agent = (array) config('ai_bots.agent');
+
+    expect(array_intersect($training, $search))->toBe([])
+        ->and(array_intersect($training, $agent))->toBe([])
+        ->and(array_intersect($search, $agent))->toBe([]);
+
+    // And block_all really is all of them, so no bucket can be forgotten.
+    expect(AiBotPolicy::BlockAll->blockedBots())
+        ->toHaveCount(count($training) + count($search) + count($agent));
+});
+
+it('exposes the new policy in the catalog', function () {
+    $response = $this->withHeaders(botBlockerHeaders())->getJson('/api/ai-bot-policies');
+
+    $agents = $response->json('ai_bot_policies.block_agents');
+
+    expect($agents['title'])->not->toBeEmpty()
+        ->and($agents['description'])->not->toBeEmpty()
+        // Strictly between the two neighbours it sits between.
+        ->and($agents['blocked_count'])->toBeGreaterThan(count($response->json('ai_bot_policies.block_training.blocked_bots')))
+        ->and($agents['blocked_count'])->toBeLessThan(count($response->json('ai_bot_policies.block_all.blocked_bots')));
 });
 
 it('restores the previous policy before failing when the config test fails', function () {

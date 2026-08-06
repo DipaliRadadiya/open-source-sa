@@ -1,21 +1,29 @@
 <?php
 
 /*
- * AI crawler names, split by what they're for — not a flat "block every AI
- * bot" list. Training crawlers feed model weights and never send a visitor
- * back; retrieval/citation crawlers fetch a page to answer a live question
- * and are how a site gets cited in ChatGPT search, Perplexity and similar —
- * blocking those costs the site owner real traffic, so "Block AI training
- * bots" only touches the first list.
+ * AI crawler names in three buckets, because "AI bot" is three different
+ * things and blocking them is three different decisions:
+ *
+ *  - `training` feeds model weights and never sends a visitor back.
+ *  - `search` indexes the site so it can be *cited* in an AI answer. This is
+ *    inbound traffic; blocking it is what costs a site owner real money.
+ *  - `agent` fetches one page because a person asked a question right now.
+ *    It carries the load of a crawl without the citation of a search index,
+ *    so wanting it gone while keeping citations is a coherent position — and
+ *    one two buckets could not express.
+ *
+ * The split follows the industry: Anthropic split ClaudeBot into training and
+ * retrieval agents in Q2 2026, and Cloudflare moved its own policy from two
+ * categories to Search/Agent/Training in July 2026. Treating training and
+ * search as one bucket is the documented expensive mistake.
  *
  * Curated, not exhaustive — cross-checked against multiple independent 2026
  * sources rather than importing a third-party "block everything AI" list
- * wholesale (most of those also block the retrieval bots above, which is
- * exactly the traffic this project's default is trying to protect). Expect
- * this to need occasional updates as crawlers split or rename, the way
- * Anthropic split ClaudeBot into training and retrieval bots in Q2 2026.
+ * wholesale (most of those also block the search bots, which is exactly the
+ * traffic this project's default is trying to protect). Expect this to need
+ * occasional updates as crawlers split or rename.
  *
- * Last reviewed: 2026-08-05.
+ * Last reviewed: 2026-08-06.
  */
 
 return [
@@ -46,17 +54,26 @@ return [
         'SemrushBot-OCOB',
     ],
 
-    // Fetches a page to answer one live question and, for the "-User" and
-    // "SearchBot" agents, is how a site earns a citation in an AI answer.
-    // Left out of "Block AI training bots" on purpose.
-    'retrieval' => [
+    // Indexes the site to answer questions about it later — the crawlers
+    // behind ChatGPT search, Claude search and Perplexity citations. Blocking
+    // these removes the site from AI search results, so nothing but the
+    // explicit "block everything" choice touches them.
+    'search' => [
         'OAI-SearchBot',
-        'ChatGPT-User',
-        'Claude-Web',
-        'Claude-User',
         'Claude-SearchBot',
-        'Perplexity-User',
         'PerplexityBot',
+        // The search-side counterpart to `Amazonbot`, which sits in training.
+        'Amzn-SearchBot',
+    ],
+
+    // Acts in real time on one person's behalf: a chat assistant fetching the
+    // page a user just asked about. Costs a request, returns no citation.
+    'agent' => [
+        'ChatGPT-User',
+        'Claude-User',
+        // Anthropic's older retrieval agent, kept for sites still seeing it.
+        'Claude-Web',
+        'Perplexity-User',
     ],
 
 ];
