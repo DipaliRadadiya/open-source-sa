@@ -7,7 +7,6 @@ use App\Models\Cronjob;
 use App\Models\SystemUser;
 use App\Services\ActivityLogger;
 use App\Services\Server\CrontabManager;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CreateCronjob
@@ -31,30 +30,38 @@ class CreateCronjob
             ]);
         }
 
-        return DB::transaction(function () use ($data, $systemUser, $username) {
-            $cronjob = Cronjob::create([
-                'name' => $data['name'],
-                'slug' => Cronjob::uniqueSlug($data['name']),
-                'username' => $username,
-                'system_user_id' => $systemUser?->id,
-                'command' => $data['command'],
-                'expression' => $data['expression'],
-                'active' => $data['active'] ?? true,
-            ]);
+        $cronjob = Cronjob::create([
+            'name' => $data['name'],
+            'slug' => Cronjob::uniqueSlug($data['name']),
+            'username' => $username,
+            'system_user_id' => $systemUser?->id,
+            'command' => $data['command'],
+            'expression' => $data['expression'],
+            'active' => $data['active'] ?? true,
+        ]);
 
-            // Only active jobs are materialised on disk. A failed write aborts
-            // the transaction so we never persist a row without its cron.d file.
-            if ($cronjob->active) {
-                $result = $this->crontab->write($cronjob);
+        // Committed before the file is written, rather than wrapped around it.
+        // The row has to exist first — its id goes into the cron.d header — and
+        // holding a transaction open across `tee` would block every other write
+        // in the panel for the length of that command, which on SQLite means
+        // one writer at a time and "database is locked" somewhere unrelated.
+        //
+        // A failed write is undone by deleting the row we just made. That is
+        // weaker than a transaction only in the case of the process dying
+        // mid-write; a transaction was never able to un-write the file either,
+        // so the guarantee it appeared to give was already partly imaginary.
+        if ($cronjob->active) {
+            $result = $this->crontab->write($cronjob);
 
-                if ($result->failed()) {
-                    throw new CronjobOperationException($result->reference);
-                }
+            if ($result->failed()) {
+                $cronjob->delete();
+
+                throw new CronjobOperationException($result->reference);
             }
+        }
 
-            $this->activityLogger->log('cronjob.created', $cronjob, ['name' => $cronjob->name]);
+        $this->activityLogger->log('cronjob.created', $cronjob, ['name' => $cronjob->name]);
 
-            return $cronjob;
-        });
+        return $cronjob;
     }
 }

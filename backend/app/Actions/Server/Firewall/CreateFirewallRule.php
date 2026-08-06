@@ -6,7 +6,6 @@ use App\Contracts\Firewall;
 use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\ActivityLogger;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CreateFirewallRule
@@ -36,27 +35,35 @@ class CreateFirewallRule
             ]);
         }
 
-        return DB::transaction(function () use ($data) {
-            $rule = FirewallRule::create([
-                'port_from' => $data['port_from'],
-                'port_to' => $data['port_to'] ?? null,
-                'protocol' => $data['protocol'],
-                'action' => $data['action'],
-                'source_ip' => $data['source_ip'] ?? null,
-                'description' => $data['description'] ?? null,
-                'origin' => 'user',
-            ]);
+        $rule = FirewallRule::create([
+            'port_from' => $data['port_from'],
+            'port_to' => $data['port_to'] ?? null,
+            'protocol' => $data['protocol'],
+            'action' => $data['action'],
+            'source_ip' => $data['source_ip'] ?? null,
+            'description' => $data['description'] ?? null,
+            'origin' => 'user',
+        ]);
 
-            $result = $this->firewall->apply($rule);
+        // Committed before ufw runs, not wrapped around it. A ufw reload takes
+        // seconds, and SQLite allows one writer — a transaction held across it
+        // stalls every other write in the panel until it returns.
+        //
+        // The row is deleted again if ufw refuses. That is the honest version
+        // of what the transaction was doing: it could never have un-applied a
+        // rule ufw had already accepted, so it was only ever rolling back the
+        // half it owned.
+        $result = $this->firewall->apply($rule);
 
-            if ($result->failed()) {
-                throw new FirewallOperationException($result->reference);
-            }
+        if ($result->failed()) {
+            $rule->delete();
 
-            $this->activityLogger->log('firewall.rule_added', $rule, ['ports' => $this->ports($rule)]);
+            throw new FirewallOperationException($result->reference);
+        }
 
-            return $rule;
-        });
+        $this->activityLogger->log('firewall.rule_added', $rule, ['ports' => $this->ports($rule)]);
+
+        return $rule;
     }
 
     private function ports(FirewallRule $rule): string

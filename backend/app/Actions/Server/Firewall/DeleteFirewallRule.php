@@ -6,7 +6,6 @@ use App\Contracts\Firewall;
 use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\ActivityLogger;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class DeleteFirewallRule
@@ -26,18 +25,24 @@ class DeleteFirewallRule
             ]);
         }
 
-        DB::transaction(function () use ($rule) {
-            $ports = $rule->portSpec().($rule->protocol !== 'all' ? '/'.$rule->protocol : '');
+        $ports = $rule->portSpec().($rule->protocol !== 'all' ? '/'.$rule->protocol : '');
 
-            $result = $this->firewall->remove($rule);
+        // Not wrapped in a transaction. `ufw` changes the running firewall the
+        // moment it returns, so a rollback afterwards could only undo the row —
+        // leaving the port open or closed with nothing in the panel saying so.
+        // The transaction never made the two systems atomic; it only held
+        // SQLite's single write lock for the seconds a ufw reload takes, which
+        // is long enough to fail an unrelated request with "database is
+        // locked". Removing first and deleting after gives the same ordering
+        // guarantee for none of that cost.
+        $result = $this->firewall->remove($rule);
 
-            if ($result->failed()) {
-                throw new FirewallOperationException($result->reference);
-            }
+        if ($result->failed()) {
+            throw new FirewallOperationException($result->reference);
+        }
 
-            $rule->delete();
+        $rule->delete();
 
-            $this->activityLogger->log('firewall.rule_removed', null, ['ports' => $ports]);
-        });
+        $this->activityLogger->log('firewall.rule_removed', null, ['ports' => $ports]);
     }
 }

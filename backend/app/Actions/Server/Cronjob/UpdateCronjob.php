@@ -6,7 +6,6 @@ use App\Exceptions\Server\Cronjob\CronjobOperationException;
 use App\Models\Cronjob;
 use App\Services\ActivityLogger;
 use App\Services\Server\CrontabManager;
-use Illuminate\Support\Facades\DB;
 
 class UpdateCronjob
 {
@@ -20,38 +19,48 @@ class UpdateCronjob
      */
     public function execute(Cronjob $cronjob, array $data): Cronjob
     {
-        return DB::transaction(function () use ($cronjob, $data) {
-            // Path is derived from the slug, so a rename (new slug) relocates
-            // the file. Regenerate the slug when the name changes.
-            $oldPath = $this->crontab->path($cronjob);
-            $oldSlug = (string) $cronjob->slug;
+        // Path is derived from the slug, so a rename (new slug) relocates the
+        // file. Regenerate the slug when the name changes.
+        $oldPath = $this->crontab->path($cronjob);
+        $oldSlug = (string) $cronjob->slug;
 
-            if (isset($data['name']) && $data['name'] !== $cronjob->name) {
-                $data['slug'] = Cronjob::uniqueSlug($data['name'], $cronjob->id);
-            }
+        if (isset($data['name']) && $data['name'] !== $cronjob->name) {
+            $data['slug'] = Cronjob::uniqueSlug($data['name'], $cronjob->id);
+        }
 
-            $cronjob->update($data);
+        // Kept so the row can be put back if the file operation refuses. No
+        // transaction: one held open across `tee` blocks every other write in
+        // the panel for the length of the command, and on SQLite that is the
+        // whole panel.
+        $before = $cronjob->getOriginal();
 
-            if ($this->crontab->path($cronjob) !== $oldPath) {
-                $this->crontab->removePath($oldPath);
-                // Carry the output history over to the new name rather than
-                // stranding it under the old one.
-                $this->crontab->moveLog($oldSlug, $cronjob);
-            }
+        $cronjob->update($data);
 
-            // Re-materialise from the new state: active → (over)write the file,
-            // inactive → remove it. A failed op aborts the transaction.
-            $result = $cronjob->active
-                ? $this->crontab->write($cronjob)
-                : $this->crontab->remove($cronjob);
+        // Re-materialise from the new state: active → (over)write the file,
+        // inactive → remove it.
+        //
+        // Ordered before the old file is removed, not after. If this fails the
+        // job is still described on disk exactly as it was, so a rename that
+        // cannot be written leaves a working cronjob rather than none.
+        $result = $cronjob->active
+            ? $this->crontab->write($cronjob)
+            : $this->crontab->remove($cronjob);
 
-            if ($result->failed()) {
-                throw new CronjobOperationException($result->reference);
-            }
+        if ($result->failed()) {
+            $cronjob->forceFill($before)->save();
 
-            $this->activityLogger->log('cronjob.updated', $cronjob, ['name' => $cronjob->name]);
+            throw new CronjobOperationException($result->reference);
+        }
 
-            return $cronjob;
-        });
+        if ($this->crontab->path($cronjob) !== $oldPath) {
+            $this->crontab->removePath($oldPath);
+            // Carry the output history over to the new name rather than
+            // stranding it under the old one.
+            $this->crontab->moveLog($oldSlug, $cronjob);
+        }
+
+        $this->activityLogger->log('cronjob.updated', $cronjob, ['name' => $cronjob->name]);
+
+        return $cronjob;
     }
 }

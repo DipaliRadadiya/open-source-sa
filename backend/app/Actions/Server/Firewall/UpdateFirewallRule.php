@@ -7,7 +7,6 @@ use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\ActivityLogger;
 use App\Services\Server\ServerOpsResult;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Edit a rule, or switch it off without losing it.
@@ -36,16 +35,22 @@ class UpdateFirewallRule
      */
     public function execute(FirewallRule $rule, array $data): FirewallRule
     {
-        return DB::transaction(function () use ($rule, $data) {
-            $original = $rule->replicate();
-            $wasEnabled = (bool) $rule->enabled;
+        $original = $rule->replicate();
+        $wasEnabled = (bool) $rule->enabled;
 
-            $rule->fill($data);
-            $specChanged = (bool) array_intersect(self::SPEC, array_keys($rule->getDirty()));
-            $enabled = (bool) $rule->enabled;
+        $rule->fill($data);
+        $specChanged = (bool) array_intersect(self::SPEC, array_keys($rule->getDirty()));
+        $enabled = (bool) $rule->enabled;
 
-            $rule->save();
+        // Kept so the row can be put back if ufw refuses. No transaction: ufw
+        // reloads take seconds and SQLite allows one writer, so holding one
+        // across these calls stalls every other write in the panel — and it
+        // could not have undone the ufw side anyway.
+        $before = $rule->getOriginal();
 
+        $rule->save();
+
+        try {
             if ($specChanged && $wasEnabled && $enabled) {
                 // Add first: for the moment both exist, which is harmless, and
                 // at no point is the port left unguarded.
@@ -70,7 +75,15 @@ class UpdateFirewallRule
             );
 
             return $rule;
-        });
+        } catch (FirewallOperationException $e) {
+            // Put the row back so the panel keeps describing the rule ufw is
+            // still enforcing. The ufw side is left as it is: a partially
+            // applied change is real, and pretending otherwise by silently
+            // reversing it would be a second unreviewed firewall edit.
+            $rule->forceFill($before)->save();
+
+            throw $e;
+        }
     }
 
     private function push(ServerOpsResult $result): void
