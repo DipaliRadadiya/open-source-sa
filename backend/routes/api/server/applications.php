@@ -55,8 +55,15 @@ Route::put('/applications/{application}/web-root', [ApplicationWebRootController
 // routes/api/webhooks.php; these two only configure it.
 Route::get('/webhook-providers', [ApplicationWebhookController::class, 'providers'])
     ->middleware('permission:application');
+// `app_deployment`, not `application`: this configures the Deployment screen,
+// and gating it on the server-level permission had two consequences. It let
+// someone who owns that screen fail to configure its webhook while someone who
+// cannot see the screen at all could — and, because the site-type check in
+// CheckPermission only runs for `app_`-prefixed permissions, it allowed
+// deploy-on-push to be switched on for a WordPress site that has no repository
+// to push to.
 Route::put('/applications/{application}/webhook', [ApplicationWebhookController::class, 'update'])
-    ->middleware('permission:application,manage');
+    ->middleware('permission:app_deployment,manage');
 Route::delete('/applications/{application}', [ApplicationController::class, 'destroy'])->middleware('permission:application,manage');
 
 // Domains. Gated by `app_domain` — an application-level permission, not the

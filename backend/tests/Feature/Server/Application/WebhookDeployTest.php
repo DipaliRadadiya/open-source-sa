@@ -493,9 +493,29 @@ describe('configuring it', function () {
     it('is refused for an application that is not deployed from git', function () {
         $app = hookApp(['site_type' => 'wordpress', 'domain' => 'blog.example.com']);
 
+        // 404 rather than the action's own 422: now that this route is gated by
+        // `app_deployment`, CheckPermission's site-type check runs first and
+        // answers the way every other per-app screen does — for a WordPress
+        // site the Deployment screen does not exist, which is a different
+        // statement from "your request was malformed".
         $this->withHeaders(hookHeaders())
             ->putJson("/api/applications/{$app->id}/webhook", ['enabled' => true, 'provider' => 'github'])
-            ->assertStatus(422);
+            ->assertStatus(404);
+    });
+
+    it('is configurable by whoever owns the Deployment screen', function () {
+        $deployer = User::factory()->create();
+        grantPermission($deployer, 'app_deployment', view: true, manage: true);
+        $app = hookApp();
+
+        // It configures the Deployment screen, so the grant that owns that
+        // screen is the one that should carry it. Gating this on the
+        // server-level `application` permission meant the owner of the screen
+        // could not set up its webhook, while someone who could not see the
+        // screen at all could.
+        $this->withHeaders(['Authorization' => 'Bearer '.$deployer->createToken('t')->plainTextToken])
+            ->putJson("/api/applications/{$app->id}/webhook", ['enabled' => true, 'provider' => 'github'])
+            ->assertOk();
     });
 
     it('needs manage permission, not just view', function () {

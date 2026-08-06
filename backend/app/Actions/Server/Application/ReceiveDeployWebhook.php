@@ -60,6 +60,16 @@ class ReceiveDeployWebhook
 
         $application->forceFill(['webhook_last_delivered_at' => now()])->save();
 
+        // Belt to the braces on the configuration endpoint's site-type check.
+        // The manual deploy endpoint has always refused a non-git application;
+        // this path never did, so a webhook enabled on a site with no
+        // repository — which the old permission gating allowed — would queue a
+        // deploy that could only fail. Checked after the signature so an
+        // unauthenticated caller still cannot learn anything about the site.
+        if ($application->site_type !== 'git') {
+            return ['deployed' => false, 'reason' => 'not_a_git_application'];
+        }
+
         if (! $driver->isPush($request)) {
             return ['deployed' => false, 'reason' => 'not_a_push'];
         }
