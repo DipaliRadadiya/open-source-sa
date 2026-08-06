@@ -34,7 +34,13 @@ class ServerCapabilityController extends Controller
                 // out this server's address" rather than offering a name that
                 // resolves nowhere.
                 'server_ip' => $dns->serverIp(),
-                'temporary_domain_suffix' => (string) config('server.temporary_domain_suffix', 'nip.io'),
+                // Every suffix on offer, so the form can pick one rather than
+                // sending every site on every install to the same free service.
+                // The same list decides what counts as temporary, so a name
+                // built from any of these is recognised as one — the frontend
+                // cannot invent a hostname the backend then mistakes for the
+                // user's own.
+                'temporary_domain_suffixes' => array_values((array) config('server.temporary_domain_suffixes', ['nip.io'])),
             ],
         ]);
     }

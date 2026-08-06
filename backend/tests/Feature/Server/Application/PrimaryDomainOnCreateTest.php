@@ -143,5 +143,26 @@ it('tells the create form this server address so it can offer a temporary name',
     // Null on a box where detection failed is a valid answer — the form has to
     // be able to say so rather than offer a name that resolves nowhere.
     expect($response->json('capabilities'))->toHaveKey('server_ip')
-        ->and($response->json('capabilities.temporary_domain_suffix'))->toBe('nip.io');
+        // A list, so the form can spread new sites across services rather than
+        // pointing every install at the same one.
+        ->and($response->json('capabilities.temporary_domain_suffixes'))->toContain('nip.io', 'sslip.io');
+});
+
+it('recognises every suffix it offers as temporary', function () {
+    // The offered list and the recognised list are the same config key, and
+    // this is what that buys: a hostname the form can build is always a
+    // hostname the backend knows not to put on a certificate. When they were
+    // two keys, a suffix could be offered and not recognised — and the name
+    // would go to Let's Encrypt as though the user owned it.
+    foreach ((array) config('server.temporary_domain_suffixes') as $suffix) {
+        expect(ApplicationDomain::looksTemporary("site.203-0-113-9.{$suffix}"))
+            ->toBeTrue("{$suffix} is offered but not recognised as temporary");
+    }
+});
+
+it('does not mistake a real domain for a temporary one', function () {
+    expect(ApplicationDomain::looksTemporary('example.com'))->toBeFalse()
+        // Not a suffix match: a real domain that merely contains the string.
+        ->and(ApplicationDomain::looksTemporary('nip.io.example.com'))->toBeFalse()
+        ->and(ApplicationDomain::looksTemporary('mysslip.io'))->toBeFalse();
 });

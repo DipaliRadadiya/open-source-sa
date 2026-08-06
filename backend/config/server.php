@@ -78,20 +78,21 @@ use App\Services\Server\WebServers\OlsDriver;
 return [
 
     /*
-     * The wildcard-DNS service behind the temporary hostname a new site can be
-     * given before its real domain points here. `nip.io` resolves
-     * `<anything>.<ip>.nip.io` to that address with no DNS setup at all.
+     * The wildcard-DNS services behind the temporary hostname a new site can be
+     * given before its real domain points here. Both resolve
+     * `<anything>.<ip>.<suffix>` to that address with no DNS setup at all, and
+     * both accept the address dotted (`1.2.3.4`) or dashed (`1-2-3-4`).
      *
-     * Configurable because it is somebody else's free service: if it goes
-     * away, or an operator runs their own, this is a config change rather
-     * than a code change.
-     */
-    'temporary_domain_suffix' => env('TEMPORARY_DOMAIN_SUFFIX', 'nip.io'),
-
-    /*
-     * Every suffix recognised as temporary when deciding whether a name may go
-     * on a certificate. Broader than the one offered above: a user can paste an
-     * `sslip.io` name themselves, and it carries the same shared rate limit.
+     * ONE list, offered and recognised, deliberately. It was briefly two — a
+     * single suffix to offer and a broader list to recognise — and that split
+     * is a trap: a suffix offered but missing from the recognised list would
+     * produce hostnames the panel then believed were the user's own and sent
+     * to Let's Encrypt, spending from a weekly quota shared with the entire
+     * internet. Keeping one list makes that state unrepresentable.
+     *
+     * More than one so a panel is not wholly dependent on a single free
+     * service somebody else runs, and so the frontend can spread new sites
+     * across them rather than pointing every install at the same host.
      */
     'temporary_domain_suffixes' => ['nip.io', 'sslip.io'],
 
