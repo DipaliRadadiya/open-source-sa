@@ -8,7 +8,8 @@ return [
     'firewall' => 'Pare-feu',
     'cronjob' => 'Tâche cron',
     'fail2ban' => 'Fail2ban',
-    'logs' => 'Journaux',
+    'logs' => 'Journaux système',
+    'backup' => 'Sauvegardes',
     'service' => 'Service',
     'php' => 'PHP',
     'node' => 'Node.js',
@@ -17,4 +18,23 @@ return [
     'activity_log' => 'Journal d\'activité',
     'git' => 'Git',
     'storage' => 'Stockage',
+
+    // Application sidebar. Separate keys from the server-level ones above:
+    // `logs` is the machine's auth.log, `app_log` is one site's access log,
+    // and the two must never share a label any more than they share a grant.
+    'app_dashboard' => 'Tableau de bord',
+    'app_domain' => 'Domaines et SSL',
+    'app_deployment' => 'Déploiement',
+    'app_environment' => 'Environnement',
+    'app_worker' => 'Workers',
+    'app_file' => 'Fichiers',
+    'app_log' => 'Journaux',
+    'app_backup' => 'Sauvegardes',
+    'app_php' => 'Paramètres PHP',
+    'app_security' => 'Protection par mot de passe',
+    'app_firewall' => 'Pare-feu web',
+    'app_bot_blocker' => 'Bloqueur de robots IA',
+    'app_fail2ban' => 'Fail2ban',
+    'app_staging' => 'Zone de préproduction',
+    'app_clone' => 'Cloner le site',
 ];

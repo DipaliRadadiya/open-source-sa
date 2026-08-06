@@ -203,3 +203,42 @@ it('localizes the admin catalog title and falls back to the DB title when no nav
         ->assertJsonFragment(['name' => 'database', 'title' => 'データベース']) // translated
         ->assertJsonFragment(['name' => 'widget', 'title' => 'Widget']);        // fallback
 });
+
+it('has a nav label for every permission in every locale', function () {
+    $this->seed(PermissionSeeder::class);
+
+    // The application sidebar shipped with none of its labels translated: the
+    // 15 `app_*` permissions had no `nav.*` keys at all, so every locale fell
+    // through to the hardcoded English title and eight translated locales
+    // rendered an English sidebar. Falling back is the right behaviour for an
+    // unknown permission and the wrong behaviour to rely on for a shipped one,
+    // and nothing failed when it happened — hence this.
+    $names = Permission::pluck('name');
+    $missing = [];
+
+    foreach (config('app.available_locales', ['en']) as $locale) {
+        $translations = trans('nav', [], $locale);
+
+        foreach ($names as $name) {
+            if (! is_array($translations) || ! array_key_exists($name, $translations)) {
+                $missing[] = "{$locale}/nav.{$name}";
+            }
+        }
+    }
+
+    expect($missing)->toBe([]);
+});
+
+it('does not label a per-app screen the same as an unrelated server one', function () {
+    $this->seed(PermissionSeeder::class);
+
+    // `firewall` opens and closes ports; `app_firewall` is the 8G rule set
+    // inspecting requests to one site. Sharing a label is how someone comes to
+    // believe enabling a WAF closed a port.
+    foreach (config('app.available_locales', ['en']) as $locale) {
+        $nav = trans('nav', [], $locale);
+
+        expect($nav['app_firewall'])->not->toBe($nav['firewall'])
+            ->and($nav['app_log'])->not->toBe($nav['logs']);
+    }
+});

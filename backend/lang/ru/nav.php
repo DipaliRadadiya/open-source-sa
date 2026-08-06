@@ -8,7 +8,8 @@ return [
     'firewall' => 'Брандмауэр',
     'cronjob' => 'Cron',
     'fail2ban' => 'Fail2ban',
-    'logs' => 'Журналы',
+    'logs' => 'Системные журналы',
+    'backup' => 'Резервные копии',
     'service' => 'Служба',
     'php' => 'PHP',
     'node' => 'Node.js',
@@ -17,4 +18,23 @@ return [
     'activity_log' => 'Журнал активности',
     'git' => 'Git',
     'storage' => 'Хранилище',
+
+    // Application sidebar. Separate keys from the server-level ones above:
+    // `logs` is the machine's auth.log, `app_log` is one site's access log,
+    // and the two must never share a label any more than they share a grant.
+    'app_dashboard' => 'Панель',
+    'app_domain' => 'Домены и SSL',
+    'app_deployment' => 'Развёртывание',
+    'app_environment' => 'Окружение',
+    'app_worker' => 'Воркеры',
+    'app_file' => 'Файлы',
+    'app_log' => 'Журналы',
+    'app_backup' => 'Резервные копии',
+    'app_php' => 'Настройки PHP',
+    'app_security' => 'Защита паролем',
+    'app_firewall' => 'Веб-брандмауэр',
+    'app_bot_blocker' => 'Блокировка ИИ-ботов',
+    'app_fail2ban' => 'Fail2ban',
+    'app_staging' => 'Тестовая площадка',
+    'app_clone' => 'Клон сайта',
 ];

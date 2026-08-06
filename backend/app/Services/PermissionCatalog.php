@@ -115,7 +115,12 @@ class PermissionCatalog
             // resource already uses, not a per-app permission of its own.
             ['name' => 'app_php', 'title' => 'PHP Settings', 'icon' => 'file-code', 'url' => '/php'],
             ['name' => 'app_security', 'title' => 'Password Protection', 'icon' => 'lock', 'url' => '/security'],
-            ['name' => 'app_firewall', 'title' => 'Firewall', 'icon' => 'shield', 'url' => '/firewall'],
+            // "Web Firewall", not "Firewall": this is the 8G rule set, which
+            // inspects requests, and the server-level `firewall` permission
+            // right next to it is ufw, which opens and closes ports. Two
+            // unrelated things sharing one label in one product is how a user
+            // ends up believing they have closed a port by enabling a WAF.
+            ['name' => 'app_firewall', 'title' => 'Web Firewall', 'icon' => 'shield', 'url' => '/firewall'],
             ['name' => 'app_bot_blocker', 'title' => 'AI Bot Blocker', 'icon' => 'bot', 'url' => '/bot-blocker'],
             ['name' => 'app_fail2ban', 'title' => 'Fail2ban', 'icon' => 'ban', 'url' => '/fail2ban'],
             ['name' => 'app_staging', 'title' => 'Staging Area', 'icon' => 'flask-conical', 'url' => '/staging'],

@@ -8,7 +8,8 @@ return [
     'firewall' => 'ファイアウォール',
     'cronjob' => 'Cronジョブ',
     'fail2ban' => 'Fail2ban',
-    'logs' => 'ログ',
+    'logs' => 'システムログ',
+    'backup' => 'バックアップ',
     'service' => 'サービス',
     'php' => 'PHP',
     'node' => 'Node.js',
@@ -17,4 +18,23 @@ return [
     'activity_log' => 'アクティビティログ',
     'git' => 'Git',
     'storage' => 'ストレージ',
+
+    // Application sidebar. Separate keys from the server-level ones above:
+    // `logs` is the machine's auth.log, `app_log` is one site's access log,
+    // and the two must never share a label any more than they share a grant.
+    'app_dashboard' => 'ダッシュボード',
+    'app_domain' => 'ドメインとSSL',
+    'app_deployment' => 'デプロイ',
+    'app_environment' => '環境変数',
+    'app_worker' => 'ワーカー',
+    'app_file' => 'ファイル',
+    'app_log' => 'ログ',
+    'app_backup' => 'バックアップ',
+    'app_php' => 'PHP設定',
+    'app_security' => 'パスワード保護',
+    'app_firewall' => 'ウェブファイアウォール',
+    'app_bot_blocker' => 'AIボットブロッカー',
+    'app_fail2ban' => 'Fail2ban',
+    'app_staging' => 'ステージング',
+    'app_clone' => 'サイト複製',
 ];

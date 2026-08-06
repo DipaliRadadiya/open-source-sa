@@ -8,7 +8,8 @@ return [
     'firewall' => 'फ़ायरवॉल',
     'cronjob' => 'क्रॉनजॉब',
     'fail2ban' => 'Fail2ban',
-    'logs' => 'लॉग',
+    'logs' => 'सिस्टम लॉग',
+    'backup' => 'बैकअप',
     'service' => 'सेवा',
     'php' => 'PHP',
     'node' => 'Node.js',
@@ -17,4 +18,23 @@ return [
     'activity_log' => 'गतिविधि लॉग',
     'git' => 'Git',
     'storage' => 'स्टोरेज',
+
+    // Application sidebar. Separate keys from the server-level ones above:
+    // `logs` is the machine's auth.log, `app_log` is one site's access log,
+    // and the two must never share a label any more than they share a grant.
+    'app_dashboard' => 'डैशबोर्ड',
+    'app_domain' => 'डोमेन और SSL',
+    'app_deployment' => 'डिप्लॉयमेंट',
+    'app_environment' => 'एनवायरनमेंट',
+    'app_worker' => 'वर्कर्स',
+    'app_file' => 'फ़ाइलें',
+    'app_log' => 'लॉग',
+    'app_backup' => 'बैकअप',
+    'app_php' => 'PHP सेटिंग्स',
+    'app_security' => 'पासवर्ड सुरक्षा',
+    'app_firewall' => 'वेब फ़ायरवॉल',
+    'app_bot_blocker' => 'AI बॉट ब्लॉकर',
+    'app_fail2ban' => 'Fail2ban',
+    'app_staging' => 'स्टेजिंग एरिया',
+    'app_clone' => 'साइट क्लोन',
 ];
