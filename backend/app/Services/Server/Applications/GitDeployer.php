@@ -59,6 +59,8 @@ class GitDeployer
         $this->progress->open($application);
 
         try {
+            $this->trustDocumentRoot($documentRoot);
+
             $credentialFile = $this->writeCredential($application);
             $remote = $this->remoteUrl($application);
             $branch = $application->branch ?: 'main';
@@ -398,6 +400,42 @@ class GitDeployer
         $bin = dirname($this->node->binaryPath((string) $application->node_version));
 
         return 'export PATH='.escapeshellarg($bin).':"$PATH"; ';
+    }
+
+    /**
+     * Every git command here runs as root — `git` is in the panel's
+     * privilege-elevation list, because `init`/`fetch`/`reset` on an
+     * application's directory cannot work as the unprivileged panel user.
+     * But `$documentRoot` is owned by the site's own system user (provisioning
+     * chowns it before any code arrives, and this method's own caller chowns
+     * it again after every deploy) — so root operating on it trips git's
+     * dubious-ownership protection (>=2.35.2, post-CVE-2022-24765): the very
+     * next git command against a directory `git init` (as root) just created
+     * inside a non-root-owned parent refuses outright with "fatal: detected
+     * dubious ownership", and on a redeploy, `fetch`/`reset` hit the same
+     * wall against the same non-root ownership left by the previous deploy's
+     * own chown. Adding a `safe.directory` exception for this application's
+     * document root, once, exempts every git command below from the check —
+     * same fix, same reasoning, as install.sh's own equivalent for the
+     * panel's own checkout.
+     */
+    private function trustDocumentRoot(string $documentRoot): void
+    {
+        $configured = $this->serverOps->run(
+            ['git', 'config', '--global', '--get-all', 'safe.directory'],
+            ['feature' => 'application', 'op' => 'git.safe_directory_check'],
+        );
+
+        $trusted = preg_split('/\r?\n/', trim($configured->output())) ?: [];
+
+        if (in_array($documentRoot, $trusted, true)) {
+            return;
+        }
+
+        $this->serverOps->run(
+            ['git', 'config', '--global', '--add', 'safe.directory', $documentRoot],
+            ['feature' => 'application', 'op' => 'git.safe_directory'],
+        );
     }
 
     private function isRepository(string $documentRoot): bool
