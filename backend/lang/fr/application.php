@@ -102,7 +102,7 @@ return [
         'configure' => 'Écriture de la configuration',
         'install_cli' => 'Installation de l\'outil d\'installation',
         'install_app' => 'Exécution de l\'installateur',
-        'clone' => 'Clonage du dépôt',
+        'init' => 'Configuration du dépôt',
         'fetch' => 'Récupération du code le plus récent',
         'checkout' => 'Basculement sur la branche',
         'build' => 'Exécution de la commande de build',

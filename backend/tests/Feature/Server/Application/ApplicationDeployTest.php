@@ -91,17 +91,19 @@ it('clones a private repository without the token ever touching the command line
     Process::assertRan(fn ($p) => $p->command[0] === 'chmod' && $p->command[1] === '0600');
 
     // The remote itself is clean — nothing sensitive lands in .git/config.
-    Process::assertRan(fn ($p) => in_array('clone', $p->command, true)
+    // (`git init` + `remote add`, not `clone` — see GitDeployer::deploy() for
+    // why a first deploy never clones.)
+    Process::assertRan(fn ($p) => in_array('add', $p->command, true)
         && in_array('https://github.com/octocat/hello.git', $p->command, true));
 
     expect($app->fresh()->last_commit)->toBe('abc123def456');
     expect($app->fresh()->status->value)->toBe('active');
 });
 
-it('deletes the credential file even when the clone fails', function () {
+it('deletes the credential file even when the fetch fails', function () {
     Process::fake(fn ($process) => match (true) {
         $process->command[0] === 'test' => Process::result(exitCode: 1),
-        in_array('clone', $process->command, true) => Process::result(errorOutput: 'fatal: auth failed', exitCode: 128),
+        in_array('fetch', $process->command, true) => Process::result(errorOutput: 'fatal: auth failed', exitCode: 128),
         default => Process::result(exitCode: 0),
     });
 
@@ -244,7 +246,7 @@ it('queues a deploy and refuses one for a non-git application', function () {
 it('never returns the git token or the raw git error', function () {
     Process::fake(fn ($process) => match (true) {
         $process->command[0] === 'test' => Process::result(exitCode: 1),
-        in_array('clone', $process->command, true) => Process::result(
+        in_array('fetch', $process->command, true) => Process::result(
             errorOutput: 'fatal: could not read Password for https://x-access-token:ghp_super_secret_value@github.com',
             exitCode: 128,
         ),

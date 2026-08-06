@@ -107,7 +107,7 @@ return [
         'configure' => 'Writing the configuration',
         'install_cli' => 'Installing the setup tool',
         'install_app' => 'Running the installer',
-        'clone' => 'Cloning the repository',
+        'init' => 'Setting up the repository',
         'fetch' => 'Fetching the latest code',
         'checkout' => 'Checking out the branch',
         'build' => 'Running the build command',

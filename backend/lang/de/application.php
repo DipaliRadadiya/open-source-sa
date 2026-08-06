@@ -102,7 +102,7 @@ return [
         'configure' => 'Konfiguration wird geschrieben',
         'install_cli' => 'Setup-Werkzeug wird installiert',
         'install_app' => 'Installer wird ausgeführt',
-        'clone' => 'Repository wird geklont',
+        'init' => 'Repository wird eingerichtet',
         'fetch' => 'Neuester Code wird geholt',
         'checkout' => 'Branch wird ausgecheckt',
         'build' => 'Build-Befehl wird ausgeführt',

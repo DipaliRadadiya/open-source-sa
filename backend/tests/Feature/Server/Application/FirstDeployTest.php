@@ -144,13 +144,21 @@ it('still writes a placeholder for a blank PHP site, before taking ownership', f
         ->and($order[1] ?? null)->toBe('chown');
 });
 
-it('clones when the directory is empty', function () {
+it('uses init, not clone, even when the directory is empty', function () {
+    // Deliberately never `git clone`: it used to be the fast path for an
+    // empty directory, gated by a separate pre-check, but the check and the
+    // clone are two separate commands and anything landing in the directory
+    // between them (a second deploy racing this one, a retry) makes `git
+    // clone` refuse with "already exists and is not an empty directory" —
+    // a real production failure this replaces. `git init` never refuses
+    // based on directory contents, so there is no gap left to race.
     $app = firstDeployApp(['status' => 'active']);
     $ran = fakeFirstDeploy(contents: '');
 
     runFirstDeploy($app);
 
-    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'clone'))->toBeTrue();
+    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'clone'))->toBeFalse()
+        ->and(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'init'))->toBeTrue();
 });
 
 it('fetches instead of cloning when the directory already has files', function () {
@@ -168,20 +176,6 @@ it('fetches instead of cloning when the directory already has files', function (
         // The reset is what makes it equivalent to a clone rather than a merge
         // with whatever happened to be in the directory.
         ->and(firstDeployRan($ran, fn ($args) => in_array('reset', $args, true) && in_array('--hard', $args, true)))->toBeTrue();
-});
-
-it('treats a directory holding only a dotfile as non-empty', function () {
-    $app = firstDeployApp(['status' => 'active']);
-
-    // A directory holding only a dotfile is empty to a careless check and not
-    // to git: a stray `.env` would turn a
-    // clean refusal into a half-deployed site.
-    $ran = fakeFirstDeploy(contents: '.env');
-
-    runFirstDeploy($app);
-
-    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'find' && in_array('-mindepth', $args, true)))->toBeTrue()
-        ->and(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'clone'))->toBeFalse();
 });
 
 it('never puts the credential in the stored remote on the fetch path', function () {

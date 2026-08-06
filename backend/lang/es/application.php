@@ -102,7 +102,7 @@ return [
         'configure' => 'Escribiendo la configuración',
         'install_cli' => 'Instalando la herramienta de instalación',
         'install_app' => 'Ejecutando el instalador',
-        'clone' => 'Clonando el repositorio',
+        'init' => 'Configurando el repositorio',
         'fetch' => 'Descargando el código más reciente',
         'checkout' => 'Cambiando a la rama',
         'build' => 'Ejecutando el comando de compilación',
