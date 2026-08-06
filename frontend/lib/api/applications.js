@@ -40,3 +40,10 @@ export function deleteApplication(id, { removeFiles = false } = {}) {
 export function checkApplicationPort(port) {
   return api.get("/applications/port-check", { params: { port } });
 }
+
+// One call does enable, credential change, AND disable — `enabled: false`
+// ignores username/password entirely. There is no separate "just change the
+// password" call: the API always takes both together.
+export function updateApplicationSecurity(id, payload) {
+  return api.put(`/applications/${id}/security`, payload);
+}

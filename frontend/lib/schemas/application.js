@@ -100,6 +100,8 @@ export const applicationSchema = z.object({
   has_process: z.boolean().default(false),
   process: processSchema.nullish(),
   webhook: webhookSchema.nullish(),
+  basic_auth_enabled: z.boolean().default(false),
+  basic_auth_username: z.string().nullish(),
   last_commit: z.union([z.string(), z.record(z.string(), z.unknown())]).nullish(),
   last_deployed_at: z.string().nullish(),
   last_deployed_at_human: z.string().nullish(),
@@ -127,6 +129,29 @@ export const portCheckResponseSchema = z.object({
     message: z.string().nullish(),
   }),
 });
+
+// The API takes username+password together whenever `enabled` is true — there
+// is no "just change the password" call — so both are required only in that
+// branch, never when turning protection off.
+export const securityFormSchema = z
+  .object({
+    enabled: z.boolean(),
+    username: z.string(),
+    password: z.string(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.enabled) return;
+    if (!data.username.trim()) {
+      ctx.addIssue({ path: ["username"], code: "custom", message: "required_username" });
+    } else if (data.username.includes(":")) {
+      ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameColon" });
+    }
+    if (!data.password) {
+      ctx.addIssue({ path: ["password"], code: "custom", message: "required_password" });
+    } else if (data.password.length < 8) {
+      ctx.addIssue({ path: ["password"], code: "custom", message: "min8" });
+    }
+  });
 
 export const createApplicationSchema = z.object({
   site_type: z.string().min(1, "applicationTypeRequired"),

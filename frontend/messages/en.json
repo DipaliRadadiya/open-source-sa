@@ -576,6 +576,9 @@
     "required_socket": "Enter the socket path.",
     "invalidPort": "Enter a port between 1 and 65535.",
     "min8": "Use at least 8 characters.",
+    "securityUsernameColon": "Can't contain a colon (:).",
+    "required_username": "Enter a username.",
+    "required_password": "Enter a password.",
     "applicationTypeRequired": "Choose an application type.",
     "applicationNameRequired": "Enter a name for this application.",
     "applicationDomainRequired": "Enter the domain this application will use.",
@@ -3076,6 +3079,37 @@
           "horizon": "You already have Horizon — it manages its own queue workers."
         }
       }
+    },
+    "security": {
+      "pageTitle": "Password Protection",
+      "pageSubtitle": "Require a username and password before anyone can view this site.",
+      "back": "Back to Applications",
+      "loadFailed": "This couldn't be loaded.",
+      "provisioning": "This site is still being set up. Password protection will be available once it's running.",
+      "statusProtected": "Protected",
+      "statusNotProtected": "Not protected",
+      "enable": "Require a password",
+      "enableHint": "Visitors must sign in with the credentials below before they can view the site.",
+      "whenToUseTitle": "When to use this",
+      "whenToUseBody": "Good for a staging site, a work-in-progress redesign, or a client preview you don't want found before launch. Turn it off once the site is ready for the public.",
+      "warning": "This protects the whole site, not just an admin area — search engines, uptime monitors and any integration hitting this domain will also be blocked until they're given the credentials. You can turn this off here at any time if that causes a problem.",
+      "credentialsNote": "This creates a new login just for this site — separate from your ServerAvatar account. Visitors will see their browser's own plain sign-in prompt, not a styled page.",
+      "disabledHint": "The site is publicly reachable — anyone can view it.",
+      "username": "Username",
+      "usernamePlaceholder": "e.g. admin",
+      "password": "Password",
+      "passwordHint": "The password must be at least 8 characters. Re-enter both fields whenever you save — even just to change the password. It's never shown again after that.",
+      "passwordPlaceholder": "Enter a password",
+      "generate": "Generate",
+      "save": "Save",
+      "saving": "Saving…",
+      "discard": "Discard",
+      "noPermission": "You don't have permission to manage this.",
+      "nothingToSave": "Nothing to save",
+      "enabledToast": "Password protection is on.",
+      "disabledToast": "Password protection is off — the site is public again.",
+      "savedCredentials": "Save these now — they won't be shown again:",
+      "openSite": "Open site"
     }
   },
   "panelUpdate": {

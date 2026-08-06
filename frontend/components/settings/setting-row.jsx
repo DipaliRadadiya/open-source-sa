@@ -79,33 +79,38 @@ export function Section({
 
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-      <div className="flex items-center gap-2.5 border-b px-5 py-3.5">
-        {Icon ? (
-          <span
-            className={cn(
-              "flex size-7 shrink-0 items-center justify-center rounded-md",
-              destructive
-                ? "bg-destructive/10 text-destructive"
-                : "bg-primary/10 text-primary",
-            )}
-          >
-            <Icon className="size-3.5" />
-          </span>
-        ) : null}
-        <div className="min-w-0">
-          <h3
-            className={cn(
-              "text-base font-semibold tracking-tight",
-              destructive && "text-destructive",
-            )}
-          >
-            {title}
-          </h3>
-          {description ? (
-            <p className="text-sm text-muted-foreground">{description}</p>
+      {/* Skipped entirely (not just emptied) when there's no title — a page
+          with exactly one card already names it in the page's own h1, and an
+          empty header band would just be dead space with a stray border. */}
+      {title ? (
+        <div className="flex items-center gap-2.5 border-b px-5 py-3.5">
+          {Icon ? (
+            <span
+              className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-md",
+                destructive
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-primary/10 text-primary",
+              )}
+            >
+              <Icon className="size-3.5" />
+            </span>
           ) : null}
+          <div className="min-w-0">
+            <h3
+              className={cn(
+                "text-base font-semibold tracking-tight",
+                destructive && "text-destructive",
+              )}
+            >
+              {title}
+            </h3>
+            {description ? (
+              <p className="text-sm text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <CardContent className="px-5 py-2">
         {readOnly ? (

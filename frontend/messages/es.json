@@ -153,6 +153,9 @@
     "required_socket": "Introduce la ruta del socket.",
     "invalidPort": "Introduce un puerto entre 1 y 65535.",
     "min8": "Usa al menos 8 caracteres.",
+    "securityUsernameColon": "No puede contener dos puntos (:).",
+    "required_username": "Introduce un usuario.",
+    "required_password": "Introduce una contraseña.",
     "applicationTypeRequired": "Elige un tipo de aplicación.",
     "applicationNameRequired": "Introduce un nombre para esta aplicación.",
     "applicationDomainRequired": "Introduce el dominio que usará esta aplicación.",
@@ -3076,6 +3079,37 @@
           "horizon": "Ya tienes Horizon: gestiona sus propios workers de cola."
         }
       }
+    },
+    "security": {
+      "pageTitle": "Protección con contraseña",
+      "pageSubtitle": "Exige un usuario y una contraseña antes de que cualquiera pueda ver este sitio.",
+      "back": "Volver a Aplicaciones",
+      "loadFailed": "No se pudo cargar esto.",
+      "provisioning": "Este sitio todavía se está configurando. La protección con contraseña estará disponible cuando esté en funcionamiento.",
+      "statusProtected": "Protegido",
+      "statusNotProtected": "No protegido",
+      "enable": "Exigir una contraseña",
+      "enableHint": "Los visitantes deberán iniciar sesión con las credenciales de abajo antes de poder ver el sitio.",
+      "whenToUseTitle": "Cuándo usar esto",
+      "whenToUseBody": "Útil para un sitio en pruebas, un rediseño en curso o una vista previa para un cliente que no quieres que se encuentre antes del lanzamiento. Desactívalo cuando el sitio esté listo para el público.",
+      "warning": "Esto protege todo el sitio, no solo un área de administración: los motores de búsqueda, los monitores de disponibilidad y cualquier integración que acceda a este dominio también quedarán bloqueados hasta que reciban las credenciales. Puedes desactivarlo aquí en cualquier momento si eso causa un problema.",
+      "credentialsNote": "Esto crea un inicio de sesión nuevo solo para este sitio, independiente de tu cuenta de ServerAvatar. Los visitantes verán el aviso de inicio de sesión propio del navegador, no una página con estilo.",
+      "disabledHint": "El sitio es de acceso público: cualquiera puede verlo.",
+      "username": "Usuario",
+      "usernamePlaceholder": "p. ej. admin",
+      "password": "Contraseña",
+      "passwordHint": "La contraseña debe tener al menos 8 caracteres. Vuelve a escribir ambos campos cada vez que guardes, incluso solo para cambiar la contraseña. No se vuelve a mostrar después de eso.",
+      "passwordPlaceholder": "Introduce una contraseña",
+      "generate": "Generar",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "discard": "Descartar",
+      "noPermission": "No tienes permiso para gestionar esto.",
+      "nothingToSave": "Nada que guardar",
+      "enabledToast": "La protección con contraseña está activada.",
+      "disabledToast": "La protección con contraseña está desactivada: el sitio vuelve a ser público.",
+      "savedCredentials": "Guarda esto ahora: no se volverá a mostrar:",
+      "openSite": "Abrir sitio"
     }
   },
   "panelUpdate": {
