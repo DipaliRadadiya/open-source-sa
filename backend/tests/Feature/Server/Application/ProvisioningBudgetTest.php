@@ -12,6 +12,7 @@ use App\Services\Server\Applications\ProvisioningBudget;
 use App\Services\Server\Applications\ProvisionProgress;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -31,7 +32,7 @@ function budgetApp(array $overrides = []): Application
 {
     return Application::create(array_merge([
         'system_user_id' => test()->su->id,
-        'name' => 'Site',
+        'name' => 'Site '.Str::random(6),
         'domain' => 'site.example.com',
         'site_type' => 'php',
         'serving_profile' => 'php',

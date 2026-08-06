@@ -45,9 +45,23 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     {
         $directory = rtrim((string) config("server.web_server_drivers.{$this->name()}.sites_dir"), '/');
 
-        // The domain is validated to a hostname charset before it ever gets
-        // here, so it cannot introduce a path separator.
-        return "{$directory}/{$application->domain}.conf";
+        // Named after the application, not its domain. A domain is mutable and
+        // was never unique, so two sites could claim one and silently overwrite
+        // each other's vhost, and changing a domain orphaned the old file under
+        // a name nothing could address any more. The slug is unique, is a
+        // filename by construction, and belongs to the site rather than to one
+        // of its names.
+        return "{$directory}/{$this->fileName($application)}.conf";
+    }
+
+    /**
+     * Falls back to the domain for a row that predates the slug column, so a
+     * site provisioned before this still resolves to the file it actually has
+     * on disk rather than to a name nothing was ever written under.
+     */
+    protected function fileName(Application $application): string
+    {
+        return (string) ($application->slug ?: $application->domain);
     }
 
     public function renderConfig(Application $application, string $documentRoot): string

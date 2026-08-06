@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 /**
  * A site the panel manages. Provisioning (files, vhost, clone) lands in later
@@ -124,6 +125,32 @@ class Application extends Model
     public function wafRules(): HasMany
     {
         return $this->hasMany(ApplicationWafRule::class);
+    }
+
+    /**
+     * A stable, unique, filesystem-safe slug from the name — the key for the
+     * web-server config filename. Suffixes `-2`, `-3`, … on collision.
+     *
+     * Stored rather than derived at read time so the panel can always address
+     * the file it wrote, including when the name has since changed and the
+     * rename is halfway through. Same shape as {@see Cronjob::uniqueSlug()},
+     * which names `/etc/cron.d` files the same way.
+     */
+    public static function uniqueSlug(string $name, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name) ?: 'application';
+        $slug = $base;
+        $suffix = 2;
+
+        while (static::query()
+            ->where('slug', $slug)
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->exists()
+        ) {
+            $slug = $base.'-'.$suffix++;
+        }
+
+        return $slug;
     }
 
     /** Per-site additions to, and exemptions from, the built-in AI bot list. */

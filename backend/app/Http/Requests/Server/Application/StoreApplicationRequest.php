@@ -32,7 +32,10 @@ class StoreApplicationRequest extends FormRequest
 
         $rules = [
             'site_type' => ['required', Rule::in($manager->names())],
-            'name' => ['required', 'string', 'max:255'],
+            // Unique because it names the web-server config file. Two sites
+            // sharing a name shared a file, and the second silently replaced
+            // the first with nothing anywhere saying so.
+            'name' => ['required', 'string', 'max:255', Rule::unique('applications', 'name')],
             'domain' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/'],
             'system_user_id' => ['required', 'integer', 'exists:system_users,id'],
             // Both versions become path segments and, for PHP, part of an

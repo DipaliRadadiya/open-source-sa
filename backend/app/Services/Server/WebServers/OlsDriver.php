@@ -19,9 +19,10 @@ use App\Services\Server\ServerOpsResult;
  *  - **A site is also two entries in the shared httpd_config.conf**, which is
  *    what `OlsSharedConfig` exists for.
  *
- * The site name is the domain. It is already validated to a hostname charset,
- * it is already unique per application, and inventing a second identifier
- * would mean two things to keep in step for no gain.
+ * The site name is the application slug — see AbstractWebServerDriver. It has
+ * to be the same string in three places (the config directory, the vhost name
+ * in httpd_config.conf, and the `map` entry), which is why it comes from one
+ * `fileName()` rather than being spelled out at each call site.
  *
  * ⚠️ **Unverified against a real OpenLiteSpeed server.** Every path, command
  * and directive here comes from LiteSpeed's documentation and OLS's own
@@ -83,7 +84,11 @@ class OlsDriver extends AbstractWebServerDriver
     {
         $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', '/usr/local/lsws/conf/vhosts'), '/');
 
-        return "{$root}/{$application->domain}/vhconf.conf";
+        // Keyed by the application, same as the other drivers — see
+        // AbstractWebServerDriver::configPath(). `vhRoot()` deliberately does
+        // not follow: that is the document root, which is where the site's
+        // files actually live, and it is addressed by domain everywhere else.
+        return "{$root}/{$this->fileName($application)}/vhconf.conf";
     }
 
     /**
@@ -122,8 +127,12 @@ class OlsDriver extends AbstractWebServerDriver
             return $written;
         }
 
+        // The vhost NAME in the shared config, which must agree with the
+        // directory `configPath()` writes into — both are the application, not
+        // one of its domains. The domains it answers to are the second
+        // argument, and those stay domains.
         return $this->shared->register(
-            $application->domain,
+            $this->fileName($application),
             $this->domains($application),
             $this->vhRoot($application),
         );
@@ -152,7 +161,7 @@ class OlsDriver extends AbstractWebServerDriver
     {
         $context = ['feature' => 'application', 'op' => 'remove_config', 'application' => $application->id];
 
-        $unregistered = $this->shared->unregister($application->domain);
+        $unregistered = $this->shared->unregister($this->fileName($application));
 
         if ($unregistered->failed()) {
             return $unregistered;
@@ -164,7 +173,7 @@ class OlsDriver extends AbstractWebServerDriver
         // what the WebAdmin console leaves behind, since the markers are
         // comments. Deleting the vhost file while the shared config still
         // names it breaks the config test for every site on the box.
-        if ($this->shared->references($application->domain)) {
+        if ($this->shared->references($this->fileName($application))) {
             return $this->shared->test();
         }
 
@@ -172,8 +181,8 @@ class OlsDriver extends AbstractWebServerDriver
         $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', '/usr/local/lsws/conf/vhosts'), '/');
 
         // `rm -rf` on a path built from a record is the most destructive
-        // command in the panel. The domain is validated to a hostname charset
-        // long before it reaches here, but a blank one would make this the
+        // command in the panel. The slug is a slug by construction, but a
+        // blank one would make this the
         // vhost root itself — deleting the configuration of every site on the
         // server. Refuse rather than rely on validation upstream staying put.
         abort_unless($directory !== $root && str_starts_with($directory, $root.'/'), 500);

@@ -18,7 +18,9 @@ function makeFeatureApp(string $siteType, string $profile = 'php', array $extra 
 {
     return Application::create(array_merge([
         'system_user_id' => test()->systemUser->id,
-        'name' => 'Site',
+        // Distinct per call: application names are unique now, and this
+        // helper is used for several site types in one test.
+        'name' => 'Site '.$siteType,
         'domain' => $siteType.'.example.com',
         'site_type' => $siteType,
         'serving_profile' => $profile,

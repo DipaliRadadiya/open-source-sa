@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Contracts\WebServerDriver;
 use App\Enums\ApplicationStatus;
 use App\Models\Application;
 use App\Services\Server\ManagedFile;
@@ -66,6 +67,13 @@ class SiteConfigResyncer
         $failed = [];
 
         foreach ($applications as $application) {
+            // Sites provisioned before configs were named after the
+            // application still have a `{domain}.conf` on disk. Writing the new
+            // one without removing that leaves both loaded, two server blocks
+            // claiming the same names, and a web server picking one — so the
+            // stale file goes first, while its name is still derivable.
+            $this->removeLegacyConfig($driver, $application);
+
             $path = $driver->configPath($application);
             $previous = $this->read($path);
 
@@ -132,6 +140,36 @@ class SiteConfigResyncer
         }
 
         $this->files->put($path, $previous, $this->context($application, 'resync_rollback'));
+    }
+
+    /**
+     * Remove the config this site would have had under the old domain-based
+     * naming, if it is still there and is not the file we are about to write.
+     *
+     * Deliberately narrow: it only ever removes the one path that this exact
+     * application would have owned before the rename, never anything it finds
+     * lying around. A resync that swept `sites-enabled` for files it did not
+     * recognise would delete a hand-written vhost the operator put there.
+     */
+    private function removeLegacyConfig(WebServerDriver $driver, Application $application): void
+    {
+        if (blank($application->slug) || blank($application->domain)) {
+            return;
+        }
+
+        // Addressed by asking the driver what the path *would* be for a
+        // slug-less copy, so the answer stays correct for whichever driver is
+        // active rather than assuming nginx's layout here.
+        $legacy = $driver->configPath((clone $application)->forceFill(['slug' => null]));
+
+        if ($legacy === $driver->configPath($application)) {
+            return;
+        }
+
+        $this->serverOps->run(
+            ['rm', '-f', $legacy],
+            $this->context($application, 'resync_remove_legacy_config'),
+        );
     }
 
     private function read(string $path): ?string

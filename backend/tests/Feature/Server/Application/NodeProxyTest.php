@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 
 /**
  * A Node application is reachable from a browser.
@@ -40,7 +41,7 @@ function proxyApp(array $overrides = []): Application
 {
     return Application::create(array_merge([
         'system_user_id' => test()->su->id,
-        'name' => 'API', 'domain' => 'api.test',
+        'name' => 'API '.Str::random(6), 'domain' => 'api.test',
         'site_type' => 'git', 'serving_profile' => 'node', 'status' => 'active',
         'web_root' => '/', 'app_port' => 3210, 'start_command' => 'node server.js',
     ], $overrides));

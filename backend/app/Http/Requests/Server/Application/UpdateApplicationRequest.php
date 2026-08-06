@@ -24,7 +24,8 @@ class UpdateApplicationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'string', 'max:255'],
+            // See StoreApplicationRequest: the name is the config filename.
+            'name' => ['sometimes', 'string', 'max:255', Rule::unique('applications', 'name')->ignore($this->route('application'))],
             'domain' => ['sometimes', 'string', 'max:255', 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/'],
             // See StoreApplicationRequest: this becomes a path used by root.
             'web_root' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],

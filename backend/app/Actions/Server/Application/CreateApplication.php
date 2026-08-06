@@ -34,7 +34,11 @@ class CreateApplication
         $type = $this->siteTypes->find((string) $data['site_type']);
         $servingProfile = ServingProfile::resolve($type, $data);
 
-        $application = Application::create([
+        $application = Application::forceCreate([
+            // Derived here, not accepted from the client: it names the
+            // web-server config file, and a caller choosing that is a caller
+            // choosing which file the panel overwrites.
+            'slug' => Application::uniqueSlug((string) $data['name']),
             'site_type' => $type->name(),
             // Derived, never taken from the client — from the rendering type
             // the user chose, or the site type where there is none. See the

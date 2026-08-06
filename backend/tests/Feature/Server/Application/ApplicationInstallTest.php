@@ -11,6 +11,7 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -47,7 +48,7 @@ function wpApp(array $overrides = []): Application
 {
     return Application::create(array_merge([
         'system_user_id' => test()->su->id,
-        'name' => 'Blog',
+        'name' => 'Blog '.Str::random(6),
         'domain' => 'blog.example.com',
         'site_type' => 'wordpress',
         'serving_profile' => 'php',

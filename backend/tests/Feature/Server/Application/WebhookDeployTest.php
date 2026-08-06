@@ -9,6 +9,7 @@ use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 
 beforeEach(function () {
@@ -40,7 +41,7 @@ function hookApp(array $overrides = []): Application
 {
     return Application::create(array_merge([
         'system_user_id' => test()->su->id,
-        'name' => 'Shop',
+        'name' => 'Shop '.Str::random(6),
         'domain' => 'shop.example.com',
         'site_type' => 'git',
         'serving_profile' => 'php',
