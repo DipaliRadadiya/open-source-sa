@@ -548,6 +548,18 @@ create_user() {
 fetch_source() {
     step "Fetching the panel"
 
+    # git >=2.35.2 refuses to run any command against a repo whose top-level
+    # directory is owned by a different user than the one invoking it (the
+    # "dubious ownership" check, added after CVE-2022-24765). Every git call
+    # in this function runs as root, but $APP_DIR is handed to $APP_USER via
+    # chown below and stays that way — so without this exception, the very
+    # next git config call, and every fetch/reset on future re-runs, fails
+    # with a bare "fatal: not in a git directory" that looks like a missing
+    # or broken clone rather than what it actually is.
+    if ! git config --global --get-all safe.directory 2>/dev/null | grep -qxF "$APP_DIR"; then
+        run git config --global --add safe.directory "$APP_DIR"
+    fi
+
     if [[ -d "${APP_DIR}/.git" ]]; then
         run git -C "$APP_DIR" fetch --depth 1 origin "$REPO_BRANCH"
         run git -C "$APP_DIR" reset --hard "origin/${REPO_BRANCH}"
