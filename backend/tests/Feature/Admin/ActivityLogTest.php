@@ -147,10 +147,22 @@ it('returns the known distinct types and actions for filter dropdowns', function
         ->getJson('/api/admin/activity-log/filters');
 
     $response->assertOk()
-        ->assertJsonPath('types', ['application', 'backup', 'central', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'role', 'server', 'service', 'setting', 'system_user', 'user'])
-        // Deduped across types: backup adds `configured` and `completed`,
-        // while its `failed` and `updated` already exist elsewhere.
-        ->assertJsonCount(135, 'actions.all');
+        ->assertJsonPath('types', ['application', 'backup', 'central', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'role', 'server', 'service', 'setting', 'system_user', 'user']);
+
+    // `all` is the deduped union of every type's verbs — asserted as that
+    // relationship rather than as a literal count.
+    //
+    // It was a literal, and it broke three times in one day: every feature that
+    // adds an activity verb had to come here and increment a number, which
+    // tests nothing except that somebody remembered to. Worse, the failure
+    // reads as a real regression, so the honest response to it is
+    // indistinguishable from the lazy one.
+    $all = $response->json('actions.all');
+    $perType = collect($response->json('actions'))->except('all');
+
+    expect($all)->toBe(array_values(array_unique($all)))
+        ->and($all)->toBe(collect($all)->sort()->values()->all())
+        ->and($all)->toEqualCanonicalizing($perType->flatten()->unique()->values()->all());
     // `all` = every verb; per-type keys are scoped to that type's verbs.
     expect($response->json('actions.all'))->toContain('registered', 'created', 'impersonation_started', 'ssh_key_added', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'downloaded', 'cleaned', 'schedule_updated', 'profile_updated', 'user_created', 'connection_updated');
     expect($response->json('actions.application'))->toContain('webhook_enabled', 'webhook_disabled', 'webhook_rotated', 'webhook_deployed');
