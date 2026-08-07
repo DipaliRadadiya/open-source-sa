@@ -6,6 +6,8 @@ use App\Actions\Server\Application\AutoIssueCertificate;
 use App\Exceptions\Server\Application\ApplicationAvailabilityException;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Models\ApplicationPhpSettings;
+use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
@@ -32,6 +34,7 @@ class ApplicationProvisioner
         private ProvisionProgress $progress,
         private AutoIssueCertificate $autoCertificate,
         private ReleaseManager $releases,
+        private PoolManager $pools,
     ) {}
 
     /**
@@ -122,6 +125,31 @@ class ApplicationProvisioner
             ['chown', '-R', "{$user->username}:{$user->username}", $documentRoot],
             ['feature' => 'application', 'op' => 'chown', 'application' => $application->id],
         ));
+
+        // Every PHP site gets its own pool from the start, not as an opt-in
+        // afterthought. Before this, a freshly provisioned site ran on the
+        // shared, server-wide pool as the web server's own account — which is
+        // exactly what let a phpMyAdmin install's own config file (owned by
+        // its site user, 0640) come back "not readable" in production. Doing
+        // this *before* write_config, not after, means the vhost picks up
+        // the isolated socket on its first render instead of needing a
+        // second write+reload the way the manual isolate() action does.
+        if ($application->serving_profile === 'php' && $this->pools->supported()) {
+            $this->step('create_php_pool', function () use ($application) {
+                $settings = $application->phpSettings
+                    ?? new ApplicationPhpSettings(['application_id' => $application->id]);
+
+                $result = $this->pools->apply($application, $settings);
+
+                if (! $result['ok']) {
+                    return new ServerOpsResult(false, (string) ($result['reference'] ?? ''), null);
+                }
+
+                $application->forceFill(['isolated_at' => now()])->save();
+
+                return new ServerOpsResult(true, (string) ($result['reference'] ?? ''), null);
+            });
+        }
 
         $this->step('write_config', fn () => $driver->apply($application, $documentRoot));
 

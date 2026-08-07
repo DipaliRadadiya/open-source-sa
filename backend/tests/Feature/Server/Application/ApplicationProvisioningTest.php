@@ -58,7 +58,7 @@ it('creates the directory, writes a tested config and reloads', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'create_directory', 'placeholder', 'set_ownership', 'write_config', 'test_config', 'reload',
+        'create_directory', 'placeholder', 'set_ownership', 'create_php_pool', 'write_config', 'test_config', 'reload',
     ]);
 
     Process::assertRan(fn ($p) => $p->command === ['mkdir', '-p', '/home/deploy/shop.example.com']);
@@ -144,7 +144,7 @@ it('is idempotent when the job runs twice', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     // mkdir -p and an overwriting tee converge rather than compounding.
-    expect($app->steps)->toHaveCount(6);
+    expect($app->steps)->toHaveCount(7);
 });
 
 it('writes a static config without a php handler', function () {
