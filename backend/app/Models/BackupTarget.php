@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'application_id', 'storage_destination_id', 'type', 'retention_count',
-    'file_excludes', 'database_excludes', 'enabled', 'frequency', 'last_run_at',
+    'file_excludes', 'database_excludes', 'enabled', 'frequency', 'schedule_time', 'last_run_at',
 ])]
 class BackupTarget extends Model
 {
@@ -70,7 +70,16 @@ class BackupTarget extends Model
 
     public function cronExpression(): ?string
     {
-        return self::CRON[$this->frequency] ?? null;
+        $base = self::CRON[$this->frequency] ?? null;
+
+        if ($base === null || $this->schedule_time === null) {
+            return $base;
+        }
+
+        // "14:30" → "30 14 * * *" — replace the hour and minute fields
+        [$hour, $minute] = explode(':', $this->schedule_time, 2);
+
+        return $minute.' '.$hour.' * * *';
     }
 
     /**

@@ -14,6 +14,8 @@ class BackupResource extends JsonResource
         return [
             'id' => $this->id,
             'application_id' => $this->application_id,
+            'application_name' => $this->resource->application?->name,
+            'application_domain' => $this->resource->application?->domain,
             'type' => $this->type->value,
             // Taken automatically just before a restore overwrote the site.
             // Worth marking in the list: it is the one entry someone scanning
@@ -31,6 +33,7 @@ class BackupResource extends JsonResource
                 : __('backup.errors.'.$this->reason),
             'size_bytes' => $this->size_bytes,
             'reason' => $this->reason,
+            'log_key' => $this->log_key,
             'reference' => $this->reference,
             'started_at' => $this->started_at?->format('d-m-Y H:i:s'),
             'finished_at' => $this->finished_at?->format('d-m-Y H:i:s'),

@@ -33,6 +33,8 @@ class BackupRunner
 
     public function run(BackupTarget $target, ?int $actorId = null): Backup
     {
+        $logKey = (string) Str::uuid();
+
         $backup = Backup::create([
             'backup_target_id' => $target->id,
             'application_id' => $target->application_id,
@@ -40,6 +42,7 @@ class BackupRunner
             'type' => $target->type->value,
             'status' => BackupStatus::Running,
             'reference' => (string) Str::uuid(),
+            'log_key' => $logKey,
             'started_at' => now(),
         ]);
 
@@ -86,6 +89,7 @@ class BackupRunner
                 'application' => $target->application_id,
                 'step' => $backup->reason,
                 'reference' => $backup->reference,
+                'log_key' => $logKey,
                 'detail' => $e->getMessage(),
             ]);
 

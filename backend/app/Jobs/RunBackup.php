@@ -89,6 +89,7 @@ class RunBackup implements ShouldBeUnique, ShouldQueue
             ->whereIn('status', [BackupStatus::Pending->value, BackupStatus::Running->value, BackupStatus::Verifying->value])
             ->update([
                 'status' => BackupStatus::Failed->value,
+                'reason' => 'crashed',
                 'finished_at' => now(),
             ]);
     }

@@ -61,6 +61,10 @@ Route::post('/backups/{backup}/restore', [RestoreController::class, 'store'])
 Route::get('/restores', [RestoreController::class, 'index'])
     ->middleware('permission:backup');
 
+// Retry a failed backup — re-runs with the same configuration.
+Route::post('/backups/{backup}/retry', [BackupController::class, 'retry'])
+    ->middleware(['permission:app_backup,manage', 'throttle:6,1']);
+
 // Polled every couple of seconds while the bar moves.
 Route::get('/restores/{restore}', [RestoreController::class, 'show'])
     ->middleware(['permission:backup', 'throttle:120,1']);

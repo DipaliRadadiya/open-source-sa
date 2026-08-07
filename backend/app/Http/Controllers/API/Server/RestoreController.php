@@ -5,10 +5,12 @@ namespace App\Http\Controllers\API\Server;
 use App\Enums\RestoreStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Backup\RestoreBackupRequest;
+use App\Http\Requests\Server\Restore\IndexRestoresRequest;
 use App\Http\Resources\RestoreResource;
 use App\Jobs\RunRestore;
 use App\Models\Backup;
 use App\Models\Restore;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 
@@ -60,12 +62,19 @@ class RestoreController extends Controller
     }
 
     /** History for one application — what was restored, when, and by whom. */
-    public function index(): JsonResponse
+    public function index(IndexRestoresRequest $request): JsonResponse
     {
+        $filter = $request->validated('filter', []);
+
         $restores = Restore::query()
             ->with('application:id,name,domain')
+            ->when($filter['application_id'] ?? null, fn ($q, $id) => $q->where('application_id', $id))
+            ->when($filter['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
+            ->when($filter['type'] ?? null, fn ($q, $t) => $q->where('type', $t))
+            ->when($filter['from'] ?? null, fn ($q, $from) => $q->where('created_at', '>=', Carbon::parse($from)->startOfDay()))
+            ->when($filter['to'] ?? null, fn ($q, $to) => $q->where('created_at', '<=', Carbon::parse($to)->endOfDay()))
             ->latest('id')
-            ->paginate(request()->integer('per_page', 20));
+            ->paginate($request->validated('per_page', 20));
 
         return response()->json([
             'restores' => RestoreResource::collection($restores)->resolve(),

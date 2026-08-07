@@ -26,6 +26,8 @@ class RestoreResource extends JsonResource
             'id' => $this->resource->id,
             'backup_id' => $this->resource->backup_id,
             'application_id' => $this->resource->application_id,
+            'application_name' => $this->resource->application?->name,
+            'application_domain' => $this->resource->application?->domain,
             'type' => $this->resource->type->value,
             'type_title' => __('backup.type.'.$this->resource->type->value),
             'status' => $this->resource->status->value,

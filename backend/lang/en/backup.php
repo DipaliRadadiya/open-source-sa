@@ -45,6 +45,8 @@ return [
         'verify_artifact' => 'The upload did not match what was sent, so this backup cannot be trusted. Nothing old was removed.',
         'unknown' => 'The backup failed for an unknown reason.',
         'prune_old_backups' => 'Old backups could not be removed. The new backup is safe; storage may just be holding more copies than the retention setting.',
+        'retry_not_failed' => 'Only a failed backup can be retried.',
+        'retry_no_target' => 'This backup has no associated configuration, so it cannot be retried.',
     ],
 
     'restore_status' => [
@@ -63,6 +65,8 @@ return [
         'swap_files' => 'Putting the files in place',
         'restart_process' => 'Starting the application',
     ],
+
+    'schedule_time' => 'Scheduled time',
 
     'restore_errors' => [
         'download_artifact' => 'The backup could not be downloaded. Nothing on the server was changed.',

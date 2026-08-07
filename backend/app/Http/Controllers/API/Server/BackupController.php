@@ -46,6 +46,14 @@ class BackupController extends Controller
             ->latest('id')
             ->paginate($request->validated('per_page', 20));
 
+        // Per-status counts, same filters as the main query (no pagination).
+        // Replaces four separate per_page=1 requests the frontend was making.
+        $baseQuery = Backup::query()
+            ->when($filter['application_id'] ?? null, fn ($query, $id) => $query->where('application_id', $id))
+            ->when($filter['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
+            ->when($filter['from'] ?? null, fn ($query, $from) => $query->where('created_at', '>=', Carbon::parse($from)->startOfDay()))
+            ->when($filter['to'] ?? null, fn ($query, $to) => $query->where('created_at', '<=', Carbon::parse($to)->endOfDay()));
+
         return response()->json([
             'backups' => BackupResource::collection($backups)->resolve(),
             'meta' => [
@@ -53,6 +61,14 @@ class BackupController extends Controller
                 'per_page' => $backups->perPage(),
                 'total' => $backups->total(),
                 'last_page' => $backups->lastPage(),
+                'counts' => [
+                    'total' => (clone $baseQuery)->count(),
+                    'pending' => (clone $baseQuery)->where('status', BackupStatus::Pending->value)->count(),
+                    'running' => (clone $baseQuery)->where('status', BackupStatus::Running->value)->count(),
+                    'verifying' => (clone $baseQuery)->where('status', BackupStatus::Verifying->value)->count(),
+                    'completed' => (clone $baseQuery)->where('status', BackupStatus::Verified->value)->count(),
+                    'failed' => (clone $baseQuery)->where('status', BackupStatus::Failed->value)->count(),
+                ],
             ],
         ]);
     }
@@ -247,5 +263,49 @@ class BackupController extends Controller
         return response()->json([
             'backup' => BackupResource::make($backup)->resolve(),
         ]);
+    }
+
+    /**
+     * Retry a failed backup with the same configuration.
+     *
+     * Uses the same target as the original run; dispatches a fresh job.
+     * Throttled at the same limit as a manual run.
+     */
+    public function retry(Backup $backup): JsonResponse
+    {
+        if ($backup->status !== BackupStatus::Failed) {
+            throw ValidationException::withMessages([
+                'backup' => [__('backup.errors.retry_not_failed')],
+            ]);
+        }
+
+        $target = $backup->target;
+
+        if ($target === null) {
+            throw ValidationException::withMessages([
+                'backup' => [__('backup.errors.retry_no_target')],
+            ]);
+        }
+
+        $inFlight = Backup::query()
+            ->where('backup_target_id', $target->id)
+            ->whereIn('status', [
+                BackupStatus::Pending->value,
+                BackupStatus::Running->value,
+                BackupStatus::Verifying->value,
+            ])
+            ->exists();
+
+        if ($inFlight) {
+            throw ValidationException::withMessages([
+                'application' => [__('backup.errors.already_running')],
+            ]);
+        }
+
+        RunBackup::dispatch($target->id, request()->user()?->id)->onQueue('backups');
+
+        return response()->json([
+            'backup_target' => BackupTargetResource::make($target->fresh(['storageDestination']))->resolve(),
+        ], 202);
     }
 }

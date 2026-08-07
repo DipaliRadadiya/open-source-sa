@@ -309,7 +309,9 @@ class PoolManager
     {
         $home = rtrim((string) $application->systemUser?->home_path, '/');
 
-        return "{$home}/{$application->domain}";
+        // Slug, not domain — the session and error log directories live inside
+        // the app's root directory which is named by slug, not domain.
+        return "{$home}/{$application->slug}";
     }
 
     /**
