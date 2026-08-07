@@ -148,10 +148,11 @@ it('gives the site its own pool running as its own user', function () {
         ->and($pool)->toContain('group = siteowner')
         ->and($pool)->not->toContain('user = www-data');
 
-    // Its own socket, named from the id — a shared path would silently orphan
+    // Its own socket, named from the slug (falling back to the domain here,
+    // since the fixture sets no slug) — a shared path would silently orphan
     // whichever pool started first.
-    expect($pool)->toContain('listen = /run/php/sv-app-'.$this->application->id.'.sock')
-        ->and($pool)->toContain('[sv-app-'.$this->application->id.']');
+    expect($pool)->toContain('listen = /run/php/shop.test.sock')
+        ->and($pool)->toContain('[shop.test]');
 });
 
 it('keeps the session directory inside the site', function () {

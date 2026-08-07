@@ -1,9 +1,10 @@
 ; Managed by the panel. Manual edits are overwritten when the site's PHP
 ; settings are saved — use the Additional directives field instead.
 ;
-; The pool name comes from the application id, never the domain: two files
-; declaring the same [name] is undefined behaviour in PHP-FPM, and domains
-; change.
+; The pool name comes from the application's slug, never the domain: two
+; files declaring the same [name] is undefined behaviour in PHP-FPM, and
+; domains change — the slug doesn't, which is also why the vhost and the
+; logs sitting next to this file are named the same way.
 [{{ $pool }}]
 
 ; The whole point. Without these the site runs as www-data, alongside every

@@ -30,10 +30,17 @@ class PoolManager
         private PhpStackManager $stacks,
     ) {}
 
-    /** `sv-app-7` — from the id, because two pools sharing a name is undefined. */
+    /**
+     * Named after the app, not an opaque `sv-app-{id}` — the id guaranteed
+     * uniqueness, but the slug already carries that same guarantee (it's
+     * what vhosts and logs are named after, for the identical reason: see
+     * AbstractWebServerDriver::fileName()) and is a name a human reading
+     * pool.d/ can actually place. Falls back to the domain for a row that
+     * predates the slug column, matching fileName()'s own fallback.
+     */
     public function poolName(Application $application): string
     {
-        return 'sv-app-'.$application->id;
+        return (string) ($application->slug ?: $application->domain);
     }
 
     /**
