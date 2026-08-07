@@ -3369,5 +3369,517 @@
     "allSetBody": "Everything recommended is installed. You can add the optional ones now or any time later.",
     "componentFailed": "The install didn't finish. You can try again.",
     "alreadyInstalled": "Already installed"
+  },
+  "storage": {
+    "title": "Storage",
+    "subtitle": "Where backups are sent. Connect a bucket here, then choose it on an application.",
+    "loadFailed": "This couldn't be loaded.",
+    "noPermission": "You don't have permission to manage this.",
+    "card": {
+      "title": "Storage destinations",
+      "subtitle": "S3-compatible buckets this server can write backups to.",
+      "add": "Add destination",
+      "whatTestDoes": "What does Test do?",
+      "testExplained": "It writes a small file to the bucket, reads it back and deletes it. That proves the keys work AND that they can write — a read-only key will always fail this."
+    },
+    "empty": {
+      "title": "No storage connected yet",
+      "body": "Backups need somewhere to go. Connect an S3-compatible bucket and any application can send its backups there.",
+      "reassurance": "The keys are stored encrypted and are only ever used to upload this server's backups and remove old ones.",
+      "stepsTitle": "To get started, follow these three steps:",
+      "step1": "Create a bucket at your provider — or pick one you already have.",
+      "step2": "Create an access key that can upload, download and delete objects in that bucket.",
+      "step3": "Paste the bucket name, its region and the keys into the form here."
+    },
+    "row": {
+      "credentialsSet": "Credentials set",
+      "credentialsMissing": "No credentials",
+      "awsDefault": "Amazon S3 default endpoint",
+      "test": "Test",
+      "testing": "Checking the connection…",
+      "testPassed": "Connection works.",
+      "testFailed": "The connection failed.",
+      "actions": "Actions",
+      "edit": "Edit",
+      "replace": "Replace credentials",
+      "delete": "Delete",
+      "testPassedIn": "Connection works · {ms} ms",
+      "addCredentials": "Add credentials",
+      "regionDefault": "Default region",
+      "added": "Added {when}",
+      "testNeedsCredentials": "Add credentials before testing this destination.",
+      "neverTested": "Never tested — nobody has checked these credentials work.",
+      "lastTestedOk": "Tested {when}",
+      "failedCredentials": "The last test failed {when} — the credentials were rejected.",
+      "failedUnreachable": "The last test failed {when} — the bucket could not be reached."
+    },
+    "form": {
+      "provider": "Provider",
+      "providerHint": "Only changes the example shown below — any S3-compatible provider works.",
+      "providers": {
+        "aws": "Amazon S3",
+        "r2": "Cloudflare R2",
+        "b2": "Backblaze B2",
+        "wasabi": "Wasabi",
+        "spaces": "DigitalOcean Spaces",
+        "minio": "MinIO or self-hosted",
+        "other": "Other"
+      },
+      "name": "Name",
+      "namePlaceholder": "e.g. Offsite backups",
+      "nameHint": "How this appears when you pick it on an application.",
+      "bucket": "Bucket",
+      "bucketPlaceholder": "my-backups",
+      "region": "Region",
+      "regionPlaceholder": "eu-west-1",
+      "endpoint": "Endpoint",
+      "endpointPlaceholder": "https://…",
+      "endpointExample": "For this provider it looks like {example}",
+      "endpointAws": "Leave empty for Amazon S3 — the region decides the endpoint.",
+      "prefix": "Folder",
+      "prefixPlaceholder": "backups/",
+      "prefixHint": "Optional. Keeps backups in their own folder inside the bucket."
+    },
+    "connect": {
+      "title": "Add a storage destination",
+      "subtitle": "An S3-compatible bucket to send backups to.",
+      "accessKey": "Access key",
+      "secretKey": "Secret key",
+      "credentialsNote": "Keys are stored encrypted and never shown again — to change them later you replace them.",
+      "cancel": "Cancel",
+      "submit": "Add destination",
+      "saving": "Adding…",
+      "added": "Destination added.",
+      "testPassed": "Connection tested — it works.",
+      "testFailed": "Saved, but the connection test failed. Check the keys and bucket.",
+      "accessKeyPlaceholder": "From your provider's API keys page",
+      "secretKeyPlaceholder": "Shown only when the key was created",
+      "permissionsNote": "The key needs permission to upload, download and delete objects in this bucket. Delete matters too — backups remove old archives once they pass the retention limit you set."
+    },
+    "edit": {
+      "title": "Edit destination",
+      "subtitle": "Change where this destination points.",
+      "cancel": "Cancel",
+      "submit": "Save changes",
+      "saving": "Saving…",
+      "saved": "Destination updated.",
+      "credentialsUntouched": "The stored keys are left alone — use Replace credentials to change them."
+    },
+    "replace": {
+      "title": "Replace credentials",
+      "subtitle": "New keys for {name}.",
+      "warning": "The stored keys are replaced immediately. They are not checked first, so a wrong key here stops backups until it is corrected.",
+      "accessKey": "New access key",
+      "secretKey": "New secret key",
+      "cancel": "Cancel",
+      "submit": "Replace keys",
+      "saving": "Replacing…",
+      "replacedAndTested": "Keys replaced — the connection works.",
+      "replacedButFailed": "Keys replaced, but the connection test failed.",
+      "accessKeyPlaceholder": "From your provider's API keys page",
+      "secretKeyPlaceholder": "Shown only when the key was created"
+    },
+    "delete": {
+      "title": "Delete this destination?",
+      "description": "{name} will be removed from the panel.",
+      "warning": "Any application set to back up here will stop backing up. Existing backups already in the bucket are not deleted.",
+      "cancel": "Cancel",
+      "confirm": "Delete destination",
+      "removed": "Destination deleted.",
+      "failed": "That couldn't be deleted."
+    }
+  },
+  "backups": {
+    "title": "Backups",
+    "subtitle": "Which sites are protected, and how to put one back.",
+    "loadFailed": "Backups could not be loaded. Try again in a moment.",
+    "tabs": {
+      "label": "Backup sections",
+      "overview": "Overview",
+      "history": "History",
+      "restores": "Restores"
+    },
+    "coverage": {
+      "setUp": "Set up backups",
+      "setUpShort": "Set up",
+      "noApplications": "There are no applications on this server yet.",
+      "lastRun": "Last run {when}",
+      "neverRun": "Has not run yet",
+      "actions": "Backup actions",
+      "manage": "Backup settings",
+      "backUpNow": "Back up now",
+      "started": "Backing up {name} now.",
+      "startFailed": "That backup could not be started.",
+      "staging": "Staging",
+      "unknownApplication": "Deleted site",
+      "allCovered": "Every site is backed up.",
+      "exposed": "{count, plural, one {# site is not backed up} other {# sites are not backed up}}",
+      "exposedHint": "If this server is lost, those sites cannot be brought back. Setting one up takes about a minute.",
+      "columns": {
+        "site": "Site",
+        "status": "Backups",
+        "schedule": "Schedule",
+        "lastRun": "Last run",
+        "actions": "Actions",
+        "type": "Backup type",
+        "storage": "Storage"
+      },
+      "status": {
+        "protected": "Protected",
+        "paused": "Paused",
+        "unprotected": "None",
+        "unknown": "Unknown"
+      },
+      "neverRunShort": "Never",
+      "allCoveredHint": "Every site has a schedule and is running it.",
+      "keeps": "keeps {count}",
+      "nextRun": "Next: {when}",
+      "runBackup": "Run backup",
+      "viewBackups": "View backups",
+      "searchPlaceholder": "Search sites",
+      "noMatches": "No sites match those filters.",
+      "showing": "Showing {shown} of {total}",
+      "filters": {
+        "all": "All",
+        "protected": "Protected",
+        "unprotected": "Not protected",
+        "anyType": "Any backup type"
+      },
+      "types": {
+        "full": "Files and database",
+        "filesystem": "Files only",
+        "database": "Database only"
+      },
+      "moreActions": "More actions",
+      "placeholders": {
+        "type": "Not configured",
+        "schedule": "Not scheduled",
+        "storage": "No storage selected",
+        "lastRun": "Never"
+      },
+      "runsShortly": "Runs shortly",
+      "notSetUpLine": "Not set up — nothing on this site is being backed up."
+    },
+    "setup": {
+      "title": "Set up backups",
+      "subtitle": "Choose a site and how often it should be copied off this server.",
+      "cancel": "Cancel",
+      "submit": "Save backup settings",
+      "saving": "Saving…",
+      "failed": "Those settings could not be saved.",
+      "savedTitle": "Backups are on for {name}",
+      "savedScheduled": "The schedule is saved and will run on its own from now on.",
+      "savedManual": "Saved. Backups will only run when you press Back up now.",
+      "done": "Done",
+      "backUpNow": "Back up now",
+      "verifyHint": "Run one now to check the storage keys work. Waiting for tonight's run to find out means finding out tomorrow.",
+      "started": "The first backup has started.",
+      "startFailed": "That backup could not be started.",
+      "summaryLabel": "This will set up",
+      "keep": "keep {count}",
+      "blocked": {
+        "noStorage": "Connect storage first.",
+        "noSite": "Choose a site to continue.",
+        "noDestination": "Choose where to store backups.",
+        "incomplete": "Fill in the schedule to continue.",
+        "unchanged": "Nothing has changed."
+      },
+      "editTitle": "Edit backup settings",
+      "editSubtitle": "Change what is copied, how often, and where it goes.",
+      "saveChanges": "Save changes"
+    },
+    "form": {
+      "applicationPlaceholder": "Choose a site",
+      "applicationSearch": "Search sites",
+      "applicationEmpty": "No sites found",
+      "noDestinations": "Backups need somewhere to go. Connect an S3-compatible storage destination first — it only takes a bucket and a key.",
+      "addDestination": "Set up storage",
+      "manageStorage": "Manage storage",
+      "destinationPlaceholder": "Choose a destination",
+      "destinationSearch": "Search destinations",
+      "destinationEmpty": "No destinations found",
+      "types": {
+        "full": {
+          "label": "Files + database",
+          "hint": "Safest — a full restore"
+        },
+        "filesystem": {
+          "label": "Files only",
+          "hint": "Files without the database"
+        },
+        "database": {
+          "label": "Database only",
+          "hint": "Database without the files"
+        }
+      },
+      "automatic": "Back up automatically",
+      "automaticOn": "Backups run on their own, on the schedule below.",
+      "automaticOff": "Backups only run when you press Back up now.",
+      "frequency": "How often",
+      "frequencyPlaceholder": "Choose a schedule",
+      "frequencies": {
+        "daily": "Every day",
+        "weekly": "Every week",
+        "monthly": "Every month"
+      },
+      "frequencyHint": {
+        "daily": "Runs every night at 02:00, server time.",
+        "weekly": "Runs every Sunday at 02:00, server time.",
+        "monthly": "Runs on the 1st of each month at 02:00, server time."
+      },
+      "retention": "How many to keep",
+      "retentionHint": "About {days, plural, one {# day} other {# days}} of history. Older ones are deleted.",
+      "fileExcludes": "Files and folders",
+      "fileExcludesPlaceholder": "node_modules\nstorage/logs",
+      "databaseExcludes": "Databases",
+      "databaseExcludesPlaceholder": "analytics_cache",
+      "groups": {
+        "site": "Which site",
+        "content": "What to back up",
+        "schedule": "When it runs",
+        "storage": "Where it is stored"
+      },
+      "excludeTitle": "Exclude files or folders",
+      "automaticOffShort": "Manual only",
+      "excludeHint": "Anything excluded is not restored later. One item per line.",
+      "suggestions": "Common:",
+      "warnings": {
+        "narrower": "Databases will stop being backed up from the next run. Backups already taken still contain them.",
+        "narrowerFiles": "Files will stop being backed up from the next run. Backups already taken still contain them.",
+        "retentionDown": "{count, plural, one {The oldest backup will be deleted} other {The # oldest backups will be deleted}} on the next run."
+      }
+    },
+    "history": {
+      "allApplications": "All sites",
+      "allStatuses": "Any status",
+      "statuses": {
+        "verified": "Verified",
+        "verifying": "Verifying",
+        "running": "Running",
+        "pending": "Queued",
+        "failed": "Failed"
+      },
+      "empty": {
+        "title": "No backups have run yet",
+        "description": "Once a site is set up, every run appears here — and this is where you restore from."
+      },
+      "emptyFiltered": {
+        "title": "No backups match those filters",
+        "description": "Try a different site or status."
+      },
+      "restore": "Restore this backup…",
+      "noPermission": "You do not have permission to restore backups.",
+      "safetyBadge": "Safety copy",
+      "sizeUnknown": "Unknown",
+      "unknownApplication": "Deleted site",
+      "unknownReason": "The reason was not recorded. Check the server logs for this run.",
+      "restoreShort": "Restore",
+      "counts": {
+        "total": "Total backups",
+        "complete": "Complete",
+        "failed": "Failed",
+        "running": "Running"
+      },
+      "columns": {
+        "site": "Site",
+        "status": "Status",
+        "type": "Backup type",
+        "when": "When",
+        "size": "Size",
+        "actions": "Actions"
+      },
+      "allTypes": "Any backup type",
+      "types": {
+        "full": "Files and database",
+        "filesystem": "Files only",
+        "database": "Database only"
+      },
+      "runAgain": "Run backup",
+      "runStarted": "Backing up {name} now.",
+      "runFailed": "That backup could not be started.",
+      "sizePending": "Not yet",
+      "sizeNone": "No archive",
+      "anyTime": "Any time",
+      "lastDays": "Last {count} days"
+    },
+    "restore": {
+      "title": "Restore {name}",
+      "description": "Puts the site back to how it was {ago} ({when}). This replaces the site with that copy — anything changed since then is lost.",
+      "whatToRestore": "What to put back",
+      "types": {
+        "full": {
+          "label": "Files and database",
+          "hint": "Everything in this backup."
+        },
+        "filesystem": {
+          "label": "Files only",
+          "hint": "Leaves the current database untouched."
+        },
+        "database": {
+          "label": "Database only",
+          "hint": "Leaves the current files untouched."
+        }
+      },
+      "safetyPromise": "A copy of the site as it is right now is taken first, so this can be undone.",
+      "confirmLabel": "Type {domain} to confirm",
+      "cancel": "Cancel",
+      "submit": "Restore site",
+      "starting": "Starting…",
+      "failed": "The restore could not be started.",
+      "typeToUnlock": "Type the site's domain to confirm.",
+      "blocked": {
+        "unverified": "Not verified",
+        "noApplication": "Site deleted",
+        "alreadyRunning": "Restore in progress",
+        "inFlight": "Still running",
+        "failed": "This backup failed"
+      },
+      "descriptionShort": "This replaces the site with the copy below. Anything changed since then is lost.",
+      "facts": {
+        "taken": "Taken",
+        "type": "Contains",
+        "size": "Size",
+        "sizeUnknown": "Unknown"
+      },
+      "confirmLabelPlain": "Type this to confirm",
+      "copyDomain": "Copy domain"
+    },
+    "progress": {
+      "running": "Restoring the site",
+      "starting": "Getting ready…",
+      "step": "Step {step} of {total}",
+      "dontLeave": "This can take a few minutes. You can leave this page — it keeps running.",
+      "succeeded": "The site has been restored",
+      "succeededBody": "Finished {when}. Check the site, then dismiss this.",
+      "succeededBodyPlain": "Check the site, then dismiss this.",
+      "undo": "Undo this restore",
+      "undoHint": "Puts back the safety copy taken just before this ran — the site as it was before you restored.",
+      "undoFailed": "The safety copy could not be loaded.",
+      "dismiss": "Dismiss",
+      "failed": "The restore did not finish",
+      "failedSafe": "A safety copy was taken first, so the site can be put back as it was.",
+      "failedNoSafety": "The restore stopped before it changed anything.",
+      "reference": "Reference: {reference}",
+      "unknownReason": "The reason was not recorded.",
+      "stalled": "This restore has not moved in a while",
+      "stalledBody": "It has not reported any progress for 20 minutes. It may still be running on the server, or the job may have stopped. Check again, or ask whoever manages this server to look.",
+      "checkAgain": "Check again",
+      "hide": "Hide"
+    },
+    "application": {
+      "pageTitle": "Backups",
+      "pageSubtitle": "Copies of this site kept off the server, and when they are taken.",
+      "back": "Applications",
+      "provisioning": "This site is still being set up. Backups can be configured once it is ready.",
+      "loadFailed": "This site's backup settings could not be loaded.",
+      "state": {
+        "protected": {
+          "title": "This site is backed up",
+          "body": "{schedule}, stored on {destination}."
+        },
+        "paused": {
+          "title": "Backups are paused",
+          "body": "Nothing runs on a schedule. Backups only happen when you press Back up now."
+        },
+        "unprotected": {
+          "title": "This site is not backed up",
+          "body": "If the server is lost, so is this site. Set a schedule below.",
+          "bodyReadOnly": "If the server is lost, so is this site. Ask an administrator to set up backups."
+        }
+      },
+      "lastRun": "Last run {when}",
+      "neverRun": "No backup has run yet",
+      "backUpNow": "Back up now",
+      "saved": "Backup settings saved.",
+      "saveFailed": "Those settings could not be saved.",
+      "readOnly": "You do not have permission to change this.",
+      "started": "Backup started.",
+      "startFailed": "That backup could not be started.",
+      "recentTitle": "Recent backups",
+      "recentDescription": "The last few runs for this site.",
+      "viewAll": "All backups",
+      "noRuns": "No backups have run for this site yet.",
+      "safetyBadge": "Safety copy",
+      "summary": {
+        "what": "What is backed up",
+        "howOften": "How often",
+        "keeps": "History kept",
+        "keepsValue": "{count, plural, one {# backup} other {# backups}}",
+        "where": "Stored on",
+        "excludes": "{count, plural, one {# exclusion} other {# exclusions}} set — anything excluded will be missing after a restore.",
+        "lastBackup": "Last backup",
+        "nextBackup": "Next backup",
+        "noNextRun": "Not scheduled",
+        "noStorage": "No storage selected",
+        "runsShortly": "Runs shortly"
+      },
+      "unknownReason": "The reason was not recorded.",
+      "restore": "Restore",
+      "runAgain": "Run backup",
+      "noRestorePermission": "You cannot restore backups.",
+      "editSettings": "Edit settings",
+      "setUp": "Set up backups",
+      "sizePending": "Not yet",
+      "sizeNone": "No archive",
+      "sizeUnknown": "Unknown"
+    },
+    "empty": {
+      "title": "Nothing on this server is backed up yet",
+      "body": "A backup copies a site's files and database to storage you own, on a schedule. If the server is ever lost, that copy is what puts the site back.",
+      "reassurance": "Restoring always takes a safety copy of the current site first, so a restore can be undone.",
+      "covers": {
+        "files": "Site files",
+        "database": "Database",
+        "schedule": "On a schedule",
+        "offsite": "Stored off this server"
+      },
+      "stepsTitle": "How to get set up",
+      "step1": "Connect a storage destination — the bucket your backups are written to.",
+      "step2": "Choose a site, what to copy, and how often.",
+      "step3": "Restore from any verified backup, on the History tab.",
+      "action": "Set up backups",
+      "addStorage": "Set up storage first"
+    },
+    "download": {
+      "label": "Download",
+      "hint": "Download this archive",
+      "hintWithSize": "Download this archive ({size})",
+      "started": "Your download is starting.",
+      "failed": "That archive could not be downloaded.",
+      "blocked": {
+        "noPermission": "You cannot download backups.",
+        "inFlight": "This backup is still being written."
+      }
+    },
+    "destinationHealth": {
+      "failedTitle": "{count, plural, one {A storage destination is failing} other {# storage destinations are failing}}",
+      "failedBody": "Backups sent to {names} cannot be written. Every scheduled run will fail until this is fixed.",
+      "untestedTitle": "{count, plural, one {A storage destination has never been tested} other {# storage destinations have never been tested}}",
+      "untestedBody": "Nobody has checked that {names} works. Test it before you need a restore.",
+      "action": "Check storage"
+    },
+    "restores": {
+      "columns": {
+        "site": "Site",
+        "status": "Status",
+        "type": "What was put back",
+        "when": "Started",
+        "undo": "Safety copy"
+      },
+      "statuses": {
+        "pending": "Waiting",
+        "running": "Restoring",
+        "succeeded": "Restored",
+        "failed": "Failed"
+      },
+      "unknownApplication": "Deleted site",
+      "unknownReason": "The reason was not recorded.",
+      "noSafetyCopy": "None taken",
+      "findSafetyCopy": "Find safety copy",
+      "empty": {
+        "title": "No restores yet",
+        "description": "When a backup is put back over a site, it will be recorded here — what was restored, when, and whether it worked."
+      }
+    }
   }
 }

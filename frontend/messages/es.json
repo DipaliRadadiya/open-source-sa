@@ -3369,5 +3369,517 @@
     "allSetBody": "Todo lo recomendado está instalado. Puedes añadir los opcionales ahora o más adelante.",
     "componentFailed": "La instalación no se completó. Puedes volver a intentarlo.",
     "alreadyInstalled": "Ya instalado"
+  },
+  "storage": {
+    "title": "Almacenamiento",
+    "subtitle": "Adónde se envían las copias de seguridad. Conecta un bucket aquí y luego elígelo en una aplicación.",
+    "loadFailed": "No se pudo cargar esto.",
+    "noPermission": "No tienes permiso para gestionar esto.",
+    "card": {
+      "title": "Destinos de almacenamiento",
+      "subtitle": "Buckets compatibles con S3 donde este servidor puede escribir copias de seguridad.",
+      "add": "Añadir destino",
+      "whatTestDoes": "¿Qué hace Probar?",
+      "testExplained": "Escribe un archivo pequeño en el bucket, lo vuelve a leer y lo elimina. Eso demuestra que las claves funcionan Y que pueden escribir: una clave de solo lectura siempre fallará."
+    },
+    "empty": {
+      "title": "Todavía no hay almacenamiento conectado",
+      "body": "Las copias de seguridad necesitan un destino. Conecta un bucket compatible con S3 y cualquier aplicación podrá enviar allí sus copias.",
+      "reassurance": "Las claves se guardan cifradas y solo se usan para subir las copias de este servidor y borrar las antiguas.",
+      "stepsTitle": "Para empezar, sigue estos tres pasos:",
+      "step1": "Crea un bucket en tu proveedor, o elige uno que ya tengas.",
+      "step2": "Crea una clave de acceso que pueda subir, descargar y eliminar objetos en ese bucket.",
+      "step3": "Pega aquí el nombre del bucket, su región y las claves."
+    },
+    "row": {
+      "credentialsSet": "Credenciales guardadas",
+      "credentialsMissing": "Sin credenciales",
+      "awsDefault": "Endpoint predeterminado de Amazon S3",
+      "test": "Probar",
+      "testing": "Comprobando la conexión…",
+      "testPassed": "La conexión funciona.",
+      "testFailed": "La conexión falló.",
+      "actions": "Acciones",
+      "edit": "Editar",
+      "replace": "Reemplazar credenciales",
+      "delete": "Eliminar",
+      "testPassedIn": "La conexión funciona · {ms} ms",
+      "addCredentials": "Añadir credenciales",
+      "regionDefault": "Región predeterminada",
+      "added": "Añadido {when}",
+      "testNeedsCredentials": "Añade credenciales antes de probar este destino.",
+      "neverTested": "Nunca probado: nadie ha comprobado que estas credenciales funcionen.",
+      "lastTestedOk": "Probado {when}",
+      "failedCredentials": "La última prueba falló {when}: se rechazaron las credenciales.",
+      "failedUnreachable": "La última prueba falló {when}: no se pudo acceder al bucket."
+    },
+    "form": {
+      "provider": "Proveedor",
+      "providerHint": "Solo cambia el ejemplo de abajo: funciona cualquier proveedor compatible con S3.",
+      "providers": {
+        "aws": "Amazon S3",
+        "r2": "Cloudflare R2",
+        "b2": "Backblaze B2",
+        "wasabi": "Wasabi",
+        "spaces": "DigitalOcean Spaces",
+        "minio": "MinIO o autoalojado",
+        "other": "Otro"
+      },
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Copias externas",
+      "nameHint": "Así aparecerá cuando lo elijas en una aplicación.",
+      "bucket": "Bucket",
+      "bucketPlaceholder": "mis-copias",
+      "region": "Región",
+      "regionPlaceholder": "eu-west-1",
+      "endpoint": "Endpoint",
+      "endpointPlaceholder": "https://…",
+      "endpointExample": "Para este proveedor se parece a {example}",
+      "endpointAws": "Déjalo vacío para Amazon S3: la región determina el endpoint.",
+      "prefix": "Carpeta",
+      "prefixPlaceholder": "backups/",
+      "prefixHint": "Opcional. Mantiene las copias en su propia carpeta dentro del bucket."
+    },
+    "connect": {
+      "title": "Añadir un destino de almacenamiento",
+      "subtitle": "Un bucket compatible con S3 al que enviar las copias.",
+      "accessKey": "Clave de acceso",
+      "secretKey": "Clave secreta",
+      "credentialsNote": "Las claves se guardan cifradas y no se vuelven a mostrar: para cambiarlas más adelante hay que reemplazarlas.",
+      "cancel": "Cancelar",
+      "submit": "Añadir destino",
+      "saving": "Añadiendo…",
+      "added": "Destino añadido.",
+      "testPassed": "Conexión probada: funciona.",
+      "testFailed": "Guardado, pero la prueba de conexión falló. Revisa las claves y el bucket.",
+      "accessKeyPlaceholder": "Desde la página de claves API de tu proveedor",
+      "secretKeyPlaceholder": "Solo se muestra al crear la clave",
+      "permissionsNote": "La clave necesita permiso para subir, descargar y eliminar objetos en este bucket. Eliminar también importa: las copias antiguas se borran cuando superan el límite de retención que definas."
+    },
+    "edit": {
+      "title": "Editar destino",
+      "subtitle": "Cambia adónde apunta este destino.",
+      "cancel": "Cancelar",
+      "submit": "Guardar cambios",
+      "saving": "Guardando…",
+      "saved": "Destino actualizado.",
+      "credentialsUntouched": "Las claves guardadas no se tocan: usa Reemplazar credenciales para cambiarlas."
+    },
+    "replace": {
+      "title": "Reemplazar credenciales",
+      "subtitle": "Nuevas claves para {name}.",
+      "warning": "Las claves guardadas se reemplazan de inmediato. No se comprueban antes, así que una clave incorrecta detiene las copias hasta que se corrija.",
+      "accessKey": "Nueva clave de acceso",
+      "secretKey": "Nueva clave secreta",
+      "cancel": "Cancelar",
+      "submit": "Reemplazar claves",
+      "saving": "Reemplazando…",
+      "replacedAndTested": "Claves reemplazadas: la conexión funciona.",
+      "replacedButFailed": "Claves reemplazadas, pero la prueba de conexión falló.",
+      "accessKeyPlaceholder": "Desde la página de claves API de tu proveedor",
+      "secretKeyPlaceholder": "Solo se muestra al crear la clave"
+    },
+    "delete": {
+      "title": "¿Eliminar este destino?",
+      "description": "{name} se quitará del panel.",
+      "warning": "Cualquier aplicación configurada para copiar aquí dejará de hacerlo. Las copias que ya están en el bucket no se eliminan.",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar destino",
+      "removed": "Destino eliminado.",
+      "failed": "No se pudo eliminar."
+    }
+  },
+  "backups": {
+    "title": "Copias de seguridad",
+    "subtitle": "Qué sitios están protegidos y cómo restaurar uno.",
+    "loadFailed": "No se pudieron cargar las copias de seguridad. Inténtalo de nuevo en un momento.",
+    "tabs": {
+      "label": "Secciones de copias",
+      "overview": "Resumen",
+      "history": "Historial",
+      "restores": "Restauraciones"
+    },
+    "coverage": {
+      "setUp": "Configurar copias",
+      "setUpShort": "Configurar",
+      "noApplications": "Todavía no hay aplicaciones en este servidor.",
+      "lastRun": "Última ejecución {when}",
+      "neverRun": "Todavía no se ha ejecutado",
+      "actions": "Acciones de copia",
+      "manage": "Ajustes de copia",
+      "backUpNow": "Copiar ahora",
+      "started": "Copiando {name} ahora.",
+      "startFailed": "No se pudo iniciar esa copia.",
+      "staging": "Pruebas",
+      "unknownApplication": "Sitio eliminado",
+      "allCovered": "Todos los sitios tienen copias.",
+      "exposed": "{count, plural, one {# sitio sin copias} other {# sitios sin copias}}",
+      "exposedHint": "Si se pierde este servidor, esos sitios no se pueden recuperar. Configurar uno lleva un minuto.",
+      "columns": {
+        "site": "Sitio",
+        "status": "Copias",
+        "schedule": "Programación",
+        "lastRun": "Última copia",
+        "actions": "Acciones",
+        "type": "Tipo de copia",
+        "storage": "Almacenamiento"
+      },
+      "status": {
+        "protected": "Protegido",
+        "paused": "En pausa",
+        "unprotected": "Ninguna",
+        "unknown": "Desconocido"
+      },
+      "neverRunShort": "Nunca",
+      "allCoveredHint": "Todos los sitios tienen una programación y la están ejecutando.",
+      "keeps": "conserva {count}",
+      "nextRun": "Próxima: {when}",
+      "runBackup": "Ejecutar copia",
+      "viewBackups": "Ver copias",
+      "searchPlaceholder": "Buscar sitios",
+      "noMatches": "Ningún sitio coincide con esos filtros.",
+      "showing": "Mostrando {shown} de {total}",
+      "filters": {
+        "all": "Todos",
+        "protected": "Protegidos",
+        "unprotected": "Sin proteger",
+        "anyType": "Cualquier tipo"
+      },
+      "types": {
+        "full": "Archivos y base de datos",
+        "filesystem": "Solo archivos",
+        "database": "Solo base de datos"
+      },
+      "moreActions": "Más acciones",
+      "placeholders": {
+        "type": "Sin configurar",
+        "schedule": "Sin programación",
+        "storage": "Sin almacenamiento",
+        "lastRun": "Nunca"
+      },
+      "runsShortly": "Se ejecuta en breve",
+      "notSetUpLine": "Sin configurar: no se respalda nada de este sitio."
+    },
+    "setup": {
+      "title": "Configurar copias de seguridad",
+      "subtitle": "Elige un sitio y con qué frecuencia se copia fuera de este servidor.",
+      "cancel": "Cancelar",
+      "submit": "Guardar ajustes de copia",
+      "saving": "Guardando…",
+      "failed": "No se pudieron guardar esos ajustes.",
+      "savedTitle": "Las copias están activas para {name}",
+      "savedScheduled": "La programación está guardada y se ejecutará sola a partir de ahora.",
+      "savedManual": "Guardado. Las copias solo se harán cuando pulses Copiar ahora.",
+      "done": "Listo",
+      "backUpNow": "Copiar ahora",
+      "verifyHint": "Ejecuta una ahora para comprobar que las claves de almacenamiento funcionan. Esperar a la copia de esta noche significa enterarte mañana.",
+      "started": "La primera copia ha comenzado.",
+      "startFailed": "No se pudo iniciar esa copia.",
+      "summaryLabel": "Esto configurará",
+      "keep": "conservar {count}",
+      "blocked": {
+        "noStorage": "Conecta primero un almacenamiento.",
+        "noSite": "Elige un sitio para continuar.",
+        "noDestination": "Elige dónde guardar las copias.",
+        "incomplete": "Completa la programación para continuar.",
+        "unchanged": "No ha cambiado nada."
+      },
+      "editTitle": "Editar ajustes de copia",
+      "editSubtitle": "Cambia qué se copia, con qué frecuencia y dónde se guarda.",
+      "saveChanges": "Guardar cambios"
+    },
+    "form": {
+      "applicationPlaceholder": "Elige un sitio",
+      "applicationSearch": "Buscar sitios",
+      "applicationEmpty": "No se encontraron sitios",
+      "noDestinations": "Las copias necesitan un destino. Conecta primero un almacenamiento compatible con S3: solo hace falta un bucket y una clave.",
+      "addDestination": "Configurar almacenamiento",
+      "manageStorage": "Gestionar almacenamiento",
+      "destinationPlaceholder": "Elige un destino",
+      "destinationSearch": "Buscar destinos",
+      "destinationEmpty": "No se encontraron destinos",
+      "types": {
+        "full": {
+          "label": "Archivos + base de datos",
+          "hint": "Lo más seguro: restauración completa"
+        },
+        "filesystem": {
+          "label": "Solo archivos",
+          "hint": "Archivos sin la base de datos"
+        },
+        "database": {
+          "label": "Solo base de datos",
+          "hint": "Base de datos sin los archivos"
+        }
+      },
+      "automatic": "Copiar automáticamente",
+      "automaticOn": "Las copias se ejecutan solas, según la programación de abajo.",
+      "automaticOff": "Las copias solo se ejecutan cuando pulsas Copiar ahora.",
+      "frequency": "Con qué frecuencia",
+      "frequencyPlaceholder": "Elige una programación",
+      "frequencies": {
+        "daily": "Cada día",
+        "weekly": "Cada semana",
+        "monthly": "Cada mes"
+      },
+      "frequencyHint": {
+        "daily": "Se ejecuta cada noche a las 02:00, hora del servidor.",
+        "weekly": "Se ejecuta cada domingo a las 02:00, hora del servidor.",
+        "monthly": "Se ejecuta el día 1 de cada mes a las 02:00, hora del servidor."
+      },
+      "retention": "Cuántas conservar",
+      "retentionHint": "{days, plural, one {Un día} other {Unos # días}} de historial. Las más antiguas se eliminan.",
+      "fileExcludes": "Archivos y carpetas",
+      "fileExcludesPlaceholder": "node_modules\nstorage/logs",
+      "databaseExcludes": "Bases de datos",
+      "databaseExcludesPlaceholder": "analytics_cache",
+      "groups": {
+        "site": "Qué sitio",
+        "content": "Qué copiar",
+        "schedule": "Cuándo se ejecuta",
+        "storage": "Dónde se guarda"
+      },
+      "excludeTitle": "Excluir archivos o carpetas",
+      "automaticOffShort": "Solo manual",
+      "excludeHint": "Lo excluido no se restaura después. Un elemento por línea.",
+      "suggestions": "Comunes:",
+      "warnings": {
+        "narrower": "Las bases de datos dejarán de respaldarse desde la próxima ejecución. Las copias ya realizadas siguen incluyéndolas.",
+        "narrowerFiles": "Los archivos dejarán de respaldarse desde la próxima ejecución. Las copias ya realizadas siguen incluyéndolos.",
+        "retentionDown": "{count, plural, one {Se eliminará la copia más antigua} other {Se eliminarán las # copias más antiguas}} en la próxima ejecución."
+      }
+    },
+    "history": {
+      "allApplications": "Todos los sitios",
+      "allStatuses": "Cualquier estado",
+      "statuses": {
+        "verified": "Verificada",
+        "verifying": "Verificando",
+        "running": "En curso",
+        "pending": "En cola",
+        "failed": "Fallida"
+      },
+      "empty": {
+        "title": "Todavía no se ha ejecutado ninguna copia",
+        "description": "Cuando configures un sitio, cada ejecución aparecerá aquí, y desde aquí se restaura."
+      },
+      "emptyFiltered": {
+        "title": "Ninguna copia coincide con esos filtros",
+        "description": "Prueba con otro sitio u otro estado."
+      },
+      "restore": "Restaurar esta copia…",
+      "noPermission": "No tienes permiso para restaurar copias de seguridad.",
+      "safetyBadge": "Copia de seguridad previa",
+      "sizeUnknown": "Desconocido",
+      "unknownApplication": "Sitio eliminado",
+      "unknownReason": "El motivo no se registró. Revisa los registros del servidor para esta ejecución.",
+      "restoreShort": "Restaurar",
+      "counts": {
+        "total": "Copias totales",
+        "complete": "Completas",
+        "failed": "Fallidas",
+        "running": "En curso"
+      },
+      "columns": {
+        "site": "Sitio",
+        "status": "Estado",
+        "type": "Tipo de copia",
+        "when": "Cuándo",
+        "size": "Tamaño",
+        "actions": "Acciones"
+      },
+      "allTypes": "Cualquier tipo",
+      "types": {
+        "full": "Archivos y base de datos",
+        "filesystem": "Solo archivos",
+        "database": "Solo base de datos"
+      },
+      "runAgain": "Ejecutar copia",
+      "runStarted": "Copiando {name} ahora.",
+      "runFailed": "No se pudo iniciar esa copia.",
+      "sizePending": "Aún no",
+      "sizeNone": "Sin archivo",
+      "anyTime": "Cualquier fecha",
+      "lastDays": "Últimos {count} días"
+    },
+    "restore": {
+      "title": "Restaurar {name}",
+      "description": "Devuelve el sitio a como estaba {ago} ({when}). Esto reemplaza el sitio por esa copia: todo lo cambiado desde entonces se pierde.",
+      "whatToRestore": "Qué restaurar",
+      "types": {
+        "full": {
+          "label": "Archivos y base de datos",
+          "hint": "Todo lo que contiene esta copia."
+        },
+        "filesystem": {
+          "label": "Solo archivos",
+          "hint": "Deja intacta la base de datos actual."
+        },
+        "database": {
+          "label": "Solo base de datos",
+          "hint": "Deja intactos los archivos actuales."
+        }
+      },
+      "safetyPromise": "Primero se toma una copia del sitio tal y como está ahora, así que esto se puede deshacer.",
+      "confirmLabel": "Escribe {domain} para confirmar",
+      "cancel": "Cancelar",
+      "submit": "Restaurar sitio",
+      "starting": "Iniciando…",
+      "failed": "No se pudo iniciar la restauración.",
+      "typeToUnlock": "Escribe el dominio del sitio para confirmar.",
+      "blocked": {
+        "unverified": "Sin verificar",
+        "noApplication": "Sitio eliminado",
+        "alreadyRunning": "Restauración en curso",
+        "inFlight": "Aún en curso",
+        "failed": "Esta copia falló"
+      },
+      "descriptionShort": "Esto reemplaza el sitio por la copia de abajo. Todo lo cambiado desde entonces se pierde.",
+      "facts": {
+        "taken": "Tomada",
+        "type": "Contiene",
+        "size": "Tamaño",
+        "sizeUnknown": "Desconocido"
+      },
+      "confirmLabelPlain": "Escribe esto para confirmar",
+      "copyDomain": "Copiar dominio"
+    },
+    "progress": {
+      "running": "Restaurando el sitio",
+      "starting": "Preparando…",
+      "step": "Paso {step} de {total}",
+      "dontLeave": "Esto puede tardar unos minutos. Puedes salir de esta página: el proceso continúa.",
+      "succeeded": "El sitio se ha restaurado",
+      "succeededBody": "Terminó {when}. Revisa el sitio y luego cierra este aviso.",
+      "succeededBodyPlain": "Revisa el sitio y luego cierra este aviso.",
+      "undo": "Deshacer esta restauración",
+      "undoHint": "Restaura la copia de seguridad tomada justo antes: el sitio tal y como estaba antes de restaurar.",
+      "undoFailed": "No se pudo cargar la copia de seguridad previa.",
+      "dismiss": "Cerrar",
+      "failed": "La restauración no terminó",
+      "failedSafe": "Se tomó una copia de seguridad previa, así que el sitio se puede dejar como estaba.",
+      "failedNoSafety": "La restauración se detuvo antes de cambiar nada.",
+      "reference": "Referencia: {reference}",
+      "unknownReason": "El motivo no se registró.",
+      "stalled": "Esta restauración lleva un rato sin avanzar",
+      "stalledBody": "No ha informado de ningún progreso durante 20 minutos. Puede que siga ejecutándose en el servidor o que el trabajo se haya detenido. Vuelve a comprobarlo o pide a quien gestione este servidor que lo revise.",
+      "checkAgain": "Comprobar de nuevo",
+      "hide": "Ocultar"
+    },
+    "application": {
+      "pageTitle": "Copias de seguridad",
+      "pageSubtitle": "Copias de este sitio guardadas fuera del servidor, y cuándo se toman.",
+      "back": "Aplicaciones",
+      "provisioning": "Este sitio todavía se está preparando. Podrás configurar las copias cuando esté listo.",
+      "loadFailed": "No se pudieron cargar los ajustes de copia de este sitio.",
+      "state": {
+        "protected": {
+          "title": "Este sitio tiene copias de seguridad",
+          "body": "{schedule}, guardadas en {destination}."
+        },
+        "paused": {
+          "title": "Las copias están en pausa",
+          "body": "No se ejecuta nada de forma programada. Las copias solo se hacen cuando pulsas Copiar ahora."
+        },
+        "unprotected": {
+          "title": "Este sitio no tiene copias de seguridad",
+          "body": "Si se pierde el servidor, se pierde este sitio. Configura una programación abajo.",
+          "bodyReadOnly": "Si se pierde el servidor, se pierde este sitio. Pide a un administrador que configure las copias."
+        }
+      },
+      "lastRun": "Última ejecución {when}",
+      "neverRun": "Todavía no se ha hecho ninguna copia",
+      "backUpNow": "Copiar ahora",
+      "saved": "Ajustes de copia guardados.",
+      "saveFailed": "No se pudieron guardar esos ajustes.",
+      "readOnly": "No tienes permiso para cambiar esto.",
+      "started": "Copia iniciada.",
+      "startFailed": "No se pudo iniciar esa copia.",
+      "recentTitle": "Copias recientes",
+      "recentDescription": "Las últimas ejecuciones de este sitio.",
+      "viewAll": "Todas las copias",
+      "noRuns": "Todavía no se ha hecho ninguna copia de este sitio.",
+      "safetyBadge": "Copia de seguridad previa",
+      "summary": {
+        "what": "Qué se copia",
+        "howOften": "Con qué frecuencia",
+        "keeps": "Historial conservado",
+        "keepsValue": "{count, plural, one {# copia} other {# copias}}",
+        "where": "Guardado en",
+        "excludes": "{count, plural, one {# exclusión} other {# exclusiones}} configuradas: lo excluido faltará tras una restauración.",
+        "lastBackup": "Última copia",
+        "nextBackup": "Próxima copia",
+        "noNextRun": "Sin programar",
+        "noStorage": "Sin almacenamiento seleccionado",
+        "runsShortly": "Se ejecuta en breve"
+      },
+      "unknownReason": "El motivo no se registró.",
+      "restore": "Restaurar",
+      "runAgain": "Ejecutar copia",
+      "noRestorePermission": "No puedes restaurar copias.",
+      "editSettings": "Editar ajustes",
+      "setUp": "Configurar copias",
+      "sizePending": "Aún no",
+      "sizeNone": "Sin archivo",
+      "sizeUnknown": "Desconocido"
+    },
+    "empty": {
+      "title": "Todavía no hay copias de seguridad en este servidor",
+      "body": "Una copia de seguridad guarda los archivos y la base de datos de un sitio en un almacenamiento tuyo, de forma programada. Si alguna vez se pierde el servidor, esa copia es lo que devuelve el sitio.",
+      "reassurance": "Al restaurar siempre se toma primero una copia del sitio actual, así que una restauración se puede deshacer.",
+      "covers": {
+        "files": "Archivos del sitio",
+        "database": "Base de datos",
+        "schedule": "De forma programada",
+        "offsite": "Guardadas fuera de este servidor"
+      },
+      "stepsTitle": "Cómo empezar",
+      "step1": "Conecta un destino de almacenamiento: el bucket donde se escriben las copias.",
+      "step2": "Elige un sitio, qué copiar y con qué frecuencia.",
+      "step3": "Restaura desde cualquier copia verificada, en la pestaña Historial.",
+      "action": "Configurar copias",
+      "addStorage": "Configurar almacenamiento primero"
+    },
+    "download": {
+      "label": "Descargar",
+      "hint": "Descargar este archivo",
+      "hintWithSize": "Descargar este archivo ({size})",
+      "started": "La descarga está comenzando.",
+      "failed": "No se pudo descargar ese archivo.",
+      "blocked": {
+        "noPermission": "No puedes descargar copias de seguridad.",
+        "inFlight": "Esta copia aún se está escribiendo."
+      }
+    },
+    "destinationHealth": {
+      "failedTitle": "{count, plural, one {Un destino de almacenamiento está fallando} other {# destinos de almacenamiento están fallando}}",
+      "failedBody": "No se pueden escribir las copias enviadas a {names}. Todas las ejecuciones programadas fallarán hasta que se corrija.",
+      "untestedTitle": "{count, plural, one {Un destino de almacenamiento nunca se ha probado} other {# destinos de almacenamiento nunca se han probado}}",
+      "untestedBody": "Nadie ha comprobado que {names} funcione. Pruébalo antes de necesitar una restauración.",
+      "action": "Revisar almacenamiento"
+    },
+    "restores": {
+      "columns": {
+        "site": "Sitio",
+        "status": "Estado",
+        "type": "Qué se restauró",
+        "when": "Iniciada",
+        "undo": "Copia de seguridad previa"
+      },
+      "statuses": {
+        "pending": "En espera",
+        "running": "Restaurando",
+        "succeeded": "Restaurado",
+        "failed": "Falló"
+      },
+      "unknownApplication": "Sitio eliminado",
+      "unknownReason": "No se registró el motivo.",
+      "noSafetyCopy": "No se tomó ninguna",
+      "findSafetyCopy": "Buscar copia previa",
+      "empty": {
+        "title": "Aún no hay restauraciones",
+        "description": "Cuando se restaure una copia sobre un sitio, quedará registrada aquí: qué se restauró, cuándo y si funcionó."
+      }
+    }
   }
 }

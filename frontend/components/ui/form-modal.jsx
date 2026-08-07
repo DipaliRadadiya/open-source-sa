@@ -49,7 +49,7 @@ export function FormModal({
       </div>
 
       {footer ? (
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-muted/50 px-6 py-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t bg-muted/50 px-6 py-4">
           {footer}
         </div>
       ) : null}

@@ -2,41 +2,29 @@
 
 import { useSearchParams } from "next/navigation";
 import { useSetQuery } from "@/hooks/use-set-query";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterSelect } from "@/components/data-table/filter-select";
 
 /**
  * URL-driven filter select. Writes `paramKey` (or clears it on the "all"
  * option) and resets to page 1. `options` is [{ value, label }].
+ *
+ * The control itself is `FilterSelect`; this only supplies where the value
+ * lives. Screens that filter a list already in memory use `FilterSelect`
+ * directly — same dropdown, no navigation per keystroke.
  */
 export function FacetSelect({ paramKey, allLabel, options, className }) {
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
-  const value = searchParams.get(paramKey) ?? "all";
 
   return (
-    <Select
-      value={value}
-      onValueChange={(v) =>
-        setQuery({ [paramKey]: v === "all" ? undefined : v }, { resetPage: true })
+    <FilterSelect
+      value={searchParams.get(paramKey) ?? "all"}
+      onChange={(value) =>
+        setQuery({ [paramKey]: value === "all" ? undefined : value }, { resetPage: true })
       }
-    >
-      <SelectTrigger className={className}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">{allLabel}</SelectItem>
-        {options.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
-            {o.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      allLabel={allLabel}
+      options={options}
+      className={className}
+    />
   );
 }

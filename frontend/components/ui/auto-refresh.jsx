@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
  * `router.refresh()` re-renders the tree in place rather than remounting it, so
  * half-typed form state in client children survives.
  */
-export function AutoRefresh({ intervalMs = 10000 }) {
+export function AutoRefresh({ intervalMs = 10000, stopAfterMs = null }) {
   const router = useRouter();
 
   useEffect(() => {
@@ -26,11 +26,18 @@ export function AutoRefresh({ intervalMs = 10000 }) {
     const id = setInterval(tick, intervalMs);
     document.addEventListener("visibilitychange", tick);
 
+    // Some callers poll because a job is running, and a job that never lands —
+    // a worker that died mid-backup, say — would otherwise leave the page
+    // polling for as long as the tab is open. Give up after a while; a reload
+    // is a fair price for a state that is already wrong.
+    const stop = stopAfterMs ? setTimeout(() => clearInterval(id), stopAfterMs) : null;
+
     return () => {
       clearInterval(id);
+      if (stop) clearTimeout(stop);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [router, intervalMs]);
+  }, [router, intervalMs, stopAfterMs]);
 
   return null;
 }

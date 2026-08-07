@@ -69,6 +69,16 @@ export function DataTable({
   rowClassName,
   fixedLayout = false,
   contextMenu,
+  // Opt-in: lets a row collapse a run of columns into one spanning cell.
+  // `{ columns: [id, …], render: (rowOriginal) => node | null }` — when
+  // `render` returns null the row is drawn normally, so this costs nothing for
+  // every other table. Exists because a row whose columns all say "not set up"
+  // reads as one statement, and repeating it four times per row turns ten rows
+  // into a wall of grey.
+  spanCells,
+  // Drops this component's own border and rounding, for callers that already
+  // sit inside a Card. Nested, the two read as a box drawn twice.
+  bare = false,
   // Passed straight to TanStack and readable from any cell as
   // `table.options.meta`. It's how a cell gets per-table context without
   // closing over it — a closure would change identity every render, and
@@ -101,7 +111,10 @@ export function DataTable({
   return (
     <div
       className={cn(
-        "rounded-xl border transition-opacity",
+        "transition-opacity",
+        // The last row's own rule would otherwise sit a pixel above the
+        // enclosing card's edge — two lines where the eye expects one.
+        bare ? "[&_tbody_tr:last-child]:border-0" : "rounded-xl border",
         // A wide table must scroll rather than silently clip columns. Skipped
         // when stickyHeader is on: the caller already supplies the scroll
         // container, and overflow-x:auto here would compute overflow-y to auto
@@ -152,13 +165,27 @@ export function DataTable({
         <TableBody>
           {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => {
+              const span = spanCells?.render(row.original) ?? null;
               const tableRow = (
                 <TableRow className={rowClassName?.(row.original)}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    if (span && spanCells.columns.includes(cell.column.id)) {
+                      // Only the first of the run draws; the rest are absorbed
+                      // by its colSpan.
+                      if (cell.column.id !== spanCells.columns[0]) return null;
+                      return (
+                        <TableCell key={cell.id} colSpan={spanCells.columns.length}>
+                          {span}
+                        </TableCell>
+                      );
+                    }
+
+                    return (
+                      <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               );
               const menuContent = contextMenu?.(row.original);
