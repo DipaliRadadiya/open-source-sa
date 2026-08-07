@@ -246,3 +246,49 @@ function renderedVhost(Application $application): string
         app(ApplicationProvisioner::class)->documentRoot($application),
     );
 }
+
+it('addresses a domain by hostname as well as by id', function () {
+    // The route parameter is called `{domain}` and the model has a `domain`
+    // column, so passing the hostname is the obvious reading. It used to 404
+    // with "No query results for model [App\Models\ApplicationDomain]
+    // alias.example.com" — a message describing the framework's failure to
+    // bind rather than anything the caller could act on.
+    $domain = $this->application->domains()->create([
+        'domain' => 'alias.example.com',
+        'type' => DomainType::Alias,
+    ]);
+
+    foreach ([$domain->id, $domain->domain, strtoupper($domain->domain)] as $reference) {
+        $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/domains/{$reference}/verify")
+            ->assertOk()
+            ->assertJsonPath('domain.domain', 'alias.example.com');
+    }
+});
+
+it('still refuses a domain belonging to another application', function () {
+    // Resolving a name is not authorising access to it — the ownership check
+    // has to survive the more forgiving lookup.
+    $other = Application::create([
+        'system_user_id' => $this->application->system_user_id,
+        'name' => 'Other site',
+        'domain' => 'other.example.com',
+        'site_type' => 'wordpress',
+        'serving_profile' => 'php',
+        'php_version' => '8.4',
+        'web_root' => '/',
+        'status' => 'active',
+    ]);
+
+    $foreign = $other->domains()->create(['domain' => 'foreign.example.com', 'type' => DomainType::Alias]);
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/domains/{$foreign->domain}/verify")
+        ->assertNotFound();
+});
+
+it('404s an unknown hostname rather than erroring', function () {
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/domains/nope.example.com/verify")
+        ->assertNotFound();
+});

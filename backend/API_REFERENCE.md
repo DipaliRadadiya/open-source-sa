@@ -1625,6 +1625,8 @@ keeps the authority on one. Say so in the UI — most users pick "alias" meaning
 - Adding a domain **rewrites and reloads the vhost**. If the new config fails its test, **the previous one is put back** rather than removed — a mistyped hostname must not take a live site down.
 
 **`POST /api/applications/{id}/domains/{domain}/verify`** → `{domain: {...}}`
+- **`{domain}` accepts either the domain's `id` or its hostname** (case-insensitive) — same for `/primary` and `DELETE`. It previously bound by id only, so passing the hostname returned `404 "No query results for model [App\Models\ApplicationDomain] blog.example.com"` — a message about the framework's binding, not about anything the caller did. Fixed 2026-08-07.
+- A hostname belonging to a **different** application still `404`s: resolving a name is not authorising access to it.
 - Re-checks DNS. Its own button because propagation is something the user waits on: they add a record at their registrar and come back.
 - **`dns_verified: false` is the gate on offering a certificate.** Let's Encrypt allows five authorisation failures per hostname per hour, so guessing is expensive — check first, then offer.
 - **`behind_proxy: true`** means the name resolves to Cloudflare, not to this server. DNS is correct *and* HTTP validation will still fail, because the proxy answers first. This is the single most common support question this feature will generate — surface it as its own message ("pause the proxy, or use DNS validation"), not as a generic failure.

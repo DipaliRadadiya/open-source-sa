@@ -43,6 +43,37 @@ class ApplicationDomain extends Model
      * able to send anyone anywhere.
      */
     /**
+     * Resolve `{domain}` in a route from either the id or the hostname.
+     *
+     * The parameter is called `domain` and the model has a `domain` column, so
+     * passing the hostname is the obvious reading — and it used to fail with
+     * "No query results for model [App\Models\ApplicationDomain]
+     * blog.example.com", a 404 that says nothing about what was actually
+     * wrong. Accepting both is cheaper than a parameter that means something
+     * other than its name.
+     *
+     * Unambiguous: `application_domains.domain` is unique across the table, so
+     * a hostname identifies exactly one row. Ownership is still checked by the
+     * controller — resolving a name is not authorising access to it.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if ($field !== null) {
+            return parent::resolveRouteBinding($value, $field);
+        }
+
+        $value = trim((string) $value);
+
+        // Numeric goes to the id, so a hostname that happens to be all digits
+        // cannot shadow a row id — and a non-numeric value never reaches an
+        // `id = 'blog.example.com'` comparison, which some drivers treat as a
+        // type error rather than simply no match.
+        return is_numeric($value)
+            ? parent::resolveRouteBinding($value)
+            : static::query()->where('domain', mb_strtolower($value))->first();
+    }
+
+    /**
      * Whether a hostname is one of the wildcard-DNS services that resolve any
      * name to an address encoded in it.
      *
