@@ -52,7 +52,7 @@ class ApplicationProvisioner
     public function documentRoot(Application $application): string
     {
         $home = rtrim((string) $application->systemUser->home_path, '/');
-        $webRoot = trim((string) ($application->web_root ?: 'public'), '/');
+        $webRoot = trim((string) ($application->web_root ?: 'public_html'), '/');
 
         // slug-based path, not domain-based — stable across domain changes.
         // Only a git site is ever redeployed (GitDeployer is the only caller
