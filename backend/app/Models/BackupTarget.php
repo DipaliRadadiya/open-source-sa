@@ -74,6 +74,31 @@ class BackupTarget extends Model
     }
 
     /**
+     * When the next scheduled run will happen.
+     *
+     * Computed here rather than published as a cron string, so the schedule
+     * stays one constant in one place — a frontend holding its own copy of
+     * `0 2 * * *` is a copy that goes stale the day this changes.
+     *
+     * Null when nothing is scheduled: a disabled or manual target has no next
+     * run, and showing one would promise a backup that is never taken.
+     */
+    public function nextRunAt(?DateTimeInterface $now = null): ?DateTimeInterface
+    {
+        if (! $this->enabled || $this->frequency === 'manual') {
+            return null;
+        }
+
+        $expression = $this->cronExpression();
+
+        if ($expression === null) {
+            return null;
+        }
+
+        return (new CronExpression($expression))->getNextRunDate($now ?? now());
+    }
+
+    /**
      * Whether a scheduled run is due.
      *
      * Compares the last run against the most recent cron slot rather than

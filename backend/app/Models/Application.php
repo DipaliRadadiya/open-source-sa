@@ -220,6 +220,34 @@ class Application extends Model
     }
 
     /**
+     * The backup configuration for this site, if it has one.
+     *
+     * Null is a real answer here — an unconfigured site is exactly what the
+     * cross-application list is for.
+     */
+    public function backupTarget(): HasOne
+    {
+        return $this->hasOne(BackupTarget::class);
+    }
+
+    public function backups(): HasMany
+    {
+        return $this->hasMany(Backup::class);
+    }
+
+    /**
+     * The newest backup, however it ended.
+     *
+     * Not "the newest successful one": a list whose whole job is to show
+     * whether a site is protected must show the failure, not skip past it to
+     * the last time things worked.
+     */
+    public function latestBackup(): HasOne
+    {
+        return $this->hasOne(Backup::class)->latestOfMany();
+    }
+
+    /**
      * The names that can go on a certificate, primary first.
      *
      * A subset of `serverNames()`: redirects are included, because a redirect

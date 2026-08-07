@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\BackupTarget;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,6 +15,9 @@ class BackupTargetResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $nextRun = $this->nextRunAt();
+        $nextRun = $nextRun === null ? null : Carbon::instance($nextRun);
+
         return [
             'id' => $this->id,
             'application_id' => $this->application_id,
@@ -34,6 +38,11 @@ class BackupTargetResource extends JsonResource
             'database_excludes' => $this->database_excludes ?? [],
             'last_run_at' => $this->last_run_at?->format('d-m-Y H:i:s'),
             'last_run_at_human' => $this->last_run_at?->diffForHumans(),
+            // Computed, never a cron string: the schedule is one constant in
+            // the model and stays there. Null when the target is manual or
+            // disabled — there is no next run to promise.
+            'next_run_at' => $nextRun?->format('d-m-Y H:i:s'),
+            'next_run_at_human' => $nextRun?->diffForHumans(),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at?->format('d-m-Y H:i:s'),
         ];

@@ -15,6 +15,15 @@ use Illuminate\Support\Facades\Route;
 | rather than a copy inside every application.
 */
 
+/*
+| The overview: every application and whether it is backed up at all.
+|
+| `backup`, not `app_backup` — this is the cross-application view, same as the
+| restore list below. Per-site configuration stays under `app_backup`.
+*/
+Route::get('/backup-targets', [BackupController::class, 'indexTargets'])
+    ->middleware('permission:backup');
+
 // The restore list: every backup, every application.
 Route::get('/backups', [BackupController::class, 'index'])
     ->middleware('permission:backup');

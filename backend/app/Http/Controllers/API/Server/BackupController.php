@@ -6,6 +6,7 @@ use App\Actions\Server\Backup\SaveBackupTarget;
 use App\Enums\BackupStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Backup\SaveBackupTargetRequest;
+use App\Http\Resources\ApplicationBackupResource;
 use App\Http\Resources\BackupResource;
 use App\Http\Resources\BackupTargetResource;
 use App\Jobs\RunBackup;
@@ -40,6 +41,38 @@ class BackupController extends Controller
                 'per_page' => $backups->perPage(),
                 'total' => $backups->total(),
                 'last_page' => $backups->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * Every application and its backup configuration — the overview screen.
+     *
+     * Driven from applications, not from backup targets: listing targets can
+     * only ever return the sites that are already protected, and the question
+     * this screen exists to answer is which ones are not. `meta` carries the
+     * counts so the header does not depend on the caller reducing the list.
+     *
+     * Not paginated. One server holds a handful of sites, and a "5 of 7
+     * protected" built from page one would be wrong.
+     */
+    public function indexTargets(): JsonResponse
+    {
+        $applications = Application::query()
+            ->with(['backupTarget.storageDestination', 'latestBackup'])
+            ->orderBy('name')
+            ->get();
+
+        $protected = $applications
+            ->filter(fn (Application $application): bool => $application->backupTarget !== null)
+            ->count();
+
+        return response()->json([
+            'backup_targets' => ApplicationBackupResource::collection($applications)->resolve(),
+            'meta' => [
+                'total' => $applications->count(),
+                'protected' => $protected,
+                'unprotected' => $applications->count() - $protected,
             ],
         ]);
     }

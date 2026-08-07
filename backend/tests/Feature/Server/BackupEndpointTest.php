@@ -182,6 +182,126 @@ it('lists backups across every application', function () {
     expect($response->json('backups.0.status_title'))->toBe('Complete');
 });
 
+describe('the cross-application overview', function () {
+    beforeEach(function () {
+        // A second site, deliberately left unconfigured: the whole point of
+        // the overview is that it shows up.
+        $this->unprotected = Application::create([
+            'system_user_id' => $this->application->system_user_id,
+            'name' => 'Blog',
+            'domain' => 'blog.example.test',
+            'site_type' => 'php',
+            'serving_profile' => 'php',
+            'status' => 'active',
+        ]);
+    });
+
+    it('lists configured and unconfigured applications alike', function () {
+        $target = BackupTarget::create(array_merge(
+            ['application_id' => $this->application->id],
+            targetPayload(),
+        ));
+
+        $response = $this->withHeaders(backupHeaders())->getJson('/api/backup-targets');
+
+        // Ordered by name: Blog before Shop.
+        $response->assertOk()
+            ->assertJsonPath('backup_targets.0.application_name', 'Blog')
+            ->assertJsonPath('backup_targets.0.application_domain', 'blog.example.test')
+            ->assertJsonPath('backup_targets.0.backup_target', null)
+            ->assertJsonPath('backup_targets.0.last_backup', null)
+            ->assertJsonPath('backup_targets.1.application_id', $this->application->id)
+            ->assertJsonPath('backup_targets.1.backup_target.id', $target->id)
+            ->assertJsonPath('backup_targets.1.backup_target.frequency', 'daily')
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonPath('meta.protected', 1)
+            ->assertJsonPath('meta.unprotected', 1);
+    });
+
+    it('reports the newest backup, however it ended', function () {
+        $target = BackupTarget::create(array_merge(
+            ['application_id' => $this->application->id],
+            targetPayload(),
+        ));
+
+        Backup::create([
+            'backup_target_id' => $target->id,
+            'application_id' => $this->application->id,
+            'type' => 'full',
+            'status' => BackupStatus::Verified,
+        ]);
+
+        // The most recent run failed. A screen that answers "am I protected?"
+        // must show this one, not skip back to the last success.
+        $failed = Backup::create([
+            'backup_target_id' => $target->id,
+            'application_id' => $this->application->id,
+            'type' => 'full',
+            'status' => BackupStatus::Failed,
+            'reason' => 'upload_artifact',
+        ]);
+
+        $this->withHeaders(backupHeaders())
+            ->getJson('/api/backup-targets')
+            ->assertOk()
+            ->assertJsonPath('backup_targets.1.last_backup.id', $failed->id)
+            ->assertJsonPath('backup_targets.1.last_backup.status', 'failed');
+    });
+
+    it('denies a user without the backup permission', function () {
+        $user = User::factory()->create();
+        $token = $user->createToken('t')->plainTextToken;
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/backup-targets')
+            ->assertForbidden();
+    });
+});
+
+describe('the next scheduled run', function () {
+    it('is computed for every scheduled frequency', function (string $frequency, string $expected) {
+        $this->travelTo('2026-03-10 12:00:00');
+
+        $response = $this->withHeaders(backupHeaders())
+            ->putJson(
+                "/api/applications/{$this->application->id}/backup-target",
+                targetPayload(['frequency' => $frequency]),
+            );
+
+        $response->assertOk()->assertJsonPath('backup_target.next_run_at', $expected);
+
+        expect($response->json('backup_target.next_run_at_human'))->not->toBeNull();
+    })->with([
+        // Tuesday 12:00 → tonight, the coming Sunday, the 1st of next month.
+        ['daily', '11-03-2026 02:00:00'],
+        ['weekly', '15-03-2026 02:00:00'],
+        ['monthly', '01-04-2026 02:00:00'],
+    ]);
+
+    it('is null for a manual target', function () {
+        $this->withHeaders(backupHeaders())
+            ->putJson(
+                "/api/applications/{$this->application->id}/backup-target",
+                targetPayload(['frequency' => 'manual']),
+            )
+            ->assertOk()
+            ->assertJsonPath('backup_target.next_run_at', null)
+            ->assertJsonPath('backup_target.next_run_at_human', null);
+    });
+
+    it('is null for a disabled target', function () {
+        // A disabled target has a frequency but no next run. Showing one
+        // would promise a backup that is never taken.
+        $this->withHeaders(backupHeaders())
+            ->putJson(
+                "/api/applications/{$this->application->id}/backup-target",
+                targetPayload(['enabled' => false]),
+            )
+            ->assertOk()
+            ->assertJsonPath('backup_target.next_run_at', null);
+    });
+});
+
 it('denies a user without the backup permissions', function () {
     $user = User::factory()->create();
     $token = $user->createToken('t')->plainTextToken;
