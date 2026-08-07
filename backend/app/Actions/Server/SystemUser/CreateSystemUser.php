@@ -66,6 +66,19 @@ class CreateSystemUser
                 );
             }
 
+            // `useradd -m` on Ubuntu 22.04+ creates the home directory at 0750
+            // — no execute bit for "others". nginx/Apache run as www-data,
+            // which is neither the owner nor in the user's own group, so every
+            // hosted site under this account would 404: the web server can't
+            // even stat() its way down to the vhost's document root, let alone
+            // serve from it. `o+x` only grants traversal into a *known* path —
+            // not directory listing or read access to anything inside — which
+            // is exactly what serving needs and nothing more.
+            $this->serverOps->run(
+                ['chmod', 'o+x', $homePath],
+                ['feature' => 'system_user', 'op' => 'grant_web_server_traversal', 'system_user' => $username],
+            );
+
             $systemUser = SystemUser::create([
                 'username' => $username,
                 'home_path' => $homePath,
