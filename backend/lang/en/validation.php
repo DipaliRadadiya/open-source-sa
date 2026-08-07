@@ -214,4 +214,6 @@ return [
 
     'webhook_secret_min' => 'The webhook secret must be at least 16 characters.',
 
+    'web_root_not_found' => 'The web root directory could not be found. Please check the web root path in the application settings and re-provision the application if needed.',
+
 ];

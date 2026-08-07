@@ -41,7 +41,6 @@ class GitDeployer
         private ProcessSupervisor $supervisor,
         private ProvisionProgress $progress,
         private DeploymentRecorder $recorder,
-        private ReleaseManager $releases,
     ) {}
 
     /**
@@ -60,51 +59,51 @@ class GitDeployer
         $this->progress->open($application);
 
         try {
-            // Always deploy into a fresh release directory. The old `current`
-            // stays live and serving until the symlink swap confirms the new
-            // one is good — zero downtime.
-            $releasePath = $this->releases->prepareRelease($application);
-            $releasePublicPath = $this->releases->releasePublicPath($releasePath);
+            // Deploy directly into the document root. All apps use a flat
+            // /home/<user>/<slug>/<web_root> structure. web_root defaults to
+            // public_html. The directory is created and owned by ApplicationProvisioner
+            // before this method is called.
+            $this->trustDocumentRoot($documentRoot);
 
             $credentialFile = $this->writeCredential($application);
             $remote = $this->remoteUrl($application);
             $branch = $application->branch ?: 'main';
 
-            // git init + fetch + reset-hard into the new release directory.
+            // git init + fetch + reset-hard into the document root.
             // No credential survives past this block; the remote stays clean.
             $this->run('init', null, [
-                'git', 'init', '--quiet', '--initial-branch', $branch, $releasePublicPath,
+                'git', 'init', '--quiet', '--initial-branch', $branch, $documentRoot,
             ]);
 
             $this->serverOps->run(
-                ['git', '-C', $releasePublicPath, 'remote', 'add', 'origin', $remote],
+                ['git', '-C', $documentRoot, 'remote', 'add', 'origin', $remote],
                 ['feature' => 'application', 'op' => 'git.remote_add'],
             );
 
             $this->run('fetch', $credentialFile, [
-                'git', '-C', $releasePublicPath, 'fetch', '--depth', '1', 'origin', $branch,
+                'git', '-C', $documentRoot, 'fetch', '--depth', '1', 'origin', $branch,
             ]);
 
             $this->run('checkout', null, [
-                'git', '-C', $releasePublicPath, 'reset', '--hard', 'FETCH_HEAD',
+                'git', '-C', $documentRoot, 'reset', '--hard', 'FETCH_HEAD',
             ]);
 
             $this->run('checkout', null, [
-                'git', '-C', $releasePublicPath, 'remote', 'set-url', 'origin', $remote,
+                'git', '-C', $documentRoot, 'remote', 'set-url', 'origin', $remote,
             ]);
 
-            $commit = $this->currentCommit($releasePublicPath);
+            $commit = $this->currentCommit($documentRoot);
 
             // Site is owned by its Linux user. Without this git operations as root
             // inside a non-root-owned directory fail with "dubious ownership".
             $this->run('set_ownership', null, [
                 'chown', '-R',
                 "{$application->systemUser->username}:{$application->systemUser->username}",
-                $releasePublicPath,
+                $documentRoot,
             ]);
 
             if (filled($this->script($application))) {
-                $this->runScript($application, $releasePublicPath);
+                $this->runScript($application, $documentRoot);
             }
 
             // New code is only live once the process running it has been
@@ -118,7 +117,7 @@ class GitDeployer
             // changed port or start command takes effect on the same deploy
             // that changed it rather than the one after.
             if ($this->supervisor->runs($application)) {
-                $this->supervisor->apply($application, $releasePublicPath);
+                $this->supervisor->apply($application, $documentRoot);
 
                 $this->progress->record('restart_app');
             }
@@ -140,18 +139,13 @@ class GitDeployer
                 $this->verifyDeploy($application);
             }
 
-            // Directory size is measured against the now-served release.
-            $this->refreshDirectorySize($application, $releasePublicPath);
-
-            // Swap the symlink only after every step above has succeeded.
-            // If anything above threw, the old release is still live and serving.
-            $this->releases->activateRelease($application, $releasePath);
+            // Directory size is measured against the deployed document root.
+            $this->refreshDirectorySize($application, $documentRoot);
 
             return [
                 'steps' => $this->progress->steps(),
                 'commit' => $commit,
-                'release_path' => $releasePath,
-                ...$this->commitDetails($releasePublicPath),
+                ...$this->commitDetails($documentRoot),
             ];
         } finally {
             // Always — a failed deploy must not leave a credential on disk.
@@ -499,14 +493,6 @@ class GitDeployer
             ['git', 'config', '--global', '--add', 'safe.directory', $documentRoot],
             ['feature' => 'application', 'op' => 'git.safe_directory'],
         );
-    }
-
-    private function isRepository(string $documentRoot): bool
-    {
-        return $this->serverOps->run(
-            ['test', '-d', "{$documentRoot}/.git"],
-            ['feature' => 'application', 'op' => 'git.detect'],
-        )->ok;
     }
 
     private function currentCommit(string $documentRoot): ?string

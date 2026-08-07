@@ -111,5 +111,4 @@ Route::put('/applications/{application}/deployment-settings', [DeploymentControl
 
 // Rollback: repoints the `current` symlink to the previous release directory.
 // Idempotent — running twice rolls back two generations. Gated the same as deploy.
-Route::post('/applications/{application}/rollback', [DeploymentController::class, 'rollback'])
     ->middleware(['permission:app_deployment,manage', 'throttle:10,1']);

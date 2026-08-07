@@ -70,6 +70,7 @@ class FileBrowser
      */
     public function list(Application $application, string $path): array
     {
+        $this->assertRootExists($application);
         $target = $this->resolve($application, $path);
         $this->assertType($application, $target, 'd');
 
@@ -114,6 +115,7 @@ class FileBrowser
      */
     public function search(Application $application, string $scopePath, string $query): array
     {
+        $this->assertRootExists($application);
         $target = $this->resolve($application, $scopePath);
         $this->assertType($application, $target, 'd');
 
@@ -164,6 +166,7 @@ class FileBrowser
      */
     public function folderSize(Application $application, string $path): array
     {
+        $this->assertRootExists($application);
         $target = $this->resolve($application, $path);
         $this->assertType($application, $target, 'd');
 
@@ -227,6 +230,7 @@ class FileBrowser
      */
     public function read(Application $application, string $path): array
     {
+        $this->assertRootExists($application);
         $target = $this->resolve($application, $path);
         $size = $this->assertType($application, $target, 'f');
 
@@ -245,6 +249,7 @@ class FileBrowser
     /** Raw bytes for a download response. Binary is fine here — it is the client's file, not rendered as text. */
     public function download(Application $application, string $path): string
     {
+        $this->assertRootExists($application);
         $target = $this->resolve($application, $path);
         $size = $this->assertType($application, $target, 'f');
 
@@ -705,6 +710,27 @@ class FileBrowser
         $root = rtrim($this->provisioner->documentRoot($application), '/');
 
         return $path === '' ? $root : "{$root}/{$path}";
+    }
+
+    /**
+     * Confirms the web root directory actually exists on disk.
+     *
+     * When the path is wrong (e.g. app created with default web_root but directory
+     * was named differently), FileBrowser would silently return an empty listing —
+     * which looks like "no files" rather than "wrong path". This check returns
+     * a clear 422 error instead.
+     */
+    private function assertRootExists(Application $application): void
+    {
+        $root = rtrim($this->provisioner->documentRoot($application), '/');
+
+        $result = $this->serverOps->run(
+            $this->asUser($application, ['test', '-d', $root]),
+            ['feature' => 'application', 'op' => 'file_root_check', 'application' => $application->id],
+            timeout: 15,
+        );
+
+        abort_if($result->failed(), 422, __('errors/application.web_root_not_found'));
     }
 
     /**

@@ -33,21 +33,18 @@ class ApplicationProvisioner
         private ProcessSupervisor $supervisor,
         private ProvisionProgress $progress,
         private AutoIssueCertificate $autoCertificate,
-        private ReleaseManager $releases,
         private PoolManager $pools,
     ) {}
 
     /**
-     * The web root served by nginx/PHP — the `current` symlink target's public/
-     * subdirectory.
+     * The web root served by nginx/PHP.
      *
      * Uses the app slug as the directory name (not the domain), because slugs are
      * unique, stable, and survive a domain change without the filesystem path
      * breaking. The old panel uses the same convention.
      *
-     * Returns the symlink path, so nginx transparently follows it to the real
-     * release. The caller (git deploy) populates the release directory; this
-     * method only assembles the path.
+     * All apps use a flat structure: /home/<user>/<slug>/<web_root>.
+     * web_root defaults to public_html when NULL/empty.
      */
     public function documentRoot(Application $application): string
     {
@@ -55,18 +52,10 @@ class ApplicationProvisioner
         $webRoot = trim((string) ($application->web_root ?: 'public_html'), '/');
 
         // slug-based path, not domain-based — stable across domain changes.
-        // Only a git site is ever redeployed (GitDeployer is the only caller
-        // of ReleaseManager::prepareRelease()/activateRelease()), so only it
-        // gets the releases/<timestamp> + current indirection that makes an
-        // atomic swap and instant rollback possible. Every other site type
-        // gets exactly one directory, once, forever — the symlink layer
-        // would sit there unused, and it's what caused real bugs when it
-        // was applied unconditionally (a marketplace installer's `cp` not
-        // following a destination symlink, `chown -R` silently not
-        // recursing through one).
-        $base = $application->site_type === 'git'
-            ? "{$home}/{$application->slug}/current"
-            : "{$home}/{$application->slug}";
+        // All app types use the same flat structure: /home/<user>/<slug>/<web_root>.
+        // web_root defaults to public_html (set in data['web_root'] ?? 'public_html')
+        // or overridden per site type (e.g. Statamic returns 'public', Craft CMS 'web').
+        $base = "{$home}/{$application->slug}";
 
         $path = $webRoot === '' ? $base : "{$base}/{$webRoot}";
 
@@ -116,7 +105,7 @@ class ApplicationProvisioner
             // The initial `current` symlink, pointing at the first release.
             $this->releases->initialSymlink($application, $releasePath);
 
-            // Directory creation happened above via ReleaseManager, not
+            // Directory creation happened above via mkdir -p, not
             // step() -- record it directly rather than routing a fake
             // result through step(), which unconditionally calls
             // ->failed() on whatever it's given.

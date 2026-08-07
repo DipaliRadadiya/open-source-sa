@@ -13,7 +13,7 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
 use App\Services\Server\Applications\ProvisioningBudget;
-use App\Services\Server\Applications\ReleaseManager;
+
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -76,7 +76,6 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
         ApplicationProvisioner $provisioner,
         ActivityLogger $activityLogger,
         DeploymentRecorder $recorder,
-        ReleaseManager $releases,
     ): void {
         $application = Application::with(['systemUser', 'gitAccount'])->find($this->applicationId);
 
@@ -103,15 +102,6 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 'last_commit' => $result['commit'],
                 'last_deployed_at' => now(),
             ]);
-
-            // Record the release in the DB and update the FK on the application.
-            $release = $releases->recordRelease(
-                $application,
-                $result['release_path'],
-                $result['commit'],
-                implode("\n\n", $result['steps'] ?? []),
-            );
-            $application->updateQuietly(['current_release_id' => $release->id]);
 
             $recorder->succeed($result['commit'] ?? null, $result['message'] ?? null, $result['author'] ?? null);
 
