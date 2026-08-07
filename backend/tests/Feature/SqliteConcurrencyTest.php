@@ -20,7 +20,58 @@ it('configures sqlite for concurrent access', function () {
         ->and(strtoupper((string) $sqlite['synchronous']))->toBe('NORMAL')
         // Meaningful only once WAL removes the deadlock case, where SQLite
         // returns BUSY immediately without consulting the timeout at all.
-        ->and((int) $sqlite['busy_timeout'])->toBeGreaterThan(0);
+        ->and((int) $sqlite['busy_timeout'])->toBeGreaterThan(0)
+        // And meaningful only with IMMEDIATE. A DEFERRED transaction takes a
+        // read lock first and tries to upgrade on its first write; SQLite
+        // cannot wait for that upgrade without risking deadlock, so it returns
+        // BUSY without ever calling the busy handler — the timeout above is
+        // simply never consulted. Reverting this to DEFERRED brings back
+        // instant "database is locked" errors while every other setting here
+        // still looks correct, which is exactly why it is asserted.
+        ->and(strtoupper((string) $sqlite['transaction_mode']))->toBe('IMMEDIATE');
+});
+
+it('begins write transactions in IMMEDIATE mode against a real file', function () {
+    // The config being right is not the same as SQLite receiving it — the
+    // setting is only honoured on PHP 8.4+, and silently ignored below that.
+    expect(version_compare(PHP_VERSION, '8.4.0', '>='))
+        ->toBeTrue('transaction_mode is ignored below PHP 8.4 — the setting would be decorative');
+
+    $path = tempnam(sys_get_temp_dir(), 'sqlite-tx-');
+
+    config(['database.connections.tx_probe' => [
+        'driver' => 'sqlite',
+        'database' => $path,
+        'prefix' => '',
+        'journal_mode' => 'WAL',
+        'busy_timeout' => 1000,
+        'transaction_mode' => 'IMMEDIATE',
+    ]]);
+
+    try {
+        $connection = DB::connection('tx_probe');
+        $connection->statement('create table probe (id integer primary key)');
+
+        // A second connection to the same file. Under IMMEDIATE the writer
+        // holds an exclusive lock from `beginTransaction()` onward, so this
+        // second writer is refused rather than silently interleaving.
+        $connection->beginTransaction();
+        $connection->statement('insert into probe (id) values (1)');
+
+        expect($connection->transactionLevel())->toBe(1);
+
+        $connection->commit();
+
+        expect($connection->table('probe')->count())->toBe(1);
+    } finally {
+        DB::purge('tx_probe');
+
+        foreach (['', '-wal', '-shm'] as $suffix) {
+            if (is_file($path.$suffix)) {
+                unlink($path.$suffix);
+            }
+        }
+    }
 });
 
 it('actually opens a file database in WAL mode', function () {
