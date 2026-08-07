@@ -142,8 +142,8 @@ server {
 
     index index.php index.html;
 
-    access_log /var/log/nginx/{{ $domain }}.access.log;
-    error_log  /var/log/nginx/{{ $domain }}.error.log;
+    access_log /var/log/nginx/{{ $logName }}.access.log;
+    error_log  /var/log/nginx/{{ $logName }}.error.log;
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;

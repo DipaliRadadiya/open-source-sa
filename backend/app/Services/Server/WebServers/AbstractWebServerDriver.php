@@ -127,6 +127,11 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         return [
             'application' => $application,
             'domain' => $application->domain,
+            // Log filenames, not server_name: named after the app the same
+            // way the vhost and pool files already are (see fileName()) so
+            // all three agree on one identifier, and a domain change doesn't
+            // orphan the log history under a name nothing points to anymore.
+            'logName' => $this->fileName($application),
             // Every name the site answers to, primary first. Templates used to
             // hardcode `www.{domain}` alongside the primary; that guess is now
             // a row in application_domains, backfilled for existing sites so

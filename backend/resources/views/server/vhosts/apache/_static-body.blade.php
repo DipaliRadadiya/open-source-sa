@@ -105,8 +105,8 @@
         Require all denied
     </DirectoryMatch>
 
-    ErrorLog  ${APACHE_LOG_DIR}/{{ $domain }}.error.log
-    CustomLog ${APACHE_LOG_DIR}/{{ $domain }}.access.log combined
+    ErrorLog  ${APACHE_LOG_DIR}/{{ $logName }}.error.log
+    CustomLog ${APACHE_LOG_DIR}/{{ $logName }}.access.log combined
 @if ($waf && $waf['mode'] === 'detect')
     {{-- One line per active category/custom rule rather than a single
          combined condition — Apache's `env=` only tests one variable, with

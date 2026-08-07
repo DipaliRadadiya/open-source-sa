@@ -22,8 +22,8 @@
     ServerAlias {{ implode(' ', array_slice($serverNames, 1)) }}
 @endif
 
-    ErrorLog  ${APACHE_LOG_DIR}/{{ $domain }}.error.log
-    CustomLog ${APACHE_LOG_DIR}/{{ $domain }}.access.log combined
+    ErrorLog  ${APACHE_LOG_DIR}/{{ $logName }}.error.log
+    CustomLog ${APACHE_LOG_DIR}/{{ $logName }}.access.log combined
 
     {{-- Off would rewrite the Host header to 127.0.0.1, so the app builds
          redirects and absolute URLs pointing at the loopback address. --}}
