@@ -34,6 +34,7 @@ class SaveBackupTargetRequest extends FormRequest
             'retention_count' => ['required', 'integer', 'min:1', 'max:365'],
 
             'frequency' => ['required', Rule::in(BackupTarget::FREQUENCIES)],
+            'schedule_time' => ['sometimes', 'date_format:H:i'],
             'enabled' => ['required', 'boolean'],
 
             // Exclusions are tar patterns and database names — never paths the
