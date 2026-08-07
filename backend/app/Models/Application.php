@@ -24,7 +24,7 @@ use Illuminate\Support\Str;
     'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
     'build_command', 'deploy_script', 'start_command', 'package_manager',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
-    'steps', 'failed_step', 'reference', 'last_commit', 'last_deployed_at',
+    'steps', 'failed_step', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
     'webhook_last_delivered_at', 'fail2ban_enabled',
 ])]
@@ -48,6 +48,7 @@ class Application extends Model
             'settings' => 'array',
             'steps' => 'array',
             'last_deployed_at' => 'datetime',
+            'directory_size_bytes' => 'integer',
             'webhook_enabled' => 'boolean',
             // Encrypted at rest: this is the one value that lets an
             // unauthenticated request start a deploy.

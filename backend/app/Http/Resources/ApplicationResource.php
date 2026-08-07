@@ -162,6 +162,10 @@ class ApplicationResource extends JsonResource
             // log under the same id, never in the response.
             'reference' => $this->reference,
 
+            // Cached directory size (bytes). Refreshed after every deploy.
+            // Null means not yet computed.
+            'directory_size_bytes' => $this->when($this->directory_size_bytes !== null, $this->directory_size_bytes),
+
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
         ];

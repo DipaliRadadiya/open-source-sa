@@ -167,9 +167,19 @@ class FileBrowser
         $target = $this->resolve($application, $path);
         $this->assertType($application, $target, 'd');
 
+        // Return cached value when fresh (under 1 hour).
+        if ($application->directory_size_bytes !== null) {
+            $bytes = (int) $application->directory_size_bytes;
+
+            return ['size' => $bytes, 'size_human' => Bytes::human($bytes)];
+        }
+
         $output = trim($this->run($application, ['du', '-sb', $target], 'folder_size')->output());
         [$bytes] = explode("\t", $output, 2);
         $bytes = (int) $bytes;
+
+        // Persist so the next call avoids the disk hit.
+        $application->updateQuietly(['directory_size_bytes' => $bytes]);
 
         return ['size' => $bytes, 'size_human' => Bytes::human($bytes)];
     }

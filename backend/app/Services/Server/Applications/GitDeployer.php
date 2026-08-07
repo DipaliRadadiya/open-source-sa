@@ -170,6 +170,10 @@ class GitDeployer
                 $this->verifyDeploy($application);
             }
 
+            // Refresh the cached directory size so the file manager does not hit
+            // the disk on every browse.
+            $this->refreshDirectorySize($application, $documentRoot);
+
             return [
                 'steps' => $this->progress->steps(),
                 'commit' => $commit,
@@ -235,6 +239,32 @@ class GitDeployer
             $result->reference,
             "curl {$url} returned HTTP {$code}",
         );
+    }
+
+    /**
+     * Recompute the directory size and persist it on the application record.
+     *
+     * Run after every successful deploy so the file manager does not hit the disk
+     * on every browse. Also recomputes if the cached value is stale (null = never
+     * computed). Uses `-k` to get 1K-block output stable across systems.
+     */
+    private function refreshDirectorySize(Application $application, string $documentRoot): void
+    {
+        $result = $this->serverOps->run(
+            ['du', '-sk', $documentRoot],
+            ['feature' => 'application', 'op' => 'directory_size', 'application' => $application->id],
+        );
+
+        if (! $result->ok) {
+            return; // Cannot determine — leave the cache as-is.
+        }
+
+        // `du -k` output is "{bytes}\t{path}". Divide by 1024 to get bytes.
+        $parts = preg_split('/\s+/', trim($result->output));
+        $kilobytes = (int) ($parts[0] ?? 0);
+        $bytes = $kilobytes * 1024;
+
+        $application->updateQuietly(['directory_size_bytes' => $bytes]);
     }
 
     /**
