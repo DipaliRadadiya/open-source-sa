@@ -14,10 +14,12 @@ use App\Enums\DeploymentTrigger;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
+use App\Http\Resources\AppSidebarResource;
 use App\Http\Resources\ApplicationResource;
 use App\Jobs\DeployApplication;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
+use App\Models\Permission;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
@@ -213,5 +215,35 @@ class ApplicationController extends Controller
         $action->execute($application);
 
         return response()->json(['deleted' => true]);
+    }
+
+    /**
+     * The app sidebar for this specific application.
+     *
+     * Filtered two ways: what this app type supports (SiteType), and what
+     * the user has been granted (permission pivot). A WordPress site does not
+     * show "Workers"; a user without `app_staging` does not see Staging.
+     *
+     * Grouped by sub-level so the frontend can render section headers without
+     * hardcoding them.
+     */
+    public function sidebar(Application $application): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Every app-level permission the user holds, keyed by name.
+        $userPermissions = $user->permissions()
+            ->where('level', 'application')
+            ->get()
+            ->keyBy('name');
+
+        // The intersection: what this app supports AND what the user can access.
+        $visible = collect($application->features())
+            ->map(fn (string $name) => $userPermissions->get($name))
+            ->filter();
+
+        $items = AppSidebarResource::collection($visible->values())->resolve();
+
+        return response()->json(['items' => $items]);
     }
 }
