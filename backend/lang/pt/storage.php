@@ -38,6 +38,7 @@ return [
     'status' => [
         'connected' => 'Conectado',
         'never_tested' => 'Ainda não testado',
+        'failed' => 'Último teste falhou',
     ],
 
     'test' => [
@@ -51,6 +52,7 @@ return [
     ],
 
     'delete' => [
-        'in_use' => 'Não é possível excluir :name — um ou mais destinos de backup ainda apontam para este destino. Remova-os ou redirecione-os primeiro.',
+        'in_use' => 'Não é possível excluir :name — ainda é usado por :applications. Remova ou redirecione esses destinos de backup primeiro.',
+        'and_more' => 'mais :count',
     ],
 ];

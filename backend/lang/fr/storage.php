@@ -38,6 +38,7 @@ return [
     'status' => [
         'connected' => 'Connecté',
         'never_tested' => 'Pas encore testé',
+        'failed' => 'Dernier test échoué',
     ],
 
     'test' => [
@@ -51,6 +52,7 @@ return [
     ],
 
     'delete' => [
-        'in_use' => 'Impossible de supprimer :name — une ou plusieurs cibles de sauvegarde pointent encore vers cette destination. Supprimez-les ou redirigez-les d’abord.',
+        'in_use' => 'Impossible de supprimer :name — cette destination est encore utilisée par :applications. Supprimez ou redirigez ces cibles de sauvegarde d’abord.',
+        'and_more' => ':count de plus',
     ],
 ];

@@ -38,6 +38,7 @@ return [
     'status' => [
         'connected' => 'Conectado',
         'never_tested' => 'Aún sin probar',
+        'failed' => 'La última prueba falló',
     ],
 
     'test' => [
@@ -51,6 +52,7 @@ return [
     ],
 
     'delete' => [
-        'in_use' => 'No se puede eliminar :name: uno o más objetivos de copia de seguridad siguen apuntando a este destino. Elimínalos o redirígelos primero.',
+        'in_use' => 'No se puede eliminar :name: todavía lo usan :applications. Elimina o redirige esos objetivos de copia de seguridad primero.',
+        'and_more' => ':count más',
     ],
 ];

@@ -43,6 +43,12 @@ class BackupTargetResource extends JsonResource
             // disabled — there is no next run to promise.
             'next_run_at' => $nextRun?->format('d-m-Y H:i:s'),
             'next_run_at_human' => $nextRun?->diffForHumans(),
+            // A run the scheduler will pick up on its next tick, within a
+            // minute. True for a target that has never run — the first backup
+            // is taken immediately rather than at tonight's slot, so a UI
+            // showing only `next_run_at` would name tomorrow at exactly the
+            // moment the user is watching the first one happen.
+            'is_due' => $this->isDue(now()),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at?->format('d-m-Y H:i:s'),
         ];

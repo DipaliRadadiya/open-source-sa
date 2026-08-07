@@ -2151,7 +2151,9 @@ Two entry points, two permissions, on purpose. **`app_backup`** covers configuri
 - `backup_target` is nested rather than flattened so `null` means "not configured" and can never be confused with a configured target whose fields happen to be empty. `last_backup` is the **newest run however it ended** — a failed one is not skipped in favour of the last success.
 
 **`GET /api/backups`** — the restore list, every application (`permission:backup`)
-- Query: `filter[application_id]`, `filter[status]`, `per_page`
+- Query: `filter[application_id]`, `filter[status]`, `filter[type]` (`filesystem`|`database`|`full`), `filter[from]`, `filter[to]` (dates), `per_page` (max 100)
+- **The query is validated** — an unknown `status` or `type` is a `422`, not an empty list. "There are no backups" is an alarming thing to say to someone who mistyped a filter.
+- `filter[to]` is **inclusive to end-of-day**: `to=2026-03-04` includes a backup that ran at 23:30 that night.
 - Response: `{backups: [{id, application_id, type, is_safety, status, status_title, type_title, reason, reason_title, size_bytes, reference, started_at, finished_at, verified_at, created_at, created_at_human}], meta}`
 - **`is_safety: true`** marks a backup taken automatically just before a restore overwrote the site. It is exempt from retention, so it will not quietly disappear — worth badging in the list, because after a bad restore it is the one row someone is actually hunting for.
 - `status`: `pending` | `running` | `verifying` | `verified` | `failed`. **Only `verified` can be restored.**
@@ -2159,7 +2161,20 @@ Two entry points, two permissions, on purpose. **`app_backup`** covers configuri
 **`GET|PUT /api/applications/{application}/backup-target`** — settings (`app_backup`, `manage` to write)
 - `backup_target` fields: `{id, application_id, storage_destination_id, storage_destination_name, type, type_title, retention_count, frequency, frequency_title, enabled, file_excludes[], database_excludes[], last_run_at, last_run_at_human, next_run_at, next_run_at_human, created_at, updated_at}`
 - **`next_run_at` is computed server-side** from the schedule the runner actually uses — never hardcode the cron expressions on the client. `null` for `frequency: manual` and for a disabled target, because neither has a next run.
+- **`is_due: true` means a run is imminent** (next scheduler tick, within a minute) — render "Runs shortly" and ignore `next_run_at`. This is normally the state of a **brand-new target**: the first backup is taken immediately rather than at tonight's slot, so the user can see the feature work. Showing `next_run_at` alone would name tomorrow at exactly the moment the first backup runs.
+
 **`POST /api/applications/{application}/backups`** — run one now (`app_backup,manage`, throttle 6/min) → `202`
+
+### Storage destinations — `/api/integrations/storage/destinations` (`permission:storage`, `manage` to write)
+
+- `storage_destination` fields: `{id, name, driver, endpoint, region, bucket, prefix, has_credentials, last_tested_at, last_tested_at_human, last_test_success, last_test_error, status, status_title, created_at, updated_at}`
+- **Credentials are write-only.** `access_key`/`secret_key` are never returned in any form — not masked, not truncated. `has_credentials` tells you whether both are set without reading them.
+- **`POST .../{id}/test`** probes the destination (write → read back → delete) and **the verdict is now persisted**, so it survives a reload. Always `200`; `test.success` carries the answer.
+- `status`: `never_tested` | `connected` | `failed`, with a localized `status_title`. `last_test_success` is `null` when never tested — **that is a different state from `false`**, and worth showing differently.
+- **Show the age, not just the tick.** `last_tested_at_human` exists because "tested 40 days ago" is not "works today".
+- The stored result is **cleared automatically** when `access_key`, `secret_key`, `endpoint`, `region` or `bucket` change — the panel will not claim a rotated-out key is connected. A rename or prefix change keeps it.
+- `last_test_error` is a stable category, `invalid_credentials` | `unreachable`. Branch on it; never parse the message. The raw SDK text is never stored or returned (it can carry a partial access key).
+- **`DELETE .../{id}`** returns **`422`** — not `500` — while any backup target still points at the destination, with `errors.storage_destination[0]` naming the sites (up to 5, then "and N more").
 
 ### Restore — `POST /api/backups/{backup}/restore`, `GET /api/restores`, `GET /api/restores/{restore}`
 

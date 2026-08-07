@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Backup\SaveBackupTarget;
 use App\Enums\BackupStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Backup\IndexBackupsRequest;
 use App\Http\Requests\Server\Backup\SaveBackupTargetRequest;
 use App\Http\Resources\ApplicationBackupResource;
 use App\Http\Resources\BackupResource;
@@ -13,8 +14,8 @@ use App\Jobs\RunBackup;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class BackupController extends Controller
@@ -25,14 +26,22 @@ class BackupController extends Controller
      * One screen rather than per-application history, because restore
      * overwrites live data and one screen means one set of guardrails.
      */
-    public function index(Request $request): JsonResponse
+    public function index(IndexBackupsRequest $request): JsonResponse
     {
+        $filter = $request->validated('filter', []);
+
         $backups = Backup::query()
             ->with('application:id,name,domain')
-            ->when($request->integer('filter.application_id'), fn ($query, $id) => $query->where('application_id', $id))
-            ->when($request->string('filter.status')->toString(), fn ($query, $status) => $query->where('status', $status))
+            ->when($filter['application_id'] ?? null, fn ($query, $id) => $query->where('application_id', $id))
+            ->when($filter['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filter['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
+            ->when($filter['from'] ?? null, fn ($query, $from) => $query->where('created_at', '>=', Carbon::parse($from)->startOfDay()))
+            // End of day, not midnight: a user asking for backups "to
+            // Tuesday" means Tuesday included, and `<= 2026-03-10 00:00:00`
+            // would silently drop everything that ran that day.
+            ->when($filter['to'] ?? null, fn ($query, $to) => $query->where('created_at', '<=', Carbon::parse($to)->endOfDay()))
             ->latest('id')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate($request->validated('per_page', 20));
 
         return response()->json([
             'backups' => BackupResource::collection($backups)->resolve(),

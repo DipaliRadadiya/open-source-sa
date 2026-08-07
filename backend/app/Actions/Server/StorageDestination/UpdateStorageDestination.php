@@ -19,6 +19,29 @@ class UpdateStorageDestination
     {
         $destination->fill($data)->save();
 
+        // A stored test result describes the credentials and address that
+        // were probed. Change either and it describes nothing — keeping it
+        // would show "Connected" for a key that was rotated out a moment
+        // ago, which is worse than showing nothing at all.
+        if ($this->invalidatesTestResult($data)) {
+            $destination->forgetTestResult();
+        }
+
         return $destination->refresh();
+    }
+
+    /**
+     * A rename or a prefix change leaves the connection itself untouched, so
+     * they do not throw the result away. Everything that decides *what the
+     * panel talks to* does.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function invalidatesTestResult(array $data): bool
+    {
+        return array_intersect_key(
+            $data,
+            array_flip(['access_key', 'secret_key', 'endpoint', 'region', 'bucket']),
+        ) !== [];
     }
 }

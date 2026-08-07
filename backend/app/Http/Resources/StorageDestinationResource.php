@@ -40,6 +40,19 @@ class StorageDestinationResource extends JsonResource
             // string the rest of the request could leak.
             'has_credentials' => $this->hasRawValue('access_key')
                 && $this->hasRawValue('secret_key'),
+            // The last connection probe, so "this destination works" survives
+            // a page reload. `last_test_success` is null when the panel has
+            // never asked — a different answer from "asked and it failed",
+            // which is why this is not a plain boolean.
+            'last_tested_at' => $this->last_tested_at?->format('d-m-Y H:i:s'),
+            // Show the age, not just the verdict: a destination tested forty
+            // days ago is not a destination known to work today.
+            'last_tested_at_human' => $this->last_tested_at?->diffForHumans(),
+            'last_test_success' => $this->last_test_success,
+            // Stable category — 'invalid_credentials' or 'unreachable'.
+            'last_test_error' => $this->last_test_error,
+            'status' => $this->testStatus(),
+            'status_title' => __('storage.status.'.$this->testStatus()),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
             'updated_at' => $this->updated_at?->format('d-m-Y H:i:s'),

@@ -73,6 +73,16 @@ class StorageDestinationController extends Controller
     ): JsonResponse {
         $result = $prober->probe($storageDestination);
 
+        // Persist the verdict so it outlives the tab that asked for it. The
+        // stable `error_class` category is stored, never `message` — that is
+        // prose in the tester's locale, and a viewer in another language
+        // would be shown someone else's language forever.
+        $storageDestination->forceFill([
+            'last_tested_at' => now(),
+            'last_test_success' => $result['success'],
+            'last_test_error' => $result['error_class'],
+        ])->save();
+
         return response()->json([
             // Use a verb-named wrapper (`test`) rather than the resource
             // shape — the resource describes stored config, this result

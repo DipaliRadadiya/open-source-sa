@@ -182,6 +182,85 @@ it('lists backups across every application', function () {
     expect($response->json('backups.0.status_title'))->toBe('Complete');
 });
 
+describe('filtering the restore list', function () {
+    beforeEach(function () {
+        $this->target = BackupTarget::create(array_merge(
+            ['application_id' => $this->application->id],
+            targetPayload(),
+        ));
+
+        $this->makeBackup = function (string $type, string $createdAt): Backup {
+            $backup = Backup::create([
+                'backup_target_id' => $this->target->id,
+                'application_id' => $this->application->id,
+                'type' => $type,
+                'status' => BackupStatus::Verified,
+            ]);
+
+            // created_at is what the range filters on, and the factory-less
+            // create() stamps it as now.
+            $backup->forceFill(['created_at' => $createdAt])->save();
+
+            return $backup;
+        };
+    });
+
+    it('filters by type', function () {
+        ($this->makeBackup)('database', '2026-03-03 02:00:00');
+        ($this->makeBackup)('full', '2026-03-04 02:00:00');
+
+        $response = $this->withHeaders(backupHeaders())
+            ->getJson('/api/backups?filter[type]=database')
+            ->assertOk();
+
+        expect($response->json('backups'))->toHaveCount(1)
+            ->and($response->json('backups.0.type'))->toBe('database');
+    });
+
+    it('filters by date range, inclusive at both ends', function () {
+        ($this->makeBackup)('full', '2026-03-02 23:00:00');
+        ($this->makeBackup)('full', '2026-03-03 02:00:00');
+        // Late on the last day of the range: `to` is taken as end-of-day, so
+        // asking "to the 4th" must not silently drop the 4th.
+        ($this->makeBackup)('full', '2026-03-04 23:30:00');
+        ($this->makeBackup)('full', '2026-03-05 02:00:00');
+
+        $response = $this->withHeaders(backupHeaders())
+            ->getJson('/api/backups?filter[from]=2026-03-03&filter[to]=2026-03-04')
+            ->assertOk();
+
+        expect($response->json('backups'))->toHaveCount(2);
+    });
+
+    it('combines type and date range', function () {
+        ($this->makeBackup)('database', '2026-03-03 02:00:00');
+        ($this->makeBackup)('full', '2026-03-03 02:00:00');
+        ($this->makeBackup)('database', '2026-03-09 02:00:00');
+
+        $response = $this->withHeaders(backupHeaders())
+            ->getJson('/api/backups?filter[type]=database&filter[from]=2026-03-01&filter[to]=2026-03-05')
+            ->assertOk();
+
+        expect($response->json('backups'))->toHaveCount(1);
+    });
+
+    it('rejects an unknown status instead of returning an empty list', function () {
+        // Silently returning nothing reads to the user as "there are no
+        // backups", which is a different and much more alarming statement.
+        $this->withHeaders(backupHeaders())
+            ->getJson('/api/backups?filter[status]=nonsense')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('filter.status');
+    });
+
+    it('rejects a reversed date range', function () {
+        $this->withHeaders(backupHeaders())
+            ->getJson('/api/backups?filter[from]=2026-03-09&filter[to]=2026-03-01')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('filter.to');
+    });
+});
+
 describe('the cross-application overview', function () {
     beforeEach(function () {
         // A second site, deliberately left unconfigured: the whole point of
@@ -277,6 +356,50 @@ describe('the next scheduled run', function () {
         ['weekly', '15-03-2026 02:00:00'],
         ['monthly', '01-04-2026 02:00:00'],
     ]);
+
+    it('reports a brand-new target as due, not as scheduled for tomorrow', function () {
+        $this->travelTo('2026-03-10 10:00:00');
+
+        // A target that has never run is picked up on the next scheduler
+        // tick, within a minute — so a UI showing only next_run_at would
+        // name tomorrow at exactly the moment the first backup happens.
+        $this->withHeaders(backupHeaders())
+            ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload())
+            ->assertOk()
+            ->assertJsonPath('backup_target.is_due', true)
+            ->assertJsonPath('backup_target.next_run_at', '11-03-2026 02:00:00');
+    });
+
+    it('stops reporting due once a run has been recorded', function () {
+        $this->travelTo('2026-03-10 10:00:00');
+
+        $this->withHeaders(backupHeaders())
+            ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload())
+            ->assertOk();
+
+        BackupTarget::first()->update(['last_run_at' => now()]);
+
+        $this->withHeaders(backupHeaders())
+            ->getJson("/api/applications/{$this->application->id}/backup-target")
+            ->assertOk()
+            ->assertJsonPath('backup_target.is_due', false);
+    });
+
+    it('is never due when manual or disabled', function () {
+        $this->withHeaders(backupHeaders())
+            ->putJson(
+                "/api/applications/{$this->application->id}/backup-target",
+                targetPayload(['frequency' => 'manual']),
+            )
+            ->assertJsonPath('backup_target.is_due', false);
+
+        $this->withHeaders(backupHeaders())
+            ->putJson(
+                "/api/applications/{$this->application->id}/backup-target",
+                targetPayload(['enabled' => false]),
+            )
+            ->assertJsonPath('backup_target.is_due', false);
+    });
 
     it('is null for a manual target', function () {
         $this->withHeaders(backupHeaders())

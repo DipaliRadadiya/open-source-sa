@@ -38,6 +38,7 @@ return [
     'status' => [
         'connected' => 'Verbunden',
         'never_tested' => 'Noch nicht getestet',
+        'failed' => 'Letzter Test fehlgeschlagen',
     ],
 
     'test' => [
@@ -51,6 +52,7 @@ return [
     ],
 
     'delete' => [
-        'in_use' => ':name kann nicht gelöscht werden — ein oder mehrere Backup-Ziele verweisen noch auf dieses Ziel. Entfernen oder ändern Sie diese zuerst.',
+        'in_use' => ':name kann nicht gelöscht werden — es wird noch von :applications verwendet. Entfernen oder ändern Sie diese Backup-Ziele zuerst.',
+        'and_more' => ':count weitere',
     ],
 ];

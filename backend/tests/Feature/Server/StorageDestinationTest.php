@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Application;
+use App\Models\BackupTarget;
 use App\Models\StorageDestination;
+use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
 use Database\Seeders\PermissionSeeder;
@@ -211,9 +214,212 @@ it('deletes a destination', function () {
     expect(StorageDestination::find($dest->id))->toBeNull();
 });
 
-// P2 (backup targets) adds the "refuses to delete a destination still
-// referenced by a backup target" case alongside the in-use guard in
-// DeleteStorageDestination.
+describe('the in-use guard', function () {
+    beforeEach(function () {
+        $systemUser = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $this->makeApplication = function (string $name) use ($systemUser): Application {
+            return Application::create([
+                'system_user_id' => $systemUser->id,
+                'name' => $name,
+                'domain' => strtolower($name).'.example.test',
+                'site_type' => 'php',
+                'serving_profile' => 'php',
+                'status' => 'active',
+            ]);
+        };
+    });
+
+    it('refuses to delete a destination a backup target still points at, naming the sites', function () {
+        $dest = makeDestination();
+
+        foreach (['Shop', 'Blog'] as $name) {
+            BackupTarget::create([
+                'application_id' => ($this->makeApplication)($name)->id,
+                'storage_destination_id' => $dest->id,
+                'type' => 'full',
+                'retention_count' => 7,
+                'frequency' => 'daily',
+                'enabled' => true,
+            ]);
+        }
+
+        $response = $this->withHeaders(storageAdminAuthHeader())
+            ->deleteJson("/api/integrations/storage/destinations/{$dest->id}")
+            ->assertStatus(422);
+
+        // The database's restrictOnDelete would have refused this too — as a
+        // 500 naming nothing. The point of the guard is the message.
+        $message = $response->json('errors.storage_destination.0');
+        expect($message)->toContain('Work S3')
+            ->and($message)->toContain('Blog')
+            ->and($message)->toContain('Shop');
+
+        expect(StorageDestination::find($dest->id))->not->toBeNull();
+    });
+
+    it('collapses a long list of applications into a count', function () {
+        $dest = makeDestination();
+
+        foreach (range(1, 8) as $i) {
+            BackupTarget::create([
+                'application_id' => ($this->makeApplication)("Site{$i}")->id,
+                'storage_destination_id' => $dest->id,
+                'type' => 'full',
+                'retention_count' => 7,
+                'frequency' => 'daily',
+                'enabled' => true,
+            ]);
+        }
+
+        $message = $this->withHeaders(storageAdminAuthHeader())
+            ->deleteJson("/api/integrations/storage/destinations/{$dest->id}")
+            ->assertStatus(422)
+            ->json('errors.storage_destination.0');
+
+        // Five named, the rest counted — a destination shared by forty sites
+        // must not produce a multi-kilobyte error string.
+        expect($message)->toContain('Site5')
+            ->and($message)->not->toContain('Site6')
+            ->and($message)->toContain('3 more');
+    });
+
+    it('deletes once the last backup target is gone', function () {
+        $dest = makeDestination();
+
+        $target = BackupTarget::create([
+            'application_id' => ($this->makeApplication)('Shop')->id,
+            'storage_destination_id' => $dest->id,
+            'type' => 'full',
+            'retention_count' => 7,
+            'frequency' => 'daily',
+            'enabled' => true,
+        ]);
+
+        $target->delete();
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->deleteJson("/api/integrations/storage/destinations/{$dest->id}")
+            ->assertNoContent();
+
+        expect(StorageDestination::find($dest->id))->toBeNull();
+    });
+});
+
+describe('the persisted test result', function () {
+    it('starts as never tested', function () {
+        $dest = makeDestination();
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->getJson("/api/integrations/storage/destinations/{$dest->id}")
+            ->assertOk()
+            // Null, not false: "never asked" and "asked and it failed" are
+            // different answers and the UI shows different things for them.
+            ->assertJsonPath('storage_destination.last_test_success', null)
+            ->assertJsonPath('storage_destination.last_tested_at', null)
+            ->assertJsonPath('storage_destination.status', 'never_tested')
+            ->assertJsonPath('storage_destination.status_title', 'Not yet tested');
+    });
+
+    it('survives a reload after a successful probe', function () {
+        $dest = makeDestination();
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
+            ->assertOk();
+
+        // A second request, as if the user navigated away and came back.
+        $response = $this->withHeaders(storageAdminAuthHeader())
+            ->getJson("/api/integrations/storage/destinations/{$dest->id}")
+            ->assertOk()
+            ->assertJsonPath('storage_destination.last_test_success', true)
+            ->assertJsonPath('storage_destination.last_test_error', null)
+            ->assertJsonPath('storage_destination.status', 'connected');
+
+        expect($response->json('storage_destination.last_tested_at'))->not->toBeNull()
+            ->and($response->json('storage_destination.last_tested_at_human'))->not->toBeNull();
+    });
+
+    it('records a failure as its stable category, never the raw exception', function () {
+        $dest = makeDestination();
+
+        $this->app->bind(StorageConnectionProber::class, fn () => new StorageConnectionProber(
+            diskBuilder: function () {
+                return new class
+                {
+                    public function put(string $key, mixed $contents, array $options = []): bool
+                    {
+                        throw new RuntimeException('InvalidAccessKeyId: AKIA_secret_value is not valid');
+                    }
+                };
+            },
+        ));
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
+            ->assertOk();
+
+        $response = $this->withHeaders(storageAdminAuthHeader())
+            ->getJson("/api/integrations/storage/destinations/{$dest->id}")
+            ->assertOk()
+            ->assertJsonPath('storage_destination.last_test_success', false)
+            ->assertJsonPath('storage_destination.last_test_error', 'invalid_credentials')
+            ->assertJsonPath('storage_destination.status', 'failed');
+
+        // The SDK's text can carry a partial access key. Only the category
+        // is stored, so it can never resurface in a later response.
+        expect($response->getContent())->not->toContain('AKIA_secret_value');
+    });
+
+    it('forgets the result when the credentials are rotated', function () {
+        $dest = makeDestination();
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
+            ->assertOk();
+
+        // A green tick describing keys that were replaced a moment ago is
+        // worse than no tick at all.
+        $this->withHeaders(storageAdminAuthHeader())
+            ->patchJson("/api/integrations/storage/destinations/{$dest->id}", [
+                'access_key' => 'AKIA_rotated',
+                'secret_key' => 'rotated_secret',
+            ])
+            ->assertOk()
+            ->assertJsonPath('storage_destination.status', 'never_tested')
+            ->assertJsonPath('storage_destination.last_test_success', null);
+    });
+
+    it('keeps the result when only the display name changes', function () {
+        $dest = makeDestination();
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
+            ->assertOk();
+
+        // A rename does not change what the panel talks to.
+        $this->withHeaders(storageAdminAuthHeader())
+            ->patchJson("/api/integrations/storage/destinations/{$dest->id}", ['name' => 'Renamed'])
+            ->assertOk()
+            ->assertJsonPath('storage_destination.status', 'connected');
+    });
+});
+
+it('has copy for every test status in every locale', function () {
+    foreach (config('app.available_locales') as $locale) {
+        app()->setLocale($locale);
+
+        foreach (['connected', 'never_tested', 'failed'] as $status) {
+            expect(__('storage.status.'.$status))->not->toBe('storage.status.'.$status);
+        }
+
+        foreach (['in_use', 'and_more'] as $key) {
+            expect(__('storage.delete.'.$key))->not->toBe('storage.delete.'.$key);
+        }
+    }
+
+    app()->setLocale('en');
+});
 
 it('probes a destination and reports success when write/read/delete all match', function () {
     $dest = makeDestination();
