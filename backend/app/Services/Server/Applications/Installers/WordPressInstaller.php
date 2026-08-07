@@ -54,7 +54,10 @@ class WordPressInstaller extends AbstractPhpInstaller
         // the lsws tree — and even on nginx the shebang finds whatever
         // /usr/bin/php happens to be, which need not be the version this site
         // was given.
-        $this->runAsSiteUser('install_app', $application, array_filter([
+        // Build the wp core install command. Arguments that are present only when
+        // the user supplied a value are added as separate array items so array_filter
+        // can exclude the nulls cleanly.
+        $installCmd = array_filter([
             $this->phpBinary($application),
             (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
             'core', 'install',
@@ -65,9 +68,38 @@ class WordPressInstaller extends AbstractPhpInstaller
             '--admin_email='.($settings['admin_email'] ?? ''),
             '--skip-email',
             '--prompt=admin_password',
-        ]), ($settings['admin_password'] ?? '')."\n");
+            // --locale is available on wp core install and sets the site language.
+            // Omitting it defaults to en_US, which is already the form default.
+            filled($settings['site_language'] ?? null)
+                ? '--locale='.$settings['site_language']
+                : null,
+        ]);
 
-        if ($this->stack->key() === 'lsphp') {
+        $this->runAsSiteUser('install_app', $application, $installCmd, ($settings['admin_password'] ?? '')."\n");
+
+        // Timezone must be set after wp core install — it is not a flag on that
+        // command. wp option update validates the value against PHP timezone
+        // strings; a bad value is silently ignored by WordPress, so this step
+        // is best-effort and never throws.
+        if (filled($settings['timezone'] ?? null)) {
+            try {
+                $this->runAsSiteUser('set_timezone', $application, [
+                    $this->phpBinary($application),
+                    (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
+                    'option', 'update', 'timezone_string',
+                    $settings['timezone'],
+                    '--path='.$documentRoot,
+                ]);
+            } catch (ProvisioningFailedException $e) {
+                // A site with a wrong timezone string still works. Log and continue.
+                report($e);
+            }
+        }
+
+        // LSCache plugin: install when the user asked for it, regardless of stack.
+        // When stack is OpenLiteSpeed it is always recommended, so the form default
+        // is true for OLS and false otherwise — but the user toggle overrides that.
+        if ($settings['install_litespeed_cache_plugin'] ?? false) {
             $this->installLiteSpeedCache($application, $documentRoot);
         }
     }

@@ -64,6 +64,13 @@ class WordPressSiteType extends AbstractSiteType
                 'default' => 'en_US',
                 'options' => FieldOptions::asOptions(FieldOptions::wordpressLocales()),
             ]),
+            $this->field('timezone', 'text', advanced: true, extra: [
+                'help' => 'Timezone for the WordPress site, e.g. America/New_York or Europe/Berlin. See WordPress Settings → General → Timezone.',
+            ]),
+            $this->field('install_litespeed_cache_plugin', 'toggle', advanced: true, extra: [
+                'default' => false,
+                'help' => 'Install and activate the LiteSpeed Cache plugin. Required when the web server is OpenLiteSpeed. Has no effect on other servers.',
+            ]),
             $this->field('table_prefix', 'text', advanced: true, extra: ['default' => 'wp_']),
         ], $this->phpFields());
     }
@@ -76,6 +83,9 @@ class WordPressSiteType extends AbstractSiteType
             'admin_email' => ['required', 'email', 'max:255'],
             'admin_password' => ['required', 'string', 'min:10'],
             'site_language' => ['nullable', 'string', Rule::in(FieldOptions::wordpressLocales())],
+            // Accepts any valid PHP timezone string. wp option update validates it.
+            'timezone' => ['nullable', 'string', 'max:64'],
+            'install_litespeed_cache_plugin' => ['nullable', 'boolean'],
             // Goes into SQL identifiers, so keep it strictly boring.
             'table_prefix' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9_]+$/'],
         ];
