@@ -13,6 +13,7 @@ use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisioningBudget;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -46,6 +47,12 @@ class ProvisionApplication implements ShouldQueue
 
     public function handle(ApplicationProvisioner $provisioner, ActivityLogger $activityLogger): void
     {
+        // The one thing `steps` and the activity log can never show: proof the
+        // worker actually picked this job up at all. Without this line, a job
+        // that never ran (queue misconfigured, worker down) looks identical
+        // in every other log to one still queued — this is what tells them apart.
+        Log::info('provisioning job started', ['application_id' => $this->applicationId]);
+
         $application = Application::with('systemUser')->find($this->applicationId);
 
         // Deleted while queued — nothing to do, and nothing to complain about.
@@ -115,11 +122,22 @@ class ProvisionApplication implements ShouldQueue
     }
 
     /**
-     * The job itself died (timeout, worker killed). Leave the record honest
-     * rather than stuck at `provisioning` forever.
+     * The job itself died (timeout, worker killed, or an exception from a step
+     * that isn't wrapped in ProvisioningFailedException — e.g. a marketplace
+     * installer's download/extract). Leave the record honest rather than stuck
+     * at `provisioning` forever.
+     *
+     * $e is the one piece of information that previously vanished entirely:
+     * failed_step='worker' told the user *that* it died, never *why*. Logged
+     * here because it's the only place this exception is ever seen at all.
      */
     public function failed(?Throwable $e): void
     {
+        Log::error('provisioning job died at the worker level', [
+            'application_id' => $this->applicationId,
+            'exception' => $e ? $e::class.': '.$e->getMessage() : null,
+        ]);
+
         Application::whereKey($this->applicationId)
             ->where('status', ApplicationStatus::Provisioning->value)
             ->update(['status' => ApplicationStatus::Failed->value, 'failed_step' => 'worker']);
