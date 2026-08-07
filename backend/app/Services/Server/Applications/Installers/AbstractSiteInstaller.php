@@ -141,8 +141,15 @@ abstract class AbstractSiteInstaller implements SiteInstaller
             ]), $application);
 
         // Copy contents (not the directory) into the web root, overwriting so
-        // a retry converges instead of nesting.
-        $this->run('extract', ['cp', '-rT', "{$work}/src", $documentRoot], $application);
+        // a retry converges instead of nesting. `-T` needs the destination to
+        // actually be a directory, not merely resolve to one — and when
+        // web_root is empty, $documentRoot IS the `current` symlink itself
+        // (ReleaseManager points it at releases/<timestamp>), which cp -T
+        // sees as "not a directory" rather than following. Resolve it to the
+        // real release directory first; a plain directory resolves to itself.
+        $target = realpath($documentRoot) ?: $documentRoot;
+
+        $this->run('extract', ['cp', '-rT', "{$work}/src", $target], $application);
 
         $this->serverOps->run(['rm', '-rf', $work], ['feature' => 'application', 'op' => 'installer.cleanup']);
     }
