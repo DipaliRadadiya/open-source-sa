@@ -1362,7 +1362,57 @@ The split follows the industry: Anthropic separated ClaudeBot from its retrieval
 ```
 - Render the UI from this response, not a hardcoded label/list on the frontend — the count and names are always exactly what the vhost enforces, because both read the same config file. **A hardcoded three-option radio group will silently miss `block_agents`.**
 
-**`PUT /api/applications/{id}/bot-blocker`** (`manage`) — body `{ policy, blocked?, allowed? }`. `policy` is one of `allow_all | block_training | block_agents | block_all`. `200 {application}` with `ai_bot_policy`/`ai_bot_policy_title`/`bot_blocked`/`bot_allowed` refreshed.
+**`PUT /api/applications/{id}/bot-blocker`** (`manage`) — update the policy and/or custom rules for one application. `200 {application}`.
+- Body: `{ policy, blocked?, allowed? }` — all fields optional, but `policy` is required.
+  - `policy` · enum · **required** — one of `allow_all | block_training | block_agents | block_all`
+  - `blocked` · array of strings · optional — user agents to block *on top of* the policy (max 50)
+  - `allowed` · array of strings · optional — user agents to allow *despite* the policy (max 50)
+- **Absent vs empty is intentional.** Sending the field means "replace the list"; omitting it means "leave the stored list alone". `[]` means "remove all entries". A form that only changes the policy must not have to resend the existing rules.
+- **Validation (all enforced server-side, surfaced as `422`):**
+  - Charset: `A-Za-z0-9._-/` only, 2–100 chars, no whitespace, quotes, braces or newlines
+  - Catch-alls rejected: `bot`, `bots`, `crawler`, `spider`, `agent`, `mozilla`, `*`, `Googlebot`, `bingbot` and similar → `422` with an explanatory message; surface it verbatim
+  - Max 50 entries per list
+  - Deduped case-insensitively (the vhost match is case-insensitive)
+- **An `allowed` entry beats a contradictory `blocked` one** — safe resolution: traffic flows.
+- `200` response: `{application: { id, ai_bot_policy, ai_bot_policy_title, bot_blocked[], bot_allowed[] }}`
+
+```jsonc
+// Example: switch to block-training + block two scrapers + allow one training bot
+// PUT /api/applications/7/bot-blocker
+{
+  "policy": "block_training",
+  "blocked": ["SemrushBot", "AhrefsBot"],
+  "allowed": ["GPTBot"]
+}
+// 200
+{
+  "application": {
+    "id": 7,
+    "ai_bot_policy": "block_training",
+    "ai_bot_policy_title": "Block AI training bots",
+    "bot_blocked": ["GPTBot", "ClaudeBot", "Google-Extended", "SemrushBot", "AhrefsBot"],
+    "bot_allowed": ["GPTBot"]
+  }
+}
+
+// Example: only change the policy, leave existing custom rules untouched
+// PUT /api/applications/7/bot-blocker
+{ "policy": "block_all" }
+// 200 — bot_blocked/bot_allowed are unchanged
+
+// Example: clear all custom rules
+// PUT /api/applications/7/bot-blocker
+{ "policy": "block_training", "blocked": [], "allowed": [] }
+// 200 — lists are now empty
+
+// 422 — invalid bot name (catch-all)
+{ "policy": "block_training", "blocked": ["bot"] }
+{ "message": "…", "errors": { "blocked.0": ["Catch-all patterns are not allowed."] } }
+
+// 422 — unknown policy value
+{ "policy": "strict_mode" }
+{ "message": "…", "errors": { "policy": ["The selected policy is invalid."] } }
+```
 
 **Per-site custom rules** (added 2026-08-06) — two optional lists, both max 50 entries:
 - **`blocked`** — user agents this site blocks *on top of* the policy. Not only AI crawlers: the SEO and scraper bots people actually complain about (`SemrushBot`, `AhrefsBot`, `BLEXBot`) belong here.
