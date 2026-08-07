@@ -43,19 +43,19 @@ class ApplicationProvisioner
      * unique, stable, and survive a domain change without the filesystem path
      * breaking. The old panel uses the same convention.
      *
-     * All apps use a flat structure: /home/<user>/<slug>/<web_root>.
-     * web_root defaults to public_html when NULL/empty.
+     * public_html is ALWAYS the fixed base. User's web_root (if set)
+     * is appended inside public_html/.
      */
     public function documentRoot(Application $application): string
     {
         $home = rtrim((string) $application->systemUser->home_path, '/');
-        $webRoot = trim((string) ($application->web_root ?: 'public_html'), '/');
+        $webRoot = trim((string) $application->web_root, '/');
 
         // slug-based path, not domain-based — stable across domain changes.
-        // All app types use the same flat structure: /home/<user>/<slug>/<web_root>.
-        // web_root defaults to public_html (set in data['web_root'] ?? 'public_html')
-        // or overridden per site type (e.g. Statamic returns 'public', Craft CMS 'web').
-        $base = "{$home}/{$application->slug}";
+        // public_html is the fixed base; user's web_root is appended inside it.
+        // web_root = NULL  → /home/<user>/<slug>/public_html/
+        // web_root = public → /home/<user>/<slug>/public_html/public/
+        $base = "{$home}/{$application->slug}/public_html";
 
         $path = $webRoot === '' ? $base : "{$base}/{$webRoot}";
 
