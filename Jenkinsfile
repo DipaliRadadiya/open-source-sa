@@ -50,7 +50,7 @@ pipeline {
         stage('Update code') {
             steps {
                 sh '''
-                    set -euo pipefail
+                    set -eu
                     git config --global --add safe.directory "$APP_DIR" || true
                     cd "$APP_DIR"
                     git fetch --depth 1 origin "$BRANCH"
@@ -64,7 +64,7 @@ pipeline {
             steps {
                 dir("${env.BACKEND_DIR}") {
                     sh '''
-                        set -euo pipefail
+                        set -eu
                         composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
                         chmod -R 775 storage bootstrap/cache
                         "$PHP_BIN" artisan migrate --force
@@ -77,7 +77,7 @@ pipeline {
             steps {
                 dir("${env.FRONTEND_DIR}") {
                     sh '''
-                        set -euo pipefail
+                        set -eu
                         NODE_BIN_DIR=$(grep -E '^PANEL_NODE_BIN_DIR=' "$BACKEND_DIR/.env" | cut -d= -f2-)
                         [ -n "$NODE_BIN_DIR" ] || { echo "PANEL_NODE_BIN_DIR missing from backend/.env"; exit 1; }
                         export PATH="$NODE_BIN_DIR:/usr/local/bin:/usr/bin:/bin"
@@ -92,7 +92,7 @@ pipeline {
         stage('Restart services') {
             steps {
                 sh '''
-                    set -euo pipefail
+                    set -eu
                     sudo systemctl reload panel-fpm.service
                     sudo systemctl restart panel-frontend.service
                     sudo systemctl restart panel-queue.service
