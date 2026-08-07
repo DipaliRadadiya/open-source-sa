@@ -2144,6 +2144,12 @@ Neither has an error or a symptom if ignored: the site simply carries on with th
 
 Two entry points, two permissions, on purpose. **`app_backup`** covers configuring and running backups for one application — it belongs to whoever manages that site. **`backup`** covers the cross-application history you restore *from*, because restoring overwrites live data and that deserves one screen with one set of guardrails rather than a copy inside every application.
 
+**`GET /api/backup-targets`** — the overview: every application, protected or not (`permission:backup`)
+- Response: `{backup_targets: [{application_id, application_name, application_domain, backup_target: {…}|null, last_backup: {…}|null}], meta: {total, protected, unprotected}}`
+- **Driven from applications, not from targets** — the sites this screen exists to surface are the ones with no target at all, and those appear as rows with `backup_target: null`. `meta` gives you "5 of 7 protected" without reducing the list.
+- Not paginated: one server holds a handful of sites, and a count built from page one would be wrong.
+- `backup_target` is nested rather than flattened so `null` means "not configured" and can never be confused with a configured target whose fields happen to be empty. `last_backup` is the **newest run however it ended** — a failed one is not skipped in favour of the last success.
+
 **`GET /api/backups`** — the restore list, every application (`permission:backup`)
 - Query: `filter[application_id]`, `filter[status]`, `per_page`
 - Response: `{backups: [{id, application_id, type, is_safety, status, status_title, type_title, reason, reason_title, size_bytes, reference, started_at, finished_at, verified_at, created_at, created_at_human}], meta}`
@@ -2151,6 +2157,8 @@ Two entry points, two permissions, on purpose. **`app_backup`** covers configuri
 - `status`: `pending` | `running` | `verifying` | `verified` | `failed`. **Only `verified` can be restored.**
 
 **`GET|PUT /api/applications/{application}/backup-target`** — settings (`app_backup`, `manage` to write)
+- `backup_target` fields: `{id, application_id, storage_destination_id, storage_destination_name, type, type_title, retention_count, frequency, frequency_title, enabled, file_excludes[], database_excludes[], last_run_at, last_run_at_human, next_run_at, next_run_at_human, created_at, updated_at}`
+- **`next_run_at` is computed server-side** from the schedule the runner actually uses — never hardcode the cron expressions on the client. `null` for `frequency: manual` and for a disabled target, because neither has a next run.
 **`POST /api/applications/{application}/backups`** — run one now (`app_backup,manage`, throttle 6/min) → `202`
 
 ### Restore — `POST /api/backups/{backup}/restore`, `GET /api/restores`, `GET /api/restores/{restore}`
