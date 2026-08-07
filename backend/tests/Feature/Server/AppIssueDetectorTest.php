@@ -4,7 +4,9 @@ namespace Tests\Feature\Server;
 
 use App\Enums\CertificateStatus;
 use App\Enums\CertificateType;
+use App\Enums\DomainType;
 use App\Models\Application;
+use App\Models\ApplicationDomain;
 use App\Models\Certificate;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\AppIssueDetector;
@@ -54,6 +56,39 @@ it('flags an expired certificate', function () {
     expect($issues)->toHaveCount(1)
         ->and($issues->first()['type'])->toBe('certificate')
         ->and($issues->first()['severity'])->toBe('critical');
+});
+
+it('flags DNS drift when stored IP no longer matches current resolution', function () {
+    $domain = ApplicationDomain::factory()->create([
+        'application_id' => $this->application->id,
+        'type' => DomainType::Primary,
+        'domain' => 'example.com',
+        'dns_resolved_ip' => '1.2.3.4',
+        'dns_verified_at' => now()->subHour(),
+    ]);
+
+    // Simulate the IP having changed since the last verification.
+    $issues = makeDetector()->issues($this->application);
+
+    expect($issues)->toHaveCount(1)
+        ->and($issues->first()['type'])->toBe('dns')
+        ->and($issues->first()['severity'])->toBe('warning')
+        ->and($issues->first()['meta']['stored_ip'])->toBe('1.2.3.4');
+});
+
+it('does not flag DNS when resolved IP matches stored IP', function () {
+    // Mock gethostbyname to return the stored IP.
+    ApplicationDomain::factory()->create([
+        'application_id' => $this->application->id,
+        'type' => DomainType::Primary,
+        'domain' => 'example.com',
+        'dns_resolved_ip' => '1.2.3.4',
+    ]);
+
+    // With no stored IP, the check is skipped (no drift possible).
+    $issues = makeDetector()->issues($this->application);
+
+    expect($issues->where('type', 'dns'))->toHaveCount(0);
 });
 
 it('flags a certificate expiring within 30 days', function () {
