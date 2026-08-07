@@ -11,6 +11,9 @@
 //   - Node     = fnm-managed, NOT on system PATH. install.sh resolves it once at
 //                install time and writes the bin dir into backend/.env as
 //                PANEL_NODE_BIN_DIR — read that instead of guessing a path.
+//   - DB       = sqlite (install.sh's default). Path comes from backend/.env's
+//                DB_DATABASE, backed up with `sqlite3 ".backup"` before every
+//                migration (safe under concurrent writers, unlike a raw cp).
 //   - Services: panel-fpm.service     (dedicated FPM master — NOT php8.4-fpm)
 //               panel-frontend.service (Next.js standalone server)
 //               panel-queue.service    (long-running `artisan queue:work` —
@@ -28,6 +31,12 @@
 //
 // Requires: the Jenkins execution user has NOPASSWD sudo to become `panel`
 // (e.g. `jenkins ALL=(panel) NOPASSWD: ALL` in /etc/sudoers.d/jenkins).
+//
+// Frontend is only rebuilt when a file under frontend/ actually changed
+// between the commit that was live before this run and the one just
+// fetched — the diff needs real history, so the checkout is unshallowed
+// on its first CI run (install.sh's initial clone is --depth 1) and fetched
+// normally from then on.
 
 pipeline {
     agent any
@@ -47,6 +56,7 @@ pipeline {
         BACKEND_DIR  = '/var/www/panel/backend'
         FRONTEND_DIR = '/var/www/panel/frontend'
         PHP_BIN      = '/usr/bin/php8.4'
+        BACKUP_DIR   = '/home/panel/db-backups'
     }
 
     // Enable one of these once the job is wired to your git host:
@@ -56,12 +66,60 @@ pipeline {
     stages {
         stage('Update code') {
             steps {
+                script {
+                    env.OLD_SHA = sh(
+                        script: 'sudo -u panel -H git -C "$APP_DIR" rev-parse HEAD 2>/dev/null || echo none',
+                        returnStdout: true
+                    ).trim()
+                }
                 sh '''
                     set -eu
                     sudo -u panel -H git config --global --add safe.directory "$APP_DIR" || true
-                    sudo -u panel -H git -C "$APP_DIR" fetch --depth 1 origin "$BRANCH"
+                    if sudo -u panel -H test -f "$APP_DIR/.git/shallow"; then
+                        sudo -u panel -H git -C "$APP_DIR" fetch --unshallow origin "$BRANCH"
+                    else
+                        sudo -u panel -H git -C "$APP_DIR" fetch origin "$BRANCH"
+                    fi
                     sudo -u panel -H git -C "$APP_DIR" reset --hard "origin/$BRANCH"
                     sudo -u panel -H git -C "$APP_DIR" config core.fileMode false
+                '''
+                script {
+                    env.NEW_SHA = sh(
+                        script: 'sudo -u panel -H git -C "$APP_DIR" rev-parse HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    if (env.OLD_SHA == 'none' || env.OLD_SHA == env.NEW_SHA) {
+                        env.FRONTEND_CHANGED = 'true'
+                        echo 'First CI deploy (or no new commits) — building frontend unconditionally.'
+                    } else {
+                        def diff = sh(
+                            script: 'sudo -u panel -H git -C "$APP_DIR" diff --name-only "$OLD_SHA" "$NEW_SHA" -- frontend/',
+                            returnStdout: true
+                        ).trim()
+                        env.FRONTEND_CHANGED = diff ? 'true' : 'false'
+                    }
+                    echo "frontend changed since last deploy: ${env.FRONTEND_CHANGED}"
+                }
+            }
+        }
+
+        stage('Backup database') {
+            steps {
+                sh '''
+                    set -eu
+                    DB_PATH=$(sudo -u panel -H sh -c 'grep -E "^DB_DATABASE=" "$1/.env" | cut -d= -f2-' -- "$BACKEND_DIR")
+                    [ -n "$DB_PATH" ] || { echo "DB_DATABASE missing from backend/.env"; exit 1; }
+
+                    STAMP=$(date +%Y%m%d-%H%M%S)
+                    BACKUP_FILE="$BACKUP_DIR/database-$STAMP.sqlite"
+
+                    sudo -u panel -H mkdir -p "$BACKUP_DIR"
+                    sudo -u panel -H sqlite3 "$DB_PATH" ".backup '$BACKUP_FILE'"
+                    echo "Database backed up to $BACKUP_FILE"
+
+                    # Keep the last 20 backups so this directory doesn't grow forever.
+                    sudo -u panel -H sh -c 'cd "$1" && ls -1t database-*.sqlite 2>/dev/null | tail -n +21 | xargs -r rm -f' -- "$BACKUP_DIR"
                 '''
             }
         }
@@ -78,6 +136,9 @@ pipeline {
         }
 
         stage('Frontend: install & build') {
+            when {
+                environment name: 'FRONTEND_CHANGED', value: 'true'
+            }
             steps {
                 sh '''
                     set -eu
@@ -95,7 +156,11 @@ pipeline {
                 sh '''
                     set -eu
                     sudo -u panel -H sudo systemctl reload panel-fpm.service
-                    sudo -u panel -H sudo systemctl restart panel-frontend.service
+                    if [ "$FRONTEND_CHANGED" = "true" ]; then
+                        sudo -u panel -H sudo systemctl restart panel-frontend.service
+                    else
+                        echo "frontend unchanged — skipping panel-frontend.service restart"
+                    fi
                     sudo -u panel -H sudo systemctl restart panel-queue.service
                 '''
             }
@@ -104,7 +169,7 @@ pipeline {
 
     post {
         success {
-            echo "panel deployed from ${params.BRANCH}: backend migrated, frontend rebuilt, fpm reloaded, frontend + queue restarted."
+            echo "panel deployed from ${params.BRANCH}: db backed up, backend migrated, frontend built=${env.FRONTEND_CHANGED}, services restarted."
         }
         failure {
             echo 'Deploy failed — see the failing stage above.'
