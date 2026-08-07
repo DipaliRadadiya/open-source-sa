@@ -45,22 +45,43 @@ class MauticSiteType extends AbstractSiteType
     public function fields(): array
     {
         return array_merge($this->commonFields(), [
+            $this->field('site_title', 'text', required: true),
             $this->field('admin_first_name', 'text', required: true, extra: ['default' => 'Admin']),
             $this->field('admin_last_name', 'text', required: true, extra: ['default' => 'User']),
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
             $this->field('admin_email', 'email', required: true),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
+            // Mailer / email delivery configuration
+            $this->field('mailer_name', 'text', required: true,
+                extra: ['autocomplete' => 'name', 'autocapitalize' => 'words']),
+            $this->field('mailer_email', 'email', required: false),
+            $this->field('mailer_host', 'text', required: true,
+                extra: ['autocomplete' => 'off', 'autocapitalize' => 'none', 'spellcheck' => 'false',
+                    'placeholder' => 'e.g. smtp.example.com']),
+            $this->field('mailer_port', 'number', required: true,
+                extra: ['min' => 1, 'max' => 65535, 'placeholder' => '587']),
+            $this->field('mailer_username', 'text', required: true,
+                extra: ['autocomplete' => 'username', 'autocapitalize' => 'none', 'spellcheck' => 'false']),
+            $this->field('mailer_password', 'password', required: true,
+                extra: ['autocomplete' => 'current-password']),
         ], $this->phpFields());
     }
 
     public function rules(): array
     {
         return [
+            'site_title' => ['required', 'string', 'max:255'],
             'admin_first_name' => ['required', 'string', 'max:100'],
             'admin_last_name' => ['required', 'string', 'max:100'],
             'admin_user' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9._@-]+$/'],
             'admin_email' => ['required', 'email', 'max:255'],
             'admin_password' => ['required', 'string', 'min:10'],
+            'mailer_name' => ['required', 'string', 'max:255'],
+            'mailer_email' => ['nullable', 'email', 'max:255'],
+            'mailer_host' => ['required', 'string', 'max:255'],
+            'mailer_port' => ['required', 'integer', 'min:1', 'max:65535'],
+            'mailer_username' => ['required', 'string', 'max:255'],
+            'mailer_password' => ['required', 'string', 'max:500'],
         ];
     }
 }

@@ -23,4 +23,15 @@ $parameters = [
     'admin_lastname' => '{{ $adminLastName }}',
 
     'site_url' => '{{ $siteUrl }}',
+    'site_title' => '{{ $siteTitle }}',
+
+    // Mailer / email delivery
+    'mailer_from_email' => '{{ $mailerEmail }}',
+    'mailer_from_name'  => '{{ $mailerName }}',
+    'mailer_host'       => '{{ $mailerHost }}',
+    'mailer_port'       => {{ $mailerPort }},
+    'mailer_user'       => '{{ $mailerUsername }}',
+    'mailer_password'   => '{{ $mailerPassword }}',
+    'mailer_auth_mode'  => null,
+    'mailerencryption'  => null,
 ];

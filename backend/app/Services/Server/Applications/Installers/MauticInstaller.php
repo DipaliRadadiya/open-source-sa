@@ -59,6 +59,13 @@ class MauticInstaller extends AbstractPhpInstaller
             'adminFirstName' => $settings['admin_first_name'] ?? 'Admin',
             'adminLastName' => $settings['admin_last_name'] ?? 'User',
             'siteUrl' => 'https://'.$application->domain,
+            'siteTitle' => $settings['site_title'] ?? $application->name,
+            'mailerName' => $settings['mailer_name'] ?? '',
+            'mailerEmail' => $settings['mailer_email'] ?? '',
+            'mailerHost' => $settings['mailer_host'] ?? '',
+            'mailerPort' => (int) ($settings['mailer_port'] ?? 587),
+            'mailerUsername' => $settings['mailer_username'] ?? '',
+            'mailerPassword' => $settings['mailer_password'] ?? '',
         ])->render());
 
         $this->runAsSiteUser('install_app', $application, [
