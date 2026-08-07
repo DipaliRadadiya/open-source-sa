@@ -9,6 +9,7 @@ Errors: standard Laravel shape — `422` validation → `{"message": "...", "err
 Envelope: every success response is wrapped under a **resource-named key** — singular for one record (`user`, `role`, `branding`, `basic_info`, `dashboard`), plural for lists (`users`, `roles`, `activity_log`, `permissions`), each paired with `meta` when paginated. There is no generic `data` wrapper.
 Dates: all timestamps are `"DD-MM-YYYY HH:mm:ss"` strings, paired with a `_human` relative-time sibling (e.g. `"created_at": "24-07-2026 10:02:33"`, `"created_at_human": "2 minutes ago"`) — not ISO 8601.
 Pagination: list endpoints accept `?per_page=10|20|50|100` and return `{"<resource>": [...], "meta": {"current_page", "per_page", "total", "last_page"}}`.
+Paths: **every route below is relative to the base URL above and lives under `/api`**, whether or not a given section writes the prefix. `GET /auth/me` and `GET /api/auth/me` are the same endpoint — the older sections omit the prefix, the newer ones include it. Nothing here is served off `/` except `/docs/api-reference`.
 
 ---
 
@@ -1593,6 +1594,34 @@ Every app route gated by an `app_*` permission also checks the site type, so the
 
 ⚠️ **`POST /api/applications/{id}/deploy` has moved from `application,manage` to `app_deployment,manage`.** It is the Deployment screen's action, so it takes that screen's permission. Two consequences: a role with server `application` but not `app_deployment` can no longer deploy, and deploying a non-git site now returns `404` instead of `422` — the refusal happens before the controller rather than as a validation failure inside it.
 
+### Deployments (App sidebar → Deployment)
+
+Requires **`app_deployment`** (`view` to read, `manage` to deploy or change settings). Git sites only — every endpoint here answers **`404`** for a one-click install, which has no repository to deploy from.
+
+**`GET /api/applications/{application}/deployments`** — history, newest first
+- Response: `{deployments: [{…}], settings: {…}}` — **the list and the settings arrive together**, so the screen renders in one request rather than two.
+- Each deployment: `{id, status, status_title, in_flight, trigger, trigger_title, user{id,username}|null, branch, commit_hash, commit_short, commit_message, commit_author, steps[], failed_step, reference, duration, started_at, finished_at, created_at, created_at_human}`
+- **Poll on `in_flight`**, not on a status list — the backend knows which statuses are terminal, and hardcoding that set on the client is a constant that drifts.
+- **`user` is `null` for a webhook deploy.** Nobody pressed anything; render it as *System*. Inventing an actor would be a lie about who changed the site.
+- **No `output` here.** A list of fifty deploys each carrying its full build log is a response nobody asked for — fetch the detail endpoint for that.
+- Not paginated.
+
+**`GET /api/applications/{application}/deployments/{deployment}`** — one deploy, with its build output
+- Response: `{deployment: {…same fields…, output}}`. `output` appears **only** on this endpoint.
+- A deployment belonging to another application answers `404`, not `403` — the id is simply not a thing that exists under this site.
+
+**`POST /api/applications/{application}/deployments/{deployment}/redeploy`** (`manage`) → `202`
+- Response: `{deployment: {…}}` — **a new row**, not the old one re-opened. Poll the returned id.
+- **This is not a rollback.** Deploys are in place: the working tree is reset to the branch tip, so there is no earlier release to return to. It re-runs the *current* branch, which is what fixes a deploy that failed on a transient error. Label the button accordingly — "Redeploy", never "Roll back". `trigger` on the new row is `redeploy`.
+
+**`PUT /api/applications/{application}/deployment-settings`** (`manage`)
+- Body (all `sometimes`): `branch`, `deploy_script` (nullable, max 65535), `webhook_enabled`
+- Response: `{settings: {branch, repository, deploy_script, deploy_script_customised, default_deploy_script, auto_deploy, last_commit, last_deployed_at, last_deployed_at_human, placeholders[]}}`
+- **`deploy_script` vs `default_deploy_script`.** `deploy_script` is what *will run*, whether the user wrote it or it fell back. `deploy_script_customised` tells you which — show the default as a placeholder when it's `false`, not as if the user had typed it.
+- `placeholders` (`{path}`, `{branch}`, `{domain}`) comes from the backend for the same reason the cron presets do: the frontend never holds that list.
+- `branch` is validated as a git ref (`[A-Za-z0-9._/-]`). `deploy_script` deliberately is **not** content-validated — it's a shell script the user wrote to run on their own server as their own site user, and a character denylist would be theatre. CRLF is normalised server-side, so a script pasted from Windows won't fail with `command not found: composer\r`.
+- Writes a distinct activity verb for a script change (`application.deploy_script_updated`) vs everything else (`application.deploy_settings_updated`) — the script is the one setting that changes what runs on the server.
+
 ### Application domains (App sidebar → Domains)
 
 Requires the **`app_domain`** permission (`view` to read, `manage` to mutate) — an
@@ -1981,6 +2010,18 @@ The one high-value action a full file manager buries: reset a site's ownership a
 - Sorted directories first, then alphabetically.
 - `404` for a path that does not exist or is not a directory.
 
+**`GET /api/applications/{application}/files/search?q=&path=`** — find by name, throttle 10/min
+- Response: `{path, query, files: [{path, name, type, size, size_human, modified_at, modified_at_human, …}], truncated}`
+- **Name substring, case-insensitive — not content search.** `q` is matched literally: `*`, `?` and `[` are escaped, so searching for `wp-config[1].php` finds that file rather than being read as a glob.
+- Recursive and **flat across every depth**, unlike the directory listing. Each result's `path` is relative to the **site root**, not to the searched subtree, so it can be handed straight to `files/content`, `download`, `rename` or `delete` without rebuilding it.
+- **Capped at 200 results; `truncated: true` means there were more.** Say so in the UI — a partial list presented as complete is how someone concludes a file isn't there.
+- `path` scopes the search to a subtree (omit for the whole site). `q` is required, 1–255 chars.
+
+**`GET /api/applications/{application}/files/size?path=`** — measure a folder, throttle 20/min
+- Response: `{path, size, size_human}`
+- **On demand, deliberately.** A directory listing reports `4096` for every folder — that's the inode, not the contents — and recursing into every folder just to render a list would make the file manager crawl on a site with a big `node_modules`. This is the "how big is this actually?" button, one folder at a time.
+- Walks the whole subtree, so it is genuinely slow on a large one; the tighter throttle reflects that.
+
 **`GET /api/applications/{application}/files/content?path=`** — read a text file, throttle 60/min
 - `200`: `{"path", "content", "size", "backups"}` — `backups` is the same list `POST .../content/restore` (below) can restore from, newest first.
 - `422` if the file is **larger than 5 MB** (`errors/application.file_too_large`) or **looks binary** (a null byte in the first 8 KB — `errors/application.file_not_text`). Both point at SFTP for anything this doesn't cover.
@@ -2178,7 +2219,8 @@ Two entry points, two permissions, on purpose. **`app_backup`** covers configuri
 
 - `storage_destination` fields: `{id, name, driver, endpoint, region, bucket, prefix, has_credentials, last_tested_at, last_tested_at_human, last_test_success, last_test_error, status, status_title, created_at, updated_at}`
 - **Credentials are write-only.** `access_key`/`secret_key` are never returned in any form — not masked, not truncated. `has_credentials` tells you whether both are set without reading them.
-- **`POST .../{id}/test`** probes the destination (write → read back → delete) and **the verdict is now persisted**, so it survives a reload. Always `200`; `test.success` carries the answer.
+- Endpoints: **`GET`** / **`POST /api/integrations/storage/destinations`**, **`GET`** / **`PATCH`** / **`DELETE /api/integrations/storage/destinations/{storageDestination}`**, **`POST /api/integrations/storage/destinations/{storageDestination}/test`**.
+- **`POST .../{id}/test`** probes the destination (write → read back → delete) and **the verdict is now persisted**, so it survives a reload. Always `200`; `test.success` carries the answer, alongside `test.latency_ms`, `test.message`, `test.error_class` and `test.tested_at`.
 - `status`: `never_tested` | `connected` | `failed`, with a localized `status_title`. `last_test_success` is `null` when never tested — **that is a different state from `false`**, and worth showing differently.
 - **Show the age, not just the tick.** `last_tested_at_human` exists because "tested 40 days ago" is not "works today".
 - The stored result is **cleared automatically** when `access_key`, `secret_key`, `endpoint`, `region` or `bucket` change — the panel will not claim a rotated-out key is connected. A rename or prefix change keeps it.
