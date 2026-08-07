@@ -141,15 +141,23 @@ abstract class AbstractSiteInstaller implements SiteInstaller
             ]), $application);
 
         // Copy contents (not the directory) into the web root, overwriting so
-        // a retry converges instead of nesting. `-T` needs the destination to
-        // actually be a directory, not merely resolve to one — and when
-        // web_root is empty, $documentRoot IS the `current` symlink itself
-        // (ReleaseManager points it at releases/<timestamp>), which cp -T
-        // sees as "not a directory" rather than following. Resolve it to the
-        // real release directory first; a plain directory resolves to itself.
-        $target = realpath($documentRoot) ?: $documentRoot;
-
-        $this->run('extract', ['cp', '-rT', "{$work}/src", $target], $application);
+        // a retry converges instead of nesting.
+        //
+        // Trailing `/.` on the source, not `-T` on the destination. `-T` was
+        // tried first and reverted: it requires the destination to actually
+        // *be* a directory rather than merely resolve to one, and when
+        // web_root is empty $documentRoot IS the `current` symlink itself
+        // (ReleaseManager points it at releases/<timestamp>) — cp -T sees
+        // "not a directory" instead of following it. Resolving the symlink
+        // in PHP first doesn't work either: this runs unprivileged as the
+        // panel queue worker, which has no access into a site owned by its
+        // own system user, so realpath() silently failed and fell back to
+        // the same broken path. `src/.` sidesteps the whole problem — cp's
+        // normal (non -T) directory-destination handling follows a symlink
+        // to a directory exactly like a real one, and it runs elevated via
+        // ServerOps regardless, so permissions were never actually the
+        // blocker for the copy itself.
+        $this->run('extract', ['cp', '-r', "{$work}/src/.", $documentRoot], $application);
 
         $this->serverOps->run(['rm', '-rf', $work], ['feature' => 'application', 'op' => 'installer.cleanup']);
     }
