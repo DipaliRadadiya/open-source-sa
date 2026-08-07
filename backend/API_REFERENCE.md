@@ -1487,7 +1487,12 @@ Duplicate any application to a brand-new domain as a fully independent site — 
 
 **`app_clone` is in every site type's default feature list** — unlike Staging, this permission never 404s on type alone. A source that needs a database and has no clone recipe built refuses with a clear error from inside `CloneManager` instead.
 
-**`POST /api/applications/{id}/clone`** (`manage`) — body `{ domain }`. `201 { clone: {...} }`.
+**`POST /api/applications/{id}/clone`** (`manage`) — body `{ domain, name? }`. `202 { clone: {...} }` immediately.
+- Clone runs on the queue so the HTTP request cannot time out while files are being rsynced. Poll progress with `GET /api/clones/{clone}`.
+- **`name`** is optional — defaults to `"{source} (Clone)"` if omitted.
+- **`GET /api/clones/{clone}`** — poll a running clone. `200 { clone: { id, source_application_id, source_application_name, target_application_id, name, domain, status, status_title, current_step, current_step_title, step_number, total_steps, reason, reason_title, reference, started_at, started_at_human, finished_at, finished_at_human } }`.
+- Clone steps (in order): `provisioning` → `copying_files` → `cloning_database` → `starting_process`.
+- **`domain`** — the target domain the clone was created with.
 - **Generic for any site type with no database** (static, blank PHP, node, git without a database) — files are copied via `rsync` (same hardcoded excludes as Staging) and nothing else is needed.
 - **A source needing a database** (`SiteType::needsDatabase()`) additionally needs that type's `CloneStrategy` — **only WordPress has one today**, same boundary as Staging and for the same reason (most marketplace apps store URLs baked into database content, and only WordPress has the "give it a fresh database and rewrite the URLs a serialization-safe way" recipe built). A source of a different database-needing type (Joomla, Moodle, NodeBB, …) refuses outright rather than producing a clone whose config still points at the source's own database.
 - **The WordPress recipe clones the database** (dump → fresh database → restore) and writes a **fresh `wp-config.php`** — the same template Staging extended, but with none of staging's safeguards (no `DISABLE_WP_CRON`, no mail trap, no `WP_ENVIRONMENT_TYPE`) — a clone is meant to become its own real site, not a safe sandbox, so treating it like one would leave it silently unable to send order emails until someone noticed. The same serialization-safe `wp search-replace` rewrites the source's URLs to the clone's.
@@ -2195,16 +2200,24 @@ Two entry points, two permissions, on purpose. **`app_backup`** covers configuri
 - Query: `filter[application_id]`, `filter[status]`, `filter[type]` (`filesystem`|`database`|`full`), `filter[from]`, `filter[to]` (dates), `per_page` (max 100)
 - **The query is validated** — an unknown `status` or `type` is a `422`, not an empty list. "There are no backups" is an alarming thing to say to someone who mistyped a filter.
 - `filter[to]` is **inclusive to end-of-day**: `to=2026-03-04` includes a backup that ran at 23:30 that night.
-- Response: `{backups: [{id, application_id, type, is_safety, status, status_title, type_title, reason, reason_title, size_bytes, reference, started_at, finished_at, verified_at, created_at, created_at_human}], meta}`
+- Response: `{backups: [{id, application_id, application_name, application_domain, type, is_safety, status, status_title, type_title, reason, reason_title, size_bytes, log_key, reference, started_at, finished_at, verified_at, created_at, created_at_human}], meta: {counts: {total, pending, running, verifying, completed, failed}}}`
+- **`meta.counts`** replaces separate requests for per-status totals — counts include all filters already applied (same `application_id`, `from`/`to` window), so filtering the list and the counts stay in sync.
+- **`application_name` / `application_domain`** — joined from the application, no extra request needed.
+- **`log_key`** — key into `GET /api/logs/{log_key}` for captured output; `null` when no output was captured yet.
 - **`is_safety: true`** marks a backup taken automatically just before a restore overwrote the site. It is exempt from retention, so it will not quietly disappear — worth badging in the list, because after a bad restore it is the one row someone is actually hunting for.
 - `status`: `pending` | `running` | `verifying` | `verified` | `failed`. **Only `verified` can be restored.**
 
 **`GET|PUT /api/applications/{application}/backup-target`** — settings (`app_backup`, `manage` to write)
 - `backup_target` fields: `{id, application_id, storage_destination_id, storage_destination_name, type, type_title, retention_count, frequency, frequency_title, enabled, file_excludes[], database_excludes[], last_run_at, last_run_at_human, next_run_at, next_run_at_human, created_at, updated_at}`
+- **`schedule_time`** (optional, `HH:MM` format) — the time-of-day component of the schedule, separate from the frequency. When set, the base cron (daily/weekly/monthly) has its hour/minute replaced by this value. Server timezone. Defaults to `02:00` server time when not set.
 - **`next_run_at` is computed server-side** from the schedule the runner actually uses — never hardcode the cron expressions on the client. `null` for `frequency: manual` and for a disabled target, because neither has a next run.
 - **`is_due: true` means a run is imminent** (next scheduler tick, within a minute) — render "Runs shortly" and ignore `next_run_at`. This is normally the state of a **brand-new target**: the first backup is taken immediately rather than at tonight's slot, so the user can see the feature work. Showing `next_run_at` alone would name tomorrow at exactly the moment the first backup runs.
 
 **`POST /api/applications/{application}/backups`** — run one now (`app_backup,manage`, throttle 6/min) → `202`
+
+**`POST /api/backups/{backup}/retry`** (`backup,manage`, throttle 6/min) — retry a failed backup.
+- `422` when the backup is not `failed`, or when another backup for the same target is `pending`/`running`/`verifying` (only one run at a time).
+- Response `202`: `{backup: {…}}` — same shape as the backup record, with `status` refreshed to `pending`.
 
 **`GET /api/backups/{backup}/download`** — a link to the archive (**`backup,manage`**, throttle 6/min)
 - Response: `{download: {url, expires_at, filename, size_bytes}}`
@@ -2250,7 +2263,7 @@ Two entry points, two permissions, on purpose. **`app_backup`** covers configuri
 
 **Everything before `restore_database` is non-destructive.** A failed download, a truncated archive, a corrupt tarball or a safety backup that could not be taken all leave the application exactly as it was — the localized `reason_title` for those cases says so explicitly, and the UI should not phrase them as damage.
 
-**`GET /api/restores`** — history (`permission:backup`), paginated, same shape.
+**`GET /api/restores`** — history (`permission:backup`), paginated. Query: `filter[application_id]`, `filter[status]`, `filter[type]`, `filter[from]`, `filter[to]`, `per_page` (max 100) — same filter chain as `GET /api/backups`. Response shape identical to `GET /api/backups` plus `backup_id` and `safety_backup_id`.
 
 #### Building the screen
 
