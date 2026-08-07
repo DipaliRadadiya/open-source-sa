@@ -18,9 +18,16 @@
 //                                       executing the previous release's code
 //                                       for jobs already loaded in memory)
 //
-// Assumes the Jenkins agent executes this pipeline AS the `panel` user — that's
-// who install.sh's sudoers rule grants systemctl rights to. Running as any other
-// user means these sudo calls get denied unless that NOPASSWD rule is extended.
+// The Jenkins agent does NOT run this pipeline as the `panel` user — every
+// step that touches the checkout, .env, vendor/, node_modules/, etc. runs
+// through `sudo -u panel -H` so file ownership matches what install.sh set
+// up (everything under APP_DIR is panel:panel). Service restarts chain a
+// second sudo (`sudo -u panel -H sudo systemctl ...`) rather than assuming
+// the Jenkins user has its own root grant, since only `panel` is guaranteed
+// that NOPASSWD rule by configure_sudoers().
+//
+// Requires: the Jenkins execution user has NOPASSWD sudo to become `panel`
+// (e.g. `jenkins ALL=(panel) NOPASSWD: ALL` in /etc/sudoers.d/jenkins).
 
 pipeline {
     agent any
@@ -51,41 +58,35 @@ pipeline {
             steps {
                 sh '''
                     set -eu
-                    git config --global --add safe.directory "$APP_DIR" || true
-                    cd "$APP_DIR"
-                    git fetch --depth 1 origin "$BRANCH"
-                    git reset --hard "origin/$BRANCH"
-                    git config core.fileMode false
+                    sudo -u panel -H git config --global --add safe.directory "$APP_DIR" || true
+                    sudo -u panel -H git -C "$APP_DIR" fetch --depth 1 origin "$BRANCH"
+                    sudo -u panel -H git -C "$APP_DIR" reset --hard "origin/$BRANCH"
+                    sudo -u panel -H git -C "$APP_DIR" config core.fileMode false
                 '''
             }
         }
 
         stage('Backend: install & migrate') {
             steps {
-                dir("${env.BACKEND_DIR}") {
-                    sh '''
-                        set -eu
-                        composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-                        chmod -R 775 storage bootstrap/cache
-                        "$PHP_BIN" artisan migrate --force
-                    '''
-                }
+                sh '''
+                    set -eu
+                    sudo -u panel -H composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$BACKEND_DIR"
+                    sudo -u panel -H chmod -R 775 "$BACKEND_DIR/storage" "$BACKEND_DIR/bootstrap/cache"
+                    sudo -u panel -H "$PHP_BIN" "$BACKEND_DIR/artisan" migrate --force
+                '''
             }
         }
 
         stage('Frontend: install & build') {
             steps {
-                dir("${env.FRONTEND_DIR}") {
-                    sh '''
-                        set -eu
-                        NODE_BIN_DIR=$(grep -E '^PANEL_NODE_BIN_DIR=' "$BACKEND_DIR/.env" | cut -d= -f2-)
-                        [ -n "$NODE_BIN_DIR" ] || { echo "PANEL_NODE_BIN_DIR missing from backend/.env"; exit 1; }
-                        export PATH="$NODE_BIN_DIR:/usr/local/bin:/usr/bin:/bin"
+                sh '''
+                    set -eu
+                    NODE_BIN_DIR=$(sudo -u panel -H sh -c 'grep -E "^PANEL_NODE_BIN_DIR=" "$1/.env" | cut -d= -f2-' -- "$BACKEND_DIR")
+                    [ -n "$NODE_BIN_DIR" ] || { echo "PANEL_NODE_BIN_DIR missing from backend/.env"; exit 1; }
 
-                        npm ci --no-audit --no-fund
-                        npm run build
-                    '''
-                }
+                    sudo -u panel -H env "PATH=$NODE_BIN_DIR:/usr/local/bin:/usr/bin:/bin" npm --prefix "$FRONTEND_DIR" ci --no-audit --no-fund
+                    sudo -u panel -H env "PATH=$NODE_BIN_DIR:/usr/local/bin:/usr/bin:/bin" npm --prefix "$FRONTEND_DIR" run build
+                '''
             }
         }
 
@@ -93,9 +94,9 @@ pipeline {
             steps {
                 sh '''
                     set -eu
-                    sudo systemctl reload panel-fpm.service
-                    sudo systemctl restart panel-frontend.service
-                    sudo systemctl restart panel-queue.service
+                    sudo -u panel -H sudo systemctl reload panel-fpm.service
+                    sudo -u panel -H sudo systemctl restart panel-frontend.service
+                    sudo -u panel -H sudo systemctl restart panel-queue.service
                 '''
             }
         }
