@@ -18,6 +18,7 @@ class CreateCloneRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name' => ['sometimes', 'string', 'max:255'],
             'domain' => [
                 'required', 'string', 'max:255',
                 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',

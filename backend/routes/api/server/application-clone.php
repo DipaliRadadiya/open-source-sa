@@ -11,3 +11,7 @@ use Illuminate\Support\Facades\Route;
 // instead, from inside CloneManager.
 Route::post('/applications/{application}/clone', [ApplicationCloneController::class, 'store'])
     ->middleware(['permission:app_clone,manage', 'throttle:5,1']);
+
+// Poll a clone while it runs.
+Route::get('/clones/{clone}', [ApplicationCloneController::class, 'show'])
+    ->middleware(['permission:app_clone', 'throttle:120,1']);

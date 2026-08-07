@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\CloneOperationException;
 use App\Models\Application;
+use App\Models\Clone;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Str;
@@ -40,25 +41,32 @@ class CloneManager
         private ServerOps $serverOps,
     ) {}
 
-    public function clone(Application $source, string $domain): Application
+    /**
+     * Run an async clone from the queue, recording named steps.
+     *
+     * Called by RunClone job. The Clone record already exists (created by
+     * the controller before dispatching the job); this method creates the
+     * target Application and records steps as it progresses.
+     */
+    public function execute(Clone $cloneRecord): Application
     {
+        $source = $cloneRecord->sourceApplication;
+        $source->load('systemUser');
+
+        $domain = $cloneRecord->domain;
+
         $siteType = $this->siteTypes->find($source->site_type);
         $needsDatabase = $siteType?->needsDatabase() ?? false;
         $strategy = $siteType?->cloneStrategy();
 
         if ($needsDatabase && $strategy === null) {
-            // Refuse rather than produce a clone whose config still points
-            // at the source's own database — only WordPress has the "give
-            // it a fresh database and rewrite its URLs" recipe built so far.
             throw new CloneOperationException((string) Str::uuid());
         }
 
-        $source->load('systemUser');
-
-        $clone = Application::create([
+        $target = Application::create([
             'system_user_id' => $source->system_user_id,
             'cloned_from_application_id' => $source->id,
-            'name' => "{$source->name} (Clone)",
+            'name' => $cloneRecord->name ?? "{$source->name} (Clone)",
             'domain' => $domain,
             'site_type' => $source->site_type,
             'serving_profile' => $source->serving_profile,
@@ -69,56 +77,129 @@ class CloneManager
             'build_command' => $source->build_command,
             'deploy_script' => $source->deploy_script,
             'start_command' => $source->start_command,
-            // Repository metadata is copied for reference; deploy-on-push is
-            // deliberately not — see webhook note below.
             'repository' => $source->repository,
             'repository_url' => $source->repository_url,
             'branch' => $source->branch,
             'status' => 'pending',
-            // `webhook_enabled` stays false and `webhook_identifier` stays
-            // null: it has a unique constraint, so copying it verbatim would
-            // fail the insert outright — and even if it didn't, two
-            // applications answering to one deploy-on-push identity is
-            // exactly the kind of ambiguity a clone must not introduce.
         ]);
 
         if ($source->app_port !== null) {
-            $clone->app_port = $this->ports->allocate();
-            $clone->save();
+            $target->app_port = $this->ports->allocate();
+            $target->save();
         }
 
-        $clone->load('systemUser');
+        $target->load('systemUser');
 
-        $this->provisioner->provision($clone, skipInstaller: true);
+        // Named steps recorded on the Clone record so the frontend can poll.
+        $cloneRecord->update(['current_step' => 'provisioning', 'reason' => null]);
+        $this->provisioner->provision($target, skipInstaller: true);
 
+        $cloneRecord->update(['current_step' => 'copying_files']);
         $this->rsync(
             $this->provisioner->documentRoot($source),
-            $this->provisioner->documentRoot($clone),
-            $clone,
+            $this->provisioner->documentRoot($target),
+            $target,
         );
 
         if ($needsDatabase) {
-            $strategy->clone($source, $clone);
+            $cloneRecord->update(['current_step' => 'cloning_database']);
+            $strategy->clone($source, $target);
         }
 
-        if ($this->supervisor->runs($clone)) {
-            $this->supervisor->apply($clone, $this->provisioner->documentRoot($clone), start: true);
+        if ($this->supervisor->runs($target)) {
+            $cloneRecord->update(['current_step' => 'starting_process']);
+            $this->supervisor->apply($target, $this->provisioner->documentRoot($target), start: true);
         }
 
-        $clone->status = 'active';
-        $clone->save();
+        $target->status = 'active';
+        $target->save();
 
-        return $clone->fresh();
+        // Update Clone record with the completed target's id.
+        $cloneRecord->update(['target_application_id' => $target->id]);
+
+        return $target->fresh();
     }
 
-    private function rsync(string $source, string $destination, Application $owner): void
+    /**
+     * Synchronous clone for internal callers (staging, testing).
+     * Does not use or create a Clone record.
+     */
+    public function clone(Application $source, string $domain, ?string $name = null): Application
     {
-        $excludes = array_merge(
-            ...array_map(fn (string $pattern) => ['--exclude', $pattern], self::FILE_EXCLUDES),
+        $siteType = $this->siteTypes->find($source->site_type);
+        $needsDatabase = $siteType?->needsDatabase() ?? false;
+        $strategy = $siteType?->cloneStrategy();
+
+        if ($needsDatabase && $strategy === null) {
+            throw new CloneOperationException((string) Str::uuid());
+        }
+
+        $source->load('systemUser');
+
+        $target = Application::create([
+            'system_user_id' => $source->system_user_id,
+            'cloned_from_application_id' => $source->id,
+            'name' => $name ?? "{$source->name} (Clone)",
+            'domain' => $domain,
+            'site_type' => $source->site_type,
+            'serving_profile' => $source->serving_profile,
+            'rendering_type' => $source->rendering_type,
+            'php_version' => $source->php_version,
+            'node_version' => $source->node_version,
+            'web_root' => $source->web_root,
+            'build_command' => $source->build_command,
+            'deploy_script' => $source->deploy_script,
+            'start_command' => $source->start_command,
+            'repository' => $source->repository,
+            'repository_url' => $source->repository_url,
+            'branch' => $source->branch,
+            'status' => 'pending',
+        ]);
+
+        if ($source->app_port !== null) {
+            $target->app_port = $this->ports->allocate();
+            $target->save();
+        }
+
+        $target->load('systemUser');
+
+        $this->provisioner->provision($target, skipInstaller: true);
+
+        $this->rsync(
+            $this->provisioner->documentRoot($source),
+            $this->provisioner->documentRoot($target),
+            $target,
         );
 
+        if ($needsDatabase) {
+            $strategy->clone($source, $target);
+        }
+
+        if ($this->supervisor->runs($target)) {
+            $this->supervisor->apply($target, $this->provisioner->documentRoot($target), start: true);
+        }
+
+        $target->status = 'active';
+        $target->save();
+
+        return $target->fresh();
+    }
+
+    /**
+     * @param  list<string>  $excludes
+     */
+    private function rsync(string $source, string $destination, Application $owner, array $excludes = []): void
+    {
+        $patterns = array_merge(self::FILE_EXCLUDES, $excludes);
+        $args = [];
+
+        foreach ($patterns as $pattern) {
+            $args[] = '--exclude';
+            $args[] = $pattern;
+        }
+
         $result = $this->serverOps->run(
-            array_merge(['rsync', '-a'], $excludes, [rtrim($source, '/').'/', rtrim($destination, '/').'/']),
+            array_merge(['rsync', '-a'], $args, [rtrim($source, '/').'/', rtrim($destination, '/').'/']),
             ['feature' => 'application', 'op' => 'clone_rsync', 'application' => $owner->id],
             timeout: 300,
         );

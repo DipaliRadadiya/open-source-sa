@@ -1,0 +1,98 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Enums\CloneStatus;
+use App\Models\Clone as CloneModel;
+use App\Services\Server\Applications\CloneManager;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
+/**
+ * Runs one site clone off the queue.
+ *
+ * Not retried. A clone that fails mid-way has already created an application
+ * record and possibly touched the filesystem — a transparent retry would start
+ * from a half-changed state rather than from scratch. The next attempt has to
+ * be a deliberate decision.
+ *
+ * Unique per source application: two clones of the same site at once would
+ * both allocate the same system user and write to the same rsync destination.
+ */
+class RunClone implements ShouldBeUnique, ShouldQueue
+{
+    use Queueable;
+
+    public int $tries = 1;
+
+    /** 10 minutes — rsync is the slow part for a large site. */
+    public int $timeout = 600;
+
+    public function __construct(public int $cloneId) {}
+
+    public function uniqueId(): string
+    {
+        return 'clone-source-'.$this->cloneId;
+    }
+
+    public function handle(CloneManager $cloner): void
+    {
+        $clone = CloneModel::with(['sourceApplication.systemUser'])->find($this->cloneId);
+
+        if ($clone === null) {
+            return;
+        }
+
+        $clone->update([
+            'status' => CloneStatus::Running,
+            'started_at' => now(),
+        ]);
+
+        try {
+            $target = $cloner->execute($clone);
+
+            $clone->update([
+                'status' => CloneStatus::Completed,
+                'target_application_id' => $target->id,
+                'finished_at' => now(),
+            ]);
+        } catch (Throwable $e) {
+            Log::channel('server-ops')->error('clone failed', [
+                'feature' => 'application',
+                'op' => 'clone',
+                'clone' => $this->cloneId,
+                'source' => $clone->source_application_id,
+                'reason' => $clone->reason,
+                'reference' => $clone->reference,
+                'detail' => $e->getMessage(),
+            ]);
+
+            $clone->update([
+                'status' => CloneStatus::Failed,
+                'finished_at' => now(),
+            ]);
+        }
+    }
+
+    public function failed(?Throwable $e): void
+    {
+        Log::channel('server-ops')->error('clone job crashed', [
+            'feature' => 'application',
+            'op' => 'clone',
+            'clone' => $this->cloneId,
+            'detail' => $e?->getMessage(),
+        ]);
+
+        CloneModel::query()
+            ->whereKey($this->cloneId)
+            ->whereIn('status', [CloneStatus::Pending->value, CloneStatus::Running->value])
+            ->update([
+                'status' => CloneStatus::Failed->value,
+                'reason' => 'crashed',
+                'finished_at' => now(),
+            ]);
+    }
+}

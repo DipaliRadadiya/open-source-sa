@@ -66,6 +66,17 @@ return [
         'restart_process' => 'Starting the application',
     ],
 
+    'cloning' => [
+        'provisioning' => 'Creating the site',
+        'copying_files' => 'Copying files',
+        'cloning_database' => 'Cloning the database',
+        'starting_process' => 'Starting the application',
+    ],
+
+    'cloning_errors' => [
+        'crashed' => 'The clone stopped unexpectedly.',
+    ],
+
     'schedule_time' => 'Scheduled time',
 
     'restore_errors' => [
