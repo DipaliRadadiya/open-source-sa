@@ -1,8 +1,11 @@
 {
-  "app": {
-    "name": "ServerAvatar"
-  },
   "common": {
+    "saveFooter": {
+      "save": "Save",
+      "saving": "Saving…",
+      "discard": "Discard",
+      "unsaved": "Not saved yet"
+    },
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "clearSearch": "Clear search",
@@ -82,7 +85,18 @@
       "publicKey": "Initial SSH public key",
       "publicKeyHint": "Optional — added as the account's first authorized key.",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
-      "submit": "Create user"
+      "submit": "Create user",
+      "more": "More options",
+      "shell": "Login shell",
+      "shellHint": "Leave as bash unless this account should not be able to log in.",
+      "sudo": "Allow sudo",
+      "sudoHint": "Lets this account run commands as root. You can change it later.",
+      "sshAccess": "Allow SSH login",
+      "sshAccessHint": "Lets this account sign in over SSH.",
+      "password": "Password",
+      "passwordPlaceholder": "Leave empty for no password",
+      "passwordHint": "Optional. At least 10 characters with upper and lower case and a number.",
+      "generate": "Generate"
     },
     "password": {
       "open": "Password",
@@ -545,8 +559,8 @@
     "domainRequired": "Enter a domain name",
     "hostnameInvalid": "Enter a valid hostname (e.g. example.com)",
     "redirectTargetRequired": "Enter where this domain should redirect to",
-    "required_username": "Username is required",
-    "required_password": "Password is required",
+    "required_username": "Enter a username.",
+    "required_password": "Enter a password.",
     "required_currentPassword": "Current password is required",
     "confirmPassword": "Please confirm your password",
     "passwordsMismatch": "Passwords do not match",
@@ -577,8 +591,6 @@
     "invalidPort": "Enter a port between 1 and 65535.",
     "min8": "Use at least 8 characters.",
     "securityUsernameColon": "Can't contain a colon (:).",
-    "required_username": "Enter a username.",
-    "required_password": "Enter a password.",
     "applicationTypeRequired": "Choose an application type.",
     "applicationNameRequired": "Enter a name for this application.",
     "applicationDomainRequired": "Enter the domain this application will use.",
@@ -594,7 +606,22 @@
     "required_target": "Enter a path",
     "invalidPath": "Enter a valid path",
     "mustEndInZip": "The target must end in .zip",
-    "invalidMode": "Enter exactly 3 octal digits, e.g. 644"
+    "invalidMode": "Enter exactly 3 octal digits, e.g. 644",
+    "required_bucket": "Bucket is required",
+    "required_accessKey": "Access key is required",
+    "required_secretKey": "Secret key is required",
+    "max100": "Must be 100 characters or fewer",
+    "max64": "Must be 64 characters or fewer",
+    "max512": "Must be 512 characters or fewer",
+    "bucketFormat": "Use letters, numbers, dots, dashes and underscores only",
+    "regionFormat": "Use letters, numbers and dashes only",
+    "prefixFormat": "Use letters, numbers, dots, dashes, underscores and slashes only",
+    "endpointFormat": "Must be a full https:// address",
+    "endpointPlaceholder": "Replace the part in <angle brackets> with your own value",
+    "required_application": "Choose a site",
+    "required_destination": "Choose where to store the backups",
+    "retentionRange": "Keep between 1 and 365 backups",
+    "required_confirm": "Type the site's domain to confirm"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -769,7 +796,7 @@
     },
     "form": {
       "name": "Name",
-      "namePlaceholder": "Nightly backup",
+      "namePlaceholder": "e.g. Nightly cleanup",
       "runAs": "Runs as",
       "runAsPlaceholder": "Select a user",
       "runAsLocked": "The run-as user cannot be changed. Delete the job and create a new one instead.",
@@ -814,6 +841,7 @@
     "title": "Something went wrong",
     "description": "This page could not be loaded. It is usually temporary — try again.",
     "retry": "Try again",
+    "retrying": "Trying…",
     "partial": {
       "title": "This part could not be loaded",
       "description": "The server did not answer. Nothing has changed — try again."
@@ -1004,7 +1032,8 @@
       "shortAction": "Edit php.ini"
     },
     "notMeasured": "Not measured",
-    "phpSettings": "PHP settings"
+    "phpSettings": "PHP settings",
+    "iniPlaceholder": "memory_limit = 256M"
   },
   "fail2ban": {
     "title": "Fail2ban",
@@ -2266,7 +2295,7 @@
     "connect": {
       "action": "Connect account",
       "unavailable": "The list of providers could not be loaded.",
-      "readOnly": "ServerAvatar only reads your repositories and branches. It never pushes.",
+      "readOnly": "{brand} only reads your repositories and branches. It never pushes.",
       "pickTitle": "Connect a Git account",
       "pickSubtitle": "Choose where your code lives.",
       "hints": {
@@ -2289,7 +2318,14 @@
       "verifying": "Checking with {provider}…",
       "connected": "{label} connected.",
       "rejected": "{provider} rejected this token. Check it was copied in full and has access to your repositories.",
-      "nextStep": "You're connected. Go to Applications → Create to choose this account as your source."
+      "nextStep": "You're connected. Go to Applications → Create to choose this account as your source.",
+      "placeholders": {
+        "token_github": "ghp_… or github_pat_…",
+        "token_gitlab": "glpat-…",
+        "token_bitbucket": "Your Bitbucket app password",
+        "host": "https://gitlab.example.com",
+        "workspace": "your-workspace-id"
+      }
     },
     "edit": {
       "title": "Edit account",
@@ -2301,7 +2337,9 @@
       "hostHelp": "Leave empty for gitlab.com.",
       "cancel": "Cancel",
       "submit": "Save",
-      "saved": "Account updated."
+      "saved": "Account updated.",
+      "namePlaceholder": "e.g. Company GitHub",
+      "workspacePlaceholder": "your-workspace-id"
     },
     "replace": {
       "title": "Replace the token for {label}",
@@ -2313,12 +2351,13 @@
       "submit": "Replace token",
       "verifying": "Checking with {provider}…",
       "replaced": "Token replaced.",
-      "rejected": "{provider} rejected this token. Your current token is still in place."
+      "rejected": "{provider} rejected this token. Your current token is still in place.",
+      "tokenPlaceholder": "Paste the new token"
     },
     "disconnect": {
       "title": "Disconnect {label}?",
       "description": "If an application deploys from this account, it will no longer be able to fetch code. The application itself will not be deleted.",
-      "stillValid": "This removes the token from ServerAvatar. It stays valid on {provider} until you delete it there.",
+      "stillValid": "This removes the token from {brand}. It stays valid on {provider} until you delete it there.",
       "revokeLink": "Manage your {provider} tokens",
       "cancel": "Cancel",
       "submit": "Disconnect",
@@ -2442,7 +2481,7 @@
     },
     "empty": {
       "title": "Your server is ready for its first application",
-      "description": "Create a site or service in a guided flow. ServerAvatar will provision it, then show its live status here.",
+      "description": "Create a site or service in a guided flow. {brand} will provision it, then show its live status here.",
       "filteredTitle": "No matching applications",
       "filteredDescription": "No applications match your search.",
       "clearSearch": "Clear search",
@@ -2492,7 +2531,7 @@
       "typeHint": "Pick the starting point for your project. You can adjust advanced configuration later.",
       "configureHint": "Only the fields required by this application are shown.",
       "reviewTitle": "Ready to provision",
-      "reviewHint": "ServerAvatar will create the site configuration and show progress on the next screen.",
+      "reviewHint": "{brand} will create the site configuration and show progress on the next screen.",
       "creatingType": "You’re creating",
       "softwareIncluded": "Software will be installed for you.",
       "bringYourOwnCode": "This creates a served site. You’ll add or deploy code afterwards.",
@@ -3093,7 +3132,7 @@
       "whenToUseTitle": "When to use this",
       "whenToUseBody": "Good for a staging site, a work-in-progress redesign, or a client preview you don't want found before launch. Turn it off once the site is ready for the public.",
       "warning": "This protects the whole site, not just an admin area — search engines, uptime monitors and any integration hitting this domain will also be blocked until they're given the credentials. You can turn this off here at any time if that causes a problem.",
-      "credentialsNote": "This creates a new login just for this site — separate from your ServerAvatar account. Visitors will see their browser's own plain sign-in prompt, not a styled page.",
+      "credentialsNote": "This creates a new login just for this site — separate from your {brand} account. Visitors will see their browser's own plain sign-in prompt, not a styled page.",
       "disabledHint": "The site is publicly reachable — anyone can view it.",
       "username": "Username",
       "usernamePlaceholder": "e.g. admin",
@@ -3103,6 +3142,7 @@
       "generate": "Generate",
       "save": "Save",
       "saving": "Saving…",
+      "savingNote": "This can take a few seconds — the web server is being reloaded.",
       "discard": "Discard",
       "noPermission": "You don't have permission to manage this.",
       "nothingToSave": "Nothing to save",
@@ -3110,11 +3150,122 @@
       "disabledToast": "Password protection is off — the site is public again.",
       "savedCredentials": "Save these now — they won't be shown again:",
       "openSite": "Open site"
+    },
+    "botBlocker": {
+      "pageTitle": "AI Bot Blocker",
+      "pageSubtitle": "Choose which AI bots are allowed to read this site.",
+      "back": "Back to Applications",
+      "loadFailed": "This couldn't be loaded.",
+      "provisioning": "This site is still being set up. The AI bot blocker will be available once it's running.",
+      "explainer": "AI bots are automated visitors from AI companies. Some only copy your content; others can send you real visitors.",
+      "activeNow": "Active now",
+      "chooseLabel": "Choose what to allow",
+      "blockedCount": "{count, plural, =0 {Nothing blocked} one {# bot blocked} other {# bots blocked}}",
+      "alsoBlocks": "Also blocks: {bots}",
+      "unsaved": "Not saved yet",
+      "showBots": "See the {count} bots this blocks",
+      "hideBots": "Hide the list",
+      "traffic": {
+        "title": "AI bots that visited this site",
+        "subtitle": "Read from this site’s access log.",
+        "range": "{days} days",
+        "unavailable": "This site’s access log couldn’t be read, so there’s nothing to show yet. This isn’t the same as no bots visiting.",
+        "empty": "No AI bots have visited in the last {days} days.",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# request} other {# requests}} · {blocked, plural, other {# blocked}}",
+        "partial": "Only the most recent part of the log was scanned, so busy sites may have had more.",
+        "blocked": "Blocked",
+        "allowed": "Getting through",
+        "columns": {
+          "bot": "Bot",
+          "kind": "Kind",
+          "requests": "Requests",
+          "lastSeen": "Last seen",
+          "status": "Right now"
+        },
+        "kinds": {
+          "training": "Training",
+          "search": "AI search",
+          "agent": "AI assistant",
+          "custom": "Your own rule"
+        }
+      },
+      "groupLabels": {
+        "block_training": "Training crawlers",
+        "block_agents": "AI assistants",
+        "block_all": "AI search crawlers"
+      },
+      "howItWorks": "Your robots.txt isn't changed, and Google and real visitors aren't affected.",
+      "save": "Save",
+      "saving": "Saving…",
+      "savingNote": "This can take a few seconds — the web server is being reloaded.",
+      "discard": "Discard",
+      "saved": "AI bot settings saved.",
+      "saveFailed": "That couldn't be saved.",
+      "noPermission": "You don't have permission to manage this.",
+      "nothingToSave": "Nothing to save"
+    },
+    "firewall": {
+      "pageTitle": "Web Firewall",
+      "pageSubtitle": "Turn away common attacks before they reach this site.",
+      "back": "Back to Applications",
+      "loadFailed": "This couldn't be loaded.",
+      "provisioning": "This site is still being set up. The firewall will be available once it's running.",
+      "explainer": "The firewall inspects every request for patterns used in attacks, and can turn them away before your site runs any code.",
+      "openlitespeed": "This server runs OpenLiteSpeed, where these rules aren't applied yet. Your settings are saved, but nothing is checked until support for it ships.",
+      "enable": "Protect this site",
+      "statusOff": "Off",
+      "statusWatching": "Watching only",
+      "statusBlocking": "Blocking",
+      "offHint": "Requests aren't checked at all.",
+      "watchingHint": "Suspicious requests are recorded, but still allowed through.",
+      "blockingHint": "Suspicious requests are refused.",
+      "whenToUseTitle": "When to use this",
+      "whenToUseBody": "Worth turning on for any public site. Start by watching for a few days — that way you can see whether it would have stopped anything real before it starts blocking.",
+      "modeLabel": "What should happen to a suspicious request?",
+      "modeDetectHint": "Nothing is blocked. Matches are written to a log so you can check for mistakes first.",
+      "modeEnforceHint": "Matching requests are refused immediately. Switch to this once watching looks clean.",
+      "detectLog": "See what it caught",
+      "detectLogHint": "The log file appears the first time something matches — until then the folder may be empty.",
+      "categoriesLabel": "What it checks",
+      "categoriesHint": "Turn one off if it's getting in the way of something legitimate on your site.",
+      "categoryHints": {
+        "query_string": "Attack code hidden in the part of a link after the ? sign.",
+        "request_uri": "Requests for files and paths that only attackers go looking for.",
+        "user_agent": "Visitors identifying themselves as known scanners and attack tools.",
+        "referrer": "Traffic claiming to arrive from spam and malware sites.",
+        "cookie": "Tampered cookies used to slip code past your site.",
+        "method": "Ways of sending a request that a normal browser never uses."
+      },
+      "lastCategory": "At least one check has to stay on. To stop checking altogether, turn the firewall off.",
+      "advanced": "Fine-tuning",
+      "exceptionsTitle": "Let these through",
+      "exceptionsHint": "A request containing any of these words skips every check. Use it when something legitimate gets caught — a plugin's own address, or a page whose name happens to look suspicious.",
+      "exceptionsPlaceholder": "e.g. my-plugin-name",
+      "exceptionsEmpty": "Nothing is being let through.",
+      "blocksTitle": "Always block these",
+      "blocksHint": "A request containing any of these words is refused, even if none of the checks above catch it.",
+      "blocksPlaceholder": "e.g. xmlrpc.php",
+      "blocksEmpty": "Nothing extra is being blocked.",
+      "add": "Add",
+      "remove": "Remove {value}",
+      "countOf": "{count} of {max}",
+      "tooLong": "Keep this under {max} characters.",
+      "listFull": "You've reached the limit of {max}.",
+      "shortTermWarning": "Short words match anywhere in an address — \"conf\" would also block \"confirm.js\". Be as specific as you can.",
+      "unsaved": "Not saved yet",
+      "save": "Save",
+      "saving": "Saving…",
+      "savingNote": "This can take a few seconds — the web server is being reloaded.",
+      "discard": "Discard",
+      "saved": "Firewall settings saved.",
+      "saveFailed": "That couldn't be saved.",
+      "noPermission": "You don't have permission to manage this.",
+      "nothingToSave": "Nothing to save"
     }
   },
   "panelUpdate": {
     "title": "Panel update",
-    "subtitle": "Update ServerAvatar itself. Hosted sites stay online; only this panel restarts.",
+    "subtitle": "Update {brand} itself. Hosted sites stay online; only this panel restarts.",
     "loadFailed": "We couldn't load the update status. Try again in a moment.",
     "installedLabel": "Installed version",
     "versionValue": "v{version}",

@@ -151,6 +151,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
               <FormLabel required>{t("form.processes")}</FormLabel>
               <FormControl>
                 <Input
+                  placeholder="1"
                   type="number"
                   inputMode="numeric"
                   min={1}
@@ -253,7 +254,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
                 <FormItem>
                   <FormLabel required>{t("form.stopWaitSeconds")}</FormLabel>
                   <FormControl>
-                    <Input type="number" inputMode="numeric" min={1} max={300} className="w-24" {...field} />
+                    <Input placeholder="10" type="number" inputMode="numeric" min={1} max={300} className="w-24" {...field} />
                   </FormControl>
                   <p className="text-xs text-muted-foreground">{t("form.stopWaitSecondsHint")}</p>
                   <FormMessage />

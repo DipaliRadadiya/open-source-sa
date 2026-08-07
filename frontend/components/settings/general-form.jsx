@@ -84,6 +84,7 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
               >
                 <FormControl>
                   <Input
+                    placeholder="server.example.com"
                     className="font-mono"
                     autoComplete="off"
                     spellCheck={false}

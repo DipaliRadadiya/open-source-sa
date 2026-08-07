@@ -18,8 +18,17 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
  * place of its hint: the alternative is letting the user pick it, confirm a
  * frightening dialog, and only then be told the API will not allow it.
  */
-export function ChoiceField({ value, onChange, options, disabled, name }) {
+/**
+ * `variant="card"` gives each option a border and tints the chosen one.
+ *
+ * Opt-in, because the default deliberately has no box: five stacked options
+ * with borders and fills read as a wall, which is why the plain variant exists.
+ * Laid out as a few side-by-side choices, though, the box IS the affordance —
+ * a radio dot alone leaves the selected option looking the same as the rest.
+ */
+export function ChoiceField({ value, onChange, options, disabled, name, className, variant }) {
   const id = useId();
+  const card = variant === "card";
 
   return (
     <RadioGroup
@@ -27,7 +36,10 @@ export function ChoiceField({ value, onChange, options, disabled, name }) {
       onValueChange={onChange}
       disabled={disabled}
       name={name}
-      className="gap-1.5"
+      // `className` lets a caller lay the options out in columns where the
+      // width is there for it — three stacked options is a lot of height to
+      // spend inside a dialog. Default is unchanged: one per line.
+      className={cn("gap-1.5", className)}
     >
       {options.map((option) => {
         const checked = option.value === value;
@@ -42,7 +54,10 @@ export function ChoiceField({ value, onChange, options, disabled, name }) {
               // a border plus a tint plus a filled dot was three signals for one
               // fact, and five of those stacked read as a wall of boxes.
               "flex cursor-pointer items-start gap-3 rounded-md px-2 py-1.5 transition-colors",
-              !checked && !blocked && "hover:bg-muted/50",
+              !checked && !blocked && !card && "hover:bg-muted/50",
+              card && "rounded-lg border p-3",
+              card && checked && "border-primary bg-primary/5 ring-1 ring-primary",
+              card && !checked && !blocked && "hover:border-input hover:bg-muted/40",
               (disabled || blocked) && "cursor-not-allowed opacity-60",
             )}
           >

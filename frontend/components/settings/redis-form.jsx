@@ -136,6 +136,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
               >
                 <FormControl>
                   <Input
+                    placeholder="256mb"
                     className="font-mono"
                     autoComplete="off"
                     spellCheck={false}

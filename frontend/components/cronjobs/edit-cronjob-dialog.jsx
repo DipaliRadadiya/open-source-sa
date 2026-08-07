@@ -116,7 +116,7 @@ export function EditCronjobDialog({
             <FormItem>
               <FormLabel required>{t("form.name")}</FormLabel>
               <FormControl>
-                <Input autoComplete="off" {...field} />
+                <Input autoComplete="off" placeholder={t("form.namePlaceholder")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

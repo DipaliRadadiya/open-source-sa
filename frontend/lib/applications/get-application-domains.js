@@ -1,16 +1,6 @@
-import { serverFetch } from "@/lib/api/server-fetch";
 import { domainsResponseSchema, certificateResponseSchema } from "@/lib/schemas/domain";
+import { read } from "@/lib/api/read";
 
-async function read(path, schema) {
-  try {
-    const res = await serverFetch(path);
-    if (!res.ok) return { data: null, failed: true };
-    const parsed = schema.safeParse(await res.json());
-    return parsed.success ? { data: parsed.data, failed: false } : { data: null, failed: true };
-  } catch {
-    return { data: null, failed: true };
-  }
-}
 
 export async function getApplicationDomains(id) {
   const result = await read(`/applications/${id}/domains`, domainsResponseSchema);

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   groupBySubLevel,
-  isApplicationNavBuilt,
+  isNavBuilt,
   findActiveNavItem,
   resolveNavItems,
   NAV_ITEM_CLASS,
@@ -78,9 +78,7 @@ export function AppSidebar({ items }) {
             )}
             <SidebarMenu className="gap-1.5">
               {groupItems.map((item) => {
-                const built =
-                  currentPanel !== "application" ||
-                  isApplicationNavBuilt(item.url);
+                const built = isNavBuilt(currentPanel, item.url);
                 const active = item === activeItem;
 
                 if (!built) {

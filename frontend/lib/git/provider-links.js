@@ -11,12 +11,14 @@
  */
 const GITLAB_PATH = "/-/user_settings/personal_access_tokens";
 
-export function createTokenUrl(provider, host) {
+export function createTokenUrl(provider, host, brand) {
   switch (provider) {
     case "github":
       // Scopes pre-ticked and the note pre-filled — this is the step people
-      // get wrong, and the fix is a link, not a longer paragraph.
-      return "https://github.com/settings/tokens/new?scopes=repo&description=ServerAvatar";
+      // get wrong, and the fix is a link, not a longer paragraph. The note is
+      // the panel's own name because it is what the customer later reads on
+      // GitHub's token list, long after they have forgotten making it.
+      return `https://github.com/settings/tokens/new?scopes=repo&description=${encodeURIComponent(brand)}`;
     case "gitlab":
       return `${base(host, "https://gitlab.com")}${GITLAB_PATH}`;
     case "bitbucket":

@@ -188,6 +188,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                   <div className="flex items-center gap-2 pt-1">
                     <FormControl>
                       <Input
+                        placeholder="2048"
                         className="w-28 font-mono"
                         inputMode="numeric"
                         autoComplete="off"

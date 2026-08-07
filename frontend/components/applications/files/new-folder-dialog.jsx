@@ -84,7 +84,7 @@ export function NewFolderDialog({ appId, path, open, onOpenChange, onSuccess }) 
             <FormItem>
               <FormLabel required>{t("newFolder.name")}</FormLabel>
               <FormControl>
-                <Input autoFocus autoComplete="off" spellCheck={false} className="font-mono" {...field} />
+                <Input autoFocus autoComplete="off" spellCheck={false} placeholder="new-folder" className="font-mono" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

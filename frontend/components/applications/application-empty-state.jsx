@@ -3,11 +3,13 @@ import { useTranslations } from "next-intl";
 import { CheckCircle2, CircleDot, Globe2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useBranding } from "@/components/branding-provider";
 
 const STEP_ICONS = [CircleDot, CheckCircle2, Globe2];
 
 export function ApplicationEmptyState({ canManage = false }) {
   const t = useTranslations("applications");
+  const { name: brand } = useBranding();
   const steps = ["choose", "configure", "provision"];
 
   return (
@@ -17,7 +19,7 @@ export function ApplicationEmptyState({ canManage = false }) {
           <span className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm"><Globe2 className="size-5" /></span>
           <div className="space-y-2">
             <h2 className="text-balance text-xl font-semibold tracking-tight sm:text-2xl">{t("empty.title")}</h2>
-            <p className="max-w-lg text-sm leading-6 text-muted-foreground">{t("empty.description")}</p>
+            <p className="max-w-lg text-sm leading-6 text-muted-foreground">{t("empty.description", { brand })}</p>
           </div>
           {canManage ? <Button asChild size="lg"><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button> : null}
         </div>

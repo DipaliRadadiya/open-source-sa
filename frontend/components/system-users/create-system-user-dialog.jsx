@@ -1,19 +1,32 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, UserRoundPlus } from "lucide-react";
-import { createSystemUserSchema } from "@/lib/schemas/system-user";
+import { ChevronDown, Loader2, Sparkles, UserRoundPlus } from "lucide-react";
+import { createSystemUserSchema, SHELLS } from "@/lib/schemas/system-user";
 import { createSystemUser } from "@/lib/api/system-users";
+import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { PasswordInput } from "@/components/ui/password-input";
 import { FormModal } from "@/components/ui/form-modal";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Form,
   FormField,
@@ -23,18 +36,35 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+const DEFAULT_SHELL = "/bin/bash";
+
 export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
   const t = useTranslations("systemUsers");
   const router = useRouter();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(createSystemUserSchema),
-    defaultValues: { username: "", public_key: "" },
+    defaultValues: {
+      username: "",
+      public_key: "",
+      shell: DEFAULT_SHELL,
+      sudo: false,
+      ssh_access: false,
+      password: "",
+    },
   });
 
   async function onSubmit(values) {
     const payload = { username: values.username };
     if (values.public_key?.trim()) payload.public_key = values.public_key.trim();
+    // Only send what was actually chosen. The backend treats every one of
+    // these as `sometimes`, so an untouched field must be absent rather than
+    // sent as its default — that keeps "just a username" a single useradd.
+    if (values.shell && values.shell !== DEFAULT_SHELL) payload.shell = values.shell;
+    if (values.sudo) payload.sudo = true;
+    if (values.ssh_access) payload.ssh_access = true;
+    if (values.password) payload.password = values.password;
     try {
       const { data } = await createSystemUser(payload);
       toast.success(t("toast.created"));
@@ -50,7 +80,10 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
   const isSubmitting = form.formState.isSubmitting;
 
   function handleOpenChange(next) {
-    if (!next) form.reset();
+    if (!next) {
+      form.reset();
+      setMoreOpen(false);
+    }
     onOpenChange?.(next);
   }
 
@@ -120,6 +153,115 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
             </FormItem>
           )}
         />
+
+        {/* Shell, sudo, SSH login and a password can all be set at creation
+            now, but the common case is still "just a username" — so they are
+            folded away rather than turning a two-field dialog into six. */}
+        <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="ghost" size="sm" className="-ml-2">
+              {t("create.more")}
+              <ChevronDown className={cn("size-3.5 transition-transform", moreOpen && "rotate-180")} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="-mx-1 overflow-hidden px-1 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+            <div className="mt-3 space-y-4">
+              <FormField
+                control={form.control}
+                name="shell"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("create.shell")}</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full font-mono text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {SHELLS.map((shell) => (
+                          <SelectItem key={shell} value={shell} className="font-mono text-xs">
+                            {shell}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">{t("create.shellHint")}</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {[
+                { name: "sudo", label: t("create.sudo"), hint: t("create.sudoHint") },
+                { name: "ssh_access", label: t("create.sshAccess"), hint: t("create.sshAccessHint") },
+              ].map((toggle) => (
+                <FormField
+                  key={toggle.name}
+                  control={form.control}
+                  name={toggle.name}
+                  render={({ field }) => (
+                    <FormItem>
+                      {/* A real label, so the whole row toggles — same as the
+                          firewall and password-protection switches. */}
+                      <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <span className="block text-sm font-medium">{toggle.label}</span>
+                          <span className="block text-xs text-muted-foreground">{toggle.hint}</span>
+                        </div>
+                        <div className="flex h-5 shrink-0 items-center">
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              aria-label={toggle.label}
+                            />
+                          </FormControl>
+                        </div>
+                      </label>
+                    </FormItem>
+                  )}
+                />
+              ))}
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  // Generate is positioned by the label but comes after the
+                  // input in the markup, so Tab reaches the field first.
+                  <FormItem className="relative">
+                    <FormLabel>{t("create.password")}</FormLabel>
+                    <FormControl>
+                      <PasswordInput
+                        autoComplete="new-password"
+                        placeholder={t("create.passwordPlaceholder")}
+                        {...field}
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="absolute top-0 right-0 h-auto p-0 text-xs"
+                      onClick={() =>
+                        form.setValue("password", generatePassword(), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                    >
+                      <Sparkles className="size-3" />
+                      {t("create.generate")}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">{t("create.passwordHint")}</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </FormModal>
     </Form>
   );

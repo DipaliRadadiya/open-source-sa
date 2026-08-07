@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronRight, Plug } from "lucide-react";
 import { FormModal } from "@/components/ui/form-modal";
+import { useBranding } from "@/components/branding-provider";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import { ConnectForm } from "@/components/integrations/git/connect-form";
 
@@ -24,6 +25,7 @@ export function ConnectDialog({
   onOpenChange,
 }) {
   const t = useTranslations("git.connect");
+  const { name: brand } = useBranding();
   const [chosen, setChosen] = useState(null);
 
   function handleOpenChange(next) {
@@ -84,7 +86,7 @@ export function ConnectDialog({
       {/* The objection this answers is the one nobody says out loud: what is
           this panel going to do with my credential. */}
       <p className="text-xs leading-relaxed text-muted-foreground">
-        {t("readOnly")}
+        {t("readOnly", { brand })}
       </p>
     </FormModal>
   );

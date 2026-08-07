@@ -31,9 +31,16 @@ const publicKeyField = z
   .trim()
   .regex(/^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-\S+)\s+\S+/, "sshKey");
 
+// Everything past `username` is optional and defaults to what creation always
+// did (bash, no sudo, no SSH, no password), so the username-only path is
+// unchanged — the backend's `sometimes` rules say the same thing.
 export const createSystemUserSchema = z.object({
   username: usernameField,
   public_key: z.union([z.literal(""), publicKeyField]).optional(),
+  shell: z.enum(SHELLS).optional(),
+  sudo: z.boolean().optional(),
+  ssh_access: z.boolean().optional(),
+  password: z.union([z.literal(""), passwordField]).optional(),
 });
 
 export const systemUserPasswordSchema = z

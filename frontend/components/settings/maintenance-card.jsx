@@ -273,6 +273,7 @@ function UpdatesSection({ updates, canManage }) {
                   >
                     <FormControl>
                       <Input
+                        placeholder="03:00"
                         type="time"
                         className="w-32 font-mono"
                         disabled={!canManage}

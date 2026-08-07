@@ -39,10 +39,45 @@ const BUILT_APPLICATION_URLS = new Set([
   "/workers",
   "/files",
   "/security",
+  "/bot-blocker",
+  "/firewall",
+  "/backups",
 ]);
 
 export function isApplicationNavBuilt(url) {
   return BUILT_APPLICATION_URLS.has(url ?? "");
+}
+
+// The same contract for the SERVER panel, which had none — every catalog item
+// was linked unconditionally, so the moment the backend advertised a screen
+// this frontend had not built (Backups, Storage), the sidebar linked straight
+// into a 404. Held back as "SOON" instead, exactly like the application side.
+const BUILT_SERVER_URLS = new Set([
+  "/dashboard",
+  "/applications",
+  "/databases",
+  "/system-users",
+  "/firewall",
+  "/cron-jobs",
+  "/fail2ban",
+  "/logs",
+  "/services",
+  "/php",
+  "/node",
+  "/settings",
+  "/disk-cleaner",
+  "/backups",
+  "/activity-log",
+  "/integrations/git",
+  "/integrations/storage",
+]);
+
+export function isServerNavBuilt(url) {
+  return BUILT_SERVER_URLS.has(url ?? "");
+}
+
+export function isNavBuilt(panel, url) {
+  return panel === "application" ? isApplicationNavBuilt(url) : isServerNavBuilt(url);
 }
 
 // Resolves a catalog item for the panel it belongs to: application items get

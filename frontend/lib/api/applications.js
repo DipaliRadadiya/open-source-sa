@@ -47,3 +47,17 @@ export function checkApplicationPort(port) {
 export function updateApplicationSecurity(id, payload) {
   return api.put(`/applications/${id}/security`, payload);
 }
+
+// `policy` is one of allow_all | block_training | block_all — the keys of
+// GET /ai-bot-policies, never a locally invented list.
+export function updateApplicationBotBlocker(id, policy) {
+  return api.put(`/applications/${id}/bot-blocker`, { policy });
+}
+
+// One atomic save for the whole firewall screen — toggle, mode, categories and
+// both rule lists go together. Note `categories: []` means ALL SIX on the
+// backend, not none, so callers must never send an empty array to mean "check
+// nothing"; turning the firewall off is what expresses that.
+export function updateApplicationWaf(id, payload) {
+  return api.put(`/applications/${id}/waf`, payload);
+}

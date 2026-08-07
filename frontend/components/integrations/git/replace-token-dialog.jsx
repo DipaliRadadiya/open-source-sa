@@ -13,6 +13,7 @@ import { createTokenUrl } from "@/lib/git/provider-links";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { apiMessage } from "@/lib/api/error-message";
+import { useBranding } from "@/components/branding-provider";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { FormModal } from "@/components/ui/form-modal";
@@ -36,6 +37,7 @@ import {
  */
 export function ReplaceTokenDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.replace");
+  const { name: brand } = useBranding();
   const router = useRouter();
   const [failure, setFailure] = useState(null);
 
@@ -65,7 +67,7 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
   }
 
   const submitting = form.formState.isSubmitting;
-  const tokenUrl = createTokenUrl(account?.provider, account?.host);
+  const tokenUrl = createTokenUrl(account?.provider, account?.host, brand);
 
   return (
     <Form {...form}>
@@ -112,6 +114,7 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
               <FormControl>
                 <PasswordInput
                   autoComplete="off"
+                  placeholder={t("tokenPlaceholder")}
                   spellCheck={false}
                   {...field}
                   onChange={(event) => field.onChange(event.target.value.trim())}

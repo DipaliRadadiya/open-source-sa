@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import {
   gitAccountsResponseSchema,
   providersResponseSchema,
@@ -9,19 +9,6 @@ import {
  * Shapes are imported, never restated here — an inline copy silently rejects
  * the whole response the first time the API grows a field.
  */
-async function read(path, schema) {
-  try {
-    const res = await serverFetch(path);
-    if (!res.ok) return { data: null, failed: true };
-
-    const parsed = schema.safeParse(await res.json());
-    return parsed.success
-      ? { data: parsed.data, failed: false }
-      : { data: null, failed: true };
-  } catch {
-    return { data: null, failed: true };
-  }
-}
 
 /** Connected accounts. A cheap DB read — no outbound calls to any provider. */
 export const getGitAccounts = cache(async function getGitAccounts() {

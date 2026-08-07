@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { serverFetch } from "@/lib/api/server-fetch";
+import { readOr } from "@/lib/api/read";
 import {
   engineStatusResponseSchema,
   dbMetricsResponseSchema,
@@ -7,16 +7,6 @@ import {
   dbTablesResponseSchema,
 } from "@/lib/schemas/database";
 
-async function read(path, schema, fallback) {
-  try {
-    const res = await serverFetch(path);
-    if (!res.ok) return fallback;
-    const parsed = schema.safeParse(await res.json());
-    return parsed.success ? parsed.data : fallback;
-  } catch {
-    return fallback;
-  }
-}
 
 /**
  * Health, history and live processes for one engine.
@@ -25,7 +15,7 @@ async function read(path, schema, fallback) {
  * that answers `status` but has no history yet should still show its status.
  */
 export const getEngineStatus = cache(async function getEngineStatus(engine) {
-  const data = await read(
+  const data = await readOr(
     `/databases/status/${encodeURIComponent(engine)}`,
     engineStatusResponseSchema,
     null,
@@ -34,7 +24,7 @@ export const getEngineStatus = cache(async function getEngineStatus(engine) {
 });
 
 export const getDatabaseMetrics = cache(async function getDatabaseMetrics(engine) {
-  const data = await read(
+  const data = await readOr(
     `/databases/metrics/history?engine=${encodeURIComponent(engine)}`,
     dbMetricsResponseSchema,
     { metrics: [] },
@@ -43,7 +33,7 @@ export const getDatabaseMetrics = cache(async function getDatabaseMetrics(engine
 });
 
 export const getProcesses = cache(async function getProcesses(engine) {
-  const data = await read(
+  const data = await readOr(
     `/databases/processes?engine=${encodeURIComponent(engine)}`,
     dbProcessesResponseSchema,
     { processes: [] },
@@ -53,7 +43,7 @@ export const getProcesses = cache(async function getProcesses(engine) {
 
 /** Tables inside one database, biggest first — the reason to look is size. */
 export const getTables = cache(async function getTables(databaseId) {
-  const data = await read(
+  const data = await readOr(
     `/databases/${databaseId}/tables`,
     dbTablesResponseSchema,
     { tables: [] },

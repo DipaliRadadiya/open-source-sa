@@ -66,6 +66,7 @@ export const workerCheckSchema = z.object({
 
 export const workerSchema = z.object({
   id: z.number(),
+  application_id: z.number().nullish(),
   name: z.string(),
   command: z.string(),
   kind: z.enum(["queue", "horizon", "custom"]).catch("custom"),

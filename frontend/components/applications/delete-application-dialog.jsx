@@ -95,6 +95,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, redir
             {t("confirmLabel", { domain })}
           </Label>
           <Input
+              placeholder={domain}
             id="delete-app-confirm"
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}

@@ -79,6 +79,7 @@ export function DeleteDatabaseDialog({ database, open, onOpenChange, redirectTo 
           {t("delete.confirmLabel", { name })}
         </Label>
         <Input
+            placeholder={name}
           id="delete-db-confirm"
           value={confirm}
           onChange={(event) => setConfirm(event.target.value)}

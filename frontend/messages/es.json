@@ -1,5 +1,11 @@
 {
   "common": {
+    "saveFooter": {
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "discard": "Descartar",
+      "unsaved": "Sin guardar"
+    },
     "showPassword": "Mostrar contraseña",
     "hidePassword": "Ocultar contraseña",
     "clearSearch": "Borrar búsqueda",
@@ -122,8 +128,8 @@
     "domainRequired": "Introduce un nombre de dominio",
     "hostnameInvalid": "Introduce un nombre de host válido (p. ej. example.com)",
     "redirectTargetRequired": "Introduce a dónde debe redirigir este dominio",
-    "required_username": "El usuario es obligatorio",
-    "required_password": "La contraseña es obligatoria",
+    "required_username": "Introduce un usuario.",
+    "required_password": "Introduce una contraseña.",
     "required_currentPassword": "La contraseña actual es obligatoria",
     "confirmPassword": "Confirma tu contraseña",
     "passwordsMismatch": "Las contraseñas no coinciden",
@@ -154,8 +160,6 @@
     "invalidPort": "Introduce un puerto entre 1 y 65535.",
     "min8": "Usa al menos 8 caracteres.",
     "securityUsernameColon": "No puede contener dos puntos (:).",
-    "required_username": "Introduce un usuario.",
-    "required_password": "Introduce una contraseña.",
     "applicationTypeRequired": "Elige un tipo de aplicación.",
     "applicationNameRequired": "Introduce un nombre para esta aplicación.",
     "applicationDomainRequired": "Introduce el dominio que usará esta aplicación.",
@@ -171,7 +175,22 @@
     "required_target": "Introduce una ruta",
     "invalidPath": "Introduce una ruta válida",
     "mustEndInZip": "El destino debe terminar en .zip",
-    "invalidMode": "Introduce exactamente 3 dígitos octales, p. ej. 644"
+    "invalidMode": "Introduce exactamente 3 dígitos octales, p. ej. 644",
+    "required_bucket": "El bucket es obligatorio",
+    "required_accessKey": "La clave de acceso es obligatoria",
+    "required_secretKey": "La clave secreta es obligatoria",
+    "max100": "Debe tener 100 caracteres o menos",
+    "max64": "Debe tener 64 caracteres o menos",
+    "max512": "Debe tener 512 caracteres o menos",
+    "bucketFormat": "Usa solo letras, números, puntos, guiones y guiones bajos",
+    "regionFormat": "Usa solo letras, números y guiones",
+    "prefixFormat": "Usa solo letras, números, puntos, guiones, guiones bajos y barras",
+    "endpointFormat": "Debe ser una dirección https:// completa",
+    "endpointPlaceholder": "Sustituye la parte entre <corchetes angulares> por tu propio valor",
+    "required_application": "Elige un sitio",
+    "required_destination": "Elige dónde guardar las copias",
+    "retentionRange": "Conserva entre 1 y 365 copias",
+    "required_confirm": "Escribe el dominio del sitio para confirmar"
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -255,9 +274,6 @@
     "menu": {
       "back": "Volver a mi cuenta"
     }
-  },
-  "app": {
-    "name": "ServerAvatar"
   },
   "users": {
     "title": "Usuarios",
@@ -522,7 +538,18 @@
       "publicKey": "Clave pública SSH inicial",
       "publicKeyHint": "Opcional — se añade como la primera clave autorizada de la cuenta.",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
-      "submit": "Crear usuario"
+      "submit": "Crear usuario",
+      "more": "Más opciones",
+      "shell": "Shell de acceso",
+      "shellHint": "Déjalo en bash salvo que esta cuenta no deba poder iniciar sesión.",
+      "sudo": "Permitir sudo",
+      "sudoHint": "Permite a esta cuenta ejecutar comandos como root. Puedes cambiarlo después.",
+      "sshAccess": "Permitir acceso por SSH",
+      "sshAccessHint": "Permite que esta cuenta inicie sesión por SSH.",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Déjalo vacío para no poner contraseña",
+      "passwordHint": "Opcional. Al menos 10 caracteres con mayúsculas, minúsculas y un número.",
+      "generate": "Generar"
     },
     "password": {
       "open": "Contraseña",
@@ -769,7 +796,7 @@
     },
     "form": {
       "name": "Nombre",
-      "namePlaceholder": "Copia de seguridad nocturna",
+      "namePlaceholder": "p. ej. Limpieza nocturna",
       "runAs": "Se ejecuta como",
       "runAsPlaceholder": "Selecciona un usuario",
       "runAsLocked": "El usuario de ejecución no se puede cambiar. Elimina la tarea y crea una nueva.",
@@ -814,6 +841,7 @@
     "title": "Algo salió mal",
     "description": "No se pudo cargar esta página. Suele ser temporal: inténtalo de nuevo.",
     "retry": "Reintentar",
+    "retrying": "Reintentando…",
     "partial": {
       "title": "No se pudo cargar esta parte",
       "description": "El servidor no respondió. No ha cambiado nada: inténtalo de nuevo."
@@ -1004,7 +1032,8 @@
       "shortAction": "Editar php.ini"
     },
     "notMeasured": "Sin medir",
-    "phpSettings": "Ajustes de PHP"
+    "phpSettings": "Ajustes de PHP",
+    "iniPlaceholder": "memory_limit = 256M"
   },
   "fail2ban": {
     "title": "Fail2ban",
@@ -2266,7 +2295,7 @@
     "connect": {
       "action": "Conectar cuenta",
       "unavailable": "No se pudo cargar la lista de proveedores.",
-      "readOnly": "ServerAvatar solo lee tus repositorios y ramas. Nunca escribe en ellos.",
+      "readOnly": "{brand} solo lee tus repositorios y ramas. Nunca escribe en ellos.",
       "pickTitle": "Conectar una cuenta de Git",
       "pickSubtitle": "Elige dónde está tu código.",
       "hints": {
@@ -2289,7 +2318,14 @@
       "verifying": "Comprobando con {provider}…",
       "connected": "{label} conectada.",
       "rejected": "{provider} rechazó este token. Comprueba que lo copiaste completo y que tiene acceso a tus repositorios.",
-      "nextStep": "Cuenta conectada. Ve a Aplicaciones → Crear para elegir esta cuenta como origen."
+      "nextStep": "Cuenta conectada. Ve a Aplicaciones → Crear para elegir esta cuenta como origen.",
+      "placeholders": {
+        "token_github": "ghp_… o github_pat_…",
+        "token_gitlab": "glpat-…",
+        "token_bitbucket": "Tu contraseña de aplicación de Bitbucket",
+        "host": "https://gitlab.example.com",
+        "workspace": "tu-workspace-id"
+      }
     },
     "edit": {
       "title": "Editar cuenta",
@@ -2301,7 +2337,9 @@
       "hostHelp": "Déjalo vacío para gitlab.com.",
       "cancel": "Cancelar",
       "submit": "Guardar",
-      "saved": "Cuenta actualizada."
+      "saved": "Cuenta actualizada.",
+      "namePlaceholder": "p. ej. GitHub de la empresa",
+      "workspacePlaceholder": "tu-workspace-id"
     },
     "replace": {
       "title": "Reemplazar el token de {label}",
@@ -2313,12 +2351,13 @@
       "submit": "Reemplazar token",
       "verifying": "Comprobando con {provider}…",
       "replaced": "Token reemplazado.",
-      "rejected": "{provider} rechazó este token. Tu token actual sigue en su sitio."
+      "rejected": "{provider} rechazó este token. Tu token actual sigue en su sitio.",
+      "tokenPlaceholder": "Pega el nuevo token"
     },
     "disconnect": {
       "title": "¿Desconectar {label}?",
       "description": "Si alguna aplicación despliega desde esta cuenta, ya no podrá obtener código. La aplicación en sí no se eliminará.",
-      "stillValid": "Esto elimina el token de ServerAvatar. Seguirá siendo válido en {provider} hasta que lo borres allí.",
+      "stillValid": "Esto elimina el token de {brand}. Seguirá siendo válido en {provider} hasta que lo borres allí.",
       "revokeLink": "Gestionar tus tokens de {provider}",
       "cancel": "Cancelar",
       "submit": "Desconectar",
@@ -2442,7 +2481,7 @@
     },
     "empty": {
       "title": "Tu servidor está listo para su primera aplicación",
-      "description": "Crea un sitio o servicio en un flujo guiado. ServerAvatar lo aprovisionará y luego mostrará aquí su estado en directo.",
+      "description": "Crea un sitio o servicio en un flujo guiado. {brand} lo aprovisionará y luego mostrará aquí su estado en directo.",
       "filteredTitle": "No hay aplicaciones coincidentes",
       "filteredDescription": "Ninguna aplicación coincide con tu búsqueda.",
       "clearSearch": "Limpiar búsqueda",
@@ -2492,7 +2531,7 @@
       "typeHint": "Elige el punto de partida para tu proyecto. Podrás ajustar la configuración avanzada más adelante.",
       "configureHint": "Solo se muestran los campos que esta aplicación necesita.",
       "reviewTitle": "Listo para aprovisionar",
-      "reviewHint": "ServerAvatar creará la configuración del sitio y mostrará el progreso en la siguiente pantalla.",
+      "reviewHint": "{brand} creará la configuración del sitio y mostrará el progreso en la siguiente pantalla.",
       "creatingType": "Estás creando",
       "softwareIncluded": "El software se instalará por ti.",
       "bringYourOwnCode": "Esto crea un sitio servido. Añadirás o desplegarás código después.",
@@ -3093,7 +3132,7 @@
       "whenToUseTitle": "Cuándo usar esto",
       "whenToUseBody": "Útil para un sitio en pruebas, un rediseño en curso o una vista previa para un cliente que no quieres que se encuentre antes del lanzamiento. Desactívalo cuando el sitio esté listo para el público.",
       "warning": "Esto protege todo el sitio, no solo un área de administración: los motores de búsqueda, los monitores de disponibilidad y cualquier integración que acceda a este dominio también quedarán bloqueados hasta que reciban las credenciales. Puedes desactivarlo aquí en cualquier momento si eso causa un problema.",
-      "credentialsNote": "Esto crea un inicio de sesión nuevo solo para este sitio, independiente de tu cuenta de ServerAvatar. Los visitantes verán el aviso de inicio de sesión propio del navegador, no una página con estilo.",
+      "credentialsNote": "Esto crea un inicio de sesión nuevo solo para este sitio, independiente de tu cuenta de {brand}. Los visitantes verán el aviso de inicio de sesión propio del navegador, no una página con estilo.",
       "disabledHint": "El sitio es de acceso público: cualquiera puede verlo.",
       "username": "Usuario",
       "usernamePlaceholder": "p. ej. admin",
@@ -3103,6 +3142,7 @@
       "generate": "Generar",
       "save": "Guardar",
       "saving": "Guardando…",
+      "savingNote": "Esto puede tardar unos segundos: se está recargando el servidor web.",
       "discard": "Descartar",
       "noPermission": "No tienes permiso para gestionar esto.",
       "nothingToSave": "Nada que guardar",
@@ -3110,11 +3150,122 @@
       "disabledToast": "La protección con contraseña está desactivada: el sitio vuelve a ser público.",
       "savedCredentials": "Guarda esto ahora: no se volverá a mostrar:",
       "openSite": "Abrir sitio"
+    },
+    "botBlocker": {
+      "pageTitle": "Bloqueador de bots de IA",
+      "pageSubtitle": "Elige qué bots de IA pueden leer este sitio.",
+      "back": "Volver a Aplicaciones",
+      "loadFailed": "No se pudo cargar esto.",
+      "provisioning": "Este sitio todavía se está configurando. El bloqueador de bots de IA estará disponible cuando esté en funcionamiento.",
+      "explainer": "Los bots de IA son visitantes automáticos de empresas de IA. Algunos solo copian tu contenido; otros pueden enviarte visitantes reales.",
+      "activeNow": "Activo ahora",
+      "chooseLabel": "Elige qué permitir",
+      "blockedCount": "{count, plural, =0 {Nada bloqueado} one {# bot bloqueado} other {# bots bloqueados}}",
+      "alsoBlocks": "También bloquea: {bots}",
+      "unsaved": "Sin guardar",
+      "showBots": "Ver los {count} bots que bloquea",
+      "hideBots": "Ocultar la lista",
+      "traffic": {
+        "title": "Bots de IA que visitaron este sitio",
+        "subtitle": "Leído del registro de acceso de este sitio.",
+        "range": "{days} días",
+        "unavailable": "No se pudo leer el registro de acceso de este sitio, así que todavía no hay nada que mostrar. No es lo mismo que no reciba visitas de bots.",
+        "empty": "Ningún bot de IA ha visitado en los últimos {days} días.",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# solicitud} other {# solicitudes}} · {blocked, plural, other {# bloqueadas}}",
+        "partial": "Solo se analizó la parte más reciente del registro, así que en sitios con mucho tráfico puede haber más.",
+        "blocked": "Bloqueado",
+        "allowed": "Pasa",
+        "columns": {
+          "bot": "Bot",
+          "kind": "Tipo",
+          "requests": "Solicitudes",
+          "lastSeen": "Visto por última vez",
+          "status": "Ahora mismo"
+        },
+        "kinds": {
+          "training": "Entrenamiento",
+          "search": "Búsqueda con IA",
+          "agent": "Asistente de IA",
+          "custom": "Regla tuya"
+        }
+      },
+      "groupLabels": {
+        "block_training": "Rastreadores de entrenamiento",
+        "block_agents": "Asistentes de IA",
+        "block_all": "Rastreadores de búsqueda con IA"
+      },
+      "howItWorks": "Tu robots.txt no se modifica, y Google y los visitantes reales no se ven afectados.",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "savingNote": "Esto puede tardar unos segundos: se está recargando el servidor web.",
+      "discard": "Descartar",
+      "saved": "Ajustes de bots de IA guardados.",
+      "saveFailed": "No se pudo guardar.",
+      "noPermission": "No tienes permiso para gestionar esto.",
+      "nothingToSave": "Nada que guardar"
+    },
+    "firewall": {
+      "pageTitle": "Cortafuegos web",
+      "pageSubtitle": "Rechaza los ataques más comunes antes de que lleguen a este sitio.",
+      "back": "Volver a Aplicaciones",
+      "loadFailed": "No se pudo cargar esto.",
+      "provisioning": "Este sitio todavía se está configurando. El cortafuegos estará disponible cuando esté en funcionamiento.",
+      "explainer": "El cortafuegos revisa cada solicitud en busca de patrones usados en ataques y puede rechazarla antes de que tu sitio ejecute código.",
+      "openlitespeed": "Este servidor usa OpenLiteSpeed, donde estas reglas aún no se aplican. Tus ajustes se guardan, pero no se revisa nada hasta que llegue la compatibilidad.",
+      "enable": "Proteger este sitio",
+      "statusOff": "Desactivado",
+      "statusWatching": "Solo observando",
+      "statusBlocking": "Bloqueando",
+      "offHint": "No se revisa ninguna solicitud.",
+      "watchingHint": "Las solicitudes sospechosas se registran, pero se dejan pasar.",
+      "blockingHint": "Las solicitudes sospechosas se rechazan.",
+      "whenToUseTitle": "Cuándo usarlo",
+      "whenToUseBody": "Conviene activarlo en cualquier sitio público. Empieza observando unos días: así verás si habría bloqueado algo legítimo antes de que empiece a bloquear.",
+      "modeLabel": "¿Qué hacer con una solicitud sospechosa?",
+      "modeDetectHint": "No se bloquea nada. Las coincidencias se escriben en un registro para que primero revises si hay errores.",
+      "modeEnforceHint": "Las solicitudes coincidentes se rechazan de inmediato. Cambia a esto cuando la observación se vea limpia.",
+      "detectLog": "Ver lo que ha detectado",
+      "detectLogHint": "El archivo de registro aparece la primera vez que algo coincide; hasta entonces la carpeta puede estar vacía.",
+      "categoriesLabel": "Qué revisa",
+      "categoriesHint": "Desactiva una si está estorbando algo legítimo de tu sitio.",
+      "categoryHints": {
+        "query_string": "Código de ataque oculto en la parte del enlace posterior al signo ?.",
+        "request_uri": "Solicitudes de archivos y rutas que solo buscan los atacantes.",
+        "user_agent": "Visitantes que se identifican como escáneres y herramientas de ataque conocidas.",
+        "referrer": "Tráfico que dice venir de sitios de spam y malware.",
+        "cookie": "Cookies manipuladas para colar código en tu sitio.",
+        "method": "Formas de enviar una solicitud que un navegador normal nunca usa."
+      },
+      "lastCategory": "Al menos una comprobación debe seguir activa. Para dejar de revisar por completo, desactiva el cortafuegos.",
+      "advanced": "Ajuste fino",
+      "exceptionsTitle": "Dejar pasar esto",
+      "exceptionsHint": "Una solicitud que contenga cualquiera de estas palabras se salta todas las comprobaciones. Úsalo cuando algo legítimo quede atrapado: la dirección propia de un plugin o una página cuyo nombre parezca sospechoso.",
+      "exceptionsPlaceholder": "p. ej. nombre-de-mi-plugin",
+      "exceptionsEmpty": "No se está dejando pasar nada.",
+      "blocksTitle": "Bloquear siempre esto",
+      "blocksHint": "Una solicitud que contenga cualquiera de estas palabras se rechaza, aunque ninguna de las comprobaciones anteriores la detecte.",
+      "blocksPlaceholder": "p. ej. xmlrpc.php",
+      "blocksEmpty": "No se está bloqueando nada más.",
+      "add": "Añadir",
+      "remove": "Quitar {value}",
+      "countOf": "{count} de {max}",
+      "tooLong": "Debe tener menos de {max} caracteres.",
+      "listFull": "Has alcanzado el límite de {max}.",
+      "shortTermWarning": "Las palabras cortas coinciden en cualquier parte de una dirección: \"conf\" también bloquearía \"confirm.js\". Sé lo más concreto posible.",
+      "unsaved": "Sin guardar",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "savingNote": "Esto puede tardar unos segundos: se está recargando el servidor web.",
+      "discard": "Descartar",
+      "saved": "Ajustes del cortafuegos guardados.",
+      "saveFailed": "No se pudo guardar.",
+      "noPermission": "No tienes permiso para gestionar esto.",
+      "nothingToSave": "Nada que guardar"
     }
   },
   "panelUpdate": {
     "title": "Actualización del panel",
-    "subtitle": "Actualiza ServerAvatar. Los sitios alojados siguen en línea; solo se reinicia este panel.",
+    "subtitle": "Actualiza {brand}. Los sitios alojados siguen en línea; solo se reinicia este panel.",
     "loadFailed": "No pudimos cargar el estado de la actualización. Inténtalo de nuevo en un momento.",
     "installedLabel": "Versión instalada",
     "versionValue": "v{version}",

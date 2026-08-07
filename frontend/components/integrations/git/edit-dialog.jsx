@@ -105,7 +105,7 @@ export function EditDialog({ account, open, onOpenChange }) {
             <FormItem>
               <FormLabel required>{t("nameLabel")}</FormLabel>
               <FormControl>
-                <Input autoComplete="off" {...field} />
+                <Input placeholder={t("namePlaceholder")} autoComplete="off" {...field} />
               </FormControl>
               <FormDescription>{t("nameHelp")}</FormDescription>
               <FormMessage />
@@ -121,7 +121,12 @@ export function EditDialog({ account, open, onOpenChange }) {
               <FormItem>
                 <FormLabel>{t("workspaceLabel")}</FormLabel>
                 <FormControl>
-                  <Input autoComplete="off" spellCheck={false} {...field} />
+                  <Input
+                    placeholder={t("workspacePlaceholder")}
+                    autoComplete="off"
+                    spellCheck={false}
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

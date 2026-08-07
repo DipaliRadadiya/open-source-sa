@@ -13,6 +13,7 @@ import { createTokenUrl } from "@/lib/git/provider-links";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { apiMessage } from "@/lib/api/error-message";
+import { useBranding } from "@/components/branding-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
@@ -35,6 +36,22 @@ function isSecret(field) {
   return field.type === "password" || field.name === "token";
 }
 
+// Placeholders per provider field. The API sends name/label/required/type and
+// no example, so the copy lives here — keyed to the field names the provider
+// config actually defines. An unknown field gets no placeholder rather than a
+// missing-key crash.
+const PLACEHOLDER_FIELDS = new Set(["host", "workspace"]);
+const TOKEN_PROVIDERS = new Set(["github", "gitlab", "bitbucket"]);
+
+function fieldPlaceholder(t, providerName, fieldName) {
+  if (fieldName === "token") {
+    return TOKEN_PROVIDERS.has(providerName)
+      ? t(`placeholders.token_${providerName}`)
+      : undefined;
+  }
+  return PLACEHOLDER_FIELDS.has(fieldName) ? t(`placeholders.${fieldName}`) : undefined;
+}
+
 /**
  * The connect form for one provider.
  *
@@ -44,6 +61,7 @@ function isSecret(field) {
  * one renderer, not three hardcoded forms, so a fourth provider is a backend
  * change only.
  */
+
 export function ConnectForm({
   provider,
   open,
@@ -53,6 +71,7 @@ export function ConnectForm({
   onOpenChange,
 }) {
   const t = useTranslations("git.connect");
+  const { name: brand } = useBranding();
   const router = useRouter();
   // Errors the API returns about the whole submission — a rejected token, most
   // often. Shown in the form, because that is where the thing to fix is.
@@ -100,7 +119,7 @@ export function ConnectForm({
   // useWatch, not form.watch(): the latter returns a fresh function each
   // render, which opts this whole component out of the React compiler.
   const host = useWatch({ control: form.control, name: "host" });
-  const tokenUrl = createTokenUrl(provider.name, host);
+  const tokenUrl = createTokenUrl(provider.name, host, brand);
   // The dialog's header mark is the provider's own, so the form says which
   // account you are connecting without reading a word.
   const HeaderIcon = (props) => <ProviderLogo provider={provider.name} {...props} />;
@@ -186,6 +205,7 @@ export function ConnectForm({
                     <PasswordInput
                       autoComplete="off"
                       spellCheck={false}
+                      placeholder={fieldPlaceholder(t, provider.name, spec.name)}
                       {...field}
                       // Tokens are pasted, and a copied line often carries a
                       // trailing newline the provider then rejects for no
@@ -193,7 +213,12 @@ export function ConnectForm({
                       onChange={(event) => field.onChange(event.target.value.trim())}
                     />
                   ) : (
-                    <Input autoComplete="off" spellCheck={false} {...field} />
+                    <Input
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder={fieldPlaceholder(t, provider.name, spec.name)}
+                      {...field}
+                    />
                   )}
                 </FormControl>
                 {isSecret(spec) ? (
@@ -225,6 +250,7 @@ export function ConnectForm({
 
 function TokenHelp({ help, url, value, provider }) {
   const t = useTranslations("git.connect");
+  const { name: brand } = useBranding();
   const pastedUrl = LOOKS_LIKE_URL.test(value ?? "");
 
   return (
@@ -244,7 +270,7 @@ function TokenHelp({ help, url, value, provider }) {
       ) : null}
       {/* Asking someone to paste a credential without saying what will be done
           with it is the whole objection this answers. */}
-      <FormDescription>{t("readOnly")}</FormDescription>
+      <FormDescription>{t("readOnly", { brand })}</FormDescription>
     </div>
   );
 }

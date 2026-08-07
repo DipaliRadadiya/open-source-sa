@@ -1,14 +1,12 @@
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getWebhookProviders } from "@/lib/applications/get-webhook-providers";
 import { DeploymentPanel } from "@/components/applications/deployment/deployment-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
-import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -51,20 +49,12 @@ export default async function ApplicationDeploymentPage({ params }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href="/applications">
-            <ArrowLeft className="size-4" />
-            {t("back")}
-          </Link>
-        </Button>
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t("pageTitle")}
-          </h1>
-          <p className="text-sm text-muted-foreground">{t("pageSubtitle")}</p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/applications"
+        backLabel={t("back")}
+        title={t("pageTitle")}
+        subtitle={t("pageSubtitle")}
+      />
 
       {!settled ? (
         <div className="rounded-2xl border bg-muted/30 p-6 text-sm text-muted-foreground">

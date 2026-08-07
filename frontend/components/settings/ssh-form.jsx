@@ -253,6 +253,7 @@ export function SshForm({
               >
                 <FormControl>
                   <Input
+                    placeholder="22"
                     className="font-mono"
                     inputMode="numeric"
                     autoComplete="off"

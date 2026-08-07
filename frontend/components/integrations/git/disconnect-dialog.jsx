@@ -8,6 +8,7 @@ import { ExternalLink, Unplug } from "lucide-react";
 import { disconnectAccount } from "@/lib/api/git";
 import { revokeTokenUrl } from "@/lib/git/provider-links";
 import { apiMessage } from "@/lib/api/error-message";
+import { useBranding } from "@/components/branding-provider";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
@@ -20,6 +21,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  */
 export function DisconnectDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.disconnect");
+  const { name: brand } = useBranding();
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -55,7 +57,7 @@ export function DisconnectDialog({ account, open, onOpenChange }) {
     >
       <div className="space-y-2 rounded-lg border bg-muted/40 px-3 py-2.5">
         <p className="text-xs leading-relaxed">
-          {t("stillValid", { provider: account?.provider_title ?? "" })}
+          {t("stillValid", { brand, provider: account?.provider_title ?? "" })}
         </p>
         {revokeUrl ? (
           <a

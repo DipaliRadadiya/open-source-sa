@@ -35,6 +35,7 @@ import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
+import { useBranding } from "@/components/branding-provider";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -440,6 +441,7 @@ export function CreateApplicationForm({
   nodeVersionsFailed = false,
 }) {
   const t = useTranslations("applications");
+  const { name: brand } = useBranding();
   const router = useRouter();
   const [gitSource, setGitSource] = useState("account");
   const [repositories, setRepositories] = useState([]);
@@ -1249,7 +1251,7 @@ export function CreateApplicationForm({
 
             <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                {selected ? t("guided.reviewHint") : t("form.chooseTypeHint")}
+                {selected ? t("guided.reviewHint", { brand }) : t("form.chooseTypeHint")}
               </p>
               <div className="flex gap-2">
                 <Button type="button" variant="outline" asChild>

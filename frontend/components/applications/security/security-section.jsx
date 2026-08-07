@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Lock, Sparkles, TriangleAlert, ExternalLink, Loader2 } from "lucide-react";
+import { Lock, Sparkles, TriangleAlert, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { securityFormSchema } from "@/lib/schemas/application";
 import { updateApplicationSecurity } from "@/lib/api/applications";
@@ -15,13 +16,13 @@ import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useBranding } from "@/components/branding-provider";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { PasswordInput } from "@/components/ui/password-input";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 
 /**
@@ -39,6 +40,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
  */
 export function SecuritySection({ appId, application, domain, canManage }) {
   const t = useTranslations("applications.security");
+  const { name: brand } = useBranding();
   const router = useRouter();
   // The password the API just accepted, shown once for copying — it is never
   // sent back on any read, so this is the only chance to grab it again.
@@ -60,9 +62,14 @@ export function SecuritySection({ appId, application, domain, canManage }) {
 
   // Any edit after a save invalidates the "here's what you just set" panel —
   // it must not go on showing a password that no longer matches what's saved.
+  // Only a real user edit counts: a successful save calls form.reset() itself,
+  // which also notifies watchers, and clearing on that would wipe the panel in
+  // the same tick it was set — losing the one and only copy of the password.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/incompatible-library -- react-hook-form's watch() is a known false positive for the React Compiler lint
-    const subscription = form.watch(() => setJustSaved(null));
+    const subscription = form.watch((_values, { type }) => {
+      if (type === "change") setJustSaved(null);
+    });
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -181,7 +188,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                       in — without this, "Username" reads as if it might be
                       the visitor's ServerAvatar login, and the plain browser
                       popup it produces can look like the feature is broken. */}
-                  <p className="text-sm text-muted-foreground">{t("credentialsNote")}</p>
+                  <p className="text-sm text-muted-foreground">{t("credentialsNote", { brand })}</p>
 
                   {/* Side by side, same column width each — username alone at
                       full width next to a half-width password (squeezed by its
@@ -290,20 +297,17 @@ export function SecuritySection({ appId, application, domain, canManage }) {
           </CardContent>
 
           {/* Directly under the content it saves — no gap wide enough to
-              read as a separate, unrelated strip. */}
-          <div className="flex items-center justify-end gap-2 border-t bg-muted/20 px-5 py-3">
-            {isDirty ? (
-              <Button type="button" variant="ghost" onClick={discard} disabled={submitting}>
-                {t("discard")}
-              </Button>
-            ) : null}
-            <ReasonTooltip reason={saveReason}>
-              <Button type="submit" disabled={Boolean(saveReason) || submitting}>
-                {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-                {submitting ? t("saving") : t("save")}
-              </Button>
-            </ReasonTooltip>
-          </div>
+              read as a separate, unrelated strip. `submit` because this card
+              is a real react-hook-form, unlike the other two that save from
+              local state. */}
+          <CardSaveFooter
+            submit
+            saving={submitting}
+            dirty={isDirty}
+            saveReason={saveReason}
+            onDiscard={discard}
+            savingNote={t("savingNote")}
+          />
         </Card>
       </form>
     </Form>

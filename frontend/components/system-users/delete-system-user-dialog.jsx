@@ -61,6 +61,7 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange }) {
           {t("delete.confirmLabel", { username })}
         </Label>
         <Input
+          placeholder={username}
           id="delete-su-confirm"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}

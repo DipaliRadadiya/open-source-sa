@@ -10,6 +10,7 @@ import { getAccountStatuses, testAccount } from "@/lib/api/git";
 import { gitStatusesResponseSchema } from "@/lib/schemas/git";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { useBranding } from "@/components/branding-provider";
 import { Card, CardContent } from "@/components/ui/card";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { AccountRow } from "@/components/integrations/git/account-row";
@@ -29,6 +30,7 @@ import { DisconnectDialog } from "@/components/integrations/git/disconnect-dialo
  */
 export function AccountsCard({ accounts = [], providers = [], canManage, providersFailed }) {
   const t = useTranslations("git");
+  const { name: brand } = useBranding();
   const router = useRouter();
   const [statuses, setStatuses] = useState(null);
   // Only the manual re-check spins the button. The first load is silent — the
@@ -159,7 +161,7 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
                 </p>
                 {/* Said before the credential is asked for, not after. */}
                 <p className="max-w-md text-xs leading-5 text-muted-foreground">
-                  {t("connect.readOnly")}
+                  {t("connect.readOnly", { brand })}
                 </p>
               </div>
 

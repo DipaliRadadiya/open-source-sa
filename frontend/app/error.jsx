@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { TriangleAlert, RotateCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { TriangleAlert } from "lucide-react";
+import { RetryButton } from "@/components/ui/retry-button";
 
 // Root-segment boundary. The (app) and admin layouts fetch the session and the
 // permission catalog, and an error.jsx never catches throws from its OWN
@@ -27,10 +27,7 @@ export default function RootError({ error, reset }) {
             <p className="pt-1 font-mono text-xs text-muted-foreground">{error.digest}</p>
           ) : null}
         </div>
-        <Button variant="outline" onClick={reset}>
-          <RotateCw className="size-4" />
-          {t("retry")}
-        </Button>
+        <RetryButton reset={reset} />
       </div>
     </div>
   );

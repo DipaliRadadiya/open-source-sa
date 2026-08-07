@@ -150,6 +150,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
               </div>
             ) : (
               <Textarea
+                placeholder={t("iniPlaceholder")}
                 value={contents}
                 onChange={(e) => setContents(e.target.value)}
                 spellCheck={false}

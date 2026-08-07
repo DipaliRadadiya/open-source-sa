@@ -102,6 +102,33 @@ export const applicationSchema = z.object({
   webhook: webhookSchema.nullish(),
   basic_auth_enabled: z.boolean().default(false),
   basic_auth_username: z.string().nullish(),
+  is_disabled: z.boolean().default(false),
+  disabled_at: z.string().nullish(),
+  // Whether per-application fail2ban is on. The live jail state is NOT here —
+  // that needs a fail2ban-client call, and has its own endpoint.
+  fail2ban_enabled: z.boolean().default(false),
+  ai_bot_policy: z.string().nullish(),
+  ai_bot_policy_title: z.string().nullish(),
+  // Per-bot overrides on top of the policy. `whenLoaded('botRules')` on the
+  // backend, so today they only come back from the bot-blocker PUT — declared
+  // here so they survive the moment a read endpoint exists.
+  bot_blocked: z.array(z.string()).default([]),
+  bot_allowed: z.array(z.string()).default([]),
+  // npm | yarn | pnpm | bun, for the ssr/csr rendering types.
+  package_manager: z.string().nullish(),
+  is_staging: z.boolean().default(false),
+  production_application_id: z.number().nullish(),
+  has_staging: z.boolean().default(false),
+  cloned_from_application_id: z.number().nullish(),
+  // The 8G Firewall. `waf_exceptions`/`waf_custom_rules` are `whenLoaded` on the
+  // backend — they come back from GET /applications/{id}/waf and from nowhere
+  // else, so a page that needs them cannot reuse the plain application read.
+  waf_enabled: z.boolean().default(false),
+  waf_mode: z.string().nullish(),
+  waf_mode_title: z.string().nullish(),
+  waf_categories: z.array(z.string()).default([]),
+  waf_exceptions: z.array(z.string()).default([]),
+  waf_custom_rules: z.array(z.string()).default([]),
   last_commit: z.union([z.string(), z.record(z.string(), z.unknown())]).nullish(),
   last_deployed_at: z.string().nullish(),
   last_deployed_at_human: z.string().nullish(),
@@ -127,6 +154,78 @@ export const portCheckResponseSchema = z.object({
     service: z.string().nullish(),
     suggested_port: z.number().nullish(),
     message: z.string().nullish(),
+  }),
+});
+
+// The catalog behind the AI Bot Blocker screen. Titles, descriptions, counts and
+// the bot names themselves all come from here — `config/ai_bots.php` on the
+// backend feeds both this endpoint and the vhost that does the blocking, so
+// rendering from the response is what keeps the screen honest about what is
+// actually enforced.
+export const aiBotPolicySchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  blocked_bots: z.array(z.string()).default([]),
+  blocked_count: z.number().default(0),
+});
+
+export const aiBotPoliciesResponseSchema = z.object({
+  ai_bot_policies: z.record(z.string(), aiBotPolicySchema).default({}),
+});
+
+// Which AI bots actually hit this site, read from its access log.
+// `status` carries the distinction that matters: `unavailable` (the log could
+// not be read) is NOT the same claim as `empty` (it was read, nothing came),
+// and showing "no bots visit you" for the first would be a confident lie.
+export const botTrafficBotSchema = z.object({
+  bot: z.string(),
+  hits: z.number().default(0),
+  // training | search | agent | custom
+  category: z.string().nullish(),
+  // What the CURRENT settings do to it — policy plus any per-bot rules.
+  blocked: z.boolean().default(false),
+  last_seen: z.string().nullish(),
+  last_seen_human: z.string().nullish(),
+});
+
+export const botTrafficResponseSchema = z.object({
+  bot_traffic: z.object({
+    status: z.string().default("unavailable"),
+    days: z.number().default(7),
+    scanned_lines: z.number().default(0),
+    since: z.string().nullish(),
+    bots: z.array(botTrafficBotSchema).default([]),
+    totals: z
+      .object({
+        bots: z.number().default(0),
+        hits: z.number().default(0),
+        blocked_hits: z.number().default(0),
+      })
+      .default({ bots: 0, hits: 0, blocked_hits: 0 }),
+  }),
+});
+
+// The six rule categories and the two modes, for the Firewall screen's labels.
+// Titles only today — the backend has no description per category, so the
+// screen's own plain-language hints live in the message files (and a matching
+// `description` field is an open request).
+export const wafOptionSchema = z.object({
+  value: z.string(),
+  title: z.string(),
+});
+
+export const wafOptionsResponseSchema = z.object({
+  waf_categories: z.array(wafOptionSchema).default([]),
+  waf_modes: z.array(wafOptionSchema).default([]),
+});
+
+// Only `web_server` is read here — the 8G ruleset has no OpenLiteSpeed
+// implementation, and a screen that silently saves settings the server will
+// never apply is worse than one that says so.
+export const serverCapabilitiesResponseSchema = z.object({
+  capabilities: z.object({
+    stack: z.string().nullish(),
+    web_server: z.string().nullish(),
   }),
 });
 

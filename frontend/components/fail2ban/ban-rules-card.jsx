@@ -112,6 +112,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
           <Label htmlFor="f2b-maxretry">{t("settings.maxretry")}</Label>
           <Input
             id="f2b-maxretry"
+            placeholder="5"
             type="number"
             min={2}
             value={maxretry}
@@ -125,6 +126,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
           <Label htmlFor="f2b-findtime">{t("settings.findtime")}</Label>
           <Input
             id="f2b-findtime"
+            placeholder="600"
             type="number"
             min={30}
             value={findtime}

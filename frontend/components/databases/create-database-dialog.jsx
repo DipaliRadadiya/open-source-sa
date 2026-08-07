@@ -263,6 +263,7 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
                   <FormLabel required>{t("create.username")}</FormLabel>
                   <FormControl>
                     <Input
+                      placeholder="app_user"
                       autoComplete="off"
                       spellCheck={false}
                       className="font-mono"

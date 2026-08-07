@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { TriangleAlert, RotateCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { TriangleAlert } from "lucide-react";
+import { RetryButton } from "@/components/ui/retry-button";
 
 // Segment-level boundary for every server-panel route: an SSR fetch that throws
 // lands here instead of on Next's default error screen. `reset()` re-runs the
@@ -28,10 +28,7 @@ export default function AppError({ error, reset }) {
           <p className="pt-1 font-mono text-xs text-muted-foreground">{error.digest}</p>
         ) : null}
       </div>
-      <Button variant="outline" onClick={reset}>
-        <RotateCw className="size-4" />
-        {t("retry")}
-      </Button>
+      <RetryButton reset={reset} />
     </div>
   );
 }
