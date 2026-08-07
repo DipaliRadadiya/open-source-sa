@@ -25,7 +25,8 @@ $parameters = [
     'site_url' => '{{ $siteUrl }}',
     'site_title' => '{{ $siteTitle }}',
 
-    // Mailer / email delivery
+    // Mailer / email delivery — keys must match Mautic's expected parameter names
+    'mailer_transport'  => 'smtp',
     'mailer_from_email' => '{{ $mailerEmail }}',
     'mailer_from_name'  => '{{ $mailerName }}',
     'mailer_host'       => '{{ $mailerHost }}',
@@ -33,5 +34,5 @@ $parameters = [
     'mailer_user'       => '{{ $mailerUsername }}',
     'mailer_password'   => '{{ $mailerPassword }}',
     'mailer_auth_mode'  => null,
-    'mailerencryption'  => null,
+    'mailer_encryption' => null,
 ];
