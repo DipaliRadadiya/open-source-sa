@@ -55,8 +55,20 @@ class ApplicationProvisioner
         $webRoot = trim((string) ($application->web_root ?: 'public'), '/');
 
         // slug-based path, not domain-based — stable across domain changes.
-        $base = "{$home}/{$application->slug}";
-        $path = $webRoot === '' ? "{$base}/current" : "{$base}/current/{$webRoot}";
+        // Only a git site is ever redeployed (GitDeployer is the only caller
+        // of ReleaseManager::prepareRelease()/activateRelease()), so only it
+        // gets the releases/<timestamp> + current indirection that makes an
+        // atomic swap and instant rollback possible. Every other site type
+        // gets exactly one directory, once, forever — the symlink layer
+        // would sit there unused, and it's what caused real bugs when it
+        // was applied unconditionally (a marketplace installer's `cp` not
+        // following a destination symlink, `chown -R` silently not
+        // recursing through one).
+        $base = $application->site_type === 'git'
+            ? "{$home}/{$application->slug}/current"
+            : "{$home}/{$application->slug}";
+
+        $path = $webRoot === '' ? $base : "{$base}/{$webRoot}";
 
         abort_if(
             str_contains($path, '/../') || str_ends_with($path, '/..'),
@@ -94,18 +106,30 @@ class ApplicationProvisioner
 
         $this->progress->open($application);
 
-        // Create the releases directory structure and initial release.
-        // The initial release path doubles as the documentRoot for this first run,
-        // since `current` does not exist yet (provisioning creates it).
-        $releasePath = $this->releases->createAppStructure($application);
+        if ($application->site_type === 'git') {
+            // The releases directory structure and initial release. The
+            // initial release path doubles as the documentRoot for this
+            // first run, since `current` does not exist yet (provisioning
+            // creates it).
+            $releasePath = $this->releases->createAppStructure($application);
 
-        // Create the initial `current` symlink pointing at the first release.
-        $this->releases->initialSymlink($application, $releasePath);
+            // The initial `current` symlink, pointing at the first release.
+            $this->releases->initialSymlink($application, $releasePath);
 
-        // Directory creation happened above via ReleaseManager, not step() --
-        // record it directly rather than routing a fake result through step(),
-        // which unconditionally calls ->failed() on whatever it's given.
-        $this->progress->record('create_directory');
+            // Directory creation happened above via ReleaseManager, not
+            // step() -- record it directly rather than routing a fake
+            // result through step(), which unconditionally calls
+            // ->failed() on whatever it's given.
+            $this->progress->record('create_directory');
+        } else {
+            // No release, no symlink -- just the one directory this site
+            // will ever have. documentRoot() already resolved to the flat
+            // path (no /current/) for anything that isn't a git site.
+            $this->step('create_directory', fn () => $this->serverOps->run(
+                ['mkdir', '-p', $documentRoot],
+                ['feature' => 'application', 'op' => 'mkdir', 'application' => $application->id],
+            ));
+        }
 
         // Written *before* ownership is set, not after. `tee` runs elevated,
         // so a placeholder written after the `chown` is a root-owned file

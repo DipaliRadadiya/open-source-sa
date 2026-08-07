@@ -57,7 +57,24 @@ class PhpMyAdminInstaller extends AbstractPhpInstaller
         // Kept beside the site rather than inside it: phpMyAdmin writes
         // uploads and exports here, and anything under the document root is
         // a URL somebody can fetch.
-        $tempDir = dirname($documentRoot).'/tmp';
+        //
+        // Anchored on the app's own {home}/{slug} directory directly, not
+        // dirname($documentRoot) — a git site nests its document root under
+        // current/, so dirname() lands on {home}/{slug} correctly, but a
+        // flat (non-git) site with an empty web_root, like this one, has
+        // its document root AT {home}/{slug}, and dirname() would escape
+        // one level too far into the site owner's shared home directory.
+        // Slug is skipped rather than interpolated blank for a row that
+        // predates the slug column — an empty path segment would still
+        // resolve on disk (a//b === a/b to the filesystem) but would no
+        // longer be the exact string anything comparing paths expects.
+        $appRoot = rtrim((string) $application->systemUser->home_path, '/');
+
+        if ($application->slug) {
+            $appRoot .= '/'.$application->slug;
+        }
+
+        $tempDir = "{$appRoot}/tmp";
         $this->run('configure', ['mkdir', '-p', $tempDir], $application);
         $this->run('configure', [
             'chown', "{$application->systemUser->username}:{$application->systemUser->username}", $tempDir,
