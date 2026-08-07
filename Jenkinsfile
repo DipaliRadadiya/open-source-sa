@@ -129,7 +129,12 @@ pipeline {
                 sh '''
                     set -eu
                     sudo -u panel -H composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$BACKEND_DIR"
-                    sudo -u panel -H chmod -R 775 "$BACKEND_DIR/storage" "$BACKEND_DIR/bootstrap/cache"
+                    # Some cached views/route files were left owned by root (an
+                    # earlier manual artisan run outside this pipeline) -- chmod
+                    # requires being the owner or root, so plain `panel` can't
+                    # touch them. Route through panel's own root-chmod sudo grant.
+                    sudo -u panel -H sudo chown -R panel:panel "$BACKEND_DIR/storage" "$BACKEND_DIR/bootstrap/cache"
+                    sudo -u panel -H sudo chmod -R 775 "$BACKEND_DIR/storage" "$BACKEND_DIR/bootstrap/cache"
                     sudo -u panel -H "$PHP_BIN" "$BACKEND_DIR/artisan" migrate --force
                 '''
             }
