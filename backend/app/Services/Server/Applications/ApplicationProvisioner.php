@@ -99,7 +99,10 @@ class ApplicationProvisioner
         // Create the initial `current` symlink pointing at the first release.
         $this->releases->initialSymlink($application, $releasePath);
 
-        $this->step('create_directory', fn () => null); // done above
+        // Directory creation happened above via ReleaseManager, not step() --
+        // record it directly rather than routing a fake result through step(),
+        // which unconditionally calls ->failed() on whatever it's given.
+        $this->progress->record('create_directory');
 
         // Written *before* ownership is set, not after. `tee` runs elevated,
         // so a placeholder written after the `chown` is a root-owned file
