@@ -135,6 +135,7 @@ return [
     'backup.failed' => 'La copia de seguridad de :application falló (:reason)',
     'central.connected' => 'Conectó este panel al panel central',
     'central.disconnected' => 'Desconectó este panel del panel central',
+    'backup.downloaded' => 'Descargó una copia de seguridad de :application',
     'backup.restored' => 'Restauró :application desde una copia de seguridad',
     'backup.restore_failed' => 'La restauración de :application falló (:reason)',
     'application.environment_updated' => 'Actualizó el entorno de :name (:keys)',

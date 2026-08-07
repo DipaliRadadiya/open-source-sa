@@ -14,8 +14,11 @@ use App\Jobs\RunBackup;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Services\ActivityLogger;
+use App\Services\Server\Backups\Storage\DestinationDisk;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class BackupController extends Controller
@@ -151,6 +154,91 @@ class BackupController extends Controller
         return response()->json([
             'backup_target' => BackupTargetResource::make($target->fresh(['storageDestination']))->resolve(),
         ], 202);
+    }
+
+    /**
+     * Hand over a time-limited link to the archive itself.
+     *
+     * Presigned and returned as JSON — the panel never streams the bytes.
+     * Proxying would pin one PHP-FPM worker for the length of a
+     * multi-gigabyte transfer, and a handful of concurrent downloads is a
+     * dead panel; a 302 would send the browser cross-origin carrying headers
+     * the presigned signature does not cover.
+     *
+     * Deliberately not gated on `verified` the way restore is. Restore
+     * overwrites a live site, so an unverified source is dangerous;
+     * downloading changes nothing, and a failed run's partial archive is
+     * sometimes exactly what someone needs to work out what went wrong. The
+     * three guards below already exclude every case where there is nothing
+     * to hand over.
+     */
+    public function download(Backup $backup, DestinationDisk $disks, ActivityLogger $activity): JsonResponse
+    {
+        $key = $backup->manifest['key'] ?? null;
+
+        if (! is_string($key) || $key === '') {
+            throw ValidationException::withMessages([
+                'backup' => [__('backup.errors.download_no_artifact')],
+            ]);
+        }
+
+        $destination = $backup->target?->storageDestination;
+
+        if ($destination === null) {
+            throw ValidationException::withMessages([
+                'backup' => [__('backup.errors.download_no_destination')],
+            ]);
+        }
+
+        $disk = $disks->for($destination);
+
+        if (! $disk->exists($key)) {
+            // The row says the archive exists; the bucket disagrees. Saying
+            // so beats handing over a link that 404s in the browser, where
+            // it looks like the panel is broken rather than the bucket.
+            throw ValidationException::withMessages([
+                'backup' => [__('backup.errors.download_missing')],
+            ]);
+        }
+
+        // Short: long enough to start the transfer, not long enough for the
+        // link to be worth passing around. S3 authorises at signature check,
+        // so a download already in flight is unaffected when it lapses.
+        $expiresAt = now()->addMinutes(5);
+
+        // A link to every file on the site plus its database dump. Who asked
+        // for it belongs in the audit trail — the URL itself does not, since
+        // it carries a working credential for those five minutes.
+        $activity->log('backup.downloaded', $backup, [
+            'application' => $backup->application?->name,
+            'backup_id' => $backup->getKey(),
+        ]);
+
+        return response()->json([
+            'download' => [
+                'url' => $disk->temporaryUrl($key, $expiresAt),
+                'expires_at' => $expiresAt->format('d-m-Y H:i:s'),
+                'filename' => $this->filename($backup),
+                'size_bytes' => $backup->size_bytes,
+            ],
+        ]);
+    }
+
+    /**
+     * A name that means something in a downloads folder.
+     *
+     * The object key is a uuid — fine on the destination, useless once four
+     * of them are sitting side by side on someone's laptop.
+     */
+    private function filename(Backup $backup): string
+    {
+        $site = $backup->application?->domain ?? 'backup';
+        $stamp = $backup->created_at?->format('Y-m-d-His') ?? 'unknown';
+
+        // Dots become hyphens before slugging — Str::slug strips them, which
+        // turns shop.example.com into "shopexamplecom" and makes the one
+        // part of the name the user recognises unreadable.
+        return Str::slug(str_replace('.', '-', $site)).'-'.$stamp.'-'.$backup->type->value.'.tar.gz';
     }
 
     /** Poll one backup while it runs. */

@@ -2165,6 +2165,15 @@ Two entry points, two permissions, on purpose. **`app_backup`** covers configuri
 
 **`POST /api/applications/{application}/backups`** — run one now (`app_backup,manage`, throttle 6/min) → `202`
 
+**`GET /api/backups/{backup}/download`** — a link to the archive (**`backup,manage`**, throttle 6/min)
+- Response: `{download: {url, expires_at, filename, size_bytes}}`
+- **`manage`, the restore tier — not the read tier.** This URL is every file on the site plus a full database dump. Seeing that backups happened and walking away with what is inside them are different levels of trust.
+- **JSON, not a `302`.** Do `window.location = url` (or an `<a download>`). Do not `fetch()` it — the presigned signature covers the exact request, so your interceptor's headers will break it, and it is cross-origin. `size_bytes` is there so you can warn before someone starts a 5 GB download on a phone.
+- **The URL expires in 5 minutes**, and it is a working credential until then — don't log it, don't put it in a shareable link. A transfer already in flight is unaffected when it lapses.
+- `422` with `errors.backup` when: the upload never finished (no artefact), the storage destination has since been deleted, or the archive is no longer in the bucket.
+- **A `failed` backup can be downloaded** — unlike restore, which requires `verified`. Downloading overwrites nothing, and a partial archive is sometimes what explains the failure.
+- Every download is written to the activity log (`backup.downloaded`) — the URL itself is not.
+
 ### Storage destinations — `/api/integrations/storage/destinations` (`permission:storage`, `manage` to write)
 
 - `storage_destination` fields: `{id, name, driver, endpoint, region, bucket, prefix, has_credentials, last_tested_at, last_tested_at_human, last_test_success, last_test_error, status, status_title, created_at, updated_at}`

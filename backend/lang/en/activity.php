@@ -135,6 +135,7 @@ return [
     'backup.failed' => 'Backup of :application failed (:reason)',
     'central.connected' => 'Connected this panel to the central panel',
     'central.disconnected' => 'Disconnected this panel from the central panel',
+    'backup.downloaded' => 'Downloaded a backup of :application',
     'backup.restored' => 'Restored :application from a backup',
     'backup.restore_failed' => 'Restore of :application failed (:reason)',
     'application.environment_updated' => 'Updated the environment for :name (:keys)',

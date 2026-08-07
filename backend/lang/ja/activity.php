@@ -135,6 +135,7 @@ return [
     'backup.failed' => ':application のバックアップに失敗しました (:reason)',
     'central.connected' => 'このパネルを中央パネルに接続しました',
     'central.disconnected' => 'このパネルと中央パネルの接続を解除しました',
+    'backup.downloaded' => ':application のバックアップをダウンロードしました',
     'backup.restored' => ':application をバックアップから復元しました',
     'backup.restore_failed' => ':application の復元に失敗しました (:reason)',
     'application.environment_updated' => ':name の環境変数を更新しました (:keys)',

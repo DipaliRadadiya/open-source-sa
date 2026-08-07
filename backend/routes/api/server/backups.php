@@ -32,6 +32,20 @@ Route::get('/backups/{backup}', [BackupController::class, 'show'])
     ->middleware('permission:backup');
 
 /*
+| Download — a link to the archive itself.
+|
+| `manage`, the same tier as restore, not the `backup` read tier: this hands
+| over every file on the site plus a full database dump in one URL. Someone
+| trusted to see that backups happened is not automatically trusted to walk
+| away with what is inside them.
+|
+| Throttled: each call signs a live credential, and there is no reason to
+| press it repeatedly.
+*/
+Route::get('/backups/{backup}/download', [BackupController::class, 'download'])
+    ->middleware(['permission:backup,manage', 'throttle:6,1']);
+
+/*
 | Restore — the destructive half.
 |
 | `manage` on `backup`, not `app_backup`: overwriting a live site is a

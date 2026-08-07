@@ -2,13 +2,16 @@
 
 use App\Enums\BackupStatus;
 use App\Jobs\RunBackup;
+use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Backups\Storage\DestinationDisk;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
@@ -422,6 +425,122 @@ describe('the next scheduled run', function () {
             )
             ->assertOk()
             ->assertJsonPath('backup_target.next_run_at', null);
+    });
+});
+
+describe('downloading a backup', function () {
+    beforeEach(function () {
+        $this->target = BackupTarget::create(array_merge(
+            ['application_id' => $this->application->id],
+            targetPayload(),
+        ));
+
+        $this->backup = Backup::create([
+            'backup_target_id' => $this->target->id,
+            'application_id' => $this->application->id,
+            'type' => 'full',
+            'status' => BackupStatus::Verified,
+            'size_bytes' => 5382914,
+            'manifest' => ['key' => 'a1b2c3.tar.gz'],
+        ]);
+
+        // A disk that answers exists()/temporaryUrl() without an S3 endpoint.
+        // Mocked as FilesystemAdapter rather than the Filesystem contract on
+        // purpose: only the adapter declares temporaryUrl (the contract has
+        // no signing), and DestinationDisk::for() returns the contract — an
+        // anonymous stub would fail its return type.
+        $this->fakeDestinationDisk = function (bool $exists = true) {
+            $disk = Mockery::mock(FilesystemAdapter::class);
+            $disk->shouldReceive('exists')->andReturn($exists);
+            $disk->shouldReceive('temporaryUrl')
+                ->andReturn('https://bucket.example.com/a1b2c3.tar.gz?X-Amz-Signature=deadbeef');
+
+            $this->app->bind(
+                DestinationDisk::class,
+                fn () => new DestinationDisk(builder: fn (array $config) => $disk),
+            );
+        };
+    });
+
+    it('returns a signed url, an expiry and a filename someone can recognise', function () {
+        ($this->fakeDestinationDisk)();
+        $this->travelTo('2026-03-10 12:00:00');
+
+        $response = $this->withHeaders(backupHeaders())
+            ->getJson("/api/backups/{$this->backup->id}/download")
+            ->assertOk();
+
+        expect($response->json('download.url'))->toContain('X-Amz-Signature')
+            ->and($response->json('download.expires_at'))->toBe('10-03-2026 12:05:00')
+            ->and($response->json('download.size_bytes'))->toBe(5382914)
+            // The object key is a uuid — useless once four of them are side
+            // by side in a downloads folder.
+            ->and($response->json('download.filename'))->toContain('shop-example-test')
+            ->and($response->json('download.filename'))->toEndWith('-full.tar.gz');
+    });
+
+    it('records who asked, without putting the signed url in the log', function () {
+        ($this->fakeDestinationDisk)();
+
+        $this->withHeaders(backupHeaders())
+            ->getJson("/api/backups/{$this->backup->id}/download")
+            ->assertOk();
+
+        $entry = ActivityLog::where('type', 'backup')->where('action', 'downloaded')->first();
+
+        expect($entry)->not->toBeNull()
+            ->and($entry->user_id)->toBe($this->admin->id)
+            // The URL carries a working credential for five minutes. It has
+            // no business being replayable out of the audit trail.
+            ->and(json_encode($entry->properties))->not->toContain('X-Amz-Signature');
+    });
+
+    it('refuses when the upload never finished', function () {
+        ($this->fakeDestinationDisk)();
+
+        $this->backup->update(['manifest' => []]);
+
+        $this->withHeaders(backupHeaders())
+            ->getJson("/api/backups/{$this->backup->id}/download")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('backup');
+    });
+
+    it('refuses when the archive is gone from the destination', function () {
+        // Saying so beats handing over a link that 404s in the browser,
+        // where it looks like the panel is broken rather than the bucket.
+        ($this->fakeDestinationDisk)(false);
+
+        $this->withHeaders(backupHeaders())
+            ->getJson("/api/backups/{$this->backup->id}/download")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('backup');
+    });
+
+    it('allows a failed backup to be downloaded for forensics', function () {
+        // Unlike restore: downloading overwrites nothing, and a partial
+        // archive is sometimes exactly what explains the failure.
+        ($this->fakeDestinationDisk)();
+
+        $this->backup->update(['status' => BackupStatus::Failed, 'reason' => 'verify_artifact']);
+
+        $this->withHeaders(backupHeaders())
+            ->getJson("/api/backups/{$this->backup->id}/download")
+            ->assertOk();
+    });
+
+    it('denies a user who can view backups but not manage them', function () {
+        ($this->fakeDestinationDisk)();
+
+        // The restore tier, not the read tier: this URL is every file on the
+        // site plus the database.
+        $user = User::factory()->create();
+        grantPermission($user, 'backup');
+        $token = $user->createToken('t')->plainTextToken;
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson("/api/backups/{$this->backup->id}/download")
+            ->assertForbidden();
     });
 });
 
