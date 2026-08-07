@@ -35,7 +35,14 @@ class ApplicationEnvironment
 
     public function path(Application $application): string
     {
-        return $this->provisioner->documentRoot($application).'/.env';
+        // .env lives at the app root, not inside any release. Releases are
+        // immutable after deploy — a .env change must be visible to all of them.
+        // documentRoot() returns the current/ symlink path which changes per-release,
+        // so use appRoot() instead.
+        return rtrim((string) $application->systemUser->home_path, '/')
+            .'/'
+            .$application->slug
+            .'/.env';
     }
 
     public function exists(Application $application): bool

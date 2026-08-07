@@ -41,6 +41,7 @@ class GitDeployer
         private ProcessSupervisor $supervisor,
         private ProvisionProgress $progress,
         private DeploymentRecorder $recorder,
+        private ReleaseManager $releases,
     ) {}
 
     /**
@@ -59,82 +60,51 @@ class GitDeployer
         $this->progress->open($application);
 
         try {
-            $this->trustDocumentRoot($documentRoot);
+            // Always deploy into a fresh release directory. The old `current`
+            // stays live and serving until the symlink swap confirms the new
+            // one is good — zero downtime.
+            $releasePath = $this->releases->prepareRelease($application);
+            $releasePublicPath = $this->releases->releasePublicPath($releasePath);
 
             $credentialFile = $this->writeCredential($application);
             $remote = $this->remoteUrl($application);
             $branch = $application->branch ?: 'main';
 
-            $alreadyCloned = $this->isRepository($documentRoot);
+            // git init + fetch + reset-hard into the new release directory.
+            // No credential survives past this block; the remote stays clean.
+            $this->run('init', null, [
+                'git', 'init', '--quiet', '--initial-branch', $branch, $releasePublicPath,
+            ]);
 
-            if ($alreadyCloned) {
-                // Redeploy: fetch and hard-reset so the working tree matches
-                // the branch exactly. Local edits on a deploy target are not
-                // something to preserve — they would silently break the next
-                // deploy instead.
-                $this->run('fetch', $credentialFile, [
-                    'git', '-C', $documentRoot, 'fetch', 'origin', $branch, '--depth', '1',
-                ]);
+            $this->serverOps->run(
+                ['git', '-C', $releasePublicPath, 'remote', 'add', 'origin', $remote],
+                ['feature' => 'application', 'op' => 'git.remote_add'],
+            );
 
-                $this->run('checkout', null, [
-                    'git', '-C', $documentRoot, 'reset', '--hard', "origin/{$branch}",
-                ]);
-            } else {
-                // Deliberately never `git clone` here, even when the directory
-                // is empty. It used to be the fast path for that case, gated by
-                // a separate `isEmpty()` pre-check — but that check and this
-                // command are two separate shell invocations, and anything that
-                // lands in the directory between them (a second deploy racing
-                // this one, a retry, a File Manager write) makes `git clone`
-                // refuse with "already exists and is not an empty directory",
-                // exactly the failure this replaces. There is no such gap here:
-                // `git init` never refuses based on directory contents.
-                //
-                // This also covers the non-empty cases that motivated the path
-                // originally — a server migrated from another panel has the
-                // user's actual files, and (historically) a provisioned site
-                // had a placeholder, though git applications no longer get one.
-                //
-                // init + fetch + hard reset reaches the same end state as a
-                // clone regardless of what, if anything, was already there. The
-                // reset is what makes it equivalent: the working tree ends up
-                // matching the branch exactly, not merged with whatever was
-                // there.
-                $this->run('init', null, [
-                    'git', 'init', '--quiet', '--initial-branch', $branch, $documentRoot,
-                ]);
+            $this->run('fetch', $credentialFile, [
+                'git', '-C', $releasePublicPath, 'fetch', '--depth', '1', 'origin', $branch,
+            ]);
 
-                // `remote add` fails if a previous attempt already added it,
-                // so set-url after add-or-nothing is the idempotent form.
-                $this->serverOps->run(
-                    ['git', '-C', $documentRoot, 'remote', 'add', 'origin', $remote],
-                    ['feature' => 'application', 'op' => 'git.remote_add'],
-                );
+            $this->run('checkout', null, [
+                'git', '-C', $releasePublicPath, 'reset', '--hard', 'FETCH_HEAD',
+            ]);
 
-                $this->run('fetch', $credentialFile, [
-                    'git', '-C', $documentRoot, 'fetch', '--depth', '1', $remote, $branch,
-                ]);
+            $this->run('checkout', null, [
+                'git', '-C', $releasePublicPath, 'remote', 'set-url', 'origin', $remote,
+            ]);
 
-                $this->run('checkout', null, [
-                    'git', '-C', $documentRoot, 'reset', '--hard', 'FETCH_HEAD',
-                ]);
+            $commit = $this->currentCommit($releasePublicPath);
 
-                // Never with a credential in it — same reason as the clone path.
-                $this->run('checkout', null, [
-                    'git', '-C', $documentRoot, 'remote', 'set-url', 'origin', $remote,
-                ]);
-            }
-
-            $commit = $this->currentCommit($documentRoot);
-
+            // Site is owned by its Linux user. Without this git operations as root
+            // inside a non-root-owned directory fail with "dubious ownership".
             $this->run('set_ownership', null, [
                 'chown', '-R',
                 "{$application->systemUser->username}:{$application->systemUser->username}",
-                $documentRoot,
+                $releasePublicPath,
             ]);
 
             if (filled($this->script($application))) {
-                $this->runScript($application, $documentRoot);
+                $this->runScript($application, $releasePublicPath);
             }
 
             // New code is only live once the process running it has been
@@ -148,7 +118,7 @@ class GitDeployer
             // changed port or start command takes effect on the same deploy
             // that changed it rather than the one after.
             if ($this->supervisor->runs($application)) {
-                $this->supervisor->apply($application, $documentRoot);
+                $this->supervisor->apply($application, $releasePublicPath);
 
                 $this->progress->record('restart_app');
             }
@@ -170,14 +140,18 @@ class GitDeployer
                 $this->verifyDeploy($application);
             }
 
-            // Refresh the cached directory size so the file manager does not hit
-            // the disk on every browse.
-            $this->refreshDirectorySize($application, $documentRoot);
+            // Directory size is measured against the now-served release.
+            $this->refreshDirectorySize($application, $releasePublicPath);
+
+            // Swap the symlink only after every step above has succeeded.
+            // If anything above threw, the old release is still live and serving.
+            $this->releases->activateRelease($application, $releasePath);
 
             return [
                 'steps' => $this->progress->steps(),
                 'commit' => $commit,
-                ...$this->commitDetails($documentRoot),
+                'release_path' => $releasePath,
+                ...$this->commitDetails($releasePublicPath),
             ];
         } finally {
             // Always — a failed deploy must not leave a credential on disk.

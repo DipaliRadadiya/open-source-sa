@@ -25,6 +25,7 @@ use Illuminate\Support\Str;
     'build_command', 'deploy_script', 'start_command', 'package_manager',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
     'steps', 'failed_step', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes',
+    'current_release_id', 'previous_release_path',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
     'webhook_last_delivered_at', 'fail2ban_enabled',
 ])]

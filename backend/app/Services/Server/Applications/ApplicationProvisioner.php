@@ -31,28 +31,30 @@ class ApplicationProvisioner
         private ProcessSupervisor $supervisor,
         private ProvisionProgress $progress,
         private AutoIssueCertificate $autoCertificate,
+        private ReleaseManager $releases,
     ) {}
 
     /**
-     * The site's directory: the owning System User's home plus the domain.
+     * The web root served by nginx/PHP — the `current` symlink target's public/
+     * subdirectory.
      *
-     * Built from stored, validated values — the domain is constrained to a
-     * hostname charset at validation, so no client string can introduce a
-     * path separator or a `..` segment here.
+     * Uses the app slug as the directory name (not the domain), because slugs are
+     * unique, stable, and survive a domain change without the filesystem path
+     * breaking. The old panel uses the same convention.
+     *
+     * Returns the symlink path, so nginx transparently follows it to the real
+     * release. The caller (git deploy) populates the release directory; this
+     * method only assembles the path.
      */
     public function documentRoot(Application $application): string
     {
         $home = rtrim((string) $application->systemUser->home_path, '/');
-        $webRoot = trim((string) ($application->web_root ?: '/'), '/');
+        $webRoot = trim((string) ($application->web_root ?: 'public'), '/');
 
-        $base = "{$home}/{$application->domain}";
-        $path = $webRoot === '' ? $base : "{$base}/{$webRoot}";
+        // slug-based path, not domain-based — stable across domain changes.
+        $base = "{$home}/{$application->slug}";
+        $path = $webRoot === '' ? "{$base}/current" : "{$base}/current/{$webRoot}";
 
-        // Checked here as well as in validation, because this string is handed
-        // straight to `mkdir -p`, `chown -R` and `tee` as root. A `..` segment
-        // in web_root would walk out of the site and hand, say, /etc to the
-        // site's user. Validation is the fix; this is the belt to its braces,
-        // and the place the damage would actually happen.
         abort_if(
             str_contains($path, '/../') || str_ends_with($path, '/..'),
             500,
@@ -89,10 +91,15 @@ class ApplicationProvisioner
 
         $this->progress->open($application);
 
-        $this->step('create_directory', fn () => $this->serverOps->run(
-            ['mkdir', '-p', $documentRoot],
-            ['feature' => 'application', 'op' => 'mkdir', 'application' => $application->id],
-        ));
+        // Create the releases directory structure and initial release.
+        // The initial release path doubles as the documentRoot for this first run,
+        // since `current` does not exist yet (provisioning creates it).
+        $releasePath = $this->releases->createAppStructure($application);
+
+        // Create the initial `current` symlink pointing at the first release.
+        $this->releases->initialSymlink($application, $releasePath);
+
+        $this->step('create_directory', fn () => null); // done above
 
         // Written *before* ownership is set, not after. `tee` runs elevated,
         // so a placeholder written after the `chown` is a root-owned file
@@ -212,8 +219,9 @@ class ApplicationProvisioner
         $driver->remove($application);
 
         if ($removeFiles) {
+            // Use slug, not domain — slug is unique and stable, domain is not.
             $this->serverOps->run(
-                ['rm', '-rf', "{$application->systemUser->home_path}/{$application->domain}"],
+                ['rm', '-rf', "{$application->systemUser->home_path}/{$application->slug}"],
                 ['feature' => 'application', 'op' => 'remove_files', 'application' => $application->id],
             );
         }

@@ -12,6 +12,7 @@ use App\Models\Deployment;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
+use App\Services\Server\Applications\ReleaseManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
@@ -81,6 +82,26 @@ class DeploymentController extends Controller
         return response()->json([
             'deployment' => DeploymentResource::make($fresh)->resolve(),
         ], 202);
+    }
+
+    /**
+     * Roll back to the previous release by repointing the `current` symlink.
+     *
+     * Idempotent: running twice rolls back two generations. Returns the path
+     * rolled back to, so the caller can describe it.
+     */
+    public function rollback(Application $application, ReleaseManager $releases, ActivityLogger $activityLogger): JsonResponse
+    {
+        $rolledBackTo = $releases->rollback($application);
+
+        $activityLogger->log('application.rolled_back', $application, [
+            'name' => $application->name,
+            'rolled_back_to' => $rolledBackTo,
+        ]);
+
+        return response()->json([
+            'rolled_back_to' => $rolledBackTo,
+        ]);
     }
 
     public function updateSettings(Application $application, UpdateDeploySettingsRequest $request, ActivityLogger $activityLogger): JsonResponse
