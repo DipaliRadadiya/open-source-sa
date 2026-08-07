@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'name', 'domain', 'status', 'current_step', 'reason', 'reference',
     'started_at', 'finished_at',
 ])]
-class Clone extends Model
+class SiteClone extends Model
 {
     protected function casts(): array
     {

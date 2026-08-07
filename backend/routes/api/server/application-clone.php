@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Server\ApplicationCloneController;
+use App\Models\SiteClone;
 use Illuminate\Support\Facades\Route;
 
 // Site Clone: duplicate an application to a brand-new domain as a fully
@@ -13,5 +14,6 @@ Route::post('/applications/{application}/clone', [ApplicationCloneController::cl
     ->middleware(['permission:app_clone,manage', 'throttle:5,1']);
 
 // Poll a clone while it runs.
-Route::get('/clones/{clone}', [ApplicationCloneController::class, 'show'])
-    ->middleware(['permission:app_clone', 'throttle:120,1']);
+Route::get('/clones/{site_clone}', [ApplicationCloneController::class, 'show'])
+    ->middleware(['permission:app_clone', 'throttle:120,1'])
+    ->bind(SiteClone::class);
