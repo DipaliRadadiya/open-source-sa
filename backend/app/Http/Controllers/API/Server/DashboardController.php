@@ -4,9 +4,12 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Process\KillProcessRequest;
+use App\Http\Resources\AppIssueResource;
 use App\Http\Resources\ServerMetricResource;
+use App\Models\Application;
 use App\Models\ServerMetric;
 use App\Services\ActivityLogger;
+use App\Services\Server\Applications\AppIssueDetector;
 use App\Services\Server\Metrics\ServerMetrics;
 use App\Services\Server\ProcessKiller;
 use Illuminate\Http\JsonResponse;
@@ -69,6 +72,29 @@ class DashboardController extends Controller
 
         return response()->json([
             'metrics' => ServerMetricResource::collection($rows),
+        ]);
+    }
+
+    /**
+     * Per-application dashboard issues — all health signals in one call.
+     *
+     * Read-only. Each issue type is independently null-safe (a site with no
+     * workers returns no worker issue, not an error).
+     */
+    public function issues(Application $application, AppIssueDetector $detector): JsonResponse
+    {
+        $application->loadMissing(['certificate', 'domains']);
+
+        $issues = $detector->issues($application);
+
+        // `healthy` means zero critical and zero warning. Info-level issues
+        // do not affect the healthy flag.
+        $hasCritical = $issues->contains(fn (array $issue) => $issue['severity'] === 'critical');
+        $hasWarning = $issues->contains(fn (array $issue) => $issue['severity'] === 'warning');
+
+        return response()->json([
+            'issues' => AppIssueResource::collection($issues->values())->resolve(),
+            'healthy' => ! $hasCritical && ! $hasWarning,
         ]);
     }
 }

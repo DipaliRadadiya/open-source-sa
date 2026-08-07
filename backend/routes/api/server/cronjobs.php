@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/cronjobs/schedule-presets', [CronjobController::class, 'schedulePresets'])->middleware('permission:cronjob');
 Route::get('/cronjobs/command-presets', [CronjobController::class, 'commandPresets'])->middleware('permission:cronjob');
 
-Route::get('/cronjobs', [CronjobController::class, 'index'])->middleware('permission:cronjob');
+Route::get('/cronjobs', [CronjobController::class, 'index'])->middleware('permission:cronjob')->middleware('throttle:api');
 Route::post('/cronjobs', [CronjobController::class, 'store'])->middleware('permission:cronjob,manage');
 Route::get('/cronjobs/{cronjob}', [CronjobController::class, 'show'])->middleware('permission:cronjob');
 Route::put('/cronjobs/{cronjob}', [CronjobController::class, 'update'])->middleware('permission:cronjob,manage');

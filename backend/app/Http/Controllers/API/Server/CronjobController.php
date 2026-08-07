@@ -25,6 +25,10 @@ class CronjobController extends Controller
             $query->where('system_user_id', $systemUserId);
         }
 
+        if ($applicationId = $request->input('filter.application_id')) {
+            $query->where('application_id', $applicationId);
+        }
+
         if ($username = $request->input('filter.username')) {
             $query->where('username', $username);
         }

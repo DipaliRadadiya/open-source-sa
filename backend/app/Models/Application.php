@@ -209,6 +209,11 @@ class Application extends Model
      * Newest first wherever this is read — the list only ever answers "what
      * happened recently".
      */
+    public function cronjobs(): HasMany
+    {
+        return $this->hasMany(Cronjob::class);
+    }
+
     public function deployments(): HasMany
     {
         return $this->hasMany(Deployment::class);

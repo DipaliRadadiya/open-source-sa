@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'slug', 'username', 'system_user_id', 'command', 'expression', 'active'])]
+#[Fillable(['name', 'slug', 'username', 'system_user_id', 'application_id', 'command', 'expression', 'active'])]
 class Cronjob extends Model
 {
     /**
@@ -75,6 +75,12 @@ class Cronjob extends Model
     public function systemUser(): BelongsTo
     {
         return $this->belongsTo(SystemUser::class);
+    }
+
+    /** The application this job belongs to, if any. Null = server-level job. */
+    public function application(): BelongsTo
+    {
+        return $this->belongsTo(Application::class);
     }
 
     /**

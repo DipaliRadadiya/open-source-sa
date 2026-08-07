@@ -4,6 +4,9 @@ use App\Http\Controllers\API\Server\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 // Server Dashboard (server panel). Read-only, gated by `dashboard` (view).
+// App Dashboard (per-application issues). Gated by `app_dashboard` (view).
+Route::get('/applications/{application}/issues', [DashboardController::class, 'issues'])
+    ->middleware('permission:app_dashboard');
 // Each concern is its own endpoint. Metrics are read live from /proc (+ df);
 // history comes from the 5-min `server:sample-metrics` collector.
 Route::get('/server/facts', [DashboardController::class, 'facts'])->middleware('permission:dashboard');
