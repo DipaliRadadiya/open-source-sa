@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\ApplicationDomain;
 use App\Models\SystemUser;
 use Database\Seeders\DemoDataSeeder;
 
@@ -82,4 +83,35 @@ it('refuses to run in production', function () {
 
     expect(Application::count())->toBe(0)
         ->and(SystemUser::count())->toBe(0);
+});
+
+it('gives every demo application a slug and a primary domain', function () {
+    $this->seed(DemoDataSeeder::class);
+
+    $applications = Application::all();
+
+    expect($applications)->not->toBeEmpty();
+
+    foreach ($applications as $application) {
+        // Demo data that behaves differently from a real site is worse than
+        // none: it sends whoever is working against it to debug a difference
+        // that does not exist in production. The Domains screen reads the
+        // domains table, so a demo site without the row shows the empty
+        // section that this data exists to help someone see fixed.
+        expect($application->slug)->not->toBeEmpty("{$application->name} has no slug")
+            ->and($application->domains()->where('type', 'primary')->count())
+            ->toBe(1, "{$application->name} has no primary domain");
+    }
+});
+
+it('stays re-runnable now that it writes domains too', function () {
+    // `updateOrCreate` on the domain keeps a second run from adding a
+    // duplicate — the seeder's whole contract is that it can be re-run to pick
+    // up newly added demo fields.
+    $this->seed(DemoDataSeeder::class);
+    $before = ApplicationDomain::count();
+
+    $this->seed(DemoDataSeeder::class);
+
+    expect(ApplicationDomain::count())->toBe($before);
 });

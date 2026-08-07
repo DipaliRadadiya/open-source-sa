@@ -6,7 +6,9 @@ use App\Enums\BackupStatus;
 use App\Enums\BackupType;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
+use App\Enums\DomainType;
 use App\Models\Application;
+use App\Models\ApplicationDomain;
 use App\Models\ApplicationPhpSettings;
 use App\Models\ApplicationWafRule;
 use App\Models\Backup;
@@ -83,10 +85,12 @@ class DemoDataSeeder extends Seeder
             // a real user entered, so re-running this to pick up newly
             // added demo fields (Basic Auth, the AI Bot Blocker, the 8G
             // Firewall) is exactly what re-running a demo seeder is for.
-            Application::updateOrCreate(
+            $application = Application::updateOrCreate(
                 ['domain' => $attributes['domain']],
                 $attributes,
             );
+
+            $this->completeApplication($application);
         }
 
         $this->seedStaging($web->id);
@@ -100,6 +104,33 @@ class DemoDataSeeder extends Seeder
         $this->seedPhpSettings();
 
         $this->command?->info('Demo data seeded. Remove it with: Application::where("domain", "like", "%'.self::DOMAIN_SUFFIX.'")->delete()');
+    }
+
+    /**
+     * The two things every application needs beyond its own row: a slug, which
+     * names its web-server config, and a primary domain row, which is what the
+     * Domains screen reads.
+     *
+     * Shared because the seeder builds applications in two places — the main
+     * loop and the staging site — and demo data that behaves differently from
+     * a real site is worse than none: it sends whoever is working against it
+     * to debug a difference that does not exist in production.
+     */
+    private function completeApplication(Application $application): void
+    {
+        if (blank($application->slug)) {
+            $application->forceFill([
+                'slug' => Application::uniqueSlug((string) $application->name, $application->id),
+            ])->save();
+        }
+
+        $application->domains()->updateOrCreate(
+            ['domain' => $application->domain],
+            [
+                'type' => DomainType::Primary,
+                'is_test' => ApplicationDomain::looksTemporary((string) $application->domain),
+            ],
+        );
     }
 
     /**
@@ -317,7 +348,7 @@ class DemoDataSeeder extends Seeder
             return;
         }
 
-        Application::updateOrCreate(
+        $staging = Application::updateOrCreate(
             ['domain' => 'staging-blog'.self::DOMAIN_SUFFIX],
             [
                 'system_user_id' => $webUserId,
@@ -331,6 +362,10 @@ class DemoDataSeeder extends Seeder
                 'web_root' => '/',
             ],
         );
+
+        // Same as every other demo site — this one is created here rather than
+        // in the main loop, which is exactly how it would get missed.
+        $this->completeApplication($staging);
     }
 
     /**
