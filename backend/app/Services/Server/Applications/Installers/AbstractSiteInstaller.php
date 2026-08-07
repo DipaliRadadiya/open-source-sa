@@ -172,11 +172,26 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     {
         $this->run('configure', ['tee', $path], $application, input: $contents);
         $this->run('configure', ['chmod', $mode, $path], $application);
-        $this->run('configure', [
-            'chown',
-            "{$application->systemUser->username}:{$application->systemUser->username}",
-            $path,
-        ], $application);
+        $this->run('configure', ['chown', $this->runtimePhpOwner($application), $path], $application);
+    }
+
+    /**
+     * Whoever actually executes PHP for this site — not always the site's own
+     * system user. Isolation gives a site its own PHP-FPM pool running as its
+     * own user; until that's turned on (the default for a freshly provisioned
+     * site — see PoolManager::socketFor()), PHP runs under the shared,
+     * server-wide pool as the web server's own account. A 0640 file chowned
+     * to the site user is unreadable by that pool: confirmed in production as
+     * phpMyAdmin's "Existing configuration file ... is not readable" on a
+     * non-isolated site.
+     */
+    private function runtimePhpOwner(Application $application): string
+    {
+        $user = $application->isolated_at !== null
+            ? $application->systemUser->username
+            : (string) config('server.web_server_user', 'www-data');
+
+        return "{$user}:{$user}";
     }
 
     /**
