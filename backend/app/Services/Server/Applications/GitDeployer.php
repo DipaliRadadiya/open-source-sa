@@ -162,6 +162,14 @@ class GitDeployer
                 $this->progress->record('restart_workers');
             }
 
+            // The script and all restarts succeeded — but the site itself might still
+            // be broken. Curl the deployed URL and treat a non-2xx as a failed deploy,
+            // because to the user "deployed" and "working" are the same thing.
+            // Skip for types that have no reachable URL yet.
+            if ($application->domain !== null) {
+                $this->verifyDeploy($application);
+            }
+
             return [
                 'steps' => $this->progress->steps(),
                 'commit' => $commit,
@@ -176,6 +184,57 @@ class GitDeployer
                 );
             }
         }
+    }
+
+    /**
+     * Curl the deployed site to confirm it responds with a 2xx.
+     *
+     * A non-2xx means the deploy — however clean its script exit code — left the
+     * site broken. The user sees "deployed" and "broken" as the same event, so
+     * the panel should too.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function verifyDeploy(Application $application): void
+    {
+        $url = 'http://'.$application->domain;
+
+        // --silent --show-error: no progress output, errors still visible
+        // --max-time 5: hard timeout, do not hang the deploy
+        // --location --max-redirs 1: follow one redirect (http→https most common)
+        // --write-out '%{http_code}': extract the final status code
+        // --output /dev/null: discard body, we only care about the status
+        // -o /dev/null: same as above, compatible with curl < 7.30
+        $result = $this->serverOps->run(
+            [
+                'curl', '--silent', '--show-error',
+                '--max-time', '5',
+                '--location', '--max-redirs', '1',
+                '--write-out', '%{http_code}',
+                '--output', '/dev/null',
+                $url,
+            ],
+            ['feature' => 'application', 'op' => 'verify_deploy', 'application' => $application->id],
+        );
+
+        $code = (int) trim($result->output);
+
+        if ($code >= 200 && $code < 300) {
+            return; // Healthy.
+        }
+
+        // Record the failure on the application so the UI can show what happened
+        // without the user needing to dig into the server-ops log.
+        $application->update([
+            'failed_step' => 'verify',
+            'reference' => $result->reference,
+        ]);
+
+        throw new ProvisioningFailedException(
+            'verify',
+            $result->reference,
+            "curl {$url} returned HTTP {$code}",
+        );
     }
 
     /**
