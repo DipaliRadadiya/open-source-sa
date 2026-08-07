@@ -5,9 +5,10 @@ namespace App\Services\Server\WebServers;
 use App\Models\Application;
 
 /**
- * Config files go straight into sites-enabled (see `web_server_drivers` in
- * config/server.php) — one file per site, nothing to symlink, matching how
- * cron.d files are handled elsewhere in the panel.
+ * Config files are written to sites-available and symlinked into
+ * sites-enabled (see `web_server_drivers` in config/server.php) — the
+ * standard Debian/Ubuntu layout, and the same one install.sh itself uses for
+ * the panel's own vhost.
  */
 class ApacheDriver extends AbstractWebServerDriver
 {

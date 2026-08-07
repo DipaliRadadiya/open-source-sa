@@ -33,6 +33,21 @@ class ManagedFile
     }
 
     /**
+     * Point `link` at `target`, replacing whatever `link` was before.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    public function symlink(string $target, string $link, array $context = []): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            // -f so re-applying an unchanged site replaces the link atomically
+            // instead of failing because it already exists.
+            ['ln', '-sf', $target, $link],
+            array_merge($context, ['op' => 'symlink', 'target' => $target, 'link' => $link]),
+        );
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function delete(string $path, array $context = []): ServerOpsResult

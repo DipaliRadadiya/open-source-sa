@@ -21,29 +21,59 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     ) {}
 
     /**
-     * One file in a directory, which is true for nginx and Apache. A driver
-     * whose configuration is not one file overrides this.
+     * One file in a directory, which is true for nginx and Apache: written to
+     * sites-available, then symlinked from sites-enabled — the same layout
+     * install.sh itself uses for the panel's own vhost. A driver whose
+     * configuration is not one file, or has no such split (OpenLiteSpeed),
+     * overrides this.
      */
     public function apply(Application $application, string $documentRoot): ServerOpsResult
     {
-        return $this->files->put(
+        $written = $this->files->put(
             $this->configPath($application),
             $this->renderConfig($application, $documentRoot),
             ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id],
         );
-    }
 
-    public function remove(Application $application): ServerOpsResult
-    {
-        return $this->files->delete(
+        if ($written->failed()) {
+            return $written;
+        }
+
+        return $this->files->symlink(
             $this->configPath($application),
-            ['feature' => 'application', 'op' => 'remove_config', 'application' => $application->id],
+            $this->enabledPath($application),
+            ['feature' => 'application', 'op' => 'enable_config', 'application' => $application->id],
         );
     }
 
+    /**
+     * Removes both the sites-enabled symlink and the sites-available file it
+     * pointed to, so a re-provision starts from nothing rather than an
+     * available file nothing links to. Both calls are idempotent (`rm -f`),
+     * so this runs unconditionally rather than stopping at the first failure.
+     */
+    public function remove(Application $application): ServerOpsResult
+    {
+        $unlinked = $this->files->delete(
+            $this->enabledPath($application),
+            ['feature' => 'application', 'op' => 'remove_config', 'application' => $application->id],
+        );
+
+        $deleted = $this->files->delete(
+            $this->configPath($application),
+            ['feature' => 'application', 'op' => 'remove_config', 'application' => $application->id],
+        );
+
+        return $unlinked->failed() ? $unlinked : $deleted;
+    }
+
+    /**
+     * The real file — sites-available. This is what gets rendered, tested via
+     * its symlink, and what disable()/enable() overwrite the contents of.
+     */
     public function configPath(Application $application): string
     {
-        $directory = rtrim((string) config("server.web_server_drivers.{$this->name()}.sites_dir"), '/');
+        $directory = rtrim((string) config("server.web_server_drivers.{$this->name()}.sites_available_dir"), '/');
 
         // Named after the application, not its domain. A domain is mutable and
         // was never unique, so two sites could claim one and silently overwrite
@@ -51,6 +81,18 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         // a name nothing could address any more. The slug is unique, is a
         // filename by construction, and belongs to the site rather than to one
         // of its names.
+        return "{$directory}/{$this->fileName($application)}.conf";
+    }
+
+    /**
+     * The symlink — sites-enabled. This is what the web server actually reads
+     * via its `include sites-enabled/*` directive; configPath() alone is
+     * invisible to it until this exists.
+     */
+    protected function enabledPath(Application $application): string
+    {
+        $directory = rtrim((string) config("server.web_server_drivers.{$this->name()}.sites_dir"), '/');
+
         return "{$directory}/{$this->fileName($application)}.conf";
     }
 

@@ -413,7 +413,10 @@ return [
     'web_server_drivers' => [
         'nginx' => [
             'driver' => NginxDriver::class,
+            // The symlink nginx actually reads via its sites-enabled/* include.
             'sites_dir' => env('SERVER_NGINX_SITES_DIR', '/etc/nginx/sites-enabled'),
+            // Where the real file is written; sites_dir then symlinks to it.
+            'sites_available_dir' => env('SERVER_NGINX_SITES_AVAILABLE_DIR', '/etc/nginx/sites-available'),
             // Where the vhost templates point `access_log` / `error_log`.
             'log_dir' => env('SERVER_NGINX_LOG_DIR', '/var/log/nginx'),
             // Which PHP stack this web server implies — see `php_stacks`.
@@ -422,6 +425,7 @@ return [
         'apache' => [
             'driver' => ApacheDriver::class,
             'sites_dir' => env('SERVER_APACHE_SITES_DIR', '/etc/apache2/sites-enabled'),
+            'sites_available_dir' => env('SERVER_APACHE_SITES_AVAILABLE_DIR', '/etc/apache2/sites-available'),
             // `${APACHE_LOG_DIR}` in the templates, resolved — Apache expands
             // it from envvars at start, which we cannot read.
             'log_dir' => env('SERVER_APACHE_LOG_DIR', '/var/log/apache2'),

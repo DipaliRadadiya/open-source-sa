@@ -150,6 +150,11 @@ class SiteConfigResyncer
      * application would have owned before the rename, never anything it finds
      * lying around. A resync that swept `sites-enabled` for files it did not
      * recognise would delete a hand-written vhost the operator put there.
+     *
+     * Goes through the driver's own remove() rather than a raw `rm -f`, so the
+     * legacy sites-enabled symlink is cleaned up too, not just the
+     * sites-available file — a dangling symlink left in sites-enabled fails
+     * the web server's own config test on every reload after this one.
      */
     private function removeLegacyConfig(WebServerDriver $driver, Application $application): void
     {
@@ -160,16 +165,14 @@ class SiteConfigResyncer
         // Addressed by asking the driver what the path *would* be for a
         // slug-less copy, so the answer stays correct for whichever driver is
         // active rather than assuming nginx's layout here.
-        $legacy = $driver->configPath((clone $application)->forceFill(['slug' => null]));
+        $legacyApplication = (clone $application)->forceFill(['slug' => null]);
+        $legacy = $driver->configPath($legacyApplication);
 
         if ($legacy === $driver->configPath($application)) {
             return;
         }
 
-        $this->serverOps->run(
-            ['rm', '-f', $legacy],
-            $this->context($application, 'resync_remove_legacy_config'),
-        );
+        $driver->remove($legacyApplication);
     }
 
     private function read(string $path): ?string

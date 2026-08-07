@@ -157,7 +157,9 @@ it('writes a static config without a php handler', function () {
     );
 
     Process::assertRan(fn ($p) => $p->command[0] === 'tee'
-        && str_contains((string) $p->command[1], 'sites-enabled')
+        // Content is written to sites-available; sites-enabled only gets a
+        // symlink to it (see AbstractWebServerDriver::apply()).
+        && str_contains((string) $p->command[1], 'sites-available')
         && ! str_contains($p->input, 'fastcgi_pass'));
 });
 
