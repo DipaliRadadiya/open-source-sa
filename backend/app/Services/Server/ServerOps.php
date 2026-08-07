@@ -209,7 +209,15 @@ class ServerOps
         // the resolved absolute path — so both spellings land on the same rule.
         $binary = basename($command[0]);
 
-        if (! in_array($binary, (array) config('server.privilege.binaries', []), true)) {
+        // php-fpm{version} (PoolManager's `php-fpm8.4 -t` config test) is a
+        // whole family of binaries, one per installed PHP version, which an
+        // exact-match list can't cover without editing code every time a
+        // version is added or removed. install.sh's own sudoers grant uses a
+        // /usr/sbin/php-fpm* wildcard for the same reason — this mirrors it.
+        $privileged = in_array($binary, (array) config('server.privilege.binaries', []), true)
+            || str_starts_with($binary, 'php-fpm');
+
+        if (! $privileged) {
             return $command;
         }
 

@@ -1264,6 +1264,12 @@ configure_sudoers() {
         /usr/bin/runuser /usr/bin/sh /usr/bin/env
         /usr/sbin/nginx /usr/sbin/apachectl /usr/bin/lswsctrl
         /usr/sbin/phpenmod /usr/sbin/phpdismod /usr/bin/update-alternatives
+        # Wildcard, not one entry per version: PoolManager tests a per-app
+        # pool with `php-fpmX.Y -t` before every reload, and the version list
+        # changes as PHP versions are added/removed through the panel's own
+        # Node/PHP-version feature -- a fixed list here would need editing
+        # every time that happens.
+        /usr/sbin/php-fpm*
         /usr/bin/mysql /usr/bin/mariadb /usr/bin/mariadb-dump /usr/bin/redis-cli /usr/bin/mongosh
         /usr/sbin/ufw /usr/bin/fail2ban-client /usr/sbin/sshd
         /usr/bin/fallocate /usr/sbin/mkswap /usr/sbin/swapon /usr/sbin/swapoff
