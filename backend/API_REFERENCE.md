@@ -12,6 +12,40 @@ Pagination: list endpoints accept `?per_page=10|20|50|100` and return `{"<resour
 
 ---
 
+## What changed on 2026-08-06 — read this if you have already built against the API
+
+Grouped by what it costs you. Details are in each feature's own section.
+
+**Will break something already written**
+| Change | Where |
+|---|---|
+| `PUT .../waf` — **omitting `categories` no longer means "all six"**; it now means "leave unchanged". `[]` means "all off". Same for `exceptions` / `custom_rules`. | *Firewall* |
+| `PUT .../webhook` — permission moved to **`app_deployment`** (was `application`); a non-git site now answers **404**, not 422. | *Deploy on push* |
+| `POST /applications` — **`name` is now unique** → `422` on a duplicate. | *Applications* |
+| Panel update has **14 steps, not 12**. A hardcoded count is wrong. | *Panel self-update* |
+| `GET /ai-bot-policies` returns **four** policies. A three-option radio group silently misses one. | *AI Bot Blocker* |
+
+**New, nothing breaks if ignored**
+| Addition | Where |
+|---|---|
+| `PUT /applications/{id}/web-root` — changing the web root now actually applies | *Web root* |
+| `GET /applications/{id}/bot-traffic` — evidence for the Bot Blocker choice (gated by `app_log`) | *AI Bot Blocker* |
+| `blocked[]` / `allowed[]` custom bot rules on `PUT .../bot-blocker` | *AI Bot Blocker* |
+| `domain_type` (`temp` \| `custom`) on create; `server_ip` + `temporary_domain_suffixes` on capabilities | *Applications*, *capabilities* |
+| `waf_detect` log source (detect mode only) | *Application logs* |
+| `description` per WAF category | *Firewall* |
+| Deployment trigger `initial` | *Deploy* |
+
+**Fixed — behaviour you may have worked around**
+- Creating a site **now records its primary domain**, so the Domains screen is no longer empty. (Sites created *before* this still have no row.)
+- Creating a git site **now fetches the repository**; expect a deployment already running after create.
+- The **app sidebar is localised** in all 8 languages (it was English everywhere), and two permission titles changed: `Firewall` → `Web Firewall`, `Logs` → `System Logs`.
+- A bot list or WAF ruleset shipped in a panel update **now reaches existing sites**.
+
+⚠️ **All of the above is verified against the test suite, which fakes process execution — not against a real server.** Treat first contact with a live box as the actual test.
+
+---
+
 ## Public (no auth)
 
 ### `GET /basic-info`
@@ -102,6 +136,12 @@ Every timezone the panel accepts, grouped by region — for a picker.
 Permission items the caller can see — the **deduped OR-union** across all their assigned roles (each permission appears once; `manage`/`view` are true if any role grants them). Pure role-based, no admin bypass: an admin sees everything only because they hold the Administrator role.
 - Query: `level` (string, optional — filters to one permission level: `server` or `application`)
 - Response: `{"permissions": [{level, sub_level, sub_level_title, name, title, icon, url, permissions: {view, manage}}]}`
+- ⚠️ **`title` was English-only for every application permission until 2026-08-06.** `lang/*/nav.php` held no `app_*` keys at all, so all 15 per-app items fell through to a hardcoded English title in every locale. Fixed — the app sidebar is now properly localised in all 8 languages. If it currently reads English in another locale, that was this bug, not the frontend's.
+- ⚠️ **Two titles changed** in the same fix, because they collided across the server/application line — which matters most in the role editor, where both levels appear in one list:
+  - `app_firewall`: `Firewall` → **`Web Firewall`** (the 8G rule set inspecting requests, versus server-level `firewall`, which is ufw opening and closing ports — same label for two unrelated things is how someone comes to believe enabling a WAF closed a port)
+  - `logs`: `Logs` → **`System Logs`** (the machine's auth.log/syslog, versus `app_log`, one site's access log)
+
+  Both come from the API, so no frontend change is needed — **unless a label is hardcoded or matched on.**
 - **There are two sidebars, and `level` is what selects them.** `?level=server` (17 items) renders the server sidebar; **`?level=application` (16 items) renders the sidebar shown *inside* an application**. Same shape, same rules — the permission row *is* the nav entry.
 - **Application `url`s are relative segments**, not paths: `/domains`, `/files`, `''` for the dashboard. The real route is `/applications/{id}{url}` — prefix it client-side. Server `url`s stay absolute (`/databases`).
 - Application permission names are all prefixed **`app_`** (`app_domain`, `app_log`, …). That is deliberate and load-bearing: ability checks resolve by name, so an app permission called `logs` would collide with the server-level one. Never assume `logs` and `app_log` are related — server `logs` is auth.log and syslog for the whole box, `app_log` is one site's access log.
@@ -242,7 +282,9 @@ Updates the panel itself: fetches a published release, switches the installation
 - Rate limit: 120/min (it is polled every couple of seconds; deliberately cheap, and it makes no outbound call)
 - Response: `{"panel_update": {"id", "status", "status_title", "current_step", "current_step_title", "step_number", "total_steps", "from_version", "to_version", "from_commit", "to_commit", "reason", "reason_title", "rolled_back", "reference", "started_at", "started_at_human", "finished_at", "finished_at_human"}}`
 - `status`: `pending` | `running` | `succeeded` | `failed`
-- `current_step` (12 in order): `maintenance_on`, `backup_database`, `fetch_release`, `checkout_release`, `composer_install`, `migrate`, `seed_permissions`, `optimize`, `frontend_build`, `restart_services`, `maintenance_off`, `health_check` — plus `rollback` when recovering. Drive a progress bar from `step_number` / `total_steps` rather than hardcoding the list; show `current_step_title` (localized) as the label.
+- `current_step` (**14** in order, was 12): `maintenance_on`, `backup_database`, `fetch_release`, `checkout_release`, `composer_install`, `migrate`, `seed_permissions`, **`configure_services`**, **`resync_site_configs`**, `optimize`, `frontend_build`, `restart_services`, `maintenance_off`, `health_check` — plus `rollback` when recovering. Drive a progress bar from `step_number` / `total_steps` rather than hardcoding the list; show `current_step_title` (localized) as the label. **A hardcoded count of 12 is now wrong.**
+- **`configure_services`** (added 2026-08-06) points the queue and sessions at Redis when Redis is actually there. On a SQLite panel the queue meant the worker polled the same single-writer file every request wrote to — the cause of intermittent "database is locked". It proves Redis answers first and changes nothing if it does not, never overwrites a driver the operator chose, and refuses to move the queue while jobs are still in the database table (switching underneath them orphans that work silently). Moving the session store **signs everyone out once.**
+- **`resync_site_configs`** (added 2026-08-06) re-renders every active site's vhost. A vhost is a *rendered file*, so the AI bot list, the 8G ruleset and the templates all ship inside the panel and previously never reached an existing site — the panel would report the new bot list while sites enforced the old one, and neither side could tell. Tests each site individually and rolls that one back on failure rather than aborting the run.
 - On failure, `reason` is **the step that failed** (a stable key), and `reason_title` is the localized explanation. Raw stderr never reaches the client. `rolled_back: true` means the previous version was restored.
 - ⚠️ **Expect the poll to fail mid-update.** `restart_services` restarts php-fpm, and `maintenance_on`…`maintenance_off` returns `503`. Treat connection errors and `503` during a run as *normal progress*, retry with backoff, and resume polling once the panel answers again — a finished update is reconstructed from the runner's state file, so the final status is correct even though nothing was alive to report it at the time.
 
@@ -1094,9 +1136,14 @@ One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moo
 **`GET /api/applications/{application}`** → `{ application: {…} }`
 
 **`POST /api/applications`** (`manage`) — create the record **and queue provisioning**. `201 { application: {…} }` returns immediately at `status: "pending"`; poll until `active` or `failed`.
-- Always: `site_type`, `name`, `domain`, `system_user_id`.
+- Always: `site_type`, `name`, `domain`, `system_user_id`. Optional: `domain_type`.
 - Then whatever the chosen type's schema declared. **Validation is generated from that same schema**, so WordPress rejects a missing `admin_email`, and keys the type never declared are ignored rather than stored.
 - `serving_profile` is derived from the type — not accepted from the client.
+- ⚠️ **`name` is now unique** (2026-08-06) → `422` on a duplicate. It names the web-server config file: two sites sharing a name shared a file, and the second silently replaced the first with nothing anywhere saying so. A `slug` is derived from it server-side (`"My Blog"` → `my-blog.conf`) and is never accepted from the client — a caller choosing that is a caller choosing which file the panel overwrites. Two names that slug identically (`"My Blog"` / `"my blog"`) are both allowed and get `my-blog` / `my-blog-2`.
+- **`domain_type`** — `temp` or `custom`, optional (added 2026-08-06). Says whether the hostname is the temporary one the panel offers or a domain the user owns. **`domain` is sent either way** — only the provenance differs, and that decides whether the name may ever go on a Let's Encrypt certificate. Omitted is treated as the user's own. An unrecognised value → `422`.
+  - The label is **not** taken on trust: a `nip.io` / `sslip.io` suffix is flagged as temporary whatever the client called it. nip.io is not on the Public Suffix List, so every certificate issued for it anywhere in the world counts against one shared weekly limit — believing a mislabelled name is how a panel spends a quota it does not own.
+- ✅ **The primary domain row is created here** (fixed 2026-08-06). Previously nothing wrote to the domains table at create time — only the migration that introduced it backfilled the sites existing then — so every application created afterwards came up with an **empty Domains section** while plainly answering on a domain. `GET /applications/{id}/domains` now returns one `primary` row immediately, for every site type.
+  - **Applications created before this fix still have no row.** They need a one-off backfill; ask if you want it added to `sites:resync`.
 - **Git — two paths, exactly one required:** `git_source: "account"` needs `git_account_id` + `repository`; `git_source: "public_url"` needs `repository_url` and **no account at all** (a public repo needs no credentials). Pasted URLs must be `https://` and may not point at loopback or the cloud metadata range.
 - `422` on a site type this server can't run — the record would describe something unprovisionable.
 
@@ -1110,6 +1157,8 @@ One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moo
 - On success: `last_commit` + `last_deployed_at` record what is actually on disk.
 - **A failed redeploy leaves a live site live.** The old code is still there and still served, so `status` stays `active` and only `failed_step`/`reference` are set. Show that as a deploy warning, not as an outage.
 - **A burst of pushes queues one deploy, not one per push.** The job is unique-until-processing per application: at most one running plus one waiting. A push that arrives mid-deploy still queues the follow-up, because the running deploy fetched the tip before that commit existed.
+- ✅ **Git sites now deploy themselves once provisioned** (fixed 2026-08-06). Three defects stacked: provisioning wrote a placeholder into the document root and `git clone` refuses a non-empty destination, so every first deploy died; nothing dispatched that deploy anyway; and the placeholder was written *after* `chown -R`, leaving a root-owned file the File Manager could list but never edit or delete. **After create, expect a deployment already in progress — not "never deployed".**
+- **New trigger value `initial`** (label "First deploy", localised) alongside `manual`, `webhook`, `redeploy`. Recorded separately because nobody pressed anything, and a history that claims they did makes the rest of the history untrustworthy. **A hardcoded trigger map will miss it.**
 
 #### Deploy on push (webhooks)
 
@@ -1121,7 +1170,9 @@ One-click types available today: **WordPress**, **Nextcloud**, **Joomla**, **Moo
 | `bitbucket` | HMAC-SHA256 over the raw body, `X-Hub-Signature` | `generate` |
 | `gitlab` | its **signing token** (HMAC over `id.timestamp.body`, Standard Webhooks) *or* its legacy plaintext `X-Gitlab-Token` | `either` — GitLab mints the signing token and shows it once, so that one can only be **pasted in**; the legacy one we can generate |
 
-**`PUT /api/applications/{application}/webhook`** (`manage`) — body `{ enabled, provider?, secret?, rotate? }` → `{ application: {…} }`. Git applications only (`422` otherwise).
+**`PUT /api/applications/{application}/webhook`** — body `{ enabled, provider?, secret?, rotate? }` → `{ application: {…} }`. Git applications only.
+
+⚠️ **Permission changed 2026-08-06: `app_deployment` (manage), not `application`.** It configures the Deployment screen, and the old gating had the grants backwards — whoever owned that screen could not set up its webhook, while someone who could not see the screen at all could. **A non-git site now answers `404`, not `422`**: moving it under an `app_`-prefixed permission brings it under the site-type check, and for a WordPress site that screen does not exist, which is a different statement from "your request was malformed".
 - `provider` is **required when enabling**; it is stored, not detected from the incoming request, so a caller cannot pick which verification runs. For a public repository there is no connected account to infer it from, which is why it is asked for.
 - `secret` omitted → the panel generates one (64 hex chars). Paste one instead for a **GitLab signing token**.
 - `rotate: true` mints a new secret and invalidates the old, keeping the same URL.
@@ -1258,6 +1309,19 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
 - **The swap is tested before it is trusted, both directions.** A failed config test rolls the vhost straight back to whatever was serving before the request — a disable or enable can never leave a site's config pointed at nothing. A `500 {message, reference}` from either endpoint means the vhost is unchanged from before the call.
 - Render the button from `is_disabled`, not from `status` — a `failed` or `pending` application can be `is_disabled: false` and vice versa; they are independent.
 
+### Web root — change which directory is served (`application` permission)
+
+**`PUT /api/applications/{id}/web-root`** (`manage`, throttle 10/min) — body `{ web_root }`. `200 {application}`.
+
+Added 2026-08-06. `web_root` was already a column *and* already editable through `PUT /applications/{id}` — but **nothing applied it**. You changed it, got a `200`, and the server kept serving the old directory until someone re-provisioned. The generic update now routes through the same code, so either endpoint works.
+
+- **Synchronous** — creating the directory, rewriting the vhost, testing and reloading takes well under a second. A real pass or a real failure, not a `202` and hope.
+- **Four things move, not one.** The document root is not just the vhost's `root`: the PHP-FPM pool's session path and error log, a Node unit's `WorkingDirectory`, and `.panel/.htpasswd` (which Password Protection points the vhost at) are all derived from it. A webroot change that moved only the vhost would silently switch password protection off.
+- **Existing files are not moved.** The new directory is created and owned by the site user, and starts empty — **warn the user**, or their site serves nothing until they put files there.
+- **Ordering:** everything the new config references is put in place first, then the vhost is applied → tested → reloaded with rollback, and only then is the stale credential file removed. At no instant does a live config point at a file that is not there.
+- Pending sites store the value only (nothing on disk yet). **Disabled sites store it without republishing** — their vhost points at the disabled page on purpose, and a webroot change must not put a site back online as a side effect.
+- Same `..`-traversal and charset validation as create. `500 {message, reference}` means the config test failed and the previous web root is still live.
+
 ### Password Protection — whole-site Basic Auth (`app_security`, its own screen)
 
 **`PUT /api/applications/{id}/security`** (`manage`) — one save action, on/off plus the credential in one call.
@@ -1272,26 +1336,80 @@ Site types with no installer (`git`, `php`, `static`) skip all of this; there is
 
 ### AI Bot Blocker — whole-site crawler control (`app_bot_blocker`, its own screen)
 
-Three plain-language choices, not a switch — a blunt on/off would block AI *search* crawlers (ChatGPT search, Perplexity, …) exactly as hard as the crawlers that only scrape for model training and never send a visitor back. `config/ai_bots.php` is the one place that classifies a bot name as `training` or `retrieval`; nothing else in this feature — not the vhost template, not the API response — keeps its own copy.
+**Four** plain-language choices, not a switch — a blunt on/off would block AI *search* crawlers (ChatGPT search, Perplexity, …) exactly as hard as the crawlers that only scrape for model training and never send a visitor back. `config/ai_bots.php` is the one place that classifies a bot name; nothing else in this feature — not the vhost template, not the API response — keeps its own copy.
 
-**`GET /api/ai-bot-policies`** (`view`) — the catalog: all three policies, each with its resolved bot list, for the screen's transparency panel ("23 bots blocked under this option").
+**Three buckets, not two** (changed 2026-08-06). "AI bot" is three different things and blocking them is three different decisions:
+
+| Bucket | What it is | Examples |
+|---|---|---|
+| `training` | Feeds model weights, never sends a visitor back | `GPTBot`, `ClaudeBot`, `Google-Extended` |
+| `search` | Indexes the site so it can be **cited** in an AI answer — inbound traffic | `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot` |
+| `agent` | Fetches one page because a person asked *right now* — load, no citation | `ChatGPT-User`, `Claude-User`, `Perplexity-User` |
+
+The split follows the industry: Anthropic separated ClaudeBot from its retrieval agents in Q2 2026, and Cloudflare moved from two categories to Search/Agent/Training in July 2026. Treating training and search as one bucket is the documented expensive mistake.
+
+**`GET /api/ai-bot-policies`** (`view`) — the catalog: all four policies, each with its resolved bot list, for the screen's transparency panel ("23 bots blocked under this option").
 ```json
 {
   "ai_bot_policies": {
-    "allow_all": {"title": "Allow all AI bots", "description": "No AI crawler is blocked.", "blocked_bots": [], "blocked_count": 0},
+    "allow_all":      {"title": "Allow all AI bots", "description": "No AI crawler is blocked.", "blocked_bots": [], "blocked_count": 0},
     "block_training": {"title": "Block AI training bots", "description": "…", "blocked_bots": ["GPTBot", "ClaudeBot", "…"], "blocked_count": 23},
-    "block_all": {"title": "Block all AI bots", "description": "…", "blocked_bots": ["GPTBot", "…", "OAI-SearchBot", "PerplexityBot", "…"], "blocked_count": 30}
+    "block_agents":   {"title": "Block AI training and AI assistants", "description": "…", "blocked_bots": ["GPTBot", "…", "ChatGPT-User", "Claude-User", "…"], "blocked_count": 27},
+    "block_all":      {"title": "Block all AI bots", "description": "…", "blocked_bots": ["GPTBot", "…", "OAI-SearchBot", "PerplexityBot", "…"], "blocked_count": 31}
   }
 }
 ```
-- Render the UI from this response, not a hardcoded label/list on the frontend — the count and names are always exactly what the vhost enforces, because both read the same config file.
+- Render the UI from this response, not a hardcoded label/list on the frontend — the count and names are always exactly what the vhost enforces, because both read the same config file. **A hardcoded three-option radio group will silently miss `block_agents`.**
 
-**`PUT /api/applications/{id}/bot-blocker`** (`manage`) — body `{ policy }`, one of `allow_all | block_training | block_all`. `200 {application}` with `ai_bot_policy`/`ai_bot_policy_title` refreshed.
+**`PUT /api/applications/{id}/bot-blocker`** (`manage`) — body `{ policy, blocked?, allowed? }`. `policy` is one of `allow_all | block_training | block_agents | block_all`. `200 {application}` with `ai_bot_policy`/`ai_bot_policy_title`/`bot_blocked`/`bot_allowed` refreshed.
+
+**Per-site custom rules** (added 2026-08-06) — two optional lists, both max 50 entries:
+- **`blocked`** — user agents this site blocks *on top of* the policy. Not only AI crawlers: the SEO and scraper bots people actually complain about (`SemrushBot`, `AhrefsBot`, `BLEXBot`) belong here.
+- **`allowed`** — user agents from the built-in list this site does **not** want blocked. Without it, a site needing one of the 23 training crawlers would have to switch the whole policy off and unblock all of them.
+- **An `allowed` entry beats a contradictory `blocked` one.** Two rules that disagree have one safe resolution, and it is the one that keeps traffic flowing.
+- **Absent means "leave the stored list alone"; `[]` means "remove them all."** Two different intentions — a form that only changes the policy must not have to resend the lists to keep them.
+- **Validation refuses rather than sanitises.** The value lands in an nginx `if`, an Apache `SetEnvIfNoCase` or an OLS rewrite, all written by an elevated process, so: strict charset (`A-Za-z0-9._-/`, 2–100 chars), no whitespace, quotes, braces or newlines → `422`.
+- **Catch-alls are refused by name** → `422` with an explanatory message. The pattern matches case-insensitively from the *start* of the user agent, so `bot` also matches `Googlebot` and `bingbot` — a widely-copied nginx "block AI bots" snippet ships with exactly that bug. `bot`, `bots`, `crawler`, `spider`, `agent`, `mozilla`, `*`, `Googlebot`, `bingbot` and similar are rejected. Real names (`SemrushBot-OCOB`, `Google-Extended`, `GPTBot/1.3`, `anthropic-ai`) pass. **Surface the message verbatim — it explains why.**
+- Deduped case-insensitively, because the vhost match is.
 - **Default for every new site is `allow_all`** — blocking anything is an action the site owner takes, not something the panel decides for them.
 - Mechanically: same apply → test → reload → rollback sequence as Password Protection and Enable/disable — a failed config test restores the previous policy before failing, so a bad change never leaves the vhost half-applied.
 - **Enforcement is the vhost-level user-agent block only** — nginx `if ($http_user_agent ~* …) { return 403; }`, Apache `SetEnvIfNoCase` + `<RequireAll><Require not env …></RequireAll>` (chosen over `mod_rewrite` so it can never collide with a site's own `.htaccess` rewrite rules), OpenLiteSpeed via its existing `rewrite{}` block. **No `robots.txt` is written or modified** — plenty of sites already ship their own (SEO plugins, a `Sitemap:` line), and generating one risks silently overwriting it; `robots.txt` is voluntary anyway; the enforced 403 is what actually blocks a bot that ignores it.
 - **A blocked bot is checked first**, ahead of Basic Auth — it gets a flat 403 and never sees the login prompt, on every driver.
-- Known limitation, stated rather than hidden: the bot list can only change for a given site the next time its vhost is re-rendered (this endpoint, a deploy, a certificate renewal, …) — a policy shipped in a future panel update does not retroactively reach an already-configured site that never gets touched again.
+- ~~Known limitation: the bot list only changes when a site's vhost is next re-rendered.~~ **Fixed 2026-08-06.** A panel update now runs `sites:resync`, which re-renders every active site's config — so a bot list shipped in an update reaches existing sites instead of leaving the panel reporting "31 bots blocked" while the vhost still enforced the old set. See *Panel self-update*.
+
+**`GET /api/applications/{id}/bot-traffic?days=7`** — which bots actually hit this site, so the policy is an evidenced choice rather than a guess.
+
+⚠️ **Gated by `app_log`, not `app_bot_blocker`** — it reads the site's access log, and reusing the bot grant here would widen it into a log-reading grant. A user with the Bot Blocker permission but not Logs gets `403`; handle that as "you don't have log access", not as an error.
+
+```json
+{
+  "bot_traffic": {
+    "status": "ok",
+    "days": 7,
+    "scanned_lines": 18432,
+    "since": "31-07-2026 06:00:00",
+    "bots": [
+      {"bot": "GPTBot", "hits": 4021, "category": "training", "blocked": true,
+       "last_seen": "06-08-2026 11:12:04", "last_seen_human": "2 hours ago"}
+    ],
+    "totals": {"bots": 6, "hits": 5210, "blocked_hits": 4100}
+  }
+}
+```
+
+- **`status` has four values and they mean different things.** Do not collapse them:
+  - `ok` — read fine, bots found.
+  - `empty` — read fine, genuinely no bot traffic.
+  - `unavailable` — **the log could not be read.** Never render this as "nothing visits you"; the user would make a real decision on a fact the panel invented.
+  - `partial` — the 200,000-line scan cap was hit. **Counts are a floor, not a total** — show "4,021+" or label it a partial scan. A busy site will hit this.
+- **`category`** is `training | search | agent | custom`. `custom` means one of this site's own rules, which are matched too — someone who blocks `SemrushBot` needs to see on this screen whether the block is working.
+- **`blocked`** is what the site's *current* settings do to that bot, already resolved (policy ∪ custom blocks ∖ exemptions). No need to cross-reference two lists client-side.
+- Bot names come from the same `config/ai_bots.php`, so they join against `GET /ai-bot-policies`.
+- `days` is 1–90, default 7.
+
+**What this cannot see, and should not be presented as if it can:**
+- **Agentic browsers** (Claude for Chrome, Copilot Actions) inherit the user's real Chrome user agent. Nothing user-agent-based catches them.
+- **User agents are spoofable.** We do not verify by published IP range the way Cloudflare does. A determined scraper claiming to be Chrome is invisible here.
 
 ### Firewall — 8G Firewall (`app_firewall`, its own screen)
 
@@ -1301,12 +1419,12 @@ A curated port of Jeff Starr's [8G Firewall](https://perishablepress.com/8g-fire
 ```json
 {
   "waf_categories": [
-    {"value": "query_string", "title": "Bad search terms"},
-    {"value": "request_uri", "title": "Bad web addresses"},
-    {"value": "user_agent", "title": "Bad visitors"},
-    {"value": "referrer", "title": "Bad links"},
-    {"value": "cookie", "title": "Bad cookies"},
-    {"value": "method", "title": "Bad request types"}
+    {"value": "query_string", "title": "Bad search terms", "description": "Blocks requests whose search terms carry SQL, script or file-path tricks — the query string after the ? in a web address."},
+    {"value": "request_uri", "title": "Bad web addresses", "description": "Blocks requests for paths used to probe for installers, backups, config files and known exploits."},
+    {"value": "user_agent", "title": "Bad visitors", "description": "Blocks requests from scanners, scrapers and exploit tools that identify themselves in the User-Agent header."},
+    {"value": "referrer", "title": "Bad links", "description": "Blocks requests arriving from links that carry injection payloads in the referring address."},
+    {"value": "cookie", "title": "Bad cookies", "description": "Blocks requests whose cookies contain code or injection payloads rather than ordinary values."},
+    {"value": "method", "title": "Bad request types", "description": "Blocks unusual HTTP methods such as TRACE and DEBUG that a normal visitor never sends."}
   ],
   "waf_modes": [
     {"value": "detect", "title": "Just watch, don't block"},
@@ -1318,10 +1436,20 @@ A curated port of Jeff Starr's [8G Firewall](https://perishablepress.com/8g-fire
 **`GET /api/applications/{id}/waf`** (`view`) — current state, including `waf_exceptions`/`waf_custom_rules`.
 
 **`PUT /api/applications/{id}/waf`** (`manage`) — body `{ enabled, mode, categories: [...], exceptions: [...], custom_rules: [...] }`. `200 {application}` with `waf_enabled`/`waf_mode`/`waf_mode_title`/`waf_categories` refreshed.
-- **`categories`** omitted or empty defaults to all six — turning the firewall on should protect everything by default, not start from an empty set.
+- ⚠️ **`categories` semantics changed 2026-08-06 — omitted no longer means "all six".**
+  - **Omitted** → leave the stored list exactly as it is.
+  - **`[]`** → switch every category off.
+  - A list → use it.
+
+  It used to mean "turn all six on", which was a live footgun: a partial update changing only the `mode` silently re-enabled every category the user had switched off — including the one they turned off to fix a false positive. Nothing in the payload said so and nothing failed. `exceptions` and `custom_rules` follow the same rule, and are no longer deleted and re-created on every save (that reset their timestamps, so "when did this rule appear" stopped being answerable).
+
+  A brand-new site still gets all six: the column starts null and null resolves to every category.
+- **Each category carries a `description`** in `/waf-options` (added 2026-08-06). "Bad cookies" is not enough to decide whether switching a category off is safe, and switching one off to fix a false positive is what this screen is *for*. Show it.
 - **`exceptions`** — plain strings (no regex), each one exempts a request from every category check if it appears in the request URI, query string, or user agent. This is the fix for the documented real-world false positives (a forum plugin's own request path, `phpinfo()`) — the site owner adds one word, not a regex.
 - **`custom_rules`** — plain strings, the opposite direction: always block a request containing this, even if none of the six built-in categories would have caught it. Checked against the request URI and query string.
 - **`mode: "detect"`** logs what *would* have been blocked (to `.panel/waf-detect.log` inside the site's own document root — nginx via a conditional `access_log`, Apache via `CustomLog ... env=...`) without ever returning a 403. **`mode: "enforce"`** actually blocks. New/changed configurations are safest started in `detect` given the ruleset's own documented false-positive history.
+- **The detect log is now readable** (added 2026-08-06) as the `waf_detect` source on `GET /applications/{id}/logs` — see *Application logs*. Detect mode exists so the user can watch what *would* be blocked before enforcing, and until now the panel produced that evidence and had no way to show it. **Listed only while the mode is `detect`**: an enforcing site returns 403 and writes nothing there, so offering it would show an empty file that reads as broken.
+- **Not available: per-category blocked counts.** All six categories set one shared `$waf_block` flag and the detect log is written in `combined` format, so *which* category matched is nowhere in the data — and enforce mode logs nothing at all. Adding it means per-category log variables and a custom `log_format` across three drivers; it is not a read-only endpoint away.
 - Mechanically: same apply → test → reload → rollback sequence as Password Protection, the AI Bot Blocker, and Enable/disable.
 - **The exceptions/custom-rules list is never written to the database until the config test passes** — a failed test leaves both the toggle state and the rule list exactly as they were before the call, not a half-applied mix.
 - **A blocked request is checked before the AI Bot Blocker and Basic Auth** — the most fundamental gate runs first, so a request that looks like an exploit attempt gets a flat 403 without ever being evaluated as a bot or offered a login prompt.
@@ -1413,7 +1541,15 @@ A different feature from the server-level `fail2ban` (below) — this watches **
 *(Web server is **not** an application field — it belongs to the server, which owns port 80. Nor is the database engine: it follows from the app type. See `GET /api/server/capabilities` below.)*
 
 **`GET /api/server/capabilities`** — what this server is and can run. Written by the installation script; if the row is missing (a server migrated in from elsewhere) it is detected once and stored on first use.
-- Response: `{ capabilities: {stack, web_server, capabilities: {php, node}, source, verified_at} }`
+- Response: `{ capabilities: {stack, web_server, capabilities: {php, node}, source, verified_at, server_ip, temporary_domain_suffixes} }`
+- **`server_ip` and `temporary_domain_suffixes`** (added 2026-08-06) are what the create form needs to offer a temporary hostname before the user's real domain points here:
+  ```json
+  "server_ip": "203.0.113.9",
+  "temporary_domain_suffixes": ["nip.io", "sslip.io"]
+  ```
+  Pick a suffix (spreading sites across them rather than sending every install to one free service), build `{name}.{ip-with-dashes}.{suffix}`, and send it as `domain` with `domain_type: "temp"`. Both services accept the address dotted (`1.2.3.4`) or dashed (`1-2-3-4`), so the choice is free.
+  **`server_ip` can be `null`** — detection is from the local route and can fail. Say "we could not work out this server's address" rather than offering a hostname that resolves nowhere.
+  The offered list is also the list the backend recognises as temporary, so a name built from any of these is always flagged correctly — the frontend cannot invent a hostname the backend then mistakes for a real domain.
 - `stack` (`lemp|lamp|ols|mern`) is how the box was **built**; `capabilities` is what it can run **now**. They legitimately differ — installing Node on a LEMP box adds the capability without changing how it was built — so **filter the UI on `capabilities`, never on `stack`.**
 - `web_server` is `nginx|apache|openlitespeed`. **`mern` is not a web server** — a MERN box runs nginx.
 - **All three can provision applications** as of 2026-07-31; OpenLiteSpeed previously refused every site type. A web server outside that list is still refused rather than guessed at — provisioning fails immediately, before anything is written to disk.
@@ -1785,11 +1921,13 @@ A site's own logs. Read-only, gated by **`app_log`** — deliberately *not* the 
 { "logs": [
   { "key": "access",      "label": "Access log",         "kind": "file",    "exists": true  },
   { "key": "error",       "label": "Error log",          "kind": "file",    "exists": true  },
-  { "key": "application", "label": "Application output", "kind": "journal", "exists": true  }
+  { "key": "application", "label": "Application output", "kind": "journal", "exists": true  },
+  { "key": "waf_detect",  "label": "Firewall detections", "kind": "file",   "exists": true  }
 ] }
 ```
 
 - `label` is localized — render it, don't map the key yourself.
+- **`waf_detect` only appears while the 8G Firewall is on *and* in `detect` mode** (added 2026-08-06). An enforcing site returns 403 and writes nothing there, so listing it would show an empty file that reads as broken rather than as "not this mode". The file lives in `.panel/` inside the document root, which every vhost template already denies over HTTP.
 - **`application` only appears for a site that runs a process** (Node and friends). For those, the access and error logs describe the **reverse proxy**, not the app: nginx will happily show a tidy 502 while the actual stack trace is in the journal. If you only surface two tabs, a Node user is looking at the wrong file at the worst moment.
 - `exists: false` is normal, not an error — a site nobody has visited has no access log yet.
 
