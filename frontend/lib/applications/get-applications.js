@@ -62,8 +62,11 @@ export const getWafOptions = cache(async function getWafOptions() {
 export async function getApplicationFail2ban(id) {
   const result = await read(`/applications/${id}/fail2ban`, applicationFail2banResponseSchema);
   return {
-    enabled: result.data?.fail2ban_enabled ?? false,
-    jails: result.data?.jails ?? [],
+    // Null means "never set up", which the screen says differently from
+    // "set up and switched off" — there is no such state any more.
+    config: result.data?.fail2ban ?? null,
+    jailTemplate: result.data?.jail_template ?? "",
+    filterTemplate: result.data?.filter_template ?? "",
     failed: result.failed,
     status: result.status,
   };

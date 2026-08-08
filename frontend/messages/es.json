@@ -3430,17 +3430,11 @@
       "saveFailed": "No se pudieron guardar los ajustes.",
       "savingNote": "Aplicando y recargando PHP…",
       "noPermission": "No puedes cambiar los ajustes de PHP de este sitio.",
-      "nothingToSave": "Aún no has cambiado nada",
+      "nothingToSave": "No ha cambiado nada",
       "versionLabel": "PHP {version}",
       "presetsLabel": "Ajustes rápidos",
       "useSuggested": "Usar la lista recomendada",
       "unmanaged": "El archivo del pool de PHP de este sitio se ha editado a mano. Al guardar aquí se reemplaza por la versión del panel y esos cambios se perderán.",
-      "groups": {
-        "security": "Seguridad de PHP",
-        "advanced": "Directivas avanzadas de PHP",
-        "runtime": "Entorno de PHP",
-        "limits": "Límites por petición"
-      },
       "fields": {
         "version": "Versión de PHP",
         "versionPlaceholder": "Elige una versión",
@@ -3472,7 +3466,9 @@
         "sessionLifetime": "Segundos que se guarda una sesión antes de poder limpiarse.",
         "timezone": "Solo afecta a las fechas que genera PHP, no al reloj del servidor.",
         "autoPrepend": "Una ruta dentro de este sitio. Déjalo vacío salvo que te hayan indicado otra cosa.",
-        "directives": "Uno por línea, como un php.ini. Lo de aquí manda sobre los campos de arriba."
+        "directives": "Uno por línea, como un php.ini. Lo de aquí manda sobre los campos de arriba.",
+        "openBasedir": "Impide que PHP lea o escriba archivos fuera de la carpeta de este sitio.",
+        "allowUrlFopen": "Permite que PHP descargue URLs remotas. Desactivarlo bloquea una vía habitual del malware para comunicarse."
       },
       "pmTypes": {
         "ondemand": "Bajo demanda",
@@ -3480,8 +3476,6 @@
         "static": "Siempre activos"
       },
       "isolation": {
-        "onTitle": "Este sitio tiene su propio PHP",
-        "onBody": "Sus límites se aplican solo a este sitio, y su código se ejecuta con su propio usuario.",
         "onTitle": "Este sitio tiene su propio PHP",
         "onBody": "Sus límites se aplican solo a este sitio y su código se ejecuta como su propio usuario.",
         "offTitle": "Modo PHP compartido",
@@ -3503,10 +3497,11 @@
         "unsupportedBody": "OpenLiteSpeed inicia PHP por su cuenta y no tiene pools por sitio, así que estos ajustes no pueden aplicarse."
       },
       "budget": {
-        "title": "Unos {value} a pleno rendimiento — {workers} procesos a la vez",
         "available": "{value} de {total} aún libres",
         "over": "Más de los {total} de este servidor",
-        "legend": "{sites, plural, =0 {Ningún otro sitio usa memoria} one {Otro sitio ha reservado {value}} other {# sitios más han reservado {value}}}"
+        "legend": "{sites, plural, =0 {Ningún otro sitio usa memoria} one {Otro sitio ha reservado {value}} other {# sitios más han reservado {value}}}",
+        "equation": "{limit} × {workers} workers = {total} a plena carga",
+        "overDetail": "Se necesitan {required}, pero este servidor tiene {total}. Reduce el límite de memoria o el número de workers."
       },
       "custom": "Personalizado",
       "seconds": "{count}s",
@@ -3514,9 +3509,10 @@
         "version": "Versión",
         "memory": "Memoria",
         "upload": "Subidas",
-        "time": "Límite de página"
+        "time": "Límite de página",
+        "runsAs": "Se ejecuta como"
       },
-      "saveAction": "Guardar ajustes de PHP",
+      "saveAction": "Guardar y recargar PHP",
       "lockedNote": "Bloqueado mientras PHP se comparte.",
       "shared": {
         "currentLabel": "Configuración actual",
@@ -3532,61 +3528,73 @@
           "security": "Bloquear funciones peligrosas",
           "directives": "Afinar directivas avanzadas"
         }
-      }
+      },
+      "blocked": {
+        "description": "PHP se negará a ejecutarlas. Casi ningún sitio las necesita y son lo primero que busca un atacante.",
+        "count": "{count, plural, =0 {No hay nada bloqueado} one {# función bloqueada} other {# funciones bloqueadas}}",
+        "addPlaceholder": "Añade una función, p. ej. eval",
+        "add": "Añadir",
+        "remove": "Quitar {name}",
+        "empty": "No hay nada bloqueado. Cualquier función de PHP instalada en este sitio puede ejecutarse.",
+        "matches": "Coincide con la lista recomendada."
+      },
+      "saveNote": "Al guardar se reescribe el pool de PHP de este sitio y se recarga. Las peticiones en curso terminan primero.",
+      "tabs": {
+        "basic": "Ajustes básicos",
+        "security": "Seguridad",
+        "advanced": "Avanzado",
+        "unsavedHere": "Cambios sin guardar en esta pestaña"
+      },
+      "sections": {
+        "runtime": "Entorno",
+        "limits": "Límites por petición"
+      },
+      "advancedNote": "Esto cambia cómo PHP-FPM ejecuta este sitio. Los valores por defecto sirven para casi todos los sitios: cámbialos solo si sabes por qué.",
+      "presetsCustom": "Personalizado: no coincide con ninguno de los ajustes anteriores."
     },
     "fail2ban": {
       "pageTitle": "Protección contra ataques",
-      "pageSubtitle": "Bloquea las direcciones que atacan este sitio una y otra vez.",
+      "pageSubtitle": "Bloquea direcciones que atacan este sitio de forma repetida.",
       "back": "Volver al sitio",
       "loadFailed": "No pudimos comprobar la protección de este sitio.",
-      "provisioning": "Este sitio aún se está creando. Podrás activar la protección cuando termine.",
-      "turnedOn": "La protección está activada.",
-      "turnedOff": "La protección está desactivada.",
-      "failed": "No se pudo cambiar.",
-      "unbanned": "{ip} vuelve a tener acceso a este sitio.",
-      "unbanFailed": "No se pudo desbloquear esa dirección.",
-      "bannedIp": "{ip} queda bloqueada en este sitio.",
-      "banFailed": "No se pudo bloquear esa dirección.",
-      "watching": "Vigilando",
-      "jailInactive": "No está activo",
-      "jailCounts": "{failed} fallando · {banned} bloqueadas",
-      "totals": "Desde que empezó: {failed} intentos fallidos, {banned} bloqueos.",
-      "jails": {
-        "generic": "Peticiones erróneas repetidas",
-        "wplogin": "Intentos de acceso a WordPress"
+      "provisioning": "Este sitio aún se está creando. La protección se puede añadir cuando termine.",
+      "empty": {
+        "title": "La protección contra ataques no está configurada",
+        "body": "Nada vigila el registro de acceso de este sitio, así que una dirección puede seguir probando contraseñas indefinidamente. Al configurarla obtienes una configuración inicial que puedes editar.",
+        "action": "Configurar la protección"
       },
       "state": {
-        "off": "Sin vigilancia",
-        "offBody": "No se detiene a nadie, por muchas veces que se equivoque.",
-        "quiet": "Vigilando — todo tranquilo",
-        "failing": "{count, plural, one {# dirección está fallando ahora mismo} other {# direcciones están fallando ahora mismo}}",
-        "onBody": "Las direcciones que siguen fallando se bloquean automáticamente.",
-        "onBadge": "Activada",
-        "offBadge": "Desactivada"
+        "on": "La protección contra ataques está activa",
+        "onBody": "fail2ban vigila el registro de acceso de este sitio y bloquea las direcciones que coinciden con el filtro de abajo.",
+        "setup": "Configurando la protección contra ataques",
+        "setupBody": "Ambos archivos parten de los valores por defecto del panel. Nada vigila este sitio hasta que los guardes."
       },
-      "lockedOut": {
-        "title": "Estás bloqueado en este sitio",
-        "body": "La dirección desde la que lees esto — {ip} — está bloqueada, así que el sitio no te responderá.",
-        "action": "Desbloquear mi dirección"
+      "files": {
+        "jail": "Jail",
+        "filter": "Filtro",
+        "jailHint": "Cuándo bloquear: cuántos intentos, en cuánto tiempo y durante cuánto.",
+        "filterHint": "Qué cuenta como intento fallido: se compara con cada línea del registro."
       },
-      "banned": {
-        "title": "{count, plural, =0 {Direcciones bloqueadas} one {Direcciones bloqueadas (#)} other {Direcciones bloqueadas (#)}}",
-        "empty": "No hay nada bloqueado. Es lo normal: solo se bloquea a quien falla una y otra vez.",
-        "you": "tú",
-        "unban": "Desbloquear"
-      },
-      "ban": {
-        "placeholder": "203.0.113.10",
-        "action": "Bloquear",
-        "errors": {
-          "ipAddress": "Escribe una sola dirección IP, sin rangos ni nombres de host."
-        }
-      },
-      "confirmOff": {
-        "title": "¿Desactivar la protección?",
-        "body": "Las direcciones dejarán de bloquearse por fallar repetidamente en este sitio. Las ya bloqueadas siguen estándolo.",
-        "confirm": "Desactivarla"
-      }
+      "placeholderNote": "{name}, {filter}, {logpath} y {slug} se rellenan al escribir los archivos. Déjalos tal cual.",
+      "placeholderLost": "{count, plural, one {{tokens} ya no está en el archivo: el valor que representaba no se rellenará. Esto solo es correcto si lo has sustituido a propósito.} other {{tokens} ya no están en el archivo: los valores que representaban no se rellenarán. Esto solo es correcto si los has sustituido a propósito.}}",
+      "unsavedHere": "Cambios sin guardar en este archivo",
+      "saveAction": "Guardar y recargar fail2ban",
+      "saveNote": "Al guardar se prueban los archivos primero. Si fail2ban los rechaza, no se escribe nada.",
+      "savingNote": "Probando y recargando fail2ban…",
+      "nothingToSave": "No ha cambiado nada",
+      "bothRequired": "Ambos archivos necesitan contenido",
+      "noPermission": "No puedes cambiar la protección contra ataques de este sitio.",
+      "saved": "Protección guardada y recargada.",
+      "saveFailed": "No se pudo guardar.",
+      "testFailed": "fail2ban rechazó esta configuración.",
+      "removeAction": "Quitar la protección",
+      "removeTitle": "¿Quitar la protección contra ataques?",
+      "removeBody": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar este sitio. Quien esté bloqueado quedará liberado.",
+      "removeConfirm": "Quitarla",
+      "removed": "Protección eliminada.",
+      "removeFailed": "No se pudo eliminar.",
+      "createAction": "Activar la protección",
+      "removeBodyDirty": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar este sitio. Quien esté bloqueado quedará liberado, y {count, plural, one {el archivo que has editado sin guardar se perderá} other {los # archivos que has editado sin guardar se perderán}}."
     }
   },
   "panelUpdate": {

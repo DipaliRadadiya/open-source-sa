@@ -26,6 +26,17 @@ export function CardSaveFooter({
   onDiscard,
   submit = false,
   savingNote,
+  // Said while the change is still unsaved, for a save whose cost is not
+  // obvious from the button — PHP settings reload the site's FPM pool.
+  note,
+  // Prints `saveReason` next to the disabled button instead of leaving it in
+  // the tooltip. Worth it on a long form, where "why is Save grey" is asked
+  // often enough that it should not need a hover to answer.
+  showReason = false,
+  // Greys the button while there is nothing to save, instead of leaving a
+  // faded primary that still reads as the thing to press. The settings cards
+  // deliberately do NOT do this — only forms that opt in.
+  quietWhenClean = false,
   // A card that saves one named thing can say so — "Save PHP settings" rather
   // than a bare "Save" that could belong to anything on the page.
   saveLabel,
@@ -44,26 +55,37 @@ export function CardSaveFooter({
       {saving && savingNote ? (
         <p className="mr-auto text-xs text-muted-foreground">{savingNote}</p>
       ) : null}
-      {!saving && dirty && showUnsaved ? (
-        <Badge variant="warning" className="mr-auto">
-          {t("unsaved")}
-        </Badge>
+      {/* Badge and note travel together so a long note cannot push the buttons
+          onto a line of their own. */}
+      {!saving && dirty && (showUnsaved || note) ? (
+        <div className="mr-auto flex min-w-0 flex-wrap items-center gap-2">
+          {showUnsaved ? <Badge variant="warning">{t("unsaved")}</Badge> : null}
+          {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
+        </div>
       ) : null}
-      {dirty && onDiscard ? (
-        <Button type="button" variant="ghost" onClick={onDiscard} disabled={saving}>
-          {t("discard")}
-        </Button>
+      {!saving && !dirty && showReason && saveReason ? (
+        <p className="mr-auto text-xs text-muted-foreground">{saveReason}</p>
       ) : null}
-      <ReasonTooltip reason={saveReason}>
-        <Button
-          type={submit ? "submit" : "button"}
-          onClick={submit ? undefined : onSave}
-          disabled={Boolean(saveReason) || saving}
-        >
-          {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-          {saving ? t("saving") : (saveLabel ?? t("save"))}
-        </Button>
-      </ReasonTooltip>
+      {/* Discard and save stay on one line together — split across two rows
+          they read as two separate decisions. */}
+      <div className="flex shrink-0 items-center gap-2">
+        {dirty && onDiscard ? (
+          <Button type="button" variant="ghost" onClick={onDiscard} disabled={saving}>
+            {t("discard")}
+          </Button>
+        ) : null}
+        <ReasonTooltip reason={saveReason}>
+          <Button
+            type={submit ? "submit" : "button"}
+            variant={quietWhenClean && !dirty && !saving ? "secondary" : "default"}
+            onClick={submit ? undefined : onSave}
+            disabled={Boolean(saveReason) || saving}
+          >
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+            {saving ? t("saving") : (saveLabel ?? t("save"))}
+          </Button>
+        </ReasonTooltip>
+      </div>
     </div>
   );
 }

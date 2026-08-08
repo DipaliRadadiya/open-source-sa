@@ -3430,17 +3430,11 @@
       "saveFailed": "The settings could not be saved.",
       "savingNote": "Applying and reloading PHP…",
       "noPermission": "You cannot change PHP settings for this site.",
-      "nothingToSave": "Nothing has changed yet",
+      "nothingToSave": "Nothing has changed",
       "versionLabel": "PHP {version}",
       "presetsLabel": "Worker presets",
       "useSuggested": "Use the recommended list",
       "unmanaged": "This site's PHP pool file has been edited by hand. Saving here replaces it with the panel's own version, and those edits will be lost.",
-      "groups": {
-        "security": "PHP security",
-        "advanced": "Advanced PHP directives",
-        "runtime": "PHP runtime",
-        "limits": "Request limits"
-      },
       "fields": {
         "version": "PHP version",
         "versionPlaceholder": "Choose a version",
@@ -3472,7 +3466,9 @@
         "sessionLifetime": "Seconds a session file is kept before it can be cleaned up.",
         "timezone": "Only affects dates PHP produces, not the server clock.",
         "autoPrepend": "A path inside this site. Leave empty unless you were told otherwise.",
-        "directives": "One per line, like a php.ini file. Anything here wins over the fields above."
+        "directives": "One per line, like a php.ini file. Anything here wins over the fields above.",
+        "openBasedir": "Stops PHP reading or writing files outside this site's folder.",
+        "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home."
       },
       "pmTypes": {
         "ondemand": "On demand",
@@ -3501,10 +3497,11 @@
         "unsupportedBody": "OpenLiteSpeed starts PHP itself and has no per-site pools, so these settings cannot be applied here."
       },
       "budget": {
-        "title": "About {value} at full load — {workers} workers at once",
         "available": "{value} of {total} still free",
         "over": "More than this server's {total}",
-        "legend": "{sites, plural, =0 {No other sites are using memory} one {One other site has claimed {value}} other {# other sites have claimed {value}}}"
+        "legend": "{sites, plural, =0 {No other sites are using memory} one {One other site has claimed {value}} other {# other sites have claimed {value}}}",
+        "equation": "{limit} × {workers} workers = {total} at full load",
+        "overDetail": "{required} required, but this server has {total}. Lower the memory limit or the number of workers."
       },
       "custom": "Custom",
       "seconds": "{count}s",
@@ -3512,9 +3509,10 @@
         "version": "Version",
         "memory": "Memory",
         "upload": "Uploads",
-        "time": "Page limit"
+        "time": "Page limit",
+        "runsAs": "Runs as"
       },
-      "saveAction": "Save PHP settings",
+      "saveAction": "Save and reload PHP",
       "lockedNote": "Locked while PHP is shared.",
       "shared": {
         "currentLabel": "Current settings",
@@ -3530,61 +3528,73 @@
           "security": "Lock down PHP security",
           "directives": "Tune advanced PHP directives"
         }
-      }
+      },
+      "blocked": {
+        "description": "PHP refuses to run these. Most sites never need them — they are what an attacker reaches for first.",
+        "count": "{count, plural, =0 {Nothing is blocked} one {# function blocked} other {# functions blocked}}",
+        "addPlaceholder": "Add a function, e.g. eval",
+        "add": "Add",
+        "remove": "Remove {name}",
+        "empty": "Nothing is blocked. Every PHP function this site has installed can run.",
+        "matches": "Matches the recommended list."
+      },
+      "saveNote": "Saving rewrites this site's PHP pool and reloads it. Requests already running finish first.",
+      "tabs": {
+        "basic": "Basic settings",
+        "security": "Security",
+        "advanced": "Advanced",
+        "unsavedHere": "Unsaved changes on this tab"
+      },
+      "sections": {
+        "runtime": "Runtime",
+        "limits": "Request limits"
+      },
+      "advancedNote": "These change how PHP-FPM runs this site. The defaults suit almost every site — change them only if you know why.",
+      "presetsCustom": "Custom — not one of the presets above."
     },
     "fail2ban": {
       "pageTitle": "Attack protection",
       "pageSubtitle": "Bans addresses that keep attacking this site.",
       "back": "Back to site",
       "loadFailed": "We could not check this site's protection.",
-      "provisioning": "This site is still being set up. Protection can be turned on once it finishes.",
-      "turnedOn": "Protection is on.",
-      "turnedOff": "Protection is off.",
-      "failed": "That could not be changed.",
-      "unbanned": "{ip} can reach this site again.",
-      "unbanFailed": "That address could not be unbanned.",
-      "bannedIp": "{ip} is banned from this site.",
-      "banFailed": "That address could not be banned.",
-      "watching": "Watching",
-      "jailInactive": "Not running",
-      "jailCounts": "{failed} failing · {banned} banned",
-      "totals": "Since it started: {failed} bad tries, {banned} bans.",
-      "jails": {
-        "generic": "Repeated bad requests",
-        "wplogin": "WordPress login attempts"
+      "provisioning": "This site is still being set up. Protection can be added once it finishes.",
+      "empty": {
+        "title": "Attack protection is not set up",
+        "body": "Nothing is watching this site's access log, so an address can keep guessing passwords as long as it likes. Setting it up gives you a starting configuration you can edit.",
+        "action": "Set up attack protection"
       },
       "state": {
-        "off": "Not watching",
-        "offBody": "Nobody is being stopped, however many times they get it wrong.",
-        "quiet": "Watching — all quiet",
-        "failing": "{count, plural, one {# address is failing right now} other {# addresses are failing right now}}",
-        "onBody": "Addresses that keep failing are banned automatically.",
-        "onBadge": "On",
-        "offBadge": "Off"
+        "on": "Attack protection is on",
+        "onBody": "fail2ban is watching this site's access log and banning addresses that match the filter below.",
+        "setup": "Setting up attack protection",
+        "setupBody": "Both files below start from the panel's defaults. Nothing is watching this site until you save them."
       },
-      "lockedOut": {
-        "title": "You are banned from this site",
-        "body": "The address you are reading this from — {ip} — is banned, so this site will not answer you.",
-        "action": "Unban my address"
+      "files": {
+        "jail": "Jail",
+        "filter": "Filter",
+        "jailHint": "When to ban — how many tries, over how long, for how long.",
+        "filterHint": "What counts as a bad try — matched against each log line."
       },
-      "banned": {
-        "title": "{count, plural, =0 {Banned addresses} one {Banned addresses (#)} other {Banned addresses (#)}}",
-        "empty": "Nothing is banned. That is the normal state — addresses only get banned after repeatedly failing.",
-        "you": "you",
-        "unban": "Unban"
-      },
-      "ban": {
-        "placeholder": "203.0.113.10",
-        "action": "Ban",
-        "errors": {
-          "ipAddress": "Enter one IP address — no ranges or host names."
-        }
-      },
-      "confirmOff": {
-        "title": "Turn protection off?",
-        "body": "Addresses will no longer be banned for repeatedly failing on this site. Anyone already banned stays banned.",
-        "confirm": "Turn it off"
-      }
+      "placeholderNote": "{name}, {filter}, {logpath} and {slug} are filled in when the files are written. Leave them as they are.",
+      "placeholderLost": "{count, plural, one {{tokens} is no longer in the file — the value it stood for will not be filled in. That is only correct if you replaced it on purpose.} other {{tokens} are no longer in the file — the values they stood for will not be filled in. That is only correct if you replaced them on purpose.}}",
+      "unsavedHere": "Unsaved changes in this file",
+      "saveAction": "Save and reload fail2ban",
+      "saveNote": "Saving tests the files first. If fail2ban rejects them, nothing is written.",
+      "savingNote": "Testing and reloading fail2ban…",
+      "nothingToSave": "Nothing has changed",
+      "bothRequired": "Both files need contents",
+      "noPermission": "You cannot change attack protection for this site.",
+      "saved": "Attack protection saved and reloaded.",
+      "saveFailed": "That could not be saved.",
+      "testFailed": "fail2ban rejected this configuration.",
+      "removeAction": "Remove protection",
+      "removeTitle": "Remove attack protection?",
+      "removeBody": "The jail and filter files are deleted and fail2ban stops watching this site. Anyone already banned is released.",
+      "removeConfirm": "Remove it",
+      "removed": "Attack protection removed.",
+      "removeFailed": "That could not be removed.",
+      "createAction": "Turn on attack protection",
+      "removeBodyDirty": "The jail and filter files are deleted and fail2ban stops watching this site. Anyone already banned is released — and {count, plural, one {the file you have edited but not saved goes with them} other {the # files you have edited but not saved go with them}}."
     }
   },
   "panelUpdate": {

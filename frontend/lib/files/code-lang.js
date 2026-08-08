@@ -9,7 +9,13 @@ function extensionOf(name) {
   return (i === -1 ? base : base.slice(i + 1)).toLowerCase();
 }
 
+// INI-family extensions CodeMirror keys under a different name. Small enough
+// to alias rather than build a table: the fail2ban editor writes .conf files,
+// and the Files editor gets the same highlighting for free.
+const ALIASES = { conf: "properties", ini: "properties", cnf: "properties" };
+
 export function codeLanguageFor(name) {
-  const factory = langs[extensionOf(name)];
+  const extension = extensionOf(name);
+  const factory = langs[ALIASES[extension] ?? extension];
   return factory ? factory() : null;
 }

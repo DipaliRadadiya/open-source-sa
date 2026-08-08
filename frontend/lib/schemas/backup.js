@@ -17,10 +17,10 @@ export const BACKUP_TYPES = ["full", "filesystem", "database"];
 /**
  * The hour the backend falls back to when no time is stored.
  *
- * A copy of `BackupTarget::CRON`'s own `0 2 * * *`, and the only reason it is
- * duplicated here is that the API does not return `schedule_time` — so this is
- * what the field has to show for a target that has never set one. The moment
- * `BackupTargetResource` carries the field, read it instead and delete this.
+ * A copy of `BackupTarget::CRON`'s own `0 2 * * *`. `BackupTargetResource` now
+ * returns `schedule_time`, so this is no longer papering over a missing field —
+ * it is only what the form shows for a target that has genuinely never set one,
+ * where the API correctly sends `null`.
  */
 export const BACKUP_DEFAULT_TIME = "02:00";
 
@@ -115,8 +115,8 @@ export const backupTargetSchema = z
     retention_count: z.number(),
     frequency: z.string(),
     frequency_title: z.string().nullish(),
-    // "HH:MM" in the server's timezone. Nullish because the API accepts and
-    // stores it but does not return it yet — see `BACKUP_DEFAULT_TIME`.
+    // "HH:MM" in the server's timezone. Nullish because a target that has never
+    // set a time stores none — not because the API withholds it.
     schedule_time: z.string().nullish(),
     enabled: z.boolean().default(true),
     file_excludes: z.array(z.string()).default([]),

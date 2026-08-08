@@ -94,21 +94,24 @@ export function updateApplicationWaf(id, payload) {
 }
 
 /**
- * Per-site fail2ban. A different feature from the server-level one: these
- * jails watch this site's own access log.
+ * Per-site fail2ban. A different feature from the server-level one: this jail
+ * watches this site's own access log.
  *
- * `ban` reaches only the generic jail (the backend picks `jailNames()[0]`),
- * while `unban` releases the address from every jail this site has — so
- * banning is site-wide by nature and unbanning is honest as one button.
+ * Both halves go together because the backend rejects a partial submission —
+ * a jail whose filter does not exist stops fail2ban reloading at all.
+ *
+ * The save is also the config test: the backend runs the pair through
+ * `fail2ban-client` first and answers `{testOk: false, output}` when it does
+ * not parse. It uses status 500 for that, so callers must read the body rather
+ * than treating any failure as an outage.
  */
-export function updateApplicationFail2ban(id, enabled) {
-  return api.put(`/applications/${id}/fail2ban`, { enabled });
+export function saveApplicationFail2ban(id, { jail, filter }) {
+  return api.post(`/applications/${id}/fail2ban`, {
+    jail_config_content: jail,
+    filter_config_content: filter,
+  });
 }
 
-export function banApplicationIp(id, ip) {
-  return api.post(`/applications/${id}/fail2ban/ban`, { ip });
-}
-
-export function unbanApplicationIp(id, ip) {
-  return api.delete(`/applications/${id}/fail2ban/ban/${encodeURIComponent(ip)}`);
+export function deleteApplicationFail2ban(id) {
+  return api.delete(`/applications/${id}/fail2ban`);
 }

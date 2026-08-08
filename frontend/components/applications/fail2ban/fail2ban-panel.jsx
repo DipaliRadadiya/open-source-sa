@@ -1,321 +1,340 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Ban, Loader2, ShieldAlert, ShieldCheck, ShieldOff } from "lucide-react";
+import {
+  FileCode2,
+  Loader2,
+  ScrollText,
+  ShieldCheck,
+  ShieldOff,
+  TriangleAlert,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  bannedAddresses,
-  isIpAddress,
-  jailKind,
-  jailTotals,
-} from "@/lib/schemas/application-fail2ban";
-import {
-  banApplicationIp,
-  unbanApplicationIp,
-  updateApplicationFail2ban,
-} from "@/lib/api/applications";
+import { fail2banConfigFormSchema, missingPlaceholders } from "@/lib/schemas/application-fail2ban";
+import { deleteApplicationFail2ban, saveApplicationFail2ban } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
-import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-/** Jail kinds this screen has a plain-language name for. */
-const KNOWN_JAILS = new Set(["generic", "wplogin"]);
+// CodeMirror and its language packs are a large chunk that only this screen
+// and the file editor need — loaded on demand so a site that never opens
+// attack protection does not pay for it.
+const CodeEditor = dynamic(
+  () => import("@/components/applications/files/code-editor").then((m) => m.CodeEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center bg-console">
+        <Loader2 className="size-5 animate-spin text-console-muted" />
+      </div>
+    ),
+  },
+);
+
+const FILES = [
+  { key: "jail", icon: ScrollText, filename: "jail.conf" },
+  { key: "filter", icon: FileCode2, filename: "filter.conf" },
+];
 
 /**
  * One site's brute-force protection.
  *
- * The page is designed around the state it is usually in — nothing banned,
- * nothing happening — and around the reason people actually open it, which is
- * not auditing counters: it is being locked out of their own site. So the
- * first thing rendered is whether THIS visitor is the one who is banned, and
- * the banned table only exists when there is something in it.
+ * This screen used to be a dashboard — a switch, two jails, a banned list,
+ * counters. The backend replaced all of it with two raw INI files written
+ * verbatim to `/etc/fail2ban/{jail,filter}.d/`, so it is an editor now. None
+ * of the old surface has an equivalent: there is no enable flag, no jail
+ * state, and no way to see or clear a ban.
  *
- * Deliberately not a copy of the server-level Fail2ban screen: there, each
- * jail toggles on its own. Here a single column drives both of this site's
- * jails, so there is one switch and the jails are facts, not controls.
+ * Two states, and the difference matters: a site that has never been set up
+ * gets an empty state with one action, not a wall of INI it did not ask for.
+ *
+ * The save is also the config test. `fail2ban-client` gets the pair first and
+ * its own error text comes back on rejection — so that output is the most
+ * important thing this screen can render, and it is shown verbatim next to
+ * the editor rather than in a toast that takes the reason away with it.
  */
-export function Fail2banPanel({ appId, enabled, jails, viewerIp, canManage }) {
+export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, canManage }) {
   const t = useTranslations("applications.fail2ban");
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [unbanning, setUnbanning] = useState(null);
-  const [confirmOff, setConfirmOff] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [banError, setBanError] = useState(null);
 
-  const banned = bannedAddresses(jails);
-  const totals = jailTotals(jails);
-  const viewerBanned = viewerIp ? banned.includes(viewerIp) : false;
+  const [editing, setEditing] = useState(Boolean(config));
+  const [tab, setTab] = useState("jail");
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  // The config test's own words, kept until the next attempt. A rejected
+  // regex is read, not glanced at.
+  const [testError, setTestError] = useState(null);
 
-  async function toggle(next) {
-    if (!next) {
-      setConfirmOff(true);
-      return;
-    }
-    await setEnabled(true);
-  }
+  const saved = {
+    jail: config?.jail_content ?? jailTemplate,
+    filter: config?.filter_content ?? filterTemplate,
+  };
 
-  async function setEnabled(next) {
-    setBusy(true);
+  const [draft, setDraft] = useState(saved);
+
+  // Nothing is saved yet during setup, so there is nothing to have changed
+  // FROM. Comparing the draft against the template made an untouched setup
+  // form read as "nothing has changed" and disabled the only button on it —
+  // accepting the defaults, which is the common case, was impossible.
+  const isSetup = !config;
+  const unsavedFiles = FILES.filter(({ key }) => draft[key] !== saved[key]).length;
+  const changed = unsavedFiles > 0;
+  const dirty = isSetup || changed;
+  const empty = !draft.jail.trim() || !draft.filter.trim();
+
+  // Warned about, not blocked: the backend fills these in when it writes the
+  // files, but a config that names a second logpath outright is legitimate.
+  const lostPlaceholders = [
+    ...missingPlaceholders(saved.jail, draft.jail),
+    ...missingPlaceholders(saved.filter, draft.filter),
+  ];
+
+  async function save() {
+    const parsed = fail2banConfigFormSchema.safeParse({
+      jail_config_content: draft.jail,
+      filter_config_content: draft.filter,
+    });
+    if (!parsed.success) return;
+
+    setSaving(true);
+    setTestError(null);
     try {
-      await updateApplicationFail2ban(appId, next);
-      setConfirmOff(false);
-      toast.success(next ? t("turnedOn") : t("turnedOff"));
+      await saveApplicationFail2ban(appId, draft);
+      toast.success(t("saved"));
       router.refresh();
     } catch (error) {
-      toast.error(apiMessage(error, t("failed")));
+      // A config the daemon refuses comes back as a body, not a status worth
+      // reading: the backend answers 500 for what is really a validation
+      // failure, so the payload decides which of the two this was.
+      const data = error.response?.data;
+      if (data?.testOk === false) {
+        // No toast: the panel it renders into sits directly above the button
+        // that was just pressed, so a toast would say the same thing twice and
+        // then take the half of it that matters away again.
+        setTestError({ message: data.message ?? t("testFailed"), output: data.output ?? "" });
+      } else {
+        toast.error(apiMessage(error, t("saveFailed")));
+      }
     } finally {
-      setBusy(false);
+      setSaving(false);
     }
   }
 
-  async function unban(ip) {
-    setUnbanning(ip);
+  async function remove() {
+    setRemoving(true);
     try {
-      await unbanApplicationIp(appId, ip);
-      toast.success(t("unbanned", { ip }));
+      await deleteApplicationFail2ban(appId);
+      setConfirmRemove(false);
+      setTestError(null);
+      // `editing` was true because a config existed. Leaving it set drops the
+      // user into the setup form the moment the config disappears — still
+      // holding the text they just deleted. Back to the empty state, with the
+      // shipped templates ready if they change their mind.
+      setEditing(false);
+      setDraft({ jail: jailTemplate, filter: filterTemplate });
+      toast.success(t("removed"));
       router.refresh();
     } catch (error) {
-      toast.error(apiMessage(error, t("unbanFailed")));
+      toast.error(apiMessage(error, t("removeFailed")));
     } finally {
-      setUnbanning(null);
+      setRemoving(false);
     }
   }
 
-  async function ban() {
-    const ip = draft.trim();
-    if (!ip) return;
-    if (!isIpAddress(ip)) {
-      setBanError("ipAddress");
-      return;
-    }
-
-    setBusy(true);
-    try {
-      await banApplicationIp(appId, ip);
-      setDraft("");
-      setBanError(null);
-      toast.success(t("bannedIp", { ip }));
-      router.refresh();
-    } catch (error) {
-      toast.error(apiMessage(error, t("banFailed")));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="max-w-3xl space-y-4">
-      {/* Bans expire by themselves and new ones arrive unannounced, so a page
-          rendered once is stale within the minute — but only while something
-          is actually watching. */}
-      {enabled ? <AutoRefresh intervalMs={10000} stopAfterMs={600000} /> : null}
-
-      {/* First, loudest, and the only state where seconds matter: the person
-          reading this is the one who is locked out. */}
-      {viewerBanned ? (
-        <Card className="gap-0 overflow-hidden border-destructive/40 py-0 shadow-sm">
-          <CardContent className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
-              <ShieldAlert className="size-5 text-destructive" />
+  // Never set up, and not being set up right now: one thing to read, one
+  // thing to press.
+  if (!config && !editing) {
+    return (
+      <div className="max-w-4xl">
+        <Card className="overflow-hidden shadow-sm">
+          <CardContent className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+            <span className="flex size-11 items-center justify-center rounded-lg bg-muted">
+              <ShieldOff className="size-5 text-muted-foreground" />
             </span>
-            <div className="min-w-0 flex-1 space-y-1">
-              <p className="font-medium">{t("lockedOut.title")}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("lockedOut.body", { ip: viewerIp })}
-              </p>
+            <div className="space-y-1.5">
+              <p className="font-medium">{t("empty.title")}</p>
+              <p className="mx-auto max-w-md text-sm text-muted-foreground">{t("empty.body")}</p>
             </div>
             {canManage ? (
-              <Button
-                variant="destructive"
-                onClick={() => unban(viewerIp)}
-                disabled={unbanning === viewerIp}
-                className="w-full sm:w-auto"
-              >
-                {unbanning === viewerIp ? <Loader2 className="size-4 animate-spin" /> : null}
-                {t("lockedOut.action")}
+              <Button className="mt-1" onClick={() => setEditing(true)}>
+                {t("empty.action")}
               </Button>
             ) : null}
           </CardContent>
         </Card>
-      ) : null}
+      </div>
+    );
+  }
 
+  return (
+    <div className="max-w-4xl space-y-4">
       <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-        <CardContent className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start">
+        <CardContent className="flex flex-wrap items-center gap-3 px-5 py-4">
           <span
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-lg",
-              enabled ? "bg-success/10" : "bg-muted",
+              "flex size-9 shrink-0 items-center justify-center rounded-lg",
+              config ? "bg-success/10" : "bg-muted",
             )}
           >
-            {enabled ? (
-              <ShieldCheck className="size-5 text-success" />
+            {config ? (
+              <ShieldCheck className="size-4.5 text-success" />
             ) : (
-              <ShieldOff className="size-5 text-muted-foreground" />
+              <ShieldOff className="size-4.5 text-muted-foreground" />
             )}
           </span>
-
           <div className="min-w-0 flex-1 space-y-1">
-            {/* The state in one line, in the words the server-level screen
-                already uses — the same idea should not have two vocabularies. */}
-            <p className="font-medium">
-              {!enabled
-                ? t("state.off")
-                : totals.currentlyFailed > 0
-                  ? t("state.failing", { count: totals.currentlyFailed })
-                  : t("state.quiet")}
+            <p className="flex flex-wrap items-center gap-2 font-semibold">
+              {config ? t("state.on") : t("state.setup")}
+              {config?.jail_name ? (
+                <Badge variant="outline" className="font-mono text-xs font-normal">
+                  {config.jail_name}
+                </Badge>
+              ) : null}
             </p>
             <p className="text-sm text-muted-foreground">
-              {enabled ? t("state.onBody") : t("state.offBody")}
+              {config ? t("state.onBody") : t("state.setupBody")}
             </p>
           </div>
-
-          {canManage ? (
-            <Switch checked={enabled} onCheckedChange={toggle} disabled={busy} />
-          ) : (
-            <Badge variant="outline">{enabled ? t("state.onBadge") : t("state.offBadge")}</Badge>
-          )}
+          {config && canManage ? (
+            <Button variant="outline" onClick={() => setConfirmRemove(true)} disabled={removing}>
+              {removing ? <Loader2 className="size-4 animate-spin" /> : null}
+              {t("removeAction")}
+            </Button>
+          ) : null}
         </CardContent>
-
-        {enabled && jails.length > 0 ? (
-          <div className="border-t px-5 py-3.5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t("watching")}
-            </p>
-            <ul className="mt-2 space-y-1.5">
-              {jails.map((jail) => (
-                <li key={jail.jail} className="flex items-center justify-between gap-3 text-sm">
-                  <span className={cn(!jail.enabled && "text-muted-foreground")}>
-                    {/* A jail we have no word for yet shows its raw name
-                        rather than a missing-key crash — the backend can add a
-                        third at any time. */}
-                    {KNOWN_JAILS.has(jailKind(jail.jail))
-                      ? t(`jails.${jailKind(jail.jail)}`)
-                      : jail.jail}
-                  </span>
-                  {jail.enabled ? (
-                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                      {t("jailCounts", {
-                        failed: jail.stats?.currently_failed ?? 0,
-                        banned: jail.stats?.currently_banned ?? 0,
-                      })}
-                    </span>
-                  ) : (
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {t("jailInactive")}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-
-            {/* One sentence rather than four counters in a table: "is this
-                doing anything" is a single question. */}
-            {totals.totalFailed > 0 || totals.totalBanned > 0 ? (
-              <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
-                {t("totals", { failed: totals.totalFailed, banned: totals.totalBanned })}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
       </Card>
 
-      {enabled ? (
-        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-          <div className="border-b px-5 py-3.5">
-            <h2 className="text-sm font-semibold tracking-tight">
-              {t("banned.title", { count: banned.length })}
-            </h2>
+      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+        <Tabs value={tab} onValueChange={setTab} className="gap-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
+            <TabsList className="!h-auto w-fit flex-wrap gap-1 p-1">
+              {FILES.map(({ key, icon: Icon }) => (
+                <TabsTrigger key={key} value={key} className="gap-2 px-3 py-1.5">
+                  <Icon className="size-4" />
+                  {t(`files.${key}`)}
+                  {draft[key] !== saved[key] ? (
+                    <span
+                      className="size-1.5 rounded-full bg-warning"
+                      aria-label={t("unsavedHere")}
+                    />
+                  ) : null}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <p className="text-xs text-muted-foreground">{t(`files.${tab}Hint`)}</p>
           </div>
 
-          <CardContent className="p-0">
-            {banned.length === 0 ? (
-              // The normal, healthy state — one line that says so, not an
-              // empty table implying something is missing.
-              <p className="px-5 py-4 text-sm text-muted-foreground">{t("banned.empty")}</p>
-            ) : (
-              <ul className="divide-y">
-                {banned.map((ip) => (
-                  <li key={ip} className="flex items-center gap-3 px-5 py-3">
-                    <span className="min-w-0 flex-1 truncate font-mono text-sm">
-                      {ip}
-                      {ip === viewerIp ? (
-                        <Badge variant="destructive" className="ml-2 font-normal">
-                          {t("banned.you")}
-                        </Badge>
-                      ) : null}
-                    </span>
-                    {canManage ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => unban(ip)}
-                        disabled={unbanning === ip}
-                      >
-                        {unbanning === ip ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                        {t("banned.unban")}
-                      </Button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
+          {/* Said before they edit, because the placeholders look like
+              something to fill in and are the one thing that must be left. */}
+          <p className="border-b bg-muted/30 px-5 py-2.5 text-xs text-muted-foreground">
+            {t("placeholderNote")}
+          </p>
 
-          {/* Secondary on purpose: people come here to let an address back in
-              far more often than to shut one out by hand. */}
-          {canManage ? (
-            <div className="flex flex-col gap-2 border-t px-5 py-3.5 sm:flex-row sm:items-center">
-              <div className="flex flex-1 gap-2">
-                <Input
-                  value={draft}
-                  onChange={(event) => {
-                    setDraft(event.target.value);
-                    if (banError) setBanError(null);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Enter") return;
-                    event.preventDefault();
-                    ban();
-                  }}
-                  placeholder={t("ban.placeholder")}
-                  spellCheck={false}
-                  autoComplete="off"
-                  disabled={busy}
-                  aria-invalid={Boolean(banError)}
-                  className="h-8 font-mono text-xs sm:max-w-56"
+          {FILES.map(({ key, filename }) => (
+            <TabsContent key={key} value={key} forceMount hidden={tab !== key} className="mt-0">
+              {/* `h-full` on the editor, `overflow-hidden` on the box — the
+                  same pair the file editor uses. Without it CodeMirror sizes
+                  to its content and leaves the rest of the box blank, so a
+                  short file sat in a dark strip above a white gap. */}
+              <div className="h-80 overflow-hidden border-b" aria-label={filename}>
+                <CodeEditor
+                  filename={filename}
+                  value={draft[key]}
+                  readOnly={!canManage || saving}
+                  onChange={(value) => setDraft((current) => ({ ...current, [key]: value }))}
+                  className="h-full"
                 />
-                <Button type="button" variant="outline" size="sm" onClick={ban} disabled={busy}>
-                  <Ban className="size-3.5" />
-                  {t("ban.action")}
-                </Button>
               </div>
-              {banError ? (
-                <p className="text-xs text-destructive">{t(`ban.errors.${banError}`)}</p>
-              ) : null}
+            </TabsContent>
+          ))}
+
+          {lostPlaceholders.length > 0 ? (
+            <p className="flex items-start gap-2.5 border-b bg-warning/10 px-5 py-3 text-sm">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+              <span>
+                {t("placeholderLost", {
+                  tokens: [...new Set(lostPlaceholders)].join(", "),
+                  count: new Set(lostPlaceholders).size,
+                })}
+              </span>
+            </p>
+          ) : null}
+
+          {/* fail2ban's own words about what it refused, kept on screen
+              because the next edit is based on them.
+
+              Not a console slab: given the black editor directly above it, a
+              second dark monospaced box read as another file rather than as
+              the reason the first one was rejected. It is quoted inside the
+              message — mono for fidelity, but plainly part of the alert. */}
+          {testError ? (
+            <div className="flex items-start gap-2.5 border-b border-destructive/30 bg-destructive/5 px-5 py-3.5">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+              <div className="min-w-0 space-y-1.5">
+                <p className="text-sm font-medium text-destructive">{testError.message}</p>
+                {testError.output ? (
+                  <p className="max-h-40 overflow-auto whitespace-pre-wrap border-l-2 border-destructive/30 pl-3 font-mono text-xs leading-relaxed text-destructive/90">
+                    {testError.output}
+                  </p>
+                ) : null}
+              </div>
             </div>
           ) : null}
-        </Card>
-      ) : null}
+
+          <CardSaveFooter
+            saving={saving}
+            dirty={dirty}
+            onSave={save}
+            // During setup the way out is back to the empty state, not a
+            // reset to a template that was never saved — otherwise the form
+            // has no exit but the browser's back button.
+            onDiscard={() => {
+              setDraft(saved);
+              setTestError(null);
+              if (isSetup) setEditing(false);
+            }}
+            saveReason={
+              !canManage
+                ? t("noPermission")
+                : empty
+                  ? t("bothRequired")
+                  : !dirty
+                    ? t("nothingToSave")
+                    : null
+            }
+            saveLabel={isSetup ? t("createAction") : t("saveAction")}
+            note={t("saveNote")}
+            savingNote={t("savingNote")}
+            showReason
+            quietWhenClean
+          />
+        </Tabs>
+      </Card>
 
       <ConfirmDialog
-        open={confirmOff}
-        onOpenChange={setConfirmOff}
-        icon={ShieldOff}
-        tone="warning"
-        title={t("confirmOff.title")}
-        description={t("confirmOff.body")}
-        confirmLabel={t("confirmOff.confirm")}
-        pending={busy}
-        onConfirm={() => setEnabled(false)}
+        open={confirmRemove}
+        onOpenChange={setConfirmRemove}
+        icon={TriangleAlert}
+        tone="destructive"
+        title={t("removeTitle")}
+        // Removing throws away unsaved edits as well as the saved config, and
+        // the two losses are not obviously the same action — so the dialog
+        // counts what else is about to go rather than letting it go quietly.
+        description={
+          unsavedFiles > 0 ? t("removeBodyDirty", { count: unsavedFiles }) : t("removeBody")
+        }
+        confirmLabel={t("removeConfirm")}
+        pending={removing}
+        onConfirm={remove}
       />
     </div>
   );
