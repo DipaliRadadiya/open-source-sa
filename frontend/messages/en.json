@@ -3293,7 +3293,7 @@
     "clone": {
       "pageTitle": "Site Clone",
       "pageSubtitle": "Make an independent copy of {name} at a new domain.",
-      "back": "Back to site",
+      "back": "Back to Applications",
       "loadFailed": "This site could not be loaded.",
       "failed": "The clone could not be started.",
       "what": {
@@ -3423,7 +3423,7 @@
     "php": {
       "pageTitle": "PHP Settings",
       "pageSubtitle": "The PHP version and limits this site runs with.",
-      "back": "Back to site",
+      "back": "Back to Applications",
       "loadFailed": "These settings could not be loaded.",
       "provisioning": "This site is still being set up. Its PHP settings will appear once it finishes.",
       "saved": "PHP settings saved.",
@@ -3555,7 +3555,7 @@
     "fail2ban": {
       "pageTitle": "Attack protection",
       "pageSubtitle": "Bans addresses that keep attacking this site.",
-      "back": "Back to site",
+      "back": "Back to Applications",
       "loadFailed": "We could not check this site's protection.",
       "provisioning": "This site is still being set up. Protection can be added once it finishes.",
       "empty": {
@@ -3595,7 +3595,72 @@
       "removeFailed": "That could not be removed.",
       "createAction": "Turn on attack protection",
       "removeBodyDirty": "The jail and filter files are deleted and fail2ban stops watching this site. Anyone already banned is released — and {count, plural, one {the file you have edited but not saved goes with them} other {the # files you have edited but not saved go with them}}."
-    }
+    },
+    "staging": {
+      "pageTitle": "Staging Area",
+      "pageSubtitle": "A copy of this site you can break without anyone noticing.",
+      "back": "Back to Applications",
+      "loadFailed": "We could not check this site's staging area.",
+      "provisioning": "This site is still being set up. A staging copy can be made once it finishes.",
+      "unsupported": "Staging is only available for WordPress sites. This one is a {type} site.",
+      "manageAction": "Open staging site",
+      "empty": {
+        "title": "No staging copy yet",
+        "body": "A staging site is a full copy of this one on its own domain — somewhere to try a plugin, a theme or an update before your visitors see it.",
+        "action": "Create staging site"
+      },
+      "push": {
+        "title": "Copy staging over production",
+        "body": "Replaces {domain} with what is on the staging site. There is no undo.",
+        "action": "Push to production"
+      },
+      "createDialog": {
+        "title": "Create staging site",
+        "description": "A copy of {domain}, on a domain of its own.",
+        "domainLabel": "Domain for the copy",
+        "domainPlaceholder": "staging.example.com",
+        "domainHint": "Point this domain at this server first, or the copy will be unreachable.",
+        "slow": "This copies the whole site and can take several minutes. Keep this window open — there is no progress to come back to.",
+        "cancel": "Cancel",
+        "submit": "Create staging site",
+        "creating": "Creating…",
+        "done": "Staging site created at {domain}.",
+        "failed": "The staging site could not be created."
+      },
+      "pushDialog": {
+        "title": "Push staging over {domain}?",
+        "description": "Everything on {staging} is copied over {production}. This cannot be undone.",
+        "downtime": "Your site is taken offline while this runs, and visitors see a maintenance page until it finishes.",
+        "whatToPush": "What should be copied",
+        "modes": {
+          "files": {
+            "label": "Files only",
+            "description": "Copies the site's files and deletes any file that exists only on production. Nothing is backed up first."
+          },
+          "full": {
+            "label": "Files and database",
+            "description": "Also replaces the database, so anything written since the copy was made — orders, comments, new posts — is gone. The old database is dumped first."
+          }
+        },
+        "backupFirst": "There is no way back from this. <link>Take a backup first</link> if you have not.",
+        "confirmLabel": "Type {domain} to confirm",
+        "pickMode": "Choose what to copy",
+        "typeToUnlock": "Type the production domain to confirm",
+        "cancel": "Cancel",
+        "submit": "Push to production",
+        "pushing": "Pushing…",
+        "done": "Staging pushed to {domain}.",
+        "failed": "The push did not finish.",
+        "copyAge": "Copy made {age}"
+      },
+      "isCopy": {
+        "title": "This site is a staging copy",
+        "body": "It was made as a copy of another site, so it does not get a staging area of its own. Push it back from the site it belongs to.",
+        "action": "Go to the original site"
+      },
+      "copyAge": "Copy made {age}"
+    },
+    "stagingBadge": "Staging"
   },
   "panelUpdate": {
     "title": "Panel update",

@@ -11,6 +11,7 @@ import {
 } from "@/lib/schemas/application";
 import { applicationPhpResponseSchema } from "@/lib/schemas/php-settings";
 import { applicationFail2banResponseSchema } from "@/lib/schemas/application-fail2ban";
+import { applicationStagingResponseSchema } from "@/lib/schemas/application-staging";
 
 
 export const getApplications = cache(async function getApplications() {
@@ -94,3 +95,19 @@ export const getServerCapabilities = cache(async function getServerCapabilities(
   const result = await read("/server/capabilities", serverCapabilitiesResponseSchema);
   return { webServer: result.data?.capabilities?.web_server ?? null, failed: result.failed };
 });
+
+/**
+ * One site's staging copy, if it has one.
+ *
+ * A 404 is an answer rather than a failure: staging is WordPress-only, so any
+ * other site type is told it cannot have one instead of being shown an error
+ * it can do nothing about.
+ */
+export async function getApplicationStaging(id) {
+  const result = await read(`/applications/${id}/staging`, applicationStagingResponseSchema);
+  return {
+    staging: result.data?.staging ?? null,
+    failed: result.failed,
+    status: result.status,
+  };
+}

@@ -45,6 +45,7 @@ const BUILT_APPLICATION_URLS = new Set([
   "/clone",
   "/php",
   "/fail2ban",
+  "/staging",
 ]);
 
 export function isApplicationNavBuilt(url) {

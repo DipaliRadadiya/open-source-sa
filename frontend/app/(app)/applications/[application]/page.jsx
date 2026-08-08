@@ -96,6 +96,15 @@ export default async function ApplicationDetailPage({ params }) {
               <Badge variant="secondary" className="font-normal">
                 {application.site_type_title ?? application.site_type}
               </Badge>
+              {/* A staging copy is otherwise indistinguishable from the site
+                  it copies, and the two are usually one letter apart in the
+                  switcher. Editing the wrong one is the exact mistake staging
+                  exists to prevent, so the copy says so where the name is. */}
+              {application.is_staging ? (
+                <Badge variant="warning" className="font-normal">
+                  {t("stagingBadge")}
+                </Badge>
+              ) : null}
             </div>
             <div className="flex items-center gap-1">
               {application.status === "active" ? (

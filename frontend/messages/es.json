@@ -3293,7 +3293,7 @@
     "clone": {
       "pageTitle": "Clonar sitio",
       "pageSubtitle": "Crea una copia independiente de {name} en un dominio nuevo.",
-      "back": "Volver al sitio",
+      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudo cargar este sitio.",
       "failed": "No se pudo iniciar la clonación.",
       "what": {
@@ -3423,7 +3423,7 @@
     "php": {
       "pageTitle": "Ajustes de PHP",
       "pageSubtitle": "La versión de PHP y los límites con los que funciona este sitio.",
-      "back": "Volver al sitio",
+      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudieron cargar estos ajustes.",
       "provisioning": "Este sitio aún se está creando. Sus ajustes de PHP aparecerán cuando termine.",
       "saved": "Ajustes de PHP guardados.",
@@ -3555,7 +3555,7 @@
     "fail2ban": {
       "pageTitle": "Protección contra ataques",
       "pageSubtitle": "Bloquea direcciones que atacan este sitio de forma repetida.",
-      "back": "Volver al sitio",
+      "back": "Volver a Aplicaciones",
       "loadFailed": "No pudimos comprobar la protección de este sitio.",
       "provisioning": "Este sitio aún se está creando. La protección se puede añadir cuando termine.",
       "empty": {
@@ -3595,7 +3595,72 @@
       "removeFailed": "No se pudo eliminar.",
       "createAction": "Activar la protección",
       "removeBodyDirty": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar este sitio. Quien esté bloqueado quedará liberado, y {count, plural, one {el archivo que has editado sin guardar se perderá} other {los # archivos que has editado sin guardar se perderán}}."
-    }
+    },
+    "staging": {
+      "pageTitle": "Área de pruebas",
+      "pageSubtitle": "Una copia de este sitio que puedes romper sin que nadie lo note.",
+      "back": "Volver a Aplicaciones",
+      "loadFailed": "No pudimos comprobar el área de pruebas de este sitio.",
+      "provisioning": "Este sitio aún se está creando. Podrás hacer una copia de pruebas cuando termine.",
+      "unsupported": "El área de pruebas solo está disponible para sitios WordPress. Este es un sitio {type}.",
+      "manageAction": "Abrir sitio de pruebas",
+      "empty": {
+        "title": "Todavía no hay copia de pruebas",
+        "body": "Un sitio de pruebas es una copia completa de este en su propio dominio: un lugar donde probar un plugin, un tema o una actualización antes de que lo vean tus visitantes.",
+        "action": "Crear sitio de pruebas"
+      },
+      "push": {
+        "title": "Copiar pruebas sobre producción",
+        "body": "Sustituye {domain} por lo que hay en el sitio de pruebas. No se puede deshacer.",
+        "action": "Publicar en producción"
+      },
+      "createDialog": {
+        "title": "Crear sitio de pruebas",
+        "description": "Una copia de {domain}, en un dominio propio.",
+        "domainLabel": "Dominio para la copia",
+        "domainPlaceholder": "pruebas.ejemplo.com",
+        "domainHint": "Apunta primero este dominio a este servidor o la copia no será accesible.",
+        "slow": "Esto copia el sitio entero y puede tardar varios minutos. Mantén esta ventana abierta: no hay ningún progreso al que volver.",
+        "cancel": "Cancelar",
+        "submit": "Crear sitio de pruebas",
+        "creating": "Creando…",
+        "done": "Sitio de pruebas creado en {domain}.",
+        "failed": "No se pudo crear el sitio de pruebas."
+      },
+      "pushDialog": {
+        "title": "¿Publicar pruebas sobre {domain}?",
+        "description": "Todo lo que hay en {staging} se copia sobre {production}. No se puede deshacer.",
+        "downtime": "Tu sitio se queda fuera de servicio mientras se ejecuta, y los visitantes verán una página de mantenimiento hasta que termine.",
+        "whatToPush": "Qué se debe copiar",
+        "modes": {
+          "files": {
+            "label": "Solo archivos",
+            "description": "Copia los archivos del sitio y elimina cualquier archivo que solo exista en producción. No se hace ninguna copia de seguridad previa."
+          },
+          "full": {
+            "label": "Archivos y base de datos",
+            "description": "También sustituye la base de datos, así que se pierde todo lo escrito desde que se hizo la copia: pedidos, comentarios, entradas nuevas. La base de datos anterior se vuelca antes."
+          }
+        },
+        "backupFirst": "No hay vuelta atrás. <link>Haz antes una copia de seguridad</link> si aún no la tienes.",
+        "confirmLabel": "Escribe {domain} para confirmar",
+        "pickMode": "Elige qué copiar",
+        "typeToUnlock": "Escribe el dominio de producción para confirmar",
+        "cancel": "Cancelar",
+        "submit": "Publicar en producción",
+        "pushing": "Publicando…",
+        "done": "Pruebas publicadas en {domain}.",
+        "failed": "La publicación no terminó.",
+        "copyAge": "Copia hecha {age}"
+      },
+      "isCopy": {
+        "title": "Este sitio es una copia de pruebas",
+        "body": "Se creó como copia de otro sitio, así que no tiene su propia área de pruebas. Publícalo desde el sitio al que pertenece.",
+        "action": "Ir al sitio original"
+      },
+      "copyAge": "Copia hecha {age}"
+    },
+    "stagingBadge": "Pruebas"
   },
   "panelUpdate": {
     "title": "Actualización del panel",

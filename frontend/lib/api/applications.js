@@ -115,3 +115,22 @@ export function saveApplicationFail2ban(id, { jail, filter }) {
 export function deleteApplicationFail2ban(id) {
   return api.delete(`/applications/${id}/fail2ban`);
 }
+
+/**
+ * Staging: a WordPress-only copy of the site to break safely.
+ *
+ * Both calls are synchronous on the backend and slow — create provisions a
+ * site and rsyncs it, push takes production offline and rsyncs the other way
+ * (300s timeout). There is no job to poll, so the caller has to hold a pending
+ * state for the whole round trip rather than showing progress.
+ *
+ * There is no delete: the staging site is an application, removed like any
+ * other one.
+ */
+export function createApplicationStaging(id, domain) {
+  return api.post(`/applications/${id}/staging`, { domain });
+}
+
+export function pushApplicationStaging(id, mode) {
+  return api.post(`/applications/${id}/staging/push`, { mode });
+}
