@@ -2570,7 +2570,7 @@
       "branchesFailed": "We could not load branches. Select the repository again to retry.",
       "branchHint": "The default branch is selected when available.",
       "generate": "Generate",
-      "domainHint": "Lowercase letters, numbers and dashes. Must be unique on this server.",
+      "domainHint": "Lowercase letters, numbers and dashes.",
       "portChecking": "Checking availability…",
       "portFree": "Port {port} is free.",
       "portUseSuggested": "Use {port}",
@@ -2589,7 +2589,14 @@
       "branchNeedsRepository": "Choose a repository first.",
       "changeType": "Change",
       "noOptions": "No options available yet.",
-      "typePlaceholder": "Search and select an application type…"
+      "typePlaceholder": "Search and select an application type…",
+      "domainMode": {
+        "own": "My domain",
+        "temporary": "Temporary",
+        "label": "Where this site will live"
+      },
+      "temporaryDomainHint": "Works right away. Use a real domain before launch.",
+      "nameHint": "Only used in the panel — visitors never see it."
     },
     "actions": {
       "label": "Application actions",

@@ -2570,7 +2570,7 @@
       "branchesFailed": "No pudimos cargar las ramas. Selecciona el repositorio de nuevo para reintentar.",
       "branchHint": "La rama predeterminada se selecciona cuando está disponible.",
       "generate": "Generar",
-      "domainHint": "Letras minúsculas, números y guiones. Debe ser único en este servidor.",
+      "domainHint": "Minúsculas, números y guiones.",
       "portChecking": "Comprobando disponibilidad…",
       "portFree": "El puerto {port} está libre.",
       "portUseSuggested": "Usar {port}",
@@ -2589,7 +2589,14 @@
       "branchNeedsRepository": "Elige primero un repositorio.",
       "changeType": "Cambiar",
       "noOptions": "Aún no hay opciones disponibles.",
-      "typePlaceholder": "Busca y selecciona un tipo de aplicación…"
+      "typePlaceholder": "Busca y selecciona un tipo de aplicación…",
+      "domainMode": {
+        "own": "Mi dominio",
+        "temporary": "Temporal",
+        "label": "Dónde vivirá este sitio"
+      },
+      "temporaryDomainHint": "Funciona al instante. Usa un dominio real antes de publicar.",
+      "nameHint": "Solo se usa en el panel; los visitantes no lo ven."
     },
     "actions": {
       "label": "Acciones de la aplicación",

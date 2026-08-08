@@ -7,6 +7,7 @@ import { getSystemUserOptions } from "@/lib/system-users/get-system-users";
 import { getGitAccounts } from "@/lib/git/get-git";
 import { getPhp } from "@/lib/php/get-php";
 import { getNode } from "@/lib/node/get-node";
+import { getServerFacts } from "@/lib/server/get-server-facts";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -18,7 +19,7 @@ export async function generateMetadata() {
 }
 
 export default async function CreateApplicationPage() {
-  const [permissions, t, types, systemUsers, accounts, php, node] = await Promise.all([
+  const [permissions, t, types, systemUsers, accounts, php, node, facts] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
     getSiteTypes(),
@@ -26,6 +27,8 @@ export default async function CreateApplicationPage() {
     getGitAccounts(),
     getPhp(),
     getNode(),
+    // For the temporary-domain option: nip.io needs the address to point at.
+    getServerFacts().catch(() => null),
   ]);
 
   const phpVersions = (php.data?.versions ?? []).filter((version) => !version.status || version.status === "ready");
@@ -56,6 +59,7 @@ export default async function CreateApplicationPage() {
         nodeVersions={nodeVersions}
         nodeDefaultVersion={node.data?.default ?? null}
         nodeVersionsFailed={node.failed}
+        serverIp={facts?.ip ?? null}
       />
     </div>
   );

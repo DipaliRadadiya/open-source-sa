@@ -40,7 +40,9 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { cn } from "@/lib/utils";
 import { ChoiceField } from "@/components/ui/choice-field";
+import { ipToLabel, temporaryDomain } from "@/lib/applications/temporary-domain";
 import {
   Collapsible,
   CollapsibleContent,
@@ -439,6 +441,7 @@ export function CreateApplicationForm({
   nodeVersions = [],
   nodeDefaultVersion = null,
   nodeVersionsFailed = false,
+  serverIp = null,
 }) {
   const t = useTranslations("applications");
   const { name: brand } = useBranding();
@@ -482,6 +485,29 @@ export function CreateApplicationForm({
   });
   const name = useWatch({ control: form.control, name: "name" });
   const domain = useWatch({ control: form.control, name: "domain" });
+
+  /**
+   * Somewhere to put a site that has no domain yet.
+   *
+   * Offered only when the server reported an address — nip.io needs one to
+   * point at, and an option that cannot produce a domain is worse than no
+   * option. `own` stays the default, so anyone who has a domain sees exactly
+   * what they saw before.
+   */
+  const canUseTemporary = Boolean(ipToLabel(serverIp));
+  const [domainMode, setDomainMode] = useState("own");
+  const temporary = domainMode === "temporary";
+  const generated = temporary ? temporaryDomain(name, serverIp) : null;
+
+  // The generated value IS the field: written through so validation, the
+  // summary panel and the submitted payload all read one source.
+  useEffect(() => {
+    if (!temporary) return;
+    const next = generated ?? "";
+    if (form.getValues("domain") !== next) {
+      form.setValue("domain", next, { shouldValidate: Boolean(next) });
+    }
+  }, [temporary, generated, form]);
   const systemUserId = useWatch({
     control: form.control,
     name: "system_user_id",
@@ -882,7 +908,12 @@ export function CreateApplicationForm({
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>{t("name")}</FormLabel>
+                      {/* Same fixed-height label row as Domain's, which
+                          carries a control in it. Two cells side by side only
+                          line up if their heads are the same height. */}
+                      <div className="flex h-7 items-center">
+                        <FormLabel required>{t("name")}</FormLabel>
+                      </div>
                       <FormControl>
                         <Input
                           autoComplete="off"
@@ -890,6 +921,12 @@ export function CreateApplicationForm({
                           {...field}
                         />
                       </FormControl>
+                      {/* Answers the question the two fields raise together —
+                          why a name AND a domain — and gives this cell the
+                          same height as Domain's, which has a hint of its
+                          own. Balance alone would not justify the line; the
+                          answer does. */}
+                      <FormDescription>{t("form.nameHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -899,14 +936,55 @@ export function CreateApplicationForm({
                   name="domain"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>{t("domain")}</FormLabel>
+                      {/* On the label row, not above the input.
+                          Stacked options gave this cell a taller head than
+                          Name's, so the two inputs no longer lined up and the
+                          left column ended in dead space. A segmented control
+                          rides in the label's own line: both cells keep the
+                          shape "one label row, one input", and the grid stays
+                          level. */}
+                      <div className="flex h-7 items-center justify-between gap-2">
+                        <FormLabel required>{t("domain")}</FormLabel>
+                        {canUseTemporary ? (
+                          <div
+                            role="group"
+                            aria-label={t("form.domainMode.label")}
+                            className="flex shrink-0 items-center gap-0.5 rounded-md border p-0.5"
+                          >
+                            {["own", "temporary"].map((mode) => (
+                              <button
+                                key={mode}
+                                type="button"
+                                aria-pressed={domainMode === mode}
+                                onClick={() => setDomainMode(mode)}
+                                className={cn(
+                                  "rounded px-2 py-0.5 text-xs transition-colors",
+                                  domainMode === mode
+                                    ? "bg-muted font-medium text-foreground"
+                                    : "text-muted-foreground hover:text-foreground",
+                                )}
+                              >
+                                {t(`form.domainMode.${mode}`)}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+
                       <FormControl>
                         <Input
                           inputMode="url"
                           autoComplete="url"
                           placeholder={t("form.domainPlaceholder")}
                           {...field}
+                          // Read-only, not disabled: a disabled field is
+                          // skipped by the keyboard and reads as broken, and
+                          // this value is real — it is just not yours to type.
+                          readOnly={temporary}
+                          className={cn(temporary && "bg-muted/50 font-mono")}
+                          value={temporary ? (generated ?? "") : field.value}
                           onChange={(event) => {
+                            if (temporary) return;
                             field.onChange(event);
                             if (!form.getValues("name")?.trim()) {
                               const label = event.target.value
@@ -917,7 +995,12 @@ export function CreateApplicationForm({
                           }}
                         />
                       </FormControl>
-                      <FormDescription>{t("form.domainHint")}</FormDescription>
+
+                      <FormDescription>
+                        {temporary
+                          ? t("form.temporaryDomainHint")
+                          : t("form.domainHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
