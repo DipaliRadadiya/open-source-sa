@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\CloneStatus;
-use App\Models\Clone as CloneModel;
+use App\Models\SiteClone;
 use App\Services\Server\Applications\CloneManager;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,16 +31,21 @@ class RunClone implements ShouldBeUnique, ShouldQueue
     /** 10 minutes — rsync is the slow part for a large site. */
     public int $timeout = 600;
 
-    public function __construct(public int $cloneId) {}
+    public function __construct(
+        public int $cloneId,
+        public int $sourceApplicationId,
+    ) {}
 
     public function uniqueId(): string
     {
-        return 'clone-source-'.$this->cloneId;
+        // Unique per source application: two clones of the same site at once would
+        // both allocate the same system user and write to the same rsync destination.
+        return 'clone-source-'.$this->sourceApplicationId;
     }
 
     public function handle(CloneManager $cloner): void
     {
-        $clone = CloneModel::with(['sourceApplication.systemUser'])->find($this->cloneId);
+        $clone = SiteClone::with(['sourceApplication.systemUser'])->find($this->cloneId);
 
         if ($clone === null) {
             return;
@@ -72,6 +77,7 @@ class RunClone implements ShouldBeUnique, ShouldQueue
 
             $clone->update([
                 'status' => CloneStatus::Failed,
+                'reason' => $clone->reason ?: ($e instanceof Throwable ? substr($e->getMessage(), 0, 255) : 'failed'),
                 'finished_at' => now(),
             ]);
         }
@@ -86,7 +92,7 @@ class RunClone implements ShouldBeUnique, ShouldQueue
             'detail' => $e?->getMessage(),
         ]);
 
-        CloneModel::query()
+        SiteClone::query()
             ->whereKey($this->cloneId)
             ->whereIn('status', [CloneStatus::Pending->value, CloneStatus::Running->value])
             ->update([

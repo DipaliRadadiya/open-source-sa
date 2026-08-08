@@ -10,7 +10,6 @@ use App\Services\Server\Applications\ReleaseManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -78,7 +77,7 @@ it('prevents rollback when no previous release path is stored', function () {
     $releases = app(ReleaseManager::class);
 
     expect(fn () => $releases->rollback($this->application))
-        ->toThrow(\RuntimeException::class, 'No previous release to roll back to');
+        ->toThrow(RuntimeException::class, 'No previous release to roll back to');
 });
 
 it('marks rolled-back releases as such', function () {

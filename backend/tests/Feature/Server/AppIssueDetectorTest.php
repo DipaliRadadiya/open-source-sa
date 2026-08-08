@@ -3,20 +3,13 @@
 namespace Tests\Feature\Server;
 
 use App\Enums\CertificateStatus;
-use App\Enums\CertificateType;
 use App\Enums\DomainType;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
 use App\Models\Certificate;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\AppIssueDetector;
-use App\Services\Server\Applications\ProcessSupervisor;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     Sanctum::actingAs(SystemUser::factory()->admin()->make());

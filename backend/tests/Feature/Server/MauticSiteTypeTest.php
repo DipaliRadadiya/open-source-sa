@@ -1,52 +1,38 @@
 <?php
 
 use App\Services\Applications\Types\MauticSiteType;
-use Illuminate\Support\Facades\Validator;
-use PHPUnit\Framework\Attributes\Test;
 
 uses()->group('mautic');
 
 describe('MauticSiteType', function () {
-    #[Test]
-    public function name_returns_mautic(): void
-    {
+    it('returns mautic as the site type name', function () {
         $type = new MauticSiteType;
         expect($type->name())->toBe('mautic');
-    }
+    });
 
-    #[Test]
-    public function method_is_one_click(): void
-    {
+    it('method is one_click', function () {
         $type = new MauticSiteType;
         expect($type->method())->toBe('one_click');
-    }
+    });
 
-    #[Test]
-    public function needs_database(): void
-    {
+    it('needs a database', function () {
         $type = new MauticSiteType;
         expect($type->needsDatabase())->toBeTrue();
-    }
+    });
 
-    #[Test]
-    public function category_is_marketing(): void
-    {
+    it('category is marketing', function () {
         $type = new MauticSiteType;
         expect($type->category())->toBe('marketing');
-    }
+    });
 
     describe('fields', function () {
-        #[Test]
-        public function contains_site_title(): void
-        {
+        it('contains a site_title field', function () {
             $type = new MauticSiteType;
             $fields = collect($type->fields());
             expect($fields->firstWhere('name', 'site_title'))->not()->toBeNull();
-        }
+        });
 
-        #[Test]
-        public function contains_all_mailer_fields(): void
-        {
+        it('contains all required mailer fields', function () {
             $type = new MauticSiteType;
             $fields = collect($type->fields());
             $mailerFields = ['mailer_name', 'mailer_email', 'mailer_host', 'mailer_port', 'mailer_username', 'mailer_password'];
@@ -55,47 +41,37 @@ describe('MauticSiteType', function () {
                 expect($fields->firstWhere('name', $field))
                     ->not()->toBeNull("Field [{$field}] should be present in MauticSiteType");
             }
-        }
+        });
 
-        #[Test]
-        public function mailer_name_is_required(): void
-        {
+        it('mailer_name is required', function () {
             $type = new MauticSiteType;
             $fields = collect($type->fields());
             $field = $fields->firstWhere('name', 'mailer_name');
             expect($field['required'] ?? false)->toBeTrue();
-        }
+        });
 
-        #[Test]
-        public function mailer_host_is_required(): void
-        {
+        it('mailer_host is required', function () {
             $type = new MauticSiteType;
             $fields = collect($type->fields());
             $field = $fields->firstWhere('name', 'mailer_host');
             expect($field['required'] ?? false)->toBeTrue();
-        }
+        });
 
-        #[Test]
-        public function mailer_port_is_number_type(): void
-        {
+        it('mailer_port is a number field', function () {
             $type = new MauticSiteType;
             $fields = collect($type->fields());
             $field = $fields->firstWhere('name', 'mailer_port');
             expect($field['type'])->toBe('number');
-        }
+        });
 
-        #[Test]
-        public function mailer_password_is_masked(): void
-        {
+        it('mailer_password is a password field', function () {
             $type = new MauticSiteType;
             $fields = collect($type->fields());
             $field = $fields->firstWhere('name', 'mailer_password');
             expect($field['type'])->toBe('password');
-        }
+        });
 
-        #[Test]
-        public function mailer_email_is_optional(): void
-        {
+        it('mailer_email is optional', function () {
             $type = new MauticSiteType;
             $fields = collect($type->fields());
             $field = $fields->firstWhere('name', 'mailer_email');
@@ -104,48 +80,38 @@ describe('MauticSiteType', function () {
     });
 
     describe('validation rules', function () {
-        #[Test]
-        public function site_title_is_required(): void
-        {
+        it('site_title is required', function () {
             $type = new MauticSiteType;
             $rules = $type->rules();
             expect($rules['site_title'])->toContain('required');
-        }
+        });
 
-        #[Test]
-        public function mailer_port_validates_as_port_range(): void
-        {
+        it('mailer_port validates as a port number', function () {
             $type = new MauticSiteType;
             $rules = $type->rules();
             expect($rules['mailer_port'])->toContain('integer');
             expect($rules['mailer_port'])->toContain('min:1');
             expect($rules['mailer_port'])->toContain('max:65535');
-        }
+        });
 
-        #[Test]
-        public function mailer_email_allows_null(): void
-        {
+        it('mailer_email allows null', function () {
             $type = new MauticSiteType;
             $rules = $type->rules();
             expect($rules['mailer_email'])->toContain('nullable');
-        }
+        });
 
-        #[Test]
-        public function mailer_password_minimum_length(): void
-        {
+        it('mailer_password has required and max constraints', function () {
             $type = new MauticSiteType;
             $rules = $type->rules();
             expect($rules['mailer_password'])->toContain('required');
             expect($rules['mailer_password'])->toContain('string');
             expect($rules['mailer_password'])->toContain('max:500');
-        }
+        });
 
-        #[Test]
-        public function admin_password_requires_minimum_length(): void
-        {
+        it('admin_password requires minimum length of 10', function () {
             $type = new MauticSiteType;
             $rules = $type->rules();
             expect($rules['admin_password'])->toContain('min:10');
-        }
+        });
     });
 });

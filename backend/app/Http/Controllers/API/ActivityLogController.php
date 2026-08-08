@@ -8,7 +8,14 @@ use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
 use App\Services\ActivityScopes;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
+/**
+ * Handles three scopes of activity log, each behind its own permission:
+ * - Own history (auth-gated)       — GET /activity-log
+ * - Admin-wide (access-admin)       — GET /admin/activity-log
+ * - Server-level (activity_log)     — GET /server/activity-log
+ */
 class ActivityLogController extends Controller
 {
     /**
@@ -94,6 +101,53 @@ class ActivityLogController extends Controller
 
         return response()->json([
             'activity_log' => ActivityLogResource::collection($paginator->items()),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * Server-level events only: cronjob, disk_cleaner, service, fail2ban,
+     * firewall, git_account, node, setting, panel_update. Per-app events
+     * (application, database, backup) are surfaced through their own feature
+     * and excluded here.
+     *
+     * Requires `activity_log` permission — different from `access-admin`
+     * which gates the admin-wide log.
+     */
+    public function serverIndex(Request $request, ActivityScopes $scopes): JsonResponse
+    {
+        $query = ActivityLog::with('user:id,username')
+            ->whereIn('type', [
+                'cronjob', 'disk_cleaner', 'service', 'fail2ban',
+                'firewall', 'git_account', 'node', 'setting', 'panel_update',
+            ])
+            ->latest('created_at');
+
+        if ($type = $request->input('filter.type')) {
+            $query->where('type', $type);
+        }
+
+        if ($action = $request->input('filter.action')) {
+            $query->where('action', $action);
+        }
+
+        if ($search = $request->string('search')->trim()->value()) {
+            $query->where(function ($q) use ($search) {
+                $q->where('type', 'like', "%{$search}%")
+                    ->orWhere('action', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = (int) $request->input('per_page', 20);
+        $paginator = $query->paginate($perPage);
+
+        return response()->json([
+            'activity_log' => ActivityLogResource::collection($paginator->items())->resolve(),
             'meta' => [
                 'current_page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),

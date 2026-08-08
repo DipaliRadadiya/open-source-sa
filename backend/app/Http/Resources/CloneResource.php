@@ -2,11 +2,11 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Clone as CloneModel;
+use App\Models\SiteClone;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin CloneModel */
+/** @mixin SiteClone */
 class CloneResource extends JsonResource
 {
     /** @return array<string, mixed> */

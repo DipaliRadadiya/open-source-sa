@@ -2,10 +2,9 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Enums\DomainType;
 use App\Models\Application;
-use App\Models\ApplicationDomain;
 use App\Services\Server\ServerOps;
-use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Collection;
 
 /**
@@ -112,7 +111,7 @@ class AppIssueDetector
     private function checkDnsDrift(Application $app): ?array
     {
         // Only check the primary domain, and only when a resolved IP was stored.
-        $domain = $app->domains->firstWhere('type', \App\Enums\DomainType::Primary);
+        $domain = $app->domains->firstWhere('type', DomainType::Primary);
 
         if (! $domain) {
             return null;

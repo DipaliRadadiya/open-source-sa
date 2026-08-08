@@ -1,15 +1,9 @@
 <?php
 
-use App\Enums\CronjobActive;
 use App\Models\Application;
 use App\Models\Cronjob;
 use App\Models\SystemUser;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     Sanctum::actingAs(SystemUser::factory()->admin()->make());

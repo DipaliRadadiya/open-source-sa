@@ -4,7 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\CloneOperationException;
 use App\Models\Application;
-use App\Models\Clone;
+use App\Models\SiteClone;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Str;
@@ -48,7 +48,7 @@ class CloneManager
      * the controller before dispatching the job); this method creates the
      * target Application and records steps as it progresses.
      */
-    public function execute(Clone $cloneRecord): Application
+    public function execute(SiteClone $cloneRecord): Application
     {
         $source = $cloneRecord->sourceApplication;
         $source->load('systemUser');

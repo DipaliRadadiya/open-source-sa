@@ -1347,14 +1347,14 @@ Response when the application has never been configured — `fail2ban` is `null`
 {"fail2ban": null, "jail_template": "...default jail INI...", "filter_template": "...default filter INI..."}
 ```
 
-Response when configured — `fail2ban` carries the saved values, and the templates echo them so the form renders the user's last submission unchanged until they edit it:
+Response when configured — `fail2ban` carries the saved values, and the templates echo them so the form renders the user's last submission unchanged until they edit it. `jail_template` and `filter_template` are always present alongside `fail2ban` so the form can pre-fill with the saved values (not defaults) without any client-side logic:
 
 ```json
 {"fail2ban": {
   "jail_name": "sVoss-shop",
   "jail_content": "[sVoss-shop]\nenabled  = true\nport     = http,https\nfilter   = sVoss-shop\nlogpath  = /var/log/nginx/shop.access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
   "filter_content": "[sVoss-shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n"
-}, "jail_template": "...same as fail2ban.jail_content...", "filter_template": "...same as fail2ban.filter_content..."}
+}, "jail_template": "[sVoss-shop]\nenabled  = true\nport     = http,https\n...", "filter_template": "[sVoss-shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n..."}
 ```
 
 The jail file template:

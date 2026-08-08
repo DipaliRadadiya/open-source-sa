@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Server\Restore;
 
-use App\Enums\BackupStatus;
 use App\Enums\BackupType;
 use App\Enums\RestoreStatus;
 use Illuminate\Foundation\Http\FormRequest;

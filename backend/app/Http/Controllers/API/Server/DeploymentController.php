@@ -12,7 +12,6 @@ use App\Models\Deployment;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
-
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 

@@ -76,10 +76,16 @@ class BackupTarget extends Model
             return $base;
         }
 
-        // "14:30" → "30 14 * * *" — replace the hour and minute fields
+        // Replace only the minute (field 0) and hour (field 1) fields,
+        // preserving the day-of-week (field 4) for weekly and day-of-month
+        // (field 2) for monthly. "14:30" on a weekly cron keeps its Sunday.
+        $parts = preg_split('/\s+/', $base);
         [$hour, $minute] = explode(':', $this->schedule_time, 2);
 
-        return $minute.' '.$hour.' * * *';
+        $parts[0] = $minute;
+        $parts[1] = (string) $hour;
+
+        return implode(' ', $parts);
     }
 
     /**

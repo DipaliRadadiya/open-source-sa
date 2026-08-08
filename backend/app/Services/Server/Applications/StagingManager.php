@@ -30,6 +30,11 @@ class StagingManager
      * @var array<int, string>
      */
     private const FILE_EXCLUDES = [
+        // wp-content/uploads/ is intentionally excluded: rsync --delete means
+        // pushing files mode would wipe production media added since staging was
+        // cloned, and there is no safety copy for files-only mode. Media lives
+        // in the database in WordPress; pushing the DB brings it back.
+        'wp-content/uploads/',
         'wp-content/cache/', '.git/', 'node_modules/', '*.log', 'wp-content/upgrade/', '.panel/',
     ];
 

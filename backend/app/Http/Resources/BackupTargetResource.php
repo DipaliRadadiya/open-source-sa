@@ -31,6 +31,7 @@ class BackupTargetResource extends JsonResource
             'retention_count' => $this->retention_count,
             'frequency' => $this->frequency,
             'frequency_title' => __('backup.frequency.'.$this->frequency),
+            'schedule_time' => $this->schedule_time,
             'enabled' => $this->enabled,
             // Objects, not lists, would be wrong here: these genuinely are
             // ordered collections of patterns. `[]` is the right empty value.

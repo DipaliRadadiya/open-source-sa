@@ -5,12 +5,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\SystemUser;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     // Admin user — has every app-level permission via the Administrator role.

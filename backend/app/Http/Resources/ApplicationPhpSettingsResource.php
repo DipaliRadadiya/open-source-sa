@@ -73,6 +73,28 @@ class ApplicationPhpSettingsResource extends JsonResource
                 'additional_directives' => $effective['additional_directives'],
             ],
 
+            // True for each field the user has explicitly set — false means the
+            // value is inherited from the panel defaults. Lets the frontend render
+            // a "Reset to default" button per field rather than guessing.
+            'overridden' => [
+                'memory_limit' => $settings->getAttribute('memory_limit') !== null,
+                'upload_max_filesize' => $settings->getAttribute('upload_max_filesize') !== null,
+                'post_max_size' => $settings->getAttribute('post_max_size') !== null,
+                'max_execution_time' => $settings->getAttribute('max_execution_time') !== null,
+                'max_input_time' => $settings->getAttribute('max_input_time') !== null,
+                'max_input_vars' => $settings->getAttribute('max_input_vars') !== null,
+                'session_gc_maxlifetime' => $settings->getAttribute('session_gc_maxlifetime') !== null,
+                'pm_type' => $settings->getAttribute('pm_type') !== null,
+                'pm_max_children' => $settings->getAttribute('pm_max_children') !== null,
+                'pm_max_requests' => $settings->getAttribute('pm_max_requests') !== null,
+                'open_basedir_enabled' => $settings->getAttribute('open_basedir_enabled') !== null,
+                'disable_functions' => $settings->getAttribute('disable_functions') !== null,
+                'allow_url_fopen' => $settings->getAttribute('allow_url_fopen') !== null,
+                'php_timezone' => $settings->getAttribute('php_timezone') !== null,
+                'auto_prepend_file' => $settings->getAttribute('auto_prepend_file') !== null,
+                'additional_directives' => $settings->getAttribute('additional_directives') !== null,
+            ],
+
             // Three named starting points instead of asking anyone to reason
             // about worker counts, each carrying the memory it implies.
             'presets' => $this->presets(),
