@@ -27,7 +27,9 @@ use Illuminate\Support\Str;
     'steps', 'failed_step', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes',
     'current_release_id', 'previous_release_path',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
-    'webhook_last_delivered_at', 'fail2ban_enabled',
+    'webhook_last_delivered_at',
+    'fail2ban_enabled',
+    'fail2ban_jail_name', 'fail2ban_jail_content', 'fail2ban_filter_content',
 ])]
 class Application extends Model
 {
@@ -45,6 +47,9 @@ class Application extends Model
             'waf_mode' => WafMode::class,
             'waf_categories' => 'array',
             'fail2ban_enabled' => 'boolean',
+            'fail2ban_jail_name' => 'string',
+            'fail2ban_jail_content' => 'string',
+            'fail2ban_filter_content' => 'string',
             'status' => ApplicationStatus::class,
             'settings' => 'array',
             'steps' => 'array',

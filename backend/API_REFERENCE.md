@@ -1332,6 +1332,99 @@ Update WAF settings.
 
 ---
 
+## Application — Per-site Fail2ban
+
+Per-application fail2ban watches one site's own access log. The jail and filter are raw INI files written verbatim to `/etc/fail2ban/{jail,filter}.d/sVoss-<slug>.conf` and reloaded into the daemon — the same shape the commercial ServerAvatar API exposes. Any feature fail2ban's INI supports (custom regex, multiple logpaths, additional actions) is reachable from the form, not just the structured `maxretry/findtime/bantime` of the previous implementation.
+
+On `GET`, applications with the old structured columns still on disk are migrated to the new INI form on the first read, after which the structured columns are dropped on the next migration. New applications start with `fail2ban: null` and the templates below.
+
+### GET `/applications/{application}/fail2ban`
+**Permission:** `app_fail2ban` (view)
+
+Response when the application has never been configured — `fail2ban` is `null`, the two templates are the defaults the form can pre-fill with:
+
+```json
+{"fail2ban": null, "jail_template": "...default jail INI...", "filter_template": "...default filter INI..."}
+```
+
+Response when configured — `fail2ban` carries the saved values, and the templates echo them so the form renders the user's last submission unchanged until they edit it:
+
+```json
+{"fail2ban": {
+  "jail_name": "sVoss-shop",
+  "jail_content": "[sVoss-shop]\nenabled  = true\nport     = http,https\nfilter   = sVoss-shop\nlogpath  = /var/log/nginx/shop.access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
+  "filter_content": "[sVoss-shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n"
+}, "jail_template": "...same as fail2ban.jail_content...", "filter_template": "...same as fail2ban.filter_content..."}
+```
+
+The jail file template:
+
+```ini
+[sVoss-{slug}]
+enabled  = true
+port     = http,https
+filter   = sVoss-{slug}
+logpath  = {webroot}/logs/access.log
+maxretry = 3
+bantime  = 3600
+findtime = 600
+```
+
+The filter file template:
+
+```ini
+[sVoss-{slug}]
+failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
+           ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
+           ^<HOST> .* "(POST|PUT|DELETE) .*wp-admin.*
+ignoreregex =
+```
+
+`{slug}`, `{name}`, `{filter}`, `{logpath}` are replaced with the resolved values when the file is written. Any other content the user submits is left untouched, so a custom regex or action is preserved end-to-end.
+
+---
+
+### POST `/applications/{application}/fail2ban`
+**Permission:** `app_fail2ban` (manage) | **Throttle:** 10/min
+
+Validate, dry-run against `fail2ban-client -t`, save, write to disk, reload. The dry-run is the gate: a config that does not parse against `fail2ban-client` never reaches the live daemon.
+
+**Request:**
+```json
+{"jail_config_content": "[sVoss-shop]\nenabled  = true\n...\n", "filter_config_content": "[sVoss-shop]\nfailregex = ^<HOST>\n...\n"}
+```
+
+Both fields are required, must be strings, and are capped at 65,535 characters.
+
+**Response `200`** — test passed, configuration applied:
+```json
+{"testOk": true, "message": "Fail2ban configured successfully!"}
+```
+
+**Response `500`** — test failed, nothing was saved or written to disk:
+```json
+{"testOk": false, "message": "Fail2ban configuration test failed.", "output": "ERROR: ..."}
+```
+
+---
+
+### DELETE `/applications/{application}/fail2ban`
+**Permission:** `app_fail2ban` (manage) | **Throttle:** 10/min
+
+Remove the jail file from `/etc/fail2ban/jail.d/`, reload the daemon, and clear the saved content. The filter file is left in place — dropping it would invalidate every other jail that referenced the same filter, and there is no clean way to know whether the filter is shared with another application.
+
+**Response `200`** — disabled:
+```json
+{"message": "Fail2ban disabled successfully!"}
+```
+
+**Response `500`** — already disabled (no saved content):
+```json
+{"message": "Fail2ban is already disabled for this application."}
+```
+
+---
+
 ## Application — Logs
 
 ### GET `/applications/{application}/logs`
@@ -1432,6 +1525,17 @@ Control a running worker. `{action}` = `start | stop | restart`.
 ---
 
 ## Application — Site Clone
+
+### GET `/clones`
+**Permission:** `app_clone` (view)
+
+Every clone across every application, newest first. For resuming a clone from a different browser session than the one that started it.
+
+```json
+{"clones": [{"id": 1, "source_application_id": 5, "source_application_name": "shop", "target_application_id": 8, "name": "shop-backup", "domain": "backup.example.com", "status": "completed", "status_title": "Completed", "current_step": null, "reason": null, "started_at": "29-07-2026 10:00:00", "finished_at": "29-07-2026 10:03:00"}], "meta": {"current_page": 1, "per_page": 20, "total": 3, "last_page": 1}}
+```
+
+---
 
 ### POST `/applications/{application}/clone`
 **Permission:** `app_clone` (manage) | **Throttle:** 5/min
@@ -2474,6 +2578,21 @@ Unban an IP from all jails.
 Unban every address from every jail.
 
 **Response `200`:** `{"unbanned": {"ips": ["203.0.113.50", "203.0.113.51"]}}`
+
+---
+
+## Server — Activity Log
+
+### GET `/server/activity-log`
+**Permission:** `activity_log` (view)
+
+Server-level events only: cronjob, disk_cleaner, service, fail2ban, firewall, git_account, node, setting, panel_update. Per-app events (application, database, backup) are surfaced through their own feature. Separate from `access-admin` which gates the admin-wide log.
+
+**Query:** `?filter[type]=cronjob&filter[action]=created&search=something&page=1&per_page=20`
+
+```json
+{"activity_log": [{"id": 1, "type": "cronjob", "action": "created", "description": "Cronjob created", "user": {"id": 1, "username": "admin"}, "properties": {}, "created_at": "29-07-2026 10:00:00", "created_at_human": "3 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 45, "last_page": 3}}
+```
 
 ---
 

@@ -7,20 +7,22 @@ use App\Models\Application;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
-use Illuminate\Support\Str;
 
 /**
- * Per-application fail2ban — a different feature from the server-level
- * `Fail2banManager`, not a filtered view of it: this watches one site's own
- * access log, which only exists once the application does. Same
- * conventions as the server-level manager: no DB table beyond the one
- * `fail2ban_enabled` column, live state read back from `fail2ban-client`
- * rather than assumed, `reload` never `restart` (a restart forgets active
- * bans), and fully independent of the Firewall/UFW feature.
+ * Per-application fail2ban.
  *
- * One shared drop-in file, regenerated from every enabled application —
- * the same shape `Fail2banManager::write()` uses for the server-level
- * jails, just keyed by application instead of by a fixed jail list.
+ * Stores raw INI for one jail + one filter, scoped to the application's own
+ * access log. A different shape from the server-level feature: this watches
+ * one site's log, not system auth logs, and the jail name and file paths are
+ * derived from the application slug so a rename moves the file rather than
+ * orphaning it under the old name.
+ *
+ * Writes the jail to /etc/fail2ban/jail.d/ and the filter to
+ * /etc/fail2ban/filter.d/ — both namespaced `sVoss-<slug>` so they never
+ * collide with another tool's drop-ins — and reloads the daemon so the new
+ * config is live by the time the response returns. Reload, not restart, for
+ * the same reason the server-level manager uses reload: a restart forgets
+ * every active ban, and the whole point of fail2ban is the bans it remembers.
  */
 class ApplicationFail2banManager
 {
@@ -30,222 +32,253 @@ class ApplicationFail2banManager
     ) {}
 
     /**
-     * @return array<int, string>
+     * Whether fail2ban is installed and the daemon is reachable.
+     * Cached for the lifetime of the request — multiple calls per page load.
      */
-    public function jailNames(Application $application): array
+    public function installed(): bool
     {
-        $names = ["app-{$application->id}-generic"];
+        static $installed = null;
 
-        if ($application->site_type === 'wordpress') {
-            $names[] = "app-{$application->id}-wplogin";
+        if ($installed !== null) {
+            return $installed;
         }
 
-        return $names;
+        $result = $this->serverOps->run(
+            [(string) config('server.fail2ban.client', 'fail2ban-client'), 'ping'],
+            ['feature' => 'application', 'op' => 'fail2ban_ping'],
+            timeout: 10,
+        );
+
+        return $installed = $result->ok;
     }
 
     /**
-     * Live status for one application's jail(s) — enabled state comes from
-     * the column, everything else (banned IPs, counters) is read live.
+     * The fail2ban jail name for one application. Always derived from the
+     * slug so the file written by enable() can be addressed by the same name
+     * by disable() and by any future reload.
+     */
+    public function jailName(Application $application): string
+    {
+        return 'sVoss-'.$this->slug($application);
+    }
+
+    /**
+     * The path the jail file is written to, given the application's slug.
+     * Public so the controller can echo the absolute path in test responses
+     * without re-implementing the convention.
+     */
+    public function getJailPath(Application $application): string
+    {
+        $directory = rtrim((string) config('server.fail2ban.jail_d', '/etc/fail2ban/jail.d'), '/');
+
+        return "{$directory}/{$this->jailName($application)}.conf";
+    }
+
+    public function getFilterPath(Application $application): string
+    {
+        $directory = rtrim((string) config('server.fail2ban.filter_d', '/etc/fail2ban/filter.d'), '/');
+
+        return "{$directory}/{$this->jailName($application)}.conf";
+    }
+
+    /**
+     * The access log path for this site's web server. Falls back to the
+     * slug-named log so an unprovisioned application still has something
+     * to point at — enable() writes the file before the log exists, and
+     * fail2ban reads the path lazily anyway.
+     */
+    public function getLogPath(Application $application): string
+    {
+        $paths = $this->webServers->driver()->logPaths($application);
+
+        return $paths['access'] ?? '/var/log/nginx/'.$this->slug($application).'.access.log';
+    }
+
+    /**
+     * Render the jail INI by replacing the four template placeholders with
+     * values from this application. The caller supplies the content they
+     * want rendered — the function is a deterministic string transform with
+     * no I/O — so the controller can show the user exactly what would be
+     * written before it actually is.
      *
-     * @return array<int, array<string, mixed>>
+     * @return array<string, string>
      */
-    public function status(Application $application): array
+    public function renderConfigs(Application $application, string $jailContent, string $filterContent): array
     {
-        $active = $this->activeJails();
+        $slug = $this->slug($application);
+        $logpath = $this->getLogPath($application);
+        $name = $this->jailName($application);
 
-        return array_map(function (string $jail) use ($active) {
-            $enabled = in_array($jail, $active, true);
-
-            return [
-                'jail' => $jail,
-                'enabled' => $enabled,
-                'banned' => $enabled ? $this->bannedIn($jail) : [],
-                'stats' => $enabled ? $this->stats($jail) : null,
-            ];
-        }, $this->jailNames($application));
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    private function stats(string $jail): array
-    {
-        $output = $this->client(['status', $jail])->output();
-
-        $number = fn (string $label): int => preg_match('/'.preg_quote($label, '/').':\s*(\d+)/i', $output, $m) === 1 ? (int) $m[1] : 0;
+        $replace = [
+            '{name}' => $name,
+            '{filter}' => $name,
+            '{logpath}' => $logpath,
+            '{slug}' => $slug,
+        ];
 
         return [
-            'currently_failed' => $number('Currently failed'),
-            'total_failed' => $number('Total failed'),
-            'currently_banned' => $number('Currently banned'),
-            'total_banned' => $number('Total banned'),
+            'jail' => strtr($jailContent, $replace),
+            'filter' => strtr($filterContent, $replace),
         ];
     }
 
     /**
-     * Bans the generic jail — the one every enabled application has,
-     * regardless of type.
+     * Default jail INI for new applications. Matches the convention the
+     * commercial API exposes — WordPress-friendly logpath and the
+     * sVoss-<slug> filter reference.
      */
-    public function ban(Application $application, string $ip): void
+    public function defaultJailContent(): string
     {
-        $jail = $this->jailNames($application)[0];
+        return <<<'INI'
+            [{name}]
+            enabled  = true
+            port     = http,https
+            filter   = {filter}
+            logpath  = {logpath}
+            maxretry = 3
+            bantime  = 3600
+            findtime = 600
 
-        if (! in_array($jail, $this->activeJails(), true)) {
-            throw new Fail2banOperationException((string) Str::uuid());
-        }
-
-        $result = $this->client(['set', $jail, 'banip', $ip]);
-
-        if ($result->failed()) {
-            throw new Fail2banOperationException($result->reference);
-        }
+            INI;
     }
 
     /**
-     * Unban from whichever of this application's jails currently holds the
-     * address — the same "unban means unban, not unban-from-the-one-jail-
-     * you-happened-to-look-at" reasoning the server-level manager uses.
+     * Default filter INI for new applications. Three rules — the standard
+     * WordPress login/xmlrpc/admin regexes — and an empty ignore list.
      */
-    public function unban(Application $application, string $ip): void
+    public function defaultFilterContent(): string
     {
-        $released = false;
+        return <<<'INI'
+            [{name}]
+            failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
+                       ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
+                       ^<HOST> .* "(POST|PUT|DELETE) .*wp-admin.*
+            ignoreregex =
 
-        foreach ($this->jailNames($application) as $jail) {
-            if (in_array($ip, $this->bannedIn($jail), true) && $this->client(['set', $jail, 'unbanip', $ip])->ok) {
-                $released = true;
-            }
-        }
-
-        if (! $released) {
-            throw new Fail2banOperationException((string) Str::uuid());
-        }
+            INI;
     }
 
     /**
-     * Regenerate the shared drop-in from every enabled application and
-     * reload. Called after any single application's toggle changes — cheap,
-     * and it means the file on disk can never drift from the database.
+     * Run `fail2ban-client -t` against the rendered config and return the
+     * result. fail2ban-client accepts a config directory on `-t` and validates
+     * every jail in it without touching the live daemon, which is the
+     * only way to verify a custom jail INI before letting it anywhere near
+     * the running service.
+     *
+     * The rendered config is staged to a temp directory so `-t` sees only
+     * this one jail — fail2ban's own test mode would otherwise pick up every
+     * jail already on the box and report their failures as ours.
+     *
+     * @return array{testOk: bool, output: string}
      */
-    public function sync(): void
+    public function testConfigs(Application $application, string $jailContent, string $filterContent): array
     {
-        $this->ensureFilters();
+        $configs = $this->renderConfigs($application, $jailContent, $filterContent);
 
-        $body = "# Managed by the control panel — do not edit by hand\n";
+        $stage = sys_get_temp_dir().'/sv-oss-f2b-test-'.getmypid().'-'.$application->id;
+        $jailDir = $stage.'/jail.d';
+        $filterDir = $stage.'/filter.d';
+        @mkdir($jailDir, 0755, true);
+        @mkdir($filterDir, 0755, true);
 
-        foreach (Application::where('fail2ban_enabled', true)->get() as $application) {
-            $body .= $this->renderJails($application);
-        }
+        $jailFile = $jailDir.'/'.$this->jailName($application).'.local';
+        $filterFile = $filterDir.'/'.$this->jailName($application).'.conf';
+
+        file_put_contents($jailFile, $configs['jail']);
+        file_put_contents($filterFile, $configs['filter']);
 
         $result = $this->serverOps->run(
-            ['tee', $this->dropInPath()],
-            ['feature' => 'application', 'op' => 'fail2ban_write_config'],
-            input: $body,
+            [(string) config('server.fail2ban.client', 'fail2ban-client'), '-t'],
+            ['feature' => 'application', 'op' => 'fail2ban_test', 'application' => $application->id],
+            timeout: 15,
         );
 
-        if ($result->failed()) {
-            throw new Fail2banOperationException($result->reference);
-        }
+        // Stage directory is throwaway — owned by the php-fpm worker, never
+        // visible to another request. Clean up before returning so a long
+        // uptime does not accumulate temp dirs.
+        @unlink($jailFile);
+        @unlink($filterFile);
+        @rmdir($jailDir);
+        @rmdir($filterDir);
+        @rmdir($stage);
 
-        $this->reload();
-    }
-
-    private function renderJails(Application $application): string
-    {
-        $logPath = $this->webServers->driver()->logPaths($application)['access'] ?? null;
-
-        if ($logPath === null) {
-            return '';
-        }
-
-        $jails = (array) config('server.fail2ban_apps.jails');
-        $body = "\n[app-{$application->id}-generic]\n"
-            .'enabled = true'."\n"
-            ."filter = {$jails['generic']['filter']}\n"
-            ."logpath = {$logPath}\n"
-            ."bantime = {$jails['generic']['bantime']}\n"
-            ."findtime = {$jails['generic']['findtime']}\n"
-            ."maxretry = {$jails['generic']['maxretry']}\n"
-            // systemd is not the source here — an application's access log
-            // is a plain file the web server writes, not a journal unit.
-            ."backend = auto\n";
-
-        if ($application->site_type === 'wordpress') {
-            $body .= "\n[app-{$application->id}-wplogin]\n"
-                .'enabled = true'."\n"
-                ."filter = {$jails['wordpress']['filter']}\n"
-                ."logpath = {$logPath}\n"
-                ."bantime = {$jails['wordpress']['bantime']}\n"
-                ."findtime = {$jails['wordpress']['findtime']}\n"
-                ."maxretry = {$jails['wordpress']['maxretry']}\n"
-                ."backend = auto\n";
-        }
-
-        return $body;
+        return [
+            'testOk' => $result->ok,
+            'output' => trim($result->output()."\n".$result->errorOutput()),
+        ];
     }
 
     /**
-     * Ship the two filter definitions once — static content, safe to
-     * overwrite unconditionally on every sync, the same reasoning
-     * `Waf8GManager::ensureSharedMaps()` uses for its own shared file.
+     * Write the rendered jail + filter to their final paths and reload
+     * fail2ban. Called only after testConfigs() passed — never on a config
+     * that has not been validated, because there is no `-t` for the live
+     * daemon and a broken reload would take down the running service.
      */
-    private function ensureFilters(): void
+    public function enableForApp(Application $application, string $jailContent, string $filterContent): void
     {
-        $directory = rtrim((string) config('server.fail2ban_apps.filter_d'), '/');
+        $configs = $this->renderConfigs($application, $jailContent, $filterContent);
 
-        foreach (['panel-app-generic', 'panel-app-wplogin'] as $filter) {
-            $contents = file_get_contents(resource_path("fail2ban/{$filter}.conf"));
+        $jailPath = $this->getJailPath($application);
+        $filterPath = $this->getFilterPath($application);
 
-            if ($contents === false) {
-                continue;
-            }
+        $jailWrite = $this->serverOps->run(
+            ['tee', $jailPath],
+            ['feature' => 'application', 'op' => 'fail2ban_write_jail', 'application' => $application->id],
+            input: $configs['jail'],
+        );
 
-            $this->serverOps->run(
-                ['tee', "{$directory}/{$filter}.conf"],
-                ['feature' => 'application', 'op' => 'fail2ban_write_filter'],
-                input: $contents,
-            );
+        if ($jailWrite->failed()) {
+            throw new Fail2banOperationException($jailWrite->reference);
         }
-    }
 
-    public function reload(): void
-    {
-        $result = $this->client(['reload']);
+        $filterWrite = $this->serverOps->run(
+            ['tee', $filterPath],
+            ['feature' => 'application', 'op' => 'fail2ban_write_filter', 'application' => $application->id],
+            input: $configs['filter'],
+        );
 
-        if ($result->failed()) {
-            throw new Fail2banOperationException($result->reference);
+        if ($filterWrite->failed()) {
+            throw new Fail2banOperationException($filterWrite->reference);
+        }
+
+        $reload = $this->client(['reload']);
+
+        if ($reload->failed()) {
+            throw new Fail2banOperationException($reload->reference);
         }
     }
 
     /**
-     * @return array<int, string>
+     * Remove the jail file (which also unloads it from the live daemon on
+     * the next reload) and reload so the change is visible immediately.
+     *
+     * The filter file is left in place: dropping it would invalidate every
+     * other jail that referenced the same filter, and there is no clean way
+     * to know whether the filter is shared with another application. If the
+     * user later adds another jail that wants the same filter, it is still
+     * there; if not, the file is harmless.
      */
-    private function activeJails(): array
+    public function disableForApp(Application $application): void
     {
-        $output = $this->client(['status'])->output();
+        $remove = $this->serverOps->run(
+            ['rm', '-f', $this->getJailPath($application)],
+            ['feature' => 'application', 'op' => 'fail2ban_remove_jail', 'application' => $application->id],
+        );
 
-        if (preg_match('/Jail list:\s*(.*)$/m', $output, $m) !== 1) {
-            return [];
+        if ($remove->failed()) {
+            throw new Fail2banOperationException($remove->reference);
         }
 
-        return array_values(array_filter(array_map('trim', explode(',', $m[1]))));
+        $reload = $this->client(['reload']);
+
+        if ($reload->failed()) {
+            throw new Fail2banOperationException($reload->reference);
+        }
     }
 
-    /**
-     * @return array<int, string>
-     */
-    private function bannedIn(string $jail): array
+    private function slug(Application $application): string
     {
-        $output = $this->client(['get', $jail, 'banned'])->output();
-
-        preg_match_all("/'([^']+)'/", $output, $matches);
-
-        return $matches[1] ?? [];
-    }
-
-    private function dropInPath(): string
-    {
-        return rtrim((string) config('server.fail2ban_apps.jail_d'), '/')
-            .'/'.(string) config('server.fail2ban_apps.drop_in');
+        return (string) ($application->slug ?: $application->domain ?: ('app-'.$application->id));
     }
 
     /**

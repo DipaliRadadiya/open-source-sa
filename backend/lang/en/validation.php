@@ -216,4 +216,23 @@ return [
 
     'web_root_not_found' => 'The web root directory could not be found. Please check the web root path in the application settings and re-provision the application if needed.',
 
+    // Per-app fail2ban thresholds
+    'fail2ban.validation.maxretry_min' => 'Must ban after at least 1 failed attempt.',
+    'fail2ban.validation.maxretry_max' => 'Cannot ban after more than 100 failed attempts.',
+    'fail2ban.validation.findtime_min' => 'The counting window must be at least 60 seconds.',
+    'fail2ban.validation.findtime_max' => 'The counting window cannot exceed 24 hours (86400 seconds).',
+    'fail2ban.validation.bantime_min' => 'Ban time must be at least 0 seconds (permanent ban allowed).',
+    'fail2ban.validation.bantime_max' => 'Ban time cannot exceed 7 days (604800 seconds).',
+
+    // Custom IP/CIDR validation
+    'ip_or_cidr' => 'Must be a valid IP address (e.g. 1.2.3.4) or CIDR notation (e.g. 10.0.0.0/8).',
+
+    // Custom per-application fail2ban (raw INI)
+    'jail_content_required' => 'The jail configuration is required.',
+    'jail_content_string' => 'The jail configuration must be a text string.',
+    'jail_content_max' => 'The jail configuration is too large (max 65535 characters).',
+    'filter_content_required' => 'The filter configuration is required.',
+    'filter_content_string' => 'The filter configuration must be a text string.',
+    'filter_content_max' => 'The filter configuration is too large (max 65535 characters).',
+
 ];
