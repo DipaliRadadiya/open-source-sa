@@ -621,7 +621,10 @@
     "required_application": "Choose a site",
     "required_destination": "Choose where to store the backups",
     "retentionRange": "Keep between 1 and 365 backups",
-    "required_confirm": "Type the site's domain to confirm"
+    "required_confirm": "Type the site's domain to confirm",
+    "cloneDomainRequired": "Enter the domain for the copy.",
+    "cloneDomainInvalid": "Enter a full domain, like copy.example.com",
+    "scheduleTime": "Use a time like 02:00"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3192,7 +3195,32 @@
       "groupLabels": {
         "block_training": "Training crawlers",
         "block_agents": "AI assistants",
-        "block_all": "AI search crawlers"
+        "block_all": "AI search crawlers",
+        "custom": "Added by you"
+      },
+      "exceptions": {
+        "title": "Your own exceptions",
+        "hint": "Add a bot this preset has never heard of, or let one through that it blocks.",
+        "blocked": {
+          "label": "Always block",
+          "description": "Blocked as well as everything the preset covers."
+        },
+        "allowed": {
+          "label": "Always allow",
+          "description": "Let through even when the preset blocks it."
+        },
+        "placeholder": "e.g. GPTBot",
+        "add": "Add",
+        "none": "Nothing added.",
+        "remove": "Remove {bot}",
+        "noEffect": "Your preset doesn't block these anyway, so allowing them changes nothing: {bots}",
+        "errors": {
+          "invalid": "Use the bot's user-agent name — letters, digits, dots and dashes only.",
+          "tooBroad": "That would match ordinary crawlers too, including Google's. Use the bot's full name.",
+          "searchEngine": "That's a search engine, not an AI crawler — blocking it would take the site out of search results.",
+          "duplicate": "That bot is already on this list.",
+          "limit": "That's the most bots this list can hold."
+        }
       },
       "howItWorks": "Your robots.txt isn't changed, and Google and real visitors aren't affected.",
       "save": "Save",
@@ -3261,6 +3289,302 @@
       "saveFailed": "That couldn't be saved.",
       "noPermission": "You don't have permission to manage this.",
       "nothingToSave": "Nothing to save"
+    },
+    "clone": {
+      "pageTitle": "Site Clone",
+      "pageSubtitle": "Make an independent copy of {name} at a new domain.",
+      "back": "Back to site",
+      "loadFailed": "This site could not be loaded.",
+      "failed": "The clone could not be started.",
+      "what": {
+        "title": "What gets copied",
+        "carries": "Will copy",
+        "drops": "Will not copy",
+        "carriesItems": {
+          "files": "Files",
+          "database": "Database",
+          "phpVersion": "Runtime versions",
+          "webRoot": "Web root",
+          "buildCommand": "Build & deploy",
+          "repository": "Repository reference"
+        },
+        "dropsItems": {
+          "ssl": "SSL certificate",
+          "backups": "Backups",
+          "cronJobs": "Cron jobs",
+          "workers": "Queue workers",
+          "passwordProtection": "Password protection",
+          "deploys": "Deploy on push"
+        }
+      },
+      "form": {
+        "domain": "Domain for the copy",
+        "domainPlaceholder": "copy.example.com",
+        "submit": "Create site copy",
+        "noPermission": "You cannot clone this site.",
+        "defaultName": "{name} (Clone)",
+        "name": "Copy name",
+        "domainTaken": "A site on this server already uses that domain."
+      },
+      "create": {
+        "title": "Create the copy",
+        "subtitle": "{name} is copied to a new domain. The original is not changed.",
+        "placeholder": "new domain"
+      },
+      "before": {
+        "title": "Before you clone"
+      },
+      "blocked": {
+        "provisioning": {
+          "title": "This site is still being set up",
+          "body": "There is nothing to copy yet. Once it finishes, this page will let you clone it."
+        },
+        "noRecipe": {
+          "title": "This site type cannot be cloned yet",
+          "body": "{type} stores its address inside its own database, and the recipe for rewriting that safely has not been built yet. Only WordPress can be copied with its database today."
+        },
+        "sourceFailed": {
+          "title": "This site did not finish setting up",
+          "body": "There is nothing complete to copy. Fix the original first — a copy of a half-built site would inherit the same problem."
+        }
+      },
+      "result": {
+        "next": {
+          "title": "Before you use it",
+          "subtitle": "Four things the copy does not inherit.",
+          "items": {
+            "ssl": {
+              "title": "Issue an SSL certificate",
+              "body": "The copy is served over plain HTTP until you do."
+            },
+            "backups": {
+              "title": "Set up backups",
+              "body": "Nothing is being backed up for the copy yet."
+            },
+            "deploys": {
+              "title": "Reconnect deploy on push",
+              "body": "The repository is set, but the webhook is not."
+            },
+            "password": {
+              "title": "Turn password protection back on",
+              "body": "The original is protected; the copy is public."
+            }
+          }
+        }
+      },
+      "copies": {
+        "title": "{count, plural, one {One copy made from this site} other {# copies made from this site}}",
+        "made": "made {when}"
+      },
+      "progress": {
+        "running": "Making the copy",
+        "queued": "Waiting to start…",
+        "resuming": "Checking a copy that was already being made…",
+        "started": "Started {when}",
+        "step": "Step {step} of {total}",
+        "canLeave": "You can leave this page — the copy carries on without it.",
+        "stalled": "This clone has not moved in a while",
+        "stalledBody": "It has reported no progress for 20 minutes. It may still be running, or the job may have stopped. Check again, or ask whoever manages this server to look.",
+        "checkAgain": "Check again",
+        "doneTitle": "The copy is ready",
+        "doneBody": "It is a fully independent site now.",
+        "name": "Name",
+        "domain": "Domain",
+        "copyDomain": "Copy domain",
+        "again": "Make another",
+        "open": "Open the copy",
+        "failedTitle": "The copy could not be made",
+        "failedUnknown": "The reason was not recorded.",
+        "failedSafe": "Nothing changed on the original — it is only ever read from.",
+        "reference": "Reference: {reference}",
+        "tryAgain": "Try again",
+        "target": "Copying to {domain}",
+        "steps": {
+          "provisioning": "Creating the site",
+          "copying_files": "Copying files",
+          "cloning_database": "Cloning the database",
+          "starting_process": "Starting the application"
+        }
+      },
+      "warnings": {
+        "dns": "Point the new domain at this server before issuing a certificate — until DNS resolves, the copy is served over plain HTTP.",
+        "password": "Password protection is not copied. The copy is public until you turn it on.",
+        "time": "A large site takes a few minutes to copy."
+      },
+      "confirm": {
+        "title": "Create copy of {name}?",
+        "body": "The original site will not change.",
+        "source": "Copy of",
+        "domain": "New domain",
+        "name": "Name",
+        "cancel": "Cancel"
+      }
+    },
+    "php": {
+      "pageTitle": "PHP Settings",
+      "pageSubtitle": "The PHP version and limits this site runs with.",
+      "back": "Back to site",
+      "loadFailed": "These settings could not be loaded.",
+      "provisioning": "This site is still being set up. Its PHP settings will appear once it finishes.",
+      "saved": "PHP settings saved.",
+      "saveFailed": "The settings could not be saved.",
+      "savingNote": "Applying and reloading PHP…",
+      "noPermission": "You cannot change PHP settings for this site.",
+      "nothingToSave": "Nothing has changed yet",
+      "versionLabel": "PHP {version}",
+      "presetsLabel": "Worker presets",
+      "useSuggested": "Use the recommended list",
+      "unmanaged": "This site's PHP pool file has been edited by hand. Saving here replaces it with the panel's own version, and those edits will be lost.",
+      "groups": {
+        "security": "PHP security",
+        "advanced": "Advanced PHP directives",
+        "runtime": "PHP runtime",
+        "limits": "Request limits"
+      },
+      "fields": {
+        "version": "PHP version",
+        "versionPlaceholder": "Choose a version",
+        "upload": "Biggest file someone can upload",
+        "post": "Biggest form submission",
+        "executionTime": "How long a page may run",
+        "inputTime": "How long an upload may take",
+        "memory": "Memory each request may use",
+        "children": "PHP worker processes",
+        "inputVars": "Fields a form may contain",
+        "openBasedir": "Keep PHP inside this site's folder",
+        "allowUrlFopen": "Let PHP open remote URLs",
+        "disableFunctions": "Blocked PHP functions",
+        "pmType": "How workers start",
+        "maxRequests": "Restart a worker after this many requests",
+        "sessionLifetime": "How long a login stays valid",
+        "timezone": "Time zone PHP reports",
+        "timezonePlaceholder": "Use the server's",
+        "autoPrepend": "File to run before every page",
+        "directives": "Extra directives",
+        "directivesPlaceholder": "opcache.enable = 1"
+      },
+      "hints": {
+        "postTooSmall": "This is smaller than the upload limit, so uploads that size will still fail.",
+        "post": "Must be at least the upload limit. Raising the upload limit raises this to match.",
+        "inputTime": "Time allowed to receive an upload. Seconds, or -1 for no limit.",
+        "pmType": "On demand starts workers only when needed. Dynamic keeps some ready.",
+        "maxRequests": "Guards against slow memory leaks. 0 never restarts.",
+        "sessionLifetime": "Seconds a session file is kept before it can be cleaned up.",
+        "timezone": "Only affects dates PHP produces, not the server clock.",
+        "autoPrepend": "A path inside this site. Leave empty unless you were told otherwise.",
+        "directives": "One per line, like a php.ini file. Anything here wins over the fields above."
+      },
+      "pmTypes": {
+        "ondemand": "On demand",
+        "dynamic": "Dynamic",
+        "static": "Always running"
+      },
+      "isolation": {
+        "onTitle": "This site has its own PHP",
+        "onBody": "Its limits apply to this site alone, and its code runs as its own user.",
+        "offTitle": "Shared PHP mode",
+        "offBody": "This site shares PHP with other sites, so per-site limits cannot be changed here.",
+        "runsAs": "runs as {user}",
+        "sharedBadge": "Shared PHP · runs as {user}",
+        "dedicatedBadge": "Dedicated PHP",
+        "isolateAction": "Give this site dedicated PHP",
+        "isolateHelper": "Creates an isolated PHP-FPM pool for this site. Site files and database are not changed.",
+        "putBackAction": "Share PHP again",
+        "required": "Give this site its own PHP first",
+        "isolated": "This site now has its own PHP.",
+        "putBack": "This site is back on shared PHP.",
+        "failed": "That could not be done.",
+        "putBackTitle": "Share PHP again?",
+        "putBackBody": "This site goes back to the shared settings, and the limits set here stop applying to it.",
+        "putBackConfirm": "Share PHP again",
+        "unsupportedTitle": "Not available on this web server",
+        "unsupportedBody": "OpenLiteSpeed starts PHP itself and has no per-site pools, so these settings cannot be applied here."
+      },
+      "budget": {
+        "title": "About {value} at full load — {workers} workers at once",
+        "available": "{value} of {total} still free",
+        "over": "More than this server's {total}",
+        "legend": "{sites, plural, =0 {No other sites are using memory} one {One other site has claimed {value}} other {# other sites have claimed {value}}}"
+      },
+      "custom": "Custom",
+      "seconds": "{count}s",
+      "summary": {
+        "version": "Version",
+        "memory": "Memory",
+        "upload": "Uploads",
+        "time": "Page limit"
+      },
+      "saveAction": "Save PHP settings",
+      "lockedNote": "Locked while PHP is shared.",
+      "shared": {
+        "currentLabel": "Current settings",
+        "version": "Version",
+        "memory": "Memory",
+        "upload": "Upload limit",
+        "time": "Page limit",
+        "runsAs": "Runs as",
+        "previewTitle": "What dedicated PHP gives you",
+        "preview": {
+          "runtime": "Switch PHP versions",
+          "limits": "Set memory, upload and time limits",
+          "security": "Lock down PHP security",
+          "directives": "Tune advanced PHP directives"
+        }
+      }
+    },
+    "fail2ban": {
+      "pageTitle": "Attack protection",
+      "pageSubtitle": "Bans addresses that keep attacking this site.",
+      "back": "Back to site",
+      "loadFailed": "We could not check this site's protection.",
+      "provisioning": "This site is still being set up. Protection can be turned on once it finishes.",
+      "turnedOn": "Protection is on.",
+      "turnedOff": "Protection is off.",
+      "failed": "That could not be changed.",
+      "unbanned": "{ip} can reach this site again.",
+      "unbanFailed": "That address could not be unbanned.",
+      "bannedIp": "{ip} is banned from this site.",
+      "banFailed": "That address could not be banned.",
+      "watching": "Watching",
+      "jailInactive": "Not running",
+      "jailCounts": "{failed} failing · {banned} banned",
+      "totals": "Since it started: {failed} bad tries, {banned} bans.",
+      "jails": {
+        "generic": "Repeated bad requests",
+        "wplogin": "WordPress login attempts"
+      },
+      "state": {
+        "off": "Not watching",
+        "offBody": "Nobody is being stopped, however many times they get it wrong.",
+        "quiet": "Watching — all quiet",
+        "failing": "{count, plural, one {# address is failing right now} other {# addresses are failing right now}}",
+        "onBody": "Addresses that keep failing are banned automatically.",
+        "onBadge": "On",
+        "offBadge": "Off"
+      },
+      "lockedOut": {
+        "title": "You are banned from this site",
+        "body": "The address you are reading this from — {ip} — is banned, so this site will not answer you.",
+        "action": "Unban my address"
+      },
+      "banned": {
+        "title": "{count, plural, =0 {Banned addresses} one {Banned addresses (#)} other {Banned addresses (#)}}",
+        "empty": "Nothing is banned. That is the normal state — addresses only get banned after repeatedly failing.",
+        "you": "you",
+        "unban": "Unban"
+      },
+      "ban": {
+        "placeholder": "203.0.113.10",
+        "action": "Ban",
+        "errors": {
+          "ipAddress": "Enter one IP address — no ranges or host names."
+        }
+      },
+      "confirmOff": {
+        "title": "Turn protection off?",
+        "body": "Addresses will no longer be banned for repeatedly failing on this site. Anyone already banned stays banned.",
+        "confirm": "Turn it off"
+      }
     }
   },
   "panelUpdate": {
@@ -3623,10 +3947,12 @@
         "monthly": "Every month"
       },
       "frequencyHint": {
-        "daily": "Runs every night at 02:00, server time.",
-        "weekly": "Runs every Sunday at 02:00, server time.",
-        "monthly": "Runs on the 1st of each month at 02:00, server time."
+        "daily": "Runs once a day, at the time you set.",
+        "weekly": "Runs every Sunday, at the time you set.",
+        "monthly": "Runs on the 1st of each month, at the time you set."
       },
+      "scheduleTime": "At what time",
+      "scheduleTimeHint": "The server's own clock, not your computer's.",
       "retention": "How many to keep",
       "retentionHint": "About {days, plural, one {# day} other {# days}} of history. Older ones are deleted.",
       "fileExcludes": "Files and folders",
@@ -3700,7 +4026,10 @@
       "sizePending": "Not yet",
       "sizeNone": "No archive",
       "anyTime": "Any time",
-      "lastDays": "Last {count} days"
+      "lastDays": "Last {count} days",
+      "retry": "Retry",
+      "retryStarted": "Retrying that backup for {name}.",
+      "retryFailed": "That backup could not be retried."
     },
     "restore": {
       "title": "Restore {name}",
@@ -3821,7 +4150,9 @@
       "setUp": "Set up backups",
       "sizePending": "Not yet",
       "sizeNone": "No archive",
-      "sizeUnknown": "Unknown"
+      "sizeUnknown": "Unknown",
+      "retryStarted": "Retrying that backup.",
+      "retryFailed": "That backup could not be retried."
     },
     "empty": {
       "title": "Nothing on this server is backed up yet",
@@ -3876,9 +4207,23 @@
       "unknownReason": "The reason was not recorded.",
       "noSafetyCopy": "None taken",
       "findSafetyCopy": "Find safety copy",
+      "allApplications": "All sites",
+      "allStatuses": "Any status",
+      "allTypes": "Any restore type",
+      "anyTime": "Any time",
+      "lastDays": "Last {count} days",
+      "types": {
+        "full": "Files and database",
+        "filesystem": "Files only",
+        "database": "Database only"
+      },
       "empty": {
         "title": "No restores yet",
         "description": "When a backup is put back over a site, it will be recorded here — what was restored, when, and whether it worked."
+      },
+      "emptyFiltered": {
+        "title": "No restores match those filters",
+        "description": "Try a different site or status."
       }
     }
   }

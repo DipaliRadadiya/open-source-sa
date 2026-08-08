@@ -17,15 +17,13 @@ import {
  * bound — every application multiplied by every run it has ever made — which
  * is the conventions doc's own test for tier 3, whatever its examples say.
  *
- * The rows carry `application_id` and nothing else. Both backend controllers
- * eager-load `application:id,name,domain`, but neither resource outputs it, so
- * the name has to be joined here. Delete `withApplications` the day
- * `BackupResource` exposes it.
+ * Rows carry `application_name` and `application_domain` directly now, so the
+ * client-side join against the applications list is gone — and with it a
+ * second request on every load of this screen.
  */
 export async function getBackups(searchParams = {}) {
-  const [result, { applications }] = await Promise.all([
-    read("/backups", backupsResponseSchema, {
-      searchParams: {
+  const result = await read("/backups", backupsResponseSchema, {
+    searchParams: {
         page: searchParams.page,
         per_page: searchParams.per_page,
         "filter[application_id]": searchParams.application,
@@ -33,12 +31,10 @@ export async function getBackups(searchParams = {}) {
         "filter[type]": searchParams.type,
         "filter[from]": since(searchParams.period),
       },
-    }),
-    getApplications(),
-  ]);
+  });
 
   return {
-    backups: withApplications(result.data?.backups ?? [], applications),
+    backups: result.data?.backups ?? [],
     meta: result.data?.meta ?? { current_page: 1, per_page: 20, total: 0, last_page: 1 },
     failed: result.failed,
   };
@@ -69,52 +65,45 @@ export function since(period) {
 }
 
 /**
- * How many backups are complete, failed, or in flight.
+ * How many backups are complete, failed or in flight.
  *
- * The list endpoint returns no per-status counts, so these are three throwaway
- * requests asking for a single row each and reading `meta.total`. Counting the
- * rows on the current page instead would report "3 failed" when it means "3
- * failed on page 1 of 40" — a number that is worse than none.
- *
- * The same application filter is applied, so the counts describe what the user
- * is actually looking at.
+ * Read straight off `meta.counts`, which the API now returns with the same
+ * filters as the rows. This used to be four throwaway requests asking for one
+ * row each — four round trips on every page load, to render one line.
  */
-export async function getBackupCounts(searchParams = {}) {
-  const shared = {
-    per_page: 1,
-    "filter[application_id]": searchParams.application,
-    "filter[type]": searchParams.type,
-    // Same window as the rows. Counts describing a wider set than the table
-    // shows is worse than no counts.
-    "filter[from]": since(searchParams.period),
-  };
-
-  const [all, verified, failed, running] = await Promise.all(
-    [undefined, "verified", "failed", "running"].map((status) =>
-      read("/backups", backupsResponseSchema, {
-        searchParams: { ...shared, "filter[status]": status },
-      }),
-    ),
-  );
-
+export function backupCounts(meta) {
+  const counts = meta?.counts ?? {};
   return {
-    total: all.data?.meta?.total ?? 0,
-    verified: verified.data?.meta?.total ?? 0,
-    failed: failed.data?.meta?.total ?? 0,
-    running: running.data?.meta?.total ?? 0,
+    total: counts.total ?? 0,
+    verified: counts.completed ?? 0,
+    failed: counts.failed ?? 0,
+    // One number for "not finished yet": three separate tallies for pending,
+    // running and verifying would be splitting a single idea three ways.
+    running: (counts.pending ?? 0) + (counts.running ?? 0) + (counts.verifying ?? 0),
   };
 }
 
+/**
+ * Every restore this server has run, filtered by the server.
+ *
+ * The same four filters as the backup history and the same query shape —
+ * `/restores` validates `filter[application_id|status|type|from|to]` now,
+ * where it used to accept only the first two and ignore the rest.
+ */
 export async function getRestores(searchParams = {}) {
-  const [result, { applications }] = await Promise.all([
-    read("/restores", restoresResponseSchema, {
-      searchParams: { page: searchParams.page, per_page: searchParams.per_page },
-    }),
-    getApplications(),
-  ]);
+  const result = await read("/restores", restoresResponseSchema, {
+    searchParams: {
+      page: searchParams.page,
+      per_page: searchParams.per_page,
+      "filter[application_id]": searchParams.application,
+      "filter[status]": searchParams.status,
+      "filter[type]": searchParams.type,
+      "filter[from]": since(searchParams.period),
+    },
+  });
 
   return {
-    restores: withApplications(result.data?.restores ?? [], applications),
+    restores: result.data?.restores ?? [],
     meta: result.data?.meta ?? { current_page: 1, per_page: 20, total: 0, last_page: 1 },
     failed: result.failed,
   };
@@ -123,9 +112,15 @@ export async function getRestores(searchParams = {}) {
 /**
  * The restore currently rewriting THIS site, or null.
  *
- * `/restores` takes no application filter, so the newest page is read and
- * narrowed here. Only one restore can run per application — the backend
- * refuses a second with a 422 — so the first match is the match.
+ * Narrowed to the site by the API rather than by reading the newest twenty
+ * restores across every application and filtering them here — on a busy
+ * server that page could be entirely other people's sites and this would
+ * answer "nothing is running" while the site was being overwritten.
+ *
+ * The in-flight check stays local because `filter[status]` takes one value and
+ * this needs two; over a single site's own restores that is a handful of rows.
+ * Only one can run per application — the backend refuses a second with a 422 —
+ * so the first match is the match.
  *
  * The application page needs this for the same reason the server-level screen
  * does: a restore started here must show its progress and, when it lands, its
@@ -133,15 +128,9 @@ export async function getRestores(searchParams = {}) {
  * happened while the site is being overwritten.
  */
 export async function getActiveRestore(applicationId) {
-  const { restores } = await getRestores({ per_page: 20 });
-  const id = Number(applicationId);
+  const { restores } = await getRestores({ application: applicationId, per_page: 5 });
 
-  return (
-    restores.find(
-      (restore) =>
-        Number(restore.application_id) === id && RESTORE_IN_FLIGHT.includes(restore.status),
-    ) ?? null
-  );
+  return restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
 }
 
 /**
@@ -215,16 +204,4 @@ function classify(target) {
   return "protected";
 }
 
-function withApplications(rows, applications) {
-  const byId = new Map(applications.map((application) => [application.id, application]));
-  return rows.map((row) => {
-    const application = byId.get(row.application_id) ?? null;
-    return {
-      ...row,
-      application_name: application?.name ?? null,
-      // The restore confirmation compares against this exact string, so a row
-      // without it cannot offer Restore at all.
-      application_domain: application?.domain ?? null,
-    };
-  });
-}
+

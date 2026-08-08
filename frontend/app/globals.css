@@ -215,3 +215,28 @@
     cursor: pointer;
     }
 }
+/*
+ * Indeterminate progress: a stripe sweeping across the track, for work whose
+ * length the API does not report (the site clone is one long request with no
+ * steps to poll). Respects reduced-motion by falling back to a still bar —
+ * an endlessly moving element is exactly what that preference is about.
+ */
+@keyframes progress-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+@layer utilities {
+  .animate-progress-sweep {
+    animation: progress-sweep 1.4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-progress-sweep {
+      animation: none;
+      transform: translateX(0);
+      width: 100%;
+      opacity: 0.6;
+    }
+  }
+}

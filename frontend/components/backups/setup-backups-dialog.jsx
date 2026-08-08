@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, PlayCircle, ShieldCheck } from "lucide-react";
-import { backupTargetFormSchema } from "@/lib/schemas/backup";
+import { BACKUP_DEFAULT_TIME, backupTargetFormSchema } from "@/lib/schemas/backup";
 import { runBackupNow, saveBackupTarget } from "@/lib/api/backups";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -66,6 +66,9 @@ export function SetupBackupsDialog({
         type: values.type,
         retention_count: values.retention_count,
         frequency: values.frequency,
+        // Only meaningful for a schedule. Sending it with `manual` would store
+        // a time for a backup that never runs on its own.
+        ...(values.frequency === "manual" ? null : { schedule_time: values.schedule_time }),
         enabled: values.enabled,
         file_excludes: values.file_excludes,
         database_excludes: values.database_excludes,
@@ -260,6 +263,11 @@ function defaults(applicationId, destinations, target) {
       type: target.type,
       retention_count: target.retention_count,
       frequency: automatic ? target.frequency : "manual",
+      // Falls back to the backend's own 02:00 because `BackupTargetResource`
+      // does not return `schedule_time` yet — so a target that HAS a time
+      // saved will still open showing 02:00. Remove the fallback the moment
+      // the API carries the field.
+      schedule_time: target.schedule_time ?? BACKUP_DEFAULT_TIME,
       enabled: automatic,
       file_excludes: target.file_excludes ?? [],
       database_excludes: target.database_excludes ?? [],
@@ -272,6 +280,7 @@ function defaults(applicationId, destinations, target) {
     type: "full",
     retention_count: 7,
     frequency: "daily",
+    schedule_time: BACKUP_DEFAULT_TIME,
     enabled: true,
     file_excludes: [],
     database_excludes: [],

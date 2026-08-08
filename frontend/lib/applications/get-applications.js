@@ -9,6 +9,8 @@ import {
   siteTypesResponseSchema,
   wafOptionsResponseSchema,
 } from "@/lib/schemas/application";
+import { applicationPhpResponseSchema } from "@/lib/schemas/php-settings";
+import { applicationFail2banResponseSchema } from "@/lib/schemas/application-fail2ban";
 
 
 export const getApplications = cache(async function getApplications() {
@@ -50,6 +52,33 @@ export const getWafOptions = cache(async function getWafOptions() {
     failed: result.failed,
   };
 });
+
+/**
+ * One site's fail2ban: whether it is watching, and what it has caught.
+ *
+ * Read live on the server for every load — bans expire on their own and new
+ * ones arrive without anyone asking, so a cached answer here is a wrong one.
+ */
+export async function getApplicationFail2ban(id) {
+  const result = await read(`/applications/${id}/fail2ban`, applicationFail2banResponseSchema);
+  return {
+    enabled: result.data?.fail2ban_enabled ?? false,
+    jails: result.data?.jails ?? [],
+    failed: result.failed,
+    status: result.status,
+  };
+}
+
+/**
+ * One site's PHP: version, limits, pool and the server's memory budget.
+ *
+ * Only for site types that serve PHP — the permission middleware answers 404
+ * for the rest, which is a real answer rather than a failure.
+ */
+export async function getApplicationPhp(id) {
+  const result = await read(`/applications/${id}/php`, applicationPhpResponseSchema);
+  return { php: result.data?.php ?? null, failed: result.failed, status: result.status };
+}
 
 // Gated by `app_log` on the backend, not `app_bot_blocker` — it reads the
 // site's access log. Callers must check that permission before asking.

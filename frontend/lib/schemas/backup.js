@@ -14,6 +14,16 @@ export const BACKUP_PERIODS = ["7", "30", "90"];
 
 export const BACKUP_TYPES = ["full", "filesystem", "database"];
 
+/**
+ * The hour the backend falls back to when no time is stored.
+ *
+ * A copy of `BackupTarget::CRON`'s own `0 2 * * *`, and the only reason it is
+ * duplicated here is that the API does not return `schedule_time` — so this is
+ * what the field has to show for a target that has never set one. The moment
+ * `BackupTargetResource` carries the field, read it instead and delete this.
+ */
+export const BACKUP_DEFAULT_TIME = "02:00";
+
 /** Manual is not a schedule; the UI has to say so out loud. */
 export const BACKUP_FREQUENCIES = ["manual", "daily", "weekly", "monthly"];
 
@@ -38,6 +48,9 @@ export const RESTORABLE_STATUS = "verified";
 /** Statuses that mean a run is still in flight, so a second must not start. */
 export const BACKUP_IN_FLIGHT = ["pending", "running", "verifying"];
 export const RESTORE_IN_FLIGHT = ["pending", "running"];
+
+/** `RestoreStatus` on the backend, and what `filter[status]` will accept. */
+export const RESTORE_STATUSES = ["pending", "running", "succeeded", "failed"];
 
 export const backupSchema = z
   .object({
@@ -70,6 +83,18 @@ const metaSchema = z.object({
   per_page: z.number().default(20),
   total: z.number().default(0),
   last_page: z.number().default(1),
+  // Per-status totals across the whole filtered set, not just this page.
+  // Undeclared, Zod stripped these and the summary row silently read zero.
+  counts: z
+    .object({
+      total: z.number().default(0),
+      pending: z.number().default(0),
+      running: z.number().default(0),
+      verifying: z.number().default(0),
+      completed: z.number().default(0),
+      failed: z.number().default(0),
+    })
+    .nullish(),
 });
 
 export const backupsResponseSchema = z.object({
@@ -90,6 +115,9 @@ export const backupTargetSchema = z
     retention_count: z.number(),
     frequency: z.string(),
     frequency_title: z.string().nullish(),
+    // "HH:MM" in the server's timezone. Nullish because the API accepts and
+    // stores it but does not return it yet — see `BACKUP_DEFAULT_TIME`.
+    schedule_time: z.string().nullish(),
     enabled: z.boolean().default(true),
     file_excludes: z.array(z.string()).default([]),
     database_excludes: z.array(z.string()).default([]),
@@ -141,6 +169,10 @@ export const restoreSchema = z
     id: z.number(),
     backup_id: z.number(),
     application_id: z.number().nullish(),
+    // Carried on the row now, so the table names the site without a second
+    // request. Null when the site has since been deleted.
+    application_name: z.string().nullish(),
+    application_domain: z.string().nullish(),
     type: z.string(),
     type_title: z.string().nullish(),
     status: z.string(),
@@ -191,6 +223,13 @@ export const backupTargetFormSchema = z.object({
     .min(1, "retentionRange")
     .max(365, "retentionRange"),
   frequency: z.enum(BACKUP_FREQUENCIES),
+  // `date_format:H:i` on the backend. The browser's own time input already
+  // refuses anything else, so this is the guard for a value that arrives some
+  // other way rather than a message anyone should see.
+  schedule_time: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "scheduleTime")
+    .default(BACKUP_DEFAULT_TIME),
   enabled: z.boolean().default(true),
   file_excludes: z.array(z.string().max(255, "max255")).max(100, "max100").default([]),
   database_excludes: z.array(z.string().max(64, "max64")).max(100, "max100").default([]),

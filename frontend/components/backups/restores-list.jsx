@@ -6,11 +6,17 @@ import { RotateCcw, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
-import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
+import {
+  BACKUP_PERIODS,
+  BACKUP_TYPES,
+  RESTORE_IN_FLIGHT,
+  RESTORE_STATUSES,
+} from "@/lib/schemas/backup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
+import { FacetSelect } from "@/components/data-table/facet-select";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RESTORE_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
@@ -28,16 +34,10 @@ import { RESTORE_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
  * which is a backup like any other and belongs in the flow that already
  * guards restores rather than in a second, shorter path from a table row.
  */
-export function RestoresList({ restores }) {
+export function RestoresList({ restores, applications = [], hasFilters = false }) {
   const t = useTranslations("backups.restores");
 
   const running = restores.some((restore) => RESTORE_IN_FLIGHT.includes(restore.status));
-
-  if (restores.length === 0) {
-    return (
-      <EmptyState icon={RotateCcw} title={t("empty.title")} description={t("empty.description")} />
-    );
-  }
 
   const columns = [
     { accessorKey: "application_name", header: t("columns.site"), meta: { className: "min-w-52" }, cell: SiteCell },
@@ -48,16 +48,63 @@ export function RestoresList({ restores }) {
   ];
 
   return (
-    <>
+    <div className="space-y-4">
       {running ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
-      <div className="lg:hidden">
-        <RestoreCards restores={restores} />
+      {/* The same four filters, in the same order and widths, as the backup
+          history tab: this is the same question asked of the other half of the
+          data, and two different filter rows for it would be two things to
+          learn. All URL-driven, so a filtered view is a link. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <FacetSelect
+          paramKey="application"
+          allLabel={t("allApplications")}
+          options={applications.map((application) => ({
+            value: String(application.id),
+            label: application.name,
+          }))}
+          className="w-full sm:w-56"
+        />
+        <FacetSelect
+          paramKey="status"
+          allLabel={t("allStatuses")}
+          options={RESTORE_STATUSES.map((value) => ({ value, label: t(`statuses.${value}`) }))}
+          className="w-full sm:w-44"
+        />
+        <FacetSelect
+          paramKey="period"
+          allLabel={t("anyTime")}
+          options={BACKUP_PERIODS.map((value) => ({
+            value,
+            label: t("lastDays", { count: Number(value) }),
+          }))}
+          className="w-full sm:w-44"
+        />
+        <FacetSelect
+          paramKey="type"
+          allLabel={t("allTypes")}
+          options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
+          className="w-full sm:w-48"
+        />
       </div>
-      <div className="hidden lg:block">
-        <DataTable columns={columns} data={restores} emptyMessage={t("empty.title")} />
-      </div>
-    </>
+
+      {restores.length === 0 ? (
+        <EmptyState
+          icon={RotateCcw}
+          title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
+          description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
+        />
+      ) : (
+        <>
+          <div className="lg:hidden">
+            <RestoreCards restores={restores} />
+          </div>
+          <div className="hidden lg:block">
+            <DataTable columns={columns} data={restores} emptyMessage={t("empty.title")} />
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

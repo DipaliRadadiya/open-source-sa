@@ -190,7 +190,10 @@
     "required_application": "Elige un sitio",
     "required_destination": "Elige dónde guardar las copias",
     "retentionRange": "Conserva entre 1 y 365 copias",
-    "required_confirm": "Escribe el dominio del sitio para confirmar"
+    "required_confirm": "Escribe el dominio del sitio para confirmar",
+    "cloneDomainRequired": "Introduce el dominio de la copia.",
+    "cloneDomainInvalid": "Introduce un dominio completo, como copia.ejemplo.com",
+    "scheduleTime": "Usa una hora como 02:00"
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -3192,7 +3195,32 @@
       "groupLabels": {
         "block_training": "Rastreadores de entrenamiento",
         "block_agents": "Asistentes de IA",
-        "block_all": "Rastreadores de búsqueda con IA"
+        "block_all": "Rastreadores de búsqueda con IA",
+        "custom": "Añadidos por ti"
+      },
+      "exceptions": {
+        "title": "Tus propias excepciones",
+        "hint": "Añade un bot que este ajuste no conoce, o deja pasar uno que sí bloquea.",
+        "blocked": {
+          "label": "Bloquear siempre",
+          "description": "Se bloquea además de todo lo que cubre el ajuste."
+        },
+        "allowed": {
+          "label": "Permitir siempre",
+          "description": "Pasa aunque el ajuste lo bloquee."
+        },
+        "placeholder": "p. ej. GPTBot",
+        "add": "Añadir",
+        "none": "No has añadido nada.",
+        "remove": "Quitar {bot}",
+        "noEffect": "Tu ajuste no bloquea estos de todos modos, así que permitirlos no cambia nada: {bots}",
+        "errors": {
+          "invalid": "Usa el nombre del user-agent del bot: solo letras, dígitos, puntos y guiones.",
+          "tooBroad": "Eso también afectaría a rastreadores normales, incluido el de Google. Usa el nombre completo del bot.",
+          "searchEngine": "Eso es un buscador, no un rastreador de IA: bloquearlo sacaría el sitio de los resultados de búsqueda.",
+          "duplicate": "Ese bot ya está en esta lista.",
+          "limit": "Esta lista no admite más bots."
+        }
       },
       "howItWorks": "Tu robots.txt no se modifica, y Google y los visitantes reales no se ven afectados.",
       "save": "Guardar",
@@ -3261,6 +3289,304 @@
       "saveFailed": "No se pudo guardar.",
       "noPermission": "No tienes permiso para gestionar esto.",
       "nothingToSave": "Nada que guardar"
+    },
+    "clone": {
+      "pageTitle": "Clonar sitio",
+      "pageSubtitle": "Crea una copia independiente de {name} en un dominio nuevo.",
+      "back": "Volver al sitio",
+      "loadFailed": "No se pudo cargar este sitio.",
+      "failed": "No se pudo iniciar la clonación.",
+      "what": {
+        "title": "Qué se copia",
+        "carries": "Se copiará",
+        "drops": "No se copiará",
+        "carriesItems": {
+          "files": "Archivos",
+          "database": "Base de datos",
+          "phpVersion": "Versiones de runtime",
+          "webRoot": "Raíz web",
+          "buildCommand": "Compilación y despliegue",
+          "repository": "Referencia del repositorio"
+        },
+        "dropsItems": {
+          "ssl": "Certificado SSL",
+          "backups": "Copias de seguridad",
+          "cronJobs": "Tareas cron",
+          "workers": "Workers de colas",
+          "passwordProtection": "Protección con contraseña",
+          "deploys": "Despliegue al hacer push"
+        }
+      },
+      "form": {
+        "domain": "Dominio para la copia",
+        "domainPlaceholder": "copia.ejemplo.com",
+        "submit": "Crear copia del sitio",
+        "noPermission": "No puedes clonar este sitio.",
+        "defaultName": "{name} (Copia)",
+        "name": "Nombre de la copia",
+        "domainTaken": "Ya hay un sitio en este servidor con ese dominio."
+      },
+      "create": {
+        "title": "Crear la copia",
+        "subtitle": "{name} se copia a un dominio nuevo. El original no cambia.",
+        "placeholder": "dominio nuevo"
+      },
+      "before": {
+        "title": "Antes de clonar"
+      },
+      "blocked": {
+        "provisioning": {
+          "title": "Este sitio aún se está configurando",
+          "body": "Todavía no hay nada que copiar. Cuando termine, podrás clonarlo desde aquí."
+        },
+        "noRecipe": {
+          "title": "Este tipo de sitio aún no se puede clonar",
+          "body": "{type} guarda su dirección dentro de su propia base de datos, y todavía no existe la receta para reescribirla de forma segura. Hoy solo WordPress se puede copiar con su base de datos."
+        },
+        "sourceFailed": {
+          "title": "Este sitio no terminó de configurarse",
+          "body": "No hay nada completo que copiar. Arregla primero el original: una copia de un sitio a medio construir heredaría el mismo problema."
+        }
+      },
+      "result": {
+        "next": {
+          "title": "Antes de usarla",
+          "subtitle": "Cuatro cosas que la copia no hereda.",
+          "items": {
+            "ssl": {
+              "title": "Emitir un certificado SSL",
+              "body": "Hasta entonces la copia se sirve por HTTP sin cifrar."
+            },
+            "backups": {
+              "title": "Configurar copias de seguridad",
+              "body": "Todavía no se respalda nada de la copia."
+            },
+            "deploys": {
+              "title": "Reconectar el despliegue al hacer push",
+              "body": "El repositorio está puesto, el webhook no."
+            },
+            "password": {
+              "title": "Volver a activar la protección con contraseña",
+              "body": "El original está protegido; la copia es pública."
+            }
+          }
+        }
+      },
+      "copies": {
+        "title": "{count, plural, one {Una copia hecha de este sitio} other {# copias hechas de este sitio}}",
+        "made": "creada {when}"
+      },
+      "progress": {
+        "running": "Creando la copia",
+        "queued": "Esperando para empezar…",
+        "resuming": "Comprobando una copia que ya se estaba creando…",
+        "started": "Empezó {when}",
+        "step": "Paso {step} de {total}",
+        "canLeave": "Puedes salir de esta página: la copia continúa sin ella.",
+        "stalled": "Esta clonación lleva un rato sin avanzar",
+        "stalledBody": "No ha informado de progreso durante 20 minutos. Puede que siga en marcha o que el trabajo se haya detenido. Vuelve a comprobarlo o pide a quien gestione este servidor que lo revise.",
+        "checkAgain": "Comprobar de nuevo",
+        "doneTitle": "La copia está lista",
+        "doneBody": "Ya es un sitio totalmente independiente.",
+        "name": "Nombre",
+        "domain": "Dominio",
+        "copyDomain": "Copiar dominio",
+        "again": "Crear otra",
+        "open": "Abrir la copia",
+        "failedTitle": "No se pudo crear la copia",
+        "failedUnknown": "No se registró el motivo.",
+        "failedSafe": "El original no ha cambiado: solo se lee de él.",
+        "reference": "Referencia: {reference}",
+        "tryAgain": "Intentar de nuevo",
+        "target": "Copiando a {domain}",
+        "steps": {
+          "provisioning": "Creando el sitio",
+          "copying_files": "Copiando archivos",
+          "cloning_database": "Clonando la base de datos",
+          "starting_process": "Iniciando la aplicación"
+        }
+      },
+      "warnings": {
+        "dns": "Apunta el dominio nuevo a este servidor antes de emitir un certificado: hasta que el DNS resuelva, la copia se sirve por HTTP sin cifrar.",
+        "password": "La protección con contraseña no se copia. La copia es pública hasta que la actives.",
+        "time": "Un sitio grande tarda unos minutos en copiarse."
+      },
+      "confirm": {
+        "title": "¿Crear una copia de {name}?",
+        "body": "El sitio original no cambiará.",
+        "source": "Copia de",
+        "domain": "Dominio nuevo",
+        "name": "Nombre",
+        "cancel": "Cancelar"
+      }
+    },
+    "php": {
+      "pageTitle": "Ajustes de PHP",
+      "pageSubtitle": "La versión de PHP y los límites con los que funciona este sitio.",
+      "back": "Volver al sitio",
+      "loadFailed": "No se pudieron cargar estos ajustes.",
+      "provisioning": "Este sitio aún se está creando. Sus ajustes de PHP aparecerán cuando termine.",
+      "saved": "Ajustes de PHP guardados.",
+      "saveFailed": "No se pudieron guardar los ajustes.",
+      "savingNote": "Aplicando y recargando PHP…",
+      "noPermission": "No puedes cambiar los ajustes de PHP de este sitio.",
+      "nothingToSave": "Aún no has cambiado nada",
+      "versionLabel": "PHP {version}",
+      "presetsLabel": "Ajustes rápidos",
+      "useSuggested": "Usar la lista recomendada",
+      "unmanaged": "El archivo del pool de PHP de este sitio se ha editado a mano. Al guardar aquí se reemplaza por la versión del panel y esos cambios se perderán.",
+      "groups": {
+        "security": "Seguridad de PHP",
+        "advanced": "Directivas avanzadas de PHP",
+        "runtime": "Entorno de PHP",
+        "limits": "Límites por petición"
+      },
+      "fields": {
+        "version": "Versión de PHP",
+        "versionPlaceholder": "Elige una versión",
+        "upload": "Archivo más grande que se puede subir",
+        "post": "Envío de formulario más grande",
+        "executionTime": "Cuánto puede tardar una página",
+        "inputTime": "Cuánto puede tardar una subida",
+        "memory": "Memoria por petición",
+        "children": "Procesos de PHP",
+        "inputVars": "Campos que puede tener un formulario",
+        "openBasedir": "Mantener PHP dentro de la carpeta del sitio",
+        "allowUrlFopen": "Permitir que PHP abra URLs remotas",
+        "disableFunctions": "Funciones de PHP bloqueadas",
+        "pmType": "Cómo se inician los procesos",
+        "maxRequests": "Reiniciar un proceso tras estas peticiones",
+        "sessionLifetime": "Cuánto dura una sesión iniciada",
+        "timezone": "Zona horaria que usa PHP",
+        "timezonePlaceholder": "Usar la del servidor",
+        "autoPrepend": "Archivo a ejecutar antes de cada página",
+        "directives": "Directivas adicionales",
+        "directivesPlaceholder": "opcache.enable = 1"
+      },
+      "hints": {
+        "postTooSmall": "Es menor que el límite de subida, así que esas subidas seguirán fallando.",
+        "post": "Debe ser al menos el límite de subida. Subir ese límite sube este también.",
+        "inputTime": "Tiempo permitido para recibir una subida. Segundos, o -1 sin límite.",
+        "pmType": "Bajo demanda inicia procesos solo cuando hacen falta. Dinámico mantiene algunos listos.",
+        "maxRequests": "Protege frente a fugas de memoria lentas. 0 no reinicia nunca.",
+        "sessionLifetime": "Segundos que se guarda una sesión antes de poder limpiarse.",
+        "timezone": "Solo afecta a las fechas que genera PHP, no al reloj del servidor.",
+        "autoPrepend": "Una ruta dentro de este sitio. Déjalo vacío salvo que te hayan indicado otra cosa.",
+        "directives": "Uno por línea, como un php.ini. Lo de aquí manda sobre los campos de arriba."
+      },
+      "pmTypes": {
+        "ondemand": "Bajo demanda",
+        "dynamic": "Dinámico",
+        "static": "Siempre activos"
+      },
+      "isolation": {
+        "onTitle": "Este sitio tiene su propio PHP",
+        "onBody": "Sus límites se aplican solo a este sitio, y su código se ejecuta con su propio usuario.",
+        "onTitle": "Este sitio tiene su propio PHP",
+        "onBody": "Sus límites se aplican solo a este sitio y su código se ejecuta como su propio usuario.",
+        "offTitle": "Modo PHP compartido",
+        "offBody": "Este sitio comparte PHP con otros sitios, así que no se pueden cambiar los límites por sitio aquí.",
+        "runsAs": "se ejecuta como {user}",
+        "sharedBadge": "PHP compartido · se ejecuta como {user}",
+        "dedicatedBadge": "PHP dedicado",
+        "isolateAction": "Dar PHP propio a este sitio",
+        "isolateHelper": "Crea un pool PHP-FPM aislado para este sitio. Los archivos del sitio y la base de datos no cambian.",
+        "putBackAction": "Volver a compartir PHP",
+        "required": "Primero dale a este sitio su propio PHP",
+        "isolated": "Este sitio ya tiene su propio PHP.",
+        "putBack": "Este sitio vuelve a compartir PHP.",
+        "failed": "No se pudo completar.",
+        "putBackTitle": "¿Volver a compartir PHP?",
+        "putBackBody": "El sitio vuelve a los ajustes compartidos y los límites de aquí dejan de aplicarse.",
+        "putBackConfirm": "Volver a compartir PHP",
+        "unsupportedTitle": "No disponible en este servidor web",
+        "unsupportedBody": "OpenLiteSpeed inicia PHP por su cuenta y no tiene pools por sitio, así que estos ajustes no pueden aplicarse."
+      },
+      "budget": {
+        "title": "Unos {value} a pleno rendimiento — {workers} procesos a la vez",
+        "available": "{value} de {total} aún libres",
+        "over": "Más de los {total} de este servidor",
+        "legend": "{sites, plural, =0 {Ningún otro sitio usa memoria} one {Otro sitio ha reservado {value}} other {# sitios más han reservado {value}}}"
+      },
+      "custom": "Personalizado",
+      "seconds": "{count}s",
+      "summary": {
+        "version": "Versión",
+        "memory": "Memoria",
+        "upload": "Subidas",
+        "time": "Límite de página"
+      },
+      "saveAction": "Guardar ajustes de PHP",
+      "lockedNote": "Bloqueado mientras PHP se comparte.",
+      "shared": {
+        "currentLabel": "Configuración actual",
+        "version": "Versión",
+        "memory": "Memoria",
+        "upload": "Límite de subida",
+        "time": "Límite de página",
+        "runsAs": "Se ejecuta como",
+        "previewTitle": "Lo que te da PHP dedicado",
+        "preview": {
+          "runtime": "Cambiar la versión de PHP",
+          "limits": "Ajustar memoria, subida y tiempo",
+          "security": "Bloquear funciones peligrosas",
+          "directives": "Afinar directivas avanzadas"
+        }
+      }
+    },
+    "fail2ban": {
+      "pageTitle": "Protección contra ataques",
+      "pageSubtitle": "Bloquea las direcciones que atacan este sitio una y otra vez.",
+      "back": "Volver al sitio",
+      "loadFailed": "No pudimos comprobar la protección de este sitio.",
+      "provisioning": "Este sitio aún se está creando. Podrás activar la protección cuando termine.",
+      "turnedOn": "La protección está activada.",
+      "turnedOff": "La protección está desactivada.",
+      "failed": "No se pudo cambiar.",
+      "unbanned": "{ip} vuelve a tener acceso a este sitio.",
+      "unbanFailed": "No se pudo desbloquear esa dirección.",
+      "bannedIp": "{ip} queda bloqueada en este sitio.",
+      "banFailed": "No se pudo bloquear esa dirección.",
+      "watching": "Vigilando",
+      "jailInactive": "No está activo",
+      "jailCounts": "{failed} fallando · {banned} bloqueadas",
+      "totals": "Desde que empezó: {failed} intentos fallidos, {banned} bloqueos.",
+      "jails": {
+        "generic": "Peticiones erróneas repetidas",
+        "wplogin": "Intentos de acceso a WordPress"
+      },
+      "state": {
+        "off": "Sin vigilancia",
+        "offBody": "No se detiene a nadie, por muchas veces que se equivoque.",
+        "quiet": "Vigilando — todo tranquilo",
+        "failing": "{count, plural, one {# dirección está fallando ahora mismo} other {# direcciones están fallando ahora mismo}}",
+        "onBody": "Las direcciones que siguen fallando se bloquean automáticamente.",
+        "onBadge": "Activada",
+        "offBadge": "Desactivada"
+      },
+      "lockedOut": {
+        "title": "Estás bloqueado en este sitio",
+        "body": "La dirección desde la que lees esto — {ip} — está bloqueada, así que el sitio no te responderá.",
+        "action": "Desbloquear mi dirección"
+      },
+      "banned": {
+        "title": "{count, plural, =0 {Direcciones bloqueadas} one {Direcciones bloqueadas (#)} other {Direcciones bloqueadas (#)}}",
+        "empty": "No hay nada bloqueado. Es lo normal: solo se bloquea a quien falla una y otra vez.",
+        "you": "tú",
+        "unban": "Desbloquear"
+      },
+      "ban": {
+        "placeholder": "203.0.113.10",
+        "action": "Bloquear",
+        "errors": {
+          "ipAddress": "Escribe una sola dirección IP, sin rangos ni nombres de host."
+        }
+      },
+      "confirmOff": {
+        "title": "¿Desactivar la protección?",
+        "body": "Las direcciones dejarán de bloquearse por fallar repetidamente en este sitio. Las ya bloqueadas siguen estándolo.",
+        "confirm": "Desactivarla"
+      }
     }
   },
   "panelUpdate": {
@@ -3623,10 +3949,12 @@
         "monthly": "Cada mes"
       },
       "frequencyHint": {
-        "daily": "Se ejecuta cada noche a las 02:00, hora del servidor.",
-        "weekly": "Se ejecuta cada domingo a las 02:00, hora del servidor.",
-        "monthly": "Se ejecuta el día 1 de cada mes a las 02:00, hora del servidor."
+        "daily": "Se ejecuta una vez al día, a la hora que elijas.",
+        "weekly": "Se ejecuta cada domingo, a la hora que elijas.",
+        "monthly": "Se ejecuta el día 1 de cada mes, a la hora que elijas."
       },
+      "scheduleTime": "A qué hora",
+      "scheduleTimeHint": "El reloj del servidor, no el de tu ordenador.",
       "retention": "Cuántas conservar",
       "retentionHint": "{days, plural, one {Un día} other {Unos # días}} de historial. Las más antiguas se eliminan.",
       "fileExcludes": "Archivos y carpetas",
@@ -3700,7 +4028,10 @@
       "sizePending": "Aún no",
       "sizeNone": "Sin archivo",
       "anyTime": "Cualquier fecha",
-      "lastDays": "Últimos {count} días"
+      "lastDays": "Últimos {count} días",
+      "retry": "Reintentar",
+      "retryStarted": "Reintentando esa copia de {name}.",
+      "retryFailed": "No se pudo reintentar esa copia."
     },
     "restore": {
       "title": "Restaurar {name}",
@@ -3821,7 +4152,9 @@
       "setUp": "Configurar copias",
       "sizePending": "Aún no",
       "sizeNone": "Sin archivo",
-      "sizeUnknown": "Desconocido"
+      "sizeUnknown": "Desconocido",
+      "retryStarted": "Reintentando esa copia.",
+      "retryFailed": "No se pudo reintentar esa copia."
     },
     "empty": {
       "title": "Todavía no hay copias de seguridad en este servidor",
@@ -3876,6 +4209,20 @@
       "unknownReason": "No se registró el motivo.",
       "noSafetyCopy": "No se tomó ninguna",
       "findSafetyCopy": "Buscar copia previa",
+      "allApplications": "Todos los sitios",
+      "allStatuses": "Cualquier estado",
+      "allTypes": "Cualquier tipo",
+      "anyTime": "Cualquier fecha",
+      "lastDays": "Últimos {count} días",
+      "types": {
+        "full": "Archivos y base de datos",
+        "filesystem": "Solo archivos",
+        "database": "Solo base de datos"
+      },
+      "emptyFiltered": {
+        "title": "Ninguna restauración coincide con esos filtros",
+        "description": "Prueba con otro sitio u otro estado."
+      },
       "empty": {
         "title": "Aún no hay restauraciones",
         "description": "Cuando se restaure una copia sobre un sitio, quedará registrada aquí: qué se restauró, cuándo y si funcionó."

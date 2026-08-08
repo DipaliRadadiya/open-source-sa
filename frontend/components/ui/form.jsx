@@ -56,7 +56,10 @@ function FormItem({ className, ...props }) {
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div data-slot="form-item" className={cn("grid gap-2", className)} {...props} />
+      {/* content-start: without it a shorter field stretched by a taller
+          neighbour in the same grid row spreads the leftover height into its
+          gap, dropping its input below the neighbour's. */}
+      <div data-slot="form-item" className={cn("grid content-start gap-2", className)} {...props} />
     </FormItemContext.Provider>
   )
 }

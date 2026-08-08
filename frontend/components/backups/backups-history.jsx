@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BACKUP_IN_FLIGHT, BACKUP_PERIODS, BACKUP_TYPES } from "@/lib/schemas/backup";
-import { runBackupNow } from "@/lib/api/backups";
+import { retryBackup } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,14 +40,17 @@ export function BackupsHistory({
   const [restoring, setRestoring] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
-  async function runAgain(applicationId, name) {
-    setBusyId(applicationId);
+  // Re-runs the failed backup itself, rather than starting a fresh one from
+  // the site's current state — which is what this button used to do, only
+  // because no retry endpoint existed.
+  async function retry(backup) {
+    setBusyId(backup.id);
     try {
-      await runBackupNow(applicationId);
-      toast.success(t("runStarted", { name: name ?? "" }));
+      await retryBackup(backup.id);
+      toast.success(t("retryStarted", { name: backup.application_name ?? "" }));
       router.refresh();
     } catch (error) {
-      toast.error(apiMessage(error, t("runFailed")));
+      toast.error(apiMessage(error, t("retryFailed")));
     } finally {
       setBusyId(null);
     }
@@ -58,7 +61,7 @@ export function BackupsHistory({
     canRestore,
     canRun,
     onRestore: setRestoring,
-    onRun: runAgain,
+    onRetry: retry,
     busyId,
   };
 

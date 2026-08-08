@@ -26,6 +26,9 @@ export function CardSaveFooter({
   onDiscard,
   submit = false,
   savingNote,
+  // A card that saves one named thing can say so — "Save PHP settings" rather
+  // than a bare "Save" that could belong to anything on the page.
+  saveLabel,
   // Off for a screen that already marks the unsaved thing where it lives — the
   // AI Bot Blocker badges the chosen card, and a second marker down here would
   // be the same fact twice.
@@ -58,7 +61,7 @@ export function CardSaveFooter({
           disabled={Boolean(saveReason) || saving}
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-          {saving ? t("saving") : t("save")}
+          {saving ? t("saving") : (saveLabel ?? t("save"))}
         </Button>
       </ReasonTooltip>
     </div>

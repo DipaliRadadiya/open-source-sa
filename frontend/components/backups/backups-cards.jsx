@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
-import { History, PlayCircle } from "lucide-react";
+import { History, RotateCw } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
@@ -25,7 +25,7 @@ export function BackupsCards({
   canRestore,
   canRun,
   onRestore,
-  onRun,
+  onRetry,
   busyId,
   showSite = true,
 }) {
@@ -90,15 +90,15 @@ export function BackupsCards({
                 <DownloadBackupButton backup={backup} canDownload={canRestore} label />
 
                 {backup.status === "failed" ? (
-                  canRun && backup.application_id ? (
+                  canRun ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={busyId === backup.application_id}
-                      onClick={() => onRun(backup.application_id, backup.application_name)}
+                      disabled={busyId === backup.id}
+                      onClick={() => onRetry(backup)}
                     >
-                      <PlayCircle className="size-4" />
-                      {t("runAgain")}
+                      <RotateCw className="size-4" />
+                      {t("retry")}
                     </Button>
                   ) : null
                 ) : (

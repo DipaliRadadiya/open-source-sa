@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { History, PlayCircle } from "lucide-react";
+import { History, RotateCw } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
@@ -117,14 +117,14 @@ export function sizeNote(backup, t) {
  * One action per state, and never one that cannot work.
  *
  * A failed backup has nothing to restore FROM, so it does not get a Restore
- * button at all — it gets the thing that actually helps, which is running a
- * fresh backup for that site. There is no retry endpoint and no log endpoint,
- * so neither is offered: a button that 404s is worse than no button.
+ * button at all — it gets Retry, which re-runs the same configuration. That
+ * used to be "Run backup" (a fresh run from the site's current state) purely
+ * because no retry endpoint existed.
  */
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
-  const { canRestore, canRun, onRestore, onRun, busyId } = table.options.meta;
+  const { canRestore, canRun, onRestore, onRetry, busyId } = table.options.meta;
   const backup = row.original;
 
   // Download rides alongside whichever action the state earns, including on a
@@ -136,7 +136,7 @@ function ActionsCell({ row, table }) {
     return (
       <div className="flex items-center justify-end gap-2">
         {download}
-        {canRun && backup.application_id ? (
+        {canRun ? (
           <Button
             size="sm"
             variant="outline"
@@ -144,11 +144,11 @@ function ActionsCell({ row, table }) {
             // one vertical line down the column instead of shuffling with
             // whichever label the row's state earned.
             className="min-w-28"
-            disabled={busyId === backup.application_id}
-            onClick={() => onRun(backup.application_id, backup.application_name)}
+            disabled={busyId === backup.id}
+            onClick={() => onRetry(backup)}
           >
-            <PlayCircle className="size-4" />
-            {t("runAgain")}
+            <RotateCw className="size-4" />
+            {t("retry")}
           </Button>
         ) : null}
       </div>
@@ -185,7 +185,7 @@ export function BackupsHistoryTable({
   canRestore,
   canRun,
   onRestore,
-  onRun,
+  onRetry,
   busyId,
   // On a site's own page every row belongs to that site, so naming it ten
   // times says nothing. The rest of the table is identical, which is the
@@ -231,7 +231,7 @@ export function BackupsHistoryTable({
       data={backups}
       emptyMessage={emptyMessage ?? t("empty.title")}
       bare={bare}
-      meta={{ canRestore, canRun, onRestore, onRun, busyId }}
+      meta={{ canRestore, canRun, onRestore, onRetry, busyId }}
     />
   );
 }

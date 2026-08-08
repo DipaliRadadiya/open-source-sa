@@ -234,6 +234,38 @@ export function BackupSettingsFields({
               )}
             />
 
+            {/* Until now the card said "Daily" and never said when — every
+                site on the server backed up at 02:00 with nothing on screen
+                admitting it. A native time input rather than a picker: this is
+                one value the OS already has a good control for, and it hands
+                back exactly the "HH:MM" the API validates. */}
+            <FormField
+              control={form.control}
+              name="schedule_time"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>{t("scheduleTime")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="time"
+                      step={60}
+                      disabled={disabled}
+                      className="w-full tabular-nums"
+                    />
+                  </FormControl>
+                  {/* Server time, said out loud for the same reason the cron
+                      dialog says it: a browser in another timezone would
+                      otherwise read this as local and be hours out. The zone's
+                      name is not worth a `/server/facts` shell-out on three
+                      more pages — "not your computer's" is the part that
+                      prevents the mistake. */}
+                  <FormDescription>{t("scheduleTimeHint")}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="retention_count"

@@ -75,3 +75,15 @@ export function fetchBackupDownload(backupId) {
 export function fetchBackup(backupId) {
   return api.get(`/backups/${backupId}`);
 }
+
+/**
+ * Re-run a failed backup with the same configuration. Throttled 6/min.
+ *
+ * Distinct from "back up now": that starts a fresh run from the site's current
+ * state, which is the honest answer when there is nothing to retry. This
+ * repeats the run that failed, which is what someone looking at a failed row
+ * actually means.
+ */
+export function retryBackup(backupId) {
+  return api.post(`/backups/${backupId}/retry`);
+}

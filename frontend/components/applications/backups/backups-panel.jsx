@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
-import { runBackupNow } from "@/lib/api/backups";
+import { retryBackup, runBackupNow } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,6 +47,7 @@ export function BackupsPanel({
   const t = useTranslations("backups.application");
   const router = useRouter();
   const [running, setRunning] = useState(false);
+  const [retryingId, setRetryingId] = useState(null);
   const [restoring, setRestoring] = useState(null);
   const [editing, setEditing] = useState(false);
   // Seeded from the server, then replaced the moment a restore is started here
@@ -56,6 +57,22 @@ export function BackupsPanel({
   // A run in flight is the one moment this page changes without the user
   // touching it. Polling only then keeps a page nobody is waiting on quiet.
   const busy = backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status));
+
+  // Re-runs the failed backup itself. "Back up now" starts a fresh run from
+  // the site's current state — a different thing, and not what someone looking
+  // at a failed row means.
+  async function retry(backup) {
+    setRetryingId(backup.id);
+    try {
+      await retryBackup(backup.id);
+      toast.success(t("retryStarted"));
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("retryFailed")));
+    } finally {
+      setRetryingId(null);
+    }
+  }
 
   async function backUpNow() {
     setRunning(true);
@@ -98,9 +115,8 @@ export function BackupsPanel({
         canRestore={canRestore}
         canManage={canManage}
         onRestore={setRestoring}
-        onRun={backUpNow}
-        running={running}
-        applicationName={application.name}
+        onRetry={retry}
+        busyId={retryingId}
       />
 
       {/* The same modal the Backups screen opens, in edit mode when a target
@@ -293,12 +309,11 @@ function ProtectionCard({ target, canManage, running, onBackUpNow, onEdit }) {
 function RecentBackups({
   backups,
   applicationId,
-  applicationName,
   canRestore,
   canManage,
   onRestore,
-  onRun,
-  running,
+  onRetry,
+  busyId,
 }) {
   const t = useTranslations("backups.application");
 
@@ -307,10 +322,8 @@ function RecentBackups({
     canRestore,
     canRun: canManage,
     onRestore,
-    onRun,
-    // The table keys "is this one busy?" off an application id, which on this
-    // page is the only one there is.
-    busyId: running ? applicationId : null,
+    onRetry,
+    busyId,
     showSite: false,
   };
 

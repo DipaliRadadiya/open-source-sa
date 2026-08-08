@@ -83,6 +83,8 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
             appId={id}
             policies={policies}
             currentPolicy={application.ai_bot_policy ?? "allow_all"}
+            currentBlocked={application.bot_blocked ?? []}
+            currentAllowed={application.bot_allowed ?? []}
             canManage={canManage}
           />
           {/* Below the choices, not above: on most sites this is empty or the

@@ -42,6 +42,9 @@ const BUILT_APPLICATION_URLS = new Set([
   "/bot-blocker",
   "/firewall",
   "/backups",
+  "/clone",
+  "/php",
+  "/fail2ban",
 ]);
 
 export function isApplicationNavBuilt(url) {
