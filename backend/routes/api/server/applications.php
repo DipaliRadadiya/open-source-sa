@@ -25,8 +25,10 @@ Route::get('/applications', [ApplicationController::class, 'index'])->middleware
 Route::post('/applications', [ApplicationController::class, 'store'])->middleware('permission:application,manage');
 Route::get('/applications/port-check', [ApplicationController::class, 'portCheck'])
     ->middleware('permission:application');
-Route::get('/applications/{application}', [ApplicationController::class, 'show'])->middleware('permission:application');
-Route::get('/applications/{application}/sidebar', [ApplicationController::class, 'sidebar'])->middleware('permission:application');
+Route::get('/applications/{application}', [ApplicationController::class, 'show'])
+    ->middleware(['permission:application', 'throttle:status']);
+Route::get('/applications/{application}/sidebar', [ApplicationController::class, 'sidebar'])
+    ->middleware(['permission:application', 'throttle:status']);
 Route::put('/applications/{application}', [ApplicationController::class, 'update'])->middleware('permission:application,manage');
 Route::post('/applications/{application}/provision', [ApplicationController::class, 'provision'])->middleware('permission:application,manage');
 // Deploy is the Deployment screen's action, so it is gated by that screen's

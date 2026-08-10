@@ -86,6 +86,13 @@ class AppServiceProvider extends ServiceProvider
             ? Limit::perMinute(120)->by($request->user()->id)
             : Limit::perMinute(20)->by($request->ip()));
 
+        // Status-polling endpoints: per-user-per-app bucket so long-running
+        // provisions (which poll frequently) cannot exhaust the global api limit.
+        // 120/min per app is ~2/sec — enough for 5s polling intervals.
+        RateLimiter::for('status', fn (Request $request) => $request->user()
+            ? Limit::perMinute(120)->by($request->user()->id.'|'.$request->route('application'))
+            : Limit::perMinute(20)->by($request->ip()));
+
         // Deploy webhooks: keyed on the webhook, not the caller's IP. A provider
         // delivers from shared egress, so an IP bucket would have one busy
         // repository throttle another user's, while doing nothing to bound the
