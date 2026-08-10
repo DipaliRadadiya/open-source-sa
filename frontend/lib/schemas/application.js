@@ -219,13 +219,20 @@ export const wafOptionsResponseSchema = z.object({
   waf_modes: z.array(wafOptionSchema).default([]),
 });
 
-// Only `web_server` is read here — the 8G ruleset has no OpenLiteSpeed
+// `web_server` gates the firewall screen — the 8G ruleset has no OpenLiteSpeed
 // implementation, and a screen that silently saves settings the server will
 // never apply is worse than one that says so.
+//
+// `server_ip` and `temporary_domain_suffixes` are the server's own answer to
+// "what address do sites point at, and which wildcard-DNS host resolves it".
+// Both were being guessed on the client: the address came from a second call to
+// /server/facts, and the suffix was a hardcoded "nip.io" constant.
 export const serverCapabilitiesResponseSchema = z.object({
   capabilities: z.object({
     stack: z.string().nullish(),
     web_server: z.string().nullish(),
+    server_ip: z.string().nullish(),
+    temporary_domain_suffixes: z.array(z.string()).default([]),
   }),
 });
 

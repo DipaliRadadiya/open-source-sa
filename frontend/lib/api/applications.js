@@ -62,6 +62,20 @@ export function updateApplicationPhp(id, payload) {
   return api.put(`/applications/${id}/php`, payload);
 }
 
+/**
+ * Drop this site's own value for one or more directives, so they inherit again.
+ *
+ * A partial payload on purpose: every rule is `sometimes`, and the controller
+ * `fill()`s only what it was sent, so nulling one field cannot disturb a value
+ * the user is midway through editing elsewhere on the form.
+ */
+export function resetApplicationPhpFields(id, names) {
+  return api.put(
+    `/applications/${id}/php`,
+    Object.fromEntries(names.map((name) => [name, null])),
+  );
+}
+
 /** Move this site onto its own FPM pool, running as its own user. */
 export function isolateApplicationPhp(id) {
   return api.post(`/applications/${id}/php/isolate`);

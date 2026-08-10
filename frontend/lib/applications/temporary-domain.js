@@ -1,17 +1,28 @@
 /**
  * A domain for a site that does not have one yet.
  *
- * nip.io resolves `anything.<ip>.nip.io` to that IP without any DNS being set
- * up, so a new site is reachable the moment it finishes provisioning. That is
- * the whole point: the alternative is telling someone to buy a domain and wait
- * for propagation before they can see whether the thing they just made works.
+ * A wildcard-DNS host resolves `anything.<ip>.nip.io` to that IP without any
+ * DNS being set up, so a new site is reachable the moment it finishes
+ * provisioning. That is the whole point: the alternative is telling someone to
+ * buy a domain and wait for propagation before they can see whether the thing
+ * they just made works.
  *
  * The IP is written with dashes rather than dots — both forms resolve, and the
  * dashed one is what the panel already serves itself on
  * (`sv-oss-app.167-233-229-184.nip.io`), so the site and the panel that made it
  * read as the same convention.
  */
-export const NIP_IO_SUFFIX = "nip.io";
+
+/**
+ * Used only when the server names no suffix of its own.
+ *
+ * `/server/capabilities` returns `temporary_domain_suffixes` (today
+ * `["nip.io", "sslip.io"]`) and that list is authoritative — it is the server
+ * saying which hosts IT will answer for. This constant exists so an older
+ * backend, or a failed capabilities read, still produces a working domain
+ * rather than none.
+ */
+export const FALLBACK_TEMPORARY_SUFFIX = "nip.io";
 
 /**
  * The longest a single DNS label may be. A name longer than this is cut rather
@@ -60,6 +71,20 @@ export function ipToLabel(ip) {
 export const DEFAULT_TEMPORARY_LABEL = "site";
 
 /**
+ * The first suffix the server offers, or the fallback when it offers none.
+ *
+ * The list is ordered by the backend; there is no choice to put in front of
+ * anyone here — nip.io and sslip.io do the identical job, and asking which
+ * wildcard-DNS provider they would like is a question nobody has an answer to.
+ */
+export function preferredSuffix(suffixes) {
+  const first = (Array.isArray(suffixes) ? suffixes : []).find(
+    (suffix) => typeof suffix === "string" && suffix.trim(),
+  );
+  return first?.trim() || FALLBACK_TEMPORARY_SUFFIX;
+}
+
+/**
  * The full temporary domain, or null when it cannot be built.
  *
  * Falls back to `DEFAULT_TEMPORARY_LABEL` when the name yields no usable label,
@@ -67,12 +92,16 @@ export const DEFAULT_TEMPORARY_LABEL = "site";
  * no address — `site..nip.io` is not a domain, and showing it would look like a
  * value that is one keystroke from working when it is not.
  */
-export function temporaryDomain(name, ip, { fallbackLabel = DEFAULT_TEMPORARY_LABEL } = {}) {
+export function temporaryDomain(
+  name,
+  ip,
+  { fallbackLabel = DEFAULT_TEMPORARY_LABEL, suffixes } = {},
+) {
   const host = ipToLabel(ip);
   if (!host) return null;
 
   const label = toDomainLabel(name) || toDomainLabel(fallbackLabel);
   if (!label) return null;
 
-  return `${label}.${host}.${NIP_IO_SUFFIX}`;
+  return `${label}.${host}.${preferredSuffix(suffixes)}`;
 }

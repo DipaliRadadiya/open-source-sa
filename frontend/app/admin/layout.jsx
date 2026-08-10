@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { signedOutPath } from "@/lib/auth/signed-out-path";
 import { AuthProvider } from "@/components/auth-provider";
 import { AdminSidebar } from "@/components/sections/admin-sidebar";
+import { AdminBreadcrumb } from "@/components/sections/admin-breadcrumb";
 import { AdminHeader } from "@/components/sections/admin-header";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +26,12 @@ export default async function AdminLayout({ children }) {
           <SidebarInset className="min-w-0">
             <AdminHeader />
             <main className="flex flex-1 flex-col">
+              {/* Same band as the server panel — the two shells stay identical. */}
+              <div className="border-b bg-muted/40">
+                <div className="mx-auto w-full max-w-screen-xl px-4 py-2.5 sm:px-6 lg:px-8">
+                  <AdminBreadcrumb />
+                </div>
+              </div>
               <div className="mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">
                 {children}
               </div>

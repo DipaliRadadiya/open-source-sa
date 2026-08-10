@@ -113,6 +113,12 @@ export const applicationPhpSchema = z
         additional_directives: z.string().nullish(),
       })
       .passthrough(),
+    // True for each directive this site has explicitly set; false means the
+    // value in `settings` is the panel default showing through. The client
+    // cannot work this out for itself — an inherited value and an override that
+    // happens to equal the default look identical — so it is the only thing
+    // that makes "Reset to default" possible.
+    overridden: z.record(z.string(), z.boolean()).default({}),
     presets: z
       .array(
         z.object({

@@ -1,14 +1,11 @@
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getDatabase } from "@/lib/databases/get-database";
 import { getExports } from "@/lib/databases/get-exports";
 import { getTables } from "@/lib/databases/get-monitor";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DatabaseUsers } from "@/components/databases/database-users";
 import { DatabaseFacts } from "@/components/databases/database-facts";
 import { ConnectionDetails } from "@/components/databases/connection-details";
@@ -52,21 +49,9 @@ export default async function DatabasePage({ params, searchParams }) {
 
   return (
     <div className="space-y-6">
-      <PageCrumb>{data.name}</PageCrumb>
+      <PageCrumb mono>{data.name}</PageCrumb>
 
       <div className="space-y-3">
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="-ml-2 h-7 text-muted-foreground"
-        >
-          <Link href="/databases">
-            <ArrowLeft className="size-4" />
-            {t("detail.back")}
-          </Link>
-        </Button>
-
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="font-mono text-2xl font-semibold tracking-tight">

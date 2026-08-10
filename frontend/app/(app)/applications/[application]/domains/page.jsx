@@ -3,12 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getApplication } from "@/lib/applications/get-applications";
+import { getApplication, getServerCapabilities } from "@/lib/applications/get-applications";
 import {
   getApplicationDomains,
   getApplicationCertificate,
 } from "@/lib/applications/get-application-domains";
-import { getServerFacts } from "@/lib/server/get-server-facts";
 import { DomainsSection } from "@/components/applications/domains/domains-section";
 import { SslSection } from "@/components/applications/domains/ssl-section";
 import { DomainsSslTabs } from "@/components/applications/domains/domains-ssl-tabs";
@@ -43,16 +42,16 @@ export default async function ApplicationDomainsPage({ params }) {
   const canManage = can(appPermissions, "app_domain", "manage", "application");
   const settled = application.status === "active";
 
-  const [domainList, certificate, facts] = await Promise.all([
+  const [domainList, certificate, capabilities] = await Promise.all([
     settled ? getApplicationDomains(id) : Promise.resolve({ domains: [], failed: false }),
     settled ? getApplicationCertificate(id) : Promise.resolve({ certificate: null, failed: false }),
-    // The A-record target for unverified domains. Null for a role that can't
-    // read server facts — the UI falls back to generic guidance.
-    settled ? getServerFacts() : Promise.resolve(null),
+    // The A-record target for unverified domains. The server states its own
+    // address; null (a role that cannot read it) falls back to generic guidance.
+    settled ? getServerCapabilities().catch(() => null) : Promise.resolve(null),
   ]);
 
   const certifiable = domainList.domains.some((d) => d.certifiable);
-  const serverIp = facts?.ip ?? null;
+  const serverIp = capabilities?.serverIp ?? null;
 
   const cert = certificate.certificate;
   const sslStatus = !cert
@@ -68,8 +67,6 @@ export default async function ApplicationDomainsPage({ params }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        backHref="/applications"
-        backLabel={t("back")}
         title={t("pageTitle")}
         subtitle={t("pageSubtitle")}
       />

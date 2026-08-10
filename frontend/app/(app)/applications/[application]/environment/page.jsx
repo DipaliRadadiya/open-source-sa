@@ -54,8 +54,6 @@ export default async function ApplicationEnvironmentPage({ params }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        backHref="/applications"
-        backLabel={t("back")}
         title={t("pageTitle")}
         subtitle={t("pageSubtitle")}
       />

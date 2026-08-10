@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getEngines } from "@/lib/databases/get-databases";
@@ -48,6 +47,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
   if (!selected) {
     return (
       <div className="space-y-6">
+        <PageCrumb>{t("crumb")}</PageCrumb>
         <Header t={t} />
         <EmptyState
           icon={Activity}
@@ -117,17 +117,6 @@ export default async function DatabaseMonitorPage({ searchParams }) {
 function Header({ t }) {
   return (
     <div className="space-y-3">
-      <Button
-        asChild
-        variant="ghost"
-        size="sm"
-        className="-ml-2 h-7 text-muted-foreground"
-      >
-        <Link href="/databases">
-          <ArrowLeft className="size-4" />
-          {t("back")}
-        </Link>
-      </Button>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>

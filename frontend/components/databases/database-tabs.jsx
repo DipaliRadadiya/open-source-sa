@@ -47,9 +47,13 @@ export function DatabaseTabs({ users, tables, backups, counts, initial }) {
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={select}>
-        <TabsList>
+        <TabsList className="!h-auto w-fit gap-1 p-1">
           {sections.map((section) => (
-            <TabsTrigger key={section.value} value={section.value}>
+            <TabsTrigger
+              key={section.value}
+              value={section.value}
+              className="!h-auto gap-2 px-4 py-2"
+            >
               {section.label}
               {/* Zero is worth showing too: "Users 0" is the fact that nothing
                   can connect, which is exactly what someone needs to see. */}

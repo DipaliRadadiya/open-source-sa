@@ -23,7 +23,7 @@ import {
 export function AdminSidebar() {
   const pathname = usePathname();
   const t = useTranslations("admin");
-  const { state, isMobile } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const iconOnly = state === "collapsed" && !isMobile;
 
   return (
@@ -53,6 +53,7 @@ export function AdminSidebar() {
                     isActive={active}
                     tooltip={title}
                     className={NAV_ITEM_CLASS}
+                    onClick={() => isMobile && setOpenMobile(false)}
                   >
                     <Link href={item.url}>
                       <NavIcon name={item.icon} />

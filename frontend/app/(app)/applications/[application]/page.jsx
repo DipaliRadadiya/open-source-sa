@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
@@ -76,13 +76,6 @@ export default async function ApplicationDetailPage({ params }) {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href="/applications">
-            <ArrowLeft className="size-4" />
-            {t("back")}
-          </Link>
-        </Button>
-
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -138,6 +131,7 @@ export default async function ApplicationDetailPage({ params }) {
               application={application}
               canManage={canManage}
               showNavigation={false}
+              redirectTo="/applications"
             />
           </div>
         </div>

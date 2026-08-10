@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { TriangleAlert } from "lucide-react";
+import { CopyButton } from "@/components/ui/copy-button";
 import { deleteApplication } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,7 +21,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  * the API. Two things people expect to happen and don't are said out loud: the
  * code on disk stays, and a database created for this site stays too.
  */
-export function DeleteApplicationDialog({ application, open, onOpenChange, redirectTo }) {
+export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo }) {
   const t = useTranslations("applications.delete");
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -31,8 +32,6 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, redir
   const matches = confirm.trim() === domain;
 
   function handleOpenChange(next) {
-    // Cleared here as well as on close: re-opening from the same trigger never
-    // fires onOpenChange, so a half-typed domain would survive.
     if (!next) {
       setConfirm("");
       setRemoveFiles(false);
@@ -47,8 +46,9 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, redir
       await deleteApplication(application.id, { removeFiles });
       toast.success(t("done", { name: application.name }));
       handleOpenChange(false);
+      if (afterDelete) await afterDelete();
       if (redirectTo) router.push(redirectTo);
-      router.refresh();
+      else router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
     } finally {
@@ -92,10 +92,19 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, redir
 
         <div className="space-y-2">
           <Label htmlFor="delete-app-confirm" className="text-sm">
-            {t("confirmLabel", { domain })}
+            {t("confirmLabelStart")}
+            <span className="ml-1.5 inline-flex items-center gap-1 font-mono text-foreground">
+              {domain}
+              <CopyButton
+                value={domain}
+                className="size-5"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </span>
+            {t("confirmLabelEnd")}
           </Label>
           <Input
-              placeholder={domain}
+            placeholder={domain}
             id="delete-app-confirm"
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}

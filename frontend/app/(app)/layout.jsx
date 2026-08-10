@@ -5,6 +5,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppSidebar } from "@/components/sections/app-sidebar";
 import { AppHeader } from "@/components/sections/app-header";
+import { AppBreadcrumb } from "@/components/sections/app-breadcrumb";
 import { ImpersonationBanner } from "@/components/sections/impersonation-banner";
 import { RebootRequiredBanner } from "@/components/sections/reboot-required-banner";
 import { getRebootRequired } from "@/lib/server/get-reboot-required";
@@ -48,12 +49,19 @@ export default async function AppLayout({ children }) {
                       canManage={can(permissions, "setting", "manage")}
                     />
                   ) : null}
-                  <AppHeader
-                    items={permissions}
-                    impersonating={!!impersonatedBy}
-                  />
+                  <AppHeader impersonating={!!impersonatedBy} />
                 </div>
                 <main className="flex flex-1 flex-col">
+                  {/* Its own band under the header rather than a line of text
+                      above the h1: the trail is chrome, and sharing the page's
+                      background made it read as a stray first line of the
+                      heading. Full-bleed so the rule actually divides, with the
+                      crumb held to the content column so it still lines up. */}
+                  <div className="border-b bg-muted/40">
+                    <div className="mx-auto w-full max-w-screen-xl px-4 py-2.5 sm:px-6 lg:px-8">
+                      <AppBreadcrumb items={permissions} />
+                    </div>
+                  </div>
                   <div className="mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">
                     {children}
                   </div>

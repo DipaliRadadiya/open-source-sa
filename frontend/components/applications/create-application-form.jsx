@@ -65,6 +65,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
 import { CreateReadinessPanel } from "@/components/applications/create-readiness-panel";
 import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
@@ -242,6 +243,7 @@ function ConfigField({
   phpVersionsFailed,
   nodeVersions,
   nodeVersionsFailed,
+  timezones,
 }) {
   const t = useTranslations("applications");
   const isAccount = config.source === "git_accounts";
@@ -259,9 +261,15 @@ function ConfigField({
         : false;
   const isRuntime =
     config.source === "php_versions" || config.source === "node_versions";
+  const isTimezone =
+    config.source === "timezones" ||
+    config.name === "timezone" ||
+    config.name === "site_timezone" ||
+    config.label?.toLowerCase().includes("time zone");
   const isPassword = config.type === "password";
   const isPort = config.name === "app_port";
   const isStartCommand = config.name === "start_command";
+  const isToggle = config.type === "toggle";
   // A field the backend declares as a choice — render a chooser even before its
   // options arrive, so it never silently degrades to a free-text box.
   const isChoice = ["select", "enum", "dropdown"].includes(config.type);
@@ -275,10 +283,21 @@ function ConfigField({
   const runtimeDefault = isRuntime
     ? (options.find((option) => option.is_default)?.value ?? options[0]?.value)
     : undefined;
-  const isChooser = options.length > 0 || isRuntime || isChoice;
+  // Timezones: flatten the grouped API response into a flat option list.
+  const timezoneOptions = useMemo(() => {
+    if (!isTimezone || !timezones?.length) return [];
+    return timezones.flatMap((group) =>
+      group.zones.map((zone) => ({
+        value: zone.value,
+        label: zone.offset ? `${zone.label} (${zone.offset})` : zone.label,
+      })),
+    );
+  }, [isTimezone, timezones]);
+  const isChooser =
+    options.length > 0 || isRuntime || isChoice || isTimezone;
   // Long enumerations (countries ~250, timezones ~400, languages) get a
   // searchable Combobox per the house rule; short lists stay a plain Select.
-  const useCombobox = options.length > 10;
+  const useCombobox = (isTimezone ? timezoneOptions.length : options.length) > 10;
   const label = fieldLabel(config);
   const placeholder =
     config.placeholder ?? t("form.fieldPlaceholder", { field: label });
@@ -344,6 +363,41 @@ function ConfigField({
                 ))}
               </SelectContent>
             </Select>
+          ) : isTimezone && timezoneOptions.length ? (
+            useCombobox ? (
+              <FormControl>
+                <Combobox
+                  options={timezoneOptions}
+                  value={field.value ? String(field.value) : ""}
+                  onChange={field.onChange}
+                  placeholder={t("form.fieldSelectPlaceholder", {
+                    field: label,
+                  })}
+                />
+              </FormControl>
+            ) : (
+              <Select
+                onValueChange={field.onChange}
+                value={field.value ? String(field.value) : ""}
+              >
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue
+                      placeholder={t("form.fieldSelectPlaceholder", {
+                        field: label,
+                      })}
+                    />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="max-h-64">
+                  {timezoneOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )
           ) : isChooser ? (
             useCombobox ? (
               <FormControl>
@@ -383,6 +437,19 @@ function ConfigField({
                 </SelectContent>
               </Select>
             )
+          ) : isToggle ? (
+            <FormControl>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={Boolean(field.value)}
+                  onCheckedChange={(checked) => field.onChange(checked)}
+                  id={config.name}
+                />
+                <FormDescription className="!mt-0">
+                  {field.value ? t("form.toggleOn") : t("form.toggleOff")}
+                </FormDescription>
+              </div>
+            </FormControl>
           ) : isPort ? (
             <PortField
               field={field}
@@ -442,6 +509,8 @@ export function CreateApplicationForm({
   nodeDefaultVersion = null,
   nodeVersionsFailed = false,
   serverIp = null,
+  temporaryDomainSuffixes = [],
+  timezones = [],
 }) {
   const t = useTranslations("applications");
   const { name: brand } = useBranding();
@@ -489,15 +558,17 @@ export function CreateApplicationForm({
   /**
    * Somewhere to put a site that has no domain yet.
    *
-   * Offered only when the server reported an address — nip.io needs one to
-   * point at, and an option that cannot produce a domain is worse than no
-   * option. `own` stays the default, so anyone who has a domain sees exactly
-   * what they saw before.
+   * Offered only when the server reported an address — the wildcard-DNS host
+   * needs one to point at, and an option that cannot produce a domain is worse
+   * than no option. `own` stays the default, so anyone who has a domain sees
+   * exactly what they saw before.
    */
   const canUseTemporary = Boolean(ipToLabel(serverIp));
   const [domainMode, setDomainMode] = useState("own");
   const temporary = domainMode === "temporary";
-  const generated = temporary ? temporaryDomain(name, serverIp) : null;
+  const generated = temporary
+    ? temporaryDomain(name, serverIp, { suffixes: temporaryDomainSuffixes })
+    : null;
 
   // The generated value IS the field: written through so validation, the
   // summary panel and the submitted payload all read one source.
@@ -1119,21 +1190,17 @@ export function CreateApplicationForm({
                                   <FormDescription className="text-destructive">
                                     {t("loadFailed")}
                                   </FormDescription>
-                                ) : !gitAccounts.length ? (
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <FormDescription className="text-destructive">
-                                      {t("noAccounts")}
-                                    </FormDescription>
-                                    <Button size="sm" variant="outline" asChild>
-                                      <Link
-                                        href="/integrations/git"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                      >
-                                        {t("connectGit")}
-                                      </Link>
-                                    </Button>
-                                  </div>
+                                ) : !gitAccounts.length && !gitAccountsFailed ? (
+                                  <span className="text-sm">
+                                    <Link
+                                      href="/integrations/git"
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-primary hover:underline"
+                                    >
+                                      {t("connectGit")}
+                                    </Link>
+                                  </span>
                                 ) : null}
                                 <FormMessage />
                               </FormItem>
@@ -1286,6 +1353,7 @@ export function CreateApplicationForm({
                           phpVersionsFailed={phpVersionsFailed}
                           nodeVersions={nodeVersions}
                           nodeVersionsFailed={nodeVersionsFailed}
+                          timezones={timezones}
                         />
                       ))}
                     </div>
@@ -1316,6 +1384,7 @@ export function CreateApplicationForm({
                             phpVersionsFailed={phpVersionsFailed}
                             nodeVersions={nodeVersions}
                             nodeVersionsFailed={nodeVersionsFailed}
+                            timezones={timezones}
                           />
                         ))}
                       </CollapsibleContent>

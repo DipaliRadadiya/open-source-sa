@@ -125,44 +125,46 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
           </>
         }
       >
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required>{t("form.name")}</FormLabel>
-              <FormControl>
-                <Input placeholder={t("form.namePlaceholder")} autoComplete="off" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("form.name")}</FormLabel>
+                <FormControl>
+                  <Input placeholder={t("form.namePlaceholder")} autoComplete="off" {...field} />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">{t("form.nameHint")}</p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="processes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel required>{t("form.processes")}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="1"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={16}
+                    {...field}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">{t("form.processesHint")}</p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <WorkerCommandField form={form} presets={presets} workers={workers} onPick={onPickPreset} />
-
-        <FormField
-          control={form.control}
-          name="processes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required>{t("form.processes")}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="1"
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={16}
-                  className="w-24"
-                  {...field}
-                />
-              </FormControl>
-              <p className="text-xs text-muted-foreground">{t("form.processesHint")}</p>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <FormField
           control={form.control}
@@ -254,7 +256,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
                 <FormItem>
                   <FormLabel required>{t("form.stopWaitSeconds")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="10" type="number" inputMode="numeric" min={1} max={300} className="w-24" {...field} />
+                    <Input placeholder="10" type="number" inputMode="numeric" min={1} max={300} {...field} />
                   </FormControl>
                   <p className="text-xs text-muted-foreground">{t("form.stopWaitSecondsHint")}</p>
                   <FormMessage />

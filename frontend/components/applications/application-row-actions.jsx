@@ -39,6 +39,12 @@ export function ApplicationRowActions({
   // On the application's own dashboard page, "Open dashboard" points at the
   // current page and "Visit" duplicates the header button — hide both there.
   showNavigation = true,
+  // Called after a successful delete, before redirecting (if redirectTo is set).
+  // Useful on the list page to refresh the table immediately.
+  afterDelete,
+  // Where to navigate after deleting from a page where staying doesn't make sense.
+  // Passed through to DeleteApplicationDialog.
+  redirectTo,
 }) {
   const t = useTranslations("applications");
   const router = useRouter();
@@ -125,6 +131,8 @@ export function ApplicationRowActions({
         application={application}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
+        afterDelete={afterDelete}
+        redirectTo={redirectTo}
       />
     </div>
   );

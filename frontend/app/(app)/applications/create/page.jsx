@@ -2,12 +2,12 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getSiteTypes } from "@/lib/applications/get-applications";
+import { getSiteTypes, getServerCapabilities } from "@/lib/applications/get-applications";
 import { getSystemUserOptions } from "@/lib/system-users/get-system-users";
 import { getGitAccounts } from "@/lib/git/get-git";
 import { getPhp } from "@/lib/php/get-php";
 import { getNode } from "@/lib/node/get-node";
-import { getServerFacts } from "@/lib/server/get-server-facts";
+import { getTimezones } from "@/lib/settings/get-timezones";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -19,7 +19,7 @@ export async function generateMetadata() {
 }
 
 export default async function CreateApplicationPage() {
-  const [permissions, t, types, systemUsers, accounts, php, node, facts] = await Promise.all([
+  const [permissions, t, types, systemUsers, accounts, php, node, capabilities, timezones] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
     getSiteTypes(),
@@ -27,8 +27,10 @@ export default async function CreateApplicationPage() {
     getGitAccounts(),
     getPhp(),
     getNode(),
-    // For the temporary-domain option: nip.io needs the address to point at.
-    getServerFacts().catch(() => null),
+    // For the temporary-domain option: the server names both the address to
+    // point at and the wildcard-DNS hosts it will answer for.
+    getServerCapabilities().catch(() => null),
+    getTimezones().catch(() => []),
   ]);
 
   const phpVersions = (php.data?.versions ?? []).filter((version) => !version.status || version.status === "ready");
@@ -59,7 +61,9 @@ export default async function CreateApplicationPage() {
         nodeVersions={nodeVersions}
         nodeDefaultVersion={node.data?.default ?? null}
         nodeVersionsFailed={node.failed}
-        serverIp={facts?.ip ?? null}
+        serverIp={capabilities?.serverIp ?? null}
+        temporaryDomainSuffixes={capabilities?.temporaryDomainSuffixes ?? []}
+        timezones={timezones ?? []}
       />
     </div>
   );

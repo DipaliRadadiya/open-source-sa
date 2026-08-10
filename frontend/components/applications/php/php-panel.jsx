@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,7 @@ import {
   Loader2,
   Lock,
   MemoryStick,
+  RotateCcw,
   Timer,
   User,
   X,
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { budgetWith, phpSettingsFormSchema, phpSizeToBytes } from "@/lib/schemas/php-settings";
 import {
   isolateApplicationPhp,
+  resetApplicationPhpFields,
   unisolateApplicationPhp,
   updateApplicationPhp,
 } from "@/lib/api/applications";
@@ -386,7 +388,30 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
     }
   }
 
+  /**
+   * A cleared field takes the value the response came back with — the default
+   * it now inherits, which the form had no way of knowing before asking.
+   *
+   * Only the cleared fields are written; anything else the user is midway
+   * through editing keeps its value AND its dirty state, so a Reset in one
+   * corner of the form never quietly discards work in another.
+   */
+  function onReset(fields, next) {
+    const settings = next?.settings;
+    if (settings) {
+      for (const field of fields) {
+        form.setValue(field, settings[field] ?? "", { shouldDirty: false });
+      }
+    }
+    // The `overridden` map lives on the server-rendered prop, so the buttons
+    // only disappear once this lands.
+    router.refresh();
+  }
+
   return (
+    <OverrideContext.Provider
+      value={{ appId, overridden: php.overridden ?? {}, disabled: !canManage || saving, onReset }}
+    >
     <Form {...form}>
       <form onSubmit={form.handleSubmit(save)} className="space-y-3">
         {/* Its own strip above the form, not the form's first row: it is what
@@ -439,7 +464,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
               <SectionTitle icon={Cpu} title={t("sections.runtime")} />
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Stack label={t("fields.version")} directive="php_version">
+                <Stack label={t("fields.version")} name="php_version" directive="php_version">
                   <ValueSelect
                     form={form}
                     name="php_version"
@@ -449,7 +474,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   />
                 </Stack>
 
-                <Stack label={t("fields.memory")} directive="memory_limit">
+                <Stack label={t("fields.memory")} name="memory_limit" directive="memory_limit">
                   <ValueSelect
                     form={form}
                     name="memory_limit"
@@ -459,7 +484,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   />
                 </Stack>
 
-                <Stack label={t("fields.children")} directive="pm.max_children">
+                <Stack label={t("fields.children")} name="pm_max_children" directive="pm.max_children">
                   <ValueSelect
                     form={form}
                     name="pm_max_children"
@@ -512,6 +537,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
               <div className="grid gap-4 sm:grid-cols-2">
                 <Stack
                   label={t("fields.upload")}
+                  name="upload_max_filesize"
                   directive="upload_max_filesize + post_max_size"
                   error={postTooSmall ? t("hints.postTooSmall") : null}
                 >
@@ -525,7 +551,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   />
                 </Stack>
 
-                <Stack label={t("fields.executionTime")} directive="max_execution_time">
+                <Stack label={t("fields.executionTime")} name="max_execution_time" directive="max_execution_time">
                   <ValueSelect
                     form={form}
                     name="max_execution_time"
@@ -537,7 +563,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   />
                 </Stack>
 
-                <Stack label={t("fields.inputVars")} directive="max_input_vars">
+                <Stack label={t("fields.inputVars")} name="max_input_vars" directive="max_input_vars">
                   <ValueSelect
                     form={form}
                     name="max_input_vars"
@@ -651,7 +677,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   name="php_timezone"
                   render={({ field }) => (
                     <FormItem>
-                      <Label label={t("fields.timezone")} />
+                      <Label label={t("fields.timezone")} name="php_timezone" />
                       <FormControl>
                         <Combobox
                           options={timezones.map((zone) => ({ value: zone, label: zone }))}
@@ -697,7 +723,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                 name="additional_directives"
                 render={({ field }) => (
                   <FormItem className="border-t pt-5">
-                    <Label label={t("fields.directives")} />
+                    <Label label={t("fields.directives")} name="additional_directives" />
                     <FormControl>
                       <Textarea
                         {...field}
@@ -734,6 +760,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
         </Card>
       </form>
     </Form>
+    </OverrideContext.Provider>
   );
 }
 
@@ -960,10 +987,10 @@ function formatBytes(bytes) {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 }
 
-function Stack({ label, directive, error, children }) {
+function Stack({ label, name, directive, error, children }) {
   return (
     <FormItem>
-      <Label label={label} />
+      <Label label={label} name={name} />
       {children}
       <Directive name={directive} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -971,9 +998,112 @@ function Stack({ label, directive, error, children }) {
   );
 }
 
-function Label({ label }) {
-  return <FormLabel>{label}</FormLabel>;
+/**
+ * Everything the per-field Reset needs, so the six field components below do
+ * not each grow four props to pass it down.
+ */
+const OverrideContext = createContext(null);
+
+function Label({ label, name }) {
+  return (
+    <div className="flex min-h-5 items-center justify-between gap-2">
+      <FormLabel>{label}</FormLabel>
+      <ResetOverride name={name} />
+    </div>
+  );
 }
+
+/**
+ * "This site sets its own value — put it back."
+ *
+ * Its presence IS the marker: a field with no button is inheriting. The
+ * alternative — a "Default" chip on every untouched field — is sixteen grey
+ * chips on a form already dense with numbers, and it decorates the common case
+ * to describe the rare one.
+ *
+ * It saves rather than editing the form, because it has to. The API returns
+ * effective values only, so an inherited 128M and an override that happens to
+ * be 128M are indistinguishable here; the value this field will fall back to is
+ * only knowable by asking. The response carries it, so one round trip both
+ * clears the override and shows the result.
+ */
+function ResetOverride({ name }) {
+  const context = useContext(OverrideContext);
+  const t = useTranslations("applications.php");
+  const [busy, setBusy] = useState(false);
+
+  if (!context || !name || !RESETTABLE.has(name)) return null;
+  // `fields` is what this control clears — usually itself, but the upload
+  // control writes two directives and has to clear both (see RESET_FIELDS).
+  const fields = (RESET_FIELDS[name] ?? [name]).filter((field) => RESETTABLE.has(field));
+  if (!fields.some((field) => context.overridden[field])) return null;
+
+  async function reset() {
+    setBusy(true);
+    try {
+      const { data } = await resetApplicationPhpFields(context.appId, fields);
+      context.onReset(fields, data?.php);
+      toast.success(t("resetDone"));
+    } catch (error) {
+      toast.error(apiMessage(error, t("resetFailed")));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={reset}
+      disabled={busy || context.disabled}
+      aria-busy={busy}
+      className="-my-1 h-6 gap-1 px-1.5 text-xs font-normal text-muted-foreground hover:text-foreground"
+    >
+      {busy ? <Loader2 className="size-3 animate-spin" /> : <RotateCcw className="size-3" />}
+      {t("reset")}
+    </Button>
+  );
+}
+
+/**
+ * Controls that own more than one directive.
+ *
+ * "Largest upload" writes `upload_max_filesize` AND `post_max_size` together —
+ * that pairing is the whole point of the control, since a `post_max_size`
+ * smaller than the upload limit is the trap every PHP guide warns about. So its
+ * Reset has to clear both; clearing only the one it is named after would leave
+ * a stale override behind and break uploads exactly the way the single control
+ * exists to prevent.
+ */
+const RESET_FIELDS = {
+  upload_max_filesize: ["upload_max_filesize", "post_max_size"],
+};
+
+/**
+ * The directives the API will actually accept a null for.
+ *
+ * `SavePhpSettingsRequest` marks every rule `sometimes`, but only these carry
+ * `nullable` — sending null for `pm_type`, `pm_max_children`, `pm_max_requests`,
+ * `open_basedir_enabled` or `allow_url_fopen` fails validation, so an override
+ * on those cannot be cleared at all yet. They are left with no button rather
+ * than one that 422s: a control that looks available and is not is worse than
+ * its absence. Add them here when the backend adds `nullable` (ask #6).
+ */
+const RESETTABLE = new Set([
+  "memory_limit",
+  "upload_max_filesize",
+  "post_max_size",
+  "max_execution_time",
+  "max_input_time",
+  "max_input_vars",
+  "session_gc_maxlifetime",
+  "disable_functions",
+  "php_timezone",
+  "auto_prepend_file",
+  "additional_directives",
+]);
 
 /**
  * The php.ini name, under the field rather than beside the label.
@@ -1007,7 +1137,7 @@ function NumberField({ form, name, label, directive, hint, disabled, min, max })
       name={name}
       render={({ field }) => (
         <FormItem>
-          <Label label={label} />
+          <Label label={label} name={name} />
           <FormControl>
             <Input
               {...field}
@@ -1035,7 +1165,7 @@ function TextField({ form, name, label, directive, hint, disabled, mono = false 
       name={name}
       render={({ field }) => (
         <FormItem>
-          <Label label={label} />
+          <Label label={label} name={name} />
           <FormControl>
             <Input
               {...field}
@@ -1061,7 +1191,7 @@ function ToggleRow({ form, name, label, directive, hint, disabled }) {
       render={({ field }) => (
         <FormItem className="flex items-start justify-between gap-4 rounded-lg border px-3 py-2.5">
           <div className="space-y-1">
-            <Label label={label} />
+            <Label label={label} name={name} />
             <Directive name={directive} />
             {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
           </div>
@@ -1124,7 +1254,7 @@ function BlockedFunctions({ form, php, disabled }) {
       name="disable_functions"
       render={() => (
         <FormItem>
-          <Label label={t("fields.disableFunctions")} />
+          <Label label={t("fields.disableFunctions")} name="disable_functions" />
           <Directive name="disable_functions" />
           <p className="text-xs text-muted-foreground">{tb("description")}</p>
 

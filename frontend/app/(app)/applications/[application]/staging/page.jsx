@@ -44,8 +44,6 @@ export default async function ApplicationStagingPage({ params }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        backHref="/applications"
-        backLabel={t("back")}
         title={t("pageTitle")}
         subtitle={t("pageSubtitle")}
       />

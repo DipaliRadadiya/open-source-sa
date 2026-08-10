@@ -7,7 +7,7 @@ import { createContext, useContext, useEffect, useState } from "react";
  *
  * The breadcrumb is built from the nav catalog, which only knows section names
  * — so every database read "Server › Database" and nothing said WHICH one you
- * had open. Context rather than a store: it is one string, and the panel has no
+ * had open. Context rather than a store: it is one entry, and the panel has no
  * client state library.
  */
 const PageCrumbContext = createContext(null);
@@ -28,16 +28,21 @@ export function usePageCrumb() {
 }
 
 /**
- * Rendered by a detail page. Clears itself on the way out, so navigating back
- * to the list does not leave a stale name in the header.
+ * Rendered by a detail page or by the application layout. Clears itself on the
+ * way out, so navigating back to the list does not leave a stale name behind.
+ *
+ * `href` makes the entry a link — the application name is an ancestor of every
+ * screen inside that site, not a dead end. `mono` is for entries that are
+ * identifiers you might retype (a database name), not for display names.
  */
-export function PageCrumb({ children }) {
+export function PageCrumb({ children, href, mono = false }) {
   const { setCrumb } = usePageCrumb();
 
   useEffect(() => {
-    setCrumb(children);
+    // Built inside the effect so a fresh object each render cannot re-trigger it.
+    setCrumb({ label: children, href, mono });
     return () => setCrumb(null);
-  }, [children, setCrumb]);
+  }, [children, href, mono, setCrumb]);
 
   return null;
 }

@@ -65,8 +65,6 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
   return (
     <div className="space-y-6">
       <PageHeader
-        backHref="/applications"
-        backLabel={t("back")}
         title={t("pageTitle")}
         subtitle={t("pageSubtitle")}
       />

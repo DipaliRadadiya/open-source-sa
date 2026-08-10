@@ -97,11 +97,27 @@ export function resolveNavItems(items, applicationId) {
 // Buckets a flat, already-filtered list of nav items by their sub_level so the
 // sidebar can render them under section headers. Pure grouping — no permission
 // or panel logic lives here.
+//
+// Returns an array, not a keyed object, for two reasons: the catalog's own
+// order is preserved, and each group carries `sub_level_title` — the label the
+// backend means you to show ("Integrations"). The raw `sub_level` is an id
+// ("integration"), and printing it is how the sidebar ended up shouting
+// INTEGRATION at people. It stays as the fallback for a catalog that predates
+// the title.
 export function groupBySubLevel(items) {
-  return items.reduce((groups, item) => {
+  const groups = [];
+  const byKey = new Map();
+
+  for (const item of items || []) {
     const key = item.sub_level || "";
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(item);
-    return groups;
-  }, {});
+    let group = byKey.get(key);
+    if (!group) {
+      group = { key, title: item.sub_level_title || key, items: [] };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    group.items.push(item);
+  }
+
+  return groups;
 }

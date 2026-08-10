@@ -31,10 +31,13 @@ export const getAiBotPolicies = cache(async function getAiBotPolicies() {
   return { policies: result.data?.ai_bot_policies ?? null, failed: result.failed };
 });
 
-export async function getApplication(id) {
+// Cached per request: the layout needs the name for the breadcrumb, the page
+// needs the record, and `generateMetadata` needs the title — three asks for one
+// site that used to be three round-trips.
+export const getApplication = cache(async function getApplication(id) {
   const result = await read(`/applications/${id}`, applicationResponseSchema);
   return { application: result.data?.application ?? null, failed: result.failed, status: result.status };
-}
+});
 
 // The firewall's own read. Same ApplicationResource, but with `wafRules`
 // loaded — the exceptions and custom rules are absent from every other
@@ -93,7 +96,13 @@ export async function getBotTraffic(id, days) {
 
 export const getServerCapabilities = cache(async function getServerCapabilities() {
   const result = await read("/server/capabilities", serverCapabilitiesResponseSchema);
-  return { webServer: result.data?.capabilities?.web_server ?? null, failed: result.failed };
+  const capabilities = result.data?.capabilities;
+  return {
+    webServer: capabilities?.web_server ?? null,
+    serverIp: capabilities?.server_ip ?? null,
+    temporaryDomainSuffixes: capabilities?.temporary_domain_suffixes ?? [],
+    failed: result.failed,
+  };
 });
 
 /**

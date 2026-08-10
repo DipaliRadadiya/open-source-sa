@@ -25,7 +25,42 @@ import {
   SidebarMenuButton,
   SidebarRail,
   useSidebar,
-} from "@/components/ui/sidebar";
+} from "@/components/ui/sidebar"
+
+/** Closes the mobile sidebar sheet after a nav link click. */
+function MobileNavLink({ item, built, active, children }) {
+  const { isMobile, setOpenMobile } = useSidebar()
+  const t = useTranslations("common")
+  const handleClick = () => { if (isMobile) setOpenMobile(false) }
+  if (!built) {
+    return (
+      <SidebarMenuButton
+        asChild
+        tooltip={`${item.title} · ${t("soon")}`}
+        className={cn(NAV_ITEM_CLASS, "cursor-default text-muted-foreground/55 hover:bg-transparent hover:text-muted-foreground/55")}
+        onClick={handleClick}
+      >
+        <span aria-disabled="true">
+          {children}
+          <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
+            {t("soon")}
+          </span>
+        </span>
+      </SidebarMenuButton>
+    )
+  }
+  return (
+    <SidebarMenuButton
+      asChild
+      isActive={active}
+      tooltip={item.title}
+      className={NAV_ITEM_CLASS}
+      onClick={handleClick}
+    >
+      {children}
+    </SidebarMenuButton>
+  )
+}
 
 export function AppSidebar({ items }) {
   const pathname = usePathname();
@@ -69,54 +104,37 @@ export function AppSidebar({ items }) {
         </Link>
       </SidebarHeader>
       <SidebarContent className="gap-0 py-2">
-        {Object.entries(groups).map(([subLevel, groupItems]) => (
-          <SidebarGroup key={subLevel} className="py-1">
-            {subLevel && (
+        {groups.map((group) => (
+          <SidebarGroup key={group.key} className="py-1">
+            {group.key && (
               <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-                {subLevel}
+                {group.title}
               </SidebarGroupLabel>
             )}
             <SidebarMenu className="gap-1.5">
-              {groupItems.map((item) => {
+              {group.items.map((item) => {
                 const built = isNavBuilt(currentPanel, item.url);
                 const active = item === activeItem;
 
                 if (!built) {
                   return (
                     <SidebarMenuItem key={`${item.name}-${item.href}`}>
-                      <SidebarMenuButton
-                        asChild
-                        tooltip={`${item.title} · ${t("soon")}`}
-                        className={cn(
-                          NAV_ITEM_CLASS,
-                          "cursor-default text-muted-foreground/55 hover:bg-transparent hover:text-muted-foreground/55",
-                        )}
-                      >
-                        <span aria-disabled="true">
-                          <NavIcon name={item.icon} />
-                          <span>{item.title}</span>
-                          <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
-                            {t("soon")}
-                          </span>
-                        </span>
-                      </SidebarMenuButton>
+                      <MobileNavLink item={item} built={false} active={active}>
+                        <NavIcon name={item.icon} />
+                        <span>{item.title}</span>
+                      </MobileNavLink>
                     </SidebarMenuItem>
-                  );
+                  )
                 }
 
                 return (
                   <SidebarMenuItem key={`${item.name}-${item.href}`}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={item.title}
-                      className={NAV_ITEM_CLASS}
-                    >
+                    <MobileNavLink item={item} built active={active}>
                       <Link href={item.href}>
                         <NavIcon name={item.icon} />
                         <span>{item.title}</span>
                       </Link>
-                    </SidebarMenuButton>
+                    </MobileNavLink>
                   </SidebarMenuItem>
                 );
               })}
