@@ -21,7 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // SANCTUM_STATEFUL_DOMAINS, alongside Bearer token auth (both work).
         $middleware->statefulApi();
         $middleware->api(prepend: ['throttle:api'], append: [SetLocale::class]);
-        $middleware->alias(['permission' => CheckPermission::class]);
+        $middleware->alias([
+            'permission' => CheckPermission::class,
+            'central' => \App\Http\Middleware\CentralSystemGuard::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
