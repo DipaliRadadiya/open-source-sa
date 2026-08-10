@@ -763,6 +763,25 @@ setup_backend() {
     # assembled by hand — and the difference matters to the setup page.
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan server:record-stack "$3"' -- "$dir" "/usr/bin/php${PHP_VERSION}" "$STACK"
     ok "stack recorded as ${STACK}"
+
+    # Central-management token. Passed in by the central panel's provisioning
+    # flow when this server is being installed on behalf of an existing customer.
+    # The token is stored server-side and the same value is registered with
+    # central so it can call this server's API without any user session.
+    if [[ -n "${CENTRAL_TOKEN:-}" ]]; then
+        run sudo -u "$APP_USER" -H sh -c '
+            cd "$1" && php "$2" artisan tinker --execute="
+                \\
+                \$token = \"${CENTRAL_TOKEN}\";
+                \$settings = \\DB::table(\\'settings\\')->where(\\'id\\', 1)->first();
+                if (\$settings) {
+                    \\DB::table(\\'settings\\')->where(\\'id\\', 1)->update([\\'central_token\\' => \$token, \\'updated_at\\' => now()]);
+                } else {
+                    \\DB::table(\\'settings\\')->insert([\\'id\\' => 1, \\'central_token\\' => \$token, \\'created_at\\' => now(), \\'updated_at\\' => now()]);
+                }
+            "' -- "$dir" "/usr/bin/php${PHP_VERSION}"
+        ok "central management token stored"
+    fi
 }
 
 # ─── Frontend ────────────────────────────────────────────────────────────────
