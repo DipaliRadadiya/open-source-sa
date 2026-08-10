@@ -68,15 +68,16 @@ function FormItem({ className, ...props }) {
 // that label a field with a plain <Label> instead of the FormField/FormLabel
 // trio (no react-hook-form field context to read `required` off of there) —
 // one implementation either way, not a second copy.
+// The asterisk is purely decorative — hover shows the tooltip, no tab stop needed.
+// Removing tabIndex={0} also prevents Radix Dialog from auto-focusing it
+// and opening the tooltip when a modal first renders (RAD-2315 / radix-ui#1949).
 function RequiredMark() {
   const t = useTranslations("common")
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          tabIndex={0}
-          className="ml-0.5 text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          aria-label={t("required")}
+          className="ml-0.5 text-destructive"
         >
           *
         </span>

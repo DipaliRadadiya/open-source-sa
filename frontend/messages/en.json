@@ -23,7 +23,9 @@
     "search": "Search…",
     "noResults": "No matches.",
     "soon": "Soon",
-    "required": "Required"
+    "required": "Required",
+    "breadcrumbServer": "Server",
+    "breadcrumbApplications": "Applications"
   },
   "systemUsers": {
     "title": "System Users",
@@ -1112,7 +1114,10 @@
       "emptyTitle": "Nobody is banned",
       "emptyBody": "Addresses show up here once they get banned.",
       "unbanAllTitle": "Unban everyone?",
-      "unbanAllDescription": "All {count} banned addresses can reach this server again straight away.",
+      "unbanAllDescription": "The following addresses will be unbanned:",
+      "unbanIpTitle": "Unban {ip}?",
+      "unbanIpDescription": "This will remove the ban for {ip} from {jail}.",
+      "unban": "Unban",
       "cancel": "Cancel",
       "unknownLeft": "Not known",
       "search": "Search address",
@@ -2118,7 +2123,6 @@
       "newPasswordRequired": "New password (required to rename on MongoDB)"
     },
     "detail": {
-      "back": "All databases",
       "size": "Size",
       "charset": "Character set",
       "collation": "Collation",
@@ -2163,7 +2167,6 @@
       "title": "Database health",
       "subtitle": "What the database engine is doing right now, and over the last day.",
       "crumb": "Health",
-      "back": "All databases",
       "running": "Running",
       "connections": "Connections",
       "threadsRunning": "Running now",
@@ -2373,7 +2376,6 @@
     "logs": {
       "pageTitle": "Logs",
       "pageSubtitle": "Read this site's access, error and application logs.",
-      "back": "Back to Applications",
       "provisioning": "Logs become available once the site finishes provisioning.",
       "loadFailed": "We couldn't load the logs.",
       "sourcesLabel": "Log source",
@@ -2389,7 +2391,6 @@
     "environment": {
       "pageTitle": "Environment",
       "pageSubtitle": "Edit this site's .env file.",
-      "back": "Back to Applications",
       "provisioning": "Environment becomes available once the site finishes provisioning.",
       "loadFailed": "We couldn't load the environment.",
       "sectionTitle": "Environment",
@@ -2473,7 +2474,6 @@
     "creating": "Creating application…",
     "created": "Application created. Provisioning has started.",
     "cancel": "Cancel",
-    "back": "Applications",
     "columns": {
       "name": "Application",
       "type": "Type",
@@ -2552,6 +2552,8 @@
       "detailsTitle": "Application details",
       "detailsHint": "Every application needs an owner, name, and domain.",
       "chooseTypeHint": "Choose an application type to reveal its configuration fields.",
+      "toggleOn": "Enabled",
+      "toggleOff": "Disabled",
       "namePlaceholder": "e.g. customer-portal",
       "domainPlaceholder": "e.g. app.example.com",
       "fieldPlaceholder": "Enter {field}",
@@ -2617,7 +2619,10 @@
       "deleting": "Deleting…",
       "done": "{name} was deleted.",
       "failed": "We could not delete this application.",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "copyDomain": "Copy domain",
+      "confirmLabelStart": "Type",
+      "confirmLabelEnd": "to confirm"
     },
     "facts": {
       "title": "Application",
@@ -2651,7 +2656,6 @@
       "loadFailed": "We could not load the domains for this application.",
       "pageTitle": "Domains & SSL",
       "pageSubtitle": "Manage the names this site answers to and its HTTPS certificate.",
-      "back": "Back to Applications",
       "provisioning": "Domains and SSL become available once the site finishes provisioning.",
       "sectionTitle": "Domains",
       "sectionSubtitle": "Every name this site answers to.",
@@ -2773,7 +2777,6 @@
     "deployment": {
       "pageTitle": "Deployment",
       "pageSubtitle": "Deploy your code and set up automatic deploys on push.",
-      "back": "Back to Applications",
       "loadFailed": "This deployment could not be loaded.",
       "provisioning": "This site is still being set up. Deployment will be available once it's running.",
       "deploy": {
@@ -2839,7 +2842,6 @@
     "files": {
       "pageTitle": "Files",
       "pageSubtitle": "Browse, view and edit this site's files.",
-      "back": "Back to Applications",
       "loadFailed": "Files could not be loaded.",
       "provisioning": "This site is still being set up. Files will be available once it's running.",
       "noPermission": "You don't have permission to manage files.",
@@ -3023,7 +3025,6 @@
     "workers": {
       "pageTitle": "Workers",
       "pageSubtitle": "Keep long-running processes — queue workers, Horizon, or your own command — running for this site.",
-      "back": "Back to Applications",
       "loadFailed": "Workers could not be loaded.",
       "provisioning": "This site is still being set up. Workers will be available once it's running.",
       "addWorker": "Add worker",
@@ -3106,6 +3107,7 @@
       "form": {
         "name": "Name",
         "namePlaceholder": "Queue worker",
+        "nameHint": "A short label to identify this worker.",
         "useTemplate": "Use template",
         "command": "Command",
         "commandHint": "Runs as this site's own user. Pipes, redirects, and shell operators (| ; & $ ` > <) aren't supported — systemd runs this command directly, not through a shell.",
@@ -3132,7 +3134,6 @@
     "security": {
       "pageTitle": "Password Protection",
       "pageSubtitle": "Require a username and password before anyone can view this site.",
-      "back": "Back to Applications",
       "loadFailed": "This couldn't be loaded.",
       "provisioning": "This site is still being set up. Password protection will be available once it's running.",
       "statusProtected": "Protected",
@@ -3164,7 +3165,6 @@
     "botBlocker": {
       "pageTitle": "AI Bot Blocker",
       "pageSubtitle": "Choose which AI bots are allowed to read this site.",
-      "back": "Back to Applications",
       "loadFailed": "This couldn't be loaded.",
       "provisioning": "This site is still being set up. The AI bot blocker will be available once it's running.",
       "explainer": "AI bots are automated visitors from AI companies. Some only copy your content; others can send you real visitors.",
@@ -3242,7 +3242,6 @@
     "firewall": {
       "pageTitle": "Web Firewall",
       "pageSubtitle": "Turn away common attacks before they reach this site.",
-      "back": "Back to Applications",
       "loadFailed": "This couldn't be loaded.",
       "provisioning": "This site is still being set up. The firewall will be available once it's running.",
       "explainer": "The firewall inspects every request for patterns used in attacks, and can turn them away before your site runs any code.",
@@ -3300,7 +3299,6 @@
     "clone": {
       "pageTitle": "Site Clone",
       "pageSubtitle": "Make an independent copy of {name} at a new domain.",
-      "back": "Back to Applications",
       "loadFailed": "This site could not be loaded.",
       "failed": "The clone could not be started.",
       "what": {
@@ -3430,7 +3428,6 @@
     "php": {
       "pageTitle": "PHP Settings",
       "pageSubtitle": "The PHP version and limits this site runs with.",
-      "back": "Back to Applications",
       "loadFailed": "These settings could not be loaded.",
       "provisioning": "This site is still being set up. Its PHP settings will appear once it finishes.",
       "saved": "PHP settings saved.",
@@ -3557,12 +3554,14 @@
         "limits": "Request limits"
       },
       "advancedNote": "These change how PHP-FPM runs this site. The defaults suit almost every site — change them only if you know why.",
-      "presetsCustom": "Custom — not one of the presets above."
+      "presetsCustom": "Custom — not one of the presets above.",
+      "reset": "Reset",
+      "resetDone": "Back to the default.",
+      "resetFailed": "Could not reset this setting."
     },
     "fail2ban": {
       "pageTitle": "Attack protection",
       "pageSubtitle": "Bans addresses that keep attacking this site.",
-      "back": "Back to Applications",
       "loadFailed": "We could not check this site's protection.",
       "provisioning": "This site is still being set up. Protection can be added once it finishes.",
       "empty": {
@@ -3606,7 +3605,6 @@
     "staging": {
       "pageTitle": "Staging Area",
       "pageSubtitle": "A copy of this site you can break without anyone noticing.",
-      "back": "Back to Applications",
       "loadFailed": "We could not check this site's staging area.",
       "provisioning": "This site is still being set up. A staging copy can be made once it finishes.",
       "unsupported": "Staging is only available for WordPress sites. This one is a {type} site.",
@@ -4180,7 +4178,6 @@
     "application": {
       "pageTitle": "Backups",
       "pageSubtitle": "Copies of this site kept off the server, and when they are taken.",
-      "back": "Applications",
       "provisioning": "This site is still being set up. Backups can be configured once it is ready.",
       "loadFailed": "This site's backup settings could not be loaded.",
       "state": {

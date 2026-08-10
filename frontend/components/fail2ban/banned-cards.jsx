@@ -16,7 +16,8 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
  * because on a phone you are deciding whether to wait or to act. The exact
  * ban timestamp is the least urgent thing here, so it goes last and small.
  */
-export function BannedCards({ data, canManage, onUnban, unbanning, t, renderExpiry }) {
+// onUnban is setUnbanConfirm — clicking opens the confirm dialog rather than unbanning directly.
+export function BannedCards({ data, canManage, onUnban: setUnbanConfirm, unbanning, t, renderExpiry }) {
   return (
     <ul className="space-y-3">
       {data.map((ban) => (
@@ -45,7 +46,7 @@ export function BannedCards({ data, canManage, onUnban, unbanning, t, renderExpi
                 variant="outline"
                 size="sm"
                 disabled={!canManage || unbanning === ban.ip}
-                onClick={() => onUnban(ban)}
+                onClick={() => setUnbanConfirm(ban)}
               >
                 <ShieldOff className="size-4" />
                 {t("banned.unban")}

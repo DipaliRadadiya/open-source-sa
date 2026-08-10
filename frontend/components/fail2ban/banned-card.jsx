@@ -113,7 +113,7 @@ function ActionsCell({ row, table }) {
           variant="ghost"
           size="sm"
           disabled={!canManage || unbanning === row.original.ip}
-          onClick={() => onUnban(row.original)}
+          onClick={() => setUnbanConfirm(row.original)}
         >
           <ShieldOff className="size-4" />
           {t("banned.unban")}
@@ -127,6 +127,7 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
   const t = useTranslations("fail2ban");
   const router = useRouter();
   const [unbanning, setUnbanning] = useState(null);
+  const [unbanConfirm, setUnbanConfirm] = useState(null);
   const [confirmAll, setConfirmAll] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [query, setQuery] = useState("");
@@ -168,6 +169,7 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
       toast.error([apiMessage(error, t("banned.failed")), data?.reference].filter(Boolean).join(" · "));
     } finally {
       setUnbanning(null);
+      setUnbanConfirm(null);
     }
   }
 
@@ -353,11 +355,37 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
         icon={TriangleAlert}
         tone="warning"
         title={t("banned.unbanAllTitle")}
-        description={t("banned.unbanAllDescription", { count: banned.length })}
         cancelLabel={t("banned.cancel")}
         confirmLabel={t("banned.unbanAll")}
         pending={clearing}
         onConfirm={onUnbanAll}
+      >
+        <div className="py-1">
+          <p className="text-sm text-muted-foreground">
+            {t("banned.unbanAllDescription")}
+          </p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {banned.map((ban) => (
+              <li key={`${ban.jail}-${ban.ip}`} className="flex items-start gap-2">
+                <span className="shrink-0 font-mono text-sm">{ban.ip}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">({ban.jail})</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={!!unbanConfirm}
+        onOpenChange={(open) => !unbanning && !open && setUnbanConfirm(null)}
+        icon={ShieldOff}
+        tone="warning"
+        title={t("banned.unbanIpTitle", { ip: unbanConfirm?.ip })}
+        description={t("banned.unbanIpDescription", { ip: unbanConfirm?.ip, jail: unbanConfirm?.jail })}
+        cancelLabel={t("banned.cancel")}
+        confirmLabel={t("banned.unban")}
+        pending={!!unbanning}
+        onConfirm={() => unbanConfirm && onUnban(unbanConfirm)}
       />
     </Card>
   );

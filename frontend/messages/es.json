@@ -23,7 +23,9 @@
     "search": "Buscar…",
     "noResults": "Sin coincidencias.",
     "soon": "Pronto",
-    "required": "Obligatorio"
+    "required": "Obligatorio",
+    "breadcrumbServer": "Servidor",
+    "breadcrumbApplications": "Aplicaciones"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",
@@ -1112,7 +1114,10 @@
       "emptyTitle": "No hay nadie bloqueado",
       "emptyBody": "Las direcciones aparecen aquí en cuanto se las bloquea.",
       "unbanAllTitle": "¿Desbloquear a todos?",
-      "unbanAllDescription": "Las {count} direcciones bloqueadas podrán llegar a este servidor otra vez de inmediato.",
+      "unbanAllDescription": "Se desbloquearán las siguientes direcciones:",
+      "unbanIpTitle": "¿Desbloquear {ip}?",
+      "unbanIpDescription": "Esto eliminará el bloqueo de {ip} en {jail}.",
+      "unban": "Desbloquear",
       "cancel": "Cancelar",
       "unknownLeft": "No se sabe",
       "search": "Buscar dirección",
@@ -2118,7 +2123,6 @@
       "newPasswordRequired": "Nueva contraseña (obligatoria para renombrar en MongoDB)"
     },
     "detail": {
-      "back": "Todas las bases de datos",
       "size": "Tamaño",
       "charset": "Juego de caracteres",
       "collation": "Cotejamiento",
@@ -2163,7 +2167,6 @@
       "title": "Estado de la base de datos",
       "subtitle": "Qué está haciendo el motor ahora mismo y durante el último día.",
       "crumb": "Estado",
-      "back": "Todas las bases de datos",
       "running": "En ejecución",
       "connections": "Conexiones",
       "threadsRunning": "En ejecución ahora",
@@ -2373,7 +2376,6 @@
     "logs": {
       "pageTitle": "Registros",
       "pageSubtitle": "Consulta los registros de acceso, error y aplicación de este sitio.",
-      "back": "Volver a Aplicaciones",
       "provisioning": "Los registros estarán disponibles cuando el sitio termine de aprovisionarse.",
       "loadFailed": "No pudimos cargar los registros.",
       "sourcesLabel": "Fuente de registro",
@@ -2389,7 +2391,6 @@
     "environment": {
       "pageTitle": "Entorno",
       "pageSubtitle": "Edita el archivo .env de este sitio.",
-      "back": "Volver a Aplicaciones",
       "provisioning": "El entorno estará disponible cuando el sitio termine de aprovisionarse.",
       "loadFailed": "No pudimos cargar el entorno.",
       "sectionTitle": "Entorno",
@@ -2473,7 +2474,6 @@
     "creating": "Creando aplicación…",
     "created": "Aplicación creada. El aprovisionamiento ha comenzado.",
     "cancel": "Cancelar",
-    "back": "Aplicaciones",
     "columns": {
       "name": "Aplicación",
       "type": "Tipo",
@@ -2552,6 +2552,8 @@
       "detailsTitle": "Detalles de la aplicación",
       "detailsHint": "Cada aplicación necesita un propietario, nombre y dominio.",
       "chooseTypeHint": "Elige un tipo de aplicación para mostrar sus campos de configuración.",
+      "toggleOn": "Activado",
+      "toggleOff": "Desactivado",
       "namePlaceholder": "p. ej., portal-cliente",
       "domainPlaceholder": "p. ej., app.ejemplo.com",
       "fieldPlaceholder": "Introduce {field}",
@@ -2617,7 +2619,10 @@
       "deleting": "Eliminando…",
       "done": "{name} se eliminó.",
       "failed": "No pudimos eliminar esta aplicación.",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "copyDomain": "Copiar dominio",
+      "confirmLabelStart": "Escribe",
+      "confirmLabelEnd": "para confirmar"
     },
     "facts": {
       "title": "Aplicación",
@@ -2651,7 +2656,6 @@
       "loadFailed": "No pudimos cargar los dominios de esta aplicación.",
       "pageTitle": "Dominios y SSL",
       "pageSubtitle": "Gestiona los nombres a los que responde este sitio y su certificado HTTPS.",
-      "back": "Volver a Aplicaciones",
       "provisioning": "Los dominios y el SSL estarán disponibles cuando el sitio termine de aprovisionarse.",
       "sectionTitle": "Dominios",
       "sectionSubtitle": "Todos los nombres a los que responde este sitio.",
@@ -2773,7 +2777,6 @@
     "deployment": {
       "pageTitle": "Despliegue",
       "pageSubtitle": "Despliega tu código y configura despliegues automáticos al hacer push.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudo cargar este despliegue.",
       "provisioning": "Este sitio todavía se está configurando. El despliegue estará disponible cuando esté en funcionamiento.",
       "deploy": {
@@ -2839,7 +2842,6 @@
     "files": {
       "pageTitle": "Archivos",
       "pageSubtitle": "Explora, visualiza y edita los archivos de este sitio.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudieron cargar los archivos.",
       "provisioning": "Este sitio todavía se está configurando. Los archivos estarán disponibles cuando esté en funcionamiento.",
       "noPermission": "No tienes permiso para gestionar archivos.",
@@ -3023,7 +3025,6 @@
     "workers": {
       "pageTitle": "Workers",
       "pageSubtitle": "Mantén en ejecución los procesos de larga duración de este sitio: workers de cola, Horizon o tu propio comando.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudieron cargar los workers.",
       "provisioning": "Este sitio todavía se está configurando. Los workers estarán disponibles cuando esté en funcionamiento.",
       "addWorker": "Añadir worker",
@@ -3106,6 +3107,7 @@
       "form": {
         "name": "Nombre",
         "namePlaceholder": "Worker de cola",
+        "nameHint": "Una etiqueta corta para identificar este worker.",
         "useTemplate": "Usar plantilla",
         "command": "Comando",
         "commandHint": "Se ejecuta como el propio usuario de este sitio. No se admiten tuberías, redirecciones ni operadores de shell (| ; & $ ` > <): systemd ejecuta este comando directamente, no a través de un shell.",
@@ -3132,7 +3134,6 @@
     "security": {
       "pageTitle": "Protección con contraseña",
       "pageSubtitle": "Exige un usuario y una contraseña antes de que cualquiera pueda ver este sitio.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudo cargar esto.",
       "provisioning": "Este sitio todavía se está configurando. La protección con contraseña estará disponible cuando esté en funcionamiento.",
       "statusProtected": "Protegido",
@@ -3164,7 +3165,6 @@
     "botBlocker": {
       "pageTitle": "Bloqueador de bots de IA",
       "pageSubtitle": "Elige qué bots de IA pueden leer este sitio.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudo cargar esto.",
       "provisioning": "Este sitio todavía se está configurando. El bloqueador de bots de IA estará disponible cuando esté en funcionamiento.",
       "explainer": "Los bots de IA son visitantes automáticos de empresas de IA. Algunos solo copian tu contenido; otros pueden enviarte visitantes reales.",
@@ -3242,7 +3242,6 @@
     "firewall": {
       "pageTitle": "Cortafuegos web",
       "pageSubtitle": "Rechaza los ataques más comunes antes de que lleguen a este sitio.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudo cargar esto.",
       "provisioning": "Este sitio todavía se está configurando. El cortafuegos estará disponible cuando esté en funcionamiento.",
       "explainer": "El cortafuegos revisa cada solicitud en busca de patrones usados en ataques y puede rechazarla antes de que tu sitio ejecute código.",
@@ -3300,7 +3299,6 @@
     "clone": {
       "pageTitle": "Clonar sitio",
       "pageSubtitle": "Crea una copia independiente de {name} en un dominio nuevo.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudo cargar este sitio.",
       "failed": "No se pudo iniciar la clonación.",
       "what": {
@@ -3430,7 +3428,6 @@
     "php": {
       "pageTitle": "Ajustes de PHP",
       "pageSubtitle": "La versión de PHP y los límites con los que funciona este sitio.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No se pudieron cargar estos ajustes.",
       "provisioning": "Este sitio aún se está creando. Sus ajustes de PHP aparecerán cuando termine.",
       "saved": "Ajustes de PHP guardados.",
@@ -3557,12 +3554,14 @@
         "limits": "Límites por petición"
       },
       "advancedNote": "Esto cambia cómo PHP-FPM ejecuta este sitio. Los valores por defecto sirven para casi todos los sitios: cámbialos solo si sabes por qué.",
-      "presetsCustom": "Personalizado: no coincide con ninguno de los ajustes anteriores."
+      "presetsCustom": "Personalizado: no coincide con ninguno de los ajustes anteriores.",
+      "reset": "Restablecer",
+      "resetDone": "Se ha restablecido el valor predeterminado.",
+      "resetFailed": "No se pudo restablecer este ajuste."
     },
     "fail2ban": {
       "pageTitle": "Protección contra ataques",
       "pageSubtitle": "Bloquea direcciones que atacan este sitio de forma repetida.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No pudimos comprobar la protección de este sitio.",
       "provisioning": "Este sitio aún se está creando. La protección se puede añadir cuando termine.",
       "empty": {
@@ -3606,7 +3605,6 @@
     "staging": {
       "pageTitle": "Área de pruebas",
       "pageSubtitle": "Una copia de este sitio que puedes romper sin que nadie lo note.",
-      "back": "Volver a Aplicaciones",
       "loadFailed": "No pudimos comprobar el área de pruebas de este sitio.",
       "provisioning": "Este sitio aún se está creando. Podrás hacer una copia de pruebas cuando termine.",
       "unsupported": "El área de pruebas solo está disponible para sitios WordPress. Este es un sitio {type}.",
@@ -4180,7 +4178,6 @@
     "application": {
       "pageTitle": "Copias de seguridad",
       "pageSubtitle": "Copias de este sitio guardadas fuera del servidor, y cuándo se toman.",
-      "back": "Aplicaciones",
       "provisioning": "Este sitio todavía se está preparando. Podrás configurar las copias cuando esté listo.",
       "loadFailed": "No se pudieron cargar los ajustes de copia de este sitio.",
       "state": {
