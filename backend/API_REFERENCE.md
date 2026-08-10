@@ -2044,6 +2044,37 @@ Update username, connection preference, or password.
 
 ---
 
+### POST `/databases/{database}/phpmyadmin-sso`
+**Permission:** `database` (view)
+
+One-click auto-login to phpMyAdmin for the database's user. Works only for MySQL/MariaDB databases (MongoDB is not supported by phpMyAdmin — see `mongo-express` instead). Requires a running phpMyAdmin site on this server.
+
+The frontend receives a `redirect_url` and should immediately redirect the browser to it. The URL contains a one-time token (TTL 60 s) that the `sso.php` shim on the PMA site consumes atomically.
+
+**Query (optional):** `?database_user_id=1` — log in as a specific database user. Without this the first available user is used.
+
+**Response `200`:**
+```json
+{"redirect_url": "https://pma.example.com/sso.php?token=***"}
+```
+
+**Response `422`** — MongoDB database:
+```json
+{"message": "phpMyAdmin does not support MongoDB databases."}
+```
+
+**Response `422`** — no phpMyAdmin site deployed:
+```json
+{"message": "No phpMyAdmin site is installed on this server."}
+```
+
+**Response `422`** — no database user exists for this database:
+```json
+{"message": "Create a database user before accessing phpMyAdmin."}
+```
+
+---
+
 ### GET `/databases/processes`
 **Permission:** `database` (view)
 

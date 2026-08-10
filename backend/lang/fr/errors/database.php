@@ -4,5 +4,9 @@ return [
     'operation_failed' => "L'opération de base de données a échoué sur le serveur.",
     'collation_mismatch' => "Le classement sélectionné n'appartient pas au jeu de caractères choisi.",
     'engine_not_installable' => 'Le panneau ne peut pas encore installer ce moteur de base de données. Installez-le vous-même et le panneau le détectera.',
+    'phpmyadmin_mongo_not_supported' => 'phpMyAdmin ne prend pas en charge les bases de données MongoDB.',
+    'phpmyadmin_not_deployed' => 'Aucun site phpMyAdmin n\'est installé sur ce serveur.',
+    'phpmyadmin_no_users' => 'Créez un utilisateur de base de données avant d\'accéder à phpMyAdmin.',
+    'phpmyadmin_user_not_found' => 'L\'utilisateur de base de données spécifié n\'appartient pas à cette base de données.',
 
 ];

@@ -4,6 +4,7 @@ use App\Http\Controllers\API\Server\DatabaseConnectionController;
 use App\Http\Controllers\API\Server\DatabaseController;
 use App\Http\Controllers\API\Server\DatabaseMonitorController;
 use App\Http\Controllers\API\Server\DatabaseUserController;
+use App\Http\Controllers\API\Server\PhpmyadminSsoController;
 use Illuminate\Support\Facades\Route;
 
 // Databases (server panel). Read gated by `database` (view), mutations by
@@ -57,6 +58,7 @@ Route::post('/databases/{database}/export', [DatabaseController::class, 'export'
 // Database users (nested — a user belongs to one database).
 Route::middleware('permission:database')->group(function () {
     Route::get('/databases/{database}/users', [DatabaseUserController::class, 'index']);
+    Route::post('/databases/{database}/phpmyadmin-sso', PhpmyadminSsoController::class);
 });
 Route::middleware('permission:database,manage')->scopeBindings()->group(function () {
     Route::post('/databases/{database}/users', [DatabaseUserController::class, 'store']);
