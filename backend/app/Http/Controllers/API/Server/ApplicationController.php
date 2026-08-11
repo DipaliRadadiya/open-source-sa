@@ -15,6 +15,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
 use App\Http\Resources\ApplicationResource;
+use App\Http\Resources\AppSidebarResource;
 use App\Jobs\DeployApplication;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
@@ -233,18 +234,9 @@ class ApplicationController extends Controller
         // to build its own answer from `$user->permissions()` — a relation
         // deleted when per-user grants gave way to roles — so the sidebar had
         // been a 500 since that refactor.
-        $items = collect($permissions->for(Auth::user(), 'application', $application))
-            ->map(fn (array $item): array => [
-                'name' => $item['name'],
-                'title' => $item['title'],
-                'icon' => $item['icon'],
-                'url' => $item['url'],
-                'sub_level' => $item['sub_level'],
-                'sub_level_title' => $item['sub_level_title'],
-                'permissions' => $item['permissions'],
-            ])
-            ->values()
-            ->all();
+        $items = AppSidebarResource::collection(
+            $permissions->for(Auth::user(), 'application', $application)
+        )->resolve();
 
         return response()->json(['items' => $items]);
     }

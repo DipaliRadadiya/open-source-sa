@@ -14,6 +14,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read string $sub_level
  * @property-read string $sub_level_title
  * @property-read string $icon
+ * @property-read array{view: bool, manage: bool} $permissions
  */
 class AppSidebarResource extends JsonResource
 {
@@ -29,6 +30,11 @@ class AppSidebarResource extends JsonResource
             'sub_level' => $this->resource['sub_level'],
             'sub_level_title' => $this->resource['sub_level_title'],
             'icon' => $this->resource['icon'],
+            // Added alongside bulk file operations: the sidebar already knows
+            // whether the user may only view a screen or also change it, and
+            // without it every screen has to ask again to decide whether to
+            // render its own write controls.
+            'permissions' => $this->resource['permissions'],
         ];
     }
 }
