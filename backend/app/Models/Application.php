@@ -9,6 +9,7 @@ use App\Enums\WafCategory;
 use App\Enums\WafMode;
 use App\Services\Applications\SiteTypeManager;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,6 +34,8 @@ use Illuminate\Support\Str;
 ])]
 class Application extends Model
 {
+    use HasFactory;
+
     /**
      * @return array<string, string>
      */

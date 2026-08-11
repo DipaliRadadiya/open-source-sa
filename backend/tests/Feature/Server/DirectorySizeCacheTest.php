@@ -4,10 +4,11 @@ namespace Tests\Feature\Server;
 
 use App\Models\Application;
 use App\Models\SystemUser;
+use App\Models\User;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
-    Sanctum::actingAs(SystemUser::factory()->admin()->make());
+    Sanctum::actingAs(User::factory()->admin()->create());
 
     $this->systemUser = SystemUser::factory()->create();
     $this->application = Application::factory()->create([

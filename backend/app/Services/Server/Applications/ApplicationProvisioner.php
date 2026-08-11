@@ -34,6 +34,7 @@ class ApplicationProvisioner
         private ProvisionProgress $progress,
         private AutoIssueCertificate $autoCertificate,
         private PoolManager $pools,
+        private ReleaseManager $releases,
     ) {}
 
     /**

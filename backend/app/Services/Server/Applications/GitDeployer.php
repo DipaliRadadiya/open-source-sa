@@ -189,7 +189,7 @@ class GitDeployer
             ['feature' => 'application', 'op' => 'verify_deploy', 'application' => $application->id],
         );
 
-        $code = (int) trim($result->output);
+        $code = (int) trim($result->output());
 
         if ($code >= 200 && $code < 300) {
             return; // Healthy.
@@ -228,7 +228,7 @@ class GitDeployer
         }
 
         // `du -k` output is "{bytes}\t{path}". Divide by 1024 to get bytes.
-        $parts = preg_split('/\s+/', trim($result->output));
+        $parts = preg_split('/\s+/', trim($result->output()));
         $kilobytes = (int) ($parts[0] ?? 0);
         $bytes = $kilobytes * 1024;
 

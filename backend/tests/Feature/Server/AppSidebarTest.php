@@ -9,7 +9,7 @@ use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
     // Admin user — has every app-level permission via the Administrator role.
-    $this->admin = SystemUser::factory()->admin()->make();
+    $this->admin = User::factory()->admin()->create();
     Sanctum::actingAs($this->admin);
 
     $this->systemUser = SystemUser::factory()->create();

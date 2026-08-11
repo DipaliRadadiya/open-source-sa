@@ -8,15 +8,39 @@ use App\Models\Application;
 use App\Models\ApplicationDomain;
 use App\Models\Certificate;
 use App\Models\SystemUser;
+use App\Models\User;
 use App\Services\Server\Applications\AppIssueDetector;
+use App\Services\Server\Applications\DnsVerifier;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
-    Sanctum::actingAs(SystemUser::factory()->admin()->make());
+    Sanctum::actingAs(User::factory()->admin()->create());
 
     $this->systemUser = SystemUser::factory()->create();
     $this->application = Application::factory()->create(['system_user_id' => $this->systemUser->id]);
 });
+
+/**
+ * Resolution is stubbed rather than left to the real resolver: a check that
+ * calls out to DNS is a test whose result depends on the network it runs on,
+ * and this one asserted "no drift" while actually resolving example.com.
+ */
+function fakeDns(?string $resolvesTo): void
+{
+    test()->swap(DnsVerifier::class, new class($resolvesTo) extends DnsVerifier
+    {
+        public function __construct(private ?string $ip)
+        {
+            // Deliberately does not call parent::__construct(): this stub
+            // never runs a server operation.
+        }
+
+        public function resolve(string $domain): ?string
+        {
+            return $this->ip;
+        }
+    });
+}
 
 function makeDetector(): AppIssueDetector
 {
@@ -52,6 +76,7 @@ it('flags an expired certificate', function () {
 });
 
 it('flags DNS drift when stored IP no longer matches current resolution', function () {
+    fakeDns('5.6.7.8');
     $domain = ApplicationDomain::factory()->create([
         'application_id' => $this->application->id,
         'type' => DomainType::Primary,
@@ -70,7 +95,7 @@ it('flags DNS drift when stored IP no longer matches current resolution', functi
 });
 
 it('does not flag DNS when resolved IP matches stored IP', function () {
-    // Mock gethostbyname to return the stored IP.
+    fakeDns('1.2.3.4');
     ApplicationDomain::factory()->create([
         'application_id' => $this->application->id,
         'type' => DomainType::Primary,
@@ -78,7 +103,6 @@ it('does not flag DNS when resolved IP matches stored IP', function () {
         'dns_resolved_ip' => '1.2.3.4',
     ]);
 
-    // With no stored IP, the check is skipped (no drift possible).
     $issues = makeDetector()->issues($this->application);
 
     expect($issues->where('type', 'dns'))->toHaveCount(0);

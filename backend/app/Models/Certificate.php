@@ -4,11 +4,14 @@ namespace App\Models;
 
 use App\Enums\CertificateStatus;
 use App\Enums\CertificateType;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Certificate extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'application_id', 'type', 'status', 'domains',
         'certificate_path', 'private_key_path', 'chain_path', 'uploaded_private_key',

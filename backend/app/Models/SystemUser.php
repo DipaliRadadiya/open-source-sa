@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['username', 'home_path', 'shell', 'sudo', 'password', 'ssh_access'])]
 class SystemUser extends Model
 {
+    use HasFactory;
+
     /**
      * @return array<string, string>
      */

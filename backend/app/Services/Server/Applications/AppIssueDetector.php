@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Enums\DomainType;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 /**
@@ -21,6 +22,15 @@ class AppIssueDetector
     public function __construct(
         private ProcessSupervisor $processSupervisor,
         private ServerOps $serverOps,
+        // The document root is derived from the slug and the system user's
+        // home, which is the provisioner's job — the model has never had a
+        // `documentRoot()` of its own.
+        private ApplicationProvisioner $provisioner,
+        // Resolution goes through the same service the domain screen uses,
+        // rather than a bare `gethostbyname()` here: one DNS mechanism with
+        // one set of semantics, and a seam a test can replace instead of
+        // reaching the real network.
+        private DnsVerifier $dns,
     ) {}
 
     /**
@@ -121,11 +131,9 @@ class AppIssueDetector
             return null;
         }
 
-        // gethostbyname is cached by the OS resolver, fast enough to call on
-        // every dashboard load.
-        $currentIp = @gethostbyname($domain->domain);
+        $currentIp = $this->dns->resolve($domain->domain);
 
-        if ($currentIp === $domain->domain) {
+        if ($currentIp === null) {
             // DNS lookup failed — domain may not be pointing to this server yet.
             // Flag as an issue but with no current IP to compare.
             return [
@@ -172,7 +180,7 @@ class AppIssueDetector
             return null;
         }
 
-        if (now()->lt($eolDate)) {
+        if (now()->lt(CarbonImmutable::parse($eolDate))) {
             return null;
         }
 
@@ -182,7 +190,7 @@ class AppIssueDetector
             'message' => __('app_dashboard.issues.php_eol', ['version' => $version]),
             'meta' => [
                 'php_version' => $version,
-                'eol_date' => $eolDate->format('d-m-Y'),
+                'eol_date' => CarbonImmutable::parse($eolDate)->format('d-m-Y'),
             ],
         ];
     }
@@ -192,7 +200,7 @@ class AppIssueDetector
      */
     private function checkDiskUsage(Application $app): ?array
     {
-        $documentRoot = $app->documentRoot();
+        $documentRoot = $this->provisioner->documentRoot($app->loadMissing('systemUser'));
 
         // Run df on the document root's mount point, not on every subdirectory.
         // Using `-k` (1K blocks) keeps the output stable across systems.
@@ -206,7 +214,7 @@ class AppIssueDetector
         }
 
         // Parse the last line of df output (the filesystem row).
-        $lines = array_filter(array_map('trim', explode("\n", $result->output)));
+        $lines = array_filter(array_map('trim', explode("\n", $result->output())));
         $lastLine = end($lines);
 
         // df -k output: Filesystem 1K-blocks Used Available Use% Mounted
@@ -256,13 +264,19 @@ class AppIssueDetector
     /**
      * PHP EOL dates — December 1 of each EOL year (standard PHP schedule).
      *
-     * @var array<string, \DateTimeImmutable>
+     * Plain strings, not `DateTimeImmutable` instances: PHP allows `new` in a
+     * parameter default or an attribute argument, but *not* in a class
+     * constant. Written that way, this file could not be loaded at all — the
+     * detector fatal'd on `New expressions are not supported in this context`
+     * before a single issue was ever checked.
+     *
+     * @var array<string, string>
      */
     private const PHP_EOL_DATES = [
-        '8.0' => new \DateTimeImmutable('2023-12-01'),
-        '8.1' => new \DateTimeImmutable('2026-12-01'),
-        '8.2' => new \DateTimeImmutable('2027-12-01'),
-        '8.3' => new \DateTimeImmutable('2028-12-01'),
-        '8.4' => new \DateTimeImmutable('2030-12-01'),
+        '8.0' => '2023-12-01',
+        '8.1' => '2026-12-01',
+        '8.2' => '2027-12-01',
+        '8.3' => '2028-12-01',
+        '8.4' => '2030-12-01',
     ];
 }

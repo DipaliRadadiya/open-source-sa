@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\ServerTimezone;
 use Cron\CronExpression;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
 #[Fillable(['name', 'slug', 'username', 'system_user_id', 'application_id', 'command', 'expression', 'active'])]
 class Cronjob extends Model
 {
+    use HasFactory;
+
     /**
      * @return array<string, string>
      */
