@@ -31,7 +31,7 @@ return [
     'permissions_fix_failed' => 'Falha ao redefinir as permissões de arquivo no servidor.',
 
     'unsafe_path' => 'Esse caminho não é permitido.',
-    'file_too_large' => 'Esse ficheiro é demasiado grande para abrir aqui. Use SFTP para ficheiros grandes.',
+    'file_too_large' => 'Esse ficheiro é demasiado grande para abrir no editor. Transfira-o — as transferências não têm limite de tamanho.',
     'file_not_text' => 'Esse ficheiro não parece ser texto e não pode ser aberto aqui.',
     'file_operation_failed' => 'A operação de ficheiro falhou no servidor.',
 

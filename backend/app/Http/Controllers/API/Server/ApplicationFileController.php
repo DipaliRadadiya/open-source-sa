@@ -20,7 +20,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PermissionFixer;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ApplicationFileController extends Controller
 {
@@ -250,19 +250,57 @@ class ApplicationFileController extends Controller
         return response()->json(['deleted' => true]);
     }
 
-    public function download(BrowseFilesRequest $request, Application $application, FileBrowser $files): Response
+    public function download(BrowseFilesRequest $request, Application $application, FileBrowser $files): StreamedResponse
     {
-        $contents = $files->download($application, $request->targetPath());
-        $filename = basename($request->targetPath());
+        $file = $files->download($application, $request->targetPath());
 
-        return response($contents, 200, [
+        return response()->stream(function () use ($file): void {
+            foreach ($file['chunks'] as $chunk) {
+                echo $chunk;
+
+                // Without this the chunks pile up in PHP's own output buffer
+                // and the memory saved by streaming the read is spent on the
+                // write instead.
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+
+                flush();
+            }
+        }, 200, [
             // Never sniffed from the file's own content — an arbitrary
             // downloaded file served as, say, text/html would let its
             // content run as a script in the browser. Force a download
             // instead of letting the browser decide what this is.
             'Content-Type' => 'application/octet-stream',
-            'Content-Disposition' => 'attachment; filename="'.addslashes($filename).'"',
-            'Content-Length' => (string) strlen($contents),
+            'Content-Disposition' => $this->attachment(basename($request->targetPath())),
+            'Content-Length' => (string) $file['size'],
+            // Chunks must reach the client as they are produced. Without this
+            // nginx buffers the whole response before sending a byte, which
+            // reinstates on the way out exactly the memory cost the streaming
+            // read removed.
+            'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    /**
+     * A Content-Disposition value that survives the filename.
+     *
+     * `addslashes()` was not enough: it leaves UTF-8 alone (so a non-ASCII
+     * name arrives mangled or dropped) and does nothing about a newline,
+     * which would end the header and let the rest be read as another one.
+     * RFC 6266 answers both — a plain ASCII `filename` for old clients and a
+     * percent-encoded `filename*` that everything current prefers.
+     */
+    private function attachment(string $filename): string
+    {
+        $ascii = preg_replace('/[^\x20-\x7E]/', '_', $filename) ?? 'download';
+        $ascii = str_replace(['\\', '"'], ['\\\\', '\\"'], $ascii);
+
+        return sprintf(
+            'attachment; filename="%s"; filename*=UTF-8\'\'%s',
+            $ascii,
+            rawurlencode($filename),
+        );
     }
 }

@@ -670,7 +670,46 @@ describe('browsing', function () {
         expect($response->headers->get('Content-Type'))->toStartWith('application/octet-stream')
             ->and($response->headers->get('Content-Disposition'))->toContain('attachment')
             ->and($response->headers->get('Content-Disposition'))->toContain('index.php')
-            ->and($response->getContent())->toBe("<?php echo \"hi\";\n");
+            // Streamed, so the body is produced by the callback rather than
+            // held on the response — `getContent()` is false here by design.
+            ->and($response->streamedContent())->toBe("<?php echo \"hi\";\n");
+    });
+
+    it('does not cap a download at the size a file has to be to fit in the editor', function () {
+        fakeFileBrowserServer();
+
+        // Comfortably past FileBrowser::MAX_BYTES, which bounds `read()`
+        // because an editor has to hold the file, and used to bound this too
+        // — so the panel accepted uploads it would then refuse to return.
+        FileBrowserFake::$fs['huge.zip'] = ['type' => 'f', 'size' => 900 * 1024 * 1024];
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(filesUrl('/download?path=huge.zip'))
+            ->assertOk();
+
+        expect($response->headers->get('Content-Length'))->toBe((string) (900 * 1024 * 1024))
+            // Buffering the response would put back the memory cost that
+            // streaming the read removed.
+            ->and($response->headers->get('X-Accel-Buffering'))->toBe('no');
+    });
+
+    it('sends a filename both an old and a current client can read', function () {
+        fakeFileBrowserServer();
+
+        // `SafeRelativePath` already limits a path to [A-Za-z0-9._- ], so a
+        // quote or a newline cannot reach this header at all — that rule is
+        // the guard, not the encoding. What the encoding buys is the space:
+        // an unencoded one is legal inside the quoted form but not in the
+        // extended one, and clients disagree about the bare form.
+        FileBrowserFake::$fs['my backup file.zip'] = ['type' => 'f', 'size' => 12];
+
+        $disposition = $this->actingAs($this->admin)
+            ->getJson(filesUrl('/download?path='.rawurlencode('my backup file.zip')))
+            ->assertOk()
+            ->headers->get('Content-Disposition');
+
+        expect($disposition)->toContain('filename="my backup file.zip"')
+            ->and($disposition)->toContain("filename*=UTF-8''my%20backup%20file.zip");
     });
 
     it('refuses to download a directory', function () {

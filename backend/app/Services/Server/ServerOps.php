@@ -151,6 +151,68 @@ class ServerOps
      * lock failure guarantees no partial work to worry about. A failure that
      * might have half-completed must never be retried.
      */
+    /**
+     * Runs a command and yields its stdout in chunks as it arrives.
+     *
+     * `run()` waits for the command to finish and hands back the whole of its
+     * output as a string, which is right for the commands that produce a line
+     * or two and wrong for `cat` on a 4 GB archive: peak memory is the size of
+     * the output. Here nothing accumulates — each chunk is yielded and
+     * dropped, so a 40 GB file costs the same resident memory as a 40 KB one.
+     *
+     * No retry loop, unlike `run()`. A transient-lock retry replays the whole
+     * command, and the caller has already sent the earlier chunks to the
+     * client — replaying would corrupt the download rather than recover it.
+     *
+     * @param  array<int, string>  $command
+     * @param  array<string, mixed>  $context
+     * @return \Generator<int, string>
+     */
+    public function stream(array $command, array $context = [], int $timeout = 3600): \Generator
+    {
+        $command = $this->elevate($command);
+
+        $reference = (string) Str::uuid();
+        $startedAt = microtime(true);
+        $bytes = 0;
+
+        $process = Process::timeout($timeout)->start($command);
+
+        while ($process->running()) {
+            $chunk = $process->latestOutput();
+
+            if ($chunk !== '') {
+                $bytes += strlen($chunk);
+                yield $chunk;
+            }
+        }
+
+        // Whatever landed between the last poll and the process exiting.
+        $chunk = $process->latestOutput();
+
+        if ($chunk !== '') {
+            $bytes += strlen($chunk);
+            yield $chunk;
+        }
+
+        $result = $process->wait();
+        $ok = $result->successful();
+
+        // Logged after the fact, and the failure cannot be turned into an
+        // error response: the headers went out with the first chunk. The log
+        // is the only place a truncated download is recorded, which is exactly
+        // why it records the byte count.
+        Log::channel('server-ops')->{$ok ? 'info' : 'error'}('server operation stream', array_merge($context, [
+            'reference' => $reference,
+            'command' => implode(' ', $command),
+            'exit_code' => $result->exitCode(),
+            'stderr' => $result->errorOutput(),
+            'bytes' => $bytes,
+            'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+            'actor_id' => Auth::id(),
+        ]));
+    }
+
     private function isTransient(string $stderr): bool
     {
         if ($stderr === '') {

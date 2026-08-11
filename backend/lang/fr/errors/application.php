@@ -31,7 +31,7 @@ return [
     'permissions_fix_failed' => 'La réinitialisation des permissions de fichiers a échoué sur le serveur.',
 
     'unsafe_path' => 'Ce chemin n\'est pas autorisé.',
-    'file_too_large' => 'Ce fichier est trop volumineux pour être ouvert ici. Utilisez SFTP pour les fichiers volumineux.',
+    'file_too_large' => 'Ce fichier est trop volumineux pour l\'éditeur. Téléchargez-le : les téléchargements n\'ont aucune limite de taille.',
     'file_not_text' => 'Ce fichier ne semble pas être du texte et ne peut pas être ouvert ici.',
     'file_operation_failed' => 'L\'opération sur le fichier a échoué sur le serveur.',
 

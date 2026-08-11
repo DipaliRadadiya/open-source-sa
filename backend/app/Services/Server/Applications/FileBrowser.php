@@ -247,15 +247,35 @@ class FileBrowser
     }
 
     /** Raw bytes for a download response. Binary is fine here — it is the client's file, not rendered as text. */
-    public function download(Application $application, string $path): string
+    /**
+     * A file's size and a generator over its bytes.
+     *
+     * Deliberately not capped at MAX_BYTES the way `read()` is. That limit
+     * exists because a file has to fit in memory to be shown in an editor;
+     * a download does not, and capping it meant the panel could accept a
+     * multi-gigabyte upload and then refuse to give the same file back.
+     * Nothing is buffered here — the caller streams each chunk out as it
+     * arrives, so resident memory is one chunk regardless of the file.
+     *
+     * The size is returned alongside so the response can carry a real
+     * Content-Length and the browser can show progress rather than an
+     * indeterminate spinner.
+     *
+     * @return array{size: int, chunks: \Generator<int, string>}
+     */
+    public function download(Application $application, string $path): array
     {
         $this->assertRootExists($application);
         $target = $this->resolve($application, $path);
         $size = $this->assertType($application, $target, 'f');
 
-        abort_if($size > self::MAX_BYTES, 422, __('errors/application.file_too_large'));
-
-        return $this->run($application, ['cat', $target], 'download')->output();
+        return [
+            'size' => $size,
+            'chunks' => $this->serverOps->stream(
+                $this->asUser($application, ['cat', $target]),
+                ['feature' => 'application', 'op' => 'file_download', 'application' => $application->id],
+            ),
+        ];
     }
 
     /**
