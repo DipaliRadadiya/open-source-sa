@@ -84,6 +84,13 @@ return [
         'admin_password' => 'एडमिन पासवर्ड',
         'site_language' => 'साइट भाषा',
         'table_prefix' => 'टेबल प्रीफ़िक्स',
+        'mailer_name' => 'प्रेषक का नाम',
+        'mailer_email' => 'प्रेषक का पता',
+        'mailer_host' => 'SMTP होस्ट',
+        'mailer_port' => 'SMTP पोर्ट',
+        'mailer_username' => 'SMTP उपयोगकर्ता नाम',
+        'mailer_password' => 'SMTP पासवर्ड',
+        'install_litespeed_cache_plugin' => 'LiteSpeed Cache प्लगइन इंस्टॉल करें',
     ],
 
     'help' => [

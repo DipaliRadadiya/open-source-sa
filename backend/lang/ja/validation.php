@@ -182,4 +182,19 @@ return [
 
     'webhook_secret_min' => 'Webhook のシークレットは 16 文字以上で入力してください。',
 
+    // Per-app fail2ban thresholds
+    'fail2ban.validation.maxretry_min' => '少なくとも 1 回の失敗でブロックする必要があります。',
+    'fail2ban.validation.maxretry_max' => '100 回を超える失敗後にはブロックできません。',
+    'fail2ban.validation.findtime_min' => '集計期間は 60 秒以上である必要があります。',
+    'fail2ban.validation.findtime_max' => '集計期間は 24 時間（86400 秒）を超えられません。',
+    'fail2ban.validation.bantime_min' => 'ブロック時間は 0 秒以上である必要があります（無期限ブロックも可）。',
+    'fail2ban.validation.bantime_max' => 'ブロック時間は 7 日（604800 秒）を超えられません。',
+    'ip_or_cidr' => '有効な IP アドレス（例: 1.2.3.4）または CIDR 表記（例: 10.0.0.0/8）である必要があります。',
+
+    'jail_content_required' => 'jail 設定は必須です。',
+    'jail_content_string' => 'jail 設定はテキストである必要があります。',
+    'jail_content_max' => 'jail 設定が大きすぎます（最大 65535 文字）。',
+    'filter_content_required' => 'フィルター設定は必須です。',
+    'filter_content_string' => 'フィルター設定はテキストである必要があります。',
+    'filter_content_max' => 'フィルター設定が大きすぎます（最大 65535 文字）。',
 ];

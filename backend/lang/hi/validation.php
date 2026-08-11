@@ -182,4 +182,19 @@ return [
 
     'webhook_secret_min' => 'webhook सीक्रेट में कम से कम 16 अक्षर होने चाहिए।',
 
+    // Per-app fail2ban thresholds
+    'fail2ban.validation.maxretry_min' => 'कम से कम 1 विफल प्रयास के बाद प्रतिबंध लगाना चाहिए।',
+    'fail2ban.validation.maxretry_max' => '100 से अधिक विफल प्रयासों के बाद प्रतिबंध नहीं लगाया जा सकता।',
+    'fail2ban.validation.findtime_min' => 'गणना अवधि कम से कम 60 सेकंड होनी चाहिए।',
+    'fail2ban.validation.findtime_max' => 'गणना अवधि 24 घंटे (86400 सेकंड) से अधिक नहीं हो सकती।',
+    'fail2ban.validation.bantime_min' => 'प्रतिबंध समय कम से कम 0 सेकंड होना चाहिए (स्थायी प्रतिबंध की अनुमति है)।',
+    'fail2ban.validation.bantime_max' => 'प्रतिबंध समय 7 दिन (604800 सेकंड) से अधिक नहीं हो सकता।',
+    'ip_or_cidr' => 'एक मान्य IP पता (जैसे 1.2.3.4) या CIDR नोटेशन (जैसे 10.0.0.0/8) होना चाहिए।',
+
+    'jail_content_required' => 'jail कॉन्फ़िगरेशन आवश्यक है।',
+    'jail_content_string' => 'jail कॉन्फ़िगरेशन टेक्स्ट होना चाहिए।',
+    'jail_content_max' => 'jail कॉन्फ़िगरेशन बहुत बड़ा है (अधिकतम 65535 अक्षर)।',
+    'filter_content_required' => 'फ़िल्टर कॉन्फ़िगरेशन आवश्यक है।',
+    'filter_content_string' => 'फ़िल्टर कॉन्फ़िगरेशन टेक्स्ट होना चाहिए।',
+    'filter_content_max' => 'फ़िल्टर कॉन्फ़िगरेशन बहुत बड़ा है (अधिकतम 65535 अक्षर)।',
 ];

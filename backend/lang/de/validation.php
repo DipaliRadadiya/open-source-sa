@@ -182,4 +182,19 @@ return [
 
     'webhook_secret_min' => 'Das Webhook-Secret muss mindestens 16 Zeichen lang sein.',
 
+    // Per-app fail2ban thresholds
+    'fail2ban.validation.maxretry_min' => 'Muss nach mindestens 1 fehlgeschlagenen Versuch sperren.',
+    'fail2ban.validation.maxretry_max' => 'Kann nicht nach mehr als 100 fehlgeschlagenen Versuchen sperren.',
+    'fail2ban.validation.findtime_min' => 'Das Zählfenster muss mindestens 60 Sekunden betragen.',
+    'fail2ban.validation.findtime_max' => 'Das Zählfenster darf 24 Stunden (86400 Sekunden) nicht überschreiten.',
+    'fail2ban.validation.bantime_min' => 'Die Sperrzeit muss mindestens 0 Sekunden betragen (dauerhafte Sperre erlaubt).',
+    'fail2ban.validation.bantime_max' => 'Die Sperrzeit darf 7 Tage (604800 Sekunden) nicht überschreiten.',
+    'ip_or_cidr' => 'Muss eine gültige IP-Adresse (z. B. 1.2.3.4) oder CIDR-Notation (z. B. 10.0.0.0/8) sein.',
+
+    'jail_content_required' => 'Die Jail-Konfiguration ist erforderlich.',
+    'jail_content_string' => 'Die Jail-Konfiguration muss Text sein.',
+    'jail_content_max' => 'Die Jail-Konfiguration ist zu groß (max. 65535 Zeichen).',
+    'filter_content_required' => 'Die Filter-Konfiguration ist erforderlich.',
+    'filter_content_string' => 'Die Filter-Konfiguration muss Text sein.',
+    'filter_content_max' => 'Die Filter-Konfiguration ist zu groß (max. 65535 Zeichen).',
 ];

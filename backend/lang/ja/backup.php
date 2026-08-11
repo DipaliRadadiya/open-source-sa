@@ -76,4 +76,17 @@ return [
         'crashed' => '復元が予期せず停止しました。再試行する前にバックアップを確認してください。',
         'unknown' => '不明な理由で復元に失敗しました。',
     ],
+
+    'cloning' => [
+        'provisioning' => 'サイトを作成しています',
+        'copying_files' => 'ファイルをコピーしています',
+        'cloning_database' => 'データベースを複製しています',
+        'starting_process' => 'アプリケーションを起動しています',
+    ],
+
+    'cloning_errors' => [
+        'crashed' => '複製が予期せず停止しました。',
+    ],
+
+    'schedule_time' => '予定時刻',
 ];

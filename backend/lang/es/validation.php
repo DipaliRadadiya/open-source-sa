@@ -205,4 +205,19 @@ return [
 
     'webhook_secret_min' => 'El secreto del webhook debe tener al menos 16 caracteres.',
 
+    // Per-app fail2ban thresholds
+    'fail2ban.validation.maxretry_min' => 'Debe bloquear tras al menos 1 intento fallido.',
+    'fail2ban.validation.maxretry_max' => 'No puede bloquear tras más de 100 intentos fallidos.',
+    'fail2ban.validation.findtime_min' => 'La ventana de conteo debe ser de al menos 60 segundos.',
+    'fail2ban.validation.findtime_max' => 'La ventana de conteo no puede superar las 24 horas (86400 segundos).',
+    'fail2ban.validation.bantime_min' => 'El tiempo de bloqueo debe ser de al menos 0 segundos (se permite bloqueo permanente).',
+    'fail2ban.validation.bantime_max' => 'El tiempo de bloqueo no puede superar los 7 días (604800 segundos).',
+    'ip_or_cidr' => 'Debe ser una dirección IP válida (p. ej. 1.2.3.4) o notación CIDR (p. ej. 10.0.0.0/8).',
+
+    'jail_content_required' => 'La configuración de la jaula es obligatoria.',
+    'jail_content_string' => 'La configuración de la jaula debe ser texto.',
+    'jail_content_max' => 'La configuración de la jaula es demasiado grande (máx. 65535 caracteres).',
+    'filter_content_required' => 'La configuración del filtro es obligatoria.',
+    'filter_content_string' => 'La configuración del filtro debe ser texto.',
+    'filter_content_max' => 'La configuración del filtro es demasiado grande (máx. 65535 caracteres).',
 ];

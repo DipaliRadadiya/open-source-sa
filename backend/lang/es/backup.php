@@ -76,4 +76,17 @@ return [
         'crashed' => 'La restauración se detuvo inesperadamente. Revisa la copia de seguridad antes de reintentar.',
         'unknown' => 'La restauración falló por un motivo desconocido.',
     ],
+
+    'cloning' => [
+        'provisioning' => 'Creando el sitio',
+        'copying_files' => 'Copiando archivos',
+        'cloning_database' => 'Clonando la base de datos',
+        'starting_process' => 'Iniciando la aplicación',
+    ],
+
+    'cloning_errors' => [
+        'crashed' => 'La clonación se detuvo inesperadamente.',
+    ],
+
+    'schedule_time' => 'Hora programada',
 ];

@@ -76,4 +76,17 @@ return [
         'crashed' => 'Die Wiederherstellung wurde unerwartet beendet. Prüfen Sie die Sicherung, bevor Sie es erneut versuchen.',
         'unknown' => 'Die Wiederherstellung ist aus unbekanntem Grund fehlgeschlagen.',
     ],
+
+    'cloning' => [
+        'provisioning' => 'Website wird erstellt',
+        'copying_files' => 'Dateien werden kopiert',
+        'cloning_database' => 'Datenbank wird geklont',
+        'starting_process' => 'Anwendung wird gestartet',
+    ],
+
+    'cloning_errors' => [
+        'crashed' => 'Der Klonvorgang wurde unerwartet beendet.',
+    ],
+
+    'schedule_time' => 'Geplante Zeit',
 ];

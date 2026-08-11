@@ -182,4 +182,19 @@ return [
 
     'webhook_secret_min' => 'Le secret du webhook doit contenir au moins 16 caractères.',
 
+    // Per-app fail2ban thresholds
+    'fail2ban.validation.maxretry_min' => 'Doit bannir après au moins 1 tentative échouée.',
+    'fail2ban.validation.maxretry_max' => 'Ne peut pas bannir après plus de 100 tentatives échouées.',
+    'fail2ban.validation.findtime_min' => 'La fenêtre de comptage doit être d\'au moins 60 secondes.',
+    'fail2ban.validation.findtime_max' => 'La fenêtre de comptage ne peut pas dépasser 24 heures (86400 secondes).',
+    'fail2ban.validation.bantime_min' => 'La durée de bannissement doit être d\'au moins 0 seconde (bannissement permanent autorisé).',
+    'fail2ban.validation.bantime_max' => 'La durée de bannissement ne peut pas dépasser 7 jours (604800 secondes).',
+    'ip_or_cidr' => 'Doit être une adresse IP valide (par ex. 1.2.3.4) ou une notation CIDR (par ex. 10.0.0.0/8).',
+
+    'jail_content_required' => 'La configuration de la prison est obligatoire.',
+    'jail_content_string' => 'La configuration de la prison doit être du texte.',
+    'jail_content_max' => 'La configuration de la prison est trop volumineuse (max. 65535 caractères).',
+    'filter_content_required' => 'La configuration du filtre est obligatoire.',
+    'filter_content_string' => 'La configuration du filtre doit être du texte.',
+    'filter_content_max' => 'La configuration du filtre est trop volumineuse (max. 65535 caractères).',
 ];

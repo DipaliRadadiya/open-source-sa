@@ -84,6 +84,13 @@ return [
         'admin_password' => 'Mot de passe administrateur',
         'site_language' => 'Langue du site',
         'table_prefix' => 'Préfixe des tables',
+        'mailer_name' => 'Nom de l\'expéditeur',
+        'mailer_email' => 'Adresse de l\'expéditeur',
+        'mailer_host' => 'Hôte SMTP',
+        'mailer_port' => 'Port SMTP',
+        'mailer_username' => 'Nom d\'utilisateur SMTP',
+        'mailer_password' => 'Mot de passe SMTP',
+        'install_litespeed_cache_plugin' => 'Installer l\'extension LiteSpeed Cache',
     ],
 
     'help' => [

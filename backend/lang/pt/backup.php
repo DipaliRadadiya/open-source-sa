@@ -76,4 +76,17 @@ return [
         'crashed' => 'A restauração parou inesperadamente. Verifique a cópia de segurança antes de tentar de novo.',
         'unknown' => 'A restauração falhou por um motivo desconhecido.',
     ],
+
+    'cloning' => [
+        'provisioning' => 'A criar o site',
+        'copying_files' => 'A copiar ficheiros',
+        'cloning_database' => 'A clonar a base de dados',
+        'starting_process' => 'A iniciar a aplicação',
+    ],
+
+    'cloning_errors' => [
+        'crashed' => 'A clonagem parou inesperadamente.',
+    ],
+
+    'schedule_time' => 'Hora agendada',
 ];

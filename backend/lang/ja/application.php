@@ -84,6 +84,13 @@ return [
         'admin_password' => '管理者パスワード',
         'site_language' => 'サイトの言語',
         'table_prefix' => 'テーブル接頭辞',
+        'mailer_name' => '送信者名',
+        'mailer_email' => '送信元アドレス',
+        'mailer_host' => 'SMTP ホスト',
+        'mailer_port' => 'SMTP ポート',
+        'mailer_username' => 'SMTP ユーザー名',
+        'mailer_password' => 'SMTP パスワード',
+        'install_litespeed_cache_plugin' => 'LiteSpeed Cache プラグインをインストールする',
     ],
 
     'help' => [

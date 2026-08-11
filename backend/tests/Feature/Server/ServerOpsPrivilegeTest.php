@@ -146,11 +146,22 @@ it('keeps the allowlist in step with what install.sh grants', function () {
     $installer = file_get_contents(dirname(base_path()).'/install.sh');
     expect($installer)->not->toBeFalse();
 
-    preg_match('/local bins=\((.*?)\)/s', $installer, $matches);
+    // Terminated on a `)` at the start of its own line, not the first `)` in
+    // the block: the list is commented, and a comment mentioning `asUser()`
+    // ended the match early — so this compared config against roughly half
+    // the grants and reported three dozen phantom omissions.
+    preg_match('/local bins=\((.*?)\n\s*\)/s', $installer, $matches);
     expect($matches[1] ?? null)->not->toBeNull();
 
-    $granted = collect(preg_split('/\s+/', trim($matches[1])))
+    $granted = collect(explode("\n", $matches[1]))
+        // Drop comment lines before splitting on whitespace, or every word in
+        // the prose becomes a "granted binary".
+        ->reject(fn (string $line): bool => str_starts_with(trim($line), '#'))
+        ->flatMap(fn (string $line): array => preg_split('/\s+/', trim($line)) ?: [])
         ->filter()
+        // `php-fpm*` is a wildcard covering one binary per installed PHP
+        // version; ServerOps matches it by prefix rather than by name.
+        ->reject(fn (string $path): bool => str_contains($path, '*'))
         ->map(fn (string $path): string => basename($path))
         ->unique()
         ->sort()

@@ -89,6 +89,13 @@ return [
         'admin_password' => 'Admin password',
         'site_language' => 'Site language',
         'table_prefix' => 'Table prefix',
+        'mailer_name' => 'Mail \'from\' name',
+        'mailer_email' => 'Mail \'from\' address',
+        'mailer_host' => 'SMTP host',
+        'mailer_port' => 'SMTP port',
+        'mailer_username' => 'SMTP username',
+        'mailer_password' => 'SMTP password',
+        'install_litespeed_cache_plugin' => 'Install the LiteSpeed Cache plugin',
     ],
 
     'help' => [

@@ -84,6 +84,13 @@ return [
         'admin_password' => 'Пароль администратора',
         'site_language' => 'Язык сайта',
         'table_prefix' => 'Префикс таблиц',
+        'mailer_name' => 'Имя отправителя',
+        'mailer_email' => 'Адрес отправителя',
+        'mailer_host' => 'SMTP-хост',
+        'mailer_port' => 'SMTP-порт',
+        'mailer_username' => 'Имя пользователя SMTP',
+        'mailer_password' => 'Пароль SMTP',
+        'install_litespeed_cache_plugin' => 'Установить плагин LiteSpeed Cache',
     ],
 
     'help' => [
