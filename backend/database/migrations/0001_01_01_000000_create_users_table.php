@@ -15,6 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('username')->unique();
             $table->boolean('is_admin')->default(false);
+            // Machine accounts. A system user owns API tokens but is not a
+            // person: it never logs in, is not listed or editable in the admin
+            // area, and is not counted in the dashboard's user totals.
+            $table->boolean('is_system')->default(false);
             $table->string('name');
             $table->string('password');
             $table->rememberToken();

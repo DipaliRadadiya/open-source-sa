@@ -23,6 +23,10 @@ return new class extends Migration
             // Bytes/second at sample time.
             $table->unsignedBigInteger('net_in')->default(0);
             $table->unsignedBigInteger('net_out')->default(0);
+            // Disk throughput, alongside the network rate it sits next to on
+            // the dashboard.
+            $table->unsignedBigInteger('disk_read')->default(0);
+            $table->unsignedBigInteger('disk_write')->default(0);
             $table->timestamp('sampled_at')->index();
         });
     }

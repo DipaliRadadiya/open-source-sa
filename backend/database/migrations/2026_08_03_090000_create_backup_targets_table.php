@@ -23,6 +23,8 @@ return new class extends Migration
             // the user-managed Cronjobs feature — the same reasoning, and the
             // same frequency vocabulary, as disk_cleaner_schedules.
             $table->string('frequency', 16)->default('daily');
+            // "HH:MM" — e.g. "14:30". Null means use the server default (02:00).
+            $table->string('schedule_time', 5)->nullable();
             $table->timestamp('last_run_at')->nullable();
 
             $table->timestamps();

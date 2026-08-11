@@ -21,6 +21,11 @@ return new class extends Migration
             // user (hand-made) | default (seeded on enable) | db_user (from a
             // remote DB user) — drives UI badges + delete protection.
             $table->string('origin')->default('user');
+            // Lets a rule be switched off without being thrown away. Testing
+            // whether a rule matters otherwise means deleting it and hoping it
+            // gets recreated correctly — which, for a `deny` rule, means the
+            // thing it was blocking is allowed in the meantime.
+            $table->boolean('enabled')->default(true);
             $table->timestamps();
         });
     }

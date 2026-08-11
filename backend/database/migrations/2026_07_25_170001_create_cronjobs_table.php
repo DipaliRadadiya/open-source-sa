@@ -23,6 +23,15 @@ return new class extends Migration
             // Soft-link to a panel System User when the target is one; null for
             // default/unmanaged users. Cascade so deleting the user cleans its jobs.
             $table->foreignId('system_user_id')->nullable()->constrained('system_users')->cascadeOnDelete();
+            // The application this job belongs to, when it was created from an
+            // application's own Cronjobs screen. Null for server-level jobs.
+            // `nullOnDelete` rather than cascade: the job is a real /etc/cron.d
+            // file, and removing a site should not silently stop a command the
+            // user may still want running.
+            $table->foreignId('application_id')
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
             $table->string('command', 1000);
             $table->string('expression');
             $table->boolean('active')->default(true);

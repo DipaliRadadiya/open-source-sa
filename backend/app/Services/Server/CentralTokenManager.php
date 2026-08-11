@@ -3,7 +3,6 @@
 namespace App\Services\Server;
 
 use App\Exceptions\Server\CentralTokenException;
-use App\Models\CentralConnection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -28,7 +27,7 @@ class CentralTokenManager
 
         DB::transaction(function () use ($token) {
             // Wipe any previous token — a new enable replaces the old one.
-            $this->revoke();
+            $this->disable();
 
             $setting = DB::table('settings')->where('id', 1)->first();
 
