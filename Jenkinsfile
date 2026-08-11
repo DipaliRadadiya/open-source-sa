@@ -32,6 +32,11 @@
 // Requires: the Jenkins execution user has NOPASSWD sudo to become `panel`
 // (e.g. `jenkins ALL=(panel) NOPASSWD: ALL` in /etc/sudoers.d/jenkins).
 //
+// Laravel's caches are cleared and rebuilt on every deploy, before the
+// restart. install.sh runs `optimize`, so route/config/view caches exist on a
+// deployed server and Laravel prefers them over the source — skipping this
+// makes a successful deploy serve the previous release's routes and config.
+//
 // Frontend is only rebuilt when a file under frontend/ actually changed
 // between the commit that was live before this run and the one just
 // fetched — the diff needs real history, so the checkout is unshallowed
@@ -156,6 +161,28 @@ pipeline {
             }
         }
 
+        // Must run after the code is in place and before the services are
+        // restarted, so the workers come back up on freshly built caches.
+        //
+        // Not optional, and not merely a tidy-up: install.sh runs `optimize`,
+        // so a deployed server has route/config/view caches on disk. Those are
+        // built from the *previous* release and Laravel prefers them over the
+        // source, so new routes 404 and changed config is ignored until they
+        // are rebuilt -- the code deploys fine and the panel keeps serving the
+        // old behaviour, which reads as "the deploy didn't work".
+        //
+        // Same pair, in the same order, as UpdateScript::STEPS' `optimize`
+        // step -- the two paths must not drift.
+        stage('Backend: rebuild caches') {
+            steps {
+                sh '''
+                    set -eu
+                    sudo -u panel -H "$PHP_BIN" "$BACKEND_DIR/artisan" optimize:clear
+                    sudo -u panel -H "$PHP_BIN" "$BACKEND_DIR/artisan" optimize
+                '''
+            }
+        }
+
         stage('Restart services') {
             steps {
                 sh '''
@@ -174,7 +201,7 @@ pipeline {
 
     post {
         success {
-            echo "panel deployed from ${params.BRANCH}: db backed up, backend migrated, frontend built=${env.FRONTEND_CHANGED}, services restarted."
+            echo "panel deployed from ${params.BRANCH}: db backed up, backend migrated, frontend built=${env.FRONTEND_CHANGED}, caches rebuilt, services restarted."
         }
         failure {
             echo 'Deploy failed — see the failing stage above.'
