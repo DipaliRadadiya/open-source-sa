@@ -1280,7 +1280,12 @@ configure_sudoers() {
         /usr/bin/tee /usr/bin/mkdir /usr/bin/chown /usr/bin/chmod /usr/bin/rm
         /usr/bin/cp /usr/bin/mv /usr/bin/ln /usr/bin/install /usr/bin/truncate
         /usr/bin/find /usr/bin/tail /usr/bin/cat /usr/bin/test /usr/bin/which
-        /usr/bin/runuser /usr/bin/sh /usr/bin/env
+        # Both paths, deliberately: runuser lives in /usr/sbin on Debian/Ubuntu
+        # and in /usr/bin on RHEL-family. sudo matches on the resolved absolute
+        # path, so a single wrong entry silently denies every asUser() operation
+        # -- file manager, deployments, wp-cli -- with "a password is required".
+        # sudo ignores entries whose file does not exist, so listing both is safe.
+        /usr/sbin/runuser /usr/bin/runuser /usr/bin/sh /usr/bin/env
         /usr/sbin/nginx /usr/sbin/apachectl /usr/bin/lswsctrl
         /usr/sbin/phpenmod /usr/sbin/phpdismod /usr/bin/update-alternatives
         # Wildcard, not one entry per version: PoolManager tests a per-app
