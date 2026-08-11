@@ -7,6 +7,7 @@ use App\Models\SystemUser;
 use App\Services\ActivityLogger;
 use App\Services\Server\AccountLock;
 use App\Services\Server\ServerOps;
+use App\Services\Server\SystemUsers\SshUsersGroup;
 
 class ToggleSshAccess
 {
@@ -14,20 +15,28 @@ class ToggleSshAccess
         private ServerOps $serverOps,
         private ActivityLogger $activityLogger,
         private AccountLock $accountLock,
+        private SshUsersGroup $sshUsersGroup,
     ) {}
 
     public function execute(SystemUser $systemUser, bool $sshAccess): void
     {
-        // Membership of the `ssh-users` group gates SSH login, provided
-        // sshd_config carries `AllowGroups ssh-users` (configured by server
-        // provisioning). Same group-toggle pattern as sudo.
+        // Membership of the `ssh-users` group is how the panel records who may
+        // log in. Note that it only *enforces* that once sshd carries a
+        // matching `AllowGroups ssh-users` — see SecuritySettings; without it
+        // this toggle records intent rather than applying it.
         //
         // usermod/gpasswd take the global /etc/group lock — serialize with
         // every other account command.
         $this->accountLock->run(function () use ($systemUser, $sshAccess) {
+            // Inside the lock, not before it: groupadd takes the same
+            // /etc/group lock, and the lock is not reentrant.
+            if ($sshAccess) {
+                $this->sshUsersGroup->ensure();
+            }
+
             $command = $sshAccess
-                ? ['usermod', '-aG', 'ssh-users', $systemUser->username]
-                : ['gpasswd', '-d', $systemUser->username, 'ssh-users'];
+                ? ['usermod', '-aG', SshUsersGroup::NAME, $systemUser->username]
+                : ['gpasswd', '-d', $systemUser->username, SshUsersGroup::NAME];
 
             $result = $this->serverOps->run(
                 $command,

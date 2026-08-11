@@ -112,13 +112,18 @@ it('disables SSH access, running gpasswd against the ssh-users group', function 
 it('returns a translated error with reference when the ssh op fails', function () {
     Process::fake(['*usermod*' => Process::result(output: '', errorOutput: 'nope', exitCode: 1)]);
 
+    // Captured rather than assumed: this used to assert the column default,
+    // which made it a test of the migration as much as of the failure path.
+    $before = $this->su->fresh()->ssh_access;
+
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->putJson("/api/system-users/{$this->su->id}/ssh", ['ssh_access' => true])
         ->assertStatus(500)
         ->assertJsonStructure(['message', 'reference']);
 
-    // flag unchanged from its default (true) because the OS op failed
-    expect($this->su->fresh()->ssh_access)->toBeTrue();
+    // The flag must not move when the OS op failed — the panel would then be
+    // claiming access the server never granted.
+    expect($this->su->fresh()->ssh_access)->toBe($before);
 });
 
 it('denies a viewer (no manage permission) from toggling ssh access', function () {

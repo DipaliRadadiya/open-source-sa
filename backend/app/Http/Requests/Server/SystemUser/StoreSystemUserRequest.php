@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Server\SystemUser;
 
+use App\Enums\LoginShell;
 use App\Services\Server\SshKeyManager;
 use Closure;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -55,6 +57,28 @@ class StoreSystemUserRequest extends FormRequest
             'ssh_access' => ['sometimes', 'boolean'],
             'password' => ['sometimes', 'string', Password::min(10)->mixedCase()->numbers()],
         ];
+    }
+
+    /**
+     * A user given SSH access but a shell that refuses login authenticates
+     * successfully and is then disconnected — the panel would report access
+     * the server does not grant. Refused rather than silently corrected: the
+     * two fields are set on the same form, so the person can see which one
+     * they meant.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $shell = $this->input('shell');
+
+            if (! $this->boolean('ssh_access') || $shell === null) {
+                return;
+            }
+
+            if (LoginShell::allowsLoginFor($shell) === false) {
+                $validator->errors()->add('ssh_access', __('errors/system-user.ssh_needs_login_shell'));
+            }
+        });
     }
 
     /**

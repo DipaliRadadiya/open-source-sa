@@ -11,4 +11,9 @@ return [
     'sudo_failed' => 'सिस्टम उपयोगकर्ता के लिए sudo एक्सेस अपडेट करने में विफल।',
     'shell_failed' => 'सिस्टम उपयोगकर्ता का शेल बदलने में विफल।',
     'ssh_failed' => 'सिस्टम उपयोगकर्ता के लिए SSH एक्सेस अपडेट करने में विफल।',
+
+    // The panel must not record access the server will not grant: sshd
+    // authenticates, then a non-login shell exits and the session closes.
+    'ssh_needs_login_shell' => 'SSH पहुँच के लिए ऐसी शेल चाहिए जिससे उपयोगकर्ता लॉगिन कर सके। इस उपयोगकर्ता की शेल लॉगिन अस्वीकार करती है, इसलिए SSH जुड़कर तुरंत डिस्कनेक्ट हो जाएगा। पहले लॉगिन वाली शेल चुनें।',
+    'shell_needs_ssh_off' => 'इस उपयोगकर्ता के पास SSH पहुँच है और चुनी गई शेल लॉगिन अस्वीकार करती है — SSH जुड़कर तुरंत डिस्कनेक्ट हो जाएगा। पहले SSH पहुँच बंद करें, या लॉगिन वाली शेल चुनें।',
 ];

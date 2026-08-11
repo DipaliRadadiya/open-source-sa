@@ -11,4 +11,9 @@ return [
     'sudo_failed' => "Échec de la mise à jour de l'accès sudo de l'utilisateur système.",
     'shell_failed' => "Échec du changement de shell de l'utilisateur système.",
     'ssh_failed' => "Échec de la mise à jour de l'accès SSH de l'utilisateur système.",
+
+    // The panel must not record access the server will not grant: sshd
+    // authenticates, then a non-login shell exits and the session closes.
+    'ssh_needs_login_shell' => 'L\'accès SSH nécessite un shell permettant à l\'utilisateur de se connecter. Le shell de cet utilisateur refuse la connexion : SSH se connecterait puis se déconnecterait aussitôt. Choisissez d\'abord un shell de connexion.',
+    'shell_needs_ssh_off' => 'Cet utilisateur a un accès SSH et le shell choisi refuse la connexion — SSH se connecterait puis se déconnecterait aussitôt. Désactivez d\'abord l\'accès SSH, ou choisissez un shell de connexion.',
 ];

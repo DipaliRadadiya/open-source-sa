@@ -11,4 +11,9 @@ return [
     'sudo_failed' => 'No se pudo actualizar el acceso sudo del usuario del sistema.',
     'shell_failed' => 'No se pudo cambiar el shell del usuario del sistema.',
     'ssh_failed' => 'No se pudo actualizar el acceso SSH del usuario del sistema.',
+
+    // The panel must not record access the server will not grant: sshd
+    // authenticates, then a non-login shell exits and the session closes.
+    'ssh_needs_login_shell' => 'El acceso SSH necesita un shell con el que el usuario pueda iniciar sesión. El shell de este usuario rechaza el inicio de sesión, así que SSH se conectaría y se desconectaría de inmediato. Elige primero un shell de inicio de sesión.',
+    'shell_needs_ssh_off' => 'Este usuario tiene acceso SSH y el shell elegido rechaza el inicio de sesión: SSH se conectaría y se desconectaría de inmediato. Desactiva primero el acceso SSH o elige un shell de inicio de sesión.',
 ];

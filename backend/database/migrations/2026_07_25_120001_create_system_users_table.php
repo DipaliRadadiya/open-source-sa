@@ -17,7 +17,12 @@ return new class extends Migration
             $table->string('shell')->default('/bin/bash');
             $table->boolean('sudo')->default(false);
             $table->string('password')->nullable();
-            $table->boolean('ssh_access')->default(true);
+            // false, matching CreateSystemUser's own `?? false`: the action
+            // always writes this column explicitly, so the old `true` default
+            // was never reached and documented the opposite of what the panel
+            // does. A schema that claims SSH is on by default is the wrong
+            // thing to read when auditing who can reach the box.
+            $table->boolean('ssh_access')->default(false);
             $table->timestamps();
         });
     }

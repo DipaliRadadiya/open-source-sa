@@ -8,6 +8,7 @@ use App\Models\SystemUser;
 use App\Services\ActivityLogger;
 use App\Services\Server\AccountLock;
 use App\Services\Server\ServerOps;
+use App\Services\Server\SystemUsers\SshUsersGroup;
 
 class CreateSystemUser
 {
@@ -16,6 +17,7 @@ class CreateSystemUser
         private AddSshKey $addSshKey,
         private ActivityLogger $activityLogger,
         private AccountLock $accountLock,
+        private SshUsersGroup $sshUsersGroup,
     ) {}
 
     /**
@@ -41,9 +43,16 @@ class CreateSystemUser
             // than a separate usermod after — one command instead of two,
             // and no window where the user briefly exists without the
             // access it was created with.
+            // useradd refuses the whole command if any -G group is missing,
+            // so the account would not be created at all — not merely created
+            // without SSH access.
+            if ($data['ssh_access'] ?? false) {
+                $this->sshUsersGroup->ensure();
+            }
+
             $groups = array_filter([
                 ($data['sudo'] ?? false) ? 'sudo' : null,
-                ($data['ssh_access'] ?? false) ? 'ssh-users' : null,
+                ($data['ssh_access'] ?? false) ? SshUsersGroup::NAME : null,
             ]);
 
             $command = ['useradd', '-m', '-s', $shell, $username];

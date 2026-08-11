@@ -62,21 +62,27 @@ it('creates a system user with sudo, ssh_access, shell and password set in one c
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->postJson('/api/system-users', [
             'username' => 'deploy',
-            'shell' => '/usr/sbin/nologin',
+            // A login shell, because ssh_access is on: the two together are
+            // now refused, since sshd would authenticate and the session
+            // would close on a shell that denies login.
+            'shell' => '/bin/bash',
             'sudo' => true,
             'ssh_access' => true,
             'password' => 'Str0ngPassword!',
         ]);
 
     $response->assertCreated()
-        ->assertJsonPath('system_user.shell', '/usr/sbin/nologin')
+        ->assertJsonPath('system_user.shell', '/bin/bash')
         ->assertJsonPath('system_user.sudo', true)
         ->assertJsonPath('system_user.ssh_access', true)
         ->assertJsonPath('system_user.password', 'Str0ngPassword!');
 
     Process::assertRan(fn ($process) => $process->command === [
-        'useradd', '-m', '-s', '/usr/sbin/nologin', '-G', 'sudo,ssh-users', 'deploy',
+        'useradd', '-m', '-s', '/bin/bash', '-G', 'sudo,ssh-users', 'deploy',
     ]);
+    // The group must be made before useradd names it, or useradd refuses the
+    // whole command and no account is created at all.
+    Process::assertRan(fn ($process) => $process->command === ['groupadd', '-f', 'ssh-users']);
     Process::assertRan(fn ($process) => $process->command === ['chpasswd']);
 
     expect(SystemUser::where('username', 'deploy')->first())

@@ -11,4 +11,9 @@ return [
     'sudo_failed' => 'システムユーザーのsudoアクセスを更新できませんでした。',
     'shell_failed' => 'システムユーザーのシェルを変更できませんでした。',
     'ssh_failed' => 'システムユーザーのSSHアクセスを更新できませんでした。',
+
+    // The panel must not record access the server will not grant: sshd
+    // authenticates, then a non-login shell exits and the session closes.
+    'ssh_needs_login_shell' => 'SSH アクセスにはログインできるシェルが必要です。このユーザーのシェルはログインを拒否するため、SSH は接続後すぐに切断されます。先にログイン可能なシェルを選んでください。',
+    'shell_needs_ssh_off' => 'このユーザーには SSH アクセスがあり、選択したシェルはログインを拒否します — SSH は接続後すぐに切断されます。先に SSH アクセスを無効にするか、ログイン可能なシェルを選んでください。',
 ];
