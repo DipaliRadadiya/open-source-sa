@@ -25,6 +25,17 @@ return [
         ],
     ],
 
+    'disable_functions_presets' => [
+        'safe' => [
+            'title' => 'Recommended',
+            'description' => 'Blocks every way to run a program from inside PHP — what a web shell needs, and what a normal site almost never does.',
+        ],
+        'strict' => [
+            'title' => 'Strict',
+            'description' => 'Adds process, user and socket inspection on top of the recommended list. Matches typical shared-hosting hardening, and may break a site that uses the sockets extension.',
+        ],
+    ],
+
     'errors' => [
         'unsupported_stack' => 'This server runs OpenLiteSpeed, which does not use PHP-FPM pools.',
         'already_isolated' => 'This site already has its own PHP pool.',

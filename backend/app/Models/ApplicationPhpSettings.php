@@ -26,6 +26,43 @@ class ApplicationPhpSettings extends Model
      */
     public const SAFE_DISABLED_FUNCTIONS = 'exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec';
 
+    /**
+     * The cPanel/WHM-style hardening list: everything in SAFE, plus the
+     * process, user and socket introspection an attacker uses *after* getting
+     * code running. Opt-in, because that extra reach costs compatibility.
+     *
+     * Cleaned rather than copied verbatim from the list that circulates on
+     * hosting forums, which contains:
+     *
+     *   - `posix,_getppid` — a stray comma splitting one name into two
+     *     non-functions, so `posix_getppid` was never actually disabled.
+     *   - `ini_alter` and `posix_geteuid` listed twice.
+     *   - `leak` (gone since PHP 5.4), `source` and `listen` (never PHP
+     *     functions), `virtual` (Apache mod_php only — a no-op under FPM).
+     *
+     * Deliberately NOT included, because each breaks working sites for very
+     * little gain:
+     *
+     *   - `symlink` / `link` — Laravel's `storage:link`, Composer path repos.
+     *   - `tmpfile` / `fpassthru` — PHPMailer, Guzzle streams, file downloads.
+     *   - `diskfreespace` — WordPress Site Health, upload pre-checks.
+     *   - `escapeshellcmd` — a *defensive* function; disabling it breaks the
+     *     libraries that sanitise without preventing anything.
+     *   - `stream_socket_server` — needed by the realtime layer.
+     *
+     * `ini_set` is not here either: disabling it breaks most applications, and
+     * it could not undo this list anyway — the pool writes these as
+     * `php_admin_value`, which a script cannot override at runtime.
+     */
+    public const STRICT_DISABLED_FUNCTIONS = 'getmyuid,passthru,shell_exec,dl,exec,system,highlight_file,show_source,'
+        .'posix_ctermid,posix_getcwd,posix_getegid,posix_geteuid,posix_getgid,posix_getgrgid,posix_getgrnam,'
+        .'posix_getgroups,posix_getlogin,posix_getpgid,posix_getpgrp,posix_getpid,posix_getppid,posix_getpwuid,'
+        .'posix_getrlimit,posix_getsid,posix_getuid,posix_isatty,posix_kill,posix_mkfifo,posix_setegid,'
+        .'posix_seteuid,posix_setgid,posix_setpgid,posix_setsid,posix_setuid,posix_times,posix_ttyname,posix_uname,'
+        .'proc_open,proc_close,proc_nice,proc_terminate,ini_alter,popen,pcntl_exec,'
+        .'socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,socket_listen,'
+        .'socket_create_listen,socket_read,socket_create_pair';
+
     protected $table = 'application_php_settings';
 
     /**

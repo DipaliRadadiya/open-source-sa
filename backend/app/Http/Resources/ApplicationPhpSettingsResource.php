@@ -102,7 +102,30 @@ class ApplicationPhpSettingsResource extends JsonResource
             'memory' => app(MemoryBudget::class)->withProposed($application, $settings),
 
             'suggested_disable_functions' => ApplicationPhpSettings::SAFE_DISABLED_FUNCTIONS,
+
+            // The same value again, as one entry in a list the frontend can
+            // render a button per. Kept alongside the flat key rather than
+            // replacing it, so an older client keeps working.
+            'disable_functions_presets' => $this->disableFunctionPresets(),
         ];
+    }
+
+    /**
+     * Starting points for `disable_functions`, safest first.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function disableFunctionPresets(): array
+    {
+        return array_map(fn (array $preset): array => [
+            'key' => $preset['key'],
+            'title' => __('php_settings.disable_functions_presets.'.$preset['key'].'.title'),
+            'description' => __('php_settings.disable_functions_presets.'.$preset['key'].'.description'),
+            'functions' => $preset['functions'],
+        ], [
+            ['key' => 'safe', 'functions' => ApplicationPhpSettings::SAFE_DISABLED_FUNCTIONS],
+            ['key' => 'strict', 'functions' => ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS],
+        ]);
     }
 
     /**

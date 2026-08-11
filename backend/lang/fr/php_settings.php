@@ -16,6 +16,17 @@ return [
         ],
     ],
 
+    'disable_functions_presets' => [
+        'safe' => [
+            'title' => 'Recommandé',
+            'description' => 'Bloque tous les moyens d\'exécuter un programme depuis PHP — ce dont un web shell a besoin, et ce qu\'un site normal ne fait presque jamais.',
+        ],
+        'strict' => [
+            'title' => 'Strict',
+            'description' => 'Ajoute l\'inspection des processus, des utilisateurs et des sockets à la liste recommandée. Correspond au durcissement habituel de l\'hébergement mutualisé et peut casser un site utilisant l\'extension sockets.',
+        ],
+    ],
+
     'errors' => [
         'unsupported_stack' => 'Ce serveur utilise OpenLiteSpeed, qui n\'emploie pas de pools PHP-FPM.',
         'already_isolated' => 'Ce site a déjà son propre pool PHP.',

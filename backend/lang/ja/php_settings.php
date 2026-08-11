@@ -16,6 +16,17 @@ return [
         ],
     ],
 
+    'disable_functions_presets' => [
+        'safe' => [
+            'title' => '推奨',
+            'description' => 'PHP からプログラムを実行するあらゆる手段を遮断します。ウェブシェルが必要とするもので、通常のサイトがほとんど使わないものです。',
+        ],
+        'strict' => [
+            'title' => '厳格',
+            'description' => '推奨リストに加えて、プロセス・ユーザー・ソケットの情報取得も遮断します。共用ホスティングの一般的な強化設定に相当し、sockets 拡張を使うサイトでは動作しなくなる場合があります。',
+        ],
+    ],
+
     'errors' => [
         'unsupported_stack' => 'このサーバーは OpenLiteSpeed を使用しており、PHP-FPM プールはありません。',
         'already_isolated' => 'このサイトにはすでに専用の PHP プールがあります。',
