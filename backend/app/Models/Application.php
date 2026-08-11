@@ -160,6 +160,28 @@ class Application extends Model
         return $slug;
     }
 
+    /**
+     * The same collision handling for the name itself, for the names the panel
+     * derives rather than the user types — "<source> (Clone)" is the same
+     * string every time, and `name` is unique, so a second clone of one site
+     * would otherwise be a constraint violation surfacing as a 500.
+     *
+     * Only for derived names. A name the user typed is checked by validation
+     * instead: silently renaming what someone chose is worse than telling them
+     * it is taken.
+     */
+    public static function uniqueName(string $name): string
+    {
+        $candidate = $name;
+        $suffix = 2;
+
+        while (static::query()->where('name', $candidate)->exists()) {
+            $candidate = $name.' '.$suffix++;
+        }
+
+        return $candidate;
+    }
+
     /** Per-site additions to, and exemptions from, the built-in AI bot list. */
     public function botRules(): HasMany
     {

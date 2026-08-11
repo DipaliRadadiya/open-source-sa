@@ -63,10 +63,17 @@ class CloneManager
             throw new CloneOperationException((string) Str::uuid());
         }
 
-        $target = Application::create([
+        $name = $cloneRecord->name ?? Application::uniqueName("{$source->name} (Clone)");
+
+        // forceCreate, not create: `slug` is deliberately not fillable — it
+        // names the web-server config file the panel overwrites, so a client
+        // must never choose it — which means mass assignment drops it in
+        // silence and the site provisions into the system user's home.
+        $target = Application::forceCreate([
             'system_user_id' => $source->system_user_id,
             'cloned_from_application_id' => $source->id,
-            'name' => $cloneRecord->name ?? "{$source->name} (Clone)",
+            'name' => $name,
+            'slug' => Application::uniqueSlug($name),
             'domain' => $domain,
             'site_type' => $source->site_type,
             'serving_profile' => $source->serving_profile,
@@ -136,10 +143,15 @@ class CloneManager
 
         $source->load('systemUser');
 
-        $target = Application::create([
+        $cloneName = $name ?? Application::uniqueName("{$source->name} (Clone)");
+
+        // See the note on the other creation site: forceCreate, because `slug`
+        // is not fillable and a slug-less application has no document root.
+        $target = Application::forceCreate([
             'system_user_id' => $source->system_user_id,
             'cloned_from_application_id' => $source->id,
-            'name' => $name ?? "{$source->name} (Clone)",
+            'name' => $cloneName,
+            'slug' => Application::uniqueSlug($cloneName),
             'domain' => $domain,
             'site_type' => $source->site_type,
             'serving_profile' => $source->serving_profile,

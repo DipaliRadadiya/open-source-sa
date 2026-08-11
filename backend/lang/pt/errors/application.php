@@ -22,6 +22,7 @@ return [
     'bot_agent_too_broad' => 'Isso é demasiado geral — bloquearia também motores de pesquisa como o Google e o Bing. Use o nome completo do bot.',
     'bot_agent_search_engine' => 'Isso é um motor de pesquisa, não um rastreador de IA. Bloqueá-lo removeria o seu site dos resultados de pesquisa.',
     'web_root_failed' => 'Não foi possível alterar a raiz web no servidor.',
+    'web_root_not_found' => 'O diretório raiz web não foi encontrado no servidor. Verifique a raiz web nas definições da aplicação e volte a aprovisioná-la se nunca foi criada.',
     'waf_failed' => 'Não foi possível alterar as definições da firewall no servidor.',
     'staging_failed' => 'A operação de staging falhou no servidor.',
     'clone_failed' => 'A operação de clonagem falhou no servidor.',

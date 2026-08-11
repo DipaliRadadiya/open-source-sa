@@ -57,10 +57,16 @@ class StagingManager
             throw new StagingOperationException((string) Str::uuid());
         }
 
-        $staging = Application::create([
+        $name = Application::uniqueName("{$production->name} (Staging)");
+
+        // forceCreate, not create: `slug` is not fillable, and without one the
+        // staging site's document root collapses onto the system user's home
+        // — the same directory production's own clone would land in.
+        $staging = Application::forceCreate([
             'system_user_id' => $production->system_user_id,
             'production_application_id' => $production->id,
-            'name' => "{$production->name} (Staging)",
+            'name' => $name,
+            'slug' => Application::uniqueSlug($name),
             'domain' => $domain,
             'site_type' => $production->site_type,
             'serving_profile' => $production->serving_profile,

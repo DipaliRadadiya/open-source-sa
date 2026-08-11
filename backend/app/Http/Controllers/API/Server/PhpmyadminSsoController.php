@@ -5,7 +5,6 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Database\IssuePhpmyadminSsoToken;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\PhpmyadminSsoRequest;
-use App\Http\Resources\PhpmyadminSsoTokenResource;
 use App\Models\Database;
 use Illuminate\Http\JsonResponse;
 

@@ -22,6 +22,7 @@ return [
     'bot_agent_too_broad' => 'C\'est trop général — cela bloquerait aussi des moteurs de recherche comme Google et Bing. Utilisez le nom complet du robot.',
     'bot_agent_search_engine' => 'C\'est un moteur de recherche, pas un robot d\'IA. Le bloquer retirerait votre site des résultats de recherche.',
     'web_root_failed' => 'La modification de la racine web a échoué sur le serveur.',
+    'web_root_not_found' => 'Le répertoire racine web est introuvable sur le serveur. Vérifiez la racine web dans les paramètres de l\'application et reprovisionnez-la si elle n\'a jamais été créée.',
     'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
     'staging_failed' => 'L\'opération de staging a échoué sur le serveur.',
     'clone_failed' => 'L\'opération de clonage a échoué sur le serveur.',

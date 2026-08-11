@@ -7,6 +7,7 @@ use App\Models\DatabaseUser;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Applications\ApplicationProvisioner;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -86,6 +87,14 @@ it('creates a staging site with its own database, linked back to production', fu
         ->and($staging->production_application_id)->toBe($this->production->id)
         ->and($staging->site_type)->toBe('wordpress')
         ->and($staging->status->value)->toBe('active')
+        // Without a slug the document root collapses to the system user's
+        // home, which production's own clone would land in too. `slug` is not
+        // fillable, so mass assignment used to drop it here in silence.
+        ->and($staging->slug)->not->toBeNull()
+        ->and($staging->slug)->not->toBe($this->production->slug)
+        ->and(app(ApplicationProvisioner::class)
+            ->documentRoot($staging->load('systemUser')))
+        ->toBe("/home/siteowner/{$staging->slug}/public_html")
         ->and(Database::where('application_id', $staging->id)->exists())->toBeTrue()
         ->and(ActivityLog::where('type', 'application')->where('action', 'staging_created')->exists())->toBeTrue();
 

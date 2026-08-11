@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Exceptions\Server\CentralTokenException;
 use App\Services\Server\CentralTokenManager;
 use Closure;
 use Illuminate\Http\Request;
@@ -40,7 +41,7 @@ class CentralSystemGuard
 
         try {
             $this->tokens->validate($token);
-        } catch (\App\Exceptions\Server\CentralTokenException) {
+        } catch (CentralTokenException) {
             return response()->json(['message' => __('errors/central.invalid_token')], 401);
         }
 
