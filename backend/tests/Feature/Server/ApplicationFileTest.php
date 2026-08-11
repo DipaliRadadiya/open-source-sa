@@ -4,6 +4,7 @@ use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Applications\FileBrowser;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Process;
@@ -233,8 +234,40 @@ function fakeFileBrowserServer(): void
 
         $relative = fn (string $target): string => $target === $root ? '' : ltrim(substr($target, strlen($root)), '/');
 
-        if ($binary === 'find' && ($inner[2] ?? null) === '-maxdepth' && ($inner[3] ?? null) === '0') {
-            $rel = $relative($inner[1]);
+        // `-maxdepth 0` stats the named paths themselves. One target with
+        // `%y\t%s` is stat(); many with `%p\t%y\t%m` is statMany(), which
+        // real find answers in a single call — the whole point of bulk.
+        $maxdepth = array_search('-maxdepth', $inner, true);
+
+        if ($binary === 'find' && $maxdepth !== false && ($inner[$maxdepth + 1] ?? null) === '0') {
+            $targets = array_slice($inner, 1, $maxdepth - 1);
+            $format = $inner[array_search('-printf', $inner, true) + 1] ?? '';
+
+            if (str_starts_with($format, '%p')) {
+                $lines = [];
+
+                foreach ($targets as $target) {
+                    $rel = $relative($target);
+
+                    if (! array_key_exists($rel, FileBrowserFake::$fs)) {
+                        continue;
+                    }
+
+                    $entry = FileBrowserFake::$fs[$rel];
+                    $mode = $entry['mode'] ?? ($entry['type'] === 'd' ? '755' : '644');
+                    $lines[] = $target."\t".$entry['type']."\t".$mode;
+                }
+
+                // Real find still exits non-zero when any path was missing,
+                // while printing the ones that were there.
+                return Process::result(
+                    exitCode: count($lines) === count($targets) ? 0 : 1,
+                    output: $lines === [] ? '' : implode("\n", $lines)."\n",
+                    errorOutput: count($lines) === count($targets) ? '' : 'No such file or directory',
+                );
+            }
+
+            $rel = $relative($targets[0] ?? '');
 
             if (! array_key_exists($rel, FileBrowserFake::$fs)) {
                 return Process::result(exitCode: 1, errorOutput: 'No such file or directory');
@@ -436,8 +469,13 @@ function fakeFileBrowserServer(): void
         }
 
         if ($binary === 'chmod') {
-            $rel = $relative($inner[2]);
-            FileBrowserFake::$fs[$rel]['mode'] = $inner[1];
+            foreach (array_slice($inner, 2) as $target) {
+                $rel = $relative($target);
+
+                if (array_key_exists($rel, FileBrowserFake::$fs)) {
+                    FileBrowserFake::$fs[$rel]['mode'] = $inner[1];
+                }
+            }
 
             return Process::result(exitCode: 0);
         }
@@ -449,35 +487,33 @@ function fakeFileBrowserServer(): void
             return Process::result(exitCode: 0);
         }
 
-        if ($binary === 'mv') {
-            $sourceRel = $relative($inner[1]);
-            $targetRel = $relative($inner[2]);
+        if ($binary === 'mv' || $binary === 'cp') {
+            // Last argument is the destination. When it is an existing
+            // directory each source lands inside it under its own name, which
+            // is how the real tools behave and how a bulk move is expressed;
+            // otherwise it is a full target path for the single source.
+            $arguments = array_slice($inner, $binary === 'cp' ? 2 : 1);
+            $destination = $relative(array_pop($arguments));
+            $intoDirectory = (FileBrowserFake::$fs[$destination]['type'] ?? null) === 'd';
 
-            foreach (FileBrowserFake::$fs as $path => $entry) {
-                if ($path === $sourceRel) {
-                    FileBrowserFake::$fs[$targetRel] = $entry;
-                    unset(FileBrowserFake::$fs[$path]);
-                } elseif (str_starts_with($path, "{$sourceRel}/")) {
-                    $moved = $targetRel.substr($path, strlen($sourceRel));
-                    FileBrowserFake::$fs[$moved] = $entry;
-                    unset(FileBrowserFake::$fs[$path]);
-                }
-            }
+            foreach ($arguments as $argument) {
+                $sourceRel = $relative($argument);
+                $targetRel = $intoDirectory
+                    ? ltrim($destination.'/'.basename($sourceRel), '/')
+                    : $destination;
 
-            return Process::result(exitCode: 0);
-        }
+                foreach (FileBrowserFake::$fs as $path => $entry) {
+                    if ($path === $sourceRel) {
+                        FileBrowserFake::$fs[$targetRel] = $entry;
+                    } elseif (str_starts_with($path, "{$sourceRel}/")) {
+                        FileBrowserFake::$fs[$targetRel.substr($path, strlen($sourceRel))] = $entry;
+                    } else {
+                        continue;
+                    }
 
-        if ($binary === 'cp') {
-            // ['cp', '-r', $source, $target]
-            $sourceRel = $relative($inner[2]);
-            $targetRel = $relative($inner[3]);
-
-            foreach (FileBrowserFake::$fs as $path => $entry) {
-                if ($path === $sourceRel) {
-                    FileBrowserFake::$fs[$targetRel] = $entry;
-                } elseif (str_starts_with($path, "{$sourceRel}/")) {
-                    $copied = $targetRel.substr($path, strlen($sourceRel));
-                    FileBrowserFake::$fs[$copied] = $entry;
+                    if ($binary === 'mv') {
+                        unset(FileBrowserFake::$fs[$path]);
+                    }
                 }
             }
 
@@ -492,12 +528,15 @@ function fakeFileBrowserServer(): void
         }
 
         if ($binary === 'rm') {
-            $target = $inner[1] === '-rf' || $inner[1] === '-f' ? $inner[2] : $inner[1];
-            $targetRel = $relative($target);
+            $flagged = in_array($inner[1] ?? '', ['-rf', '-f'], true);
 
-            foreach (array_keys(FileBrowserFake::$fs) as $path) {
-                if ($path === $targetRel || str_starts_with($path, "{$targetRel}/")) {
-                    unset(FileBrowserFake::$fs[$path]);
+            foreach (array_slice($inner, $flagged ? 2 : 1) as $target) {
+                $targetRel = $relative($target);
+
+                foreach (array_keys(FileBrowserFake::$fs) as $path) {
+                    if ($path === $targetRel || str_starts_with($path, "{$targetRel}/")) {
+                        unset(FileBrowserFake::$fs[$path]);
+                    }
                 }
             }
 
@@ -1561,5 +1600,218 @@ describe('setting permissions on one file', function () {
         $this->actingAs($user)
             ->putJson(filesUrl('/permissions'), ['path' => 'index.php', 'mode' => '644'])
             ->assertForbidden();
+    });
+});
+
+/*
+ * Bulk operations.
+ *
+ * The point is not only the UX. Every action used to take one path, so
+ * clearing a cache directory of 200 files meant 200 requests, each spawning
+ * its own `runuser` process to stat and another to act — and the delete
+ * endpoint is throttled at 10/min, so it could not be done at all. These
+ * assert the two things that make a batch trustworthy: it really is one
+ * command, and a batch that partly fails says exactly which parts.
+ */
+describe('bulk operations', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['cache'] = ['type' => 'd'];
+        FileBrowserFake::$fs['cache/a.txt'] = ['type' => 'f', 'size' => 1];
+        FileBrowserFake::$fs['cache/b.txt'] = ['type' => 'f', 'size' => 1];
+        FileBrowserFake::$fs['cache/sub'] = ['type' => 'd'];
+        FileBrowserFake::$fs['cache/sub/deep.txt'] = ['type' => 'f', 'size' => 1];
+        FileBrowserFake::$fs['keep'] = ['type' => 'd'];
+    });
+
+    it('deletes a whole selection in one pair of commands', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), [
+                'paths' => ['cache/a.txt', 'cache/b.txt', 'cache/sub'],
+                'confirm' => true,
+                'count' => 3,
+            ])
+            ->assertOk()
+            ->assertJsonPath('deleted', true)
+            ->assertJsonPath('failed', []);
+
+        expect(FileBrowserFake::$fs)->not->toHaveKey('cache/a.txt')
+            ->and(FileBrowserFake::$fs)->not->toHaveKey('cache/b.txt')
+            ->and(FileBrowserFake::$fs)->not->toHaveKey('cache/sub/deep.txt')
+            ->and(FileBrowserFake::$fs)->toHaveKey('cache');
+
+        // Directories and files go through separate commands: `delete()` has
+        // always used -r only for a directory, and a blanket -rf would widen
+        // what one mistaken path can destroy.
+        $removals = collect(FileBrowserFake::$ran)->filter(fn (string $c) => str_contains($c, ' rm '));
+
+        expect($removals)->toHaveCount(2)
+            ->and($removals->first(fn (string $c) => str_contains($c, '-rf')))->toContain('cache/sub')
+            ->and($removals->first(fn (string $c) => str_contains($c, '-f ') && ! str_contains($c, '-rf')))
+            ->toContain('cache/a.txt')
+            ->toContain('cache/b.txt');
+    });
+
+    it('reports each path that failed and still does the rest', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), [
+                'paths' => ['cache/a.txt', 'cache/gone.txt', 'cache/b.txt'],
+                'confirm' => true,
+                'count' => 3,
+            ])
+            ->assertOk();
+
+        expect($response->json('deleted'))->toBeFalse()
+            ->and($response->json('succeeded'))->toEqualCanonicalizing(['cache/a.txt', 'cache/b.txt'])
+            ->and($response->json('failed'))->toBe([['path' => 'cache/gone.txt', 'reason' => 'not_found']]);
+
+        // The two that existed are gone: one bad path does not abandon the batch.
+        expect(FileBrowserFake::$fs)->not->toHaveKey('cache/a.txt')
+            ->and(FileBrowserFake::$fs)->not->toHaveKey('cache/b.txt');
+    });
+
+    it('refuses when the confirmed count disagrees with the selection', function () {
+        fakeFileBrowserServer();
+
+        // The realistic bulk-delete accident: a stale checkbox means the
+        // selection is not what the user is looking at. `confirm` cannot
+        // catch it — it is true either way.
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), [
+                'paths' => ['cache/a.txt', 'cache/b.txt'],
+                'confirm' => true,
+                'count' => 1,
+            ])
+            ->assertStatus(422);
+
+        expect(FileBrowserFake::$fs)->toHaveKey('cache/a.txt');
+    });
+
+    it('refuses more paths than one argument vector can carry', function () {
+        fakeFileBrowserServer();
+
+        $paths = array_map(fn (int $i): string => "cache/f{$i}.txt", range(1, FileBrowser::MAX_BULK_PATHS + 1));
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['paths' => $paths, 'confirm' => true, 'count' => count($paths)])
+            ->assertStatus(422);
+    });
+
+    it('validates every path in a selection, not just the first', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), [
+                'paths' => ['cache/a.txt', '../../../etc/passwd'],
+                'confirm' => true,
+                'count' => 2,
+            ])
+            ->assertStatus(422);
+
+        expect(FileBrowserFake::$fs)->toHaveKey('cache/a.txt');
+    });
+
+    it('moves a selection into a directory', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), [
+                'paths' => ['cache/a.txt', 'cache/b.txt'],
+                'target_directory' => 'keep',
+            ])
+            ->assertOk()
+            ->assertJsonPath('renamed', true);
+
+        expect(FileBrowserFake::$fs)->toHaveKey('keep/a.txt')
+            ->and(FileBrowserFake::$fs)->toHaveKey('keep/b.txt')
+            ->and(FileBrowserFake::$fs)->not->toHaveKey('cache/a.txt');
+    });
+
+    it('copies a selection without moving it', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), [
+                'paths' => ['cache/a.txt', 'cache/sub'],
+                'target_directory' => 'keep',
+            ])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('keep/a.txt')
+            ->and(FileBrowserFake::$fs)->toHaveKey('keep/sub/deep.txt')
+            // Still where it started, unlike a move.
+            ->and(FileBrowserFake::$fs)->toHaveKey('cache/a.txt');
+    });
+
+    it('refuses to overwrite something already at the destination', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['keep/a.txt'] = ['type' => 'f', 'size' => 99];
+
+        $response = $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), [
+                'paths' => ['cache/a.txt', 'cache/b.txt'],
+                'target_directory' => 'keep',
+            ])
+            ->assertOk();
+
+        // The single-path form has always refused rather than overwritten; a
+        // selection must not become the way around that.
+        expect($response->json('failed'))->toBe([['path' => 'cache/a.txt', 'reason' => 'exists']])
+            ->and($response->json('succeeded'))->toBe(['cache/b.txt'])
+            ->and(FileBrowserFake::$fs['keep/a.txt']['size'])->toBe(99)
+            ->and(FileBrowserFake::$fs)->toHaveKey('cache/a.txt');
+    });
+
+    it('chmods a selection in one command and verifies the mode landed', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/permissions'), [
+                'paths' => ['cache/a.txt', 'cache/b.txt'],
+                'mode' => '600',
+            ])
+            ->assertOk()
+            ->assertJsonPath('chmoded', true);
+
+        expect(FileBrowserFake::$fs['cache/a.txt']['mode'])->toBe('600')
+            ->and(FileBrowserFake::$fs['cache/b.txt']['mode'])->toBe('600')
+            ->and(collect(FileBrowserFake::$ran)->filter(fn (string $c) => str_contains($c, ' chmod ')))
+            ->toHaveCount(1);
+    });
+
+    it('zips a selection from one folder', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), [
+                'paths' => ['cache/a.txt', 'cache/b.txt'],
+                'target' => 'cache/bundle.zip',
+            ])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('cache/bundle.zip');
+
+        // Bare names, run from their shared parent — otherwise the archive
+        // contains the whole absolute path.
+        $zip = collect(FileBrowserFake::$ran)->first(fn (string $c) => str_contains($c, ' zip '));
+
+        expect($zip)->toEndWith('a.txt b.txt');
+    });
+
+    it('refuses to zip sources spread across folders', function () {
+        fakeFileBrowserServer();
+
+        // There is no single directory to run `zip` from, so there is no way
+        // to produce bare names for both.
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), [
+                'paths' => ['cache/a.txt', 'cache/sub/deep.txt'],
+                'target' => 'cache/bundle.zip',
+            ])
+            ->assertStatus(422);
     });
 });

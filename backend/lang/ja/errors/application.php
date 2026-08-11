@@ -51,4 +51,6 @@ return [
     'upload_directory_missing' => 'このアップロード先のフォルダーは存在しなくなりました。',
     'upload_insufficient_space' => 'このアップロードに必要な空きディスク容量がサーバーにありません。',
 
+    'bulk_count_mismatch' => '確認した件数が、選択されている項目の数と一致しません。',
+    'sources_not_in_one_directory' => '圧縮する項目はすべて同じフォルダー内にある必要があります。',
 ];

@@ -51,4 +51,6 @@ return [
     'upload_directory_missing' => 'Der Ordner für diesen Upload existiert nicht mehr.',
     'upload_insufficient_space' => 'Auf dem Server ist nicht genügend freier Speicherplatz für diesen Upload vorhanden.',
 
+    'bulk_count_mismatch' => 'Die bestätigte Anzahl stimmt nicht mit der Anzahl der ausgewählten Elemente überein.',
+    'sources_not_in_one_directory' => 'Alle zu komprimierenden Elemente müssen im selben Ordner liegen.',
 ];

@@ -51,4 +51,6 @@ return [
     'upload_directory_missing' => 'Le dossier de destination de cet envoi n\'existe plus.',
     'upload_insufficient_space' => 'Le serveur ne dispose pas d\'assez d\'espace disque libre pour cet envoi.',
 
+    'bulk_count_mismatch' => 'Le nombre que vous avez confirmé ne correspond pas au nombre d\'éléments sélectionnés.',
+    'sources_not_in_one_directory' => 'Tous les éléments à compresser doivent se trouver dans le même dossier.',
 ];

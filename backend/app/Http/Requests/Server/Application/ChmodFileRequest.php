@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests\Server\Application;
 
-use App\Rules\SafeRelativePath;
+use App\Http\Requests\Server\Application\Concerns\AcceptsManyPaths;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ChmodFileRequest extends FormRequest
 {
+    use AcceptsManyPaths;
+
     public function authorize(): bool
     {
         return $this->user()?->canManage('app_file') ?? false;
@@ -17,12 +19,11 @@ class ChmodFileRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'path' => ['required', 'string', 'max:1024', new SafeRelativePath],
+        return array_merge($this->pathRules(), [
             // Exactly 3 octal digits — no setuid/setgid/sticky. See
             // FileBrowser::chmod() for why a fourth digit is refused.
             'mode' => ['required', 'string', 'regex:/^[0-7]{3}$/'],
-        ];
+        ]);
     }
 
     public function targetPath(): string

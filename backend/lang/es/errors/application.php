@@ -51,4 +51,6 @@ return [
     'upload_directory_missing' => 'La carpeta de destino de esta subida ya no existe.',
     'upload_insufficient_space' => 'El servidor no tiene suficiente espacio libre en disco para esta subida.',
 
+    'bulk_count_mismatch' => 'El número que confirmaste no coincide con la cantidad de elementos seleccionados.',
+    'sources_not_in_one_directory' => 'Todos los elementos que se van a comprimir deben estar en la misma carpeta.',
 ];

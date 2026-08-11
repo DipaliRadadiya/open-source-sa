@@ -172,15 +172,20 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $files->rename($application, $request->sourcePath(), $request->targetPath());
+        $paths = $request->selectedPaths();
+
+        $result = $request->isBulk()
+            ? $files->transferMany($application, $paths, $request->targetDirectory(), move: true)
+            : $this->single(fn () => $files->rename($application, $paths[0], $request->targetPath()), $paths[0]);
 
         $activity->log('application.file_renamed', $application, [
             'name' => $application->name,
-            'path' => $request->sourcePath(),
-            'target' => $request->targetPath(),
+            'path' => $paths[0],
+            'target' => $request->isBulk() ? $request->targetDirectory() : $request->targetPath(),
+            'count' => count($paths),
         ]);
 
-        return response()->json(['renamed' => true]);
+        return response()->json(array_merge(['renamed' => $result['failed'] === []], $result));
     }
 
     public function copy(
@@ -189,15 +194,20 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $files->copy($application, $request->sourcePath(), $request->targetPath());
+        $paths = $request->selectedPaths();
+
+        $result = $request->isBulk()
+            ? $files->transferMany($application, $paths, $request->targetDirectory(), move: false)
+            : $this->single(fn () => $files->copy($application, $paths[0], $request->targetPath()), $paths[0]);
 
         $activity->log('application.file_copied', $application, [
             'name' => $application->name,
-            'path' => $request->sourcePath(),
-            'target' => $request->targetPath(),
+            'path' => $paths[0],
+            'target' => $request->isBulk() ? $request->targetDirectory() : $request->targetPath(),
+            'count' => count($paths),
         ]);
 
-        return response()->json(['copied' => true]);
+        return response()->json(array_merge(['copied' => $result['failed'] === []], $result));
     }
 
     public function compress(
@@ -206,15 +216,37 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $files->compress($application, $request->sourcePath(), $request->targetPath());
+        $paths = $request->selectedPaths();
+
+        $request->isBulk()
+            ? $files->compressMany($application, $paths, $request->targetPath())
+            : $files->compress($application, $paths[0], $request->targetPath());
 
         $activity->log('application.files_compressed', $application, [
             'name' => $application->name,
-            'path' => $request->sourcePath(),
+            'path' => $paths[0],
             'target' => $request->targetPath(),
+            'count' => count($paths),
         ]);
 
         return response()->json(['compressed' => true]);
+    }
+
+    /**
+     * Wraps a single-path operation in the per-path result shape.
+     *
+     * The single form still aborts on failure rather than reporting it — a
+     * caller who named one file wants the status code, not a list with one
+     * entry in it. This only makes the successful response the same shape as
+     * the bulk one, so a client can read one field either way.
+     *
+     * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
+     */
+    private function single(callable $operation, string $path): array
+    {
+        $operation();
+
+        return ['succeeded' => [$path], 'failed' => []];
     }
 
     public function chmod(
@@ -223,15 +255,20 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $files->chmod($application, $request->targetPath(), $request->mode());
+        $paths = $request->selectedPaths();
+
+        $result = $request->isBulk()
+            ? $files->chmodMany($application, $paths, $request->mode())
+            : $this->single(fn () => $files->chmod($application, $paths[0], $request->mode()), $paths[0]);
 
         $activity->log('application.file_chmod', $application, [
             'name' => $application->name,
-            'path' => $request->targetPath(),
+            'path' => $paths[0],
             'mode' => $request->mode(),
+            'count' => count($paths),
         ]);
 
-        return response()->json(['chmoded' => true]);
+        return response()->json(array_merge(['chmoded' => $result['failed'] === []], $result));
     }
 
     public function destroy(
@@ -240,14 +277,22 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $files->delete($application, $request->targetPath());
+        $paths = $request->selectedPaths();
 
+        $result = $request->isBulk()
+            ? $files->deleteMany($application, $paths)
+            : $this->single(fn () => $files->delete($application, $paths[0]), $paths[0]);
+
+        // One entry for the whole operation, with the count. N entries would
+        // bury every other kind of activity the moment someone clears a cache
+        // directory.
         $activity->log('application.file_deleted', $application, [
             'name' => $application->name,
-            'path' => $request->targetPath(),
+            'path' => $paths[0],
+            'count' => count($paths),
         ]);
 
-        return response()->json(['deleted' => true]);
+        return response()->json(array_merge(['deleted' => $result['failed'] === []], $result));
     }
 
     public function download(BrowseFilesRequest $request, Application $application, FileBrowser $files): StreamedResponse

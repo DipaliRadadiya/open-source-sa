@@ -51,4 +51,6 @@ return [
     'upload_directory_missing' => 'The folder this upload was going to no longer exists.',
     'upload_insufficient_space' => 'The server does not have enough free disk space for this upload.',
 
+    'bulk_count_mismatch' => 'The number you confirmed does not match how many items are selected.',
+    'sources_not_in_one_directory' => 'All the items to compress must be in the same folder.',
 ];

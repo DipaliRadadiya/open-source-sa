@@ -51,4 +51,6 @@ return [
     'upload_directory_missing' => 'A pasta de destino deste envio já não existe.',
     'upload_insufficient_space' => 'O servidor não tem espaço livre em disco suficiente para este envio.',
 
+    'bulk_count_mismatch' => 'O número que confirmou não corresponde à quantidade de itens selecionados.',
+    'sources_not_in_one_directory' => 'Todos os itens a comprimir têm de estar na mesma pasta.',
 ];

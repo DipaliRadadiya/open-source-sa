@@ -58,6 +58,16 @@ class FileBrowser
      * with a `truncated` flag so the caller knows there's more. */
     public const MAX_SEARCH_RESULTS = 200;
 
+    /**
+     * How many paths one bulk request may name.
+     *
+     * `rm`/`chmod`/`cp` take a list natively, but an argument vector has a
+     * kernel limit (ARG_MAX) and crossing it fails obscurely, mid-operation,
+     * with some paths already handled. A refusal the caller can read beats a
+     * truncation it cannot see.
+     */
+    public const MAX_BULK_PATHS = 250;
+
     private const BINARY_SNIFF_BYTES = 8192;
 
     public function __construct(
@@ -812,6 +822,296 @@ class FileBrowser
         }
 
         return $result;
+    }
+
+    /**
+     * Stats many paths in one command.
+     *
+     * The reason bulk operations are worth having at all: statting N paths
+     * one at a time is N processes before any work starts, which is most of
+     * what made deleting a selection slow enough to be unusable.
+     *
+     * `find` reports a missing path on stderr and exits non-zero while still
+     * processing the rest, so the exit code is deliberately ignored — absence
+     * from the output *is* the answer for a path that is not there.
+     *
+     * @param  list<string>  $paths  relative to the document root
+     * @return array<string, array{type: string, mode: string}> keyed by relative path
+     */
+    private function statMany(Application $application, array $paths): array
+    {
+        if ($paths === []) {
+            return [];
+        }
+
+        $root = rtrim($this->provisioner->documentRoot($application), '/');
+        $targets = array_map(fn (string $path): string => $this->resolve($application, $path), $paths);
+
+        $result = $this->serverOps->run(
+            $this->asUser($application, array_merge(
+                ['find'], $targets, ['-maxdepth', '0', '-printf', "%p\t%y\t%m\n"],
+            )),
+            ['feature' => 'application', 'op' => 'file_stat_many', 'application' => $application->id],
+            timeout: 60,
+        );
+
+        $found = [];
+
+        foreach (explode("\n", trim($result->output())) as $line) {
+            if ($line === '') {
+                continue;
+            }
+
+            [$absolute, $type, $mode] = array_pad(explode("\t", $line, 3), 3, '');
+
+            $relative = $absolute === $root ? '' : ltrim(substr($absolute, strlen($root)), '/');
+            $found[$relative] = ['type' => $type, 'mode' => $mode];
+        }
+
+        return $found;
+    }
+
+    /**
+     * Deletes many paths, reporting the outcome of each.
+     *
+     * Files and directories are separated rather than sent through one
+     * `rm -rf`: `delete()` has always used `-f` for a file and `-r` only for a
+     * directory, and doing a bulk delete with a blanket `-r` would quietly
+     * widen what a single mistaken path can destroy.
+     *
+     * The result is derived by re-statting afterwards rather than by reading
+     * `rm`'s stderr. `rm` reports failures it can attribute and stays silent
+     * about ones it cannot; what is actually on disk afterwards is the only
+     * answer that cannot be wrong.
+     *
+     * @param  list<string>  $paths
+     * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
+     */
+    public function deleteMany(Application $application, array $paths): array
+    {
+        $this->assertRootExists($application);
+
+        // The site root is not a path the file manager may delete, in bulk or
+        // otherwise -- it would take the document root with it.
+        abort_if(in_array('', $paths, true), 422, __('errors/application.cannot_delete_root'));
+
+        $found = $this->statMany($application, $paths);
+        $failed = $this->missing($paths, $found);
+
+        $directories = [];
+        $files = [];
+
+        foreach (array_keys($found) as $relative) {
+            $target = $this->resolve($application, $relative);
+            $found[$relative]['type'] === 'd' ? $directories[] = $target : $files[] = $target;
+        }
+
+        if ($directories !== []) {
+            $this->tolerant($application, array_merge(['rm', '-rf'], $directories), 'delete_many');
+        }
+
+        if ($files !== []) {
+            $this->tolerant($application, array_merge(['rm', '-f'], $files), 'delete_many');
+        }
+
+        $remaining = $this->statMany($application, array_keys($found));
+        $succeeded = [];
+
+        foreach (array_keys($found) as $relative) {
+            if (array_key_exists($relative, $remaining)) {
+                $failed[] = ['path' => $relative, 'reason' => 'failed'];
+
+                continue;
+            }
+
+            $succeeded[] = $relative;
+        }
+
+        return ['succeeded' => $succeeded, 'failed' => $failed];
+    }
+
+    /**
+     * Copies or moves many paths into one directory.
+     *
+     * A destination *directory*, not a target path per source: "put these
+     * twelve in here" is the operation a selection expresses, and a per-source
+     * target would need the caller to name twelve of them.
+     *
+     * @param  list<string>  $paths
+     * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
+     */
+    public function transferMany(Application $application, array $paths, string $targetDirectory, bool $move): array
+    {
+        $this->assertRootExists($application);
+
+        $destination = $this->resolve($application, $targetDirectory);
+        $this->assertType($application, $destination, 'd');
+
+        $found = $this->statMany($application, $paths);
+        $failed = $this->missing($paths, $found);
+
+        // A destination that is already occupied is refused rather than
+        // overwritten -- the same rule `copy()` and `rename()` already apply
+        // to a single path, kept here so a bulk move cannot destroy something
+        // a single move would have protected.
+        $landing = [];
+
+        foreach (array_keys($found) as $relative) {
+            $landing[$relative] = ltrim($targetDirectory.'/'.basename($relative), '/');
+        }
+
+        $occupied = $this->statMany($application, array_values($landing));
+        $sources = [];
+
+        foreach ($landing as $relative => $target) {
+            if (array_key_exists($target, $occupied)) {
+                $failed[] = ['path' => $relative, 'reason' => 'exists'];
+
+                continue;
+            }
+
+            $sources[$relative] = $this->resolve($application, $relative);
+        }
+
+        if ($sources !== []) {
+            $this->tolerant(
+                $application,
+                array_merge($move ? ['mv'] : ['cp', '-r'], array_values($sources), [$destination]),
+                $move ? 'move_many' : 'copy_many',
+            );
+        }
+
+        $arrived = $this->statMany($application, array_map(fn (string $r): string => $landing[$r], array_keys($sources)));
+        $succeeded = [];
+
+        foreach (array_keys($sources) as $relative) {
+            if (array_key_exists($landing[$relative], $arrived)) {
+                $succeeded[] = $relative;
+
+                continue;
+            }
+
+            $failed[] = ['path' => $relative, 'reason' => 'failed'];
+        }
+
+        return ['succeeded' => $succeeded, 'failed' => $failed];
+    }
+
+    /**
+     * @param  list<string>  $paths
+     * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
+     */
+    public function chmodMany(Application $application, array $paths, string $mode): array
+    {
+        $this->assertRootExists($application);
+
+        $found = $this->statMany($application, $paths);
+        $failed = $this->missing($paths, $found);
+
+        $targets = array_map(
+            fn (string $relative): string => $this->resolve($application, $relative),
+            array_keys($found),
+        );
+
+        if ($targets !== []) {
+            $this->tolerant($application, array_merge(['chmod', $mode], $targets), 'chmod_many');
+        }
+
+        // Verified against the mode actually on disk, which is why statMany
+        // reads `%m` at all.
+        $after = $this->statMany($application, array_keys($found));
+        $succeeded = [];
+
+        foreach (array_keys($found) as $relative) {
+            if (ltrim($after[$relative]['mode'] ?? '', '0') === ltrim($mode, '0')) {
+                $succeeded[] = $relative;
+
+                continue;
+            }
+
+            $failed[] = ['path' => $relative, 'reason' => 'failed'];
+        }
+
+        return ['succeeded' => $succeeded, 'failed' => $failed];
+    }
+
+    /**
+     * Zips many paths into one archive.
+     *
+     * Every source must sit in the same directory. `zip` is run from that
+     * directory with bare names so the archive contains `style.css` rather
+     * than `home/siteowner/shop/public_html/style.css` — the same reason
+     * `compress()` already passes a `cwd` — and there is no single directory
+     * to run from once the sources are spread across the tree.
+     *
+     * @param  list<string>  $paths
+     */
+    public function compressMany(Application $application, array $paths, string $targetPath): void
+    {
+        $this->assertRootExists($application);
+
+        abort_unless(str_ends_with(strtolower($targetPath), '.zip'), 422, __('errors/application.target_not_zip'));
+
+        $parents = array_unique(array_map(
+            fn (string $path): string => trim(dirname('/'.$path), '/'),
+            $paths,
+        ));
+
+        abort_if(count($parents) > 1, 422, __('errors/application.sources_not_in_one_directory'));
+
+        $found = $this->statMany($application, $paths);
+
+        abort_if(count($found) !== count(array_unique($paths)), 404);
+
+        $target = $this->resolve($application, $targetPath);
+        abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
+        $this->assertType($application, dirname($target), 'd');
+
+        $this->run(
+            $application,
+            array_merge(['zip', '-r', $target], array_map('basename', $paths)),
+            'compress_many',
+            cwd: $this->resolve($application, reset($parents) ?: ''),
+        );
+    }
+
+    /**
+     * The paths that were asked for but are not on disk.
+     *
+     * @param  list<string>  $paths
+     * @param  array<string, array{type: string, mode: string}>  $found
+     * @return list<array{path: string, reason: string}>
+     */
+    private function missing(array $paths, array $found): array
+    {
+        $missing = [];
+
+        foreach (array_unique($paths) as $path) {
+            if (! array_key_exists($path, $found)) {
+                $missing[] = ['path' => $path, 'reason' => 'not_found'];
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Runs a command whose failure is reported per path rather than thrown.
+     *
+     * `run()` turns a non-zero exit into a FileOperationException, which is
+     * right when one path was asked for and wrong here: `rm` on twelve paths
+     * exits non-zero if one of them fails, and throwing would report eleven
+     * successful deletions as a server error.
+     *
+     * @param  array<int, string>  $command
+     */
+    private function tolerant(Application $application, array $command, string $op): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            $this->asUser($application, $command),
+            ['feature' => 'application', 'op' => "file_{$op}", 'application' => $application->id],
+            timeout: 300,
+        );
     }
 
     /**
