@@ -165,7 +165,7 @@ class BackupController extends Controller
             ]);
         }
 
-        RunBackup::dispatch($target->id, request()->user()?->id)->onQueue('backups');
+        RunBackup::dispatch($target->id, request()->user()?->id);
 
         return response()->json([
             'backup_target' => BackupTargetResource::make($target->fresh(['storageDestination']))->resolve(),
@@ -302,7 +302,7 @@ class BackupController extends Controller
             ]);
         }
 
-        RunBackup::dispatch($target->id, request()->user()?->id)->onQueue('backups');
+        RunBackup::dispatch($target->id, request()->user()?->id);
 
         return response()->json([
             'backup_target' => BackupTargetResource::make($target->fresh(['storageDestination']))->resolve(),

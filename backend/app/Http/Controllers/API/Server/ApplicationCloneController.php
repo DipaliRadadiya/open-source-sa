@@ -55,7 +55,7 @@ class ApplicationCloneController extends Controller
             'status' => CloneStatus::Pending,
         ]);
 
-        RunClone::dispatch($clone->id, $application->id)->onQueue('default');
+        RunClone::dispatch($clone->id, $application->id);
 
         return response()->json([
             'clone' => CloneResource::make($clone)->resolve(),

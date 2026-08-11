@@ -46,7 +46,7 @@ class RestoreController extends Controller
             'reference' => (string) Str::uuid(),
         ]);
 
-        RunRestore::dispatch($restore->id, $backup->application_id)->onQueue('backups');
+        RunRestore::dispatch($restore->id, $backup->application_id);
 
         return response()->json([
             'restore' => RestoreResource::make($restore)->resolve(),

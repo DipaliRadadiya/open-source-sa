@@ -23,6 +23,11 @@ use Throwable;
  *
  * Unique per target, so a manual run started while the scheduled one is still
  * going cannot produce two archives of the same site at once.
+ *
+ * Dispatched to the default queue, deliberately: the installer runs a single
+ * `queue:work` with no `--queue`, so that is the only queue anything drains.
+ * This job used to go to a `backups` queue that no worker consumed, which is
+ * why scheduled backups never ran on any real install.
  */
 class RunBackup implements ShouldBeUnique, ShouldQueue
 {

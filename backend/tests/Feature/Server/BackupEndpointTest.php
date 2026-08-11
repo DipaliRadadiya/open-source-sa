@@ -128,7 +128,15 @@ describe('running a backup', function () {
             // exist until a worker picks it up.
             ->assertStatus(202);
 
-        Queue::assertPushed(RunBackup::class);
+        // The queue, not just the job. `assertPushed` alone passes for a job
+        // sent anywhere, which is how this shipped pointing at a `backups`
+        // queue that no worker consumed — every backup was accepted, stored
+        // and never run, with no error to show for it.
+        //
+        // Null rather than 'default': naming no queue is what makes the job
+        // land on the connection's default, and it is the bare `queue:work`
+        // in install.sh that drains it.
+        Queue::assertPushed(RunBackup::class, fn (RunBackup $job): bool => $job->queue === null);
     });
 
     it('refuses when backups are not configured', function () {

@@ -37,7 +37,7 @@ class RunScheduledBackups extends Command
             // Not marked as run here: the runner sets last_run_at when it
             // finishes, success or failure. Marking it now would mean a job
             // that never reached a worker looked like a completed backup.
-            RunBackup::dispatch($target->id)->onQueue('backups');
+            RunBackup::dispatch($target->id);
         }
 
         if ($due->isNotEmpty()) {

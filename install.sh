@@ -1274,6 +1274,10 @@ Type=simple
 User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${backend}
+# No --queue, so this consumes `default` and nothing else. Jobs must
+# therefore not name a queue: one sent elsewhere is accepted, stored and
+# never run -- no error, no failed_jobs row, it simply never happens.
+# Backups shipped that way and never once executed on a real install.
 ExecStart=/usr/bin/php${PHP_VERSION} ${backend}/artisan queue:work --sleep=3 --tries=1 --max-time=3600
 Restart=always
 RestartSec=5
