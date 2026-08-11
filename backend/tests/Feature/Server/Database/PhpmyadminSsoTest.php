@@ -4,14 +4,20 @@ use App\Enums\ApplicationStatus;
 use App\Models\Application;
 use App\Models\Database;
 use App\Models\DatabaseUser;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    // Without the catalog there are no permissions to grant, so every
+    // authorisation check below would be testing an empty set.
+    $this->seed(PermissionSeeder::class);
+
     $this->user = User::factory()->create();
     $this->actingAs($this->user);
 
@@ -22,14 +28,27 @@ beforeEach(function () {
     $this->pmaApp = Application::factory()->create([
         'site_type' => 'phpmyadmin',
         'domain' => 'pma.example.com',
-        'status' => ApplicationStatus::Running,
+        'status' => ApplicationStatus::Active,
     ]);
 });
 
+/**
+ * Uses the suite's shared helper rather than a local one: permissions are
+ * granted through a role, and the pivot carries `view`/`manage`. Syncing a
+ * permission *name* as if it were an id silently attaches nothing (or, on
+ * SQLite, trips the foreign key).
+ */
+/**
+ * Permissions are role-based, and the pivot carries `view`/`manage` — a bare
+ * `sync(['database'])` passes a permission *name* where an id belongs, so it
+ * attaches nothing and trips the foreign key on the way past.
+ */
 function grantDatabasePermission(User $user): void
 {
     $role = Role::factory()->create(['is_system' => false]);
-    $role->permissions()->sync(['database']);
+    $permission = Permission::firstWhere('name', 'database');
+
+    $role->permissions()->attach($permission->id, ['view' => true, 'manage' => true]);
     $user->roles()->sync([$role->id]);
 }
 
@@ -89,11 +108,11 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
     it('returns 422 when no phpMyAdmin site is deployed', function () {
         grantDatabasePermission($this->user);
 
-        // Create a stopped/removed PMA app instead of a running one.
-        Application::factory()->create([
-            'site_type' => 'phpmyadmin',
-            'status' => ApplicationStatus::Stopped,
-        ]);
+        // The only phpMyAdmin site is one that never finished provisioning:
+        // the record exists but nothing is being served, so SSO has nowhere
+        // to send the user. There is no "stopped" status — a site is Pending,
+        // Provisioning, Active or Failed.
+        $this->pmaApp->update(['status' => ApplicationStatus::Failed]);
 
         DatabaseUser::factory()->create(['database_id' => $this->database->id]);
 

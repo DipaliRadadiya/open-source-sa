@@ -47,9 +47,12 @@ beforeEach(function () {
 
     $systemUser = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Shop',
+        // The site directory and the web-server config are named after the
+        // slug, never the domain — a domain is mutable and not unique.
+        'slug' => 'shop',
         'domain' => 'shop.test',
         'site_type' => 'php',
         'serving_profile' => 'php',
@@ -90,7 +93,7 @@ it('resets ownership and modes across the whole site', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    $root = '/home/siteowner/shop.test';
+    $root = '/home/siteowner/shop/public_html';
 
     expect(FixPermissionsFake::$ran)->toContain("chown -R siteowner:siteowner {$root}")
         // 0755/0644, not tighter: nginx serves static assets straight off disk
@@ -114,7 +117,7 @@ it('re-tightens .env back to 0600 when one exists', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(FixPermissionsFake::$ran)->toContain('chmod 0600 /home/siteowner/shop.test/.env');
+    expect(FixPermissionsFake::$ran)->toContain('chmod 0600 /home/siteowner/shop/.env');
 });
 
 it('does not touch .env when the site has none', function () {
@@ -122,7 +125,7 @@ it('does not touch .env when the site has none', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(FixPermissionsFake::$ran)->not->toContain('chmod 0600 /home/siteowner/shop.test/.env');
+    expect(FixPermissionsFake::$ran)->not->toContain('chmod 0600 /home/siteowner/shop/.env');
 });
 
 it('re-tightens the session directory once the site is isolated', function () {
@@ -134,7 +137,7 @@ it('re-tightens the session directory once the site is isolated', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(FixPermissionsFake::$ran)->toContain('chmod -R 0700 /home/siteowner/shop.test/.panel/sessions');
+    expect(FixPermissionsFake::$ran)->toContain('chmod -R 0700 /home/siteowner/shop/.panel/sessions');
 });
 
 it('leaves the session directory alone for a site that is not isolated', function () {
@@ -215,7 +218,7 @@ class FileBrowserFake
 
 function fakeFileBrowserServer(): void
 {
-    $root = '/home/siteowner/shop.test';
+    $root = '/home/siteowner/shop/public_html';
 
     Process::fake(function ($process) use ($root) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
@@ -1280,7 +1283,7 @@ describe('compressing', function () {
         expect(FileBrowserFake::$fs)->toHaveKey('wp-content/backup.zip')
             // The archive contains relative paths (my-plugin/...), not the
             // full server path — that's what running with cwd set achieves.
-            ->and(FileBrowserFake::$cwds)->toContain('/home/siteowner/shop.test')
+            ->and(FileBrowserFake::$cwds)->toContain('/home/siteowner/shop/public_html')
             ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- zip -r')))->toBeTrue()
             ->and(ActivityLog::where('action', 'files_compressed')->exists())->toBeTrue();
     });

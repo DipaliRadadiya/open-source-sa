@@ -5,9 +5,14 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\SystemUser;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
+    // The Administrator role is synced from the catalog, so the catalog has
+    // to exist before the admin is created or the role holds nothing.
+    $this->seed(PermissionSeeder::class);
+
     // Admin user — has every app-level permission via the Administrator role.
     $this->admin = User::factory()->admin()->create();
     Sanctum::actingAs($this->admin);
@@ -21,7 +26,9 @@ beforeEach(function () {
 
 it('returns only app-level permissions the user has', function () {
     // A user with no app-level roles gets an empty sidebar.
-    $viewer = SystemUser::factory()->create();
+    // A panel login with no app-level grants — not a SystemUser, which is
+    // the Linux account that owns the site and cannot log in at all.
+    $viewer = User::factory()->create();
     Sanctum::actingAs($viewer);
 
     $response = $this->getJson("/api/applications/{$this->application->id}/sidebar");

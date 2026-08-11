@@ -59,9 +59,12 @@ class IssuePhpmyadminSsoToken
 
     private function resolvePhpmyadminApp(): Application
     {
+        // `Active`, not `Running`: there is no Running case — a site is
+        // Pending, Provisioning, Active or Failed. Referencing a case that
+        // does not exist is a fatal, so this path could only ever 500.
         $pma = Application::query()
             ->where('site_type', 'phpmyadmin')
-            ->where('status', ApplicationStatus::Running)
+            ->where('status', ApplicationStatus::Active)
             ->first();
 
         if (! $pma) {
