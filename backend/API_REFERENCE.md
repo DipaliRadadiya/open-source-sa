@@ -1006,29 +1006,98 @@ Restore a file from an automatic backup.
 ### POST `/applications/{application}/files/upload`
 **Permission:** `app_file` (manage) | **Throttle:** 10/min | **Content-Type:** `multipart/form-data`
 
-Upload a file.
+Upload one file in a single request. **Capped at 50 MB** — the whole body is
+buffered through PHP memory. For anything larger use the resumable endpoints
+below; there is no size limit there.
 
-**Body:** `file` (binary), `path` (destination directory, e.g. `/wp-content`)
+**Body:** `file` (binary), `path` (destination directory, e.g. `wp-content`)
 
 **Response `200`:** `{"uploaded": true}`
+
+---
+
+### GET `/applications/{application}/files/uploads/space`
+**Permission:** `app_file` (view)
+
+Free space before starting a large upload, so the UI can refuse early rather
+than after the user has waited.
+
+---
+
+### POST `/applications/{application}/files/uploads`
+**Permission:** `app_file` (manage) | **Throttle:** 30/min
+
+Opens a resumable upload and returns its id. Validates up front that the
+destination directory exists and that the disk has room.
+
+**Request:** `{"path": "wp-content/big-backup.zip"}`
+
+**Response `201`:** `{"upload": {"id": "…32 hex…"}}`
+
+---
+
+### PUT `/applications/{application}/files/uploads/{uploadId}`
+**Permission:** `app_file` (manage) | **Throttle:** 1200/min | **Content-Type:** raw body
+
+Appends one chunk. **The body is the raw bytes, not multipart** — that halves
+the disk traffic of an upload on a box that is also serving customer sites.
+
+Bounds: one chunk must fit `client_max_body_size` (**64 MB**); the reference
+client sends **8 MB**. The throttle is per chunk, not per file, so a large
+upload is legitimately thousands of requests.
+
+**There is no file-size limit.** The only bound is free disk: a chunk is
+refused if writing it would leave less than 5 GB or 10% of the disk free,
+whichever is larger.
+
+---
+
+### GET `/applications/{application}/files/uploads/{uploadId}`
+**Permission:** `app_file` (view) | **Throttle:** 60/min
+
+Bytes received so far — **this is the resume offset.** Restart from it after a
+dropped connection; there is no separate session to reconcile.
+
+---
+
+### POST `/applications/{application}/files/uploads/{uploadId}/finalize`
+**Permission:** `app_file` (manage) | **Throttle:** 30/min
+
+Moves the assembled file into place. A same-filesystem rename, so it is atomic
+and instant — a half-finished upload is never visible at the target path.
+
+---
+
+### DELETE `/applications/{application}/files/uploads/{uploadId}`
+**Permission:** `app_file` (manage) | **Throttle:** 30/min
+
+Abandons an upload and removes its part file.
 
 ---
 
 ### GET `/applications/{application}/files/download`
 **Permission:** `app_file` (view) | **Throttle:** 20/min
 
-Download a file. Response is a binary stream (`Content-Type: application/octet-stream`).
+Download a file. **Streamed, with no size limit** (changed 11-08-2026 — it was
+previously capped at 5 MB).
 
-**Query:** `?path=/wp-content/seo-pack.zip`
+The response is a stream, not a buffered body: read it as a blob, not as text.
+`Content-Length` carries the real size so a progress bar is possible, and
+`Content-Disposition` includes an RFC 6266 `filename*` alongside the plain
+`filename`.
+
+**Query:** `?path=wp-content/seo-pack.zip`
 
 ---
 
 ### POST `/applications/{application}/files/extract`
 **Permission:** `app_file` (manage) | **Throttle:** 5/min
 
-Extract a `.zip`, `.tar.gz` or `.tar.bz2` archive.
+Extract a **`.zip`, `.tar.gz` or `.tgz`** archive already in the site. Guarded
+against zip bombs: refused above 250 MB uncompressed or 10,000 entries, and
+any entry that is a symlink or escapes the destination.
 
-**Request:** `{"archive_path": "/wp-content/themes.zip", "target_path": "/wp-content"}`
+**Request:** `{"path": "plugin.zip", "target": "wp-content/plugins"}`
 
 **Response `200`:** `{"extracted": true}`
 
@@ -1037,42 +1106,83 @@ Extract a `.zip`, `.tar.gz` or `.tar.bz2` archive.
 ### POST `/applications/{application}/files/directories`
 **Permission:** `app_file` (manage) | **Throttle:** 20/min
 
-Create a directory.
+Create one directory. The parent must already exist.
 
-**Request:** `{"path": "/wp-content/new-plugin"}`
+**Request:** `{"path": "wp-content/uploads/2026"}`
 
 **Response `200`:** `{"created": true}`
+
+---
+
+## Bulk file operations
+
+`rename`, `copy`, `permissions`, `compress` and `DELETE /files` each accept
+**either** a single `path` **or** a `paths[]` selection. The single form is
+unchanged and still supported.
+
+The two are not the same operation:
+
+| | single `path` | `paths[]` |
+|---|---|---|
+| Missing file | **404** | `200` with a `failed` entry |
+| Result | `{"deleted": true}` | per-path `succeeded[]` / `failed[]` |
+
+**Bulk response:**
+
+```json
+{"deleted": false,
+ "succeeded": ["cache/a.txt", "cache/b.txt"],
+ "failed": [{"path": "cache/gone.txt", "reason": "not_found"}]}
+```
+
+`reason` is `not_found`, `exists` (something is already at the destination) or
+`failed`. A batch can partly succeed — show the failures rather than treating
+the call as failed.
+
+**Limits:** at most **250** paths per request (`422` above that — an argument
+vector has a kernel limit, and crossing it would fail with some paths already
+handled). Every entry is validated individually, so one bad path rejects the
+whole request with `422`.
 
 ---
 
 ### PUT `/applications/{application}/files/rename`
 **Permission:** `app_file` (manage) | **Throttle:** 20/min
 
-Rename or move a file/directory.
+Rename or move one path; move a selection into a directory.
 
-**Request:** `{"source_path": "/wp-content/old-name", "target_path": "/wp-content/new-name"}`
+**Single:** `{"path": "wp-content/old-name", "target": "wp-content/new-name"}`
+**Bulk:** `{"paths": ["cache/a.txt", "cache/b.txt"], "target_directory": "keep"}`
 
-**Response `200`:** `{"renamed": true}`
+A destination that is already occupied is refused, never overwritten.
+
+**Response `200`:** `{"renamed": true, "succeeded": […], "failed": […]}`
 
 ---
 
 ### POST `/applications/{application}/files/copy`
 **Permission:** `app_file` (manage) | **Throttle:** 10/min
 
-Copy a file.
+**Single:** `{"path": "wp-config.php", "target": "wp-config.php.bak"}`
+**Bulk:** `{"paths": ["cache/a.txt", "cache/sub"], "target_directory": "keep"}`
 
-**Request:** `{"source_path": "/wp-config.php", "target_path": "/wp-config.php.bak"}`
-
-**Response `200`:** `{"copied": true}`
+**Response `200`:** `{"copied": true, "succeeded": […], "failed": […]}`
 
 ---
 
 ### POST `/applications/{application}/files/compress`
 **Permission:** `app_file` (manage) | **Throttle:** 10/min
 
-Compress files/directories into a `.tar.gz`.
+Compress into a **`.zip`** (the target name must end in `.zip`; `422`
+otherwise).
 
-**Request:** `{"source_path": "/wp-content", "target_path": "/wp-content-backup.tar.gz"}`
+**Single:** `{"path": "wp-content", "target": "wp-content-backup.zip"}`
+**Bulk:** `{"paths": ["cache/a.txt", "cache/b.txt"], "target": "cache/bundle.zip"}`
+
+Bulk sources must all sit in **the same folder** (`422` otherwise): `zip` runs
+from that folder so the archive holds bare names, and there is no folder to
+run from once the sources are spread across the tree. Disable the button when
+a selection spans folders.
 
 **Response `200`:** `{"compressed": true}`
 
@@ -1081,22 +1191,28 @@ Compress files/directories into a `.tar.gz`.
 ### PUT `/applications/{application}/files/permissions`
 **Permission:** `app_file` (manage) | **Throttle:** 20/min
 
-Change file/directory mode (e.g. `0644`, `0755`).
+Change the mode. **Exactly three octal digits** — `644`, not `0644`. A fourth
+digit (setuid/setgid/sticky) is refused with `422`.
 
-**Request:** `{"path": "/wp-config.php", "mode": "0644"}`
+**Single:** `{"path": "wp-config.php", "mode": "644"}`
+**Bulk:** `{"paths": ["cache/a.txt", "cache/b.txt"], "mode": "600"}`
 
-**Response `200`:** `{"chmoded": true}`
+**Response `200`:** `{"chmoded": true, "succeeded": […], "failed": […]}`
 
 ---
 
 ### DELETE `/applications/{application}/files`
 **Permission:** `app_file` (manage) | **Throttle:** 10/min
 
-Delete a file or directory. Requires `{"path": "…", "confirm": true}` in body.
+**Single:** `{"path": "wp-content/old-plugin", "confirm": true}`
+**Bulk:** `{"paths": [...], "confirm": true, "count": <paths.length>}`
 
-**Request:** `{"path": "/wp-content/old-plugin", "confirm": true}`
+`confirm` is required either way. For a selection, `count` must equal the
+number of paths or the request is refused with `422` — a stale selection is
+the realistic bulk-delete accident, and `confirm` cannot catch it because it
+is true either way. Send `paths.length`; do not hardcode it.
 
-**Response `200`:** `{"deleted": true}`
+**Response `200`:** `{"deleted": true, "succeeded": […], "failed": […]}`
 
 ---
 
@@ -1119,6 +1235,24 @@ Delete a file or directory. Requires `{"path": "…", "confirm": true}` in body.
 ```
 
 `isolated: false` — site runs on the shared PHP-FPM pool.
+
+The response also carries `disable_functions` starting points. Render one
+button per entry, in the order given (safest first); titles and descriptions
+are already localised by `Accept-Language`.
+
+```json
+{"php": {
+  "disable_functions_presets": [
+    {"key": "safe",   "title": "Recommended", "description": "…", "functions": "exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec"},
+    {"key": "strict", "title": "Strict",      "description": "…", "functions": "getmyuid,passthru,shell_exec,dl,exec,system,…"}
+  ],
+  "suggested_disable_functions": "exec,passthru,…"
+}}
+```
+
+`suggested_disable_functions` is the `safe` list repeated as a flat string,
+kept so older clients keep working. Prefer the array — a third preset should
+not need a frontend change.
 
 ---
 

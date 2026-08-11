@@ -15,5 +15,5 @@ it('serves the raw markdown', function () {
 
     $response->assertOk();
     expect($response->headers->get('Content-Type'))->toContain('text/markdown');
-    expect($response->getContent())->toStartWith('# ServerAvatar OSS Backend — API Reference');
+    expect($response->getContent())->toStartWith('# ServerAvatar OSS — API Reference');
 });
