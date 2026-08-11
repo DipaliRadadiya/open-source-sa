@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\SystemUser;
 
+use App\Enums\LoginShell;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -9,8 +10,16 @@ class ChangeShellRequest extends FormRequest
 {
     /**
      * Allowlisted login shells — user input never picks an arbitrary shell.
+     *
+     * Derived from the enum rather than repeated, so the list the API
+     * publishes and the list it accepts cannot drift apart.
+     *
+     * @return array<int, string>
      */
-    public const SHELLS = ['/bin/bash', '/bin/sh', '/usr/bin/zsh', '/usr/sbin/nologin', '/bin/false'];
+    public static function shells(): array
+    {
+        return LoginShell::paths();
+    }
 
     public function authorize(): bool
     {
@@ -23,7 +32,7 @@ class ChangeShellRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'shell' => ['required', 'string', Rule::in(self::SHELLS)],
+            'shell' => ['required', 'string', Rule::in(self::shells())],
         ];
     }
 }

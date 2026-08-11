@@ -25,4 +25,13 @@ return [
         'unknown' => 'प्रमाणपत्र जारी नहीं किया जा सका।',
     ],
 
+    // Why a certificate type is not on offer for this site. Each names the
+    // thing the user would have to change, or says plainly that nothing can
+    // be changed and points at the option that does work.
+    'unavailable' => [
+        'test_domain' => 'इस साइट के एकमात्र डोमेन अस्थायी टेस्ट डोमेन (:domains) हैं। Let\'s Encrypt उनके लिए प्रमाणपत्र जारी नहीं कर सकता, क्योंकि वे उस सेवा के सभी उपयोगकर्ताओं के साथ एक ही साप्ताहिक सीमा साझा करते हैं। स्व-हस्ताक्षरित प्रमाणपत्र इस साइट को अभी एन्क्रिप्ट कर देगा।',
+        'dns_unverified' => 'इस साइट का कोई भी डोमेन अभी तक इस सर्वर की ओर इशारा नहीं करता। एक DNS A रिकॉर्ड जोड़ें, उसके प्रसार की प्रतीक्षा करें, फिर दोबारा कोशिश करें।',
+        'self_signed_warning' => 'ट्रैफ़िक को तुरंत एन्क्रिप्ट करता है और टेस्ट व आंतरिक सहित किसी भी डोमेन पर काम करता है। ब्राउज़र चेतावनी दिखाएँगे, क्योंकि इस सर्वर के बाहर कोई इसकी पुष्टि नहीं करता।',
+    ],
+
 ];

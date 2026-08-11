@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Admin;
 use App\Actions\Admin\CreateRole;
 use App\Actions\Admin\DeleteRole;
 use App\Actions\Admin\UpdateRole;
+use App\Enums\AccessLevel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreRoleRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
@@ -72,15 +73,27 @@ class RoleController extends Controller
             'slug' => $role->slug,
             'is_system' => $role->is_system,
             'description' => $role->description,
-            'permissions' => $role->permissions->map(fn ($permission) => [
-                'level' => $permission->level,
-                'name' => $permission->name,
-                'title' => $permission->title,
-                'permissions' => [
-                    'view' => (bool) $permission->pivot->view,
-                    'manage' => (bool) $permission->pivot->manage,
-                ],
-            ])->all(),
+            'permissions' => $role->permissions->map(function ($permission) {
+                $view = (bool) $permission->pivot->view;
+                $manage = (bool) $permission->pivot->manage;
+
+                return [
+                    'level' => $permission->level,
+                    'name' => $permission->name,
+                    // localizedTitle(), not the raw column: the catalog this
+                    // form is rendered against localizes it, so returning the
+                    // stored English here left the role screen in English in
+                    // all eight locales while the sidebar beside it translated.
+                    'title' => $permission->localizedTitle(),
+                    // One field the form can bind a three-way control to.
+                    // The booleans stay for anything already reading them.
+                    'access' => AccessLevel::fromGrant($view, $manage)->value,
+                    'permissions' => [
+                        'view' => $view,
+                        'manage' => $manage,
+                    ],
+                ];
+            })->all(),
             'created_at' => $role->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $role->created_at?->diffForHumans(),
         ];

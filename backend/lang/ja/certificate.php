@@ -25,4 +25,13 @@ return [
         'unknown' => '証明書を発行できませんでした。',
     ],
 
+    // Why a certificate type is not on offer for this site. Each names the
+    // thing the user would have to change, or says plainly that nothing can
+    // be changed and points at the option that does work.
+    'unavailable' => [
+        'test_domain' => 'このサイトのドメインは一時的なテストドメイン (:domains) のみです。Let\'s Encrypt はそれらに証明書を発行できません。同サービスの利用者全体で 1 つの週間上限を共有しているためです。自己署名証明書なら今すぐこのサイトを暗号化できます。',
+        'dns_unverified' => 'このサイトのドメインはまだどれもこのサーバーを指していません。DNS の A レコードを追加し、反映を待ってから再試行してください。',
+        'self_signed_warning' => 'すぐにトラフィックを暗号化し、テスト用や内部用を含むあらゆるドメインで機能します。このサーバー以外の誰も保証しないため、ブラウザーは警告を表示します。',
+    ],
+
 ];

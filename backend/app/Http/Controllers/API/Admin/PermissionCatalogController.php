@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Admin;
 
+use App\Enums\AccessLevel;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PermissionResource;
 use App\Models\Permission;
@@ -19,11 +20,7 @@ class PermissionCatalogController extends Controller
      */
     public function index(): JsonResponse
     {
-        $permissions = Permission::query()->orderBy('order')->get();
-
-        return response()->json([
-            'permissions' => PermissionResource::collection($permissions)->resolve(),
-        ]);
+        return response()->json($this->catalogPayload());
     }
 
     /**
@@ -36,13 +33,48 @@ class PermissionCatalogController extends Controller
     {
         $catalog->sync();
 
+        $payload = $this->catalogPayload();
+
+        $activityLogger->log('permission.synced', properties: ['count' => count($payload['permissions'])]);
+
+        return response()->json($payload + ['synced' => count($payload['permissions'])]);
+    }
+
+    /**
+     * The catalog in the three shapes the role form needs at once.
+     *
+     * `permissions` is the flat ordered list, unchanged. `groups` is the same
+     * rows already bucketed by level and sub-level, because the form renders
+     * section headers and a select-all per section — grouping it here means
+     * one implementation instead of one per frontend, and the section titles
+     * come back localized rather than being invented client-side.
+     * `access_levels` names the three states a grant can hold.
+     *
+     * @return array{permissions: array<int, mixed>, groups: array<int, mixed>, access_levels: array<int, mixed>}
+     */
+    private function catalogPayload(): array
+    {
         $permissions = Permission::query()->orderBy('order')->get();
+        $resolved = PermissionResource::collection($permissions)->resolve();
 
-        $activityLogger->log('permission.synced', properties: ['count' => $permissions->count()]);
+        $groups = collect($resolved)
+            // Keyed by both: `logs` exists at server and application level as
+            // two different permissions, and merging them into one section
+            // would offer a single control over two unrelated grants.
+            ->groupBy(fn (array $permission): string => $permission['level'].'|'.$permission['sub_level'])
+            ->map(fn ($items, string $key): array => [
+                'level' => explode('|', $key)[0],
+                'sub_level' => explode('|', $key)[1],
+                'sub_level_title' => $items->first()['sub_level_title'],
+                'permissions' => $items->values()->all(),
+            ])
+            ->values()
+            ->all();
 
-        return response()->json([
-            'permissions' => PermissionResource::collection($permissions)->resolve(),
-            'synced' => $permissions->count(),
-        ]);
+        return [
+            'permissions' => $resolved,
+            'groups' => $groups,
+            'access_levels' => AccessLevel::catalog(),
+        ];
     }
 }

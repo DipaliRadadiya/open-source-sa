@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreCertificateRequest;
 use App\Http\Resources\CertificateResource;
 use App\Models\Application;
+use App\Services\Server\Certificates\CertificateOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -21,7 +22,7 @@ class CertificateController extends Controller
      * `null` rather than a 404 when there is no certificate: "this site has no
      * certificate" is a normal state the screen has to render, not an error.
      */
-    public function show(Application $application): JsonResponse
+    public function show(Application $application, CertificateOptions $options): JsonResponse
     {
         $certificate = $application->certificate;
 
@@ -29,6 +30,11 @@ class CertificateController extends Controller
             'certificate' => $certificate === null
                 ? null
                 : CertificateResource::make($certificate)->resolve(),
+            // What this site can actually be given, so the screen offers the
+            // option that works instead of the one that will fail. A test or
+            // internal domain has always been able to take a self-signed
+            // certificate; nothing said so.
+            'available_types' => $options->for($application),
         ]);
     }
 

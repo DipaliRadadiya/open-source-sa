@@ -25,4 +25,13 @@ return [
         'unknown' => 'Le certificat n\'a pas pu être émis.',
     ],
 
+    // Why a certificate type is not on offer for this site. Each names the
+    // thing the user would have to change, or says plainly that nothing can
+    // be changed and points at the option that does work.
+    'unavailable' => [
+        'test_domain' => 'Les seuls domaines de ce site sont des domaines de test temporaires (:domains). Let\'s Encrypt ne peut pas émettre de certificat pour eux, car ils partagent une limite hebdomadaire avec tous les autres utilisateurs de ce service. Un certificat auto-signé chiffrera ce site dès maintenant.',
+        'dns_unverified' => 'Aucun domaine de ce site ne pointe encore vers ce serveur. Ajoutez un enregistrement DNS A, attendez sa propagation, puis réessayez.',
+        'self_signed_warning' => 'Chiffre le trafic immédiatement et fonctionne sur n\'importe quel domaine, y compris de test ou interne. Les navigateurs afficheront un avertissement, car rien en dehors de ce serveur ne le garantit.',
+    ],
+
 ];

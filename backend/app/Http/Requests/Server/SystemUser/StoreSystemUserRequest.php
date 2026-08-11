@@ -50,7 +50,7 @@ class StoreSystemUserRequest extends FormRequest
             // All optional, defaulting to the same values CreateSystemUser
             // already used before these existed — the fast path (username
             // only) stays exactly as fast.
-            'shell' => ['sometimes', 'string', Rule::in(ChangeShellRequest::SHELLS)],
+            'shell' => ['sometimes', 'string', Rule::in(ChangeShellRequest::shells())],
             'sudo' => ['sometimes', 'boolean'],
             'ssh_access' => ['sometimes', 'boolean'],
             'password' => ['sometimes', 'string', Password::min(10)->mixedCase()->numbers()],

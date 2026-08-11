@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\AccessLevel;
 use App\Models\Role;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UpdateRoleRequest extends FormRequest
 {
@@ -25,8 +27,13 @@ class UpdateRoleRequest extends FormRequest
             'permissions' => ['sometimes', 'array'],
             'permissions.*.level' => ['required_with:permissions', 'string'],
             'permissions.*.name' => ['required_with:permissions', 'string'],
-            'permissions.*.view' => ['required_with:permissions', 'boolean'],
-            'permissions.*.manage' => ['required_with:permissions', 'boolean'],
+            // Either one three-way `access`, or the original pair. The pair
+            // stays accepted so nothing already sending it breaks, but a form
+            // that sends `access` cannot express "write without read" at all —
+            // the combination the resolver used to silently rewrite.
+            'permissions.*.access' => ['sometimes', 'string', Rule::in(AccessLevel::cases())],
+            'permissions.*.view' => ['required_without:permissions.*.access', 'boolean'],
+            'permissions.*.manage' => ['required_without:permissions.*.access', 'boolean'],
         ];
     }
 

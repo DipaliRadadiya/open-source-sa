@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\LoginShell;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,6 +18,12 @@ class SystemUserResource extends JsonResource
             'username' => $this->username,
             'home_path' => $this->home_path,
             'shell' => $this->shell,
+            // The path is what the server needs; these two are what a person
+            // needs. `shell_allows_login` is null for a shell we do not offer,
+            // which an adopted server's users can legitimately have — null
+            // means "unknown", not "cannot log in".
+            'shell_title' => LoginShell::titleFor($this->shell),
+            'shell_allows_login' => LoginShell::allowsLoginFor($this->shell),
             'sudo' => (bool) $this->sudo,
             'ssh_access' => (bool) $this->ssh_access,
             // Plaintext, per operator decision — shown so an admin can copy it

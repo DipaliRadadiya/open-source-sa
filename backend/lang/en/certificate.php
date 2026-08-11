@@ -25,4 +25,13 @@ return [
         'unknown' => 'The certificate could not be issued.',
     ],
 
+    // Why a certificate type is not on offer for this site. Each names the
+    // thing the user would have to change, or says plainly that nothing can
+    // be changed and points at the option that does work.
+    'unavailable' => [
+        'test_domain' => 'This site\'s only domains are temporary test domains (:domains). Let\'s Encrypt cannot issue a certificate for them, because they share one weekly limit with everyone else using that service. A self-signed certificate will encrypt this site now.',
+        'dns_unverified' => 'None of this site\'s domains point at this server yet. Add a DNS A record for one, wait for it to propagate, then try again.',
+        'self_signed_warning' => 'Encrypts traffic immediately and works on any domain, including test and internal ones. Browsers will show a warning, because nothing outside this server vouches for it.',
+    ],
+
 ];

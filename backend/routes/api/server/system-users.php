@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Server\SystemUser\ChangeShellController;
 use App\Http\Controllers\API\Server\SystemUser\SetPasswordController;
+use App\Http\Controllers\API\Server\SystemUser\ShellCatalogController;
 use App\Http\Controllers\API\Server\SystemUser\SshKeyController;
 use App\Http\Controllers\API\Server\SystemUser\ToggleSshAccessController;
 use App\Http\Controllers\API\Server\SystemUser\ToggleSudoController;
@@ -12,6 +13,10 @@ use Illuminate\Support\Facades\Route;
 // mutations by `system_user` (manage).
 Route::get('/system-users', [SystemUserController::class, 'index'])->middleware('permission:system_user');
 Route::post('/system-users', [SystemUserController::class, 'store'])->middleware('permission:system_user,manage');
+// Before the {systemUser} route below, not after: a wildcard registered
+// first would match "shells" and try to resolve it as an id.
+Route::get('/system-users/shells', ShellCatalogController::class)->middleware('permission:system_user');
+
 Route::get('/system-users/{systemUser}', [SystemUserController::class, 'show'])->middleware('permission:system_user');
 Route::delete('/system-users/{systemUser}', [SystemUserController::class, 'destroy'])->middleware('permission:system_user,manage');
 
