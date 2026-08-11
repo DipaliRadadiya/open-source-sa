@@ -68,13 +68,13 @@ function runClone(Application $source, string $domain, ?string $name = null): Si
     return $clone->fresh();
 }
 
-function fakeCloneServer(): void
+function fakeCloneServer(bool $testPasses = true): void
 {
-    Process::fake(function ($process) {
+    Process::fake(function ($process) use ($testPasses) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
-            return Process::result(exitCode: 0);
+            return Process::result(exitCode: $testPasses ? 0 : 1, errorOutput: $testPasses ? '' : 'invalid');
         }
 
         return Process::result(exitCode: 0);
@@ -189,4 +189,58 @@ it('refuses without manage permission', function () {
     $this->withHeaders(['Authorization' => 'Bearer '.$viewer->createToken('t')->plainTextToken])
         ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'docs2-clone.test'])
         ->assertStatus(403);
+});
+
+/*
+ * The failure path, which had no test — every one above fakes a server where
+ * nothing goes wrong. A clone creates its target Application row before it
+ * provisions, and `domain` is unique, so a row left behind by a failure meant
+ * the same clone could never be retried and the panel listed a site that had
+ * never been built.
+ */
+describe('when a clone fails partway', function () {
+    it('leaves no half-made site behind and lets the same clone be retried', function () {
+        fakeCloneServer(testPasses: false);
+
+        $source = Application::forceCreate([
+            'system_user_id' => $this->systemUser->id,
+            'name' => 'Docs',
+            'slug' => 'docs', 'domain' => 'docs.test', 'site_type' => 'static',
+            'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
+        ]);
+
+        $failed = runClone($source, 'docs-clone.test');
+
+        // The SiteClone record is the history and stays; the application does not.
+        expect($failed->status->value)->toBe('failed')
+            ->and($failed->target_application_id)->toBeNull()
+            ->and(Application::where('domain', 'docs-clone.test')->exists())->toBeFalse()
+            ->and(Application::where('cloned_from_application_id', $source->id)->exists())->toBeFalse();
+
+        // The whole point: the same domain is free, so the retry works.
+        fakeCloneServer();
+
+        $retried = runClone($source, 'docs-clone.test');
+
+        expect($retried->status->value)->toBe('completed')
+            ->and(Application::find($retried->target_application_id))->not->toBeNull();
+    });
+
+    it('still records why it failed', function () {
+        fakeCloneServer(testPasses: false);
+
+        $source = Application::forceCreate([
+            'system_user_id' => $this->systemUser->id,
+            'name' => 'Docs',
+            'slug' => 'docs', 'domain' => 'docs.test', 'site_type' => 'static',
+            'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
+        ]);
+
+        // Cleaning up must not cost the user the reason — without it the panel
+        // can only say the clone failed, which is the half of the message they
+        // already know.
+        $record = runClone($source, 'docs-clone.test');
+
+        expect($record->reason)->not->toBeEmpty();
+    });
 });

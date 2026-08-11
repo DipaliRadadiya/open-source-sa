@@ -9,7 +9,9 @@ use App\Models\Database;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Everything about staging that is the same no matter what is being staged:
@@ -77,20 +79,61 @@ class StagingManager
 
         $staging->load('systemUser');
 
-        $this->provisioner->provision($staging);
+        // Everything from here can fail on the server, and the row already
+        // exists. Left behind, that row holds the domain and satisfies the
+        // `$production->staging !== null` guard above — so a staging attempt
+        // that failed once blocked every later attempt, and the panel listed a
+        // site that was never created. See `discard()`.
+        try {
+            $this->provisioner->provision($staging);
 
-        $this->rsync(
-            $this->provisioner->documentRoot($production->load('systemUser')),
-            $this->provisioner->documentRoot($staging),
-            $staging,
-        );
+            $this->rsync(
+                $this->provisioner->documentRoot($production->load('systemUser')),
+                $this->provisioner->documentRoot($staging),
+                $staging,
+            );
 
-        $strategy->create($production, $staging);
+            $strategy->create($production, $staging);
+        } catch (Throwable $e) {
+            $this->discard($staging);
+
+            throw $e;
+        }
 
         $staging->status = 'active';
         $staging->save();
 
         return $staging->fresh();
+    }
+
+    /**
+     * Undo a half-made site.
+     *
+     * Deprovision goes through the provisioner rather than
+     * `DeprovisionApplication`, which returns early for a `pending`
+     * application — and a site that failed on the way up is exactly that, so
+     * the action would skip the vhost it did manage to write.
+     *
+     * Cleanup failures are swallowed on purpose. The caller is already
+     * throwing the reason the site could not be created, and replacing that
+     * with "cleanup failed" would hide the thing the user needs to read.
+     */
+    private function discard(Application $application): void
+    {
+        try {
+            $this->provisioner->deprovision($application);
+        } catch (Throwable $cleanupFailure) {
+            Log::channel('server-ops')->warning('could not deprovision a half-made site', [
+                'feature' => 'application',
+                'op' => 'staging_discard',
+                'application' => $application->id,
+                'detail' => $cleanupFailure->getMessage(),
+            ]);
+        }
+
+        // The row is what actually blocks a retry: it holds the domain, the
+        // name, the slug and any allocated port.
+        $application->delete();
     }
 
     /**

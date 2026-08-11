@@ -222,3 +222,49 @@ it('refuses without manage permission', function () {
         ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
         ->assertStatus(403);
 });
+
+/*
+ * The failure path, which had no test at all — every existing one fakes a
+ * server where nothing goes wrong, so "what happens when it does" was never
+ * asked. A staging attempt creates its Application row before it provisions,
+ * and that row satisfies the one-staging-per-site guard. Left behind, it
+ * meant a single failure locked staging off for that site permanently.
+ */
+describe('when creating staging fails', function () {
+    it('leaves nothing behind and lets the user try again', function () {
+        fakeStagingServer(testPasses: false);
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
+            ->assertStatus(500);
+
+        // No half-made site in the list, and nothing holding the domain.
+        expect(Application::where('production_application_id', $this->production->id)->exists())
+            ->toBeFalse()
+            ->and(Application::where('domain', 'staging.shop.test')->exists())->toBeFalse();
+
+        // The whole point: the same request now works.
+        fakeStagingServer();
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
+            ->assertCreated();
+
+        expect(Application::where('production_application_id', $this->production->id)->count())->toBe(1);
+    });
+
+    it('still reports why it failed', function () {
+        fakeStagingServer(testPasses: false);
+
+        // Cleanup must not swallow the reason. The reference is what ties the
+        // failure to the `server-ops` log line holding the actual nginx error,
+        // and it travels inside the message rather than as its own key.
+        $message = $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
+            ->assertStatus(500)
+            ->json('message');
+
+        expect($message)->toContain('test_config')
+            ->and($message)->toMatch('/reference [0-9a-f-]{36}/');
+    });
+});

@@ -7,7 +7,9 @@ use App\Models\Application;
 use App\Models\SiteClone;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Duplicate any application to a brand-new domain as a fully independent
@@ -97,25 +99,36 @@ class CloneManager
 
         $target->load('systemUser');
 
-        // Named steps recorded on the Clone record so the frontend can poll.
-        $cloneRecord->update(['current_step' => 'provisioning', 'reason' => null]);
-        $this->provisioner->provision($target, skipInstaller: true);
+        // Everything from here can fail on the server, and the row already
+        // exists. Left behind it holds the domain — which is unique — so
+        // retrying the same clone was refused with a validation error, and the
+        // panel listed a site that had never been created. The SiteClone
+        // record keeps the history; the half-made application does not.
+        try {
+            // Named steps recorded on the Clone record so the frontend can poll.
+            $cloneRecord->update(['current_step' => 'provisioning', 'reason' => null]);
+            $this->provisioner->provision($target, skipInstaller: true);
 
-        $cloneRecord->update(['current_step' => 'copying_files']);
-        $this->rsync(
-            $this->provisioner->documentRoot($source),
-            $this->provisioner->documentRoot($target),
-            $target,
-        );
+            $cloneRecord->update(['current_step' => 'copying_files']);
+            $this->rsync(
+                $this->provisioner->documentRoot($source),
+                $this->provisioner->documentRoot($target),
+                $target,
+            );
 
-        if ($needsDatabase) {
-            $cloneRecord->update(['current_step' => 'cloning_database']);
-            $strategy->clone($source, $target);
-        }
+            if ($needsDatabase) {
+                $cloneRecord->update(['current_step' => 'cloning_database']);
+                $strategy->clone($source, $target);
+            }
 
-        if ($this->supervisor->runs($target)) {
-            $cloneRecord->update(['current_step' => 'starting_process']);
-            $this->supervisor->apply($target, $this->provisioner->documentRoot($target), start: true);
+            if ($this->supervisor->runs($target)) {
+                $cloneRecord->update(['current_step' => 'starting_process']);
+                $this->supervisor->apply($target, $this->provisioner->documentRoot($target), start: true);
+            }
+        } catch (Throwable $e) {
+            $this->discard($target);
+
+            throw $e;
         }
 
         $target->status = 'active';
@@ -125,6 +138,35 @@ class CloneManager
         $cloneRecord->update(['target_application_id' => $target->id]);
 
         return $target->fresh();
+    }
+
+    /**
+     * Undo a half-made clone.
+     *
+     * Deprovision goes through the provisioner rather than
+     * `DeprovisionApplication`, which returns early for a `pending`
+     * application — and a clone that failed on the way up is exactly that, so
+     * the action would skip the vhost it did manage to write.
+     *
+     * The cleanup's own failure is logged and swallowed: the caller is about
+     * to report why the clone failed, and that is the message worth keeping.
+     */
+    private function discard(Application $application): void
+    {
+        try {
+            $this->provisioner->deprovision($application);
+        } catch (Throwable $cleanupFailure) {
+            Log::channel('server-ops')->warning('could not deprovision a half-made clone', [
+                'feature' => 'application',
+                'op' => 'clone_discard',
+                'application' => $application->id,
+                'detail' => $cleanupFailure->getMessage(),
+            ]);
+        }
+
+        // The row is what blocks the retry: it holds the unique domain, the
+        // unique name and slug, and any port allocated above.
+        $application->delete();
     }
 
     /**
