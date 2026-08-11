@@ -1815,3 +1815,46 @@ describe('bulk operations', function () {
             ->assertStatus(422);
     });
 });
+
+/*
+ * Rate limiting on the resumable-upload endpoints.
+ *
+ * `bootstrap/app.php` prepends `throttle:api` to every API route, and a
+ * per-route throttle does not replace it — it stacks, so the lower of the two
+ * wins. These endpoints declare 240/min and 1200/min precisely because one
+ * upload is legitimately thousands of requests; with the global 120/min still
+ * applied those numbers were decoration, and a large upload competed for that
+ * one budget with every other call the UI made.
+ *
+ * Asserted by making the requests rather than by reading the route: the
+ * declared limit and the effective limit were different things, and only one
+ * of them is observable.
+ */
+describe('upload throttling', function () {
+    it('lets an upload run past the global api limit', function () {
+        fakeFileBrowserServer();
+
+        // The global limiter refuses at 121. Anything past that proves the
+        // route's own limit is the one in force.
+        for ($i = 1; $i <= 150; $i++) {
+            $response = $this->actingAs($this->admin)
+                ->getJson(filesUrl('/uploads/'.str_repeat('a', 32)));
+
+            expect($response->getStatusCode())->not->toBe(429);
+        }
+    });
+
+    it('still bounds the endpoints that are not part of an upload', function () {
+        fakeFileBrowserServer();
+
+        // The global limit is deliberately left on everything else: removing
+        // it wholesale would be a rate limiter that bounds nothing.
+        $statuses = [];
+
+        for ($i = 1; $i <= 130; $i++) {
+            $statuses[] = $this->actingAs($this->admin)->getJson(filesUrl())->getStatusCode();
+        }
+
+        expect($statuses)->toContain(429);
+    });
+});

@@ -86,8 +86,18 @@ class AppServiceProvider extends ServiceProvider
             ? Limit::perMinute(120)->by($request->user()->id)
             : Limit::perMinute(20)->by($request->ip()));
 
-        // Status-polling endpoints: per-user-per-app bucket so long-running
-        // provisions (which poll frequently) cannot exhaust the global api limit.
+        // Status-polling endpoints: a per-user-per-app bucket, so one app's
+        // polling cannot starve another app's.
+        //
+        // Note what this does NOT do, because the comment here used to claim
+        // it: polling still consumes the global `api` budget. That limiter is
+        // prepended to every API route in bootstrap/app.php and a second
+        // throttle stacks with it rather than replacing it — escaping it takes
+        // an explicit `withoutMiddleware('throttle:api')`, as the deploy
+        // webhook and the upload endpoints do. Left in place here deliberately:
+        // these are ordinary read endpoints, and exempting them would mean the
+        // global limit bounds nothing on the busiest routes in the panel.
+        //
         // 120/min per app is ~2/sec — enough for 5s polling intervals.
         RateLimiter::for('status', fn (Request $request) => $request->user()
             ? Limit::perMinute(120)->by($request->user()->id.'|'.$request->route('application'))

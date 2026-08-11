@@ -56,6 +56,13 @@ Route::post('/applications/{application}/files/upload', [ApplicationFileControll
 | thousands of requests, so the usual 10/min here would cap throughput at a
 | few hundred MB an hour. The real bounds on this endpoint are nginx's
 | client_max_body_size (one chunk) and ChunkedUpload's free-space guard.
+|
+| `throttle:api` is removed for the same reason it is removed on the deploy
+| webhook: bootstrap/app.php prepends it to every API route, and a per-route
+| throttle does not replace it, it stacks. Left on, the global 120/min won
+| every time — the declared 1200 and 240 were decoration, and a large upload
+| competed for that budget with the UI's own polling. Verified by probing:
+| the first 429 arrived at request 121 on a route declaring 240.
 */
 // Registered before the `{uploadId}` route below so "space" is never taken
 // for an upload id. (It would 404 there anyway — ids are 32 hex characters —
@@ -72,21 +79,27 @@ Route::post('/applications/{application}/files/upload', [ApplicationFileControll
 // what bounds it is the free-space guard and the size of the FPM pool, not a
 // request count.
 Route::get('/applications/{application}/files/uploads/space', [ApplicationUploadController::class, 'space'])
+    ->withoutMiddleware('throttle:api')
     ->middleware(['permission:app_file', 'throttle:240,1']);
 
 Route::post('/applications/{application}/files/uploads', [ApplicationUploadController::class, 'begin'])
+    ->withoutMiddleware('throttle:api')
     ->middleware(['permission:app_file,manage', 'throttle:240,1']);
 
 Route::put('/applications/{application}/files/uploads/{uploadId}', [ApplicationUploadController::class, 'chunk'])
+    ->withoutMiddleware('throttle:api')
     ->middleware(['permission:app_file,manage', 'throttle:1200,1']);
 
 Route::get('/applications/{application}/files/uploads/{uploadId}', [ApplicationUploadController::class, 'status'])
+    ->withoutMiddleware('throttle:api')
     ->middleware(['permission:app_file', 'throttle:240,1']);
 
 Route::post('/applications/{application}/files/uploads/{uploadId}/finalize', [ApplicationUploadController::class, 'finalize'])
+    ->withoutMiddleware('throttle:api')
     ->middleware(['permission:app_file,manage', 'throttle:240,1']);
 
 Route::delete('/applications/{application}/files/uploads/{uploadId}', [ApplicationUploadController::class, 'abort'])
+    ->withoutMiddleware('throttle:api')
     ->middleware(['permission:app_file,manage', 'throttle:240,1']);
 
 Route::get('/applications/{application}/files/download', [ApplicationFileController::class, 'download'])
