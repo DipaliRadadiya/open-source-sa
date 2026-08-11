@@ -57,6 +57,12 @@ Route::post('/applications/{application}/files/upload', [ApplicationFileControll
 | few hundred MB an hour. The real bounds on this endpoint are nginx's
 | client_max_body_size (one chunk) and ChunkedUpload's free-space guard.
 */
+// Registered before the `{uploadId}` route below so "space" is never taken
+// for an upload id. (It would 404 there anyway — ids are 32 hex characters —
+// but relying on that is a trap for whoever loosens the pattern later.)
+Route::get('/applications/{application}/files/uploads/space', [ApplicationUploadController::class, 'space'])
+    ->middleware(['permission:app_file', 'throttle:60,1']);
+
 Route::post('/applications/{application}/files/uploads', [ApplicationUploadController::class, 'begin'])
     ->middleware(['permission:app_file,manage', 'throttle:30,1']);
 

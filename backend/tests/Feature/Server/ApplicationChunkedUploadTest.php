@@ -231,6 +231,51 @@ it('refuses an upload id that could become a path', function () {
         ->assertNotFound();
 });
 
+it('refuses a file that will not fit before a single byte is sent', function () {
+    // 10 GB free on a 300 GB disk: past the floor, so small writes are fine.
+    ChunkedUploadFake::$availableBlocks = 10 * 1024 * 1024;
+
+    $this->actingAs($this->admin)
+        ->postJson(uploadsUrl(), ['path' => 'huge.zip', 'size' => 40 * 1024 * 1024 * 1024])
+        ->assertStatus(507);
+
+    // Nothing was created for an upload that was never going to fit.
+    expect(ChunkedUploadFake::binaries())->not->toContain('touch');
+});
+
+it('accepts a file that fits once the floor is taken into account', function () {
+    ChunkedUploadFake::$availableBlocks = 100 * 1024 * 1024;
+
+    $this->actingAs($this->admin)
+        ->postJson(uploadsUrl(), ['path' => 'big.zip', 'size' => 40 * 1024 * 1024 * 1024])
+        ->assertOk();
+});
+
+it('reports usable space with the safety floor already subtracted', function () {
+    ChunkedUploadFake::$totalBlocks = 300 * 1024 * 1024;
+    ChunkedUploadFake::$availableBlocks = 100 * 1024 * 1024;
+
+    $response = $this->actingAs($this->admin)
+        ->getJson(uploadsUrl().'/space')
+        ->assertOk();
+
+    $floor = (int) (300 * 1024 * 1024 * 1024 * ChunkedUpload::MIN_FREE_FRACTION);
+
+    expect($response->json('available'))->toBe(100 * 1024 * 1024 * 1024)
+        ->and($response->json('floor'))->toBe($floor)
+        ->and($response->json('usable'))->toBe(100 * 1024 * 1024 * 1024 - $floor);
+});
+
+it('does not claim the disk is full when free space cannot be read', function () {
+    // `df` failing must not block uploads the disk may well have room for.
+    Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'df: cannot read'));
+
+    $this->actingAs($this->admin)
+        ->getJson(uploadsUrl().'/space')
+        ->assertOk()
+        ->assertJson(['usable' => PHP_INT_MAX]);
+});
+
 it('refuses to write when the shared disk is close to full', function () {
     $id = $this->actingAs($this->admin)->postJson(uploadsUrl(), ['path' => 'big.zip'])->json('upload_id');
 

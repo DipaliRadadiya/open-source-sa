@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { UploadCloud, X, Loader2, CircleCheck, CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { uploadAnySize } from "@/lib/api/files";
+import { uploadAnySize, uploadSpace } from "@/lib/api/files";
 import { joinPath } from "@/lib/files/path-helpers";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -61,9 +61,49 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
           status: "pending",
           progress: 0,
           error: null,
+          spaceBlocked: false,
         });
       }
       return [...prev, ...next];
+    });
+
+    checkSpace();
+  }
+
+  // Flags files the disk cannot take, at the moment they are picked rather
+  // than partway through sending them — uploads here are unbounded in size,
+  // so "we ran out of room" can otherwise arrive an hour in.
+  //
+  // Checked against the *cumulative* size of everything still queued, not
+  // each file alone: five 3 GB files fit individually and not together.
+  //
+  // Advisory. The server re-checks on every write, because this number is
+  // stale the moment it arrives — every other site on the box shares the
+  // disk and is writing to it too. A failure here is therefore ignored: it
+  // must never be the reason an upload the disk could take is refused.
+  async function checkSpace() {
+    let usable;
+    try {
+      ({ usable } = await uploadSpace(appId));
+    } catch {
+      return;
+    }
+
+    setItems((prev) => {
+      let queued = 0;
+      return prev.map((item) => {
+        if (item.status === "done") return item;
+        queued += item.file.size;
+
+        if (queued > usable) {
+          return { ...item, status: "error", error: t("uploadDialog.noSpace"), spaceBlocked: true };
+        }
+        // Room again — because something ahead of it was removed, or the
+        // disk was freed up elsewhere.
+        return item.spaceBlocked
+          ? { ...item, status: "pending", error: null, spaceBlocked: false }
+          : item;
+      });
     });
   }
 
@@ -74,6 +114,8 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
 
   function removeItem(id) {
     setItems((prev) => prev.filter((i) => i.id !== id));
+    // Dropping one file can make room for the ones behind it.
+    checkSpace();
   }
 
   function handleOpenChange(next) {
@@ -99,6 +141,9 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
         succeededNames.push(item.file.name);
         continue;
       }
+      // Known not to fit. Sending it anyway would fill the disk that every
+      // hosted site shares, only to be refused at the last chunk.
+      if (item.spaceBlocked) continue;
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: "uploading", error: null } : i)));
       try {
         await uploadAnySize(appId, joinPath(path, item.file.name), item.file, {

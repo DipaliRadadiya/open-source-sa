@@ -70,8 +70,27 @@ const CHUNK_RETRIES = 3;
  * The server is the authority on how much it actually has — after any failure
  * we ask, rather than assuming our own count survived the interruption.
  */
+/**
+ * What the server's disk can still take, in bytes.
+ *
+ * `usable` already has the safety floor subtracted, so it is the number to
+ * compare a file against — `available` is only there to show the user how
+ * much room actually exists. Advisory: the server re-checks on every write,
+ * because other sites share this disk and are writing the whole time.
+ */
+export async function uploadSpace(appId, { signal } = {}) {
+  const { data } = await api.get(`/applications/${appId}/files/uploads/space`, { signal });
+  return data;
+}
+
 export async function uploadFileChunked(appId, path, file, { onProgress, signal } = {}) {
-  const { data } = await api.post(`/applications/${appId}/files/uploads`, { path }, { signal });
+  const { data } = await api.post(
+    `/applications/${appId}/files/uploads`,
+    // Declared up front so the server can reject an impossible upload before
+    // a single byte moves, rather than at whichever chunk fills the disk.
+    { path, size: file.size },
+    { signal },
+  );
   const uploadId = data.upload_id;
   const base = `/applications/${appId}/files/uploads/${uploadId}`;
 

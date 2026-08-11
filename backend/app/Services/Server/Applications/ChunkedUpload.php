@@ -91,10 +91,16 @@ class ChunkedUpload
      * spent an hour uploading: that the destination directory exists, and that
      * the disk has room.
      */
-    public function begin(Application $application, string $path): string
+    public function begin(Application $application, string $path, int $expectedBytes = 0): string
     {
         $this->assertDirectoryExists($application, dirname($this->resolve($application, $path)));
-        $this->assertDiskHasRoom($application, 0);
+
+        // Checked against the *whole* declared size, not just the floor: the
+        // point is to fail now rather than an hour in, with the disk full and
+        // a part file to clean up. The client is not trusted to be honest
+        // about this -- the per-chunk check still runs regardless -- but it is
+        // trusted enough to save everyone the wasted hour when it is right.
+        $this->assertDiskHasRoom($application, $expectedBytes);
 
         $id = bin2hex(random_bytes(16));
 
@@ -237,9 +243,59 @@ class ChunkedUpload
     }
 
     /**
+     * What the disk can currently accept, for a client that wants to know
+     * before it starts rather than after.
+     *
+     * Selecting a 40 GB file onto a disk with 20 GB free should say so at the
+     * moment of selection — not an hour later, with the disk near full and a
+     * part file to reap. The numbers are returned rather than just a verdict
+     * so the UI can tell the user *how much* room there is.
+     *
+     * @return array{available: int, usable: int, floor: int}
+     */
+    public function space(Application $application): array
+    {
+        $disk = $this->freeSpace($application);
+
+        if ($disk === null) {
+            // Unknown free space must not read as "no room" — that would block
+            // uploads the disk can take. PHP_INT_MAX means "cannot say"; the
+            // per-chunk guard and ENOSPC remain as the real backstops.
+            return ['available' => PHP_INT_MAX, 'usable' => PHP_INT_MAX, 'floor' => 0];
+        }
+
+        return [
+            'available' => $disk['available'],
+            'usable' => max(0, $disk['available'] - $disk['floor']),
+            'floor' => $disk['floor'],
+        ];
+    }
+
+    /**
      * Refuses the write if it would leave the shared disk too close to full.
      */
     private function assertDiskHasRoom(Application $application, int $incoming): void
+    {
+        $disk = $this->freeSpace($application);
+
+        // Unreadable free space is not a reason to block an upload the disk
+        // may well have room for; the write itself still fails safely on
+        // ENOSPC. Logged by ServerOps either way.
+        if ($disk === null) {
+            return;
+        }
+
+        abort_if(
+            $disk['floor'] > $disk['available'] - $incoming,
+            507,
+            __('errors/application.upload_insufficient_space'),
+        );
+    }
+
+    /**
+     * @return array{total: int, available: int, floor: int}|null
+     */
+    private function freeSpace(Application $application): ?array
     {
         $result = $this->serverOps->run(
             $this->asUser($application, ['df', '-Pk', $this->provisioner->documentRoot($application)]),
@@ -247,11 +303,8 @@ class ChunkedUpload
             timeout: 15,
         );
 
-        // Unreadable free space is not a reason to block an upload the disk
-        // may well have room for; the write itself still fails safely on
-        // ENOSPC. Logged by ServerOps either way.
         if ($result->failed()) {
-            return;
+            return null;
         }
 
         $lines = preg_split('/\R/', trim($result->output())) ?: [];
@@ -259,18 +312,16 @@ class ChunkedUpload
 
         // df -Pk: Filesystem, 1024-blocks, Used, Available, Capacity, Mounted
         if (count($fields) < 4 || ! is_numeric($fields[1]) || ! is_numeric($fields[3])) {
-            return;
+            return null;
         }
 
         $total = (int) $fields[1] * 1024;
-        $available = (int) $fields[3] * 1024;
-        $floor = max(self::MIN_FREE_BYTES, (int) ($total * self::MIN_FREE_FRACTION));
 
-        abort_if(
-            $available - $incoming < $floor,
-            507,
-            __('errors/application.upload_insufficient_space'),
-        );
+        return [
+            'total' => $total,
+            'available' => (int) $fields[3] * 1024,
+            'floor' => max(self::MIN_FREE_BYTES, (int) ($total * self::MIN_FREE_FRACTION)),
+        ];
     }
 
     /**

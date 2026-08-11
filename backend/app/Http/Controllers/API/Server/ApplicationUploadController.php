@@ -32,13 +32,30 @@ use Illuminate\Http\Request;
  */
 class ApplicationUploadController extends Controller
 {
+    /**
+     * How much the disk can take, so the client can refuse a file at the
+     * moment it is picked rather than partway through sending it.
+     *
+     * Advisory only — `begin` and every chunk re-check server-side, because a
+     * client's idea of the free space is stale the moment it is answered and
+     * other sites on the same disk are writing throughout.
+     */
+    public function space(Application $application, ChunkedUpload $uploads): JsonResponse
+    {
+        return response()->json($uploads->space($application));
+    }
+
     public function begin(
         BeginUploadRequest $request,
         Application $application,
         ChunkedUpload $uploads,
     ): JsonResponse {
         return response()->json([
-            'upload_id' => $uploads->begin($application, $request->targetPath()),
+            'upload_id' => $uploads->begin(
+                $application,
+                $request->targetPath(),
+                $request->expectedBytes(),
+            ),
         ]);
     }
 
