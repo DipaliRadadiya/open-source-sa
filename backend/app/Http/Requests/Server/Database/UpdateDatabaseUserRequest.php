@@ -18,8 +18,10 @@ class UpdateDatabaseUserRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // 32 is MySQL 8's hard limit on a user name — see
+            // StoreDatabaseUserRequest.
             'username' => [
-                'sometimes', 'string', 'regex:/^[A-Za-z0-9_]{1,63}$/',
+                'sometimes', 'string', 'regex:/^[A-Za-z0-9_]{1,32}$/',
                 Rule::notIn((array) config('server.databases.system_users', [])),
             ],
             'connection_preference' => ['sometimes', Rule::in(['localhost', 'remote', 'anywhere'])],

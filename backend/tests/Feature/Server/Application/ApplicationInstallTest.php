@@ -208,6 +208,30 @@ it('creates a database and a dedicated user, and writes them into wp-config', fu
     Process::assertNotRan(fn ($p) => str_contains(implode(' ', $p->command), $password));
 });
 
+it('keeps the database user within the length MySQL will accept', function () {
+    fakeSaltService();
+    fakeInstallServer();
+
+    // A nip.io host, which is how every IP-addressed test site is reached and
+    // is long before anyone has typed a real domain. This one produced
+    // `wordpress_139_59_88_213_nip_io_xqolim` (37 chars) and killed the
+    // install at create_database with MySQL's "ERROR 1470 ... is too long for
+    // user name" -- 32 is the hard limit, and the same string names both the
+    // database and its user.
+    $app = wpApp(['domain' => 'wordpress.139.59.88.213.nip.io']);
+
+    runProvision($app);
+
+    $database = Database::where('application_id', $app->id)->with('users')->first();
+    $username = $database->users->first()->username;
+
+    expect(strlen($username))->toBeLessThanOrEqual(32)
+        // The random tail is what keeps two truncated domains apart, so it
+        // must survive the truncation rather than being cut off by it.
+        ->and($username)->toMatch('/_[a-z0-9]{6}$/')
+        ->and($username)->toStartWith('wordpress_');
+});
+
 it('locks down wp-config.php, which holds live database credentials', function () {
     fakeSaltService();
     fakeInstallServer();

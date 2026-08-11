@@ -18,8 +18,12 @@ class StoreDatabaseUserRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // 32, not 63: MySQL 8 refuses a longer user name outright with
+            // "ERROR 1470 ... is too long for user name". 63 is the *database*
+            // name limit; letting it through here turns a field the user can
+            // fix into a raw engine error from the middle of provisioning.
             'username' => [
-                'required', 'string', 'regex:/^[A-Za-z0-9_]{1,63}$/',
+                'required', 'string', 'regex:/^[A-Za-z0-9_]{1,32}$/',
                 Rule::notIn((array) config('server.databases.system_users', [])),
             ],
             'password' => ['nullable', 'string', 'min:8', 'max:255'],

@@ -148,8 +148,31 @@ class InstallerManager
     }
 
     /**
+     * Longest identifier this may produce.
+     *
+     * 32 because that is MySQL 8's hard limit on a **user** name, and this one
+     * string names both the database and its user. Exceeding it does not
+     * degrade — `CREATE USER` fails outright with "ERROR 1470 ... is too long
+     * for user name" and the whole install dies at create_database.
+     *
+     * Database names may be 64, so this only binds because the two are
+     * deliberately the same string. Splitting them would buy 32 characters
+     * nobody wants and cost the "a database and its user share a name"
+     * property that makes these greppable in `SHOW GRANTS`.
+     */
+    private const MAX_IDENTIFIER = 32;
+
+    /** Random tail that keeps two similar domains apart. */
+    private const IDENTIFIER_SUFFIX = 6;
+
+    /**
      * A database identifier derived from the domain: predictable for the user,
-     * and constrained to the charset the engine accepts.
+     * and constrained to the charset *and length* every engine accepts.
+     *
+     * The domain part is truncated rather than the whole string, so the
+     * random suffix always survives: it is the only thing keeping
+     * `shop.example.com` and `shop.example.net` from colliding once both have
+     * been cut to the same prefix.
      */
     private function identifier(Application $application): string
     {
@@ -157,10 +180,14 @@ class InstallerManager
             ->replace('.', '_')
             ->replaceMatches('/[^A-Za-z0-9_]/', '')
             ->lower()
-            ->limit(48, '')
+            // Room for the suffix and the underscore joining it.
+            ->limit(self::MAX_IDENTIFIER - self::IDENTIFIER_SUFFIX - 1, '')
+            // Truncation can land on a separator; a trailing underscore before
+            // the suffix reads as a typo.
+            ->rtrim('_')
             ->value();
 
-        return ($base ?: 'app').'_'.Str::lower(Str::random(6));
+        return ($base ?: 'app').'_'.Str::lower(Str::random(self::IDENTIFIER_SUFFIX));
     }
 
     /**

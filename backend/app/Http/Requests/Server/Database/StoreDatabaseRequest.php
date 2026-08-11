@@ -35,8 +35,10 @@ class StoreDatabaseRequest extends FormRequest
             'application_id' => ['nullable', 'integer', Rule::exists('applications', 'id')],
 
             'create_user' => ['nullable', 'array'],
+            // 32 is MySQL 8's hard limit on a user name, unlike the 63 allowed
+            // for the database name above — see StoreDatabaseUserRequest.
             'create_user.username' => [
-                'required_with:create_user', 'string', 'regex:/^[A-Za-z0-9_]{1,63}$/',
+                'required_with:create_user', 'string', 'regex:/^[A-Za-z0-9_]{1,32}$/',
                 Rule::notIn((array) config('server.databases.system_users', [])),
             ],
             'create_user.password' => ['nullable', 'string', 'min:8', 'max:255'],
