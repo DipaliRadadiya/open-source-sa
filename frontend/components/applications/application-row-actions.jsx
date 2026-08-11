@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { toast } from "sonner";
 import {
   ExternalLink,
@@ -65,7 +66,7 @@ export function ApplicationRowActions({
       await retryProvisioning(application.id);
       router.refresh();
     } catch (error) {
-      toast.error(apiMessage(error, t("details.failed", { step: application.failed_step ?? "—" })));
+      toast.error(apiMessage(error, t("details.failedAt", { step: provisionStepLabel(application.failed_step, t, "details.") })));
     } finally {
       setRetrying(false);
     }

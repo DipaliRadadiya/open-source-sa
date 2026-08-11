@@ -66,9 +66,11 @@ function ProcessesCardInner({ data, failed, canManage }) {
               <RefreshButton />
             </>
           ) : null}
+          {/* Default size, not sm: it sits beside the search box and the
+              refresh button, which are both h-9, and every other toolbar in
+              the panel pairs RefreshButton with a default-size Button. */}
           <Button
             variant="outline"
-            size="sm"
             onClick={() => setOpen((prev) => !prev)}
             aria-expanded={open}
           >

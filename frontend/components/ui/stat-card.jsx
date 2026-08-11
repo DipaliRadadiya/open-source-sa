@@ -68,11 +68,21 @@ export function StatCard({ icon: Icon, label, value, hint, sub, percent, loading
           </>
         ) : (
           <>
-            <div className="mt-4 flex items-baseline justify-between gap-2">
-              <p className="text-lg font-semibold leading-none tracking-tight tabular-nums">
+            {/* min-h so the row is the same height with or without a hint —
+                the hint's line-height made cards that have one sit 2px lower,
+                and the helper lines underneath then failed to line up across
+                the row. */}
+            <div className="mt-4 flex min-h-5 items-baseline justify-between gap-2">
+              <p className="text-xl font-semibold leading-none tracking-tight tabular-nums">
                 {value}
               </p>
-              <span className="shrink-0 text-sm tabular-nums text-muted-foreground">{hint}</span>
+              {/* leading-none to match the value: on `items-baseline`, the
+                  hint's half-leading pushed its baseline down and made cards
+                  that have a hint 2px taller than those that don't, so the
+                  helper lines underneath drifted out of line across the row. */}
+              <span className="shrink-0 text-sm leading-none tabular-nums text-muted-foreground">
+                {hint}
+              </span>
             </div>
 
             {percent != null ? (

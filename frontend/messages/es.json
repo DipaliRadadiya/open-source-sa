@@ -641,50 +641,39 @@
     "cores": "{count} núcleos",
     "loadHint": "1m · 5m · 15m",
     "info": {
-      "title": "Servidor",
-      "description": "Hardware, sistema operativo y entornos instalados.",
-      "hostname": "Nombre de host",
-      "os": "Sistema operativo",
       "kernel": "Kernel",
-      "arch": "Arquitectura",
       "ip": "Dirección IP",
-      "uptime": "Tiempo activo",
-      "timezone": "Zona horaria",
       "cpuModel": "Procesador",
       "runtimes": "Entornos",
       "noRuntimes": "Ninguno detectado",
-      "rebootRequired": "Reinicio necesario",
-      "healthy": "Correcto",
       "copyIp": "Copiar la dirección IP",
       "servicesOk": "{count, plural, one {# servicio en ejecución} other {Los # servicios están en ejecución}}",
       "servicesDown": "{count, plural, one {No está en ejecución: {names}} other {No están en ejecución: {names}}}"
     },
     "charts": {
-      "title": "Últimas 24 horas",
-      "usage": "Uso",
-      "loadTitle": "Carga media",
-      "empty": "Aún no hay historial — las muestras se recogen cada 5 minutos.",
-      "emptyTitle": "Recopilando datos",
-      "emptyHint": "Los primeros puntos aparecen a los 5 minutos de iniciarse el recolector.",
-      "networkTitle": "Tráfico de red",
-      "networkIn": "Entrada",
-      "networkOut": "Salida",
-      "usage24": "CPU, memoria y disco · 24 h",
-      "load24": "Carga media · 24 h",
-      "network24": "Tráfico de red · 24 h",
-      "collecting": "Recopilando métricas: los primeros puntos aparecen en 5 minutos.",
-      "usageDescription": "Uso de CPU, memoria, swap y disco, muestreado cada 5 minutos.",
-      "loadDescription": "Carga del sistema en 1, 5 y 15 minutos.",
-      "networkDescription": "Tráfico de entrada y salida, muestreado cada 5 minutos.",
-      "load": "Carga",
-      "network": "Red"
-    },
-    "network": {
-      "title": "Red",
-      "description": "Rendimiento en vivo (se actualiza cada 3 s).",
-      "in": "Entrada",
-      "out": "Salida",
-      "waiting": "Esperando muestras…"
+      "waiting": "Esperando muestras…",
+      "load": {
+        "title": "Carga del servidor",
+        "description": "Trabajo en cola frente al número de núcleos del servidor.",
+        "cores": "{count} núcleos"
+      },
+      "usage": {
+        "title": "Uso de recursos",
+        "description": "Cuánto de cada recurso está en uso actualmente."
+      },
+      "network": {
+        "title": "E/S de red",
+        "description": "Tráfico de entrada y salida, en tiempo real.",
+        "in": "Entrada",
+        "out": "Salida"
+      },
+      "disk": {
+        "title": "E/S de disco",
+        "description": "Rendimiento de lectura y escritura, en tiempo real.",
+        "read": "Lectura",
+        "write": "Escritura",
+        "iops": "{ops} IOPS"
+      }
     },
     "processes": {
       "title": "Procesos",
@@ -739,12 +728,7 @@
       "refused": "Este proceso no se puede detener desde aquí.",
       "failed": "No se pudo detener el proceso."
     },
-    "throughput": {
-      "title": "Rendimiento",
-      "description": "Red y disco, en tiempo real.",
-      "disk": "Disco",
-      "iops": "{ops} IOPS"
-    }
+    "diskUnknown": "No informado"
   },
   "cronJobs": {
     "title": "Tareas cron",
@@ -1117,7 +1101,6 @@
       "unbanAllDescription": "Se desbloquearán las siguientes direcciones:",
       "unbanIpTitle": "¿Desbloquear {ip}?",
       "unbanIpDescription": "Esto eliminará el bloqueo de {ip} en {jail}.",
-      "unban": "Desbloquear",
       "cancel": "Cancelar",
       "unknownLeft": "No se sabe",
       "search": "Buscar dirección",
@@ -1636,6 +1619,7 @@
       "description": "Solo se listan las versiones que este servidor puede instalar.",
       "version": "Versión",
       "submit": "Instalar",
+      "installing": "Instalando…",
       "started": "Instalando PHP {version}; esto tarda unos minutos.",
       "already": "PHP {version} ya estaba instalada.",
       "failed": "No se pudo instalar esa versión.",
@@ -1743,6 +1727,7 @@
       "description": "Solo se listan las versiones que este servidor puede instalar.",
       "version": "Versión",
       "submit": "Instalar",
+      "installing": "Instalando…",
       "started": "Instalando Node.js {version}: esto tarda unos minutos.",
       "already": "Node.js {version} ya estaba instalada.",
       "failed": "No se pudo instalar esa versión.",
@@ -2011,6 +1996,9 @@
       "action": "Revisar",
       "confirmTitle": "Adoptar bases de datos existentes",
       "confirmDescription": "No se cambia ni se elimina nada: el panel simplemente empieza a gestionarlas.",
+      "selectedCount": "{selected} de {total} seleccionadas",
+      "selectAll": "Seleccionar todas",
+      "clearAll": "Borrar",
       "submit": "Adoptar",
       "adopting": "Adoptando…",
       "done": "{count, plural, one {# base de datos adoptada.} other {# bases de datos adoptadas.}}",
@@ -2201,7 +2189,60 @@
       "noEngine": {
         "title": "No hay ningún motor de base de datos en ejecución",
         "description": "La información de estado viene de un motor en ejecución. Inicia o conecta uno primero."
-      }
+      },
+      "runningCount": "{count, plural, =0 {nada en ejecución} one {# en ejecución} other {# en ejecución}}",
+      "ofMaxShort": "de {max}",
+      "threadsHint": "ejecutándose ahora",
+      "sinceRestart": "desde el último reinicio",
+      "durationSeconds": "{seconds}s",
+      "durationMinutes": "{minutes}m {seconds}s",
+      "durationHours": "{hours}h {minutes}m",
+      "showAll": "{count, plural, one {Mostrar # consulta más} other {Mostrar # consultas más}}",
+      "showLess": "{count, plural, one {Mostrar menos consultas} other {Mostrar menos consultas}}",
+      "stopQuery": "Detener consulta",
+      "searchQueries": "Buscar consultas, base de datos, usuario…",
+      "slowOnly": "Solo las largas",
+      "noMatches": "Ninguna consulta coincide con tu búsqueda.",
+      "clearFilters": "Quitar filtros",
+      "perHour": "{rate}/hora",
+      "verdict": {
+        "normal": "Normal",
+        "high": "Alto",
+        "review": "Requiere revisión",
+        "restarted": "Reiniciado hace poco"
+      },
+      "health": {
+        "healthy": "Correcto",
+        "attention": "Requiere atención",
+        "healthyBody": "Ahora mismo no hay nada que requiera tu atención.",
+        "issueCount": "{count, plural, one {# aspecto a revisar} other {# aspectos a revisar}}",
+        "running": "En ejecución",
+        "uptimeDays": "Activo {days, plural, one {# día} other {# días}}",
+        "uptimeHours": "Activo {hours, plural, one {# hora} other {# horas}}",
+        "uptimeMinutes": "Activo {minutes, plural, one {# minuto} other {# minutos}}",
+        "issues": {
+          "connectionsHigh": "Las conexiones están al {percent}% del límite.",
+          "connectionsCritical": "Las conexiones están al {percent}% del límite: las nuevas podrían fallar.",
+          "stuckQueries": "{count, plural, one {# consulta de larga duración requiere revisión} other {# consultas de larga duración requieren revisión}}",
+          "slowQueries": "{count, plural, one {# consulta lleva más de diez segundos} other {# consultas llevan más de diez segundos}}",
+          "slowRateHigh": "Alrededor de {rate} consultas lentas por hora desde el último reinicio.",
+          "slowRateCritical": "Alrededor de {rate} consultas lentas por hora: conviene revisar el registro de consultas lentas.",
+          "recentlyRestarted": "Este motor se reinició hace poco, así que los contadores y el historial aún se están llenando."
+        }
+      },
+      "longRunning": "Consulta de larga duración",
+      "meta": {
+        "database": "Base de datos",
+        "user": "Usuario",
+        "state": "Estado"
+      },
+      "summary": {
+        "current": "Actual",
+        "peak": "Máximo",
+        "average": "Media"
+      },
+      "runningQueries": "Consultas en ejecución",
+      "longRunningCount": "{count, plural, one {# de larga duración} other {# de larga duración}}"
     },
     "tables": {
       "title": "Tablas",
@@ -2507,17 +2548,45 @@
     "searchPlaceholder": "Buscar aplicaciones…",
     "details": {
       "title": "Aplicación",
-      "provisioning": "Aprovisionamiento",
-      "pending": "Esperando a que comience el aprovisionamiento.",
-      "inProgress": "El aprovisionamiento está en curso.",
-      "active": "La aplicación está activa.",
-      "failed": "El aprovisionamiento falló en {step}.",
-      "retry": "Reintentar aprovisionamiento",
+      "settingUp": "Configurando tu sitio",
+      "failedTitle": "La configuración falló",
+      "pending": "En cola: empezará en un momento.",
+      "keepWaiting": "Esto continúa en el servidor. Puedes salir de esta página sin problema.",
+      "takesMinutes": "La mayoría de los sitios están listos en unos minutos. Un instalador de un clic tarda más.",
+      "starting": "Iniciando…",
+      "working": "Trabajando…",
+      "failedAt": "Se detuvo en: {step}",
+      "retry": "Reintentar la configuración",
       "retrying": "Reintentando…",
       "reference": "Referencia de soporte: {reference}",
-      "steps": "Pasos completados",
-      "unknownStep": "Paso completado",
-      "noSteps": "Aún no se ha completado ningún paso."
+      "copyReference": "Copiar la referencia de soporte",
+      "unknownStep": "Se completó un paso",
+      "steps": {
+        "create_directory": "Creando la carpeta del sitio",
+        "placeholder": "Añadiendo una página provisional",
+        "set_ownership": "Configurando los permisos de archivos",
+        "create_php_pool": "Configurando PHP para este sitio",
+        "create_database": "Creando la base de datos",
+        "write_config": "Escribiendo la configuración del servidor web",
+        "test_config": "Comprobando la configuración del servidor web",
+        "reload": "Recargando el servidor web",
+        "script": "Ejecutando el script de instalación",
+        "restart_app": "Iniciando la aplicación",
+        "restart_workers": "Iniciando los procesos en segundo plano",
+        "download": "Descargando archivos",
+        "extract": "Descomprimiendo archivos",
+        "configure": "Aplicando la configuración",
+        "harden": "Aplicando ajustes de seguridad",
+        "install_app": "Instalando la aplicación",
+        "install_cache": "Configurando la caché",
+        "install_cli": "Instalando las herramientas de línea de comandos",
+        "set_password": "Estableciendo la contraseña de administrador",
+        "set_timezone": "Estableciendo la zona horaria",
+        "trust_domain": "Autorizando el dominio"
+      },
+      "stalledTitle": "Esto está tardando más de lo esperado",
+      "stalledBody": "La configuración no ha informado avances desde hace un rato. Puede que siga en marcha: vuelve a comprobarlo o contacta con soporte si sigue así.",
+      "checkAgain": "Comprobar de nuevo"
     },
     "port": {
       "label": "Puerto de aplicación",
@@ -2559,6 +2628,7 @@
       "fieldPlaceholder": "Introduce {field}",
       "fieldSelectPlaceholder": "Elige {field}",
       "requiredField": "Elige o introduce {field} antes de crear la aplicación.",
+      "advancedErrors": "{count, plural, one {# error} other {# errores}}",
       "noSystemUsers": "No hay usuarios del sistema disponibles. Crea uno antes de crear una aplicación.",
       "systemUsersUnavailable": "No pudimos cargar los usuarios del sistema. Aún puedes crear uno para continuar.",
       "noSystemUserCreatePermission": "Necesitas permiso para administrar usuarios del sistema. Pide a un administrador que cree uno.",
@@ -2923,7 +2993,13 @@
         "dropOverlay": "Suelta aquí para subir",
         "remove": "Quitar",
         "submit": "Subir",
-        "itemFailed": "No se pudo subir este archivo."
+        "itemFailed": "No se pudo subir este archivo.",
+        "noSpace": "No hay suficiente espacio libre en disco en el servidor para este archivo.",
+        "overall": "{done} de {count} archivos",
+        "uploadedOne": "{name} se ha subido.",
+        "uploadedMany": "Se han subido {count} archivos.",
+        "partial": "{done} subidos, {failed} fallidos.",
+        "allFailed": "No se pudo subir ninguno de estos archivos."
       },
       "editor": {
         "subtitle": "Los cambios se respaldan automáticamente antes de cada guardado.",

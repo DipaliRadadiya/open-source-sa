@@ -641,50 +641,39 @@
     "cores": "{count} cores",
     "loadHint": "1m · 5m · 15m",
     "info": {
-      "title": "Server",
-      "description": "Hardware, OS and installed runtimes.",
-      "hostname": "Hostname",
-      "os": "OS",
       "kernel": "Kernel",
-      "arch": "Architecture",
       "ip": "IP address",
-      "uptime": "Uptime",
-      "timezone": "Timezone",
       "cpuModel": "Processor",
       "runtimes": "Runtimes",
       "noRuntimes": "None detected",
-      "rebootRequired": "Reboot required",
-      "healthy": "Healthy",
       "copyIp": "Copy IP address",
       "servicesOk": "{count, plural, one {# service running} other {All # services running}}",
       "servicesDown": "{count, plural, one {Not running: {names}} other {Not running: {names}}}"
     },
     "charts": {
-      "title": "Last 24 hours",
-      "usage": "Usage",
-      "loadTitle": "Load average",
-      "empty": "No history yet — samples are collected every 5 minutes.",
-      "emptyTitle": "Collecting data",
-      "emptyHint": "The first points appear within 5 minutes of the collector starting.",
-      "networkTitle": "Network traffic",
-      "networkIn": "In",
-      "networkOut": "Out",
-      "usage24": "CPU, memory & disk · 24h",
-      "load24": "Load average · 24h",
-      "network24": "Network traffic · 24h",
-      "collecting": "Collecting metrics — the first points appear within 5 minutes.",
-      "usageDescription": "CPU, memory, swap and disk utilisation, sampled every 5 minutes.",
-      "loadDescription": "System load over 1, 5 and 15 minutes.",
-      "networkDescription": "Inbound and outbound throughput, sampled every 5 minutes.",
-      "load": "Load",
-      "network": "Network"
-    },
-    "network": {
-      "title": "Network",
-      "description": "Live throughput (updates every 3s).",
-      "in": "In",
-      "out": "Out",
-      "waiting": "Waiting for samples…"
+      "waiting": "Waiting for samples…",
+      "load": {
+        "title": "Server load",
+        "description": "Queued work against how many cores this server has.",
+        "cores": "{count} cores"
+      },
+      "usage": {
+        "title": "Resource usage",
+        "description": "How much of each resource is currently in use."
+      },
+      "network": {
+        "title": "Network I/O",
+        "description": "Inbound and outbound traffic, updating live.",
+        "in": "In",
+        "out": "Out"
+      },
+      "disk": {
+        "title": "Disk I/O",
+        "description": "Read and write throughput, updating live.",
+        "read": "Read",
+        "write": "Write",
+        "iops": "{ops} IOPS"
+      }
     },
     "processes": {
       "title": "Processes",
@@ -739,12 +728,7 @@
       "refused": "This process cannot be stopped from here.",
       "failed": "The process could not be stopped."
     },
-    "throughput": {
-      "title": "Throughput",
-      "description": "Network and disk, updating live.",
-      "disk": "Disk",
-      "iops": "{ops} IOPS"
-    }
+    "diskUnknown": "Not reported"
   },
   "cronJobs": {
     "title": "Cron jobs",
@@ -1117,7 +1101,6 @@
       "unbanAllDescription": "The following addresses will be unbanned:",
       "unbanIpTitle": "Unban {ip}?",
       "unbanIpDescription": "This will remove the ban for {ip} from {jail}.",
-      "unban": "Unban",
       "cancel": "Cancel",
       "unknownLeft": "Not known",
       "search": "Search address",
@@ -1636,6 +1619,7 @@
       "description": "Only versions this server can actually install are listed.",
       "version": "Version",
       "submit": "Install",
+      "installing": "Installing…",
       "started": "Installing PHP {version} — this takes a few minutes.",
       "already": "PHP {version} was already installed.",
       "failed": "That version could not be installed.",
@@ -1743,6 +1727,7 @@
       "description": "Only versions this server can actually install are listed.",
       "version": "Version",
       "submit": "Install",
+      "installing": "Installing…",
       "started": "Installing Node.js {version} — this takes a few minutes.",
       "already": "Node.js {version} was already installed.",
       "failed": "That version could not be installed.",
@@ -2011,6 +1996,9 @@
       "action": "Review",
       "confirmTitle": "Adopt existing databases",
       "confirmDescription": "Nothing is changed or deleted — the panel just starts managing them.",
+      "selectedCount": "{selected} of {total} selected",
+      "selectAll": "Select all",
+      "clearAll": "Clear",
       "submit": "Adopt",
       "adopting": "Adopting…",
       "done": "{count, plural, one {# database adopted.} other {# databases adopted.}}",
@@ -2201,7 +2189,60 @@
       "noEngine": {
         "title": "No database engine is running",
         "description": "Health information comes from a running engine. Start or connect one first."
-      }
+      },
+      "runningCount": "{count, plural, =0 {nothing running} one {# running} other {# running}}",
+      "ofMaxShort": "of {max}",
+      "threadsHint": "executing right now",
+      "sinceRestart": "since last restart",
+      "durationSeconds": "{seconds}s",
+      "durationMinutes": "{minutes}m {seconds}s",
+      "durationHours": "{hours}h {minutes}m",
+      "showAll": "{count, plural, one {Show # more query} other {Show # more queries}}",
+      "showLess": "{count, plural, one {Show fewer queries} other {Show fewer queries}}",
+      "stopQuery": "Stop query",
+      "searchQueries": "Search queries, database, user…",
+      "slowOnly": "Long-running only",
+      "noMatches": "No queries match your search.",
+      "clearFilters": "Clear filters",
+      "perHour": "{rate}/hour",
+      "verdict": {
+        "normal": "Normal",
+        "high": "High",
+        "review": "Needs review",
+        "restarted": "Recently restarted"
+      },
+      "health": {
+        "healthy": "Healthy",
+        "attention": "Needs attention",
+        "healthyBody": "Nothing needs your attention right now.",
+        "issueCount": "{count, plural, one {# thing to look at} other {# things to look at}}",
+        "running": "Running",
+        "uptimeDays": "Up {days, plural, one {# day} other {# days}}",
+        "uptimeHours": "Up {hours, plural, one {# hour} other {# hours}}",
+        "uptimeMinutes": "Up {minutes, plural, one {# minute} other {# minutes}}",
+        "issues": {
+          "connectionsHigh": "Connections are at {percent}% of the limit.",
+          "connectionsCritical": "Connections are at {percent}% of the limit — new ones may start failing.",
+          "stuckQueries": "{count, plural, one {# long-running query needs review} other {# long-running queries need review}}",
+          "slowQueries": "{count, plural, one {# query is running longer than ten seconds} other {# queries are running longer than ten seconds}}",
+          "slowRateHigh": "Around {rate} slow queries an hour since the last restart.",
+          "slowRateCritical": "Around {rate} slow queries an hour — worth looking at the slow query log.",
+          "recentlyRestarted": "This engine restarted recently, so counters and history are still filling up."
+        }
+      },
+      "longRunning": "Long-running query",
+      "meta": {
+        "database": "Database",
+        "user": "User",
+        "state": "State"
+      },
+      "summary": {
+        "current": "Current",
+        "peak": "Peak",
+        "average": "Average"
+      },
+      "runningQueries": "Running queries",
+      "longRunningCount": "{count, plural, one {# long-running} other {# long-running}}"
     },
     "tables": {
       "title": "Tables",
@@ -2507,17 +2548,45 @@
     "searchPlaceholder": "Search applications…",
     "details": {
       "title": "Application",
-      "provisioning": "Provisioning",
-      "pending": "Waiting for provisioning to start.",
-      "inProgress": "Provisioning is in progress.",
-      "active": "Application is active.",
-      "failed": "Provisioning failed at {step}.",
-      "retry": "Retry provisioning",
+      "settingUp": "Setting up your site",
+      "failedTitle": "Setup failed",
+      "pending": "Queued — this starts in a moment.",
+      "keepWaiting": "This continues on the server. You can safely leave this page.",
+      "takesMinutes": "Most sites are ready within a few minutes. A one-click installer takes longer.",
+      "starting": "Starting…",
+      "working": "Working…",
+      "failedAt": "Stopped at: {step}",
+      "retry": "Retry setup",
       "retrying": "Retrying…",
       "reference": "Support reference: {reference}",
-      "steps": "Completed steps",
-      "unknownStep": "Completed step",
-      "noSteps": "No provisioning steps have completed yet."
+      "copyReference": "Copy support reference",
+      "unknownStep": "Completed a step",
+      "steps": {
+        "create_directory": "Creating the site folder",
+        "placeholder": "Adding a placeholder page",
+        "set_ownership": "Setting file permissions",
+        "create_php_pool": "Setting up PHP for this site",
+        "create_database": "Creating the database",
+        "write_config": "Writing the web server configuration",
+        "test_config": "Checking the web server configuration",
+        "reload": "Reloading the web server",
+        "script": "Running the setup script",
+        "restart_app": "Starting the application",
+        "restart_workers": "Starting background workers",
+        "download": "Downloading files",
+        "extract": "Unpacking files",
+        "configure": "Applying configuration",
+        "harden": "Applying security settings",
+        "install_app": "Installing the application",
+        "install_cache": "Setting up caching",
+        "install_cli": "Installing command-line tools",
+        "set_password": "Setting the administrator password",
+        "set_timezone": "Setting the time zone",
+        "trust_domain": "Trusting the domain"
+      },
+      "stalledTitle": "This is taking longer than expected",
+      "stalledBody": "Setup has not reported progress for a while. It may still be running — check again, or contact support if it stays like this.",
+      "checkAgain": "Check again"
     },
     "port": {
       "label": "Application port",
@@ -2559,6 +2628,7 @@
       "fieldPlaceholder": "Enter {field}",
       "fieldSelectPlaceholder": "Choose {field}",
       "requiredField": "Choose or enter {field} before creating the application.",
+      "advancedErrors": "{count, plural, one {# error} other {# errors}}",
       "noSystemUsers": "No system users are available. Create one before creating an application.",
       "systemUsersUnavailable": "We couldn’t load system users. You can still create one to continue.",
       "noSystemUserCreatePermission": "You need permission to manage system users. Ask an administrator to create one.",
@@ -2923,7 +2993,13 @@
         "dropOverlay": "Drop to upload here",
         "remove": "Remove",
         "submit": "Upload",
-        "itemFailed": "Couldn't upload this file."
+        "itemFailed": "Couldn't upload this file.",
+        "noSpace": "Not enough free disk space on the server for this file.",
+        "overall": "{done} of {count} files",
+        "uploadedOne": "{name} uploaded.",
+        "uploadedMany": "{count} files uploaded.",
+        "partial": "{done} uploaded, {failed} failed.",
+        "allFailed": "Couldn't upload any of these files."
       },
       "editor": {
         "subtitle": "Changes are backed up automatically before each save.",

@@ -10,8 +10,8 @@ import {
   getProcesses,
 } from "@/lib/databases/get-monitor";
 import { getServerFacts } from "@/lib/server/get-server-facts";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { HealthSummary } from "@/components/databases/health-summary";
 import { EngineStatusCards } from "@/components/databases/engine-status-cards";
 import { QueryChart } from "@/components/databases/query-chart";
 import { ProcessList } from "@/components/databases/process-list";
@@ -68,11 +68,12 @@ export default async function DatabaseMonitorPage({ searchParams }) {
   return (
     <div className="space-y-6">
       <PageCrumb>{t("crumb")}</PageCrumb>
-      <Header t={t} />
+      <Header t={t} engine={selected} />
 
       <div className="max-w-5xl space-y-4">
         {/* Only when there is a choice to make. A switch with one option reads
-            as a step you have to take. */}
+            as a step you have to take — with one engine its identity rides in
+            the page title instead. */}
         {running.length > 1 ? (
           <div className="flex items-center gap-2">
             {running.map((engine) => (
@@ -88,39 +89,37 @@ export default async function DatabaseMonitorPage({ searchParams }) {
               </Button>
             ))}
           </div>
-        ) : (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-medium">{selected.engine}</span>
-            {selected.version ? (
-              <span className="font-mono text-xs text-muted-foreground">
-                {selected.version}
-              </span>
-            ) : null}
-            <Badge variant="success" className="font-normal">
-              {t("running")}
-            </Badge>
-          </div>
-        )}
+        ) : null}
 
-        <EngineStatusCards status={status} />
-        <QueryChart metrics={metrics} timeZone={facts?.timezone} />
+        <HealthSummary engine={selected} status={status} processes={processes} />
+
+        <EngineStatusCards status={status} processes={processes} />
+
+        {/* Queries before the chart. Someone opens this page because something
+            is slow *now*; the 24h history is what you consult after seeing
+            what is running. With the chart first, the query rows — including
+            the one that has been going for two minutes — sat below the fold. */}
         <ProcessList
           engine={selected.engine}
           processes={processes}
           canManage={canManage}
         />
+        <QueryChart metrics={metrics} timeZone={facts?.timezone} />
       </div>
     </div>
   );
 }
 
+/**
+ * Plain title. The engine, its version, whether it is up and for how long all
+ * live in the health summary below — repeating them here would be the same
+ * fact twice, a few pixels apart.
+ */
 function Header({ t }) {
   return (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+    <div className="space-y-1">
+      <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+      <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
     </div>
   );
 }

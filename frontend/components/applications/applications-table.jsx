@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { ChevronRight, CircleAlert, Globe2, Plus, SearchX, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,8 +46,12 @@ function StatusCell({ row }) {
       <Badge variant={STATUS_VARIANTS[application.status] ?? "secondary"} className="font-normal">
         {application.status_title ?? application.status}
       </Badge>
+      {/* The API sends raw step identifiers (`create_php_pool`), which were
+          being printed straight into the row. */}
       {(application.status === "pending" || application.status === "provisioning") && application.steps?.length ? (
-        <p className="max-w-40 truncate text-xs text-muted-foreground">{application.steps.at(-1)}</p>
+        <p className="max-w-40 truncate text-xs text-muted-foreground">
+          {provisionStepLabel(application.steps.at(-1), t, "details.")}
+        </p>
       ) : null}
       {application.status === "failed" && application.reference ? (
         <p className="font-mono text-xs text-destructive">{application.reference}</p>

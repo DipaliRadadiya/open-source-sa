@@ -16,8 +16,9 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
  * because on a phone you are deciding whether to wait or to act. The exact
  * ban timestamp is the least urgent thing here, so it goes last and small.
  */
-// onUnban is setUnbanConfirm — clicking opens the confirm dialog rather than unbanning directly.
-export function BannedCards({ data, canManage, onUnban: setUnbanConfirm, unbanning, t, renderExpiry }) {
+// Unban asks first, same as the table: releasing an address is a security
+// decision, and a mis-tap on a phone is a lot easier than a mis-click.
+export function BannedCards({ data, canManage, onRequestUnban, unbanning, t, renderExpiry }) {
   return (
     <ul className="space-y-3">
       {data.map((ban) => (
@@ -46,7 +47,7 @@ export function BannedCards({ data, canManage, onUnban: setUnbanConfirm, unbanni
                 variant="outline"
                 size="sm"
                 disabled={!canManage || unbanning === ban.ip}
-                onClick={() => setUnbanConfirm(ban)}
+                onClick={() => onRequestUnban(ban)}
               >
                 <ShieldOff className="size-4" />
                 {t("banned.unban")}

@@ -6,7 +6,10 @@ import { cn } from "@/lib/utils";
 import { clockFormatter } from "@/lib/format/time";
 import { useLiveMetrics } from "@/components/server-dashboard/use-live-metrics";
 import { StatCards } from "@/components/server-dashboard/stat-cards";
-import { NetworkChart } from "@/components/server-dashboard/network-chart";
+import { ServerLoadChart } from "@/components/server-dashboard/server-load-chart";
+import { ResourceUsageChart } from "@/components/server-dashboard/resource-usage-chart";
+import { NetworkIoChart } from "@/components/server-dashboard/network-io-chart";
+import { DiskIoChart } from "@/components/server-dashboard/disk-io-chart";
 
 function LiveStatus({ failed, updatedAt, timeZone }) {
   const t = useTranslations("serverDashboard");
@@ -51,20 +54,42 @@ function LiveStatus({ failed, updatedAt, timeZone }) {
   );
 }
 
-export function LiveMetricsSection({ children, timeZone }) {
-  const { metrics, netSeries, failed, updatedAt, ratesReady } = useLiveMetrics();
+export function LiveMetricsSection({ timeZone }) {
+  const { metrics, series, failed, updatedAt, ratesReady } = useLiveMetrics();
+  // Everything on screen is last-known, not current — the charts have to say
+  // so as loudly as the stat cards do.
+  const stale = failed && Boolean(metrics);
 
   return (
     <div className="space-y-4">
       <LiveStatus failed={failed} updatedAt={updatedAt} timeZone={timeZone} />
-      <StatCards
-        metrics={metrics}
-        stale={failed && Boolean(metrics)}
-        ratesReady={ratesReady}
-      />
+      <StatCards metrics={metrics} stale={stale} ratesReady={ratesReady} />
+      {/* Row one asks "is the machine struggling", row two "what is it
+          moving". All four read the same poll, so nothing here costs an extra
+          request — and no metric appears on two charts. */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <NetworkChart series={netSeries} metrics={metrics} timeZone={timeZone} />
-        {children}
+        <ServerLoadChart
+          series={series}
+          metrics={metrics}
+          timeZone={timeZone}
+          stale={stale}
+        />
+        <ResourceUsageChart
+          series={series}
+          metrics={metrics}
+          timeZone={timeZone}
+          stale={stale}
+          ratesReady={ratesReady}
+        />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <NetworkIoChart
+          series={series}
+          metrics={metrics}
+          timeZone={timeZone}
+          stale={stale}
+        />
+        <DiskIoChart series={series} metrics={metrics} timeZone={timeZone} stale={stale} />
       </div>
     </div>
   );

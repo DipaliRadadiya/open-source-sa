@@ -7,17 +7,23 @@ const POLL_MS = 3000;
 const SLOW_POLL_MS = 15000;
 // Back off only once the failures look like an outage, not a blip.
 const FAILURES_BEFORE_BACKOFF = 3;
-const MAX_POINTS = 40;
+// 100 points x 3s = a five-minute window. Forty points was two minutes, which
+// is too short to read a trend off — you saw noise, not a shape.
+const MAX_POINTS = 100;
 
 /**
- * Polls GET /server/metrics/live and keeps a short rolling window of network
- * samples for the streaming chart. Pauses while the tab is hidden and aborts
- * the in-flight request on unmount so a backgrounded tab costs nothing.
- * Timestamps stay raw — formatting is the caller's job, via next-intl.
+ * Polls GET /server/metrics/live and keeps one rolling window that feeds every
+ * chart on the dashboard — load, resource usage and both I/O pairs. One poll,
+ * one series, four charts: the alternative was four components each keeping
+ * their own history of the same response.
+ *
+ * Pauses while the tab is hidden and aborts the in-flight request on unmount so
+ * a backgrounded tab costs nothing. Timestamps stay raw — formatting is the
+ * caller's job, via next-intl.
  */
 export function useLiveMetrics(initial = null) {
   const [metrics, setMetrics] = useState(initial);
-  const [netSeries, setNetSeries] = useState([]);
+  const [series, setSeries] = useState([]);
   const [failed, setFailed] = useState(false);
   // `cpu.percent`, `network` and `disk_io` are rates measured against the
   // PREVIOUS poll, so the first sample after any gap comes back as 0 — there is
@@ -76,17 +82,34 @@ export function useLiveMetrics(initial = null) {
           // chart gets no point rather than a false zero.
           needsBaseline = false;
           setRatesReady(false);
+          // A baseline is only ever needed after a gap — a hidden tab, an
+          // outage, a fresh mount. Push a valueless point so the line BREAKS
+          // there. Without it, coming back from 45s on another tab drew a
+          // straight segment across the whole absence, which reads as "traffic
+          // was steady" when the truth is "nobody was looking".
+          setSeries((prev) =>
+            prev.length ? [...prev, { t: Date.now() }].slice(-MAX_POINTS) : prev,
+          );
           return;
         }
 
         setRatesReady(true);
-        setNetSeries((prev) =>
+        setSeries((prev) =>
           [
             ...prev,
             {
               t: Date.now(),
-              in: Number(data.network?.in ?? 0),
-              out: Number(data.network?.out ?? 0),
+              net_in: Number(data.network?.in ?? 0),
+              net_out: Number(data.network?.out ?? 0),
+              disk_read: Number(data.disk_io?.read ?? 0),
+              disk_write: Number(data.disk_io?.write ?? 0),
+              cpu: Number(data.cpu?.percent ?? 0),
+              memory: Number(data.memory?.percent ?? 0),
+              // Only real when the collector reports a filesystem at all;
+              // a 0 % here means "unknown", not "empty disk".
+              disk: data.disk?.total ? Number(data.disk.percent ?? 0) : null,
+              load_5: Number(data.load?.[5] ?? 0),
+              load_15: Number(data.load?.[15] ?? 0),
             },
           ].slice(-MAX_POINTS),
         );
@@ -114,5 +137,5 @@ export function useLiveMetrics(initial = null) {
     };
   }, []);
 
-  return { metrics, netSeries, failed, updatedAt, ratesReady };
+  return { metrics, series, failed, updatedAt, ratesReady };
 }

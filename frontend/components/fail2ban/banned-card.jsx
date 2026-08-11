@@ -105,7 +105,7 @@ function expiryContent(ban, t) {
 }
 
 function ActionsCell({ row, table }) {
-  const { canManage, onUnban, unbanning, t } = table.options.meta;
+  const { canManage, onRequestUnban, unbanning, t } = table.options.meta;
   return (
     <div className="flex justify-end">
       <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
@@ -113,7 +113,7 @@ function ActionsCell({ row, table }) {
           variant="ghost"
           size="sm"
           disabled={!canManage || unbanning === row.original.ip}
-          onClick={() => setUnbanConfirm(row.original)}
+          onClick={() => onRequestUnban(row.original)}
         >
           <ShieldOff className="size-4" />
           {t("banned.unban")}
@@ -295,7 +295,7 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
               <BannedCards
                 data={visible}
                 canManage={canManage}
-                onUnban={onUnban}
+                onRequestUnban={setUnbanConfirm}
                 unbanning={unbanning}
                 t={t}
                 renderExpiry={(ban) => expiryContent(ban, t)}
@@ -312,7 +312,7 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
                 data={visible}
                 emptyMessage={t("banned.noMatches")}
                 stickyHeader
-                meta={{ canManage, onUnban, unbanning, t }}
+                meta={{ canManage, onRequestUnban: setUnbanConfirm, unbanning, t }}
               />
             </div>
           </>

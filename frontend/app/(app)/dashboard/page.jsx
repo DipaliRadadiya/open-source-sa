@@ -4,14 +4,12 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getServerFacts } from "@/lib/server/get-server-facts";
-import { getServerHistory } from "@/lib/server/get-server-history";
 import { getServerProcesses } from "@/lib/server/get-server-processes";
 import { getServiceHealth } from "@/lib/server/get-service-health";
 import { getSetup } from "@/lib/setup/get-setup";
 import { SetupBanner } from "@/components/setup/setup-banner";
 import { LiveMetricsSection } from "@/components/server-dashboard/live-metrics-section";
 import { ServerInfoCard } from "@/components/server-dashboard/server-info-card";
-import { MetricsCharts } from "@/components/server-dashboard/metrics-charts";
 import { ProcessesCard } from "@/components/server-dashboard/processes-card";
 
 export const dynamic = "force-dynamic";
@@ -39,16 +37,19 @@ export default async function DashboardPage() {
   const allowed = can(permissions, "dashboard", "view");
   // Stopping a process is a write, so it needs `manage`, not `view`.
   const canManage = can(permissions, "dashboard", "manage");
-  const [facts, history, processResult, health] = allowed
+  // No history fetch: /server/metrics/history returns nothing on any box we
+  // can reach, and every chart now reads the live poll instead. The fetcher
+  // stays in lib/server for when the collector ships and the charts gain a
+  // Live/24h switch.
+  const [facts, processResult, health] = allowed
     ? await Promise.all([
         getServerFacts(),
-        getServerHistory(),
         getServerProcesses(),
         // Null when the user cannot read services — the card then says nothing
         // rather than claiming everything is fine.
         getServiceHealth(),
       ])
-    : [null, [], { data: [], failed: false }, null];
+    : [null, { data: [], failed: false }, null];
 
   return (
     <div className="space-y-6">
@@ -61,11 +62,11 @@ export default async function DashboardPage() {
 
       {allowed ? (
         <>
-          {/* Network chart pairs with the server facts on the same row. */}
-          <LiveMetricsSection timeZone={facts?.timezone}>
-            <ServerInfoCard facts={facts} health={health} />
-          </LiveMetricsSection>
-          <MetricsCharts history={history} timeZone={facts?.timezone} />
+          {/* Identity first — "which machine am I on" is read once, on
+              arrival — then the live numbers, then four even history charts:
+              the network pair, then the system pair. */}
+          <ServerInfoCard facts={facts} health={health} />
+          <LiveMetricsSection timeZone={facts?.timezone} />
           <ProcessesCard
             data={processResult.data}
             failed={processResult.failed}

@@ -101,6 +101,11 @@ function ChartTooltipContent({
   labelFormatter,
   labelClassName,
   formatter,
+  // Formats ONLY the value, keeping the colour indicator and series name that
+  // `formatter` replaces wholesale. Without it, any chart needing localized or
+  // unit-scaled values (bytes/s, percentages) lost its labels and rendered as
+  // a stack of bare numbers.
+  valueFormatter,
   color,
   nameKey,
   labelKey
@@ -208,9 +213,11 @@ function ChartTooltipContent({
                       </div>
                       {item.value != null && (
                         <span className="font-mono font-medium text-foreground tabular-nums">
-                          {typeof item.value === "number"
-                            ? item.value.toLocaleString()
-                            : String(item.value)}
+                          {valueFormatter
+                            ? valueFormatter(item.value, item)
+                            : typeof item.value === "number"
+                              ? item.value.toLocaleString()
+                              : String(item.value)}
                         </span>
                       )}
                     </div>

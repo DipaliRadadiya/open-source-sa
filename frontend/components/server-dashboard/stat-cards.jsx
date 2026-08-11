@@ -90,17 +90,25 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         hasSub
         loading={loading}
       />
+      {/* Guarded like swap above: when the collector reports no filesystem at
+          all, disk_total is 0 and the unguarded card rendered "0%" over an
+          empty bar and "0 B of 0 B" — which reads as a healthy empty disk when
+          the truth is that nothing was measured. */}
       <StatCard
         icon={HardDrive}
         label={t("disk")}
-        value={percentText(disk?.percent)}
-        percent={disk?.percent}
+        value={Number(disk?.total) > 0 ? percentText(disk?.percent) : "—"}
+        percent={Number(disk?.total) > 0 ? disk?.percent : null}
         hint={
-          disk?.total_human
+          Number(disk?.total) > 0 && disk?.total_human
             ? t("usedOf", { used: disk.used_human, total: disk.total_human })
+            : t("diskUnknown")
+        }
+        sub={
+          Number(disk?.total) > 0 && disk?.free_human
+            ? t("free", { free: disk.free_human })
             : ""
         }
-        sub={disk?.free_human ? t("free", { free: disk.free_human }) : ""}
         hasSub
         loading={loading}
       />

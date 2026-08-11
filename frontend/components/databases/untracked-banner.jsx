@@ -32,6 +32,8 @@ export function UntrackedBanner({ untracked = [], canManage }) {
 
   if (untracked.length === 0) return null;
 
+  const allChosen = chosen.length === untracked.length;
+
   function toggle(name) {
     setChosen((current) =>
       current.includes(name)
@@ -95,6 +97,10 @@ export function UntrackedBanner({ untracked = [], canManage }) {
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
+        // Wider than a yes/no confirmation because this one asks you to read a
+        // list, and a generated name like `wordpress_139_59_88_213_nip_io_4fguku`
+        // does not fit 384px. `!` is required — see restore-dialog.jsx.
+        className="w-full sm:!max-w-lg"
         icon={PackageSearch}
         title={t("adopt.confirmTitle")}
         description={t("adopt.confirmDescription")}
@@ -113,22 +119,59 @@ export function UntrackedBanner({ untracked = [], canManage }) {
         pending={pending}
         onConfirm={onConfirm}
       >
-        <div className="space-y-1">
-          {untracked.map((item) => (
-            <label
-              key={`${item.engine}-${item.name}`}
-              className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/50"
+        <div className="space-y-2">
+          {/* Everything starts ticked, so the count is the only thing that says
+              what you are about to take — and the toggle is how you get back to
+              "all of them" after unticking one by mistake. */}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {t("adopt.selectedCount", {
+                selected: chosen.length,
+                total: untracked.length,
+              })}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={pending}
+              onClick={() =>
+                setChosen(allChosen ? [] : untracked.map((item) => item.name))
+              }
             >
-              <Checkbox
-                checked={chosen.includes(item.name)}
-                onCheckedChange={() => toggle(item.name)}
-              />
-              <span className="font-mono text-sm">{item.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {t(`engines.${item.engine}`)}
-              </span>
-            </label>
-          ))}
+              {allChosen ? t("adopt.clearAll") : t("adopt.selectAll")}
+            </Button>
+          </div>
+
+          {/* Bounded with its own scroll: a server migrated in can carry fifty
+              of these, and a dialog that grows with the list pushes Adopt off
+              the bottom of the screen. */}
+          <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-1">
+            {untracked.map((item) => (
+              <label
+                key={`${item.engine}-${item.name}`}
+                className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/50"
+              >
+                <Checkbox
+                  className="shrink-0"
+                  checked={chosen.includes(item.name)}
+                  disabled={pending}
+                  onCheckedChange={() => toggle(item.name)}
+                />
+                {/* Wrapped, never truncated. These names are generated and
+                    differ only in the last few characters, so an ellipsis at
+                    the end turns `..._9ulk1c` and `..._irlezq` into the same
+                    row — on a phone you would be ticking boxes blind. */}
+                <span className="min-w-0 flex-1 font-mono text-sm break-all">
+                  {item.name}
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {t(`engines.${item.engine}`)}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
       </ConfirmDialog>
     </>

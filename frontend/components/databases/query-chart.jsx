@@ -55,9 +55,25 @@ export function QueryChart({ metrics = [], timeZone }) {
     threads_running: { label: t("threadsRunning"), color: "var(--chart-4)" },
   };
 
+  // Points that are all zero are "no activity recorded", not a trend. Drawing
+  // 288 of them as a flat line costs 360px of page to say nothing, so it gets
+  // the same slim notice as having no points at all.
+  const hasActivity = data.some(
+    (point) => point.qps > 0 || point.connections > 0 || point.threads_running > 0,
+  );
+
+  // Of the series currently on screen — switching the tab switches these too,
+  // because "peak 391" means nothing without knowing peak of what.
+  const values = data.map((point) => point[view] ?? 0);
+  const summary = {
+    current: values.at(-1) ?? 0,
+    peak: values.length ? Math.max(...values) : 0,
+    average: values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0,
+  };
+
   // Nothing collected yet is a normal state on a server that just started —
   // a slim notice, not a tall empty card.
-  if (!data.length) {
+  if (!data.length || !hasActivity) {
     return (
       <div className="flex items-center gap-2.5 rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
         <ChartSpline className="size-4 shrink-0 text-primary" />
@@ -68,7 +84,7 @@ export function QueryChart({ metrics = [], timeZone }) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+      <CardHeader className="flex flex-col gap-3 pb-1 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <ChartSpline className="size-4 text-primary" />
@@ -77,17 +93,47 @@ export function QueryChart({ metrics = [], timeZone }) {
           <CardDescription>{t(`chart.${view}`)}</CardDescription>
         </div>
 
-        <Tabs value={view} onValueChange={setView} className="shrink-0">
-          <TabsList>
-            <TabsTrigger value="qps">{t("qps")}</TabsTrigger>
-            <TabsTrigger value="connections">{t("connections")}</TabsTrigger>
-            <TabsTrigger value="threads_running">{t("threadsShort")}</TabsTrigger>
+        {/* Wrapping list, same as every other tab strip in the panel: three
+            full-length labels are wider than a phone card, and a clipped
+            "Threads" reads as a broken card rather than a third view. */}
+        <Tabs value={view} onValueChange={setView} className="min-w-0 lg:shrink-0">
+          <TabsList className="!h-auto w-fit flex-wrap gap-1 p-1">
+            <TabsTrigger value="qps" className="px-3 py-1.5">
+              {t("qps")}
+            </TabsTrigger>
+            <TabsTrigger value="connections" className="px-3 py-1.5">
+              {t("connections")}
+            </TabsTrigger>
+            <TabsTrigger value="threads_running" className="px-3 py-1.5">
+              {t("threadsShort")}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </CardHeader>
 
-      <CardContent>
-        <ChartContainer config={config} className="h-64 w-full">
+      <CardContent className="space-y-3">
+        {/* Three numbers off the same series the chart is drawing. A 24-hour
+            line answers "what shape", not "what is it now" or "how bad did it
+            get" — and those are the two people actually ask. Compact, because
+            this is context for the line below it, not a stat row of its own. */}
+        <dl className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/30 px-4 py-2.5">
+          {[
+            ["current", summary.current],
+            ["peak", summary.peak],
+            ["average", summary.average],
+          ].map(([key, value]) => (
+            <div key={key} className="min-w-0">
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                {t(`summary.${key}`)}
+              </dt>
+              <dd className="truncate text-sm font-semibold tabular-nums">
+                {decimal(value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        <ChartContainer config={config} className="h-52 w-full">
           <AreaChart data={data} margin={{ left: -20, right: 8 }}>
             <defs>
               <linearGradient id="fill-db" x1="0" y1="0" x2="0" y2="1">
@@ -108,8 +154,8 @@ export function QueryChart({ metrics = [], timeZone }) {
               content={
                 <ChartTooltipContent
                   indicator="line"
-                  labelFormatter={clock}
-                  formatter={(value) => decimal(value)}
+                  labelFormatter={(_, payload) => clock(payload?.[0]?.payload?.time)}
+                  valueFormatter={(value) => decimal(value)}
                 />
               }
             />

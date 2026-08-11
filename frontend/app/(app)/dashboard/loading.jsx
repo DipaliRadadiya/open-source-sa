@@ -9,6 +9,9 @@ export default function DashboardLoading() {
         <Skeleton className="h-4 w-72" />
       </div>
 
+      {/* Server info band. */}
+      <Skeleton className="h-36 rounded-xl" />
+
       <Skeleton className="h-6 w-24 rounded-full" />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -27,10 +30,13 @@ export default function DashboardLoading() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Skeleton className="h-[26rem] rounded-xl" />
-        <Skeleton className="h-[26rem] rounded-xl" />
-      </div>
+      {/* Two chart rows: load + usage, then network + disk I/O. */}
+      {Array.from({ length: 2 }).map((_, row) => (
+        <div key={row} className="grid gap-4 lg:grid-cols-2">
+          <Skeleton className="h-[26rem] rounded-xl" />
+          <Skeleton className="h-[26rem] rounded-xl" />
+        </div>
+      ))}
 
       <Skeleton className="h-72 rounded-xl" />
     </div>

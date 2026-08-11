@@ -34,6 +34,7 @@ import {
 import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useBranding } from "@/components/branding-provider";
 import { Input } from "@/components/ui/input";
@@ -94,6 +95,19 @@ function fieldLabel(config) {
   const source = config.name || label.split(".").pop() || "";
   const words = source.replace(/[._]+/g, " ").trim();
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : label;
+}
+
+/**
+ * A toggle's value as a real boolean.
+ *
+ * The backend declares defaults as JSON, so a toggle can arrive as `false`, as
+ * the string `"false"`, or as `0`. Plain `Boolean()` is wrong for two of those —
+ * `Boolean("false")` is `true`, which drew the switch ON while the field still
+ * held a string the API rejects with "must be true or false".
+ */
+function toggleValue(value) {
+  if (typeof value === "string") return !["", "0", "false"].includes(value.trim().toLowerCase());
+  return Boolean(value);
 }
 
 
@@ -441,12 +455,12 @@ function ConfigField({
             <FormControl>
               <div className="flex items-center gap-2">
                 <Switch
-                  checked={Boolean(field.value)}
+                  checked={toggleValue(field.value)}
                   onCheckedChange={(checked) => field.onChange(checked)}
                   id={config.name}
                 />
                 <FormDescription className="!mt-0">
-                  {field.value ? t("form.toggleOn") : t("form.toggleOff")}
+                  {toggleValue(field.value) ? t("form.toggleOn") : t("form.toggleOff")}
                 </FormDescription>
               </div>
             </FormControl>
@@ -521,6 +535,9 @@ export function CreateApplicationForm({
   const [repositoriesState, setRepositoriesState] = useState("idle");
   const [branchesState, setBranchesState] = useState("idle");
   const [systemUserDialogOpen, setSystemUserDialogOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Bumped to ask for a scroll; the effect runs after the reveal has committed.
+  const [scrollRequest, setScrollRequest] = useState(0);
   const formRef = useRef(null);
   const [createdSystemUsers, setCreatedSystemUsers] = useState([]);
   const form = useForm({
@@ -602,6 +619,10 @@ export function CreateApplicationForm({
   );
   const standardFields = visibleFields.filter((config) => !config.advanced);
   const advancedFields = visibleFields.filter((config) => config.advanced);
+  const advancedFieldNames = new Set(advancedFields.map((config) => config.name));
+  const advancedErrorCount = advancedFields.filter(
+    (config) => form.formState.errors[config.name],
+  ).length;
   const availableSystemUsers = [
     ...systemUsers,
     ...createdSystemUsers.filter(
@@ -631,11 +652,21 @@ export function CreateApplicationForm({
     })
     .filter(Boolean);
   const advancedSummaryItems = advancedFields
-    .filter((config) => String(values?.[config.name] ?? "").trim())
+    .filter(
+      (config) =>
+        config.type === "toggle" || String(values?.[config.name] ?? "").trim(),
+    )
     .map((config) => ({
       key: `advanced-${config.name}`,
       label: fieldLabel(config),
-      value: String(values[config.name]),
+      // A raw `false` under a switch labelled "Enabled" is a contradiction —
+      // the review reads back the same words the control shows.
+      value:
+        config.type === "toggle"
+          ? toggleValue(values?.[config.name])
+            ? t("form.toggleOn")
+            : t("form.toggleOff")
+          : String(values[config.name]),
       ready: true,
     }));
   const readinessItems = [
@@ -768,7 +799,15 @@ export function CreateApplicationForm({
         form.getValues(field.name)
       )
         continue;
-      form.setValue(field.name, String(field.default), {
+      // Keep the declared type. Stringifying a toggle's default turned `false`
+      // into `"false"` — a value the switch reads as ON and the API rejects.
+      const value =
+        field.type === "toggle"
+          ? toggleValue(field.default)
+          : field.type === "number"
+            ? Number(field.default)
+            : String(field.default);
+      form.setValue(field.name, value, {
         shouldDirty: false,
         shouldValidate: true,
       });
@@ -853,11 +892,29 @@ export function CreateApplicationForm({
     };
   }, [form, gitAccountId, gitSource, isGit, repository, repositories]);
 
-  // Zod validation failed — react-hook-form marked the fields; bring the first
-  // into view.
-  function onInvalidSubmit() {
-    scrollToFirstError(formRef.current);
+  /**
+   * Bring a failed submit into view — including when it failed inside the
+   * collapsed Advanced section.
+   *
+   * A rejected `table_prefix` under a closed disclosure is the worst possible
+   * feedback: the button appears to do nothing and there is nothing on screen
+   * to read. So open the section first, and only scroll once React has
+   * actually mounted those fields (Radix unmounts collapsed content, so
+   * scrolling in the same tick finds nothing).
+   */
+  function revealErrors(names = []) {
+    if (names.some((name) => advancedFieldNames.has(name))) setAdvancedOpen(true);
+    setScrollRequest((count) => count + 1);
   }
+
+  function onInvalidSubmit(errors) {
+    revealErrors(Object.keys(errors ?? {}));
+  }
+
+  useEffect(() => {
+    if (!scrollRequest) return;
+    scrollToFirstError(formRef.current);
+  }, [scrollRequest, advancedOpen]);
 
   async function onSubmit(values) {
     const missingFields = visibleFields.filter(
@@ -879,7 +936,7 @@ export function CreateApplicationForm({
           message: t("form.requiredField", { field: field.label }),
         }),
       );
-      scrollToFirstError(formRef.current);
+      revealErrors([...missingFields, ...missingGitFields].map((field) => field.name));
       return;
     }
     const payload = {
@@ -899,6 +956,13 @@ export function CreateApplicationForm({
     // "php" — the field is hidden and would create a unit nothing routes to.
     for (const config of visibleFields) {
       const value = values[config.name];
+      // A toggle always goes, including when off: the backend validates it as
+      // "true or false", so omitting it reads as missing, and sending the
+      // string "false" is a 422.
+      if (config.type === "toggle") {
+        payload[config.name] = toggleValue(value);
+        continue;
+      }
       if (value === undefined || value === "") continue;
       payload[config.name] = config.type === "number" ? Number(value) : value;
     }
@@ -922,6 +986,9 @@ export function CreateApplicationForm({
       router.refresh();
     } catch (error) {
       handleValidationError(error, form);
+      // The backend rejects fields too, and its errors landed silently: nothing
+      // scrolled, and an advanced field's message stayed behind the disclosure.
+      revealErrors(Object.keys(error.response?.data?.errors ?? {}));
     }
   }
 
@@ -1359,7 +1426,11 @@ export function CreateApplicationForm({
                     </div>
                   ) : null}
                   {advancedFields.length ? (
-                    <Collapsible className="border-t pt-4">
+                    <Collapsible
+                      className="border-t pt-4"
+                      open={advancedOpen}
+                      onOpenChange={setAdvancedOpen}
+                    >
                       <CollapsibleTrigger asChild>
                         <Button
                           type="button"
@@ -1369,6 +1440,16 @@ export function CreateApplicationForm({
                           <span className="flex items-center gap-2">
                             <Sparkles className="size-4 text-primary" />
                             {t("advanced")}
+                            {/* Says so on the closed row as well: the section
+                                reopens on submit, but nothing should be able to
+                                hide a rejected field behind a tidy summary. */}
+                            {advancedErrorCount ? (
+                              <Badge variant="destructive" className="font-normal">
+                                {t("form.advancedErrors", {
+                                  count: advancedErrorCount,
+                                })}
+                              </Badge>
+                            ) : null}
                           </span>
                           <ChevronDown className="size-4" />
                         </Button>

@@ -50,18 +50,24 @@ export default async function AppLayout({ children }) {
                     />
                   ) : null}
                   <AppHeader impersonating={!!impersonatedBy} />
-                </div>
-                <main className="flex flex-1 flex-col">
                   {/* Its own band under the header rather than a line of text
                       above the h1: the trail is chrome, and sharing the page's
                       background made it read as a stray first line of the
                       heading. Full-bleed so the rule actually divides, with the
-                      crumb held to the content column so it still lines up. */}
-                  <div className="border-b bg-muted/40">
+                      crumb held to the content column so it still lines up.
+
+                      Inside the sticky cluster, not `top-16` in <main>: the
+                      banners above it are conditional, so any fixed offset is
+                      wrong the moment someone is impersonating. Frosted rather
+                      than a flat tint because a translucent band would show the
+                      page scrolling through it. */}
+                  <div className="border-b bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/70">
                     <div className="mx-auto w-full max-w-screen-xl px-4 py-2.5 sm:px-6 lg:px-8">
                       <AppBreadcrumb items={permissions} />
                     </div>
                   </div>
+                </div>
+                <main className="flex flex-1 flex-col">
                   <div className="mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">
                     {children}
                   </div>

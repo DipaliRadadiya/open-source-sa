@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Plus, TriangleAlert } from "lucide-react";
+import { Download, Loader2, Plus, TriangleAlert } from "lucide-react";
 import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
 import { installPhpVersion } from "@/lib/api/php";
 import { installNodeVersion } from "@/lib/api/node";
@@ -18,14 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/ui/form-modal";
 import { apiMessage } from "@/lib/api/error-message";
 
 // The page is a Server Component, so it can't hand us a function — it names
@@ -86,52 +79,64 @@ export function InstallVersionButton({
         </Button>
       </ReasonTooltip>
 
-      <Dialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("install.title")}</DialogTitle>
-            <DialogDescription>{t("install.description")}</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-2 py-4">
-            <Label htmlFor={`${runtime}-version`}>{t("install.version")}</Label>
-            <Select value={version} onValueChange={setVersion}>
-              <SelectTrigger id={`${runtime}-version`} className="w-full max-w-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {installable.map((option) => (
-                  <SelectItem key={option.version} value={option.version}>
-                    <span className="flex items-center gap-2">
-                      {t("versions.name", { version: option.version })}
-                      <LifecycleBadge
-                        namespace={runtime}
-                        lifecycle={option.lifecycle}
-                        available={lifecycleAvailable}
-                      />
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {dead ? (
-              <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
-                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-                {t("install.eolWarning", { version })}
-              </p>
-            ) : null}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+      <FormModal
+        open={open}
+        onOpenChange={(next) => !pending && setOpen(next)}
+        asForm
+        onSubmit={(event) => {
+          event.preventDefault();
+          install();
+        }}
+        icon={Download}
+        title={t("install.title")}
+        description={t("install.description")}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={pending}
+            >
               {t("versions.confirmCancel")}
             </Button>
-            <Button onClick={install} disabled={pending || !version}>
-              {t("install.submit")}
+            <Button type="submit" disabled={pending || !version}>
+              {pending && <Loader2 className="size-4 animate-spin" />}
+              {pending ? t("install.installing") : t("install.submit")}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <Label htmlFor={`${runtime}-version`}>{t("install.version")}</Label>
+          <Select value={version} onValueChange={setVersion}>
+            <SelectTrigger id={`${runtime}-version`} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {installable.map((option) => (
+                <SelectItem key={option.version} value={option.version}>
+                  <span className="flex items-center gap-2">
+                    {t("versions.name", { version: option.version })}
+                    <LifecycleBadge
+                      namespace={runtime}
+                      lifecycle={option.lifecycle}
+                      available={lifecycleAvailable}
+                    />
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {dead ? (
+          <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            {t("install.eolWarning", { version })}
+          </p>
+        ) : null}
+      </FormModal>
     </>
   );
 }

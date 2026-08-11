@@ -65,7 +65,12 @@ export function ConfirmDialog({
           ) : null}
         </AlertDialogHeader>
 
-        {children}
+        {/* The dialog body is a grid, and a grid item's `min-width` defaults to
+            `auto` — so a child holding long unbroken strings (database names,
+            paths) grows the whole dialog past its own max-width instead of
+            truncating inside it. `min-w-0` is what makes `truncate` work at
+            all in here. */}
+        {children ? <div className="min-w-0">{children}</div> : null}
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>

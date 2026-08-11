@@ -24,14 +24,17 @@ export default async function AdminLayout({ children }) {
         <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
           <AdminSidebar />
           <SidebarInset className="min-w-0">
-            <AdminHeader />
-            <main className="flex flex-1 flex-col">
-              {/* Same band as the server panel — the two shells stay identical. */}
-              <div className="border-b bg-muted/40">
+            {/* Header + trail ride together as one sticky cluster, same as the
+                server panel — the two shells stay identical. */}
+            <div className="sticky top-0 z-20">
+              <AdminHeader />
+              <div className="border-b bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/70">
                 <div className="mx-auto w-full max-w-screen-xl px-4 py-2.5 sm:px-6 lg:px-8">
                   <AdminBreadcrumb />
                 </div>
               </div>
+            </div>
+            <main className="flex flex-1 flex-col">
               <div className="mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">
                 {children}
               </div>
