@@ -208,6 +208,32 @@ it('creates a database and a dedicated user, and writes them into wp-config', fu
     Process::assertNotRan(fn ($p) => str_contains(implode(' ', $p->command), $password));
 });
 
+it('hands the extracted files to the site user, not root', function () {
+    fakeSaltService();
+    fakeInstallServer();
+    $app = wpApp();
+
+    runProvision($app);
+
+    // The extract copy runs elevated, so without this every file is root's and
+    // the installer's own CLI -- which runs as the site user -- cannot write.
+    // Mautic surfaced it as "Unable to create the cache directory
+    // (.../var/cache/prod)"; provisioning's set_ownership step cannot cover it
+    // because that runs before the download.
+    //
+    // The trailing `/.` matters: $documentRoot can be the `current` symlink,
+    // and `chown -R` on a symlink argument changes the link rather than
+    // descending into the release it points at.
+    Process::assertRan(function ($p) {
+        $args = ($p->command[0] ?? null) === 'sudo' ? array_slice($p->command, 2) : $p->command;
+
+        return ($args[0] ?? null) === 'chown'
+            && ($args[1] ?? null) === '-R'
+            && ($args[2] ?? null) === 'deploy:deploy'
+            && str_ends_with((string) ($args[3] ?? ''), '/.');
+    });
+});
+
 it('keeps the database user within the length MySQL will accept', function () {
     fakeSaltService();
     fakeInstallServer();

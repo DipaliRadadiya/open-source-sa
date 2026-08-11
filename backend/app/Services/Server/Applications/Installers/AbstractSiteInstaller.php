@@ -159,6 +159,27 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // blocker for the copy itself.
         $this->run('extract', ['cp', '-r', "{$work}/src/.", $documentRoot], $application);
 
+        // The copy above runs elevated, so everything it just wrote is owned
+        // by root. Provisioning's `set_ownership` step cannot help: it runs
+        // *before* the download, so it chowns an empty directory and never
+        // sees these files.
+        //
+        // Whatever the installer does next runs as the site's own user, and a
+        // root-owned tree stops it dead — Mautic's `mautic:install` failed
+        // with "Unable to create the cache directory
+        // (.../var/cache/prod)" for exactly this reason. Six installers had
+        // each grown their own `chown -R` afterwards to compensate; doing it
+        // here instead means the next one added does not have to remember,
+        // and does not get a bug report first.
+        //
+        // Trailing `/.` for the same reason the `cp` above uses it: when
+        // web_root is empty, $documentRoot IS the `current` symlink, and a
+        // plain `chown -R` on a symlink argument changes the link itself
+        // rather than descending into the release it points at — which would
+        // leave every file exactly as root-owned as before.
+        $owner = $application->systemUser->username;
+        $this->run('extract', ['chown', '-R', "{$owner}:{$owner}", "{$documentRoot}/."], $application);
+
         $this->serverOps->run(['rm', '-rf', $work], ['feature' => 'application', 'op' => 'installer.cleanup']);
     }
 
