@@ -67,9 +67,10 @@ it('serializes empty application settings as an object, not a list', function ()
     $token = $admin->createToken('t')->plainTextToken;
 
     $systemUser = SystemUser::create(['username' => 'shapes', 'home_path' => '/home/shapes']);
-    $application = Application::create([
+    $application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'No settings',
+        'slug' => 'no-settings',
         'domain' => 'shapes.example.test',
         'site_type' => 'php',
         'serving_profile' => 'php',
@@ -94,9 +95,10 @@ it('still serializes populated settings as an object', function () {
     $token = $admin->createToken('t')->plainTextToken;
 
     $systemUser = SystemUser::create(['username' => 'shapes2', 'home_path' => '/home/shapes2']);
-    $application = Application::create([
+    $application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'With settings',
+        'slug' => 'with-settings',
         'domain' => 'shapes2.example.test',
         'site_type' => 'php',
         'serving_profile' => 'php',
@@ -117,9 +119,10 @@ it('keeps steps as a list — it is a genuine array', function () {
     $token = $admin->createToken('t')->plainTextToken;
 
     $systemUser = SystemUser::create(['username' => 'shapes3', 'home_path' => '/home/shapes3']);
-    $application = Application::create([
+    $application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Steps',
+        'slug' => 'steps',
         'domain' => 'shapes3.example.test',
         'site_type' => 'php',
         'serving_profile' => 'php',

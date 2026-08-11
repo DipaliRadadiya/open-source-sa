@@ -33,9 +33,10 @@ beforeEach(function () {
 
     $systemUser = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
 
-    $this->production = Application::create([
+    $this->production = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Shop',
+        'slug' => 'shop',
         'domain' => 'shop.test',
         'site_type' => 'wordpress',
         'serving_profile' => 'php',
@@ -114,9 +115,10 @@ it('refuses a second staging site for the same application', function () {
 
 it('refuses staging for a site type with no staging recipe', function () {
     fakeStagingServer();
-    $static = Application::create([
+    $static = Application::forceCreate([
         'system_user_id' => $this->production->system_user_id,
-        'name' => 'Landing', 'domain' => 'landing.test', 'site_type' => 'static',
+        'name' => 'Landing',
+        'slug' => 'landing', 'domain' => 'landing.test', 'site_type' => 'static',
         'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
     ]);
 

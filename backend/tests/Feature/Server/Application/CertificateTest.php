@@ -35,9 +35,10 @@ beforeEach(function () {
         'username' => 'certuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Shop',
+        'slug' => 'shop',
         'domain' => 'shop.example.com',
         'site_type' => 'wordpress',
         'serving_profile' => 'php',

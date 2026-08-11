@@ -335,8 +335,9 @@ describe('the driver', function () {
             'shell' => '/bin/bash', 'sudo' => false,
         ]);
 
-        $this->app_ = Application::create([
-            'system_user_id' => $user->id, 'name' => 'Shop', 'domain' => 'shop.test',
+        $this->app_ = Application::forceCreate([
+            'system_user_id' => $user->id, 'name' => 'Shop',
+            'slug' => 'shop', 'domain' => 'shop.test',
             'site_type' => 'wordpress', 'serving_profile' => 'php', 'web_root' => '/',
             'status' => 'pending', 'php_version' => '8.4',
         ]);

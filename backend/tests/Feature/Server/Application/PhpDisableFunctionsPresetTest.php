@@ -31,9 +31,10 @@ beforeEach(function () {
 
     $systemUser = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Shop',
+        'slug' => 'shop',
         'domain' => 'shop.test',
         'site_type' => 'php',
         'serving_profile' => 'php',

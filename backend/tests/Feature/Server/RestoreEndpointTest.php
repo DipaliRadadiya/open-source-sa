@@ -29,9 +29,10 @@ beforeEach(function () {
         'home_path' => '/home/endpointuser',
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Endpoint Site',
+        'slug' => 'endpoint-site',
         'domain' => 'endpoint.test',
         'site_type' => 'php',
         'serving_profile' => 'php',
@@ -147,9 +148,10 @@ it('refuses to restore a database from a files-only backup', function () {
 });
 
 it('always aims the restore at the backup\'s own application', function () {
-    $other = Application::create([
+    $other = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,
         'name' => 'Someone Else',
+        'slug' => 'someone-else',
         'domain' => 'other.test',
         'site_type' => 'php',
         'serving_profile' => 'php',

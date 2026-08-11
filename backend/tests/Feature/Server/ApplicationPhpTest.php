@@ -48,9 +48,10 @@ beforeEach(function () {
 
     $systemUser = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Shop',
+        'slug' => 'shop',
         'domain' => 'shop.test',
         'site_type' => 'php',
         'serving_profile' => 'php',
@@ -371,9 +372,10 @@ describe('permissions', function () {
     it('is absent for a site that serves no PHP', function () {
         fakePhpServer();
 
-        $static = Application::create([
+        $static = Application::forceCreate([
             'system_user_id' => $this->application->system_user_id,
-            'name' => 'Brochure', 'domain' => 'brochure.test', 'site_type' => 'static',
+            'name' => 'Brochure',
+            'slug' => 'brochure', 'domain' => 'brochure.test', 'site_type' => 'static',
             'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
         ]);
 

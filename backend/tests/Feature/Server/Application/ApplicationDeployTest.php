@@ -229,8 +229,9 @@ it('queues a deploy and refuses one for a non-git application', function () {
 
     Queue::assertPushed(DeployApplication::class);
 
-    $static = Application::create([
-        'system_user_id' => $this->su->id, 'name' => 'S', 'domain' => 's.example.com',
+    $static = Application::forceCreate([
+        'system_user_id' => $this->su->id, 'name' => 'S',
+        'slug' => 's', 'domain' => 's.example.com',
         'site_type' => 'static', 'serving_profile' => 'static', 'status' => 'active',
     ]);
 

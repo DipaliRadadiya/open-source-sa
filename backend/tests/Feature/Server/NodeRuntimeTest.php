@@ -128,8 +128,9 @@ it('counts how many sites pin each version', function () {
     fakeNode(installed: ['20.11.0']);
 
     $user = SystemUser::create(['username' => 'n', 'home_path' => '/home/n', 'shell' => '/bin/bash', 'sudo' => false]);
-    Application::create([
-        'system_user_id' => $user->id, 'name' => 'App', 'domain' => 'a.test',
+    Application::forceCreate([
+        'system_user_id' => $user->id, 'name' => 'App',
+        'slug' => 'app', 'domain' => 'a.test',
         'site_type' => 'php', 'serving_profile' => 'php', 'web_root' => '/',
         'status' => 'pending', 'node_version' => '20.11.0',
     ]);
@@ -195,8 +196,9 @@ it('refuses to remove a version a site depends on, and names the site', function
     fakeNode(installed: ['20.11.0', '18.20.4'], default: '20.11.0');
 
     $user = SystemUser::create(['username' => 'n', 'home_path' => '/home/n', 'shell' => '/bin/bash', 'sudo' => false]);
-    Application::create([
-        'system_user_id' => $user->id, 'name' => 'Checkout', 'domain' => 'c.test',
+    Application::forceCreate([
+        'system_user_id' => $user->id, 'name' => 'Checkout',
+        'slug' => 'checkout', 'domain' => 'c.test',
         'site_type' => 'php', 'serving_profile' => 'php', 'web_root' => '/',
         'status' => 'pending', 'node_version' => '18.20.4',
     ]);

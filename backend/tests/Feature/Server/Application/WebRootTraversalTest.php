@@ -76,8 +76,9 @@ it('still accepts the web roots real applications use', function (string $webRoo
 it('refuses to build a document root with a parent segment even if one is stored', function () {
     // Defence in depth: validation is the fix, but this is the line where the
     // damage would happen, so it refuses too rather than trusting the record.
-    $app = Application::create([
-        'system_user_id' => $this->su->id, 'name' => 'X', 'domain' => 'x.test',
+    $app = Application::forceCreate([
+        'system_user_id' => $this->su->id, 'name' => 'X',
+        'slug' => 'x', 'domain' => 'x.test',
         'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'pending',
     ]);
 

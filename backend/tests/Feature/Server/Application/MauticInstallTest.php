@@ -22,9 +22,10 @@ beforeEach(function () {
         'username' => 'mtcuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Marketing',
+        'slug' => 'marketing',
         'domain' => 'mautic.example.com',
         'site_type' => 'mautic',
         'serving_profile' => 'php',
@@ -121,7 +122,7 @@ it('runs the installer from the site directory as the site user', function () {
 
     $install = collect($runs)->first(fn ($run) => in_array('mautic:install', $run['command'], true));
 
-    expect($install['path'])->toBe("{$this->home}/mautic.example.com")
+    expect($install['path'])->toBe("{$this->home}/marketing/public_html")
         ->and(array_slice($install['command'], 0, 4))->toBe(['runuser', '-u', 'mtcuser', '--'])
         ->and($install['command'])->toContain('--no-interaction');
 });

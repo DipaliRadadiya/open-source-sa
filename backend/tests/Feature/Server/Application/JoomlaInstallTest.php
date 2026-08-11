@@ -23,9 +23,10 @@ beforeEach(function () {
         'username' => 'jmluser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Site',
+        'slug' => 'site',
         'domain' => 'joomla.example.com',
         'site_type' => 'joomla',
         'serving_profile' => 'php',
@@ -152,7 +153,7 @@ it('runs from the site directory, as the site user', function () {
     fakeJoomlaReleases();
     $install = joomlaInstallRun(installJoomla());
 
-    expect($install['path'])->toBe("{$this->home}/joomla.example.com")
+    expect($install['path'])->toBe("{$this->home}/site/public_html")
         ->and(array_slice($install['command'], 0, 4))->toBe(['runuser', '-u', 'jmluser', '--']);
 });
 

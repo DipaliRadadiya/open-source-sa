@@ -39,9 +39,10 @@ beforeEach(function () {
 
     $systemUser = SystemUser::create(['username' => 'restoreuser', 'home_path' => $this->home]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Restore Me',
+        'slug' => 'restore-me',
         'domain' => $this->domain,
         'site_type' => 'php',
         'serving_profile' => 'php',

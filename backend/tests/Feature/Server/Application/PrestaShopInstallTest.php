@@ -23,9 +23,10 @@ beforeEach(function () {
         'username' => 'psuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Shop',
+        'slug' => 'shop',
         'domain' => 'shop.example.com',
         'site_type' => 'prestashop',
         'serving_profile' => 'php',
@@ -39,7 +40,7 @@ beforeEach(function () {
         ],
     ]);
 
-    $this->docRoot = "{$this->home}/shop.example.com";
+    $this->docRoot = "{$this->home}/shop/public_html";
 });
 
 /**

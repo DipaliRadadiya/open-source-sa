@@ -21,9 +21,10 @@ beforeEach(function () {
 
     $systemUser = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Shop',
+        'slug' => 'shop',
         'domain' => 'shop.example.test',
         'site_type' => 'php',
         'serving_profile' => 'php',
@@ -268,9 +269,10 @@ describe('the cross-application overview', function () {
     beforeEach(function () {
         // A second site, deliberately left unconfigured: the whole point of
         // the overview is that it shows up.
-        $this->unprotected = Application::create([
+        $this->unprotected = Application::forceCreate([
             'system_user_id' => $this->application->system_user_id,
             'name' => 'Blog',
+            'slug' => 'blog',
             'domain' => 'blog.example.test',
             'site_type' => 'php',
             'serving_profile' => 'php',

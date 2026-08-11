@@ -21,9 +21,10 @@ beforeEach(function () {
         'username' => 'crftuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Craft site',
+        'slug' => 'craft-site',
         'domain' => 'craft.example.com',
         'site_type' => 'craftcms',
         'serving_profile' => 'php',
@@ -38,7 +39,7 @@ beforeEach(function () {
         ],
     ]);
 
-    $this->projectRoot = "{$this->home}/craft.example.com";
+    $this->projectRoot = "{$this->home}/craft-site/public_html";
 });
 
 function installCraft(): ArrayObject

@@ -39,9 +39,10 @@ beforeEach(function () {
         'home_path' => dirname($this->siteRoot),
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Backed Up',
+        'slug' => 'backed-up',
         'domain' => basename($this->siteRoot),
         'site_type' => 'php',
         'serving_profile' => 'php',

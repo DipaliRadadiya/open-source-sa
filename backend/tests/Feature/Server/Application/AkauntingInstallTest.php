@@ -23,9 +23,10 @@ beforeEach(function () {
         'username' => 'akuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Books',
+        'slug' => 'books',
         'domain' => 'books.example.com',
         'site_type' => 'akaunting',
         'serving_profile' => 'php',
@@ -123,6 +124,6 @@ it('unzips the resolved release', function () {
 it('runs from the site directory as the site user', function () {
     $install = akauntingRun(installAkaunting());
 
-    expect($install['path'])->toBe("{$this->home}/books.example.com")
+    expect($install['path'])->toBe("{$this->home}/books/public_html")
         ->and(array_slice($install['command'], 0, 4))->toBe(['runuser', '-u', 'akuser', '--']);
 });

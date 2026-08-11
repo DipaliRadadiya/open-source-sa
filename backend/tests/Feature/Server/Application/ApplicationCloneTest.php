@@ -84,9 +84,10 @@ function fakeCloneServer(): void
 it('clones a static site (no database needed) generically', function () {
     fakeCloneServer();
 
-    $source = Application::create([
+    $source = Application::forceCreate([
         'system_user_id' => $this->systemUser->id,
-        'name' => 'Docs', 'domain' => 'docs.test', 'site_type' => 'static',
+        'name' => 'Docs',
+        'slug' => 'docs', 'domain' => 'docs.test', 'site_type' => 'static',
         'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
     ]);
 
@@ -113,9 +114,10 @@ it('clones a static site (no database needed) generically', function () {
 it('clones a WordPress site including its database', function () {
     fakeCloneServer();
 
-    $source = Application::create([
+    $source = Application::forceCreate([
         'system_user_id' => $this->systemUser->id,
-        'name' => 'Shop', 'domain' => 'shop.test', 'site_type' => 'wordpress',
+        'name' => 'Shop',
+        'slug' => 'shop', 'domain' => 'shop.test', 'site_type' => 'wordpress',
         'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
     ]);
 
@@ -137,9 +139,10 @@ it('clones a WordPress site including its database', function () {
 it('refuses to clone a database-needing type with no clone recipe', function () {
     fakeCloneServer();
 
-    $source = Application::create([
+    $source = Application::forceCreate([
         'system_user_id' => $this->systemUser->id,
-        'name' => 'Forum', 'domain' => 'forum.test', 'site_type' => 'nodebb',
+        'name' => 'Forum',
+        'slug' => 'forum', 'domain' => 'forum.test', 'site_type' => 'nodebb',
         'serving_profile' => 'node', 'status' => 'active', 'node_version' => '22', 'app_port' => 4000,
     ]);
 
@@ -156,9 +159,10 @@ it('refuses to clone a database-needing type with no clone recipe', function () 
 it('allocates a fresh port for a node clone rather than reusing the source port', function () {
     fakeCloneServer();
 
-    $source = Application::create([
+    $source = Application::forceCreate([
         'system_user_id' => $this->systemUser->id,
-        'name' => 'Status', 'domain' => 'status.test', 'site_type' => 'uptimekuma',
+        'name' => 'Status',
+        'slug' => 'status', 'domain' => 'status.test', 'site_type' => 'uptimekuma',
         'serving_profile' => 'node', 'status' => 'active', 'node_version' => '22',
         'app_port' => 3001, 'start_command' => 'node server.js',
     ]);
@@ -172,9 +176,10 @@ it('allocates a fresh port for a node clone rather than reusing the source port'
 
 it('refuses without manage permission', function () {
     fakeCloneServer();
-    $source = Application::create([
+    $source = Application::forceCreate([
         'system_user_id' => $this->systemUser->id,
-        'name' => 'Docs', 'domain' => 'docs2.test', 'site_type' => 'static',
+        'name' => 'Docs',
+        'slug' => 'docs', 'domain' => 'docs2.test', 'site_type' => 'static',
         'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
     ]);
 

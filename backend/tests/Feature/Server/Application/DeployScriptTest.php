@@ -21,9 +21,10 @@ beforeEach(function () {
         'username' => 'scriptuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'App',
+        'slug' => 'app',
         'domain' => 'app.example.com',
         'site_type' => 'git',
         'serving_profile' => 'php',
@@ -101,7 +102,7 @@ it('substitutes the placeholders', function () {
 
     $command = scriptCommand();
 
-    expect($command)->toContain($this->home.'/app.example.com')
+    expect($command)->toContain($this->home.'/app/public_html')
         ->toContain('develop')
         ->toContain('app.example.com')
         ->not->toContain('{path}');

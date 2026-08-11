@@ -18,9 +18,10 @@ beforeEach(function () {
 
     $systemUser = SystemUser::create(['username' => 'logowner', 'home_path' => '/home/logowner']);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Logged Site',
+        'slug' => 'logged-site',
         'domain' => 'logged.test',
         'site_type' => 'php',
         'serving_profile' => 'php',

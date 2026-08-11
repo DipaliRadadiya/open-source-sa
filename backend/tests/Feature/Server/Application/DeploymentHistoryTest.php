@@ -25,9 +25,10 @@ beforeEach(function () {
         'username' => 'depuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'App',
+        'slug' => 'app',
         'domain' => 'app.example.com',
         'site_type' => 'git',
         'serving_profile' => 'php',
@@ -140,9 +141,10 @@ it('keeps only the most recent deploys', function () {
 it('does not prune another applications history', function () {
     config(['server.deployments.keep' => 2]);
 
-    $other = Application::create([
+    $other = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,
-        'name' => 'Other', 'domain' => 'other.example.com', 'site_type' => 'git',
+        'name' => 'Other',
+        'slug' => 'other', 'domain' => 'other.example.com', 'site_type' => 'git',
         'serving_profile' => 'php', 'web_root' => '/', 'status' => 'active',
     ]);
 
@@ -215,9 +217,10 @@ it('keeps the output off the list and on the detail view', function () {
 });
 
 it('does not let one application read another applications deploy', function () {
-    $other = Application::create([
+    $other = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,
-        'name' => 'Other', 'domain' => 'other.example.com', 'site_type' => 'git',
+        'name' => 'Other',
+        'slug' => 'other', 'domain' => 'other.example.com', 'site_type' => 'git',
         'serving_profile' => 'php', 'web_root' => '/', 'status' => 'active',
     ]);
 
@@ -248,9 +251,10 @@ it('needs manage on app_deployment to start one', function () {
 });
 
 it('has no deployment screen at all on a site that cannot deploy', function () {
-    $wordpress = Application::create([
+    $wordpress = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,
-        'name' => 'Blog', 'domain' => 'blog.example.com', 'site_type' => 'wordpress',
+        'name' => 'Blog',
+        'slug' => 'blog', 'domain' => 'blog.example.com', 'site_type' => 'wordpress',
         'serving_profile' => 'php', 'web_root' => '/', 'status' => 'active',
     ]);
 

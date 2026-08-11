@@ -115,8 +115,9 @@ it('refuses to remove a version a site is pinned to, naming the site', function 
     fakePhp(default: '8.4');
 
     $user = SystemUser::create(['username' => 'p', 'home_path' => '/home/p', 'shell' => '/bin/bash', 'sudo' => false]);
-    Application::create([
-        'system_user_id' => $user->id, 'name' => 'Legacy shop', 'domain' => 'l.test',
+    Application::forceCreate([
+        'system_user_id' => $user->id, 'name' => 'Legacy shop',
+        'slug' => 'legacy-shop', 'domain' => 'l.test',
         'site_type' => 'php', 'serving_profile' => 'php', 'web_root' => '/',
         'status' => 'pending', 'php_version' => '8.3',
     ]);

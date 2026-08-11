@@ -18,9 +18,10 @@ beforeEach(function () {
         'username' => 'expuser', 'home_path' => '/home/expuser', 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
-        'name' => 'Shop', 'domain' => 'shop.example.com', 'site_type' => 'wordpress',
+        'name' => 'Shop',
+        'slug' => 'shop', 'domain' => 'shop.example.com', 'site_type' => 'wordpress',
         'serving_profile' => 'php', 'php_version' => '8.4', 'web_root' => '/', 'status' => 'active',
     ]);
 

@@ -280,8 +280,9 @@ it('skips the installer entirely for site types that have none', function () {
     fakeSaltService();
     fakeInstallServer();
 
-    $app = Application::create([
-        'system_user_id' => $this->su->id, 'name' => 'Static', 'domain' => 'static.example.com',
+    $app = Application::forceCreate([
+        'system_user_id' => $this->su->id, 'name' => 'Static',
+        'slug' => 'static', 'domain' => 'static.example.com',
         'site_type' => 'static', 'serving_profile' => 'static', 'status' => 'pending', 'web_root' => '/',
     ]);
 

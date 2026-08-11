@@ -52,9 +52,10 @@ beforeEach(function () {
 
     $systemUser = SystemUser::create(['username' => 'workerowner', 'home_path' => '/home/workerowner']);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Queued Site',
+        'slug' => 'queued-site',
         'domain' => 'queued.test',
         'site_type' => 'git',
         'serving_profile' => 'php',
@@ -324,9 +325,10 @@ describe('which sites have workers', function () {
     it('is refused at the endpoint for a site that has none', function () {
         fakeWorkerSystemd();
 
-        $wordpress = Application::create([
+        $wordpress = Application::forceCreate([
             'system_user_id' => $this->application->system_user_id,
-            'name' => 'Blog', 'domain' => 'blog.test', 'site_type' => 'wordpress',
+            'name' => 'Blog',
+            'slug' => 'blog', 'domain' => 'blog.test', 'site_type' => 'wordpress',
             'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
         ]);
 

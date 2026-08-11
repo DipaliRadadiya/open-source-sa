@@ -21,9 +21,10 @@ beforeEach(function () {
         'username' => 'ncuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Files',
+        'slug' => 'files',
         'domain' => 'cloud.example.com',
         'site_type' => 'nextcloud',
         'serving_profile' => 'php',
@@ -37,7 +38,7 @@ beforeEach(function () {
         ],
     ]);
 
-    $this->docRoot = "{$this->home}/cloud.example.com";
+    $this->docRoot = "{$this->home}/files/public_html";
 });
 
 /**

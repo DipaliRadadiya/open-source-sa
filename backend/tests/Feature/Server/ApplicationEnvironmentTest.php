@@ -20,9 +20,10 @@ beforeEach(function () {
 
     $systemUser = SystemUser::create(['username' => 'envowner', 'home_path' => '/home/envowner']);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Deployed Site',
+        'slug' => 'deployed-site',
         'domain' => 'deployed.test',
         'site_type' => 'git',            // git sites keep a .env
         'serving_profile' => 'php',
@@ -175,9 +176,10 @@ it('saves a file with warnings, because they are the user\'s business', function
 
 describe('site types that keep no .env', function () {
     beforeEach(function () {
-        $this->wordpress = Application::create([
+        $this->wordpress = Application::forceCreate([
             'system_user_id' => $this->application->system_user_id,
             'name' => 'Blog',
+            'slug' => 'blog',
             'domain' => 'blog.test',
             'site_type' => 'wordpress',
             'serving_profile' => 'php',

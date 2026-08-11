@@ -23,9 +23,10 @@ beforeEach(function () {
         'username' => 'statuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Statamic site',
+        'slug' => 'statamic-site',
         'domain' => 'stat.example.com',
         'site_type' => 'statamic',
         'serving_profile' => 'php',
@@ -38,7 +39,7 @@ beforeEach(function () {
         ],
     ]);
 
-    $this->projectRoot = "{$this->home}/stat.example.com";
+    $this->projectRoot = "{$this->home}/statamic-site/public_html";
 });
 
 function installStatamic(): ArrayObject

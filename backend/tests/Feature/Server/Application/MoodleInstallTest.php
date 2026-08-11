@@ -21,9 +21,10 @@ beforeEach(function () {
         'username' => 'mdluser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Courses',
+        'slug' => 'courses',
         'domain' => 'learn.example.com',
         'site_type' => 'moodle',
         'serving_profile' => 'php',
@@ -137,7 +138,7 @@ it('runs both scripts from the site directory, as the site user', function () {
 
     foreach (['admin/cli/install_database.php', 'admin/cli/reset_password.php'] as $script) {
         $run = moodleRun($runs, $script);
-        expect($run['path'])->toBe("{$this->home}/learn.example.com")
+        expect($run['path'])->toBe("{$this->home}/courses/public_html")
             ->and(array_slice($run['command'], 0, 4))->toBe(['runuser', '-u', 'mdluser', '--']);
     }
 });

@@ -26,9 +26,10 @@ beforeEach(function () {
         'username' => 'domuser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Shop',
+        'slug' => 'shop',
         'domain' => 'shop.example.com',
         'site_type' => 'wordpress',
         'serving_profile' => 'php',
@@ -100,9 +101,10 @@ it('gives a redirect its own server block instead of serving the same content', 
 });
 
 it('refuses a domain already used by another application', function () {
-    $other = Application::create([
+    $other = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,
-        'name' => 'Blog', 'domain' => 'blog.example.com', 'site_type' => 'wordpress',
+        'name' => 'Blog',
+        'slug' => 'blog', 'domain' => 'blog.example.com', 'site_type' => 'wordpress',
         'serving_profile' => 'php', 'php_version' => '8.4', 'web_root' => '/', 'status' => 'active',
     ]);
     $other->domains()->create(['domain' => 'blog.example.com', 'type' => DomainType::Primary]);
@@ -179,9 +181,10 @@ it('removes an alias and rewrites the vhost without it', function () {
 });
 
 it('does not let one application address another applications domain', function () {
-    $other = Application::create([
+    $other = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,
-        'name' => 'Blog', 'domain' => 'blog.example.com', 'site_type' => 'wordpress',
+        'name' => 'Blog',
+        'slug' => 'blog', 'domain' => 'blog.example.com', 'site_type' => 'wordpress',
         'serving_profile' => 'php', 'php_version' => '8.4', 'web_root' => '/', 'status' => 'active',
     ]);
     $foreign = $other->domains()->create(['domain' => 'blog.example.com', 'type' => DomainType::Primary]);
@@ -269,9 +272,10 @@ it('addresses a domain by hostname as well as by id', function () {
 it('still refuses a domain belonging to another application', function () {
     // Resolving a name is not authorising access to it — the ownership check
     // has to survive the more forgiving lookup.
-    $other = Application::create([
+    $other = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,
         'name' => 'Other site',
+        'slug' => 'other-site',
         'domain' => 'other.example.com',
         'site_type' => 'wordpress',
         'serving_profile' => 'php',

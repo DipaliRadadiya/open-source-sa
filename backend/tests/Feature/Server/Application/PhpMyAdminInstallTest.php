@@ -22,9 +22,10 @@ beforeEach(function () {
         'username' => 'pmauser', 'home_path' => $this->home, 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    $this->application = Application::create([
+    $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Database admin',
+        'slug' => 'database-admin',
         'domain' => 'db.example.com',
         'site_type' => 'phpmyadmin',
         'serving_profile' => 'php',
@@ -126,7 +127,7 @@ it('removes the setup wizard, which writes configuration over the web', function
     // Fine inside a distribution package, which secures it. On a tarball in a
     // public web root it is a configuration console on the open internet.
     expect(collect($runs)->pluck('command'))
-        ->toContain(['rm', '-rf', "{$this->home}/db.example.com/setup"]);
+        ->toContain(['rm', '-rf', "{$this->home}/database-admin/public_html/setup"]);
 });
 
 it('keeps the temp directory out of the web root', function () {

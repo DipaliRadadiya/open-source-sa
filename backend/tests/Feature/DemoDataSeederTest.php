@@ -53,9 +53,10 @@ it('is idempotent — re-running adds nothing and edits nothing', function () {
 
 it('leaves pre-existing rows untouched', function () {
     $existing = SystemUser::create(['username' => 'realuser', 'home_path' => '/home/realuser']);
-    $realApp = Application::create([
+    $realApp = Application::forceCreate([
         'system_user_id' => $existing->id,
         'name' => 'Real Site',
+        'slug' => 'real-site',
         'domain' => 'real.example.com',
         'site_type' => 'php',
         'serving_profile' => 'php',

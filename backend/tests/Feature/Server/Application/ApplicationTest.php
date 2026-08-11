@@ -242,8 +242,9 @@ it('rejects an unknown site type', function () {
 
 it('lists, shows, updates and deletes an application', function () {
     capableServer();
-    $app = Application::create([
-        'system_user_id' => $this->su->id, 'name' => 'Site', 'domain' => 'site.example.com',
+    $app = Application::forceCreate([
+        'system_user_id' => $this->su->id, 'name' => 'Site',
+        'slug' => 'site', 'domain' => 'site.example.com',
         'site_type' => 'static', 'serving_profile' => 'static', 'status' => 'pending',
         'settings' => ['a' => 1],
     ]);
@@ -311,8 +312,9 @@ it('denies creating and deleting with view-only access', function () {
     grantPermission($user, 'application', view: true, manage: false);
     $token = $user->createToken('t')->plainTextToken;
 
-    $app = Application::create([
-        'system_user_id' => $this->su->id, 'name' => 'Site', 'domain' => 'site.example.com',
+    $app = Application::forceCreate([
+        'system_user_id' => $this->su->id, 'name' => 'Site',
+        'slug' => 'site', 'domain' => 'site.example.com',
         'site_type' => 'static', 'serving_profile' => 'static', 'status' => 'pending',
     ]);
 
