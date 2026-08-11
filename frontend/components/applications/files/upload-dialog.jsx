@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { UploadCloud, X, Loader2, CircleCheck, CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { uploadFile } from "@/lib/api/files";
+import { uploadAnySize } from "@/lib/api/files";
 import { joinPath } from "@/lib/files/path-helpers";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -101,7 +101,7 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
       }
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: "uploading", error: null } : i)));
       try {
-        await uploadFile(appId, joinPath(path, item.file.name), item.file, {
+        await uploadAnySize(appId, joinPath(path, item.file.name), item.file, {
           onProgress: (fraction) =>
             setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, progress: fraction } : i))),
         });

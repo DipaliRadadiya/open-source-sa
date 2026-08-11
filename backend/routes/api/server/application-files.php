@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Server\ApplicationFileController;
+use App\Http\Controllers\API\Server\ApplicationUploadController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -41,6 +42,35 @@ Route::post('/applications/{application}/files/content/restore', [ApplicationFil
 
 Route::post('/applications/{application}/files/upload', [ApplicationFileController::class, 'upload'])
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);
+
+/*
+| Resumable uploads, for files past what the single-shot endpoint above can
+| buffer through PHP memory. `uploads` (plural) rather than a nested path
+| under `upload`, so neither route is a prefix of the other.
+|
+| The chunk endpoint takes a **raw body**, not multipart — see
+| ApplicationUploadController for why that halves the disk traffic of an
+| upload on a box that is also serving customer sites.
+|
+| Its throttle is per chunk, not per file: one large upload is legitimately
+| thousands of requests, so the usual 10/min here would cap throughput at a
+| few hundred MB an hour. The real bounds on this endpoint are nginx's
+| client_max_body_size (one chunk) and ChunkedUpload's free-space guard.
+*/
+Route::post('/applications/{application}/files/uploads', [ApplicationUploadController::class, 'begin'])
+    ->middleware(['permission:app_file,manage', 'throttle:30,1']);
+
+Route::put('/applications/{application}/files/uploads/{uploadId}', [ApplicationUploadController::class, 'chunk'])
+    ->middleware(['permission:app_file,manage', 'throttle:1200,1']);
+
+Route::get('/applications/{application}/files/uploads/{uploadId}', [ApplicationUploadController::class, 'status'])
+    ->middleware(['permission:app_file', 'throttle:60,1']);
+
+Route::post('/applications/{application}/files/uploads/{uploadId}/finalize', [ApplicationUploadController::class, 'finalize'])
+    ->middleware(['permission:app_file,manage', 'throttle:30,1']);
+
+Route::delete('/applications/{application}/files/uploads/{uploadId}', [ApplicationUploadController::class, 'abort'])
+    ->middleware(['permission:app_file,manage', 'throttle:30,1']);
 
 Route::get('/applications/{application}/files/download', [ApplicationFileController::class, 'download'])
     ->middleware(['permission:app_file', 'throttle:20,1']);

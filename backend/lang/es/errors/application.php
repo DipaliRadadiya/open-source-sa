@@ -48,4 +48,7 @@ return [
     'target_not_zip' => 'El nombre del nuevo archivo debe terminar en .zip.',
     'unknown_backup' => 'Esa no es una copia de seguridad conocida de este archivo.',
 
+    'upload_directory_missing' => 'La carpeta de destino de esta subida ya no existe.',
+    'upload_insufficient_space' => 'El servidor no tiene suficiente espacio libre en disco para esta subida.',
+
 ];

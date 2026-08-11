@@ -48,4 +48,7 @@ return [
     'target_not_zip' => '新しいアーカイブの名前は .zip で終わる必要があります。',
     'unknown_backup' => 'それはこのファイルの既知のバックアップではありません。',
 
+    'upload_directory_missing' => 'このアップロード先のフォルダーは存在しなくなりました。',
+    'upload_insufficient_space' => 'このアップロードに必要な空きディスク容量がサーバーにありません。',
+
 ];

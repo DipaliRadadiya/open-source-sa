@@ -20,9 +20,18 @@ class ServerOps
     /**
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
-     * @param  string|null  $input  Data piped to the command's stdin (e.g. for
-     *                              `chpasswd`). Never logged — keep secrets here,
-     *                              not in the command array.
+     * @param  mixed  $input  Data piped to the command's stdin (e.g. for
+     *                        `chpasswd`). Never logged — keep secrets here,
+     *                        not in the command array.
+     *
+     *                        A **stream resource** is also accepted, and is how
+     *                        anything file-sized must be passed: Symfony reads
+     *                        it incrementally, so memory stays at the pipe
+     *                        buffer instead of the whole payload. Passing a
+     *                        string means holding every byte in PHP memory —
+     *                        fine for a password, fatal for an upload. There is
+     *                        no `resource` type declaration in PHP, hence
+     *                        `mixed`.
      * @param  string|null  $cwd  Working directory. Some tools refuse to run
      *                            from anywhere else — Nextcloud's `occ install`
      *                            fails outright unless it is run from its own
@@ -37,7 +46,7 @@ class ServerOps
      *                                      the place for secrets, since a
      *                                      child process inherits it.
      */
-    public function run(array $command, array $context = [], int $timeout = 60, ?string $input = null, ?string $cwd = null, array $env = []): ServerOpsResult
+    public function run(array $command, array $context = [], int $timeout = 60, mixed $input = null, ?string $cwd = null, array $env = []): ServerOpsResult
     {
         $command = $this->elevate($command);
 
@@ -67,6 +76,17 @@ class ServerOps
             try {
                 $pending = Process::timeout($timeout);
                 if ($input !== null) {
+                    // A stream is consumed by the attempt that reads it, so a
+                    // retry would pipe nothing and "succeed" at writing an
+                    // empty file. Rewind first; if the stream is not seekable
+                    // there is nothing to replay, so refuse to retry rather
+                    // than silently truncate.
+                    if (is_resource($input) && $attempts > 1) {
+                        if (! @rewind($input)) {
+                            break;
+                        }
+                    }
+
                     $pending = $pending->input($input);
                 }
                 if ($cwd !== null) {

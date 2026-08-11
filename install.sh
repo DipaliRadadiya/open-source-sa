@@ -863,6 +863,22 @@ pm.process_idle_timeout = 30s
 pm.max_requests = 500
 php_admin_value[error_log] = /var/log/php-${PANEL_SLUG}.log
 php_admin_flag[log_errors] = on
+; Upload limits for the panel's *own* pool. These were previously unset, which
+; left the panel on the distro defaults (upload_max_filesize=2M,
+; post_max_size=8M) while nginx allowed 64M and the file manager advertised
+; 50M -- so every upload over 2M was rejected by PHP before Laravel ever saw
+; the request.
+;
+; Sized to match client_max_body_size, not to enable large uploads: files
+; bigger than this go through the resumable chunked endpoint, which never
+; sends more than one chunk per request. Raising these further would not help
+; it and would only widen what a single request can consume.
+php_admin_value[upload_max_filesize] = 64M
+php_admin_value[post_max_size] = 64M
+; The single-shot upload path buffers the file through PHP memory twice (read
+; + pipe to stdin), so this has to clear 2x the 50M that endpoint accepts. The
+; chunked path streams instead and is unaffected by this value.
+php_admin_value[memory_limit] = 256M
 POOL
 
     # A minimal master config that loads only the panel pool. Kept separate
@@ -946,7 +962,20 @@ SANCTUM
 
     cat >"$api_locations" <<NGINX
 # Managed by the Control panel installer.
+# Bounds one request, not one upload: files of any size go through the
+# resumable chunked endpoint, which sends a chunk per request. This never has
+# to grow to accommodate bigger files.
 client_max_body_size 64M;
+
+# Keeps request bodies in memory instead of spilling them to client_body_temp.
+# This is the difference between one disk write per uploaded byte and two, and
+# on a box that also serves the hosted sites the second write is not the cost
+# that matters -- streaming the bytes through the page cache evicts the sites'
+# hot files, and they start hitting disk. Must stay >= the client's chunk size
+# (8M) for chunked uploads to avoid the spill entirely. Worst case is
+# pm.max_children (10) x this, which is trivial next to any box that runs a
+# panel and sites together.
+client_body_buffer_size 12M;
 
 location ${api_prefix} {
     try_files \$uri \$uri/ /index.php?\$query_string;
