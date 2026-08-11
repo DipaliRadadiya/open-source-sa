@@ -5,6 +5,7 @@ namespace App\Services\Server\Restores;
 use App\Contracts\RestoreStep;
 use App\Enums\RestoreStatus;
 use App\Models\Restore;
+use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -22,7 +23,7 @@ class RestoreRunner
     /** @var list<RestoreStep> */
     private array $steps;
 
-    public function __construct()
+    public function __construct(private ServerOps $serverOps)
     {
         $this->steps = array_map(
             fn (string $class): RestoreStep => app($class),
@@ -123,8 +124,17 @@ class RestoreRunner
         // The staging directory sits next to the live site, not under the
         // working directory, so it needs removing explicitly — a half-unpacked
         // copy of a site left beside it is both confusing and expensive.
+        //
+        // Through ServerOps, not File::: it lives in a tree owned by the
+        // site's Linux user, where this worker cannot delete anything.
+        // File::deleteDirectory() there returns false rather than throwing, so
+        // the failure was silent and left behind exactly the copy this is
+        // meant to remove.
         if ($context->stagingDirectory !== null) {
-            File::deleteDirectory($context->stagingDirectory);
+            $this->serverOps->run(
+                ['rm', '-rf', $context->stagingDirectory],
+                ['feature' => 'backup', 'op' => 'restore_staging_cleanup'],
+            );
         }
     }
 

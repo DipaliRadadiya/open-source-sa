@@ -6,7 +6,6 @@ use App\Contracts\RestoreStep;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\ServerOps;
-use Illuminate\Support\Facades\File;
 use RuntimeException;
 
 /**
@@ -47,9 +46,30 @@ class ExtractArchive implements RestoreStep
         $siteRoot = $this->provisioner->documentRoot($context->application);
         $staging = dirname($siteRoot).'/.restore-'.$context->restore->id;
 
-        File::deleteDirectory($staging);
-        File::ensureDirectoryExists($staging, 0755);
+        // Both through ServerOps rather than File::, which is PHP's own
+        // mkdir()/rmdir() and therefore runs as the panel's queue worker. The
+        // staging directory sits *beside the live site*, inside a tree owned
+        // by that site's own Linux user, and the worker has no access there —
+        // it failed with a bare "mkdir(): Permission denied" that named
+        // neither the path nor the reason. Every other filesystem action in
+        // this class already goes through ServerOps; these two were the
+        // exception.
+        $this->serverOps->run(
+            ['rm', '-rf', $staging],
+            ['feature' => 'backup', 'op' => 'restore_staging_reset', 'application' => $context->application->id],
+        );
 
+        $created = $this->serverOps->run(
+            ['mkdir', '-p', $staging],
+            ['feature' => 'backup', 'op' => 'restore_staging_create', 'application' => $context->application->id],
+        );
+
+        if ($created->failed()) {
+            throw new RuntimeException('the staging directory could not be created');
+        }
+
+        // Recorded only once it exists, so a failure above leaves the runner
+        // with nothing to clean up rather than a path that was never made.
         $context->stagingDirectory = $staging;
 
         $command = ['tar', '-xzf', $archive, '-C', $staging];
