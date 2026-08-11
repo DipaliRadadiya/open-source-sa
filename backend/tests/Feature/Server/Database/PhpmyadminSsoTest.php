@@ -3,12 +3,11 @@
 use App\Enums\ApplicationStatus;
 use App\Models\Application;
 use App\Models\Database;
-use App\Models\DatabaseConnection;
 use App\Models\DatabaseUser;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use Tests\TestCase;
 
 uses(RefreshDatabase::class);
 
@@ -29,7 +28,7 @@ beforeEach(function () {
 
 function grantDatabasePermission(User $user): void
 {
-    $role = \App\Models\Role::factory()->create(['is_system' => false]);
+    $role = Role::factory()->create(['is_system' => false]);
     $role->permissions()->sync(['database']);
     $user->roles()->sync([$role->id]);
 }

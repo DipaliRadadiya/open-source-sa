@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\CloneStatus;
 use App\Models\SiteClone;
+use App\Services\ActivityLogger;
 use App\Services\Server\Applications\CloneManager;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -43,9 +44,9 @@ class RunClone implements ShouldBeUnique, ShouldQueue
         return 'clone-source-'.$this->sourceApplicationId;
     }
 
-    public function handle(CloneManager $cloner): void
+    public function handle(CloneManager $cloner, ActivityLogger $activity): void
     {
-        $clone = SiteClone::with(['sourceApplication.systemUser'])->find($this->cloneId);
+        $clone = SiteClone::with(['sourceApplication.systemUser', 'user'])->find($this->cloneId);
 
         if ($clone === null) {
             return;
@@ -64,6 +65,16 @@ class RunClone implements ShouldBeUnique, ShouldQueue
                 'target_application_id' => $target->id,
                 'finished_at' => now(),
             ]);
+
+            // Logged here rather than in the controller: the 202 only means
+            // the clone was accepted, and an activity entry written then would
+            // claim a site exists before anything had been copied. The actor
+            // is passed explicitly because a queued job has no authenticated
+            // user to fall back on.
+            $activity->log('application.cloned', $clone->sourceApplication, [
+                'name' => $clone->sourceApplication?->name,
+                'domain' => $clone->domain,
+            ], $clone->user);
         } catch (Throwable $e) {
             Log::channel('server-ops')->error('clone failed', [
                 'feature' => 'application',

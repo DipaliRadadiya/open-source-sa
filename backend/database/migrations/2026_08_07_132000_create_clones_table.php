@@ -14,6 +14,11 @@ return new class extends Migration
             $table->foreignId('target_application_id')->nullable()->constrained('applications');
             $table->foreignId('user_id')->nullable()->constrained();
             $table->string('name', 255)->nullable();         // optional clone name
+            // The domain the clone will be served on. Required, and captured
+            // here rather than only on the target application because the
+            // record exists before the target does — the queued job needs to
+            // know where it is cloning to before it has anything to clone into.
+            $table->string('domain', 255);
             $table->string('status', 20)->default('pending');
             $table->string('current_step', 40)->nullable();  // nullable = not started yet
             $table->string('reason', 40)->nullable();         // stable error key

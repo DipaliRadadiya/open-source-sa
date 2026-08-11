@@ -1,10 +1,12 @@
 <?php
 
+use App\Jobs\RunClone;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Database;
 use App\Models\DatabaseUser;
 use App\Models\ServerCapability;
+use App\Models\SiteClone;
 use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -17,6 +19,12 @@ use Illuminate\Support\Facades\Process;
  * identity is never copied (it has a unique constraint and would create
  * ambiguity), and `provision()`'s installer/process-start steps are
  * skipped so a fresh install never fights the rsync that follows it.
+ *
+ * Cloning is asynchronous: the request returns 202 with a `SiteClone` record
+ * and the work happens in `RunClone` off the queue, because rsyncing a large
+ * site outlasts an HTTP request. So these tests assert the handover (202, a
+ * pending record) and then run the job, which is the rest of the operation as
+ * far as the user is concerned.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -36,6 +44,28 @@ beforeEach(function () {
 function cloneHeaders(): array
 {
     return ['Authorization' => 'Bearer '.test()->admin->createToken('t')->plainTextToken];
+}
+
+/**
+ * Starts a clone through the API and then runs the queued job, returning the
+ * refreshed record. The 202 is only a promise; nothing exists until the job
+ * has run.
+ */
+function runClone(Application $source, string $domain, ?string $name = null): SiteClone
+{
+    $payload = array_filter(['domain' => $domain, 'name' => $name]);
+
+    $response = test()->withHeaders(cloneHeaders())
+        ->postJson("/api/applications/{$source->id}/clone", $payload)
+        ->assertAccepted()
+        ->assertJsonPath('clone.domain', $domain)
+        ->assertJsonPath('clone.status', 'pending');
+
+    $clone = SiteClone::findOrFail($response->json('clone.id'));
+
+    app()->call([new RunClone($clone->id, $source->id), 'handle']);
+
+    return $clone->fresh();
 }
 
 function fakeCloneServer(): void
@@ -60,17 +90,21 @@ it('clones a static site (no database needed) generically', function () {
         'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
     ]);
 
-    $response = $this->withHeaders(cloneHeaders())
-        ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'docs-clone.test'])
-        ->assertCreated()
-        ->assertJsonPath('clone.domain', 'docs-clone.test')
-        ->assertJsonPath('clone.cloned_from_application_id', $source->id);
+    $record = runClone($source, 'docs-clone.test');
 
-    $clone = Application::find($response->json('clone.id'));
+    expect($record->status->value)->toBe('completed')
+        ->and($record->target_application_id)->not->toBeNull();
+
+    $clone = Application::find($record->target_application_id);
 
     expect($clone)->not->toBeNull()
+        ->and($clone->cloned_from_application_id)->toBe($source->id)
         ->and($clone->status->value)->toBe('active')
         ->and($clone->webhook_enabled)->toBeFalse()
+        // Without a slug the clone provisions into the system user's home,
+        // which is where every other clone for that user would land too.
+        ->and($clone->slug)->not->toBeNull()
+        ->and($clone->slug)->not->toBe($source->slug)
         ->and(ActivityLog::where('type', 'application')->where('action', 'cloned')->exists())->toBeTrue();
 
     Process::assertRan(fn ($p) => ($p->command[0] ?? '') === 'rsync');
@@ -88,11 +122,11 @@ it('clones a WordPress site including its database', function () {
     $database = Database::create(['name' => 'shop_db', 'engine' => 'mysql', 'application_id' => $source->id]);
     DatabaseUser::create(['database_id' => $database->id, 'username' => 'shop_user', 'password' => 'secret', 'connection_preference' => 'localhost', 'host' => 'localhost']);
 
-    $response = $this->withHeaders(cloneHeaders())
-        ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'shop-clone.test'])
-        ->assertCreated();
+    $record = runClone($source, 'shop-clone.test');
 
-    $clone = Application::find($response->json('clone.id'));
+    expect($record->status->value)->toBe('completed');
+
+    $clone = Application::find($record->target_application_id);
 
     expect(Database::where('application_id', $clone->id)->exists())->toBeTrue();
 
@@ -109,11 +143,14 @@ it('refuses to clone a database-needing type with no clone recipe', function () 
         'serving_profile' => 'node', 'status' => 'active', 'node_version' => '22', 'app_port' => 4000,
     ]);
 
-    $this->withHeaders(cloneHeaders())
-        ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'forum-clone.test'])
-        ->assertStatus(500);
+    // The refusal moved into the job with the 202: the request can no longer
+    // report it, so the record carries the failure instead.
+    $record = runClone($source, 'forum-clone.test');
 
-    expect(Application::where('domain', 'forum-clone.test')->exists())->toBeFalse();
+    expect($record->status->value)->toBe('failed')
+        ->and($record->target_application_id)->toBeNull()
+        ->and($record->finished_at)->not->toBeNull()
+        ->and(Application::where('domain', 'forum-clone.test')->exists())->toBeFalse();
 });
 
 it('allocates a fresh port for a node clone rather than reusing the source port', function () {
@@ -126,11 +163,9 @@ it('allocates a fresh port for a node clone rather than reusing the source port'
         'app_port' => 3001, 'start_command' => 'node server.js',
     ]);
 
-    $response = $this->withHeaders(cloneHeaders())
-        ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'status-clone.test'])
-        ->assertCreated();
+    $record = runClone($source, 'status-clone.test');
 
-    $clone = Application::find($response->json('clone.id'));
+    $clone = Application::find($record->target_application_id);
 
     expect($clone->app_port)->not->toBeNull()->and($clone->app_port)->not->toBe(3001);
 });
