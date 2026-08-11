@@ -15,7 +15,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
 use App\Http\Resources\ApplicationResource;
-use App\Http\Resources\AppSidebarResource;
 use App\Jobs\DeployApplication;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
@@ -23,6 +22,7 @@ use App\Models\Permission;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
+use App\Services\VisiblePermissions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -227,22 +227,24 @@ class ApplicationController extends Controller
      * Grouped by sub-level so the frontend can render section headers without
      * hardcoding them.
      */
-    public function sidebar(Application $application): JsonResponse
+    public function sidebar(Application $application, VisiblePermissions $permissions): JsonResponse
     {
-        $user = Auth::user();
-
-        // Every app-level permission the user holds, keyed by name.
-        $userPermissions = $user->permissions()
-            ->where('level', 'application')
-            ->get()
-            ->keyBy('name');
-
-        // The intersection: what this app supports AND what the user can access.
-        $visible = collect($application->features())
-            ->map(fn (string $name) => $userPermissions->get($name))
-            ->filter();
-
-        $items = AppSidebarResource::collection($visible->values())->resolve();
+        // Resolved by the same service `/permissions` uses. This method used
+        // to build its own answer from `$user->permissions()` — a relation
+        // deleted when per-user grants gave way to roles — so the sidebar had
+        // been a 500 since that refactor.
+        $items = collect($permissions->for(Auth::user(), 'application', $application))
+            ->map(fn (array $item): array => [
+                'name' => $item['name'],
+                'title' => $item['title'],
+                'icon' => $item['icon'],
+                'url' => $item['url'],
+                'sub_level' => $item['sub_level'],
+                'sub_level_title' => $item['sub_level_title'],
+                'permissions' => $item['permissions'],
+            ])
+            ->values()
+            ->all();
 
         return response()->json(['items' => $items]);
     }

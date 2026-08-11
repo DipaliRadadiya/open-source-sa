@@ -48,4 +48,7 @@ return [
     'target_not_zip' => 'The new archive\'s name must end in .zip.',
     'unknown_backup' => 'That is not a known backup of this file.',
 
+    'upload_directory_missing' => 'The folder this upload was going to no longer exists.',
+    'upload_insufficient_space' => 'The server does not have enough free disk space for this upload.',
+
 ];
