@@ -146,22 +146,26 @@ describe('DELETE /api/central', function () {
 describe('CentralSystemGuard middleware', function () {
 
     /*
-     * Exercised through a route registered here rather than through a real
-     * one: the guard is registered in bootstrap/app.php but applied to no
-     * route at all, so asserting against `/api/applications` was asserting
-     * against the permission middleware that actually guards it. Which routes
-     * central may reach is a design decision, not something a test should
-     * assume — this covers the middleware itself, and nothing more.
+     * The guard is an authenticator, not a gate: it signs the central panel in
+     * when the server's token is presented and does nothing at all otherwise.
+     * So the refusals below come from `auth:sanctum`, exactly as they would on
+     * any route — which is the point. It used to answer 401 itself, which is
+     * why it could only ever be applied to routes central alone used.
+     *
+     * The route is registered here rather than borrowing a real one so the
+     * test covers the middleware and not whatever permissions a real endpoint
+     * happens to require.
      */
     beforeEach(function () {
-        Route::middleware('central')->get('/api/test-central-guard', fn () => response()->json(['ok' => true]));
+        Route::middleware(['auth:sanctum'])
+            ->get('/api/test-central-guard', fn () => response()->json(['ok' => true]));
     });
 
-    it('returns 401 when no Authorization header is present', function () {
+    it('refuses a request with no Authorization header', function () {
         $this->getJson('/api/test-central-guard')->assertStatus(401);
     });
 
-    it('returns 401 when the token is invalid', function () {
+    it('refuses a token that is not the stored one', function () {
         DB::table('settings')->insert([
             'id' => 1,
             'central_token' => 'sv_central_realtoken12345678901234',
@@ -174,7 +178,7 @@ describe('CentralSystemGuard middleware', function () {
         ])->assertStatus(401);
     });
 
-    it('allows access with a valid token', function () {
+    it('signs the central panel in with a valid token', function () {
         DB::table('settings')->insert([
             'id' => 1,
             'central_token' => 'sv_central_realtoken12345678901234',
