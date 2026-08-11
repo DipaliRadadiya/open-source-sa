@@ -152,8 +152,8 @@ it('gives the site its own pool running as its own user', function () {
     // Its own socket, named from the slug (falling back to the domain here,
     // since the fixture sets no slug) — a shared path would silently orphan
     // whichever pool started first.
-    expect($pool)->toContain('listen = /run/php/shop.test.sock')
-        ->and($pool)->toContain('[shop.test]');
+    expect($pool)->toContain('listen = /run/php/shop.sock')
+        ->and($pool)->toContain('[shop]');
 });
 
 it('keeps the session directory inside the site', function () {
@@ -163,7 +163,7 @@ it('keeps the session directory inside the site', function () {
     // PHP's default session directory belongs to www-data. A site that stops
     // being www-data cannot write there, and every login on it breaks with no
     // obvious cause — so the path has to move with the user.
-    expect(poolFile())->toContain('session.save_path] = /home/siteowner/shop.test/.panel/sessions');
+    expect(poolFile())->toContain('session.save_path] = /home/siteowner/shop/.panel/sessions');
 });
 
 it('bounds a memory leak with max_requests', function () {
@@ -268,7 +268,7 @@ describe('settings', function () {
 
         // Restricting file access without allowing the session directory
         // breaks every login on the site.
-        expect(poolFile())->toContain('open_basedir] = /home/siteowner/shop.test:/home/siteowner/shop.test/.panel/sessions:/tmp');
+        expect(poolFile())->toContain('open_basedir] = /home/siteowner/shop:/home/siteowner/shop/.panel/sessions:/tmp');
     });
 
     it('refuses a section header in the free-text directives', function () {

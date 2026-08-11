@@ -349,7 +349,7 @@ describe('the driver', function () {
 
     it('puts each site in its own directory', function () {
         expect(app(OlsDriver::class)->configPath($this->app_))
-            ->toBe('/usr/local/lsws/conf/vhosts/shop.test/vhconf.conf');
+            ->toBe('/usr/local/lsws/conf/vhosts/shop/vhconf.conf');
     });
 
     it('writes the vhost before registering it in the shared config', function () {
@@ -397,11 +397,13 @@ describe('the driver', function () {
 
     it('refuses to rm -rf anything that is not inside the vhost root', function () {
         fakeOls(olsConfig());
-        $this->app_->forceFill(['domain' => ''])->save();
+        // Both, not just the domain: the config is named after the slug and
+        // only falls back to the domain, so blanking one still leaves a name.
+        $this->app_->forceFill(['slug' => null, 'domain' => ''])->save();
 
-        // A blank domain makes the target the vhost root itself — deleting
-        // every site's configuration on the server. Validation upstream stops
-        // this today; the guard means it stays stopped.
+        // With neither, the target is the vhost root itself — deleting every
+        // site's configuration on the server. Validation upstream stops this
+        // today; the guard means it stays stopped.
         expect(fn () => app(OlsDriver::class)->remove($this->app_))
             ->toThrow(HttpException::class);
 

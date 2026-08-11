@@ -116,7 +116,11 @@ it('enables the firewall, writes the shared nginx maps file, and persists the ru
     expect($sharedMapsWrite)->not->toBeNull()
         ->and($sharedMapsWrite['input'])->toContain('map $query_string $bad_querystring_ng');
 
-    $vhostWrite = collect($writes)->first(fn ($w) => str_contains($w['path'], 'shop.test'));
+    // The vhost is named after the slug, not the domain — a domain is mutable
+    // and was never unique, so two sites could claim one and overwrite each
+    // other's config. Matching on 'shop.test' found nothing, and the null went
+    // straight into an array offset.
+    $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/shop.conf'));
     expect($vhostWrite['input'])
         ->toContain('bad_querystring_ng')
         ->toContain('bad_request_ng')
@@ -137,7 +141,11 @@ it('excludes disabled categories from the rendered vhost', function () {
         ])
         ->assertOk();
 
-    $vhostWrite = collect($writes)->first(fn ($w) => str_contains($w['path'], 'shop.test'));
+    // The vhost is named after the slug, not the domain — a domain is mutable
+    // and was never unique, so two sites could claim one and overwrite each
+    // other's config. Matching on 'shop.test' found nothing, and the null went
+    // straight into an array offset.
+    $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/shop.conf'));
 
     expect($vhostWrite['input'])
         ->toContain('not_allowed_method_ng')
@@ -156,7 +164,11 @@ it('logs would-be blocks instead of enforcing in detect mode', function () {
         ->assertOk()
         ->assertJsonPath('application.waf_mode', 'detect');
 
-    $vhostWrite = collect($writes)->first(fn ($w) => str_contains($w['path'], 'shop.test'));
+    // The vhost is named after the slug, not the domain — a domain is mutable
+    // and was never unique, so two sites could claim one and overwrite each
+    // other's config. Matching on 'shop.test' found nothing, and the null went
+    // straight into an array offset.
+    $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/shop.conf'));
 
     expect($vhostWrite['input'])
         ->not->toContain('return 403')

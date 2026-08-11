@@ -30,8 +30,8 @@ beforeEach(function () {
     ]);
 
     $this->files = [
-        '/var/log/nginx/logged.test.access.log' => "GET / 200\nGET /about 200\nGET /missing 404\n",
-        '/var/log/nginx/logged.test.error.log' => "PHP Warning: something\n",
+        '/var/log/nginx/logged-site.access.log' => "GET / 200\nGET /about 200\nGET /missing 404\n",
+        '/var/log/nginx/logged-site.error.log' => "PHP Warning: something\n",
     ];
     $this->journal = "-- Logs begin --\nsv-app: listening on 3000\n";
 });
