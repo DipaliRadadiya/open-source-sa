@@ -60,23 +60,34 @@ Route::post('/applications/{application}/files/upload', [ApplicationFileControll
 // Registered before the `{uploadId}` route below so "space" is never taken
 // for an upload id. (It would 404 there anyway — ids are 32 hex characters —
 // but relying on that is a trap for whoever loosens the pattern later.)
+// These five are throttled per *file*, not per byte, so the limits have to
+// clear what a legitimate multi-file drop costs: begin + finalize for every
+// file, an abort for every one that fails, and a status call for every chunk
+// retry. At 30/min a forty-file drop throttled itself halfway through, and
+// the aborts fired by the failures then used up the same budget -- the limit
+// turned one failure into a stuck queue.
+//
+// They are cheap metadata operations (a few short commands each); the load a
+// large upload actually puts on the box is in the chunk endpoint below, and
+// what bounds it is the free-space guard and the size of the FPM pool, not a
+// request count.
 Route::get('/applications/{application}/files/uploads/space', [ApplicationUploadController::class, 'space'])
-    ->middleware(['permission:app_file', 'throttle:60,1']);
+    ->middleware(['permission:app_file', 'throttle:240,1']);
 
 Route::post('/applications/{application}/files/uploads', [ApplicationUploadController::class, 'begin'])
-    ->middleware(['permission:app_file,manage', 'throttle:30,1']);
+    ->middleware(['permission:app_file,manage', 'throttle:240,1']);
 
 Route::put('/applications/{application}/files/uploads/{uploadId}', [ApplicationUploadController::class, 'chunk'])
     ->middleware(['permission:app_file,manage', 'throttle:1200,1']);
 
 Route::get('/applications/{application}/files/uploads/{uploadId}', [ApplicationUploadController::class, 'status'])
-    ->middleware(['permission:app_file', 'throttle:60,1']);
+    ->middleware(['permission:app_file', 'throttle:240,1']);
 
 Route::post('/applications/{application}/files/uploads/{uploadId}/finalize', [ApplicationUploadController::class, 'finalize'])
-    ->middleware(['permission:app_file,manage', 'throttle:30,1']);
+    ->middleware(['permission:app_file,manage', 'throttle:240,1']);
 
 Route::delete('/applications/{application}/files/uploads/{uploadId}', [ApplicationUploadController::class, 'abort'])
-    ->middleware(['permission:app_file,manage', 'throttle:30,1']);
+    ->middleware(['permission:app_file,manage', 'throttle:240,1']);
 
 Route::get('/applications/{application}/files/download', [ApplicationFileController::class, 'download'])
     ->middleware(['permission:app_file', 'throttle:20,1']);

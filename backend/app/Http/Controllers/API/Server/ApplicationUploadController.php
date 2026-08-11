@@ -102,10 +102,11 @@ class ApplicationUploadController extends Controller
     public function finalize(
         FinalizeUploadRequest $request,
         Application $application,
+        string $uploadId,
         ChunkedUpload $uploads,
         ActivityLogger $activity,
     ): JsonResponse {
-        $uploads->finalize($application, $request->uploadId(), $request->targetPath());
+        $uploads->finalize($application, $uploadId, $request->targetPath());
 
         $activity->log('application.file_uploaded', $application, [
             'name' => $application->name,

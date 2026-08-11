@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Server\Application;
 
 use App\Rules\SafeRelativePath;
-use App\Services\Server\Applications\ChunkedUpload;
 use Illuminate\Foundation\Http\FormRequest;
 
 class FinalizeUploadRequest extends FormRequest
@@ -14,19 +13,21 @@ class FinalizeUploadRequest extends FormRequest
     }
 
     /**
+     * The upload id is **not** validated here: it identifies the upload in the
+     * URL, exactly as it does for chunk, status and abort. Requiring it in the
+     * body as well made finalize the one endpoint of the five that wanted it
+     * twice, and rejected the client for sending it once.
+     *
+     * ChunkedUpload validates it against ID_PATTERN on the way in, so an id
+     * that could become a path is still a 404 rather than a filename.
+     *
      * @return array<string, mixed>
      */
     public function rules(): array
     {
         return [
-            'upload_id' => ['required', 'string', 'regex:'.ChunkedUpload::ID_PATTERN],
             'path' => ['required', 'string', 'max:1024', new SafeRelativePath],
         ];
-    }
-
-    public function uploadId(): string
-    {
-        return (string) $this->validated('upload_id');
     }
 
     public function targetPath(): string

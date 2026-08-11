@@ -209,8 +209,11 @@ it('moves the completed upload into place with a rename', function () {
 
     $this->actingAs($this->admin)->call('PUT', uploadsUrl()."/{$id}", [], [], [], [], 'payload');
 
+    // Body carries the path only — the id is in the URL, exactly as it is for
+    // chunk, status and abort. Requiring it in both places made finalize
+    // reject the client for sending it once.
     $this->actingAs($this->admin)
-        ->postJson(uploadsUrl()."/{$id}/finalize", ['upload_id' => $id, 'path' => 'big.zip'])
+        ->postJson(uploadsUrl()."/{$id}/finalize", ['path' => 'big.zip'])
         ->assertOk();
 
     expect(ChunkedUploadFake::$ran)->toContain(
@@ -219,6 +222,14 @@ it('moves the completed upload into place with a rename', function () {
 
     // A rename, so no copy ever ran.
     expect(ChunkedUploadFake::binaries())->not->toContain('cp');
+});
+
+it('still refuses a finalize whose id could become a path', function () {
+    // The id left the request body, so this is the only thing standing
+    // between a crafted URL and an arbitrary filename.
+    $this->actingAs($this->admin)
+        ->postJson(uploadsUrl().'/not-a-valid-id/finalize', ['path' => 'big.zip'])
+        ->assertNotFound();
 });
 
 it('refuses an upload id that could become a path', function () {
