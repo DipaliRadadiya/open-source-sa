@@ -1834,9 +1834,11 @@ describe('upload throttling', function () {
     it('lets an upload run past the global api limit', function () {
         fakeFileBrowserServer();
 
-        // The global limiter refuses at 121. Anything past that proves the
+        // Past the global budget entirely: anything beyond it proves the
         // route's own limit is the one in force.
-        for ($i = 1; $i <= 150; $i++) {
+        $beyondGlobal = (int) config('server.rate_limits.api') + 30;
+
+        for ($i = 1; $i <= $beyondGlobal; $i++) {
             $response = $this->actingAs($this->admin)
                 ->getJson(filesUrl('/uploads/'.str_repeat('a', 32)));
 
@@ -1850,8 +1852,9 @@ describe('upload throttling', function () {
         // The global limit is deliberately left on everything else: removing
         // it wholesale would be a rate limiter that bounds nothing.
         $statuses = [];
+        $beyondGlobal = (int) config('server.rate_limits.api') + 10;
 
-        for ($i = 1; $i <= 130; $i++) {
+        for ($i = 1; $i <= $beyondGlobal; $i++) {
             $statuses[] = $this->actingAs($this->admin)->getJson(filesUrl())->getStatusCode();
         }
 

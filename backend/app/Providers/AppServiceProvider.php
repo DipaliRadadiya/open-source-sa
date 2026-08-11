@@ -82,9 +82,19 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)
             ->by($request->string('username').'|'.$request->ip()));
 
+        // The budget every authenticated request draws on, unless a route
+        // explicitly opts out. Env-tunable because the right number depends on
+        // how the panel is used — a dashboard with several polling widgets
+        // spends this faster than one person clicking around.
+        //
+        // Raising it does not make a per-route limit above it work: a second
+        // throttle stacks with this one rather than replacing it, so the lower
+        // always wins. A route that needs genuine headroom has to drop this
+        // one, as the upload endpoints and the deploy webhook do — and
+        // RateLimitTest fails the build if one forgets.
         RateLimiter::for('api', fn (Request $request) => $request->user()
-            ? Limit::perMinute(120)->by($request->user()->id)
-            : Limit::perMinute(20)->by($request->ip()));
+            ? Limit::perMinute((int) config('server.rate_limits.api', 180))->by($request->user()->id)
+            : Limit::perMinute((int) config('server.rate_limits.guest', 20))->by($request->ip()));
 
         // Status-polling endpoints: a per-user-per-app bucket, so one app's
         // polling cannot starve another app's.

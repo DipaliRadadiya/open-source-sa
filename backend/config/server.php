@@ -1551,4 +1551,23 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | API rate limits
+    |--------------------------------------------------------------------------
+    |
+    | Requests per minute, per authenticated user (`api`) or per IP for guests.
+    | Applied to every API route by bootstrap/app.php.
+    |
+    | A per-route `throttle:N,1` does NOT replace this — both buckets must
+    | pass, so the lower wins. Raising this number does not make a higher
+    | per-route limit take effect; the route has to drop `throttle:api`.
+    |
+    */
+
+    'rate_limits' => [
+        'api' => (int) env('RATE_LIMIT_API', 180),
+        'guest' => (int) env('RATE_LIMIT_GUEST', 20),
+    ],
+
 ];
