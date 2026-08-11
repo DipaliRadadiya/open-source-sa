@@ -155,8 +155,21 @@ pipeline {
                     NODE_BIN_DIR=$(sudo -u panel -H sh -c 'grep -E "^PANEL_NODE_BIN_DIR=" "$1/.env" | cut -d= -f2-' -- "$BACKEND_DIR")
                     [ -n "$NODE_BIN_DIR" ] || { echo "PANEL_NODE_BIN_DIR missing from backend/.env"; exit 1; }
 
+                    # V8 will not grow its old space past this cap however much
+                    # memory the agent has, so a large `next build` dies with
+                    # "Reached heap limit ... JavaScript heap out of memory"
+                    # while free memory still looks fine. Sized from RAM the
+                    # same way install.sh's build_frontend() and
+                    # UpdateScript's frontend_build do -- three build paths,
+                    # one rule, or a deploy fails on a box the installer built.
+                    RAM_MB=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+                    if [ "$RAM_MB" -ge 7500 ]; then HEAP_MB=4096
+                    elif [ "$RAM_MB" -ge 3500 ]; then HEAP_MB=3072
+                    else HEAP_MB=2048; fi
+                    echo "frontend build heap: ${HEAP_MB} MB (${RAM_MB} MB RAM)"
+
                     sudo -u panel -H env "PATH=$NODE_BIN_DIR:/usr/local/bin:/usr/bin:/bin" npm --prefix "$FRONTEND_DIR" ci --no-audit --no-fund
-                    sudo -u panel -H env "PATH=$NODE_BIN_DIR:/usr/local/bin:/usr/bin:/bin" npm --prefix "$FRONTEND_DIR" run build
+                    sudo -u panel -H env "PATH=$NODE_BIN_DIR:/usr/local/bin:/usr/bin:/bin" "NODE_OPTIONS=--max-old-space-size=$HEAP_MB" npm --prefix "$FRONTEND_DIR" run build
                 '''
             }
         }

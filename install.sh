@@ -807,12 +807,37 @@ build_frontend() {
     local node_dir
     node_dir=$(dirname "$NODE_BIN")
 
+    # V8 will not grow its old space past this cap no matter how much memory
+    # the box has, so a large `next build` dies with "FATAL ERROR: Reached
+    # heap limit Allocation failed - JavaScript heap out of memory" while
+    # `free` still shows plenty spare. That is a different failure from the
+    # one configure_swap() addresses: swap cannot help here, because nothing
+    # is short of memory — V8 is refusing to use it.
+    #
+    # Node picks this default from total RAM, so the boxes most likely to hit
+    # it are exactly the small ones the panel is meant to run on. Sized from
+    # RAM rather than hardcoded: a fixed 4 GB on a 1 GB box invites the OOM
+    # killer instead, trading a clear V8 error for a bare "Killed".
+    local ram_mb heap_mb
+    ram_mb=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+    if (( ram_mb >= 7500 )); then
+        heap_mb=4096
+    elif (( ram_mb >= 3500 )); then
+        heap_mb=3072
+    else
+        # Above physical RAM on a small box, deliberately: configure_swap()
+        # has already added 2 GB by this point, and a slow build that
+        # finishes beats a fast one that does not.
+        heap_mb=2048
+    fi
+
     say "     this is the slow part — a few minutes"
     run sudo -u "$APP_USER" -H env "PATH=${node_dir}:/usr/local/bin:/usr/bin:/bin" \
         npm --prefix "$dir" ci --no-audit --no-fund
     run sudo -u "$APP_USER" -H env "PATH=${node_dir}:/usr/local/bin:/usr/bin:/bin" \
+        "NODE_OPTIONS=--max-old-space-size=${heap_mb}" \
         npm --prefix "$dir" run build
-    ok "panel built"
+    ok "panel built (${heap_mb} MB build heap)"
 }
 
 # ─── PHP-FPM pool ────────────────────────────────────────────────────────────

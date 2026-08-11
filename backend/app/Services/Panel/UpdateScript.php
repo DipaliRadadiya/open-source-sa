@@ -157,9 +157,20 @@ class UpdateScript
 
         # PATH is pinned because npm's shebang is `env node`: unpinned, the
         # build silently uses whatever node is first on PATH.
+        #
+        # NODE_OPTIONS caps V8's old space, which it will not grow past no
+        # matter how much memory is free -- a large `next build` otherwise
+        # dies with "Reached heap limit ... JavaScript heap out of memory"
+        # while the box still has RAM spare. Sized from RAM the same way
+        # install.sh's build_frontend() does; the two must not disagree, or an
+        # update fails on a box its own installer built fine.
         note frontend_build
+        BUILD_RAM_MB=\$(awk '/MemTotal/ {printf "%d", \$2/1024}' /proc/meminfo)
+        if [ "\$BUILD_RAM_MB" -ge 7500 ]; then BUILD_HEAP_MB=4096
+        elif [ "\$BUILD_RAM_MB" -ge 3500 ]; then BUILD_HEAP_MB=3072
+        else BUILD_HEAP_MB=2048; fi
         {$run}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" npm --prefix {$frontend} ci --no-audit --no-fund
-        {$run}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" npm --prefix {$frontend} run build
+        {$run}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" "NODE_OPTIONS=--max-old-space-size=\${BUILD_HEAP_MB}" npm --prefix {$frontend} run build
 
         note restart_services
         {$run}sudo systemctl reload {$this->service('php_fpm')}
