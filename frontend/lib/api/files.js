@@ -173,6 +173,52 @@ export function deleteFile(appId, path) {
   return api.delete(`/applications/${appId}/files`, { data: { path, confirm: true } });
 }
 
+/**
+ * More than this in one request is a 422 — an argument vector has a kernel
+ * limit, and crossing it would fail with some paths already handled. Enforced
+ * in the UI so nobody assembles a selection they cannot act on.
+ */
+export const BULK_PATH_LIMIT = 250;
+
+/* Bulk forms of the five write operations. They are NOT the single-path calls
+ * in a loop: the server answers with per-path `succeeded[]` / `failed[]`, so a
+ * batch that half-works reports as such instead of throwing on the first
+ * missing file. A missing path is a `failed` entry here, where the single-path
+ * form would 404. */
+
+export function moveFiles(appId, paths, targetDirectory) {
+  return api.put(`/applications/${appId}/files/rename`, {
+    paths,
+    target_directory: targetDirectory,
+  });
+}
+
+export function copyFiles(appId, paths, targetDirectory) {
+  return api.post(`/applications/${appId}/files/copy`, {
+    paths,
+    target_directory: targetDirectory,
+  });
+}
+
+// Every source must sit in the same folder — `zip` runs from that folder so the
+// archive holds bare names. The caller checks before offering the action.
+export function compressFiles(appId, paths, target) {
+  return api.post(`/applications/${appId}/files/compress`, { paths, target });
+}
+
+export function setFilesPermissions(appId, paths, mode) {
+  return api.put(`/applications/${appId}/files/permissions`, { paths, mode });
+}
+
+// `count` must equal paths.length or the server refuses: `confirm` is true
+// either way, so it cannot catch the realistic accident, which is acting on a
+// selection that changed under you. Always send the real length.
+export function deleteFiles(appId, paths) {
+  return api.delete(`/applications/${appId}/files`, {
+    data: { paths, confirm: true, count: paths.length },
+  });
+}
+
 export function fixApplicationPermissions(appId) {
   return api.post(`/applications/${appId}/fix-permissions`);
 }

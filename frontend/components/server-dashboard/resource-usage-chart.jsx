@@ -26,10 +26,11 @@ import {
  * same "is it busy" question in the right unit, and load keeps its own card
  * where a cores line gives it a scale.
  */
-export function ResourceUsageChart({ series, metrics, timeZone, stale, ratesReady }) {
+export function ResourceUsageChart({ history = [], timeZone }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
-  const clock = clockFormatter(format, timeZone, { second: "2-digit" });
+  // No seconds — five minutes between samples.
+  const clock = clockFormatter(format, timeZone);
   const percentTick = (value) =>
     format.number(Number(value) / 100, { style: "percent", maximumFractionDigits: 0 });
   const percentValue = (value) =>
@@ -38,7 +39,11 @@ export function ResourceUsageChart({ series, metrics, timeZone, stale, ratesRead
   // Disk joins only when the collector actually reports a filesystem. On a box
   // where disk_total is 0 a flat 0 % line would read as "empty disk" when the
   // truth is "not measured".
-  const hasDisk = series.some((p) => p.disk != null);
+  // A collector that cannot read the filesystem stores 0, not null — so an
+  // all-zero disk column is "not measured" here too, and a flat 0 % line would
+  // read as an empty disk.
+  const hasDisk = history.some((point) => Number(point.disk) > 0);
+  const latest = history.at(-1);
   const config = {
     cpu: { label: t("cpu"), color: "var(--chart-1)" },
     memory: { label: t("memory"), color: "var(--chart-2)" },
@@ -50,23 +55,17 @@ export function ResourceUsageChart({ series, metrics, timeZone, stale, ratesRead
       icon={Gauge}
       title={t("charts.usage.title")}
       description={t("charts.usage.description")}
-      ready={series.length >= 2}
-      stale={stale}
-      // CPU joins only once a second sample exists to measure against — it is
-      // a rate, and the API's first 0 means "not measured", not "idle".
+      ready={history.length >= 2}
+      emptyMessage={t("charts.noHistory")}
+      // Read off the newest collected sample so the header and the line agree.
       summary={
-        metrics?.memory
-          ? [
-              ratesReady ? `${t("cpu")} ${percentValue(metrics.cpu?.percent)}` : null,
-              `${t("memory")} ${percentValue(metrics.memory.percent)}`,
-            ]
-              .filter(Boolean)
-              .join(" · ")
+        latest
+          ? `${t("cpu")} ${percentValue(latest.cpu)} · ${t("memory")} ${percentValue(latest.memory)}`
           : null
       }
     >
       <ChartContainer config={config} className="h-72 w-full">
-        <AreaChart data={series} margin={{ left: -20, right: 8 }}>
+        <AreaChart data={history} margin={{ left: -20, right: 8 }}>
           <defs>
             {Object.entries(config).map(([key, cfg]) => (
               <linearGradient key={key} id={`use-${key}`} x1="0" y1="0" x2="0" y2="1">

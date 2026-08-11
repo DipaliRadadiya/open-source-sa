@@ -18,6 +18,45 @@ import { ApplicationRowActions } from "@/components/applications/application-row
 
 const STATUS_VARIANTS = { active: "success", failed: "destructive", provisioning: "warning", pending: "secondary" };
 
+/* Every cell is defined at module level — flexRender treats a cell function's
+ * identity as the component TYPE, so a cell written inline in the columns array
+ * is a brand new type on every render and React unmounts it. This list refreshes
+ * itself every 4s while any site is provisioning, so an inline actions cell threw
+ * away its own state four seconds after you opened the delete dialog. */
+
+function TypeCell({ row }) {
+  return (
+    <span className="text-muted-foreground">
+      {row.original.site_type_title ?? row.original.site_type}
+    </span>
+  );
+}
+
+function OwnerCell({ row }) {
+  return (
+    <span className="font-mono text-xs text-muted-foreground">
+      {row.original.system_user?.username ?? "—"}
+    </span>
+  );
+}
+
+function CreatedCell({ row }) {
+  return (
+    <span className="whitespace-nowrap text-muted-foreground">
+      {row.original.created_at_human ?? "—"}
+    </span>
+  );
+}
+
+function ActionsCell({ row, table }) {
+  return (
+    <ApplicationRowActions
+      application={row.original}
+      canManage={table.options.meta?.canManage ?? false}
+    />
+  );
+}
+
 function NameCell({ row }) {
   const t = useTranslations("applications");
   return <div className="flex min-w-0 items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Globe2 className="size-4" /></span><div className="min-w-0"><div className="flex min-w-0 items-center gap-2"><Link href={`/applications/${row.original.id}`} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate">{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}</div><p className="truncate font-mono text-xs text-muted-foreground">{row.original.domain}</p></div></div>;
@@ -99,16 +138,19 @@ export function ApplicationsTable({ applications = [], canManage = false }) {
     });
   }, [applications, query, statusFilter, typeFilter]);
   const createButton = canManage ? <Button asChild><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button> : null;
-  const columns = [
-    { accessorKey: "name", header: t("columns.name"), cell: NameCell, sortingFn: "alphanumeric" },
-    { accessorKey: "site_type_title", header: t("columns.type"), cell: ({ row }) => <span className="text-muted-foreground">{row.original.site_type_title ?? row.original.site_type}</span> },
-    { accessorKey: "status", header: t("columns.status"), cell: StatusCell },
-    { id: "owner", accessorFn: (row) => row.system_user?.username ?? "", header: t("columns.owner"), cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.system_user?.username ?? "—"}</span> },
-    { id: "created", accessorFn: (row) => createdTimestamp(row.created_at), header: t("columns.created"), cell: ({ row }) => <span className="whitespace-nowrap text-muted-foreground">{row.original.created_at_human ?? "—"}</span>, sortingFn: "basic" },
-    { id: "actions", header: "", cell: ({ row }) => <ApplicationRowActions application={row.original} canManage={canManage} /> },
-  ];
+  const columns = useMemo(
+    () => [
+      { accessorKey: "name", header: t("columns.name"), cell: NameCell, sortingFn: "alphanumeric" },
+      { accessorKey: "site_type_title", header: t("columns.type"), cell: TypeCell },
+      { accessorKey: "status", header: t("columns.status"), cell: StatusCell },
+      { id: "owner", accessorFn: (row) => row.system_user?.username ?? "", header: t("columns.owner"), cell: OwnerCell },
+      { id: "created", accessorFn: (row) => createdTimestamp(row.created_at), header: t("columns.created"), cell: CreatedCell, sortingFn: "basic" },
+      { id: "actions", header: "", cell: ActionsCell },
+    ],
+    [t],
+  );
   const filters = <Filters query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} typeFilter={typeFilter} setTypeFilter={setTypeFilter} statusOptions={statusOptions} typeOptions={typeOptions} t={t} />;
   if (applications.length === 0) return <ApplicationEmptyState canManage={canManage} />;
   if (!filtered.length) return <div className="space-y-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">{filters}<div className="flex items-center gap-2"><RefreshButton />{createButton}</div></div><EmptyState icon={SearchX} title={t("empty.filteredTitle")} description={t("empty.filteredDescription")} action={<Button variant="outline" onClick={() => { setQuery(""); setStatusFilter("all"); setTypeFilter("all"); }}>{t("empty.clearSearch")}</Button>} /></div>;
-  return <div className="space-y-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">{filters}<div className="flex items-center gap-2"><RefreshButton />{createButton}</div></div><div className="flex flex-wrap gap-2">{statusOptions.map(([status, label]) => <Badge key={status} variant={STATUS_VARIANTS[status] ?? "secondary"} className="font-normal">{label} {applications.filter((application) => application.status === status).length}</Badge>)}</div><DataTable columns={columns} data={filtered} sortable defaultSorting={[{ id: "created", desc: true }]} /></div>;
+  return <div className="space-y-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">{filters}<div className="flex items-center gap-2"><RefreshButton />{createButton}</div></div><div className="flex flex-wrap gap-2">{statusOptions.map(([status, label]) => <Badge key={status} variant={STATUS_VARIANTS[status] ?? "secondary"} className="font-normal">{label} {applications.filter((application) => application.status === status).length}</Badge>)}</div><DataTable columns={columns} data={filtered} sortable defaultSorting={[{ id: "created", desc: true }]} meta={{ canManage }} /></div>;
 }

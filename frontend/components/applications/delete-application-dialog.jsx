@@ -91,18 +91,31 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
         <p className="text-xs leading-5 text-muted-foreground">{t("databaseNote")}</p>
 
         <div className="space-y-2">
-          <Label htmlFor="delete-app-confirm" className="text-sm">
-            {t("confirmLabelStart")}
-            <span className="ml-1.5 inline-flex items-center gap-1 font-mono text-foreground">
-              {domain}
-              <CopyButton
-                value={domain}
-                className="size-5"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </span>
-            {t("confirmLabelEnd")}
-          </Label>
+          {/* One sentence, not three fragments. `Label` is display:flex, so
+              "Type", the domain and "to confirm" were laid out as flex items
+              and a long domain pushed the trailing words into their own
+              wrapped column. `block` makes them words again, and the whole
+              sentence is one key so word order can differ by language. */}
+          <div className="flex items-start justify-between gap-2">
+            <Label
+              htmlFor="delete-app-confirm"
+              className="block text-sm leading-5 font-normal"
+            >
+              {t.rich("confirmLabel", {
+                domain,
+                code: (chunks) => (
+                  <span className="font-mono font-medium break-all text-foreground">
+                    {chunks}
+                  </span>
+                ),
+              })}
+            </Label>
+            <CopyButton
+              value={domain}
+              label={t("copyDomain")}
+              className="size-6 shrink-0"
+            />
+          </div>
           <Input
             placeholder={domain}
             id="delete-app-confirm"

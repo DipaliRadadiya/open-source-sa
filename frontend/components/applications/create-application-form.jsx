@@ -14,6 +14,7 @@ import {
   Loader2,
   Sparkles,
   TriangleAlert,
+  UserPlus,
   Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -1148,7 +1149,24 @@ export function CreateApplicationForm({
                   name="system_user_id"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel required>{t("systemUser")}</FormLabel>
+                      {/* Create sits on the label row and stays there whether or
+                          not users already exist. Wanting a dedicated user for
+                          a new site is the normal case, not a recovery from an
+                          empty list — hiding it behind "you have none" meant
+                          leaving the form to go and make one. */}
+                      <div className="flex min-h-6 items-center justify-between gap-2">
+                        <FormLabel required>{t("systemUser")}</FormLabel>
+                        {canCreateSystemUser ? (
+                          <button
+                            type="button"
+                            onClick={() => setSystemUserDialogOpen(true)}
+                            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline"
+                          >
+                            <UserPlus className="size-3" />
+                            {t("form.createSystemUser")}
+                          </button>
+                        ) : null}
+                      </div>
                       <FormControl>
                         <Combobox
                           options={availableSystemUsers.map((user) => ({
@@ -1164,31 +1182,19 @@ export function CreateApplicationForm({
                         />
                       </FormControl>
                       {availableSystemUsers.length === 0 ? (
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <FormDescription
-                            className={
-                              systemUsersFailed ? "text-destructive" : undefined
-                            }
-                          >
-                            {systemUsersFailed
-                              ? t("form.systemUsersUnavailable")
-                              : t("form.noSystemUsers")}
-                          </FormDescription>
-                          {canCreateSystemUser ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setSystemUserDialogOpen(true)}
-                            >
-                              {t("form.createSystemUser")}
-                            </Button>
-                          ) : (
-                            <FormDescription className="text-destructive">
-                              {t("form.noSystemUserCreatePermission")}
-                            </FormDescription>
-                          )}
-                        </div>
+                        <FormDescription
+                          className={
+                            systemUsersFailed || !canCreateSystemUser
+                              ? "text-destructive"
+                              : undefined
+                          }
+                        >
+                          {systemUsersFailed
+                            ? t("form.systemUsersUnavailable")
+                            : canCreateSystemUser
+                              ? t("form.noSystemUsers")
+                              : t("form.noSystemUserCreatePermission")}
+                        </FormDescription>
                       ) : null}
                       <FormMessage />
                     </FormItem>

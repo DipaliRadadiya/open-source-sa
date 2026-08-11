@@ -4,6 +4,8 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getServerFacts } from "@/lib/server/get-server-facts";
+import { getServerHistory } from "@/lib/server/get-server-history";
+import { historySeries } from "@/lib/server/history-series";
 import { getServerProcesses } from "@/lib/server/get-server-processes";
 import { getServiceHealth } from "@/lib/server/get-service-health";
 import { getSetup } from "@/lib/setup/get-setup";
@@ -37,19 +39,19 @@ export default async function DashboardPage() {
   const allowed = can(permissions, "dashboard", "view");
   // Stopping a process is a write, so it needs `manage`, not `view`.
   const canManage = can(permissions, "dashboard", "manage");
-  // No history fetch: /server/metrics/history returns nothing on any box we
-  // can reach, and every chart now reads the live poll instead. The fetcher
-  // stays in lib/server for when the collector ships and the charts gain a
-  // Live/24h switch.
-  const [facts, processResult, health] = allowed
+  // Load and resource usage are the last 24 hours, from the five-minute
+  // `server:sample-metrics` collector. Fetched here, once per render — polling
+  // a table that gains a row every five minutes would be pointless.
+  const [facts, processResult, health, history] = allowed
     ? await Promise.all([
         getServerFacts(),
         getServerProcesses(),
         // Null when the user cannot read services — the card then says nothing
         // rather than claiming everything is fine.
         getServiceHealth(),
+        getServerHistory(),
       ])
-    : [null, { data: [], failed: false }, null];
+    : [null, { data: [], failed: false }, null, []];
 
   return (
     <div className="space-y-6">
@@ -63,10 +65,13 @@ export default async function DashboardPage() {
       {allowed ? (
         <>
           {/* Identity first — "which machine am I on" is read once, on
-              arrival — then the live numbers, then four even history charts:
-              the network pair, then the system pair. */}
+              arrival — then the live numbers, then four even charts: the last
+              day for load and usage, then the live throughput pair. */}
           <ServerInfoCard facts={facts} health={health} />
-          <LiveMetricsSection timeZone={facts?.timezone} />
+          <LiveMetricsSection
+            timeZone={facts?.timezone}
+            history={historySeries(history)}
+          />
           <ProcessesCard
             data={processResult.data}
             failed={processResult.failed}

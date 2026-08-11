@@ -1235,6 +1235,35 @@ function BlockedFunctions({ form, php, disabled }) {
       shouldValidate: true,
     });
 
+  // The API sends the starting points, safest first, already localised. An
+  // older backend only sends the flat suggested string — treat that as a
+  // one-entry list so there is a single code path.
+  const presets = php.disable_functions_presets?.length
+    ? php.disable_functions_presets
+    : php.suggested_disable_functions
+      ? [
+          {
+            key: "safe",
+            title: t("useSuggested"),
+            description: "",
+            functions: php.suggested_disable_functions,
+          },
+        ]
+      : [];
+  // Order and spacing are noise here — a list is the same list however it was
+  // typed, and a preset that quietly stops matching over whitespace would keep
+  // claiming the site is unhardened.
+  const asSet = (list) =>
+    (list ?? "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .sort()
+      .join(",");
+  const activePreset = presets.find(
+    (preset) => asSet(preset.functions) === asSet(value),
+  );
+
   function add() {
     // A pasted list is a list — splitting it here saves adding five names one
     // at a time, and drops the duplicates that produces.
@@ -1309,30 +1338,46 @@ function BlockedFunctions({ form, php, disabled }) {
               {tb("add")}
             </Button>
 
-            {php.suggested_disable_functions && value !== php.suggested_disable_functions ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={disabled}
-                onClick={() =>
-                  form.setValue("disable_functions", php.suggested_disable_functions, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
-              >
-                <ShieldCheck className="size-3.5" />
-                {t("useSuggested")}
-              </Button>
-            ) : (
-              <p className="text-xs text-muted-foreground">{tb("matches")}</p>
-            )}
-
             <p className="ml-auto text-xs text-muted-foreground tabular-nums">
               {tb("count", { count: names.length })}
             </p>
           </div>
+
+          {/* One button per starting point, same shape as the FPM presets
+              above: the matching one is filled in, and its description is read
+              out underneath rather than hidden in a `title` no phone can
+              reach. Rendered from the API, so a third preset needs no change
+              here. */}
+          {presets.length ? (
+            <div className="self-start">
+              <Label label={tb("presetsLabel")} />
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {presets.map((preset) => (
+                  <Button
+                    key={preset.key}
+                    type="button"
+                    variant={activePreset?.key === preset.key ? "default" : "outline"}
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() =>
+                      write(
+                        preset.functions
+                          .split(",")
+                          .map((name) => name.trim())
+                          .filter(Boolean),
+                      )
+                    }
+                  >
+                    <ShieldCheck className="size-3.5" />
+                    {preset.title}
+                  </Button>
+                ))}
+              </div>
+              <p className="mt-1.5 min-h-4 text-xs text-muted-foreground">
+                {activePreset?.description || tb("presetsCustom")}
+              </p>
+            </div>
+          ) : null}
 
           <FormMessage />
         </FormItem>

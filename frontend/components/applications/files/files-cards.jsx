@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { Folder, Link2, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FileRowActions } from "@/components/applications/files/file-row-actions";
 import { FileThumb } from "@/components/applications/files/file-thumb";
 import { isImageFile } from "@/lib/files/file-icon";
 import { isWorldWritable } from "@/lib/files/describe-mode";
 
-export function FilesCards({ appId, data, canManage, onAction, busyPath, highlightPath }) {
+export function FilesCards({ appId, data, canManage, onAction, busyPath, highlightPath, selected = [], onToggle }) {
+  const t = useTranslations("applications.files");
   return (
     <ul className="space-y-2">
       {data.map((file) => {
@@ -23,6 +26,15 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
             )}
           >
             <div className="flex min-w-0 items-center gap-2.5">
+              {/* Same selection on a phone as on a desktop. Bulk work is exactly
+                  what you reach for on the small screen, where doing it one row
+                  at a time is most painful. */}
+              <Checkbox
+                className="shrink-0"
+                checked={selected.includes(file.path)}
+                onCheckedChange={() => onToggle?.(file.path)}
+                aria-label={t("bulk.selectOne", { name: file.name })}
+              />
               {file.type === "dir" ? (
                 <Folder className="size-4 shrink-0 text-primary" />
               ) : file.type === "symlink" ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations, useFormatter } from "next-intl";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clockFormatter } from "@/lib/format/time";
 import { useLiveMetrics } from "@/components/server-dashboard/use-live-metrics";
@@ -54,7 +54,8 @@ function LiveStatus({ failed, updatedAt, timeZone }) {
   );
 }
 
-export function LiveMetricsSection({ timeZone }) {
+export function LiveMetricsSection({ timeZone, history = [] }) {
+  const t = useTranslations("serverDashboard");
   const { metrics, series, failed, updatedAt, ratesReady } = useLiveMetrics();
   // Everything on screen is last-known, not current — the charts have to say
   // so as loudly as the stat cards do.
@@ -62,26 +63,12 @@ export function LiveMetricsSection({ timeZone }) {
 
   return (
     <div className="space-y-4">
+      {/* Grouped by clock, not by subject. Everything under the Live badge is
+          the 3s poll; everything under the 24h label is the five-minute
+          collector. Mixing the two under one "Live" badge is exactly the
+          question this page kept being asked. */}
       <LiveStatus failed={failed} updatedAt={updatedAt} timeZone={timeZone} />
       <StatCards metrics={metrics} stale={stale} ratesReady={ratesReady} />
-      {/* Row one asks "is the machine struggling", row two "what is it
-          moving". All four read the same poll, so nothing here costs an extra
-          request — and no metric appears on two charts. */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ServerLoadChart
-          series={series}
-          metrics={metrics}
-          timeZone={timeZone}
-          stale={stale}
-        />
-        <ResourceUsageChart
-          series={series}
-          metrics={metrics}
-          timeZone={timeZone}
-          stale={stale}
-          ratesReady={ratesReady}
-        />
-      </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <NetworkIoChart
           series={series}
@@ -90,6 +77,17 @@ export function LiveMetricsSection({ timeZone }) {
           stale={stale}
         />
         <DiskIoChart series={series} metrics={metrics} timeZone={timeZone} stale={stale} />
+      </div>
+
+      <div className="flex items-center gap-2 pt-2">
+        <History className="size-3.5 text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground">
+          {t("historyLabel")}
+        </span>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ServerLoadChart history={history} metrics={metrics} timeZone={timeZone} />
+        <ResourceUsageChart history={history} timeZone={timeZone} />
       </div>
     </div>
   );

@@ -141,6 +141,20 @@ export const applicationPhpSchema = z
       })
       .default({ total: 0, committed: 0, available: 0, over_committed: false, sites: 0, this_site: 0 }),
     suggested_disable_functions: z.string().default(""),
+    // Starting points for `disable_functions`, safest first, titles and
+    // descriptions already localised by the API. Read this rather than the
+    // flat `suggested_disable_functions` above — a third preset should not
+    // need a frontend change.
+    disable_functions_presets: z
+      .array(
+        z.object({
+          key: z.string(),
+          title: z.string(),
+          description: z.string().default(""),
+          functions: z.string().default(""),
+        }),
+      )
+      .default([]),
   })
   .passthrough();
 

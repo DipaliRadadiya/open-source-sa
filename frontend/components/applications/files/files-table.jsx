@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Folder, Link2, Loader2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable } from "@/components/ui/data-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
@@ -43,6 +44,45 @@ function withDirsFirst(compare) {
 const sortByName = withDirsFirst((a, b) => a.name.localeCompare(b.name));
 const sortBySize = withDirsFirst((a, b) => (a.size ?? 0) - (b.size ?? 0));
 const sortByModified = withDirsFirst((a, b) => parseApiDate(a.modified_at) - parseApiDate(b.modified_at));
+
+/**
+ * Selection lives in the panel, not in TanStack's own row-selection state: the
+ * panel is what runs the bulk calls, and a selection keyed by row index would
+ * point at the wrong file the moment the list re-sorts or refreshes. Paths are
+ * the stable identity here.
+ */
+function SelectCell({ row, table }) {
+  const t = useTranslations("applications.files");
+  const { selected, onToggle } = table.options.meta;
+  const file = row.original;
+  return (
+    <Checkbox
+      checked={selected.includes(file.path)}
+      onCheckedChange={() => onToggle(file.path)}
+      aria-label={t("bulk.selectOne", { name: file.name })}
+      // The row is a navigation target for folders — a tick must not follow
+      // the link it happens to sit inside.
+      onClick={(event) => event.stopPropagation()}
+    />
+  );
+}
+
+function SelectAllHeader({ table }) {
+  const t = useTranslations("applications.files");
+  const { selected, onToggleAll } = table.options.meta;
+  const rows = table.getRowModel().rows.map((row) => row.original.path);
+  const all = rows.length > 0 && rows.every((path) => selected.includes(path));
+  const some = !all && rows.some((path) => selected.includes(path));
+  return (
+    <Checkbox
+      // "This folder", never "everything on the site" — a select-all that
+      // silently reaches past what you can see is how bulk deletes go wrong.
+      checked={all ? true : some ? "indeterminate" : false}
+      onCheckedChange={() => onToggleAll(rows, !all)}
+      aria-label={t("bulk.selectAll")}
+    />
+  );
+}
 
 function NameCell({ row, table }) {
   const t = useTranslations("applications.files");
@@ -149,7 +189,7 @@ function ActionsCell({ row, table }) {
   return <FileRowActions file={file} appId={appId} canManage={canManage} onAction={onAction} />;
 }
 
-export function FilesTable({ appId, path, data, canManage, onAction, busyPath, highlightPath }) {
+export function FilesTable({ appId, path, data, canManage, onAction, busyPath, highlightPath, selected = [], onToggle, onToggleAll }) {
   const t = useTranslations("applications.files");
 
   // Percentages, not px, and they sum to 100 — paired with `fixedLayout`
@@ -167,9 +207,16 @@ export function FilesTable({ appId, path, data, canManage, onAction, busyPath, h
   // same gap instead of some feeling tighter than others.
   const columns = [
     {
+      id: "select",
+      header: SelectAllHeader,
+      meta: { className: "w-[4%] pl-6 pr-0" },
+      cell: SelectCell,
+      enableSorting: false,
+    },
+    {
       accessorKey: "name",
       header: t("columns.name"),
-      meta: { className: "w-[26%] px-6" },
+      meta: { className: "w-[22%] px-6" },
       cell: NameCell,
       sortingFn: sortByName,
     },
@@ -207,7 +254,7 @@ export function FilesTable({ appId, path, data, canManage, onAction, busyPath, h
     <DataTable
       columns={columns}
       data={data}
-      meta={{ appId, path, canManage, onAction, busyPath }}
+      meta={{ appId, path, canManage, onAction, busyPath, selected, onToggle, onToggleAll }}
       emptyMessage={t("empty.title")}
       rowClassName={(file) =>
         cn(

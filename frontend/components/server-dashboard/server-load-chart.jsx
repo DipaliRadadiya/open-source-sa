@@ -28,12 +28,17 @@ import {
  * 5-minute line doesn't say more reliably; the stat card above still prints
  * all three as numbers for anyone who wants the instant reading.
  */
-export function ServerLoadChart({ series, metrics, timeZone, stale }) {
+export function ServerLoadChart({ history = [], metrics, timeZone }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
-  const clock = clockFormatter(format, timeZone, { second: "2-digit" });
+  // No seconds: samples are five minutes apart, so a clock reading 11:05:00
+  // implies a precision the data does not have.
+  const clock = clockFormatter(format, timeZone);
   const decimal = (value) => format.number(Number(value), { maximumFractionDigits: 2 });
+  // Core count is a fact about the machine, not a sample — the live poll is
+  // still the honest source for it even on a history chart.
   const cores = Number(metrics?.cpu?.cores) || 0;
+  const latest = history.at(-1);
 
   const config = {
     load_5: { label: "5m", color: "var(--chart-1)" },
@@ -45,18 +50,19 @@ export function ServerLoadChart({ series, metrics, timeZone, stale }) {
       icon={Activity}
       title={t("charts.load.title")}
       description={t("charts.load.description")}
-      ready={series.length >= 2}
-      stale={stale}
-      // Both averages are absolute readings, valid from the very first sample —
-      // so the card can answer the question while the line is still forming.
+      ready={history.length >= 2}
+      emptyMessage={t("charts.noHistory")}
+      // The newest COLLECTED sample, not the live poll: this card is the last
+      // day, and a header number from a different clock than the line under it
+      // is how you get someone reading the two against each other.
       summary={
-        metrics?.load
-          ? `5m ${decimal(metrics.load[5])} · 15m ${decimal(metrics.load[15])}`
+        latest
+          ? `5m ${decimal(latest.load_5)} · 15m ${decimal(latest.load_15)}`
           : null
       }
     >
       <ChartContainer config={config} className="h-72 w-full">
-        <LineChart data={series} margin={{ left: -20, right: 8 }}>
+        <LineChart data={history} margin={{ left: -20, right: 8 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="t"

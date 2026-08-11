@@ -56,6 +56,11 @@ export function LiveChartCard({
   summary,
   ready,
   stale = false,
+  // The live charts are waiting seconds for their second sample; the 24h ones
+  // are waiting on a collector that runs every five minutes. "Waiting for
+  // samples…" under a chart that will stay empty for the next five minutes
+  // reads as broken.
+  emptyMessage,
   children,
 }) {
   const t = useTranslations("serverDashboard");
@@ -89,7 +94,9 @@ export function LiveChartCard({
             {summary ? (
               <p className="text-lg font-semibold tabular-nums">{summary}</p>
             ) : null}
-            <p className="text-sm text-muted-foreground">{t("charts.waiting")}</p>
+            <p className="text-sm text-muted-foreground">
+              {emptyMessage ?? t("charts.waiting")}
+            </p>
           </div>
         )}
       </CardContent>

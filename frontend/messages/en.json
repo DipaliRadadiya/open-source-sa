@@ -652,14 +652,15 @@
     },
     "charts": {
       "waiting": "Waiting for samples…",
+      "noHistory": "No samples yet. The server is measured every five minutes.",
       "load": {
         "title": "Server load",
-        "description": "Queued work against how many cores this server has.",
+        "description": "Queued work against how many cores this server has, over the last 24 hours.",
         "cores": "{count} cores"
       },
       "usage": {
         "title": "Resource usage",
-        "description": "How much of each resource is currently in use."
+        "description": "How much of each resource has been in use over the last 24 hours."
       },
       "network": {
         "title": "Network I/O",
@@ -698,6 +699,7 @@
       "showLess": "Show less"
     },
     "live": "Live",
+    "historyLabel": "Last 24 hours",
     "offline": "Live metrics unavailable",
     "updated": "Updated {time}",
     "of": "of",
@@ -2684,15 +2686,13 @@
       "removeFilesOn": "The site’s directory and everything in it will be deleted from the server.",
       "removeFilesOff": "The files stay on the server. Only the panel record and the site configuration are removed.",
       "databaseNote": "A database created for this application is kept. Remove it from Databases if you no longer need it.",
-      "confirmLabel": "Type {domain} to confirm",
+      "confirmLabel": "Type <code>{domain}</code> to confirm",
       "submit": "Delete application",
       "deleting": "Deleting…",
       "done": "{name} was deleted.",
       "failed": "We could not delete this application.",
       "cancel": "Cancel",
-      "copyDomain": "Copy domain",
-      "confirmLabelStart": "Type",
-      "confirmLabelEnd": "to confirm"
+      "copyDomain": "Copy domain"
     },
     "facts": {
       "title": "Application",
@@ -3096,6 +3096,52 @@
         "confirm": "Fix permissions",
         "done": "Permissions reset.",
         "failed": "Couldn't reset permissions."
+      },
+      "bulk": {
+        "selected": "{count, plural, one {# selected} other {# selected}}",
+        "clear": "Clear",
+        "selectAll": "Select everything in this folder",
+        "selectOne": "Select {name}",
+        "move": "Move",
+        "copy": "Copy",
+        "compress": "Compress",
+        "permissions": "Permissions",
+        "delete": "Delete",
+        "tooMany": "Pick at most {limit} at a time. {count} are selected.",
+        "oneFolderOnly": "Everything has to be in the same folder to go into one archive.",
+        "targetFolder": "Destination folder",
+        "archiveName": "Archive name",
+        "moveTitle": "Move {count, plural, one {# item} other {# items}}",
+        "moveDescription": "They keep their names. Anything already there is left alone, not overwritten.",
+        "moveHint": "Path from the site root, e.g. wp-content/keep",
+        "moveDone": "{count, plural, one {# item moved.} other {# items moved.}}",
+        "copyTitle": "Copy {count, plural, one {# item} other {# items}}",
+        "copyDescription": "They keep their names. Anything already there is left alone, not overwritten.",
+        "copyHint": "Path from the site root, e.g. wp-content/keep",
+        "copyDone": "{count, plural, one {# item copied.} other {# items copied.}}",
+        "compressTitle": "Compress {count, plural, one {# item} other {# items}}",
+        "compressDescription": "One zip file, holding the names as they are now.",
+        "compressHint": "Must end in .zip. Everything selected is in {folder}.",
+        "compressDone": "{count, plural, one {# item compressed.} other {# items compressed.}}",
+        "permissionsTitle": "Permissions for {count, plural, one {# item} other {# items}}",
+        "permissionsDescription": "The same mode is applied to everything selected.",
+        "modeLabel": "Mode",
+        "modeHint": "Three digits, e.g. 644. Not 0644.",
+        "permissionsDone": "{count, plural, one {# item updated.} other {# items updated.}}",
+        "deleteTitle": "Delete {count, plural, one {# item} other {# items}}?",
+        "deleteDescription": "These are removed from the server. This cannot be undone.",
+        "deleteSubmit": "Delete",
+        "deleting": "Deleting…",
+        "deleteDone": "{count, plural, one {# item deleted.} other {# items deleted.}}",
+        "partlyDone": "{done} of {total} done. The rest could not be:",
+        "noneDone": "None of the {total} could be done:",
+        "dismiss": "Dismiss",
+        "failed": "That could not be done.",
+        "reason": {
+          "not_found": "No longer there",
+          "exists": "Something is already at the destination",
+          "failed": "The server refused it"
+        }
       }
     },
     "workers": {
@@ -3616,7 +3662,8 @@
         "add": "Add",
         "remove": "Remove {name}",
         "empty": "Nothing is blocked. Every PHP function this site has installed can run.",
-        "matches": "Matches the recommended list."
+        "presetsLabel": "Start from",
+        "presetsCustom": "Your own list."
       },
       "saveNote": "Saving rewrites this site's PHP pool and reloads it. Requests already running finish first.",
       "tabs": {

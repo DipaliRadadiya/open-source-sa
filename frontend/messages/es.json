@@ -652,14 +652,15 @@
     },
     "charts": {
       "waiting": "Esperando muestras…",
+      "noHistory": "Aún no hay muestras. El servidor se mide cada cinco minutos.",
       "load": {
         "title": "Carga del servidor",
-        "description": "Trabajo en cola frente al número de núcleos del servidor.",
+        "description": "Trabajo en cola frente a los núcleos que tiene este servidor, durante las últimas 24 horas.",
         "cores": "{count} núcleos"
       },
       "usage": {
         "title": "Uso de recursos",
-        "description": "Cuánto de cada recurso está en uso actualmente."
+        "description": "Cuánto se ha usado de cada recurso durante las últimas 24 horas."
       },
       "network": {
         "title": "E/S de red",
@@ -698,6 +699,7 @@
       "showLess": "Mostrar menos"
     },
     "live": "En vivo",
+    "historyLabel": "Últimas 24 horas",
     "offline": "Métricas en vivo no disponibles",
     "updated": "Actualizado {time}",
     "of": "de",
@@ -2684,15 +2686,13 @@
       "removeFilesOn": "Se eliminará del servidor el directorio del sitio y todo su contenido.",
       "removeFilesOff": "Los archivos permanecen en el servidor. Solo se eliminan el registro del panel y la configuración del sitio.",
       "databaseNote": "La base de datos creada para esta aplicación se conserva. Elimínala desde Bases de datos si ya no la necesitas.",
-      "confirmLabel": "Escribe {domain} para confirmar",
+      "confirmLabel": "Escribe <code>{domain}</code> para confirmar",
       "submit": "Eliminar aplicación",
       "deleting": "Eliminando…",
       "done": "{name} se eliminó.",
       "failed": "No pudimos eliminar esta aplicación.",
       "cancel": "Cancelar",
-      "copyDomain": "Copiar dominio",
-      "confirmLabelStart": "Escribe",
-      "confirmLabelEnd": "para confirmar"
+      "copyDomain": "Copiar dominio"
     },
     "facts": {
       "title": "Aplicación",
@@ -3096,6 +3096,52 @@
         "confirm": "Corregir permisos",
         "done": "Permisos restablecidos.",
         "failed": "No se pudieron restablecer los permisos."
+      },
+      "bulk": {
+        "selected": "{count, plural, one {# seleccionado} other {# seleccionados}}",
+        "clear": "Quitar",
+        "selectAll": "Seleccionar todo en esta carpeta",
+        "selectOne": "Seleccionar {name}",
+        "move": "Mover",
+        "copy": "Copiar",
+        "compress": "Comprimir",
+        "permissions": "Permisos",
+        "delete": "Eliminar",
+        "tooMany": "Elige como máximo {limit} a la vez. Hay {count} seleccionados.",
+        "oneFolderOnly": "Todo tiene que estar en la misma carpeta para ir en un archivo.",
+        "targetFolder": "Carpeta de destino",
+        "archiveName": "Nombre del archivo",
+        "moveTitle": "Mover {count, plural, one {# elemento} other {# elementos}}",
+        "moveDescription": "Conservan su nombre. Lo que ya esté allí no se sobrescribe.",
+        "moveHint": "Ruta desde la raíz del sitio, p. ej. wp-content/keep",
+        "moveDone": "{count, plural, one {# elemento movido.} other {# elementos movidos.}}",
+        "copyTitle": "Copiar {count, plural, one {# elemento} other {# elementos}}",
+        "copyDescription": "Conservan su nombre. Lo que ya esté allí no se sobrescribe.",
+        "copyHint": "Ruta desde la raíz del sitio, p. ej. wp-content/keep",
+        "copyDone": "{count, plural, one {# elemento copiado.} other {# elementos copiados.}}",
+        "compressTitle": "Comprimir {count, plural, one {# elemento} other {# elementos}}",
+        "compressDescription": "Un solo archivo zip, con los nombres tal como están ahora.",
+        "compressHint": "Debe terminar en .zip. Todo lo seleccionado está en {folder}.",
+        "compressDone": "{count, plural, one {# elemento comprimido.} other {# elementos comprimidos.}}",
+        "permissionsTitle": "Permisos de {count, plural, one {# elemento} other {# elementos}}",
+        "permissionsDescription": "Se aplica el mismo modo a todo lo seleccionado.",
+        "modeLabel": "Modo",
+        "modeHint": "Tres dígitos, p. ej. 644. No 0644.",
+        "permissionsDone": "{count, plural, one {# elemento actualizado.} other {# elementos actualizados.}}",
+        "deleteTitle": "¿Eliminar {count, plural, one {# elemento} other {# elementos}}?",
+        "deleteDescription": "Se eliminan del servidor. Esto no se puede deshacer.",
+        "deleteSubmit": "Eliminar",
+        "deleting": "Eliminando…",
+        "deleteDone": "{count, plural, one {# elemento eliminado.} other {# elementos eliminados.}}",
+        "partlyDone": "{done} de {total} hechos. El resto no se pudo:",
+        "noneDone": "Ninguno de los {total} se pudo hacer:",
+        "dismiss": "Descartar",
+        "failed": "No se pudo hacer.",
+        "reason": {
+          "not_found": "Ya no está",
+          "exists": "Ya hay algo en el destino",
+          "failed": "El servidor lo rechazó"
+        }
       }
     },
     "workers": {
@@ -3616,7 +3662,8 @@
         "add": "Añadir",
         "remove": "Quitar {name}",
         "empty": "No hay nada bloqueado. Cualquier función de PHP instalada en este sitio puede ejecutarse.",
-        "matches": "Coincide con la lista recomendada."
+        "presetsLabel": "Empezar desde",
+        "presetsCustom": "Tu propia lista."
       },
       "saveNote": "Al guardar se reescribe el pool de PHP de este sitio y se recarga. Las peticiones en curso terminan primero.",
       "tabs": {

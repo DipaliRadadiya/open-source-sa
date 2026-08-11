@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,9 @@ import { ExtractDialog } from "@/components/applications/files/extract-dialog";
 import { PermissionsDialog } from "@/components/applications/files/permissions-dialog";
 import { DeleteFileDialog } from "@/components/applications/files/delete-file-dialog";
 import { FixPermissionsButton } from "@/components/applications/files/fix-permissions-button";
+import { SelectionBar } from "@/components/applications/files/selection-bar";
+import { BulkDialogs } from "@/components/applications/files/bulk-dialogs";
+import { BulkResultPanel } from "@/components/applications/files/bulk-result-panel";
 import { joinPath } from "@/lib/files/path-helpers";
 
 export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
@@ -61,6 +65,52 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
   // poll for. The path segment is what the server component keys its fetch on.
   const path = initialPath ?? "";
   const files = (initialFiles ?? []).map((f) => ({ ...f, path: joinPath(path, f.name) }));
+
+  // Selection is a list of paths, not row indexes: the list re-sorts and
+  // refreshes under you, and an index would then point at a different file.
+  const [selected, setSelected] = useState([]);
+  const [bulkAction, setBulkAction] = useState(null);
+  const [bulkOutcome, setBulkOutcome] = useState(null);
+
+  // Leaving the folder abandons the selection — carrying it across folders
+  // would let someone act on things they can no longer see. Adjusted during
+  // render rather than in an effect: an effect would paint one frame with the
+  // old folder's selection still ticked, and React re-runs this immediately
+  // without committing that frame.
+  const [selectionPath, setSelectionPath] = useState(path);
+  if (selectionPath !== path) {
+    setSelectionPath(path);
+    setSelected([]);
+    setBulkOutcome(null);
+  }
+
+  function toggleSelected(target) {
+    setSelected((current) =>
+      current.includes(target)
+        ? current.filter((entry) => entry !== target)
+        : [...current, target],
+    );
+  }
+
+  function toggleAll(paths, on) {
+    setSelected((current) =>
+      on
+        ? [...new Set([...current, ...paths])]
+        : current.filter((entry) => !paths.includes(entry)),
+    );
+  }
+
+  function onBulkResult(action, result) {
+    setSelected([]);
+    // Everything worked — a toast is enough, and the panel stays out of the
+    // way. Anything else is left on screen to be read.
+    if (!result.failed.length) {
+      setBulkOutcome(null);
+      toast.success(t(`bulk.${action}Done`, { count: result.succeeded.length }));
+      return;
+    }
+    setBulkOutcome(result);
+  }
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -182,6 +232,16 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
         {addButtons}
       </div>
 
+      <BulkResultPanel result={bulkOutcome} onDismiss={() => setBulkOutcome(null)} />
+      {siteSearch ? null : (
+        <SelectionBar
+          selected={selected}
+          canManage={canManage}
+          onClear={() => setSelected([])}
+          onAction={setBulkAction}
+        />
+      )}
+
       {siteSearch ? (
         <SiteSearchResults appId={appId} query={query} onAction={onAction} />
       ) : files.length === 0 ? (
@@ -207,6 +267,8 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
               canManage={canManage}
               onAction={onAction}
               highlightPath={highlightPath}
+              selected={selected}
+              onToggle={toggleSelected}
             />
           </div>
           <div className="hidden lg:block">
@@ -217,6 +279,9 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
               canManage={canManage}
               onAction={onAction}
               highlightPath={highlightPath}
+              selected={selected}
+              onToggle={toggleSelected}
+              onToggleAll={toggleAll}
             />
           </div>
         </>
@@ -251,6 +316,17 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
       {/* Mounted only while active, not always-mounted + an open flag — each
           dialog then initializes its own state fresh from props instead of
           resetting via a setState-in-effect on every action change. */}
+      {bulkAction ? (
+        <BulkDialogs
+          appId={appId}
+          action={bulkAction}
+          paths={selected}
+          path={path}
+          onOpenChange={(open) => !open && setBulkAction(null)}
+          onResult={onBulkResult}
+        />
+      ) : null}
+
       {action?.type === "edit" ? (
         <FileEditorDialog
           appId={appId}
