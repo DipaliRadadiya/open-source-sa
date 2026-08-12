@@ -1626,6 +1626,10 @@ return [
     'rate_limits' => [
         'api' => (int) env('RATE_LIMIT_API', 180),
         'guest' => (int) env('RATE_LIMIT_GUEST', 20),
+        // The central panel, which arrives as one machine account for every
+        // site it manages here. Its own budget so a vendor operating several
+        // sites is not sharing one person's allowance.
+        'central' => (int) env('RATE_LIMIT_CENTRAL', 3000),
         // Progress-polling endpoints only, and they are exempt from the `api`
         // budget above rather than sharing it — so this number stands on its
         // own instead of being capped by the lower of the two. High on purpose:

@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\Application;
+use App\Models\User;
 use App\Providers\AppServiceProvider;
+use App\Services\Server\CentralTokenManager;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
@@ -102,6 +104,33 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/server/sync/{run}',
         'api/admin/panel-update/{panelUpdate}',
     ]);
+});
+
+it('gives the central panel its own budget, and no one else', function () {
+    // Both assertions below compare against config, so they would both hold
+    // trivially if the two limits were configured to the same number — and
+    // this suite reads the real .env.
+    expect((int) config('server.rate_limits.central'))
+        ->not->toBe((int) config('server.rate_limits.api'));
+
+    // The half that matters, and it goes FIRST: an ordinary caller must not be
+    // handed the vendor's allowance. `withHeader()` persists for the rest of
+    // the test, so asserting this after the central call measured a request
+    // that was still carrying the central token — it read 3000 and would have
+    // passed had the branch been wrong in exactly the way this guards against.
+    $user = User::factory()->create();
+
+    expect($this->actingAs($user)->getJson('/api/basic-info')->headers->get('X-RateLimit-Limit'))
+        ->toBe((string) config('server.rate_limits.api'));
+
+    // The real token, through the real guard — not the attribute set by hand,
+    // which would prove only that the branch reads what the test wrote.
+    $token = app(CentralTokenManager::class)->enable()['central_token'];
+
+    expect($this->withHeader('Authorization', 'Bearer '.$token)
+        ->getJson('/api/basic-info')
+        ->headers->get('X-RateLimit-Limit'))
+        ->toBe((string) config('server.rate_limits.central'));
 });
 
 it('keys the progress limiter on identity, not on the record being polled', function () {

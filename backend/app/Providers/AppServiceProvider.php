@@ -118,9 +118,28 @@ class AppServiceProvider extends ServiceProvider
         // always wins. A route that needs genuine headroom has to drop this
         // one, as the upload endpoints and the deploy webhook do — and
         // RateLimitTest fails the build if one forgets.
-        RateLimiter::for('api', fn (Request $request) => $request->user()
-            ? Limit::perMinute((int) config('server.rate_limits.api', 180))->by($request->user()->id)
-            : Limit::perMinute((int) config('server.rate_limits.guest', 20))->by($request->ip()));
+        RateLimiter::for('api', function (Request $request) {
+            // Central signs in as one machine account (see CentralSystemGuard),
+            // so the per-user branch below would hand the vendor a single
+            // budget for everything it does on this server — ten managed sites
+            // share the allowance of one person clicking around. And a machine
+            // answers a 429 with a retry, which spends the next window too, so
+            // the limit that bites once tends to keep biting.
+            //
+            // High rather than absent. `Limit::none()` would also stop the
+            // errors, but this token sits in a settings row, and if it ever
+            // leaks the ceiling is the only thing between it and the whole API
+            // at line speed. Same trade as the deploy webhook: far above any
+            // real rate, far below anything harmful.
+            if ($request->attributes->get('central_authenticated') === true) {
+                return Limit::perMinute((int) config('server.rate_limits.central', 3000))
+                    ->by('central');
+            }
+
+            return $request->user()
+                ? Limit::perMinute((int) config('server.rate_limits.api', 180))->by($request->user()->id)
+                : Limit::perMinute((int) config('server.rate_limits.guest', 20))->by($request->ip());
+        });
 
         // Progress-polling endpoints — provisioning, deployments, sync runs,
         // panel updates. These are the screens someone sits and watches, so
