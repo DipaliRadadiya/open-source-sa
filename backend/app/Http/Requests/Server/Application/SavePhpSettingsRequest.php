@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Server\Application;
 
 use App\Models\ApplicationPhpSettings;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -45,6 +46,44 @@ class SavePhpSettingsRequest extends FormRequest
             'pm_max_requests' => ['sometimes', 'integer', 'min:0', 'max:100000'],
 
             'open_basedir_enabled' => ['sometimes', 'boolean'],
+            'open_basedir_paths' => [
+                'sometimes', 'nullable', 'string', 'max:2000',
+                function (string $attribute, mixed $value, Closure $fail) {
+                    foreach (preg_split('/[:\n,]+/', (string) $value) ?: [] as $path) {
+                        $path = trim($path);
+
+                        if ($path === '') {
+                            continue;
+                        }
+
+                        // Absolute only. A relative entry is resolved against
+                        // the worker's working directory, which is not a thing
+                        // the user can see or predict.
+                        if (! str_starts_with($path, '/')) {
+                            $fail(__('php_settings.errors.basedir_absolute', ['path' => $path]));
+
+                            return;
+                        }
+
+                        // `/` allows everything, so the pool would say
+                        // open_basedir is on while enforcing nothing — the
+                        // panel would be reporting a protection it does not
+                        // have. Turning the toggle off is the honest way to
+                        // get the same result.
+                        if (rtrim($path, '/') === '') {
+                            $fail(__('php_settings.errors.basedir_root'));
+
+                            return;
+                        }
+
+                        if (str_contains($path, '..') || str_contains($path, "\0")) {
+                            $fail(__('php_settings.errors.basedir_traversal', ['path' => $path]));
+
+                            return;
+                        }
+                    }
+                },
+            ],
             // A comma-separated list of function names and nothing else. This
             // lands in the pool file verbatim, so anything that is not a
             // function name has no business being here.

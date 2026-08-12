@@ -488,3 +488,133 @@ it('writes the vhost at the site\'s real document root when the version changes'
                 ->documentRoot($this->application->fresh()->load('systemUser'))
         );
 });
+
+/*
+ * open_basedir: the base paths are the site's, the extras are the user's.
+ *
+ * The legacy panel wrote `{home}/{name}:/var/lib/php/sessions:/tmp:{custom}`.
+ * Two of those are deliberately different here — the app root is named by
+ * slug, and the session directory is this site's own rather than a
+ * server-wide one, which every site on the box could otherwise read.
+ */
+describe('open_basedir', function () {
+    /** The rendered `php_admin_value[open_basedir]` line, without the comments. */
+    function openBasedirLine(): ?string
+    {
+        return collect(explode("\n", (string) poolFile()))
+            ->first(fn (string $l): bool => str_starts_with(trim($l), 'php_admin_value[open_basedir]'));
+    }
+
+    it('is left out entirely when the setting is off', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        // Absent, not empty: an empty value would forbid everything, where the
+        // user asked for no restriction at all.
+        expect(openBasedirLine())->toBeNull();
+    });
+
+    it('always allows the app root, the session directory and /tmp', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true])
+            ->assertOk();
+
+        $sessionPath = app(PoolManager::class)->sessionPath($this->application);
+
+        // The directive itself, not the whole file — the template explains
+        // PHP's default in a comment, and asserting against the file would
+        // read that comment as configuration.
+        $line = openBasedirLine();
+
+        // Without the session directory, switching this on logs out every
+        // visitor and keeps them logged out — the classic way open_basedir
+        // gets blamed for the panel breaking a site.
+        expect($line)->toContain('/home/siteowner/shop')
+            ->toContain($sessionPath)
+            ->toContain('/tmp')
+            // The site's own session directory, never a shared one: naming
+            // /var/lib/php/sessions would let every site on the server read
+            // every other site's sessions.
+            ->not->toContain('/var/lib/php/sessions');
+    });
+
+    it('appends the user\'s own directories', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), [
+                'open_basedir_enabled' => true,
+                'open_basedir_paths' => "/mnt/shared\n/srv/uploads",
+            ])
+            ->assertOk();
+
+        expect(openBasedirLine())->toContain('/mnt/shared')
+            ->toContain('/srv/uploads')
+            // Still there — the extras add, they never replace.
+            ->toContain('/tmp');
+    });
+
+    it('never writes an empty path component', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true, 'open_basedir_paths' => ''])
+            ->assertOk();
+
+        // The legacy template interpolated the column straight in, so an empty
+        // one left a trailing colon. What PHP makes of an empty component is
+        // version dependent and never what anyone intended.
+        $line = openBasedirLine();
+
+        expect($line)->not->toContain('::')
+            ->and(rtrim((string) $line))->not->toEndWith(':');
+    });
+
+    it('refuses a relative path', function () {
+        fakePhpServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true, 'open_basedir_paths' => 'srv/uploads'])
+            ->assertJsonValidationErrors('open_basedir_paths');
+    });
+
+    it('refuses traversal', function () {
+        fakePhpServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true, 'open_basedir_paths' => '/srv/../../etc'])
+            ->assertJsonValidationErrors('open_basedir_paths');
+    });
+
+    it('refuses / , which would leave the setting on but enforcing nothing', function () {
+        fakePhpServer();
+
+        // The panel must not report a protection it is not applying. Turning
+        // the toggle off is the honest way to get the same result.
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true, 'open_basedir_paths' => '/'])
+            ->assertJsonValidationErrors('open_basedir_paths');
+    });
+
+    it('reports the exact value the pool will contain', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true, 'open_basedir_paths' => '/mnt/shared'])
+            ->assertOk();
+
+        // The user supplies additions only, so a screen showing just their
+        // input would be showing half the setting.
+        $effective = $this->actingAs($this->admin)->getJson(phpUrl())->json('php.open_basedir_effective');
+
+        expect($effective)->toContain('/mnt/shared')
+            ->toContain('/tmp')
+            ->and(poolFile())->toContain($effective);
+    });
+});

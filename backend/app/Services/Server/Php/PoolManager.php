@@ -221,10 +221,8 @@ class PoolManager
             'autoPrependFile' => $effective['auto_prepend_file'],
             'allowUrlFopen' => (bool) $effective['allow_url_fopen'],
 
-            // The session directory has to be inside the allowed paths or
-            // enabling this silently breaks every login on the site.
             'openBasedir' => $effective['open_basedir_enabled']
-                ? $root.':'.$this->sessionPath($application).':/tmp'
+                ? $this->openBasedir($application, (string) ($effective['open_basedir_paths'] ?? ''))
                 : null,
             'disableFunctions' => $effective['disable_functions'],
             'additionalDirectives' => $effective['additional_directives'],
@@ -303,6 +301,46 @@ class PoolManager
         $result = $this->serverOps->run(['cat', $path], ['feature' => 'php', 'op' => 'pool_read'], timeout: 30);
 
         return $result->failed() ? null : $result->output();
+    }
+
+    /**
+     * The full open_basedir value: what the site always needs, plus whatever
+     * the user added.
+     *
+     * The first three are not negotiable. Without the app root PHP cannot read
+     * its own code; without the session directory every login on the site
+     * stops working the moment this is switched on, which is the classic way
+     * open_basedir gets blamed for "the panel broke my site"; /tmp is where
+     * uploads land before PHP moves them.
+     *
+     * Note the session directory is this site's own, under its app root — not
+     * a server-wide `/var/lib/php/sessions`. Naming a shared session directory
+     * here would let every site on the box read every other site's session
+     * files, which is the isolation per-app pools exist to provide.
+     *
+     * Empty entries are dropped rather than joined blindly: a trailing colon
+     * leaves an empty path component, and what PHP does with one is version
+     * dependent and never what anybody meant.
+     */
+    public function openBasedirFor(Application $application, ApplicationPhpSettings $settings): ?string
+    {
+        $effective = $settings->effective();
+
+        return $effective['open_basedir_enabled']
+            ? $this->openBasedir($application, (string) ($effective['open_basedir_paths'] ?? ''))
+            : null;
+    }
+
+    private function openBasedir(Application $application, string $extra): string
+    {
+        $paths = array_merge(
+            [$this->appRoot($application), $this->sessionPath($application), '/tmp'],
+            preg_split('/[:\n,]+/', $extra) ?: [],
+        );
+
+        $paths = array_values(array_unique(array_filter(array_map('trim', $paths), fn (string $p): bool => $p !== '')));
+
+        return implode(':', $paths);
     }
 
     /**

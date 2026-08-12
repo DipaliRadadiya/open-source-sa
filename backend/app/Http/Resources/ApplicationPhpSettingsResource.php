@@ -66,6 +66,7 @@ class ApplicationPhpSettingsResource extends JsonResource
                 'pm_max_children' => (int) $effective['pm_max_children'],
                 'pm_max_requests' => (int) $effective['pm_max_requests'],
                 'open_basedir_enabled' => (bool) $effective['open_basedir_enabled'],
+                'open_basedir_paths' => $effective['open_basedir_paths'],
                 'disable_functions' => $effective['disable_functions'],
                 'allow_url_fopen' => (bool) $effective['allow_url_fopen'],
                 'php_timezone' => $effective['php_timezone'],
@@ -88,6 +89,7 @@ class ApplicationPhpSettingsResource extends JsonResource
                 'pm_max_children' => $settings->getAttribute('pm_max_children') !== null,
                 'pm_max_requests' => $settings->getAttribute('pm_max_requests') !== null,
                 'open_basedir_enabled' => $settings->getAttribute('open_basedir_enabled') !== null,
+                'open_basedir_paths' => $settings->getAttribute('open_basedir_paths') !== null,
                 'disable_functions' => $settings->getAttribute('disable_functions') !== null,
                 'allow_url_fopen' => $settings->getAttribute('allow_url_fopen') !== null,
                 'php_timezone' => $settings->getAttribute('php_timezone') !== null,
@@ -100,6 +102,11 @@ class ApplicationPhpSettingsResource extends JsonResource
             'presets' => $this->presets(),
 
             'memory' => app(MemoryBudget::class)->withProposed($application, $settings),
+
+            // Exactly what the pool file will contain, base paths included.
+            // The user only supplies additions, so without this the screen
+            // would be showing half the value and calling it the setting.
+            'open_basedir_effective' => $pools->openBasedirFor($application, $settings),
 
             'suggested_disable_functions' => ApplicationPhpSettings::SAFE_DISABLED_FUNCTIONS,
 

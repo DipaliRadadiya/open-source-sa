@@ -1319,6 +1319,10 @@ Update PHP version and/or pool settings.
 
 **Response `200`:** `{"php": {...updated...}}`
 
+`open_basedir_paths` holds **additional** directories, one per line (`:` and `,` also accepted). The app root, the site's own session directory and `/tmp` are always included and cannot be removed — without them the site cannot read its own code or keep anyone logged in. Read `open_basedir_effective` from `GET .../php` to show the exact value the pool file will contain.
+
+**`422` on `open_basedir_paths`** for a relative path, a path containing `..`, or `/` — the last because it would leave the setting switched on while enforcing nothing.
+
 **`422` on `settings`** when the site has `isolated: false` and `isolation_supported: true`. Every limit on this form is enforced by the pool file, so without a pool they would be stored and never applied. Offer the isolate action instead of a save.
 
 `php_version` is exempt — it is carried by the vhost and can be changed either way.

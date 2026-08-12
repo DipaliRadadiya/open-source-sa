@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'memory_limit', 'upload_max_filesize', 'post_max_size',
     'max_execution_time', 'max_input_time', 'max_input_vars', 'session_gc_maxlifetime',
     'pm_type', 'pm_max_children', 'pm_max_requests',
-    'open_basedir_enabled', 'disable_functions', 'allow_url_fopen',
+    'open_basedir_enabled', 'open_basedir_paths', 'disable_functions', 'allow_url_fopen',
     'php_timezone', 'auto_prepend_file', 'additional_directives',
 ])]
 class ApplicationPhpSettings extends Model
@@ -112,6 +112,7 @@ class ApplicationPhpSettings extends Model
             // something. With it, the leak is bounded to 500 requests.
             'pm_max_requests' => 500,
             'open_basedir_enabled' => false,
+            'open_basedir_paths' => null,
             'disable_functions' => null,
             'allow_url_fopen' => true,
             'php_timezone' => null,
