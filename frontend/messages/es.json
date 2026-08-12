@@ -3006,7 +3006,7 @@
         "name": "Nombre",
         "size": "Tamaño",
         "modified": "Modificado",
-        "owner": "Propietario",
+        "owner": "Propietario / Grupo",
         "permissions": "Permisos",
         "worldWritableHint": "Editable por cualquiera — cualquier usuario con acceso a este servidor puede modificar este archivo, no solo su propietario."
       },

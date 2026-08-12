@@ -80,12 +80,16 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
                 )}
                 <p className="truncate text-xs text-muted-foreground">
                   {/* The card is the narrow-screen view of the same row, so it
-                      carries the same facts — owner included, since a file
-                      owned by the wrong user is exactly what someone reaches
-                      for this screen to check. Group is left to the table:
-                      there is no room for it here and it is almost always the
-                      owner repeated. */}
-                  {[file.size_human, file.modified_at_human, file.owner].filter(Boolean).join(" · ")}
+                      carries the same facts — user and group included, since a
+                      file owned by the wrong one is exactly what someone
+                      reaches for this screen to check. */}
+                  {[
+                    file.size_human,
+                    file.modified_at_human,
+                    file.owner ? [file.owner, file.group].filter(Boolean).join(":") : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                   {file.mode ? (
                     <>
                       {file.size_human || file.modified_at_human || file.owner ? " · " : ""}

@@ -184,12 +184,13 @@ function ModifiedCell({ row }) {
 }
 
 /**
- * Owner, and the group when it differs.
+ * User and group, always both — `deploy:www-data`, the way `ls -l` reports it.
  *
- * Both are shown by `ls -l`, but a site's files are overwhelmingly
- * `owner:owner` — repeating the same name twice on every row is noise that
- * makes the rows where it *does* differ (`deploy:www-data`, the ones worth
- * noticing) harder to spot rather than easier.
+ * Shown even when they are the same. Hiding the repeat would be tidier, but it
+ * makes the column's meaning depend on its value: a reader seeing one name
+ * cannot tell whether the group matches or simply was not rendered, and
+ * "which of these is group-owned by the web server?" stops being answerable by
+ * scanning.
  */
 function OwnerCell({ row }) {
   const file = row.original;
@@ -201,7 +202,7 @@ function OwnerCell({ row }) {
   return (
     <span className="flex items-center font-mono text-xs text-muted-foreground">
       <span className="truncate">{file.owner}</span>
-      {file.group && file.group !== file.owner ? (
+      {file.group ? (
         <>
           <span className="text-muted-foreground/50">:</span>
           <span className="truncate">{file.group}</span>
