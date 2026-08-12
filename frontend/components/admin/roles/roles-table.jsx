@@ -12,10 +12,15 @@ import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { SyncPermissionsButton } from "@/components/admin/roles/sync-permissions-button";
 import { RoleRowActions } from "@/components/admin/roles/role-row-actions";
+import { ACCESS_NONE, accessFromGrant } from "@/lib/schemas/role";
 
+// Counts on `access`, not on the boolean pair: the API now sends the level and
+// may omit the pair entirely, which would have made every role read as zero.
 function grantedCount(role) {
   return (role.permissions ?? []).filter(
-    (p) => p.permissions?.view || p.permissions?.manage,
+    (entry) =>
+      (entry.access ?? accessFromGrant(entry.permissions?.view, entry.permissions?.manage)) !==
+      ACCESS_NONE,
   ).length;
 }
 

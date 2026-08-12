@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, TriangleAlert } from "lucide-react";
-import { roleFormSchema } from "@/lib/schemas/role";
+import { roleFormSchema, ACCESS_NONE } from "@/lib/schemas/role";
 import { createRole, updateRole } from "@/lib/api/roles";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -32,13 +32,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+// The role's own grants, keyed the way the matrix reads them. `access` is
+// what the API sends now; the schema fills it in from the old boolean pair
+// when an older backend omits it, so only one shape reaches here.
 function seedMatrix(role) {
   const value = {};
-  for (const p of role?.permissions ?? []) {
-    value[permKey(p.level, p.name)] = {
-      view: Boolean(p.permissions?.view),
-      manage: Boolean(p.permissions?.manage),
-    };
+  for (const entry of role?.permissions ?? []) {
+    value[permKey(entry.level, entry.name)] = entry.access ?? ACCESS_NONE;
   }
   return value;
 }
@@ -61,19 +61,16 @@ export function RoleForm({ mode = "create", role, catalog }) {
     },
   });
 
-  const enabledCount = catalog.filter((item) => {
-    const s = matrix[permKey(item.level, item.name)];
-    return s && (s.view || s.manage);
-  }).length;
+  const permissions = catalog.permissions ?? [];
+  const enabledCount = permissions.filter(
+    (item) => (matrix[permKey(item.level, item.name)] ?? ACCESS_NONE) !== ACCESS_NONE,
+  ).length;
 
   // A stable fingerprint of the granted permissions, so we can tell whether the
   // matrix drifted from what we loaded.
   const canonMatrix = (m) =>
-    catalog
-      .map((i) => {
-        const s = m[permKey(i.level, i.name)] ?? {};
-        return `${i.level}:${i.name}:${s.view ? 1 : 0}${s.manage ? 1 : 0}`;
-      })
+    permissions
+      .map((i) => `${i.level}:${i.name}:${m[permKey(i.level, i.name)] ?? ACCESS_NONE}`)
       .join(",");
 
   const isDirty =
@@ -101,15 +98,16 @@ export function RoleForm({ mode = "create", role, catalog }) {
   }
 
   async function onSubmit(values) {
-    const permissions = catalog.map((item) => {
-      const s = matrix[permKey(item.level, item.name)] ?? { view: false, manage: false };
-      return { level: item.level, name: item.name, view: s.view, manage: s.manage };
-    });
-
+    // One access level per permission, not a boolean pair — the pair could
+    // express a state the server does not store.
     const payload = {
       name: values.name,
       description: values.description || null,
-      permissions,
+      permissions: permissions.map((item) => ({
+        level: item.level,
+        name: item.name,
+        access: matrix[permKey(item.level, item.name)] ?? ACCESS_NONE,
+      })),
     };
 
     try {
@@ -180,11 +178,16 @@ export function RoleForm({ mode = "create", role, catalog }) {
               variant={enabledCount > 0 ? "success" : "secondary"}
               className="shrink-0"
             >
-              {t("form.enabledCount", { count: enabledCount, total: catalog.length })}
+              {t("form.enabledCount", { count: enabledCount, total: permissions.length })}
             </Badge>
           </CardHeader>
           <CardContent>
-            <PermissionMatrix catalog={catalog} value={matrix} onChange={setMatrix} />
+            <PermissionMatrix
+              groups={catalog.groups ?? []}
+              accessLevels={catalog.accessLevels ?? []}
+              value={matrix}
+              onChange={setMatrix}
+            />
           </CardContent>
         </Card>
 
