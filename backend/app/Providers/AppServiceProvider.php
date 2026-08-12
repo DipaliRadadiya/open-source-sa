@@ -21,6 +21,7 @@ use App\Services\Server\Sync\Discoverers\ApplicationDiscoverer;
 use App\Services\Server\Sync\Discoverers\CertificateDiscoverer;
 use App\Services\Server\Sync\Discoverers\CronjobDiscoverer;
 use App\Services\Server\Sync\Discoverers\DatabaseUserDiscoverer;
+use App\Services\Server\Sync\Discoverers\FirewallRuleDiscoverer;
 use App\Services\Server\Sync\Discoverers\PhpSettingsDiscoverer;
 use App\Services\Server\Sync\Discoverers\SshKeyDiscoverer;
 use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
@@ -54,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
             $app->make(DatabaseUserDiscoverer::class),
             $app->make(CertificateDiscoverer::class),
             $app->make(CronjobDiscoverer::class),
+            $app->make(FirewallRuleDiscoverer::class),
         ]));
 
         // How PHP is served here. Resolved from the web server this box runs,

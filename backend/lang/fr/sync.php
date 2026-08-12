@@ -15,6 +15,9 @@ return [
     ],
 
     'reasons' => [
+        'firewall_direction_unsupported' => 'C\'est une règle sortante. Le panneau ne gère que les règles entrantes ; l\'enregistrer ici l\'appliquerait dans le mauvais sens.',
+        'firewall_action_unsupported' => 'Cette règle limite ou rejette au lieu d\'autoriser ou de refuser. Le panneau n\'a pas d\'équivalent, et l\'enregistrer comme un simple allow ou deny décrirait mal ce que fait le serveur.',
+        'firewall_app_profile' => 'Cette règle utilise un profil d\'application plutôt qu\'un port. Les ports derrière peuvent changer lors d\'une mise à jour du paquet ; importer les numéros d\'aujourd\'hui serait un instantané se faisant passer pour la règle.',
         'panel_infrastructure' => 'Il s\'agit du panneau lui-même, pas d\'un site qu\'il peut héberger. Laissé de côté volontairement.',
         'outside_panel_layout' => 'Ce site n\'est pas organisé comme le panneau gère les sites ; il ne peut pas être adopté sans déplacer ses fichiers. Il continue d\'être servi — rien n\'a changé.',
         'vhost_unreadable' => 'La configuration du serveur web de ce site n\'a pas pu être lue ; il a été laissé tel quel.',

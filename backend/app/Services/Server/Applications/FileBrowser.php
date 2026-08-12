@@ -85,7 +85,7 @@ class FileBrowser
         $this->assertType($application, $target, 'd');
 
         $result = $this->run($application, [
-            'find', $target, '-mindepth', '1', '-maxdepth', '1', '-printf', "%f\t%y\t%s\t%T@\t%m\t%u\t%g\n",
+            'find', $target, '-mindepth', '1', '-maxdepth', '1', '-printf', self::PRINTF_FORMAT,
         ], 'list');
 
         $entries = [];
@@ -95,9 +95,9 @@ class FileBrowser
                 continue;
             }
 
-            [$name, $type, $size, $mtime, $mode, $owner, $group] = explode("\t", $line, 7);
+            [$name, $type, $size, $mtime, $mode, $owner, $group, $targetType, $linkTarget] = self::splitEntry($line);
 
-            $entries[] = $this->buildEntry($name, $type, $size, $mtime, $mode, $owner, $group);
+            $entries[] = $this->buildEntry($name, $type, $size, $mtime, $mode, $owner, $group, $targetType, $linkTarget);
         }
 
         // Directories first, then alphabetical — how every file manager in
@@ -135,7 +135,7 @@ class FileBrowser
         $pattern = '*'.$this->escapeFindPattern($query).'*';
 
         $result = $this->run($application, [
-            'find', $target, '-mindepth', '1', '-iname', $pattern, '-printf', "%P\t%y\t%s\t%T@\t%m\t%u\t%g\n",
+            'find', $target, '-mindepth', '1', '-iname', $pattern, '-printf', self::searchPrintfFormat(),
         ], 'search');
 
         $entries = [];
@@ -149,10 +149,12 @@ class FileBrowser
             // root — rejoined with $scopePath so a result's `path` is always
             // usable directly against every other endpoint here, regardless
             // of which subtree was searched.
-            [$relativeToScope, $type, $size, $mtime, $mode, $owner, $group] = explode("\t", $line, 7);
+            [$relativeToScope, $type, $size, $mtime, $mode, $owner, $group, $targetType, $linkTarget] = self::splitEntry($line);
             $relativePath = $scopePath === '' ? $relativeToScope : "{$scopePath}/{$relativeToScope}";
 
-            $entries[] = ['path' => $relativePath] + $this->buildEntry(basename($relativePath), $type, $size, $mtime, $mode, $owner, $group);
+            $entries[] = ['path' => $relativePath] + $this->buildEntry(
+                basename($relativePath), $type, $size, $mtime, $mode, $owner, $group, $targetType, $linkTarget,
+            );
         }
 
         usort($entries, fn (array $a, array $b): int => strcasecmp($a['path'], $b['path']));

@@ -15,6 +15,9 @@ return [
     ],
 
     'reasons' => [
+        'firewall_direction_unsupported' => 'Das ist eine ausgehende Regel. Das Panel verwaltet nur eingehende Regeln – hier erfasst würde sie in die falsche Richtung angewendet.',
+        'firewall_action_unsupported' => 'Diese Regel begrenzt oder weist ab, statt zu erlauben oder zu verbieten. Das Panel hat dafür keine Entsprechung, und sie als einfaches Allow oder Deny zu erfassen würde falsch beschreiben, was der Server tut.',
+        'firewall_app_profile' => 'Diese Regel nutzt ein Anwendungsprofil statt eines Ports. Die dahinterliegenden Ports können sich bei einem Paket-Update ändern; die heutigen Nummern zu importieren wäre eine Momentaufnahme, die sich als Regel ausgibt.',
         'panel_infrastructure' => 'Das ist das Panel selbst, keine Website, die es hosten kann. Absichtlich unangetastet gelassen.',
         'outside_panel_layout' => 'Diese Website ist nicht so abgelegt, wie das Panel Websites verwaltet, und kann ohne Verschieben der Dateien nicht übernommen werden. Sie wird weiterhin ausgeliefert – es wurde nichts geändert.',
         'vhost_unreadable' => 'Die Webserver-Konfiguration dieser Website konnte nicht gelesen werden und blieb unangetastet.',

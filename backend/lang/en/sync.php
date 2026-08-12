@@ -15,6 +15,9 @@ return [
     ],
 
     'reasons' => [
+        'firewall_direction_unsupported' => 'This is an outbound rule. The panel only manages inbound rules, and recording it here would apply it in the wrong direction.',
+        'firewall_action_unsupported' => 'This rule limits or rejects rather than allowing or denying. The panel has no equivalent, and recording it as a plain allow or deny would misstate what the server does.',
+        'firewall_app_profile' => 'This rule uses an application profile rather than a port. The ports behind it can change when the package updates, so importing today\'s numbers would be a snapshot pretending to be the rule.',
         'panel_infrastructure' => 'This is the panel itself, not a site it can host. Left alone deliberately.',
         'outside_panel_layout' => 'This site is not laid out the way the panel manages sites, so it cannot be adopted without moving its files. It is still being served — nothing has changed.',
         'vhost_unreadable' => 'The web server config for this site could not be read, so it was left alone.',

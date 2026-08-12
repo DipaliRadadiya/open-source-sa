@@ -15,6 +15,9 @@ return [
     ],
 
     'reasons' => [
+        'firewall_direction_unsupported' => 'Esta é uma regra de saída. O painel só gere regras de entrada, e registá-la aqui aplicá-la-ia na direção errada.',
+        'firewall_action_unsupported' => 'Esta regra limita ou rejeita em vez de permitir ou negar. O painel não tem equivalente, e registá-la como um simples allow ou deny descreveria mal o que o servidor faz.',
+        'firewall_app_profile' => 'Esta regra usa um perfil de aplicação em vez de uma porta. As portas por trás podem mudar quando o pacote é atualizado, por isso importar os números de hoje seria uma fotografia a fazer-se passar pela regra.',
         'panel_infrastructure' => 'Isto é o próprio painel, não um site que ele possa alojar. Deixado intacto de propósito.',
         'outside_panel_layout' => 'Este site não está organizado da forma como o painel gere sites, por isso não pode ser adotado sem mover os seus ficheiros. Continua a ser servido — nada foi alterado.',
         'vhost_unreadable' => 'Não foi possível ler a configuração do servidor web deste site, por isso ficou intacto.',

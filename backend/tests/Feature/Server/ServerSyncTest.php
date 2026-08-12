@@ -13,6 +13,7 @@ use App\Models\Certificate;
 use App\Models\Cronjob;
 use App\Models\Database;
 use App\Models\DatabaseUser;
+use App\Models\FirewallRule;
 use App\Models\ServerCapability;
 use App\Models\SshKey;
 use App\Models\SyncIgnore;
@@ -1497,5 +1498,127 @@ describe('the ignore endpoints', function () {
             ->postJson('/api/server/sync/ignores', [
                 'resource_type' => 'application', 'resource_key' => 'x',
             ])->assertForbidden();
+    });
+});
+
+/*
+ * Firewall rules — the only opt-in resource.
+ *
+ * Every other adoption leaves the server exactly as it was. This one
+ * populates the screen someone will later use to *change* the firewall, and a
+ * half-imported rule list is a worse starting point for that than an empty
+ * one, because it looks complete.
+ */
+describe('discovering firewall rules', function () {
+    function fakeUfwForSync(string $status): void
+    {
+        Process::fake(function ($process) use ($status) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'ufw') {
+                return Process::result(output: $status);
+            }
+
+            if (($args[0] ?? '') === 'getent') {
+                return Process::result(output: '');
+            }
+
+            return Process::result(exitCode: 1, errorOutput: 'nothing');
+        });
+    }
+
+    function ufwRun(string $status): SyncRun
+    {
+        fakeUfwForSync($status);
+
+        return runSync(SyncMode::Preview, ['include_firewall' => true]);
+    }
+
+    it('does nothing at all unless asked for', function () {
+        fakeUfwForSync("[ 1] 22/tcp                     ALLOW IN    Anywhere\n");
+
+        // Opt-in means opt-in. Not a line saying it was skipped either — the
+        // caller chose, and repeating their choice back is noise on the
+        // screen that matters.
+        expect(runSync()->items()->where('resource_type', 'firewall_rule')->count())->toBe(0);
+    });
+
+    it('reads a port rule', function () {
+        $run = ufwRun("Status: active\n\n[ 1] 3306                       ALLOW IN    203.0.113.5\n");
+
+        $item = $run->items()->where('resource_type', 'firewall_rule')->first();
+
+        expect($item->action)->toBe(SyncAction::Found)
+            ->and($item->evidence['from'])->toBe('203.0.113.5');
+    });
+
+    it('does not import the same rule twice for IPv6', function () {
+        // ufw lists the v6 half as its own numbered entry. The panel stores
+        // one row per rule, so adopting both would double every rule.
+        $run = ufwRun(implode("\n", [
+            '[ 1] 22/tcp                     ALLOW IN    Anywhere',
+            '[ 2] 22/tcp (v6)                ALLOW IN    Anywhere (v6)',
+        ]));
+
+        expect($run->items()->where('resource_type', 'firewall_rule')->count())->toBe(1);
+    });
+
+    it('refuses a LIMIT rule rather than calling it an allow', function () {
+        $run = ufwRun("[ 1] 22/tcp                     LIMIT IN    Anywhere\n");
+
+        $item = $run->items()->where('resource_type', 'firewall_rule')->first();
+
+        // Rate limiting is not allowing. Recording it as one would misstate
+        // what the server does, in the direction nobody notices.
+        expect($item->action)->toBe(SyncAction::Skipped)
+            ->and($item->reason)->toBe('firewall_action_unsupported');
+    });
+
+    it('refuses an outbound rule', function () {
+        $run = ufwRun("[ 1] 25/tcp                     DENY OUT    Anywhere\n");
+
+        // The panel's rules are inbound only; recorded here it would be
+        // applied in the wrong direction.
+        expect($run->items()->where('resource_type', 'firewall_rule')->first()->reason)
+            ->toBe('firewall_direction_unsupported');
+    });
+
+    it('refuses an application profile', function () {
+        $run = ufwRun("[ 1] Nginx Full                 ALLOW IN    Anywhere\n");
+
+        // The ports behind a profile live in /etc/ufw/applications.d and can
+        // change when the package updates. Today's numbers would be a
+        // snapshot pretending to be the rule.
+        expect($run->items()->where('resource_type', 'firewall_rule')->first()->reason)
+            ->toBe('firewall_app_profile');
+    });
+
+    it('adopts a rule as in force, because it is', function () {
+        fakeUfwForSync("[ 1] 8000:9000/tcp              ALLOW IN    Anywhere\n");
+
+        runSync(SyncMode::Apply, ['include_firewall' => true]);
+
+        $rule = FirewallRule::firstOrFail();
+
+        expect($rule->port_from)->toBe(8000)
+            ->and($rule->port_to)->toBe(9000)
+            ->and($rule->protocol)->toBe('tcp')
+            // Anywhere is no restriction, not a literal source.
+            ->and($rule->source_ip)->toBeNull()
+            // Recording it disabled would describe a firewall with holes it
+            // does not have.
+            ->and($rule->enabled)->toBeTrue()
+            // Made by hand on the server, not the panel's seeded set — the
+            // badge and the delete protection both key off this.
+            ->and($rule->origin)->toBe('user');
+    });
+
+    it('is safe to run twice', function () {
+        fakeUfwForSync("[ 1] 22/tcp                     ALLOW IN    Anywhere\n");
+
+        runSync(SyncMode::Apply, ['include_firewall' => true]);
+        runSync(SyncMode::Apply, ['include_firewall' => true]);
+
+        expect(FirewallRule::count())->toBe(1);
     });
 });

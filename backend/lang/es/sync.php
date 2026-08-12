@@ -15,6 +15,9 @@ return [
     ],
 
     'reasons' => [
+        'firewall_direction_unsupported' => 'Es una regla de salida. El panel solo gestiona reglas de entrada, y registrarla aquí la aplicaría en la dirección equivocada.',
+        'firewall_action_unsupported' => 'Esta regla limita o rechaza en lugar de permitir o denegar. El panel no tiene equivalente, y registrarla como un simple allow o deny describiría mal lo que hace el servidor.',
+        'firewall_app_profile' => 'Esta regla usa un perfil de aplicación en vez de un puerto. Los puertos que hay detrás pueden cambiar al actualizar el paquete, así que importar los números de hoy sería una foto fija haciéndose pasar por la regla.',
         'panel_infrastructure' => 'Esto es el propio panel, no un sitio que pueda alojar. Se deja intacto a propósito.',
         'outside_panel_layout' => 'Este sitio no tiene la estructura de directorios que el panel gestiona, así que no se puede adoptar sin mover sus archivos. Sigue funcionando: no se ha cambiado nada.',
         'vhost_unreadable' => 'No se pudo leer la configuración del servidor web para este sitio, así que se dejó intacto.',
