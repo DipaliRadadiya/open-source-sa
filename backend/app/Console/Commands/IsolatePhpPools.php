@@ -49,6 +49,24 @@ class IsolatePhpPools extends Command
             count($result['failed']),
         ));
 
+        foreach ($result['adopted'] as $adoption) {
+            $this->line(sprintf(
+                'Kept the existing open_basedir for %s: %s',
+                $adoption['name'],
+                $adoption['kept'] === [] ? '(base paths only)' : implode(', ', $adoption['kept']),
+            ));
+
+            if ($adoption['dropped'] !== []) {
+                // Said out loud rather than logged quietly: this is the one
+                // part of the old configuration deliberately not carried over.
+                $this->warn(sprintf(
+                    '  dropped %s — a server-wide session directory would let %s read every other site\'s sessions. It has its own.',
+                    implode(', ', $adoption['dropped']),
+                    $adoption['name'],
+                ));
+            }
+        }
+
         foreach ($result['failed'] as $failure) {
             $this->warn(sprintf(
                 'Left on the shared pool: %s (#%d) — %s',

@@ -692,3 +692,82 @@ describe('open_basedir, as reported', function () {
             ->toBeNull();
     });
 });
+
+/*
+ * Migrating a server must not quietly re-configure it.
+ *
+ * A box coming from another panel has real open_basedir values in its pool
+ * files. The settings row that replaces them starts empty, so writing our own
+ * pool would drop a restriction the owner deliberately set — a silent
+ * loosening, during exactly the operation people trust least.
+ */
+describe('adopting an existing open_basedir', function () {
+    /** Put a foreign pool file on disk, the way a migrated server would have. */
+    function seedForeignPool(string $openBasedir): void
+    {
+        $path = '/etc/php/8.4/fpm/pool.d/'.test()->application->slug.'.conf';
+
+        PoolFake::$files[$path] = "[legacy]\nuser = siteowner\n"
+            ."php_admin_value[open_basedir] = {$openBasedir}\n";
+    }
+
+    it('keeps the paths the old panel set', function () {
+        fakePhpServer();
+        seedForeignPool('/home/siteowner/shop:/mnt/legacy-share:/tmp');
+
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $php = $this->actingAs($this->admin)->getJson(phpUrl())->json('php');
+
+        expect($php['settings']['open_basedir_enabled'])->toBeTrue()
+            ->and($php['settings']['open_basedir_paths'])->toContain('/mnt/legacy-share')
+            ->and($php['open_basedir_effective'])->toContain('/mnt/legacy-share');
+    });
+
+    it('does not import a server-wide session directory', function () {
+        fakePhpServer();
+
+        // The running panel's own format. Carried over verbatim it would let
+        // this site read every other site's sessions — the isolation per-app
+        // pools exist to give.
+        seedForeignPool('/home/siteowner/shop:/var/lib/php/sessions:/tmp:/mnt/legacy-share');
+
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $effective = $this->actingAs($this->admin)->getJson(phpUrl())->json('php.open_basedir_effective');
+
+        expect($effective)->toContain('/mnt/legacy-share')
+            ->not->toContain('/var/lib/php/sessions')
+            // Its own session directory is in there instead, so nothing it
+            // legitimately needs was lost.
+            ->toContain(app(PoolManager::class)->sessionPath($this->application));
+    });
+
+    it('leaves a site alone when the old pool restricted nothing', function () {
+        fakePhpServer();
+        // A pool file with no open_basedir at all is the common case, and
+        // switching a restriction ON during a migration is its own surprise.
+        PoolFake::$files['/etc/php/8.4/fpm/pool.d/shop.conf'] = "[legacy]\nuser = siteowner\n";
+
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        expect($this->actingAs($this->admin)->getJson(phpUrl())->json('php.settings.open_basedir_enabled'))
+            ->toBeFalse();
+    });
+
+    it('never overwrites a choice the user already made', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true, 'open_basedir_paths' => '/mnt/mine'])
+            ->assertOk();
+
+        // Adoption is a one-time takeover of an unowned pool, not something
+        // that re-reads the file and second-guesses the user afterwards.
+        $settings = ApplicationPhpSettings::where('application_id', $this->application->id)->firstOrFail();
+
+        expect(app(PoolManager::class)->adoptOpenBasedir($this->application, $settings)['adopted'])->toBeFalse()
+            ->and($settings->fresh()->open_basedir_paths)->toBe('/mnt/mine');
+    });
+});

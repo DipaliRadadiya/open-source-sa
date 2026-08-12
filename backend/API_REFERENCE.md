@@ -1327,6 +1327,8 @@ Update PHP version and/or pool settings.
 | `open_basedir_live` | what the pool file on disk **actually** sets. `null` when the site has no pool, or its pool sets nothing. |
 | `open_basedir_recommended` | what switching it on with no additions would give — show this as the suggested value when it is off. |
 
+On a **migrated server**, the first time the panel takes ownership of a site's pool (`POST .../php/isolate` or `php artisan php:isolate-all`) it adopts whatever `open_basedir` was already there: the old panel's paths are kept as `open_basedir_paths` and the setting is switched on. A server-wide session directory (`/var/lib/php/sessions` and friends) is deliberately **not** carried over — importing it would let that site read every other site's sessions, and the site's own session directory is in the base paths already. The command prints what it kept and what it dropped, per site.
+
 `live` differs from `effective` when someone hand-edited the pool file, or set their own `open_basedir` through `additional_directives` (which is appended raw and wins, since FPM takes the last of a repeated key). When they differ, show `live` — that is what PHP is enforcing — and `managed` will also be `false`.
 
 `open_basedir_paths` holds **additional** directories, one per line (`:` and `,` also accepted). The app root, the site's own session directory and `/tmp` are always included and cannot be removed — without them the site cannot read its own code or keep anyone logged in. Read `open_basedir_effective` from `GET .../php` to show the exact value the pool file will contain.

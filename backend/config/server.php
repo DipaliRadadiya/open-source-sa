@@ -488,6 +488,23 @@ return [
     'php_socket_dir' => env('SERVER_PHP_SOCKET_DIR', '/run/php'),
     'web_server_user' => env('SERVER_WEB_SERVER_USER', 'www-data'),
 
+    /*
+    | Server-wide PHP session directories, as other panels configure them.
+    |
+    | Dropped when an existing open_basedir is adopted from a migrated
+    | server. Every site on such a box shares one session directory, so an
+    | open_basedir that names it lets any site read every other site's
+    | session files — which is the isolation per-app pools exist to give.
+    | The adopted site gets its own session directory in the base paths
+    | instead, so nothing it legitimately needs is lost.
+    */
+    'shared_session_dirs' => [
+        '/var/lib/php/sessions',
+        '/var/lib/php/session',
+        '/var/lib/php5/sessions',
+        '/tmp/sessions',
+    ],
+
     // How a version maps to its CLI binary, so an application's own tooling
     // runs on the same PHP that will serve it.
     'php_binary_pattern' => env('SERVER_PHP_BINARY_PATTERN', '/usr/bin/php{version}'),

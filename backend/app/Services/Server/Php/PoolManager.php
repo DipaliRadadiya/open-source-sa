@@ -7,6 +7,7 @@ use App\Models\ApplicationPhpSettings;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 
 /**
@@ -354,6 +355,81 @@ class PoolManager
         $value = $matches[1] === [] ? null : trim((string) end($matches[1]));
 
         return ($value === null || $value === '') ? null : $value;
+    }
+
+    /**
+     * Take over an open_basedir that was already on the box.
+     *
+     * A server migrated from another panel has real values in its pool files,
+     * and the settings row that replaces them starts empty — so writing our
+     * own pool would drop a restriction the owner deliberately set, without
+     * saying so. Read what is there, subtract the paths we supply ourselves,
+     * and keep the remainder as the user's own.
+     *
+     * Runs once, at the point the panel takes ownership of a site's pool.
+     * After that the row is authoritative and the file is its artefact.
+     *
+     * @return array{adopted: bool, kept: array<int, string>, dropped: array<int, string>}
+     */
+    public function adoptOpenBasedir(Application $application, ApplicationPhpSettings $settings): array
+    {
+        $none = ['adopted' => false, 'kept' => [], 'dropped' => []];
+
+        // Already answered by the user — never overwrite a real choice with
+        // whatever a previous panel happened to leave on disk.
+        if ($settings->getAttribute('open_basedir_paths') !== null || $settings->open_basedir_enabled) {
+            return $none;
+        }
+
+        $live = $this->liveOpenBasedir($application);
+
+        if ($live === null) {
+            return $none;
+        }
+
+        $ours = array_map('trim', explode(':', $this->openBasedir($application, '')));
+        $shared = array_map(
+            fn (string $path): string => rtrim($path, '/'),
+            (array) config('server.shared_session_dirs', []),
+        );
+
+        $kept = [];
+        $dropped = [];
+
+        foreach (explode(':', $live) as $path) {
+            $path = trim($path);
+
+            if ($path === '' || in_array($path, $ours, true)) {
+                continue;
+            }
+
+            // A server-wide session directory is the one thing not carried
+            // over: importing it would hand this site read access to every
+            // other site's sessions, and its own session directory is already
+            // in the base paths.
+            if (in_array(rtrim($path, '/'), $shared, true)) {
+                $dropped[] = $path;
+
+                continue;
+            }
+
+            $kept[] = $path;
+        }
+
+        $settings->open_basedir_enabled = true;
+        $settings->open_basedir_paths = $kept === [] ? null : implode(':', $kept);
+        $settings->application_id = $application->id;
+        $settings->save();
+
+        Log::channel('server-ops')->info('adopted an existing open_basedir', [
+            'feature' => 'php',
+            'op' => 'open_basedir_adopt',
+            'application' => $application->id,
+            'kept' => $kept,
+            'dropped' => $dropped,
+        ]);
+
+        return ['adopted' => true, 'kept' => $kept, 'dropped' => $dropped];
     }
 
     /**

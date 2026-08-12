@@ -32,13 +32,19 @@ class PoolIsolator
     }
 
     /**
-     * @return array{ok: bool, reason?: string, reference?: string|null}
+     * @return array{ok: bool, reason?: string, reference?: string|null, adoption?: array{adopted: bool, kept: array<int, string>, dropped: array<int, string>}}
      */
     public function isolate(Application $application): array
     {
         $settings = $application->phpSettings ?? new ApplicationPhpSettings([
             'application_id' => $application->id,
         ]);
+
+        // Before the first write, not after. This is the moment the panel
+        // takes ownership of a pool it did not create — on a migrated server
+        // that file can carry an open_basedir the owner set deliberately, and
+        // rendering ours over it would drop the restriction in silence.
+        $adoption = $this->pools->adoptOpenBasedir($application, $settings);
 
         $result = $this->pools->apply($application, $settings);
 
@@ -54,7 +60,7 @@ class PoolIsolator
         // that socket is live, or the site 502s in the gap.
         $this->republish($application);
 
-        return $result;
+        return $result + ['adoption' => $adoption];
     }
 
     /**
@@ -85,7 +91,7 @@ class PoolIsolator
      * from before this feature converts in one pass instead of the admin
      * opening each site's PHP screen.
      *
-     * @return array{total: int, isolated: int, skipped: int, failed: array<int, array{id: int, name: string, reason: string}>}
+     * @return array{total: int, isolated: int, skipped: int, adopted: array<int, array{name: string, kept: array<int, string>, dropped: array<int, string>}>, failed: array<int, array{id: int, name: string, reason: string}>}
      */
     public function isolateAll(): array
     {
@@ -96,6 +102,7 @@ class PoolIsolator
             ->get();
 
         $isolated = 0;
+        $adopted = [];
         $failed = [];
 
         foreach ($applications as $application) {
@@ -103,6 +110,18 @@ class PoolIsolator
 
             if ($result['ok']) {
                 $isolated++;
+
+                // Reported, not just logged: taking over someone else's
+                // open_basedir changes what a site can reach, and a migration
+                // that does that quietly is the thing this whole path exists
+                // to avoid.
+                if (($result['adoption']['adopted'] ?? false) === true) {
+                    $adopted[] = [
+                        'name' => $application->name,
+                        'kept' => $result['adoption']['kept'],
+                        'dropped' => $result['adoption']['dropped'],
+                    ];
+                }
 
                 continue;
             }
@@ -121,6 +140,7 @@ class PoolIsolator
             'total' => $applications->count(),
             'isolated' => $isolated,
             'skipped' => 0,
+            'adopted' => $adopted,
             'failed' => $failed,
         ];
     }
