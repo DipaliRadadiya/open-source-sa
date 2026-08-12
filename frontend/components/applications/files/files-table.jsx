@@ -162,6 +162,34 @@ function ModifiedCell({ row }) {
   );
 }
 
+/**
+ * Owner, and the group when it differs.
+ *
+ * Both are shown by `ls -l`, but a site's files are overwhelmingly
+ * `owner:owner` — repeating the same name twice on every row is noise that
+ * makes the rows where it *does* differ (`deploy:www-data`, the ones worth
+ * noticing) harder to spot rather than easier.
+ */
+function OwnerCell({ row }) {
+  const file = row.original;
+
+  // Null for a symlink, whose own ownership is not a meaningful thing to show
+  // — the same reason its mode is omitted.
+  if (!file.owner) return <span className="text-muted-foreground">—</span>;
+
+  return (
+    <span className="flex items-center font-mono text-xs text-muted-foreground">
+      <span className="truncate">{file.owner}</span>
+      {file.group && file.group !== file.owner ? (
+        <>
+          <span className="text-muted-foreground/50">:</span>
+          <span className="truncate">{file.group}</span>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
 function PermissionsCell({ row }) {
   const t = useTranslations("applications.files");
   const file = row.original;
@@ -169,8 +197,6 @@ function PermissionsCell({ row }) {
   const worldWritable = isWorldWritable(file.mode);
   return (
     <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-      {file.owner ? <span className="truncate">{file.owner}</span> : null}
-      {file.owner ? <span className="text-muted-foreground/50">·</span> : null}
       {/* Symbolic, with the octal kept on hover: `drwxr-xr-x` is what anyone
           reads at a glance, but `755` is what the chmod dialog and every
           how-to guide talk in, so throwing it away would cost more than it
@@ -256,28 +282,37 @@ export function FilesTable({
     {
       accessorKey: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
-      meta: { className: "text-right w-[12%] px-6" },
+      meta: { className: "text-right w-[10%] px-6" },
       cell: SizeCell,
       sortingFn: sortBySize,
     },
     {
       accessorKey: "modified_at",
       header: t("columns.modified"),
-      meta: { className: "w-[20%] px-6" },
+      meta: { className: "w-[18%] px-6" },
       cell: ModifiedCell,
       sortingFn: sortByModified,
     },
     {
+      // Sortable, unlike permissions: "show me everything root ended up
+      // owning" is a real question after a restore or an install, and it is
+      // the one this column exists to answer.
+      accessorKey: "owner",
+      header: t("columns.owner"),
+      meta: { className: "w-[13%] px-6" },
+      cell: OwnerCell,
+    },
+    {
       id: "permissions",
       header: t("columns.permissions"),
-      meta: { className: "w-[17%] px-6" },
+      meta: { className: "w-[13%] px-6" },
       cell: PermissionsCell,
       enableSorting: false,
     },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
-      meta: { className: "w-[25%] px-6" },
+      meta: { className: "w-[20%] px-6" },
       cell: ActionsCell,
       enableSorting: false,
     },

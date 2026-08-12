@@ -2990,6 +2990,7 @@
         "name": "Name",
         "size": "Size",
         "modified": "Modified",
+        "owner": "Owner",
         "permissions": "Permissions",
         "worldWritableHint": "World-writable — anyone with a login on this server can modify this file, not just its owner."
       },

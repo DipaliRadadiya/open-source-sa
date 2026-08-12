@@ -62,10 +62,16 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
                   </button>
                 )}
                 <p className="truncate text-xs text-muted-foreground">
-                  {[file.size_human, file.modified_at_human].filter(Boolean).join(" · ")}
+                  {/* The card is the narrow-screen view of the same row, so it
+                      carries the same facts — owner included, since a file
+                      owned by the wrong user is exactly what someone reaches
+                      for this screen to check. Group is left to the table:
+                      there is no room for it here and it is almost always the
+                      owner repeated. */}
+                  {[file.size_human, file.modified_at_human, file.owner].filter(Boolean).join(" · ")}
                   {file.mode ? (
                     <>
-                      {file.size_human || file.modified_at_human ? " · " : ""}
+                      {file.size_human || file.modified_at_human || file.owner ? " · " : ""}
                       <span
                         className={isWorldWritable(file.mode) ? "font-medium text-destructive" : undefined}
                         title={file.mode}
