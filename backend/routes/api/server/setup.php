@@ -13,4 +13,9 @@ use Illuminate\Support\Facades\Route;
 | the install endpoints it points at keep their own `manage` requirements.
 */
 
-Route::get('/setup', [SetupController::class, 'show'])->middleware('permission:setting');
+// The first-run checklist, and it names the component currently installing —
+// so it is polled throughout setup, which is the worst possible moment to
+// answer "Too Many Attempts".
+Route::get('/setup', [SetupController::class, 'show'])
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:setting', 'throttle:progress']);

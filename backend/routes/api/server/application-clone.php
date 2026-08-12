@@ -16,6 +16,9 @@ Route::get('/clones', [ApplicationCloneController::class, 'index'])
 Route::post('/applications/{application}/clone', [ApplicationCloneController::class, 'store'])
     ->middleware(['permission:app_clone,manage', 'throttle:5,1']);
 
-// Poll a clone while it runs.
+// Poll a clone while it runs — copying files and a database is not quick. Its
+// old 120/min was capped by the global limiter it stacked with, so it bought no
+// headroom and spent the interactive budget while the user watched.
 Route::get('/clones/{clone}', [ApplicationCloneController::class, 'show'])
-    ->middleware(['permission:app_clone', 'throttle:120,1']);
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:app_clone', 'throttle:progress']);

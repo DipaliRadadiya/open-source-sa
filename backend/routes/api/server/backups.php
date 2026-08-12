@@ -28,8 +28,10 @@ Route::get('/backup-targets', [BackupController::class, 'indexTargets'])
 Route::get('/backups', [BackupController::class, 'index'])
     ->middleware('permission:backup');
 
+// Polled while a backup runs — a large site's archive and upload take minutes.
 Route::get('/backups/{backup}', [BackupController::class, 'show'])
-    ->middleware('permission:backup');
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:backup', 'throttle:progress']);
 
 /*
 | Download — a link to the archive itself.
@@ -65,9 +67,13 @@ Route::get('/restores', [RestoreController::class, 'index'])
 Route::post('/backups/{backup}/retry', [BackupController::class, 'retry'])
     ->middleware(['permission:app_backup,manage', 'throttle:6,1']);
 
-// Polled every couple of seconds while the bar moves.
+// Polled every couple of seconds while the bar moves. The 120/min it used to
+// declare never applied: a per-route throttle stacks with the global one rather
+// than replacing it, so the lower of the two won and this was bounded at — and
+// spending — the same budget as the rest of the panel.
 Route::get('/restores/{restore}', [RestoreController::class, 'show'])
-    ->middleware(['permission:backup', 'throttle:120,1']);
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:backup', 'throttle:progress']);
 
 // Per-application settings and manual runs.
 Route::get('/applications/{application}/backup-target', [BackupController::class, 'showTarget'])

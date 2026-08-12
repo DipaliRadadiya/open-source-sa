@@ -14,7 +14,13 @@ use Illuminate\Support\Facades\Route;
  * job from managing PHP.
  */
 
-Route::get('/php', [PhpController::class, 'index'])->middleware('permission:php');
+// Polled while a version installs — apt takes minutes and holds a lock, and
+// this is the screen showing that progress (PhpOverview reads RuntimeProgress).
+// Outside the global limiter for the same reason as the other progress feeds:
+// a watched job must not spend the budget the rest of the panel needs.
+Route::get('/php', [PhpController::class, 'index'])
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:php', 'throttle:progress']);
 Route::put('/php/default', [PhpController::class, 'setDefault'])->middleware('permission:php,manage');
 
 Route::post('/php/versions', [PhpController::class, 'store'])->middleware('permission:php,manage');

@@ -26,7 +26,10 @@ Route::post('/databases/adopt', [DatabaseController::class, 'adopt'])->middlewar
 // P2 monitoring (static routes before the {database} binding).
 Route::get('/databases/processes', [DatabaseMonitorController::class, 'processes'])->middleware('permission:database');
 Route::delete('/databases/processes/{id}', [DatabaseMonitorController::class, 'killProcess'])->middleware('permission:database,manage');
-Route::get('/databases/status/{engine}', [DatabaseMonitorController::class, 'status'])->middleware('permission:database');
+// Polled while an engine installs.
+Route::get('/databases/status/{engine}', [DatabaseMonitorController::class, 'status'])
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:database', 'throttle:progress']);
 Route::get('/databases/metrics/history', [DatabaseMonitorController::class, 'history'])->middleware('permission:database');
 
 // Exports (static; before the {database} binding).

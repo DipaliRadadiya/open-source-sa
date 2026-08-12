@@ -9,7 +9,10 @@ use Illuminate\Support\Facades\Route;
  * which also grants the SSH port and the reboot button.
  */
 
-Route::get('/node', [NodeController::class, 'index'])->middleware('permission:node');
+// Polled while a Node version installs — same progress feed as /php.
+Route::get('/node', [NodeController::class, 'index'])
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:node', 'throttle:progress']);
 Route::put('/node/default', [NodeController::class, 'setDefault'])->middleware('permission:node,manage');
 
 Route::post('/node/versions', [NodeController::class, 'store'])->middleware('permission:node,manage');

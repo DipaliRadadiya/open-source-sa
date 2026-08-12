@@ -103,6 +103,22 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/applications/{application}/deployments/{deployment}',
         'api/server/sync/{run}',
         'api/admin/panel-update/{panelUpdate}',
+
+        // The rest of the same class, found by auditing for "what does a
+        // screen watch?" rather than by waiting for the next 429 report.
+        //
+        // The last three previously declared `throttle:120,1`, which never
+        // applied: a per-route throttle stacks with the global one rather than
+        // replacing it, so 120 lost to 180 and they spent the interactive
+        // budget anyway. A number below the global limit is not headroom, and
+        // the test above cannot flag it because it is not a violation.
+        'api/php',
+        'api/node',
+        'api/setup',
+        'api/databases/status/{engine}',
+        'api/backups/{backup}',
+        'api/restores/{restore}',
+        'api/clones/{clone}',
     ]);
 });
 
