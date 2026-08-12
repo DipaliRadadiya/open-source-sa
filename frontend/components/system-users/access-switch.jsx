@@ -8,6 +8,7 @@ import { ShieldAlert } from "lucide-react";
 import { setSystemUserSudo, setSystemUserSsh } from "@/lib/api/system-users";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
 // Inline access toggle used in the table. `field` is "sudo" | "ssh". Applies
@@ -49,14 +50,24 @@ export function AccessSwitch({ user, field, canManage = true }) {
     apply(v);
   }
 
+  // SSH access and a shell that refuses login are a contradiction the server
+  // rejects. `shell_allows_login: null` is an unrecognised shell — unknown, not
+  // refusing — so it is left alone rather than blocked on a guess.
+  const sshBlocked =
+    field === "ssh" && !checked && user.shell_allows_login === false;
+
   return (
     <>
-      <Switch
-        checked={checked}
-        disabled={busy || !canManage}
-        onCheckedChange={canManage ? onToggle : undefined}
-        aria-label={label}
-      />
+      <ReasonTooltip
+        reason={sshBlocked ? t("sshNeedsLoginShell", { shell: user.shell_title ?? user.shell }) : null}
+      >
+        <Switch
+          checked={checked}
+          disabled={busy || !canManage || sshBlocked}
+          onCheckedChange={canManage && !sshBlocked ? onToggle : undefined}
+          aria-label={label}
+        />
+      </ReasonTooltip>
 
       {field === "sudo" ? (
         <ConfirmDialog

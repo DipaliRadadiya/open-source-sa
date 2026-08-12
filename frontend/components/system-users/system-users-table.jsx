@@ -50,7 +50,13 @@ function HomeCell({ row }) {
 }
 
 function ShellCell({ row, table }) {
-  return <ShellSelect user={row.original} canManage={table.options.meta.canManage} />;
+  return (
+    <ShellSelect
+      user={row.original}
+      shells={table.options.meta.shells}
+      canManage={table.options.meta.canManage}
+    />
+  );
 }
 
 function SudoCell({ row, table }) {
@@ -81,7 +87,7 @@ function RowActionsCell({ row }) {
   return <SystemUserRowActions user={row.original} />;
 }
 
-export function SystemUsersTable({ data, canManage = false }) {
+export function SystemUsersTable({ data, shells = [], canManage = false }) {
   const t = useTranslations("systemUsers");
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -163,7 +169,7 @@ export function SystemUsersTable({ data, canManage = false }) {
           />
         )
       ) : (
-        <DataTable columns={columns} data={filtered} meta={{ canManage }} />
+        <DataTable columns={columns} data={filtered} meta={{ canManage, shells }} />
       )}
 
       {canManage ? (

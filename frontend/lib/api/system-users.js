@@ -27,6 +27,13 @@ export function setSystemUserSsh(id, ssh_access) {
   return api.put(`/system-users/${id}/ssh`, { ssh_access });
 }
 
+// The shells this server accepts, titles already localised. Client-side too,
+// because the create dialog is opened from the applications form as well as
+// from this page and cannot rely on a prop from one of them.
+export function getShellCatalog() {
+  return api.get("/system-users/shells").then((res) => res.data?.shells ?? []);
+}
+
 // Full detail (applications with domain/status/php) — the list only returns
 // minimal apps, so the Apps modal fetches this on open.
 export function getSystemUserDetail(id) {

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Loader2, Sparkles, UserRoundPlus } from "lucide-react";
-import { createSystemUserSchema, SHELLS } from "@/lib/schemas/system-user";
-import { createSystemUser } from "@/lib/api/system-users";
+import { createSystemUserSchema, DEFAULT_SHELL } from "@/lib/schemas/system-user";
+import { createSystemUser, getShellCatalog } from "@/lib/api/system-users";
 import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -36,9 +36,24 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-const DEFAULT_SHELL = "/bin/bash";
-
 export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
+  // Fetched when the dialog opens rather than passed in: it is opened from the
+  // system-users page AND from the application form, and only one of those has
+  // the catalog to hand.
+  const [shells, setShells] = useState([]);
+  useEffect(() => {
+    if (!open) return undefined;
+    let cancelled = false;
+    getShellCatalog()
+      .then((list) => {
+        if (!cancelled) setShells(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   const t = useTranslations("systemUsers");
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -174,14 +189,30 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                     <FormLabel>{t("create.shell")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <SelectTrigger className="w-full font-mono text-xs">
-                          <SelectValue />
+                        <SelectTrigger className="w-full text-xs">
+                          {/* Title only — see shell-select.jsx. */}
+                          <SelectValue>
+                            {shells.find((entry) => entry.value === field.value)?.title ??
+                              field.value}
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {SHELLS.map((shell) => (
-                          <SelectItem key={shell} value={shell} className="font-mono text-xs">
-                            {shell}
+                        {/* Title first, path underneath: "No login" is what the
+                            choice means, `/usr/sbin/nologin` is only how it is
+                            spelled. Until the catalog arrives the default is
+                            the single option, so the field is never empty. */}
+                        {(shells.length
+                          ? shells
+                          : [{ value: DEFAULT_SHELL, title: DEFAULT_SHELL }]
+                        ).map((shell) => (
+                          <SelectItem key={shell.value} value={shell.value} className="text-xs">
+                            <span className="flex flex-col">
+                              <span>{shell.title}</span>
+                              <span className="font-mono text-[11px] text-muted-foreground">
+                                {shell.value}
+                              </span>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>

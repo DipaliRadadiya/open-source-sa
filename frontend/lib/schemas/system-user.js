@@ -1,13 +1,25 @@
 import { z } from "zod";
 
-// Backend-allowed login shells (PUT /system-users/{id}/shell).
-export const SHELLS = [
-  "/bin/bash",
-  "/bin/sh",
-  "/usr/bin/zsh",
-  "/usr/sbin/nologin",
-  "/bin/false",
-];
+/**
+ * One entry of GET /system-users/shells.
+ *
+ * `allows_login` is the field that matters: a shell that refuses login cannot
+ * be combined with SSH access, and the server rejects the pair from either
+ * side. It is nullable — an unrecognised shell on an adopted server means
+ * "we do not know", which is NOT the same as "denies login" and must not be
+ * drawn as a refusal.
+ */
+export const shellSchema = z.object({
+  value: z.string(),
+  title: z.string(),
+  description: z.string().default(""),
+  allows_login: z.boolean().nullable().default(null),
+});
+
+// The default a new account gets when the form is left alone. The full list of
+// acceptable shells belongs to the server (GET /system-users/shells) — keeping
+// a copy here is how the picker ends up offering something the server refuses.
+export const DEFAULT_SHELL = "/bin/bash";
 
 // Mirrors the backend OS-password policy: min 10, mixed case + a number.
 const passwordField = z
@@ -37,7 +49,9 @@ const publicKeyField = z
 export const createSystemUserSchema = z.object({
   username: usernameField,
   public_key: z.union([z.literal(""), publicKeyField]).optional(),
-  shell: z.enum(SHELLS).optional(),
+  // Not an enum any more — the server owns the list, and a stale copy here
+  // would reject a shell the server is perfectly happy with.
+  shell: z.string().optional(),
   sudo: z.boolean().optional(),
   ssh_access: z.boolean().optional(),
   password: z.union([z.literal(""), passwordField]).optional(),
