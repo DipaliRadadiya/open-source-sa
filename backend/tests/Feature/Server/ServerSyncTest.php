@@ -4,6 +4,8 @@ use App\Enums\SyncAction;
 use App\Enums\SyncMode;
 use App\Enums\SyncStatus;
 use App\Jobs\RunServerSync;
+use App\Models\Application;
+use App\Models\ServerCapability;
 use App\Models\SshKey;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
@@ -316,4 +318,271 @@ it('records a failure per resource type instead of ending the run', function () 
     $run = runSync();
 
     expect($run->status)->toBe(SyncStatus::Completed);
+});
+
+/*
+ * Sites the web server is already serving.
+ *
+ * The hard resource: a database is a name, a site is a config file plus a
+ * directory plus an owner plus a type read off the disk. Only the first three
+ * are facts, and the tests below are mostly about the fourth being treated as
+ * the guess it is.
+ */
+describe('discovering applications', function () {
+    beforeEach(function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        $this->owner = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    /**
+     * @param  array<string, string>  $vhosts  filename (no .conf) => contents
+     * @param  array<int, string>  $files  paths that `test -f` should find
+     */
+    function fakeVhosts(array $vhosts, string $owner = 'siteowner', array $files = []): void
+    {
+        Process::fake(function ($process) use ($vhosts, $owner, $files) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+
+            if ($binary === 'getent') {
+                return Process::result(output: "siteowner:x:1001:1001::/home/siteowner:/bin/bash\n");
+            }
+
+            if ($binary === 'find') {
+                return Process::result(output: implode("\n", array_map(
+                    fn (string $name): string => "/etc/nginx/sites-available/{$name}.conf",
+                    array_keys($vhosts),
+                )));
+            }
+
+            if ($binary === 'cat') {
+                $path = (string) ($args[1] ?? '');
+
+                if (str_contains($path, 'authorized_keys')) {
+                    return Process::result(exitCode: 1, errorOutput: 'No such file');
+                }
+
+                foreach ($vhosts as $name => $contents) {
+                    if (str_ends_with($path, "/{$name}.conf")) {
+                        return Process::result(output: $contents);
+                    }
+                }
+
+                return Process::result(exitCode: 1, errorOutput: 'No such file');
+            }
+
+            if ($binary === 'stat') {
+                return Process::result(output: $owner);
+            }
+
+            if ($binary === 'test') {
+                return Process::result(exitCode: in_array($args[2] ?? '', $files, true) ? 0 : 1);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    function nginxVhost(string $serverNames, string $root = '/home/siteowner/shop/public_html'): string
+    {
+        return "server {\n    listen 80;\n    server_name {$serverNames};\n    root {$root};\n}\n";
+    }
+
+    it('finds a served site with all of its names', function () {
+        fakeVhosts(['shop' => nginxVhost('shop.example.com www.shop.example.com')]);
+
+        $item = runSync()->items()->where('resource_type', 'application')->first();
+
+        expect($item->action)->toBe(SyncAction::Found)
+            ->and($item->resource_key)->toBe('shop.example.com')
+            // Aliases are part of the site, not separate sites.
+            ->and($item->evidence['domains'])->toBe(['shop.example.com', 'www.shop.example.com']);
+    });
+
+    it('never adopts the panel\'s own vhost', function () {
+        fakeVhosts([
+            'panel' => nginxVhost('panel.example.com', '/var/www/panel/public'),
+            'shop' => nginxVhost('shop.example.com'),
+        ]);
+
+        $keys = $ru = runSync()->items()->where('resource_type', 'application')->pluck('resource_key')->all();
+
+        // Adopting the control plane would put it in the list of sites the
+        // user can rename, move or delete.
+        expect($keys)->toBe(['shop.example.com']);
+    });
+
+    it('ignores a site the panel already has', function () {
+        Application::forceCreate([
+            'system_user_id' => $this->owner->id, 'name' => 'Shop', 'slug' => 'shop',
+            'domain' => 'shop.example.com', 'site_type' => 'php', 'serving_profile' => 'php',
+            'status' => 'active', 'web_root' => '/',
+        ]);
+
+        fakeVhosts(['shop' => nginxVhost('shop.example.com')]);
+
+        expect(runSync()->items()->where('resource_type', 'application')->count())->toBe(0);
+    });
+
+    it('refuses a site whose owner the panel does not manage', function () {
+        fakeVhosts(['shop' => nginxVhost('shop.example.com')], owner: 'somebodyelse');
+
+        $item = runSync()->items()->where('resource_type', 'application')->first();
+
+        // Adopted anyway, the site would have no account to run as and every
+        // later operation would fail somewhere much deeper than here.
+        expect($item->action)->toBe(SyncAction::Skipped)
+            ->and($item->reason)->toBe('owner_not_tracked');
+    });
+
+    it('reports a config it cannot read instead of dropping it', function () {
+        fakeVhosts(['weird' => "# nothing this parser understands\n"]);
+
+        $item = runSync()->items()->where('resource_type', 'application')->first();
+
+        // The site is live. A list that silently omits it is wrong in the one
+        // direction that matters.
+        expect($item->action)->toBe(SyncAction::Skipped)
+            ->and($item->reason)->toBe('vhost_unparsed');
+    });
+
+    it('reads an Apache vhost too', function () {
+        fakeVhosts(['shop' => "<VirtualHost *:80>\n  ServerName shop.example.com\n  ServerAlias www.shop.example.com\n  DocumentRoot /home/siteowner/shop/public_html\n</VirtualHost>\n"]);
+
+        $item = runSync()->items()->where('resource_type', 'application')->first();
+
+        expect($item->action)->toBe(SyncAction::Found)
+            ->and($item->evidence['domains'])->toContain('shop.example.com', 'www.shop.example.com');
+    });
+
+    it('drops nginx catch-alls and wildcards, which name no site', function () {
+        fakeVhosts(['shop' => nginxVhost('_ *.example.com shop.example.com')]);
+
+        expect(runSync()->items()->where('resource_type', 'application')->first()->evidence['domains'])
+            ->toBe(['shop.example.com']);
+    });
+});
+
+describe('inferring what a site is', function () {
+    beforeEach(function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    it('is confident about WordPress and says why', function () {
+        fakeVhosts(
+            ['shop' => nginxVhost('shop.example.com')],
+            files: ['/home/siteowner/shop/public_html/wp-config.php'],
+        );
+
+        $item = runSync()->items()->where('resource_type', 'application')->first();
+
+        // The evidence is the point: a user confirming this needs to know it
+        // was a file on disk and not a hunch.
+        expect($item->evidence['site_type'])->toBe('wordpress')
+            ->and($item->evidence['matched'])->toBe('wp-config.php')
+            ->and($item->confidence)->toBeGreaterThan(90);
+    });
+
+    it('is honest when it recognises nothing', function () {
+        fakeVhosts(['shop' => nginxVhost('shop.example.com')], files: []);
+
+        $item = runSync()->items()->where('resource_type', 'application')->first();
+
+        // Low confidence and no evidence, rather than a confident wrong
+        // answer. The screen can then ask instead of telling.
+        expect($item->confidence)->toBeLessThan(20)
+            ->and($item->evidence['matched'])->toBeNull()
+            // php over static: serving a PHP app as plain files publishes its
+            // source, and the opposite mistake only costs a spare handler.
+            ->and($item->evidence['site_type'])->toBe('php');
+    });
+
+    it('prefers the more specific signature', function () {
+        // A Laravel app has index.php too; whichever is checked first decides,
+        // so the order of the signature list is load-bearing.
+        fakeVhosts(
+            ['shop' => nginxVhost('shop.example.com')],
+            files: [
+                '/home/siteowner/shop/public_html/artisan',
+                '/home/siteowner/shop/public_html/index.php',
+            ],
+        );
+
+        expect(runSync()->items()->where('resource_type', 'application')->first()->evidence['site_type'])
+            ->toBe('git');
+    });
+});
+
+describe('adopting a site', function () {
+    beforeEach(function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    it('creates the site and every one of its domains', function () {
+        fakeVhosts(
+            ['shop' => nginxVhost('shop.example.com www.shop.example.com')],
+            files: ['/home/siteowner/shop/public_html/wp-config.php'],
+        );
+
+        runSync(SyncMode::Apply);
+
+        $application = Application::where('domain', 'shop.example.com')->firstOrFail();
+
+        expect($application->site_type)->toBe('wordpress')
+            ->and($application->slug)->not->toBeNull()
+            ->and($application->domains()->count())->toBe(2)
+            ->and($application->domains()->where('type', 'primary')->count())->toBe(1);
+    });
+
+    it('keeps the guess where anyone acting on the site will see it', function () {
+        fakeVhosts(
+            ['shop' => nginxVhost('shop.example.com')],
+            files: ['/home/siteowner/shop/public_html/wp-config.php'],
+        );
+
+        runSync(SyncMode::Apply);
+
+        $adoption = Application::where('domain', 'shop.example.com')->firstOrFail()->settings['adoption'];
+
+        // Nobody looks up a sync run before running a command against a site,
+        // so the confidence has to travel with the site itself.
+        expect($adoption['inferred_site_type'])->toBe('wordpress')
+            ->and($adoption['matched'])->toBe('wp-config.php')
+            ->and($adoption['confidence'])->toBeGreaterThan(90);
+    });
+
+    it('does not claim the panel wrote a pool for it', function () {
+        fakeVhosts(['shop' => nginxVhost('shop.example.com')]);
+
+        runSync(SyncMode::Apply);
+
+        // `isolated_at` set here would make php:isolate-all skip the one site
+        // that most needs converting.
+        expect(Application::where('domain', 'shop.example.com')->firstOrFail()->isolated_at)->toBeNull();
+    });
+
+    it('is safe to run twice', function () {
+        fakeVhosts(['shop' => nginxVhost('shop.example.com')]);
+
+        runSync(SyncMode::Apply);
+        $after = Application::count();
+
+        runSync(SyncMode::Apply);
+
+        expect(Application::count())->toBe($after);
+    });
 });

@@ -15,6 +15,9 @@ return [
     ],
 
     'reasons' => [
+        'vhost_unreadable' => 'Não foi possível ler a configuração do servidor web deste site, por isso ficou intacto.',
+        'vhost_unparsed' => 'Este site está a ser servido, mas a sua configuração não tem um formato que o painel consiga ler. Adote-o manualmente ou verifique o ficheiro.',
+        'owner_not_tracked' => 'A conta Linux dona deste site não é gerida pelo painel. Sincronize primeiro os utilizadores do sistema.',
         'unreadable_key' => 'Esta linha não é uma chave pública que o painel consiga ler, por isso ficou intacta. Pode continuar a conceder acesso — verifique-a manualmente.',
         'discovery_failed' => 'Não foi possível ler do servidor. Nada foi alterado.',
         'adopt_failed' => 'Encontrado no servidor, mas o painel não conseguiu criar um registo.',

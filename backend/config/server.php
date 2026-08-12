@@ -498,6 +498,17 @@ return [
     | The adopted site gets its own session directory in the base paths
     | instead, so nothing it legitimately needs is lost.
     */
+    /*
+    | The panel's own vhost, by config-file name.
+    |
+    | Excluded from sync discovery: adopting it would put the control plane in
+    | the list of sites the user can rename, move or delete. Matches
+    | install.sh's PANEL_SLUG.
+    */
+    'sync' => [
+        'panel_vhost' => env('SERVER_PANEL_VHOST', 'panel'),
+    ],
+
     'shared_session_dirs' => [
         '/var/lib/php/sessions',
         '/var/lib/php/session',

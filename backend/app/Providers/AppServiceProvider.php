@@ -17,6 +17,7 @@ use App\Services\Server\Setup\Components\NodeComponent;
 use App\Services\Server\Setup\Components\PhpComponent;
 use App\Services\Server\Setup\Components\RedisComponent;
 use App\Services\Server\Setup\SetupCatalog;
+use App\Services\Server\Sync\Discoverers\ApplicationDiscoverer;
 use App\Services\Server\Sync\Discoverers\SshKeyDiscoverer;
 use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
 use App\Services\Server\Sync\ServerSync;
@@ -42,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ServerSync::class, fn ($app) => new ServerSync([
             $app->make(SystemUserDiscoverer::class),
             $app->make(SshKeyDiscoverer::class),
+            $app->make(ApplicationDiscoverer::class),
         ]));
 
         // How PHP is served here. Resolved from the web server this box runs,

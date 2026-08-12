@@ -15,6 +15,9 @@ return [
     ],
 
     'reasons' => [
+        'vhost_unreadable' => 'No se pudo leer la configuración del servidor web para este sitio, así que se dejó intacto.',
+        'vhost_unparsed' => 'Este sitio se está sirviendo, pero su configuración no tiene un formato que el panel pueda leer. Adóptalo a mano o revisa el archivo.',
+        'owner_not_tracked' => 'La cuenta de Linux propietaria de este sitio no es una que el panel gestione. Sincroniza primero los usuarios del sistema y vuelve a ejecutarlo.',
         'unreadable_key' => 'Esta línea no es una clave pública que el panel pueda leer, así que se dejó intacta. Puede seguir concediendo acceso: revísala a mano.',
         'discovery_failed' => 'No se pudo leer del servidor. No se cambió nada.',
         'adopt_failed' => 'Encontrado en el servidor, pero el panel no pudo crear un registro.',
