@@ -45,7 +45,10 @@ export function InstallVersionButton({
   const [version, setVersion] = useState(installable[0]?.version ?? "");
   const [pending, setPending] = useState(false);
 
-  if (installable.length === 0) return null;
+  // Never hidden. An empty list means the package index offers nothing new
+  // right now, which is a fact worth stating — a button that disappears reads
+  // as a missing feature, and "where is Install?" is the question it creates.
+  const unavailable = installable.length === 0 ? t("install.noneAvailable") : null;
 
   // Warn before, not after: a dead version installs perfectly well and gets no
   // security fixes, and that is not something to find out later.
@@ -72,8 +75,12 @@ export function InstallVersionButton({
 
   return (
     <>
-      <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-        <Button variant="outline" disabled={!canManage} onClick={() => setOpen(true)}>
+      <ReasonTooltip reason={unavailable ?? (canManage ? null : t("noPermission"))}>
+        <Button
+          variant="outline"
+          disabled={!canManage || Boolean(unavailable)}
+          onClick={() => setOpen(true)}
+        >
           <Plus className="size-4" />
           {t("install.action")}
         </Button>

@@ -14,7 +14,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Card,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -29,14 +28,13 @@ import { apiMessage } from "@/lib/api/error-message";
  * available — on a one-version server neither exists, because you cannot remove
  * the only version and it is already the default.
  *
- * `children` carries the php.ini button and `installButton` the install dialog;
- * both are owned by the page, which is a Server Component.
+ * `children` carries the php.ini button, owned by the page (a Server
+ * Component). Install lives beside the version picker, not here.
  */
 export function VersionSummary({
   version,
   canManage,
   lifecycleAvailable = false,
-  installButton,
   children,
 }) {
   const t = useTranslations("php");
@@ -98,9 +96,18 @@ export function VersionSummary({
     }
   }
 
+  // Each action appears only when it genuinely applies: the default version
+  // cannot be made default again, and the panel`s own version cannot go.
+  const showMakeDefault = !version.is_default;
+  const showRemove = !version.in_use_by_panel;
+
   return (
     <Card>
       <CardHeader>
+        {/* php.ini sits with the version it edits, on the title line. It was in
+            the footer next to Install, where the two most-used controls on the
+            page were a pair of unrelated actions sharing a bar. */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
           {t("versions.name", { version: version.version })}
           {/* Filled, not outlined: "Default" is a state this version is in, and
@@ -130,19 +137,50 @@ export function VersionSummary({
           )}
         </CardTitle>
 
-        {/* Names, because the question behind "can I remove this?" is which
-            sites go down if you do. */}
+          {/* Every action for this version on one line, with the version it
+              acts on. A footer bar underneath repeated the card's own subject
+              and split the controls across two places for no reason. */}
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {children}
+
+            {!showMakeDefault ? null : (
+              <ReasonTooltip reason={notReadyReason ?? (canManage ? null : t("noPermission"))}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canManage || pending || Boolean(notReadyReason)}
+                  onClick={makeDefault}
+                >
+                  {t("versions.makeDefault")}
+                </Button>
+              </ReasonTooltip>
+            )}
+
+            {/* Hidden entirely on the panel's own version — the API refuses it,
+                but a button that exists to be refused is still a trap. */}
+            {!showRemove ? null : (
+              <ReasonTooltip reason={removeReason}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+                  disabled={Boolean(removeReason) || pending}
+                  onClick={() => setConfirming(true)}
+                >
+                  {t("versions.remove")}
+                </Button>
+              </ReasonTooltip>
+            )}
+          </div>
+        </div>
+
+        {/* The count answers "can I remove this?"; the names answer "what
+            breaks if I do?". Run together as one sentence, ten site names —
+            several of them near-identical, like "Blog" and "Blog (Staging)" —
+            became a grey paragraph nobody reads, and the count was buried at
+            the end of it. */}
         <CardDescription>
-          {sites.length > 0
-            ? version.sites_truncated
-              ? t("versions.usedByNamesMore", {
-                  sites: sites.join(", "),
-                  count: usedBy - sites.length,
-                })
-              : t("versions.usedByNames", { sites: sites.join(", ") })
-            : usedBy > 0
-              ? t("versions.usedByCount", { count: usedBy })
-              : t("versions.usedByNone")}
+          {usedBy > 0 ? t("versions.usedByCount", { count: usedBy }) : t("versions.usedByNone")}
           {/* Only when the date is news. On a supported version the green badge
               already says what you need, and a 2028 date is trivia. */}
           {lifecycleAvailable &&
@@ -156,6 +194,27 @@ export function VersionSummary({
             : null}
         </CardDescription>
 
+        {/* Tags, not prose: each name is one scannable unit, so the near-
+            duplicates stop reading as one long string. The API sends at most
+            five and tells us how many it held back. */}
+        {sites.length > 0 ? (
+          <ul className="flex flex-wrap gap-1.5 pt-1">
+            {sites.map((site) => (
+              <li
+                key={site}
+                className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+              >
+                {site}
+              </li>
+            ))}
+            {version.sites_truncated && usedBy > sites.length ? (
+              <li className="px-1 py-0.5 text-xs text-muted-foreground">
+                {t("versions.moreCount", { count: usedBy - sites.length })}
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
+
         {/* "Default" reads as "every site now uses this", which it isn't. Said
             plainly and only where the badge is, rather than left to be found
             out by changing it. */}
@@ -163,43 +222,6 @@ export function VersionSummary({
           <p className="text-xs text-muted-foreground">{t("versions.defaultHint")}</p>
         ) : null}
       </CardHeader>
-
-      {/* Same footer shape as every other card in the panel: installing sits on
-          the left because it adds a version, the rest act on this one. */}
-      <CardFooter className="flex-wrap justify-between gap-3 border-t bg-muted/30 py-4">
-        {installButton}
-
-        <div className="flex flex-wrap items-center gap-2">
-          {children}
-
-          {version.is_default ? null : (
-            <ReasonTooltip reason={notReadyReason ?? (canManage ? null : t("noPermission"))}>
-              <Button
-                variant="outline"
-                disabled={!canManage || pending || Boolean(notReadyReason)}
-                onClick={makeDefault}
-              >
-                {t("versions.makeDefault")}
-              </Button>
-            </ReasonTooltip>
-          )}
-
-          {/* Hidden entirely on the panel's own version — the API refuses it, but
-              a button that exists to be refused is still a trap. */}
-          {version.in_use_by_panel ? null : (
-            <ReasonTooltip reason={removeReason}>
-              <Button
-                variant="ghost"
-                className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
-                disabled={Boolean(removeReason) || pending}
-                onClick={() => setConfirming(true)}
-              >
-                {t("versions.remove")}
-              </Button>
-            </ReasonTooltip>
-          )}
-        </div>
-      </CardFooter>
 
       <ConfirmDialog
         open={confirming}

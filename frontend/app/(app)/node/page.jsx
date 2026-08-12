@@ -79,21 +79,17 @@ export default async function NodePage({ searchParams }) {
         </div>
       ) : (
         <div className="max-w-5xl space-y-4">
+          {/* Install sits at the end of the version chips: adding a version is
+              the same decision as choosing one. With a single version there are
+              no chips to sit beside, so the button stands alone — it must still
+              be reachable, or a one-version server could never get a second. */}
           {versions.length > 1 ? (
             <VersionBar
               versions={versions}
               selected={selected}
               namespace="node"
               lifecycleAvailable={lifecycleAvailable}
-            />
-          ) : null}
-
-          {current ? (
-            <VersionSummary
-              version={current}
-              canManage={canManage}
-              lifecycleAvailable={lifecycleAvailable}
-              installButton={
+              action={
                 <InstallVersionButton
                   runtime="node"
                   installable={node?.installable ?? []}
@@ -101,6 +97,21 @@ export default async function NodePage({ searchParams }) {
                   lifecycleAvailable={lifecycleAvailable}
                 />
               }
+            />
+          ) : (
+            <InstallVersionButton
+              runtime="node"
+              installable={node?.installable ?? []}
+              canManage={canManage}
+              lifecycleAvailable={lifecycleAvailable}
+            />
+          )}
+
+          {current ? (
+            <VersionSummary
+              version={current}
+              canManage={canManage}
+              lifecycleAvailable={lifecycleAvailable}
             />
           ) : null}
 

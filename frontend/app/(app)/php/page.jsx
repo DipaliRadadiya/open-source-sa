@@ -83,23 +83,17 @@ export default async function PhpPage({ searchParams }) {
         />
       ) : (
         <div className="max-w-5xl space-y-4">
-          {/* Only when there is a choice to make. One version means nothing to
-              switch, and a switch with one option reads as a required step. */}
+          {/* Install sits at the end of the version chips: adding a version is
+              the same decision as choosing one. With a single version there are
+              no chips to sit beside, so the button stands alone — it must still
+              be reachable, or a one-version server could never get a second. */}
           {versions.length > 1 ? (
             <VersionBar
               versions={versions}
               selected={selected}
               namespace="php"
               lifecycleAvailable={lifecycleAvailable}
-            />
-          ) : null}
-
-          {current ? (
-            <VersionSummary
-              version={current}
-              canManage={canManage}
-              lifecycleAvailable={lifecycleAvailable}
-              installButton={
+              action={
                 <InstallVersionButton
                   runtime="php"
                   installable={php?.installable ?? []}
@@ -107,6 +101,21 @@ export default async function PhpPage({ searchParams }) {
                   lifecycleAvailable={lifecycleAvailable}
                 />
               }
+            />
+          ) : (
+            <InstallVersionButton
+              runtime="php"
+              installable={php?.installable ?? []}
+              canManage={canManage}
+              lifecycleAvailable={lifecycleAvailable}
+            />
+          )}
+
+          {current ? (
+            <VersionSummary
+              version={current}
+              canManage={canManage}
+              lifecycleAvailable={lifecycleAvailable}
             >
               <IniEditor
                 version={selected}

@@ -18,7 +18,16 @@ import { ScrollFade } from "@/components/ui/scroll-fade";
  * server, and the version you were looking at should survive a reload and be
  * linkable.
  */
-export function VersionBar({ versions, selected, namespace, lifecycleAvailable = false }) {
+export function VersionBar({
+  versions,
+  selected,
+  namespace,
+  lifecycleAvailable = false,
+  // Sits at the end of the chips, inside the same scrolling row. Adding a
+  // version belongs beside choosing one — pushed to the far right of the page
+  // it reads as an unrelated page-level action.
+  action,
+}) {
   const t = useTranslations(namespace);
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -60,6 +69,7 @@ export function VersionBar({ versions, selected, namespace, lifecycleAvailable =
               </Link>
             );
           })}
+          {action ? <div className="ms-1 shrink-0">{action}</div> : null}
         </nav>
       </ScrollFade>
     </div>

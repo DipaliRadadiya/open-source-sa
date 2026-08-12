@@ -15,7 +15,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Card,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -25,13 +24,9 @@ import {
  *
  * Same card as PHP's, minus the panel-version rule (the panel doesn't run on
  * Node) and plus npm, which belongs to the version rather than the machine.
+ * Install lives beside the version picker, not here.
  */
-export function VersionSummary({
-  version,
-  canManage,
-  lifecycleAvailable = false,
-  installButton,
-}) {
+export function VersionSummary({ version, canManage, lifecycleAvailable = false }) {
   const t = useTranslations("node");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -95,31 +90,74 @@ export function VersionSummary({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
-          {t("versions.name", { version: version.version })}
-          {version.is_default ? (
-            <Badge variant="secondary" className="font-normal">
-              {t("versions.default")}
-            </Badge>
-          ) : null}
-          <LifecycleBadge
-            lifecycle={version.lifecycle}
-            namespace="node"
-            available={lifecycleAvailable}
-          />
-        </CardTitle>
+        {/* Every action for this version on one line, with the version it acts
+            on. A footer bar underneath repeated the card's own subject and
+            split the controls across two places for no reason. */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
+            {t("versions.name", { version: version.version })}
+            {version.is_default ? (
+              <Badge variant="secondary" className="font-normal">
+                {t("versions.default")}
+              </Badge>
+            ) : null}
+            <LifecycleBadge
+              lifecycle={version.lifecycle}
+              namespace="node"
+              available={lifecycleAvailable}
+            />
+          </CardTitle>
 
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {/* npm ships inside Node and is updated separately. Null means it
+                couldn't be read — no number is better than a wrong one, so the
+                control goes away rather than claiming to update nothing. */}
+            {npm ? (
+              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canManage || pending}
+                  onClick={upgradeNpm}
+                >
+                  {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {t("npm.action", { version: npm })}
+                </Button>
+              </ReasonTooltip>
+            ) : null}
+
+            {version.is_default ? null : (
+              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canManage || pending}
+                  onClick={makeDefault}
+                >
+                  {t("versions.makeDefault")}
+                </Button>
+              </ReasonTooltip>
+            )}
+
+            <ReasonTooltip reason={removeReason}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+                disabled={Boolean(removeReason) || pending}
+                onClick={() => setConfirming(true)}
+              >
+                {t("versions.remove")}
+              </Button>
+            </ReasonTooltip>
+          </div>
+        </div>
+
+        {/* The count answers "can I remove this?"; the names answer "what
+            breaks if I do?". See the PHP card — run together as one sentence
+            they became a grey paragraph with the count buried at the end. */}
         <CardDescription>
-          {sites.length > 0
-            ? version.sites_truncated
-              ? t("versions.usedByNamesMore", {
-                  sites: sites.join(", "),
-                  count: usedBy - sites.length,
-                })
-              : t("versions.usedByNames", { sites: sites.join(", ") })
-            : usedBy > 0
-              ? t("versions.usedByCount", { count: usedBy })
-              : t("versions.usedByNone")}
+          {usedBy > 0 ? t("versions.usedByCount", { count: usedBy }) : t("versions.usedByNone")}
           {/* Only when the date is news — on a supported line the green badge
               already says what you need. */}
           {lifecycleAvailable &&
@@ -134,47 +172,30 @@ export function VersionSummary({
             : null}
         </CardDescription>
 
+        {/* Tags, not prose: each name is one scannable unit. The API sends at
+            most five and tells us how many it held back. */}
+        {sites.length > 0 ? (
+          <ul className="flex flex-wrap gap-1.5 pt-1">
+            {sites.map((site) => (
+              <li
+                key={site}
+                className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+              >
+                {site}
+              </li>
+            ))}
+            {version.sites_truncated && usedBy > sites.length ? (
+              <li className="px-1 py-0.5 text-xs text-muted-foreground">
+                {t("versions.moreCount", { count: usedBy - sites.length })}
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
+
         {version.is_default ? (
           <p className="text-xs text-muted-foreground">{t("versions.defaultHint")}</p>
         ) : null}
       </CardHeader>
-
-      <CardFooter className="flex-wrap justify-between gap-3 border-t bg-muted/30 py-4">
-        {installButton}
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* npm ships inside Node and is updated separately. Null means it
-              couldn't be read — no number is better than a wrong one, so the
-              control goes away rather than claiming to update nothing. */}
-          {npm ? (
-            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-              <Button variant="outline" disabled={!canManage || pending} onClick={upgradeNpm}>
-                {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-                {t("npm.action", { version: npm })}
-              </Button>
-            </ReasonTooltip>
-          ) : null}
-
-          {version.is_default ? null : (
-            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-              <Button variant="outline" disabled={!canManage || pending} onClick={makeDefault}>
-                {t("versions.makeDefault")}
-              </Button>
-            </ReasonTooltip>
-          )}
-
-          <ReasonTooltip reason={removeReason}>
-            <Button
-              variant="ghost"
-              className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
-              disabled={Boolean(removeReason) || pending}
-              onClick={() => setConfirming(true)}
-            >
-              {t("versions.remove")}
-            </Button>
-          </ReasonTooltip>
-        </div>
-      </CardFooter>
 
       <ConfirmDialog
         open={confirming}
