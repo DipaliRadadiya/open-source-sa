@@ -506,7 +506,23 @@ return [
     | install.sh's PANEL_SLUG.
     */
     'sync' => [
-        'panel_vhost' => env('SERVER_PANEL_VHOST', 'panel'),
+        /*
+        | Extra things the sync should never offer.
+        |
+        | The panel's own vhosts are detected from where this code runs, not
+        | from a name — install.sh writes both `{slug}.conf` and
+        | `{slug}-tls.conf`, the slug is overridable, and the panel is
+        | reached by a domain rather than by that slug, so every name-based
+        | guess breaks on a custom install. These lists are for the operator
+        | who runs their own stack on the same box: two lines, and it stops
+        | being offered.
+        |
+        | Both accept `*` globs and are matched case-insensitively.
+        */
+        'exclude' => [
+            'vhosts' => [],
+            'domains' => [],
+        ],
     ],
 
     'shared_session_dirs' => [

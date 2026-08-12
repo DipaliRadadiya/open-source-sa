@@ -404,16 +404,20 @@ describe('discovering applications', function () {
     });
 
     it('never adopts the panel\'s own vhost', function () {
+        // Detected by the directory it serves, not by its name — see the
+        // exclusion group below for why a name is not enough. Recorded with a
+        // reason rather than dropped, so the list accounts for every vhost on
+        // the box.
         fakeVhosts([
-            'panel' => nginxVhost('panel.example.com', '/var/www/panel/public'),
+            'panel' => nginxVhost('panel.example.com', dirname(base_path()).'/backend/public'),
             'shop' => nginxVhost('shop.example.com'),
         ]);
 
-        $keys = $ru = runSync()->items()->where('resource_type', 'application')->pluck('resource_key')->all();
+        $items = runSync()->items()->where('resource_type', 'application')->get()->keyBy('resource_key');
 
-        // Adopting the control plane would put it in the list of sites the
-        // user can rename, move or delete.
-        expect($keys)->toBe(['shop.example.com']);
+        expect($items['panel.example.com']->action)->toBe(SyncAction::Skipped)
+            ->and($items['panel.example.com']->reason)->toBe('panel_infrastructure')
+            ->and($items['shop.example.com']->action)->toBe(SyncAction::Found);
     });
 
     it('ignores a site the panel already has', function () {
@@ -584,5 +588,99 @@ describe('adopting a site', function () {
         runSync(SyncMode::Apply);
 
         expect(Application::count())->toBe($after);
+    });
+});
+
+/*
+ * Things on the box that are not customer sites.
+ *
+ * A server usually runs more than the sites it hosts — the panel itself, and
+ * whatever else the operator put there. Offering to adopt the control plane as
+ * a site is the failure mode, and matching on names does not prevent it:
+ * install.sh writes both `{slug}.conf` and `{slug}-tls.conf`, the slug is
+ * overridable, and the panel answers on a domain rather than that slug. On the
+ * box this was developed against the panel's own frontend vhost is called
+ * `sv-oss-app.conf`, which no amount of matching "panel" would ever catch.
+ */
+describe('excluding what is not a customer site', function () {
+    beforeEach(function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        // Where this code is actually running — the panel's own directory is
+        // one level above the Laravel root, whatever it happens to be called.
+        $this->panelRoot = dirname(base_path());
+    });
+
+    it('refuses any vhost serving the panel\'s own directory', function () {
+        fakeVhosts([
+            // Named nothing like "panel", exactly as on a real install.
+            'sv-oss-app' => nginxVhost('panel.example.com', $this->panelRoot.'/frontend'),
+        ]);
+
+        $item = runSync()->items()->where('resource_type', 'application')->first();
+
+        expect($item->action)->toBe(SyncAction::Skipped)
+            ->and($item->reason)->toBe('panel_infrastructure');
+    });
+
+    it('catches the TLS vhost of the panel too', function () {
+        // install.sh writes a second file per panel vhost. Excluding one name
+        // left this one adoptable.
+        fakeVhosts(['panel-tls' => nginxVhost('panel.example.com', $this->panelRoot.'/backend/public')]);
+
+        expect(runSync()->items()->where('resource_type', 'application')->first()->reason)
+            ->toBe('panel_infrastructure');
+    });
+
+    it('refuses a site laid out somewhere the panel could not manage it', function () {
+        // Plesk-style, or anything else hand-built. Reported rather than
+        // dropped: the site is live and the user should know it was seen.
+        fakeVhosts(['legacy' => nginxVhost('legacy.example.com', '/var/www/vhosts/legacy/httpdocs')]);
+
+        $item = runSync()->items()->where('resource_type', 'application')->first();
+
+        expect($item->action)->toBe(SyncAction::Skipped)
+            ->and($item->reason)->toBe('outside_panel_layout')
+            ->and($item->evidence['document_root'])->toBe('/var/www/vhosts/legacy/httpdocs');
+    });
+
+    it('honours an operator\'s own exclusions, globs included', function () {
+        config(['server.sync.exclude.vhosts' => ['internal-*']]);
+
+        fakeVhosts([
+            'internal-metrics' => nginxVhost('metrics.example.com'),
+            'shop' => nginxVhost('shop.example.com'),
+        ]);
+
+        // Excluded by the operator, so not even worth a line — unlike the
+        // rules above, this is a deliberate "I know, stop showing me".
+        expect(runSync()->items()->where('resource_type', 'application')->pluck('resource_key')->all())
+            ->toBe(['shop.example.com']);
+    });
+
+    it('honours an exclusion by domain', function () {
+        config(['server.sync.exclude.domains' => ['*.internal.example.com']]);
+
+        fakeVhosts([
+            'metrics' => nginxVhost('box.internal.example.com'),
+            'shop' => nginxVhost('shop.example.com'),
+        ]);
+
+        expect(runSync()->items()->where('resource_type', 'application')->pluck('resource_key')->all())
+            ->toBe(['shop.example.com']);
+    });
+
+    it('still adopts a real site laid out the panel\'s way', function () {
+        // The guard against over-blocking: all of the above must not cost us
+        // the sites the feature exists to find.
+        fakeVhosts(['shop' => nginxVhost('shop.example.com', '/home/siteowner/shop/public_html')]);
+
+        expect(runSync()->items()->where('resource_type', 'application')->first()->action)
+            ->toBe(SyncAction::Found);
     });
 });

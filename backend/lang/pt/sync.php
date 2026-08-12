@@ -15,6 +15,8 @@ return [
     ],
 
     'reasons' => [
+        'panel_infrastructure' => 'Isto é o próprio painel, não um site que ele possa alojar. Deixado intacto de propósito.',
+        'outside_panel_layout' => 'Este site não está organizado da forma como o painel gere sites, por isso não pode ser adotado sem mover os seus ficheiros. Continua a ser servido — nada foi alterado.',
         'vhost_unreadable' => 'Não foi possível ler a configuração do servidor web deste site, por isso ficou intacto.',
         'vhost_unparsed' => 'Este site está a ser servido, mas a sua configuração não tem um formato que o painel consiga ler. Adote-o manualmente ou verifique o ficheiro.',
         'owner_not_tracked' => 'A conta Linux dona deste site não é gerida pelo painel. Sincronize primeiro os utilizadores do sistema.',

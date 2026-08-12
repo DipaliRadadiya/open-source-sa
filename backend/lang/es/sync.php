@@ -15,6 +15,8 @@ return [
     ],
 
     'reasons' => [
+        'panel_infrastructure' => 'Esto es el propio panel, no un sitio que pueda alojar. Se deja intacto a propósito.',
+        'outside_panel_layout' => 'Este sitio no tiene la estructura de directorios que el panel gestiona, así que no se puede adoptar sin mover sus archivos. Sigue funcionando: no se ha cambiado nada.',
         'vhost_unreadable' => 'No se pudo leer la configuración del servidor web para este sitio, así que se dejó intacto.',
         'vhost_unparsed' => 'Este sitio se está sirviendo, pero su configuración no tiene un formato que el panel pueda leer. Adóptalo a mano o revisa el archivo.',
         'owner_not_tracked' => 'La cuenta de Linux propietaria de este sitio no es una que el panel gestione. Sincroniza primero los usuarios del sistema y vuelve a ejecutarlo.',

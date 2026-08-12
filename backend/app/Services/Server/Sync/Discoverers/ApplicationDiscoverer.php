@@ -63,7 +63,17 @@ class ApplicationDiscoverer implements Discoverable
         $trackedSlugs = Application::query()->pluck('slug')->filter()->map('strtolower')->all();
         $trackedDomains = ApplicationDomain::query()->pluck('domain')->map('strtolower')->all();
         $owners = SystemUser::query()->pluck('id', 'username');
-        $panel = (string) config('server.sync.panel_vhost', 'panel');
+
+        // The panel's own installation. Derived from where this code is
+        // running rather than from a configured name: install.sh writes
+        // `{PANEL_SLUG}.conf` *and* `{PANEL_SLUG}-tls.conf`, PANEL_SLUG is
+        // overridable, and the vhost is named after the slug while the panel
+        // is reached by a domain — so matching on any of those names is a
+        // guess that a custom install breaks. The document root is not.
+        $panelRoot = rtrim(dirname(base_path()), '/');
+        $homeBase = rtrim((string) config('server.home_base', '/home'), '/');
+        $excludedNames = (array) config('server.sync.exclude.vhosts', []);
+        $excludedDomains = array_map('strtolower', (array) config('server.sync.exclude.domains', []));
 
         $found = [];
 
@@ -76,9 +86,7 @@ class ApplicationDiscoverer implements Discoverable
 
             $name = preg_replace('/\.conf$/', '', basename($path)) ?? basename($path);
 
-            // The panel's own vhost. Adopting it would put the control plane
-            // in the list of sites the user can delete.
-            if ($name === $panel) {
+            if ($this->matchesAny($name, $excludedNames)) {
                 continue;
             }
 
@@ -112,6 +120,41 @@ class ApplicationDiscoverer implements Discoverable
             $primary = $parsed['domains'][0];
 
             if (in_array(strtolower($primary), $trackedDomains, true)) {
+                continue;
+            }
+
+            if ($this->matchesAny(strtolower($primary), $excludedDomains)) {
+                continue;
+            }
+
+            $root = rtrim($parsed['root'], '/');
+
+            // The panel serving itself. Adopting it would put the control
+            // plane in the list of sites the user can rename, move or delete
+            // — and this catches the API vhost, the frontend vhost and the
+            // TLS variant of each, without knowing any of their names.
+            if ($root === $panelRoot || str_starts_with($root.'/', $panelRoot.'/')) {
+                $found[] = [
+                    'key' => $primary,
+                    'skip' => 'panel_infrastructure',
+                    'evidence' => ['path' => $path, 'document_root' => $root],
+                ];
+
+                continue;
+            }
+
+            // Every site this panel creates lives at
+            // {home_base}/{user}/{slug}/public_html. A document root anywhere
+            // else belongs to something the panel did not lay out and cannot
+            // manage without moving files — reported so the user knows it
+            // exists, rather than adopted into a shape that does not fit it.
+            if (! str_starts_with($root.'/', $homeBase.'/')) {
+                $found[] = [
+                    'key' => $primary,
+                    'skip' => 'outside_panel_layout',
+                    'evidence' => ['path' => $path, 'document_root' => $root],
+                ];
+
                 continue;
             }
 
@@ -269,6 +312,24 @@ class ApplicationDiscoverer implements Discoverable
         }
 
         return ['domains' => $domains, 'root' => $root];
+    }
+
+    /**
+     * Case-insensitive match against a list that may contain `*` globs, so an
+     * operator running their own stack alongside the panel can exclude it
+     * with one line rather than one line per vhost.
+     *
+     * @param  array<int, string>  $patterns
+     */
+    private function matchesAny(string $value, array $patterns): bool
+    {
+        foreach ($patterns as $pattern) {
+            if (fnmatch((string) $pattern, $value, FNM_CASEFOLD)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function owner(string $documentRoot): ?string

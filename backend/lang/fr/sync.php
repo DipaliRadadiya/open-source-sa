@@ -15,6 +15,8 @@ return [
     ],
 
     'reasons' => [
+        'panel_infrastructure' => 'Il s\'agit du panneau lui-même, pas d\'un site qu\'il peut héberger. Laissé de côté volontairement.',
+        'outside_panel_layout' => 'Ce site n\'est pas organisé comme le panneau gère les sites ; il ne peut pas être adopté sans déplacer ses fichiers. Il continue d\'être servi — rien n\'a changé.',
         'vhost_unreadable' => 'La configuration du serveur web de ce site n\'a pas pu être lue ; il a été laissé tel quel.',
         'vhost_unparsed' => 'Ce site est servi, mais sa configuration n\'a pas une forme que le panneau sait lire. Adoptez-le à la main ou vérifiez le fichier.',
         'owner_not_tracked' => 'Le compte Linux propriétaire de ce site n\'est pas géré par le panneau. Synchronisez d\'abord les utilisateurs système.',

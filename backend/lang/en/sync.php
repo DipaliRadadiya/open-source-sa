@@ -15,6 +15,8 @@ return [
     ],
 
     'reasons' => [
+        'panel_infrastructure' => 'This is the panel itself, not a site it can host. Left alone deliberately.',
+        'outside_panel_layout' => 'This site is not laid out the way the panel manages sites, so it cannot be adopted without moving its files. It is still being served — nothing has changed.',
         'vhost_unreadable' => 'The web server config for this site could not be read, so it was left alone.',
         'vhost_unparsed' => 'This site is being served, but its config is not in a shape the panel could read. Adopt it by hand, or check the file.',
         'owner_not_tracked' => 'The Linux account that owns this site is not one the panel manages. Sync system users first, then run this again.',
