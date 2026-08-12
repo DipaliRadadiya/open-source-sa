@@ -1319,6 +1319,16 @@ Update PHP version and/or pool settings.
 
 **Response `200`:** `{"php": {...updated...}}`
 
+`GET .../php` reports open_basedir three ways, and they are allowed to disagree:
+
+| field | meaning |
+|---|---|
+| `open_basedir_effective` | what the panel would write from the saved settings. `null` when off. |
+| `open_basedir_live` | what the pool file on disk **actually** sets. `null` when the site has no pool, or its pool sets nothing. |
+| `open_basedir_recommended` | what switching it on with no additions would give — show this as the suggested value when it is off. |
+
+`live` differs from `effective` when someone hand-edited the pool file, or set their own `open_basedir` through `additional_directives` (which is appended raw and wins, since FPM takes the last of a repeated key). When they differ, show `live` — that is what PHP is enforcing — and `managed` will also be `false`.
+
 `open_basedir_paths` holds **additional** directories, one per line (`:` and `,` also accepted). The app root, the site's own session directory and `/tmp` are always included and cannot be removed — without them the site cannot read its own code or keep anyone logged in. Read `open_basedir_effective` from `GET .../php` to show the exact value the pool file will contain.
 
 **`422` on `open_basedir_paths`** for a relative path, a path containing `..`, or `/` — the last because it would leave the setting switched on while enforcing nothing.

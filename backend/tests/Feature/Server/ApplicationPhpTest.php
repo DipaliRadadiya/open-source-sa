@@ -618,3 +618,77 @@ describe('open_basedir', function () {
             ->and(poolFile())->toContain($effective);
     });
 });
+
+/*
+ * Three answers about one setting, and they are allowed to disagree.
+ *
+ * `effective` is what the panel would write, `live` is what the file on disk
+ * says, `recommended` is what switching it on would give. The panel is only
+ * honest if it can show the second one when it differs from the first.
+ */
+describe('open_basedir, as reported', function () {
+    it('recommends the base paths when the setting is off', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $php = $this->actingAs($this->admin)->getJson(phpUrl())->json('php');
+
+        // Nothing enforced, but the screen can still offer the value rather
+        // than asking someone to work out what a safe one looks like.
+        expect($php['open_basedir_effective'])->toBeNull()
+            ->and($php['open_basedir_live'])->toBeNull()
+            ->and($php['open_basedir_recommended'])
+            ->toContain('/home/siteowner/shop')
+            ->toContain('/tmp');
+    });
+
+    it('reads the value the pool file actually sets', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true, 'open_basedir_paths' => '/mnt/shared'])
+            ->assertOk();
+
+        $php = $this->actingAs($this->admin)->getJson(phpUrl())->json('php');
+
+        expect($php['open_basedir_live'])->toBe($php['open_basedir_effective'])
+            ->and($php['open_basedir_live'])->toContain('/mnt/shared');
+    });
+
+    it('reports what someone else set, not what we would have set', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true])
+            ->assertOk();
+
+        // Someone hand-edits the pool, or slips their own directive into the
+        // additional-directives box — where it lands after ours and wins,
+        // because FPM takes the last of a repeated key.
+        foreach (PoolFake::$files as $path => $contents) {
+            if (str_contains($path, 'pool.d/')) {
+                PoolFake::$files[$path] = $contents."\nphp_admin_value[open_basedir] = /srv/somewhere-else\n";
+            }
+        }
+
+        $php = $this->actingAs($this->admin)->getJson(phpUrl())->json('php');
+
+        // The whole point: the panel must not claim a restriction PHP is not
+        // applying.
+        expect($php['open_basedir_live'])->toBe('/srv/somewhere-else')
+            ->and($php['open_basedir_live'])->not->toBe($php['open_basedir_effective'])
+            // And the existing drift flag says the file is no longer ours.
+            ->and($php['managed'])->toBeFalse();
+    });
+
+    it('reports nothing live for a site with no pool of its own', function () {
+        fakePhpServer();
+
+        // Not isolated: there is no pool file, so there is nothing to read.
+        // Null, not the recommendation — "unknown" and "none" are different
+        // answers and the screen renders them differently.
+        expect($this->actingAs($this->admin)->getJson(phpUrl())->json('php.open_basedir_live'))
+            ->toBeNull();
+    });
+});

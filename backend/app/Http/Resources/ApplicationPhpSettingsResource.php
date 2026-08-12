@@ -103,10 +103,22 @@ class ApplicationPhpSettingsResource extends JsonResource
 
             'memory' => app(MemoryBudget::class)->withProposed($application, $settings),
 
-            // Exactly what the pool file will contain, base paths included.
-            // The user only supplies additions, so without this the screen
-            // would be showing half the value and calling it the setting.
+            // Three different answers, on purpose.
+            //
+            //  effective   — what the panel would write from the stored row.
+            //  live        — what the pool file on disk actually says. Null
+            //                when the site has no pool, or its pool sets
+            //                nothing. Differs from `effective` when someone
+            //                hand-edited the file or overrode the directive
+            //                through the additional-directives box, where it
+            //                lands after ours and wins.
+            //  recommended — what turning it on with no additions would give.
+            //                A starting point to show when it is off, so the
+            //                screen offers the value instead of asking the
+            //                user to invent it.
             'open_basedir_effective' => $pools->openBasedirFor($application, $settings),
+            'open_basedir_live' => $pools->liveOpenBasedir($application),
+            'open_basedir_recommended' => $pools->recommendedOpenBasedir($application),
 
             'suggested_disable_functions' => ApplicationPhpSettings::SAFE_DISABLED_FUNCTIONS,
 

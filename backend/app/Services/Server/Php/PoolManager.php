@@ -296,11 +296,77 @@ class PoolManager
         $this->files->put($path, $previous, $this->context($application, 'pool_rollback'));
     }
 
+    /**
+     * Memoized for the life of this instance — one request. `managed()` and
+     * the live open_basedir lookup both want the same file, and each read is
+     * an elevated `cat`; without this, opening one PHP screen shells out
+     * twice for identical bytes.
+     *
+     * @var array<string, string|null>
+     */
+    private array $readCache = [];
+
     private function read(string $path): ?string
     {
+        if (array_key_exists($path, $this->readCache)) {
+            return $this->readCache[$path];
+        }
+
         $result = $this->serverOps->run(['cat', $path], ['feature' => 'php', 'op' => 'pool_read'], timeout: 30);
 
-        return $result->failed() ? null : $result->output();
+        return $this->readCache[$path] = $result->failed() ? null : $result->output();
+    }
+
+    /**
+     * The open_basedir the pool file on disk actually sets, or null when the
+     * file does not exist or does not set one.
+     *
+     * Read rather than derived, because the two can differ and the difference
+     * is the whole point: someone can hand-edit the pool, or put their own
+     * `php_admin_value[open_basedir]` in the additional-directives box, where
+     * it lands after ours and wins. Deriving would have the panel report a
+     * restriction PHP is not applying.
+     */
+    public function liveOpenBasedir(Application $application): ?string
+    {
+        $path = $this->poolPath($application);
+
+        if ($path === null) {
+            return null;
+        }
+
+        $contents = $this->read($path);
+
+        if ($contents === null) {
+            return null;
+        }
+
+        // The last match wins, the way FPM itself resolves a repeated key —
+        // taking the first would report the panel's line while the server
+        // obeys someone else's. `php_value` as well as `php_admin_value`:
+        // both set it, and a config the panel did not write may use either.
+        preg_match_all(
+            '/^\s*php_(?:admin_)?value\s*\[\s*open_basedir\s*\]\s*=\s*(.+?)\s*$/mi',
+            $contents,
+            $matches,
+        );
+
+        $value = $matches[1] === [] ? null : trim((string) end($matches[1]));
+
+        return ($value === null || $value === '') ? null : $value;
+    }
+
+    /**
+     * What we would set if the user turned this on and added nothing.
+     *
+     * Offered as a starting point when open_basedir is off, so the screen can
+     * show the value rather than asking someone to guess it — the same shape
+     * as the disable_functions presets. It is deliberately the bare minimum
+     * the site needs to keep working, not a guess at what it might want.
+     */
+    public function recommendedOpenBasedir(Application $application): string
+    {
+        return $this->openBasedir($application, '');
     }
 
     /**
