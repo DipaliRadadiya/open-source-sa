@@ -325,10 +325,14 @@ Returns every `type` and `action` value the system has ever recorded, for buildi
 Paginated. Filters: `filter[user_id]`, `filter[type]`, `filter[action]`, `search` (free-text on type + action + actor name).
 
 ```json
-{"activity_log": [{"id": 1, "type": "user", "action": "registered", "description": "Registered", "user": {"id": 1, "username": "admin"}, "properties": {}, "created_at": "…", "created_at_human": "2 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 150, "last_page": 8}}
+{"activity_log": [{"id": 1, "type": "user", "action": "registered", "scope": "account", "description": "Registered", "user": {"id": 1, "username": "admin"}, "is_system": false, "properties": {}, "created_at": "…", "created_at_human": "2 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 150, "last_page": 8}}
 ```
 
 `description` is built at read time from `__('activity.'.$type.'.'.$action, $properties)` in the viewer's locale — not stored.
+
+`scope` is which half of the panel the row is about — `account` (users, roles, permissions, central consent) or `server` (everything operational) — so the frontend can badge or group without keeping its own copy of the type→scope map. It is null for a type not yet in the map.
+
+**`is_system: true` means no person did this** — a scheduled reboot, an automatic disk clean, a deploy from a git webhook. It is stated outright rather than left to be inferred from a null `user`, and the backend deliberately does not paper over it by writing some admin's id onto a system action.
 
 ---
 
@@ -520,15 +524,18 @@ Field `type` values: `text`, `password`, `select`, `domain`, `email`, `textarea`
 ### GET `/applications`
 **Permission:** `application` (view)
 
+Every application in the list carries the **same full shape** as `GET /applications/{application}` below — this is one resource, used everywhere. The list is not a trimmed variant.
+
 ```json
 {"applications": [{
   "id": 1, "name": "shop", "domain": "shop.example.com",
-  "site_type": "wordpress", "serving_profile": "php",
+  "site_type": "wordpress", "site_type_title": "WordPress",
+  "serving_profile": "php", "rendering_type": null,
+  "status": "active", "status_title": "Active", "deployed": true,
+  "is_disabled": false, "disabled_at": null,
   "system_user": {"id": 1, "username": "siteowner"},
-  "status": "running", "php_version": "8.4",
-  "repository": null, "branch": null,
-  "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago",
-  "last_deployed_at": null
+  "php_version": "8.4", "node_version": null,
+  "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
 }]}
 ```
 
@@ -581,25 +588,64 @@ Full application record. Poll this while `status` is `provisioning` or `deployin
 ```json
 {"application": {
   "id": 1, "name": "shop", "domain": "shop.example.com",
-  "site_type": "wordpress", "serving_profile": "php",
+  "site_type": "wordpress", "site_type_title": "WordPress",
+  "serving_profile": "php", "rendering_type": null,
+
+  "status": "active", "status_title": "Active", "deployed": true,
+  "is_disabled": false, "disabled_at": null,
+
+  "basic_auth_enabled": false, "basic_auth_username": null,
+
+  "ai_bot_policy": "block_training", "ai_bot_policy_title": "Block AI training crawlers",
+  "waf_enabled": true, "waf_mode": "detect", "waf_mode_title": "Detect only",
+  "waf_categories": ["query_string", "request_uri", "user_agent", "referrer", "cookie", "method"],
+  "fail2ban_enabled": false,
+
+  "is_staging": false, "production_application_id": null,
+  "cloned_from_application_id": null,
+
   "system_user": {"id": 1, "username": "siteowner"},
-  "status": "running", "status_title": "Running",
-  "php_version": "8.4",
-  "app_port": null,
-  "repository": null, "branch": null,
-  "webhook_enabled": false,
-  "auto_deploy": false,
-  "package_manager": null,
-  "node_version": null,
-  "deploy_script": null,
-  "deploy_script_customised": false,
-  "last_commit": null, "last_deployed_at": null,
-  "backup_target": {"id": 1, "storage_destination": {"id": 1, "name": "S3 Backup"}},
-  "certificate": {"type": "letsencrypt", "expires_at": "01-09-2026 00:00:00"},
-  "domains": [{"id": 1, "domain": "shop.example.com", "type": "primary", "verified": true}],
+
+  "php_version": "8.4", "node_version": null, "app_port": null,
+  "web_root": "/", "build_command": null, "start_command": null,
+
+  "has_process": false,
+
+  "git_account_id": null, "repository": null, "repository_url": null, "branch": null,
+
+  "webhook": {
+    "enabled": false, "provider": null, "url": null, "secret": null,
+    "verification": null, "last_delivered_at": null, "last_delivered_at_human": null
+  },
+
+  "settings": {},
+  "steps": [], "failed_step": null,
+  "last_commit": null, "last_deployed_at": null, "last_deployed_at_human": null,
+  "reference": null,
+
   "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
 }}
 ```
+
+**`status` is `pending` · `provisioning` · `active` · `failed`** — there is no `running`.
+
+**`status` and `is_disabled` are two different axes.** A healthy site can be paused — the vhost is swapped to an "unavailable" page — without its provisioning `status` changing. The enable/disable button switches on `is_disabled`, never on `status`. `deployed` is simply `status === "active"`, exposed so a "pending" badge cannot imply the site is reachable.
+
+**Fields that are absent, not null, unless the endpoint loads them.** These use `whenLoaded`, so the key is missing from the JSON entirely — check with `in` / `hasOwnProperty`, not for `null`:
+
+| field | present only on |
+|---|---|
+| `bot_blocked`, `bot_allowed` | `PUT /applications/{id}/bot-blocker` |
+| `waf_exceptions`, `waf_custom_rules` | `GET` and `PUT /applications/{id}/waf` |
+| `has_staging` | never — see the note under Staging Area |
+| `process` | only when `has_process` is true |
+| `directory_size_bytes` | only once computed (after the first deploy) |
+
+`has_process` is null-safe to read everywhere and tells you whether to render process controls at all: PHP and static sites have nothing to run, so the answer is "render nothing", not "render a disabled button".
+
+**`webhook.secret` is returned in full, deliberately** — the user has to paste it into their repository settings and will come back for it. `webhook.url` is assembled server-side so the frontend never builds the path or gets the host wrong. `webhook.verification` is `signature` or `token`; `token` means a plaintext shared value, which only GitLab has — offer the user the stronger signing token when you see it.
+
+`settings` is always an object (`{}` when empty), never `[]`. `steps` is a genuine list and stays `[]`.
 
 ---
 
@@ -726,10 +772,27 @@ Check if a port is available before creating an app.
 **Permission:** `app_domain` (view)
 
 ```json
-{"domains": [
-  {"id": 1, "domain": "shop.example.com", "type": "primary", "verified": true, "verified_at": "26-07-2026 09:00:00", "created_at": "25-07-2026 14:30:00"}
-]}
+{"domains": [{
+  "id": 1, "domain": "shop.example.com",
+  "type": "primary", "type_title": "Primary",
+  "redirect_to": null, "redirect_status": null,
+  "is_test": false,
+  "dns_verified": true,
+  "dns_verified_at": "26-07-2026 09:00:00", "dns_verified_at_human": "2 hours ago",
+  "dns_resolved_ip": "203.0.113.10",
+  "behind_proxy": false,
+  "certifiable": true,
+  "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
+}]}
 ```
+
+`type` is one of `primary`, `alias`, `redirect` — there is no `additional`. `redirect_to` and `redirect_status` (301 / 302) are only meaningful on a `redirect` row and null elsewhere.
+
+**The DNS fields are what gate the SSL button.** `dns_verified` is derived (`dns_verified_at !== null`) and means "this name currently resolves to this server". Do not offer Let's Encrypt while it is false: Let's Encrypt permits five authorisation failures per hostname per hour, so a guess is expensive.
+
+`behind_proxy` is broken out on its own because it is the single most common support question this screen produces. Cloudflare's proxy answers on its own addresses, so `dns_resolved_ip` will not be this server and HTTP validation never arrives — "DNS looks fine but SSL fails". Show the cause; don't let the user hunt for it.
+
+`certifiable` is whether this name can go on a certificate at all. A test domain never can — `nip.io` is not on the Public Suffix List, so every certificate issued for it anywhere shares one weekly limit.
 
 ---
 
@@ -738,16 +801,14 @@ Check if a port is available before creating an app.
 
 **Request:** `{"domain": "www.example.com"}`
 
-**Response `201`:** `{"domain": {"id": 2, "domain": "www.example.com", "type": "additional", "verified": false}}`
+**Response `201`:** `{"domain": {…}}` — the full domain object above.
 
 ---
 
 ### POST `/applications/{application}/domains/{domain}/verify`
 **Permission:** `app_domain` (view)
 
-Re-check DNS for this domain.
-
-**Response `200`:** `{"domain": {"id": 2, "domain": "www.example.com", "verified": true, "verified_at": "26-07-2026 09:05:00"}}`
+Re-check DNS for this domain. Returns the full domain object with `dns_verified`, `dns_verified_at`, `dns_resolved_ip` and `behind_proxy` refreshed.
 
 ---
 
@@ -776,13 +837,30 @@ Promote this domain to primary (renames vhost + log files).
 
 ```json
 {"certificate": {
-  "type": "letsencrypt", "status": "active",
-  "expires_at": "01-09-2026 00:00:00", "expires_at_human": "in 3 weeks",
-  "issuer": "Let's Encrypt",
+  "id": 1,
+  "type": "letsencrypt", "type_title": "Let's Encrypt",
+  "status": "active",
   "domains": ["shop.example.com", "www.example.com"],
-  "created_at": "25-07-2026 14:31:00"
+  "missing_domains": [],
+  "force_https": true,
+  "auto_renew": true, "renewable": true,
+  "issued_at": "25-07-2026 14:31:00", "issued_at_human": "2 weeks ago",
+  "expires_at": "01-09-2026 00:00:00", "expires_at_human": "in 3 weeks",
+  "days_remaining": 21,
+  "expired": false, "expiring_soon": false,
+  "message": "Active until 1 September 2026."
 }}
 ```
+
+There is **no `issuer` field** — use `type` / `type_title`.
+
+**`domains` is what the certificate covers; `missing_domains` is what the site answers to but the certificate does not.** They diverge the moment someone adds a domain, and that divergence is exactly the failure this panel exists to catch: the browser reports it, the server logs nothing. A non-empty `missing_domains` should prompt a re-issue, not a warning buried in a tooltip.
+
+`renewable` is a property of the type — nothing can renew an uploaded or self-signed certificate — while `auto_renew` is the user's setting. Show a renewal date only when `renewable` is true.
+
+`expiring_soon` is its own flag rather than something the frontend computes from `days_remaining`, so the threshold is one decision in one place (and can move when certificate lifetimes shrink).
+
+`message` is always present: a sentence in the *viewer's* locale. `reason` (a classified code) and `reference` appear **only when `status` is `failed`** — the keys are absent otherwise. Neither ever carries certbot's own output, which contains paths, order URLs and occasionally the account key location.
 
 **Response `200` with `certificate: null`:** no cert installed yet.
 
@@ -861,14 +939,22 @@ Newest first.
 
 ```json
 {"deployments": [{
-  "id": 12, "trigger": "manual", "trigger_title": "Manual deploy",
-  "status": "completed", "status_title": "Completed",
-  "branch": "main", "commit": "a1b2c3d",
+  "id": 12,
+  "status": "succeeded", "status_title": "Succeeded", "in_flight": false,
+  "trigger": "manual", "trigger_title": "Manual deploy",
+  "user": {"id": 1, "username": "admin"},
+  "branch": "main",
+  "commit_hash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+  "commit_short": "a1b2c3d",
   "commit_message": "Fix payment redirect",
-  "started_at": "28-07-2026 11:00:00", "started_at_human": "3 days ago",
-  "finished_at": "28-07-2026 11:01:30", "finished_at_human": "3 days ago",
-  "output": "…build log…",
-  "user": {"id": 1, "username": "admin"}
+  "commit_author": "Priya Nair",
+  "steps": ["init", "fetch", "checkout", "set_ownership", "script"],
+  "failed_step": null,
+  "reference": null,
+  "duration": 90,
+  "started_at": "28-07-2026 11:00:00",
+  "finished_at": "28-07-2026 11:01:30",
+  "created_at": "28-07-2026 11:00:00", "created_at_human": "3 days ago"
 }], "settings": {
   "branch": "main", "repository": "https://github.com/user/shop",
   "deploy_script": "cd {path}\ngit pull origin {branch}\nnpm install\nnpm run build",
@@ -880,6 +966,18 @@ Newest first.
 }}
 ```
 
+**`status` is `queued` · `running` · `succeeded` · `failed`.** There is no `completed` and no `pending`. Rather than hardcoding which of those are terminal, poll on **`in_flight`** — it is the backend's own answer to "is this still going", so a new status added later cannot silently break the list's polling.
+
+**`output` is not in the list.** It appears only on the single-deployment endpoint below; fifty deploys each carrying a full build log is a response nobody asked for.
+
+`commit_hash` is the full 40 characters, `commit_short` the one people recognise — the old `commit` key does not exist. `commit_author` is the commit's own author, which is not the `user` who pressed deploy.
+
+`user` is **null for a webhook deploy** — nobody pressed anything, and inventing an actor would be a lie. Render it as "System". On `POST …/deployments` and `…/redeploy` the key is **absent entirely** (the relation is not loaded there); it is present on this list and on the single-deployment view.
+
+`steps` accumulates step names in the order they completed — `init`, `fetch`, `checkout`, `set_ownership`, `script` — so the UI can show which stage a running deploy reached instead of a bare spinner. On a failure, `failed_step` names the one that broke and `reference` is the id to quote to support; the technical detail lives in the server-ops log under that id, never in the response.
+
+`duration` is whole seconds, and null until the deploy has both started and finished.
+
 ---
 
 ### POST `/applications/{application}/deployments`
@@ -887,25 +985,14 @@ Newest first.
 
 Start a deploy.
 
-**Response `202`:** `{"deployment": {"id": 13, "status": "pending"}}`
+**Response `202`:** `{"deployment": {"id": 13, "status": "queued", "in_flight": true, …}}`
 
 ---
 
 ### GET `/applications/{application}/deployments/{deployment}`
 **Permission:** `app_deployment` (view)
 
-One deployment with full build output.
-
-```json
-{"deployment": {
-  "id": 12, "trigger": "manual", "status": "completed",
-  "branch": "main", "commit": "a1b2c3d",
-  "commit_message": "Fix payment redirect",
-  "output": "…full build log…",
-  "started_at": "28-07-2026 11:00:00", "finished_at": "28-07-2026 11:01:30",
-  "user": {"id": 1, "username": "admin"}
-}}
-```
+The same deployment object as the list, plus **`output`** — the full build log, with credentials redacted. Each command appears as `$ <step>` followed by what it printed.
 
 ---
 
@@ -992,15 +1079,36 @@ All health signals for this application in one call.
 
 ```json
 {"environment": {
+  "exists": true,
   "path": "/home/siteowner/shop.example.com/.env",
+  "framework": "laravel", "framework_title": "Laravel",
+  "requires_restart": false,
+  "requires_apply": true,
   "raw": "APP_NAME=Shop\nDB_HOST=127.0.0.1\n…",
-  "backups": ["2026-07-28-141530", "2026-07-27-093000"],
   "variables": [
     {"key": "APP_NAME", "value": "Shop", "secret": false},
-    {"key": "DB_PASSWORD", "value": "••••••••", "secret": true}
-  ]
+    {"key": "DB_PASSWORD", "value": null, "secret": true}
+  ],
+  "checks": [
+    {"code": "app_debug_enabled", "severity": "danger", "key": "APP_DEBUG", "value": "true", "title": "…", "detail": "…"}
+  ],
+  "backups": ["2026-07-28-141530", "2026-07-27-093000"]
 }}
 ```
+
+All of this comes from **one read** of the file. A raw endpoint plus a parsed endpoint plus a checks endpoint would read it three times and can return three different answers if someone saves in between.
+
+`exists: false` is a normal state (nothing written yet), not an error — `raw` is then `""` and `checks` is empty.
+
+**A secret's `value` is `null`, not a masked string.** Don't render dots from the API; render them from `secret: true`.
+
+**`requires_restart` and `requires_apply` are the two ways a save can appear to do nothing**, answered up front so the button can say what it will actually do:
+- `requires_restart` — the application runs a process of its own, which is holding the old values in memory.
+- `requires_apply` — a compiled config cache exists (`bootstrap/cache/config.php` on Laravel/Statamic), which is read *instead of* the file. Editing `.env` with one present changes nothing at all until it is rebuilt.
+
+`framework` is one of `laravel`, `craft`, `statamic`, `nextjs`, `nuxt`, `node`, `unknown` — detected from what is on disk, not from the site type.
+
+`checks` are lint results on the file's contents, each with a `code`, a `severity`, the offending `key`/`value`, and a localised `title`/`detail`.
 
 `backups` — timestamped automatic snapshots before each save.
 
@@ -1379,32 +1487,95 @@ is true either way. Send `paths.length`; do not hardcode it.
 
 `403` for non-PHP site types.
 
+**The editable values live under `settings`, not at the top level.** There is no `opcache_*` field on this endpoint.
+
 ```json
 {"php": {
-  "isolated": true, "isolated_at": "25-07-2026 14:30:00",
+  "application_id": 1,
   "php_version": "8.4",
-  "memory_limit": "256M", "max_execution_time": 120,
-  "upload_max_filesize": "64M", "post_max_size": "128M",
-  "max_input_vars": 3000,
-  "opcache_enabled": true, "opcache_revalidate_freq": 2
-}}
-```
+  "available_versions": ["8.1", "8.2", "8.3", "8.4"],
 
-`isolated: false` — site runs on the shared PHP-FPM pool.
+  "isolated": true,
+  "isolated_at": "25-07-2026 14:30:00",
+  "isolation_supported": true,
+  "runs_as": "siteowner",
+  "managed": true,
 
-The response also carries `disable_functions` starting points. Render one
-button per entry, in the order given (safest first); titles and descriptions
-are already localised by `Accept-Language`.
+  "settings": {
+    "memory_limit": "256M",
+    "upload_max_filesize": "64M",
+    "post_max_size": "128M",
+    "max_execution_time": 120,
+    "max_input_time": 60,
+    "max_input_vars": 3000,
+    "session_gc_maxlifetime": 1440,
+    "pm_type": "ondemand",
+    "pm_max_children": 6,
+    "pm_max_requests": 500,
+    "open_basedir_enabled": true,
+    "open_basedir_paths": "/var/www/shop/extra",
+    "disable_functions": "exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec",
+    "allow_url_fopen": true,
+    "php_timezone": "UTC",
+    "auto_prepend_file": null,
+    "additional_directives": null
+  },
 
-```json
-{"php": {
+  "overridden": {
+    "memory_limit": true, "upload_max_filesize": false, "post_max_size": false,
+    "max_execution_time": true, "max_input_time": false, "max_input_vars": true,
+    "session_gc_maxlifetime": false, "pm_type": false, "pm_max_children": false,
+    "pm_max_requests": false, "open_basedir_enabled": true, "open_basedir_paths": true,
+    "disable_functions": true, "allow_url_fopen": false, "php_timezone": false,
+    "auto_prepend_file": false, "additional_directives": false
+  },
+
+  "presets": [
+    {"key": "low", "title": "…", "description": "…", "pm_type": "ondemand", "pm_max_children": 2},
+    {"key": "balanced", "title": "…", "description": "…", "pm_type": "ondemand", "pm_max_children": 6},
+    {"key": "high", "title": "…", "description": "…", "pm_type": "dynamic", "pm_max_children": 12}
+  ],
+
+  "memory": {
+    "total": 8360124416, "committed": 2147483648, "available": 6212640768,
+    "over_committed": false, "sites": 4, "this_site": 1610612736
+  },
+
+  "open_basedir_effective": "/var/www/shop:/var/www/shop/.sessions:/tmp:/var/www/shop/extra",
+  "open_basedir_live": "/var/www/shop:/var/www/shop/.sessions:/tmp",
+  "open_basedir_recommended": "/var/www/shop:/var/www/shop/.sessions:/tmp",
+
+  "suggested_disable_functions": "exec,passthru,…",
   "disable_functions_presets": [
     {"key": "safe",   "title": "Recommended", "description": "…", "functions": "exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec"},
     {"key": "strict", "title": "Strict",      "description": "…", "functions": "getmyuid,passthru,shell_exec,dl,exec,system,…"}
-  ],
-  "suggested_disable_functions": "exec,passthru,…"
+  ]
 }}
 ```
+
+**`settings` is always the *effective* value** — the user's override where one exists, the panel default otherwise. `overridden` is the parallel map saying which is which, so you can render a per-field "Reset to default" control instead of guessing. Same keys, same order, one boolean each.
+
+**`isolated` gates the entire screen.** Every value here is only enforceable once the site has a pool of its own; on a shared pool `memory_limit` is shared too. `isolated_at` is when that happened; `isolation_supported` is false where the web server has no FPM at all (OpenLiteSpeed runs LSAPI), so hide the isolate action rather than offering one that cannot work. `runs_as` is the Linux user the site's PHP executes as — its own system user once isolated, otherwise the server-wide web user (`www-data`).
+
+The shared `www-data` pool is **no longer a choice**: asking for it answers `405`. It survives only as a state for sites migrated from an older panel and for OpenLiteSpeed.
+
+**`managed: false` means the pool file on disk no longer matches what the panel would write** — someone edited it by hand. Warn *before* the user presses save, not after their edits are gone.
+
+**`open_basedir` has three answers on purpose, and they are all different questions.** `additional_directives` is appended to the pool config raw, so a directive a user writes there lands *after* the panel's and wins.
+
+| field | question it answers |
+|---|---|
+| `open_basedir_effective` | what the panel would write from the stored settings |
+| `open_basedir_live` | what the pool file on disk actually says right now — null when the site has no pool, or its pool sets nothing. Differs from `effective` after a hand edit or an override via `additional_directives` |
+| `open_basedir_recommended` | what switching it on with no additions would give — the value to offer when it is off, so the screen proposes a path list instead of asking the user to invent one |
+
+Paths the user adds are **appended** to a base of the application root plus that site's own session directory plus `/tmp`. A server-wide session directory (`/var/lib/php/sessions`, which a migrated commercial panel leaves behind) is deliberately never included: it would let every site read every other site's sessions.
+
+`pm_type` is `ondemand` / `dynamic` / `static`, and `presets` exists so nobody has to reason about worker counts from first principles — three named starting points, each carrying the `pm_type` and `pm_max_children` it implies. `memory` is the budget in **bytes**, recalculated against `/proc` on every request (a VPS can be resized underneath a cached figure); `this_site` is what the current settings commit, so the screen can show the cost of a change before it is saved and flag `over_committed`.
+
+`suggested_disable_functions` is the `safe` list repeated as a flat string,
+kept so older clients keep working. Prefer `disable_functions_presets` — a third preset should
+not need a frontend change. Titles and descriptions in both `presets` arrays are already localised by `Accept-Language`.
 
 `suggested_disable_functions` is the `safe` list repeated as a flat string,
 kept so older clients keep working. Prefer the array — a third preset should
@@ -1494,11 +1665,16 @@ WordPress only. Clone a site to a staging domain, work on it, push changes back.
 ```json
 {"staging": {
   "id": 5, "name": "shop-staging", "domain": "staging.example.com",
-  "status": "running", "php_version": "8.4",
+  "status": "active", "php_version": "8.4",
+  "is_staging": true, "production_application_id": 1,
   "system_user": {"id": 1, "username": "siteowner"},
   "created_at": "28-07-2026 09:00:00", "created_at_human": "3 days ago"
 }}
 ```
+
+A staging site is **just another application row** — the full application object, with `is_staging: true` and `production_application_id` pointing back. `staging: null` when none exists.
+
+⚠️ The production site's own `has_staging` flag is documented on the application resource but **no endpoint currently loads the relation that produces it**, so the key never appears in practice. Decide "create staging vs view staging" from this endpoint returning null or an object, not from `has_staging`.
 
 `staging: null` — no staging site exists yet.
 
@@ -1780,15 +1956,45 @@ For live tail, poll with `?after=<cursor>` — returns only newly-appended lines
 ### GET `/applications/{application}/workers`
 **Permission:** `app_worker` (view)
 
+Workers are systemd units. The old supervisor-style field names (`numprocs`, `autostart`, `autorestart`, `startsecs`, `stopwaitsecs`, `status`) **do not exist** — the real shape is:
+
 ```json
-{"workers": [
-  {"id": 1, "name": "queue", "command": "php artisan queue:work --sleep=3 --tries=3", "directory": "/home/siteowner/shop.example.com", "numprocs": 2, "autostart": true, "autorestart": true, "startsecs": 3, "stopwaitsecs": 10, "enabled": true, "status": "running"}
-], "presets": [
-  {"name": "Queue Worker", "command": "php artisan queue:work --sleep=3 --tries=3", "directory": "{path}", "numprocs": 1, "autostart": true, "autorestart": true}
-], "checks": {"queue_present": true}}
+{"workers": [{
+  "id": 1,
+  "application_id": 1,
+  "name": "queue",
+  "command": "php8.4 artisan queue:work --sleep=3 --tries=3 --max-time=3600",
+  "kind": "queue", "kind_title": "Queue worker",
+  "directory": null,
+  "processes": 4,
+  "stop_wait_seconds": 10,
+  "auto_restart": true,
+  "restart_on_deploy": true,
+  "enabled": true,
+  "running": 3,
+  "state": "degraded", "state_title": "Degraded",
+  "log_identifier": "sv-worker-1",
+  "created_at": "28-07-2026 11:00:00", "created_at_human": "3 days ago"
+}], "presets": [
+  {"key": "queue", "kind": "queue", "title": "Queue worker", "description": "…", "command": "php8.4 artisan queue:work --sleep=3 --tries=3 --max-time=3600"},
+  {"key": "horizon", "kind": "horizon", "title": "Horizon", "description": "…", "command": "php8.4 artisan horizon"},
+  {"key": "custom", "kind": "custom", "title": "Custom command", "description": "…", "command": ""}
+], "checks": [
+  {"code": "cache_driver_array", "severity": "warning", "title": "…", "detail": "…"}
+]}
 ```
 
-`presets` — one-click setups for common patterns (queue worker, Horizon, custom). `{path}` is substituted with the app's root directory.
+**`running` and `state` are read from systemd on every request and never stored.** `state` is `running` (all processes up), `degraded` (some up), or `stopped` (none) — "3 of 4 running" is a real condition that a single green dot would hide, so show `running` against `processes`.
+
+`enabled: false` means the unit is kept but not started — disabling is not deleting.
+
+`kind` is `queue`, `horizon` or `custom`, and it decides **how** a restart happens: `queue:restart` for a queue worker, `horizon:terminate` for Horizon, a direct unit restart otherwise. It is not cosmetic. A queue worker and Horizon on the same application both consume the same queue and would run every job twice — neither tool can detect the other, so the request layer rejects the combination.
+
+`restart_on_deploy` makes the worker pick up new code after a deploy; without it a deploy leaves the site on new code and the queue on old code, with nothing anywhere connecting the two.
+
+`log_identifier` is the journal identifier, so the logs screen can be linked to without the frontend assembling a unit name.
+
+`presets` are starting points for the detected framework — key/kind/command, already localised. `checks` is a list (empty for non-Laravel sites), each entry a `code` + `severity` + localised `title`/`detail`; `cache_driver_array` is the one worth surfacing loudly, because on the `array` cache driver `queue:restart` silently does nothing.
 
 ---
 
@@ -1799,8 +2005,20 @@ Add a worker.
 
 **Request:**
 ```json
-{"name": "queue", "command": "php artisan queue:work --sleep=3 --tries=3", "directory": "/home/siteowner/shop.example.com", "numprocs": 2, "autostart": true, "autorestart": true, "startsecs": 3, "stopwaitsecs": 10}
+{
+  "name": "queue",
+  "command": "php8.4 artisan queue:work --sleep=3 --tries=3",
+  "kind": "queue",
+  "directory": null,
+  "processes": 2,
+  "stop_wait_seconds": 10,
+  "auto_restart": true,
+  "restart_on_deploy": true,
+  "enabled": true
+}
 ```
+
+`name` and `command` are required; everything else is optional. `name` is unique per application. `command` rejects shell metacharacters (`; | & \` $ < > ( )` and newlines) — it is executed directly, not through a shell. `directory` is relative to the application root, defaults to it, and may not contain `..`. `processes` is at least 1, `stop_wait_seconds` 1–600.
 
 **Response `201`:** `{"worker": {...}}`
 
@@ -1811,7 +2029,7 @@ Add a worker.
 
 Update worker settings. Changes write a new systemd unit and restart the worker.
 
-**Request:** `{"numprocs": 4, "autostart": false}`
+**Request:** `{"processes": 4, "enabled": false}` — same fields as create, all optional.
 
 **Response `200`:** `{"worker": {...updated...}}`
 
@@ -1831,7 +2049,7 @@ Remove the worker (stops the process, removes the unit, deletes the record).
 
 Control a running worker. `{action}` = `start | stop | restart`.
 
-**Response `200`:** `{"worker": {"id": 1, "status": "running"}}`
+**Response `200`:** `{"worker": {"id": 1, "running": 4, "state": "running", "state_title": "Running", …}}` — the full worker object, with `running`/`state` re-read from systemd after the action.
 
 ---
 
@@ -1896,12 +2114,26 @@ On failure: `status: "failed", "status_title: "Clone failed", "reason": "…"`.
 
 Every application and its backup configuration — the overview screen.
 
+**Driven from applications, not from backup targets** — a list built from targets could only ever return the sites that are already protected, and the question this screen exists to answer is which ones are not. Not paginated: one server holds a handful of sites, and a "5 of 7 protected" built from page one would be wrong.
+
 ```json
 {"backup_targets": [
-  {"id": 1, "application": {"id": 1, "name": "shop", "domain": "shop.example.com"}, "configured": true, "storage_destination": {"id": 1, "name": "S3 Backup"}, "schedule": "daily", "retention": 7, "last_backup": {"id": 15, "status": "completed", "created_at": "28-07-2026 02:00:00"}},
-  {"id": null, "application": {"id": 2, "name": "blog", "domain": "blog.example.com"}, "configured": false, "storage_destination": null, "schedule": null, "retention": null, "last_backup": null}
+  {
+    "application_id": 1, "application_name": "shop", "application_domain": "shop.example.com",
+    "backup_target": {"id": 1, "type": "full", "frequency": "daily", "…": "…"},
+    "last_backup": {"id": 15, "status": "verified", "created_at": "28-07-2026 02:00:00", "…": "…"}
+  },
+  {
+    "application_id": 2, "application_name": "blog", "application_domain": "blog.example.com",
+    "backup_target": null,
+    "last_backup": null
+  }
 ], "meta": {"total": 7, "protected": 4, "unprotected": 3}}
 ```
+
+There is no `configured` flag — `backup_target === null` is the unprotected state. `backup_target` and `last_backup` are the full objects documented below.
+
+**`last_backup` is the newest run however it ended**, not the last successful one. A failed run replaces a good one here; read its `status` before showing a reassuring date.
 
 ---
 
@@ -1912,11 +2144,30 @@ Backup settings for one application.
 
 ```json
 {"backup_target": {
-  "id": 1, "storage_destination_id": 1,
-  "storage_destination": {"id": 1, "name": "S3 Backup", "provider": "s3", "bucket": "my-backups"},
-  "schedule": "daily", "retention": 7, "enabled": true
+  "id": 1,
+  "application_id": 1,
+  "storage_destination_id": 1,
+  "storage_destination_name": "S3 Backup",
+  "type": "full", "type_title": "Files and database",
+  "retention_count": 7,
+  "frequency": "daily", "frequency_title": "Daily",
+  "schedule_time": "02:00",
+  "enabled": true,
+  "file_excludes": ["storage/framework/cache", "node_modules"],
+  "database_excludes": ["sessions", "cache"],
+  "last_run_at": "28-07-2026 02:00:00", "last_run_at_human": "3 days ago",
+  "next_run_at": "29-07-2026 02:00:00", "next_run_at_human": "in 20 hours",
+  "is_due": false,
+  "created_at": "25-07-2026 14:30:00",
+  "updated_at": "28-07-2026 02:00:05"
 }}
 ```
+
+There is no `schedule` or `retention` field — they are **`frequency`** and **`retention_count`**. There is no nested `storage_destination` object either: only `storage_destination_id` plus a flat `storage_destination_name` (and that name is present only when the endpoint loads the relation — it does here and on save).
+
+`frequency` is `manual` · `daily` · `weekly` · `monthly`; `schedule_time` is `HH:MM` in the server's timezone. `type` is `filesystem` · `database` · `full`.
+
+**Read `is_due`, not `next_run_at`, to decide whether a run is imminent.** A brand-new target is due immediately — it will run on the next scheduler tick — while `next_run_at` names the next *scheduled* slot, which can be tomorrow. The two disagreeing is correct, not a bug.
 
 `backup_target: null` — not configured.
 
@@ -1929,8 +2180,19 @@ Configure or update backup settings.
 
 **Request:**
 ```json
-{"storage_destination_id": 1, "schedule": "daily", "retention": 7, "enabled": true}
+{
+  "storage_destination_id": 1,
+  "type": "full",
+  "frequency": "daily",
+  "schedule_time": "02:00",
+  "retention_count": 7,
+  "enabled": true,
+  "file_excludes": ["node_modules"],
+  "database_excludes": ["sessions"]
+}
 ```
+
+`storage_destination_id`, `type`, `frequency`, `retention_count` and `enabled` are all **required** — this is a full save, not a patch. `retention_count` is 1–365. `schedule_time` must be `H:i`. The two exclude arrays are optional, max 100 entries each.
 
 **Response `200`:** `{"backup_target": {...}}`
 
@@ -1954,18 +2216,36 @@ Poll the backup's own `GET /backups/{id}` while it runs.
 
 Every backup across every application — paginated, filterable.
 
-**Query:** `?filter[application_id]=1&filter[status]=completed&filter[type]=full&filter[from]=2026-07-01&filter[to]=2026-07-31&page=1&per_page=20`
+**Query:** `?filter[application_id]=1&filter[status]=verified&filter[type]=full&filter[from]=2026-07-01&filter[to]=2026-07-31&page=1&per_page=20`
 
 ```json
 {"backups": [{
-  "id": 15, "application_id": 1,
-  "application": {"id": 1, "name": "shop", "domain": "shop.example.com"},
-  "type": "full", "status": "completed", "status_title": "Completed",
-  "size_bytes": 52428800, "size_human": "50 MB",
+  "id": 15,
+  "application_id": 1,
+  "application_name": "shop", "application_domain": "shop.example.com",
+  "type": "full", "type_title": "Files and database",
   "is_safety": false,
+  "status": "verified", "status_title": "Verified",
+  "size_bytes": 52428800,
+  "reason": null, "reason_title": null,
+  "log_key": "backup-15",
+  "reference": null,
+  "started_at": "28-07-2026 02:00:00",
+  "finished_at": "28-07-2026 02:04:00",
+  "verified_at": "28-07-2026 02:04:10",
   "created_at": "28-07-2026 02:00:00", "created_at_human": "Yesterday"
-}], "meta": {"current_page": 1, "per_page": 20, "total": 45, "last_page": 3, "counts": {"total": 45, "pending": 0, "running": 1, "completed": 40, "failed": 4}}}
+}], "meta": {"current_page": 1, "per_page": 20, "total": 45, "last_page": 3, "counts": {"total": 45, "pending": 0, "running": 1, "verifying": 0, "completed": 40, "failed": 4}}}
 ```
+
+**`status` is `pending` · `running` · `verifying` · `verified` · `failed`.** There is no `completed` — a finished, checked backup is `verified`, and `filter[status]=completed` is rejected as an invalid enum value. (The `meta.counts` key *is* spelled `completed`, and counts the `verified` rows. That inconsistency is in the response; it is not a typo here.)
+
+`verified_at` is when the archive was checked after upload, which is the only timestamp that means the backup is actually restorable. `finished_at` only means the process stopped.
+
+The application is flattened as `application_name` / `application_domain` — there is no nested `application` object, and **no `size_human`**: format `size_bytes` yourself.
+
+`reason` is a classified failure code with `reason_title` its localised sentence; both null unless `status` is `failed`. `log_key` addresses this run's log through the logs endpoints, and `reference` is the id to quote to support.
+
+`is_safety: true` marks the automatic pre-restore snapshot rather than a backup anyone scheduled — worth distinguishing in the list so it does not read as a stray extra run.
 
 ---
 
@@ -1974,16 +2254,7 @@ Every backup across every application — paginated, filterable.
 
 Poll one backup.
 
-```json
-{"backup": {
-  "id": 15, "application_id": 1, "type": "full",
-  "status": "completed", "status_title": "Completed",
-  "size_bytes": 52428800, "size_human": "50 MB",
-  "is_safety": false,
-  "created_at": "28-07-2026 02:00:00", "created_at_human": "Yesterday",
-  "finished_at": "28-07-2026 02:04:00", "finished_at_human": "4 minutes later"
-}}
-```
+Same object as the list above — `{"backup": {…}}`. Poll until `status` is `verified` or `failed`.
 
 ---
 
@@ -2028,15 +2299,25 @@ Restore history — what was restored, when, and by whom. Paginated.
 ```json
 {"restores": [{
   "id": 3, "backup_id": 14, "application_id": 1,
-  "application": {"id": 1, "name": "shop", "domain": "shop.example.com"},
-  "type": "full", "status": "succeeded", "status_title": "Restore succeeded",
-  "reason": null, "current_step": null,
-  "started_at": "28-07-2026 10:00:00", "finished_at": "28-07-2026 10:05:00",
-  "safety_backup_id": 16, "rollback_path": "/home/siteowner/.rollback-3"
+  "application_name": "shop", "application_domain": "shop.example.com",
+  "type": "full", "type_title": "Files and database",
+  "status": "succeeded", "status_title": "Restore succeeded",
+  "current_step": null, "current_step_title": null,
+  "step_number": null, "total_steps": 7,
+  "reason": null, "reason_title": null,
+  "safety_backup_id": 16,
+  "rollback_path": "/home/siteowner/.rollback-3",
+  "reference": null,
+  "started_at": "28-07-2026 10:00:00", "started_at_human": "3 days ago",
+  "finished_at": "28-07-2026 10:05:00", "finished_at_human": "3 days ago"
 }], "meta": {"current_page": 1, "per_page": 20, "total": 3, "last_page": 1}}
 ```
 
+The application is flattened as `application_name` / `application_domain` — no nested object.
+
 `safety_backup_id` — the pre-restore snapshot created automatically. `rollback_path` — the previous site directory still on disk.
+
+`current_step` is the machine key, `current_step_title` its localised sentence, and `step_number` / `total_steps` turn it into a progress bar. `step_number` is null when nothing has started yet; `total_steps` is always populated, so a bar can be rendered before the first step reports.
 
 ---
 
@@ -2252,7 +2533,40 @@ An omitted `mode` is **preview**. Refused with `422` while another run is live.
 ### GET `/server/sync/{run}?since=<item id>`
 **Permission:** `sync` (view)
 
-The run plus items **after the cursor**, so a screen can poll ~1s and append — this is the line-by-line feed. Each item: `resource_type`, `resource_key`, `action` (`found|adopted|skipped|failed`), `confidence`, `evidence`, `reason` (localized).
+The run plus items **after the cursor**, so a screen can poll ~1s and append — this is the line-by-line feed.
+
+```json
+{"sync": {
+  "id": 1,
+  "mode": "preview",
+  "status": "running",
+  "finished": false,
+  "options": {"only": [], "include_firewall": false, "include_ignored": false},
+  "totals": {"found": 12, "adopted": 0, "skipped": 3, "failed": 0},
+  "started_at": "12-08-2026 09:00:00",
+  "finished_at": null,
+  "items": [{
+    "id": 87,
+    "resource_type": "application",
+    "resource_key": "shop.example.com",
+    "action": "found",
+    "confidence": "high",
+    "evidence": "wp-config.php",
+    "reason": null,
+    "model_id": null
+  }]
+}}
+```
+
+Poll on **`finished`** rather than comparing `status` against a list of terminal values.
+
+`totals` is the running tally per action, so the header does not have to be reduced from a paged item list — and stays correct when the caller is only fetching items after a cursor.
+
+`model_id` is the id of the row that was created, and is **null on a preview run and on any item that was not adopted**. It is what turns a finished line into a link to the thing it created.
+
+`confidence` and `evidence` exist because a site's type is *inferred* (`wp-config.php`, `artisan`, `package.json`). A site mislabelled WordPress will later have `wp` commands run at it, so show the evidence rather than presenting the guess as fact.
+
+`items` is absent unless the endpoint loads it.
 
 ### GET `/server/sync/latest` · GET/POST `/server/sync/ignores` · DELETE `/server/sync/ignores/{ignore}`
 **Permission:** `sync` (view / manage)
@@ -2311,13 +2625,23 @@ All exports, newest first. Includes in-flight rows.
 
 ```json
 {"exports": [{
-  "id": 1, "database_id": 1, "database_name": "shop_db", "engine": "mariadb",
+  "id": 1, "database_id": 1, "database": "shop_db", "engine": "mariadb",
   "status": "completed", "file": "shop_db-2026-07-28-100000.sql.gz",
   "size_bytes": 2097152, "size_human": "2 MB",
+  "reason": null, "message": null, "reference": null,
   "available": true,
-  "created_at": "28-07-2026 10:00:00", "created_at_human": "Yesterday"
+  "download_url": "https://panel.example.com/api/databases/exports/shop_db-2026-07-28-100000.sql.gz",
+  "requested_by": {"id": 1, "username": "admin"},
+  "created_at": "28-07-2026 10:00:00", "created_at_human": "Yesterday",
+  "finished_at": "28-07-2026 10:00:12", "finished_at_human": "Yesterday"
 }]}
 ```
+
+The database name is `database`, not `database_name`.
+
+**`available` is not the same as `status: "completed"`** — it also checks the file is still on disk. A retention sweep or a manual delete leaves a completed row whose file is gone; render the download button off `available`, and `download_url` is null in exactly that case.
+
+`reason` is a classified failure code and `message` its localised sentence; `reference` is the id to quote to support. `requested_by` is absent unless the endpoint loads the user, and null when the export was made by the system rather than a person.
 
 ---
 
@@ -2345,11 +2669,20 @@ Delete the export row **and** its file.
 ```json
 {"users": [{
   "id": 1, "database_id": 1, "username": "shopuser",
+  "password": "s3cr3t…",
+  "password_known": true,
   "connection_preference": "localhost",
-  "host": null, "connection_string": "shopuser@localhost",
+  "host": "localhost",
+  "connection_string": "mariadb://shopuser:s3cr3t%E2%80%A6@127.0.0.1:3306/shop_db",
   "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
 }]}
 ```
+
+**`connection_string` is a full URI with the password in it**, not a `user@host` label — it exists to be copied into an application's config. It is null when the password is unknown or the `database` relation is not loaded. `localhost` and `%` are rendered as `127.0.0.1` so the string works when pasted.
+
+**`password_known: false` is the adopted-database case.** A user imported from an existing server has no password the panel ever saw, so `password` is null and no connection string can be built — offer "set a new password" rather than showing an empty field that looks like a bug.
+
+The password is returned in full, deliberately: the user has to paste it into their application and will come back for it. Same reasoning as the system-user password.
 
 ---
 
@@ -2659,13 +2992,26 @@ Paginated, filterable. Filters: `filter[system_user_id]`, `filter[application_id
 
 ```json
 {"cronjobs": [{
-  "id": 1, "user": "siteowner", "system_user": {"id": 1, "username": "siteowner"},
+  "id": 1,
+  "name": "Laravel scheduler",
+  "slug": "laravel-scheduler",
+  "username": "siteowner",
+  "system_user": {"id": 1, "username": "siteowner"},
   "command": "cd /home/siteowner/shop.example.com && php artisan schedule:run",
-  "expression": "*/5 * * * *", "human": "Every 5 minutes",
-  "active": true, "last_run_at": "29-07-2026 09:55:00", "next_run_at": "29-07-2026 10:00:00",
-  "created_at": "25-07-2026 14:30:00"
+  "expression": "*/5 * * * *",
+  "active": true,
+  "timezone": "Europe/Berlin",
+  "log_key": "cron-laravel-scheduler",
+  "next_run_at": "29-07-2026 10:00:00", "next_run_at_human": "in 4 minutes",
+  "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
 }], "meta": {"current_page": 1, "per_page": 10, "total": 3, "last_page": 1}}
 ```
+
+The account is `username` (a plain string, always present), not `user`. `system_user` is the linked record and is **absent unless the endpoint loads it**, and null for a job whose account is not a panel-managed system user — a job adopted from an existing crontab is the normal case.
+
+There is **no `human` field** (render the expression client-side or use the schedule presets endpoint) and **no `last_run_at`** — cron does not record one. `next_run_at` is computed from the expression against `timezone`, which is the server's timezone and is returned on every row so the frontend never has to assume UTC.
+
+`slug` is the identity on disk (`/etc/cron.d/<slug>`); `log_key` addresses this job's captured output through the logs endpoints.
 
 ---
 
@@ -2758,7 +3104,9 @@ Current snapshot — poll every 2–5s for live gauges. **Network and disk I/O a
 
 ```json
 {"metrics": [
-  {"sampled_at": "28-07-2026 00:00:00", "cpu": 8.2, "memory": 45.1, "swap": 0, "disk": 58, "load_1": 0.3, "net_in": 5120, "net_out": 2048, "disk_read": 0, "disk_write": 0},
+  {"sampled_at": "28-07-2026 00:00:00", "cpu": 8.2, "memory": 45.1, "swap": 0, "disk": 58,
+   "load_1": 0.3, "load_5": 0.42, "load_15": 0.51,
+   "net_in": 5120, "net_out": 2048, "disk_read": 0, "disk_write": 0},
   …
 ]}
 ```
@@ -2867,15 +3215,43 @@ Inbound rule presets for the UI.
 ### GET `/firewall`
 **Permission:** `firewall` (view)
 
+**The payload is flat — there is no `firewall` wrapper object.**
+
 ```json
-{"firewall": {
+{
   "enabled": true,
-  "rules": [
-    {"id": 1, "type": "allow", "port": 22, "protocol": "tcp", "address": "203.0.113.5/32", "label": "Office IP", "created_at": "23-07-2026 10:00:00"}
-  ],
-  "risky_ports": [{"port": 3306, "service": "MySQL", "reason": "Database server"}, …]
-}}
+  "default_policy": "deny",
+  "rules": [{
+    "id": 1,
+    "port_from": 22, "port_to": null,
+    "protocol": "tcp",
+    "action": "allow",
+    "source_ip": "203.0.113.5/32",
+    "description": "Office IP",
+    "origin": "user",
+    "enabled": true,
+    "protected": false,
+    "summary": "Allow 22/tcp from 203.0.113.5/32",
+    "created_at": "23-07-2026 10:00:00", "created_at_human": "3 weeks ago"
+  }],
+  "your_ip": "203.0.113.5",
+  "ssh_port": 22,
+  "listening": [{"port": 3306, "protocol": "tcp", "address": "0.0.0.0", "program": "mariadbd"}],
+  "risky_ports": [{"port": 3306, "service": "MySQL", "reason": "Database server"}]
+}
 ```
+
+A rule is `action` (`allow` / `deny`) over a port **range** — `port_from` plus optional `port_to` — not `type` + `port`. The source is `source_ip` (IP or CIDR, null meaning anywhere), and the note is `description`, not `label`. `protocol` is `all` · `tcp` · `udp`.
+
+`summary` is the whole rule as one localised sentence ("Allow 443/tcp from Anywhere") — use it for the row rather than reassembling the parts in the frontend.
+
+`enabled: false` means kept but not applied; disabling is not deleting. `protected: true` marks system-seeded rules (`origin` other than `user`) that cannot be deleted — hide the delete action rather than letting it 422.
+
+`your_ip` is the caller's own address, so "only my IP" is one click; without it people open ports to everyone rather than go and look their address up.
+
+`ssh_port` is read here rather than from Settings on purpose: a user with firewall access but not settings access would get a 403 there and fall back to 22, and being wrong about the SSH port on this screen is how people lock themselves out.
+
+`listening` is what is actually bound right now, from `ss`. `program` is often null — the panel's PHP process is unprivileged and cannot see another user's process name — so render the port even when the program is unknown.
 
 `risky_ports` — ports detected from installed database engines + config, to warn before opening them.
 
@@ -2886,9 +3262,11 @@ Inbound rule presets for the UI.
 
 Add a rule.
 
-**Request:** `{"type": "allow", "port": 22, "protocol": "tcp", "address": "203.0.113.5/32"}`
+**Request:** `{"action": "allow", "port_from": 22, "port_to": null, "protocol": "tcp", "source_ip": "203.0.113.5/32", "description": "Office IP"}`
 
-**Response `201`:** `{"firewall_rule": {"id": 2, "type": "allow", "port": 22, "protocol": "tcp", "address": "203.0.113.5/32"}}`
+`action`, `port_from` and `protocol` are required. `port_to` is optional and must be ≥ `port_from`. `source_ip` accepts a bare IP or CIDR; null means anywhere.
+
+**Response `201`:** `{"rule": {…}}` — note the key is **`rule`**, not `firewall_rule`.
 
 ---
 
@@ -3123,8 +3501,18 @@ Remove the schedule entirely.
 
 Manual + scheduled run history, paginated.
 
+`categories` is what was asked for; `freed` is a per-category map of bytes actually reclaimed, so a category that ran and freed nothing is visible as `0` rather than missing. `disk_percent` is disk usage **after** the run, which is what makes the history worth keeping — it answers whether cleaning is still helping.
+
 ```json
-{"runs": [{"id": 1, "trigger": "scheduled", "categories": ["apt_cache"], "freed_total": 104857600, "freed_total_human": "100 MB", "status": "success", "created_at": "27-07-2026 03:00:00"}], "meta": {"current_page": 1, "per_page": 20, "total": 5, "last_page": 1}}
+{"runs": [{
+  "id": 1, "trigger": "scheduled",
+  "categories": ["apt_cache", "journal"],
+  "freed": {"apt_cache": 83886080, "journal": 20971520},
+  "freed_total": 104857600, "freed_total_human": "100 MB",
+  "status": "success",
+  "disk_percent": 58,
+  "created_at": "27-07-2026 03:00:00", "created_at_human": "5 days ago"
+}], "meta": {"current_page": 1, "per_page": 20, "total": 5, "last_page": 1}}
 ```
 
 ---
@@ -3446,10 +3834,22 @@ What each provider needs to connect.
 **Permission:** `git` (view)
 
 ```json
-{"git_accounts": [
-  {"id": 1, "label": "Personal", "provider": "github", "provider_title": "GitHub", "username": "devuser", "status": "valid", "expires_at": null}
-]}
+{"git_accounts": [{
+  "id": 1,
+  "provider": "github", "provider_title": "GitHub",
+  "label": "Personal",
+  "identifier": "devuser",
+  "host": null,
+  "workspace": null,
+  "scopes": ["repo", "read:user"],
+  "last_verified_at": "29-07-2026 10:00:00", "last_verified_at_human": "2 hours ago",
+  "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
+}]}
 ```
+
+The account name is `identifier`, not `username`. **There is no `status` or `expires_at` here** — token health is never cached on this record; ask `GET /integrations/git/accounts/status` for it, since a token can be revoked at any moment.
+
+`host` is null for the hosted service and set for a self-hosted GitLab/Bitbucket. `workspace` is the Bitbucket workspace (or GitLab group) the token is scoped to, null elsewhere. `scopes` is what the token was found to grant at `last_verified_at` — an empty array means the check has not run or returned none, not that the token is scopeless.
 
 ---
 
@@ -3538,11 +3938,31 @@ Verify the token is still valid with the provider.
 **Permission:** `storage` (view)
 
 ```json
-{"storage_destinations": [
-  {"id": 1, "name": "S3 Backup", "provider": "s3", "bucket": "my-backups", "region": "eu-west-1",
-   "last_tested_at": "28-07-2026 10:00:00", "last_test_success": true, "last_test_error": null}
-]}
+{"storage_destinations": [{
+  "id": 1,
+  "name": "S3 Backup",
+  "driver": "s3",
+  "endpoint": "https://s3.eu-west-1.amazonaws.com",
+  "region": "eu-west-1",
+  "bucket": "my-backups",
+  "prefix": "backups/",
+  "has_credentials": true,
+  "status": "connected", "status_title": "Connected",
+  "last_tested_at": "28-07-2026 10:00:00", "last_tested_at_human": "yesterday",
+  "last_test_success": true,
+  "last_test_error": null,
+  "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago",
+  "updated_at": "28-07-2026 10:00:00", "updated_at_human": "yesterday"
+}]}
 ```
+
+The field is `driver` (always `"s3"` today), not `provider`, and the path prefix is `prefix`, not `path_prefix`.
+
+**`status` distinguishes three states, and the third one matters:** `never_tested` · `connected` · `failed`. `last_test_success` is deliberately nullable — never-asked is not the same as asked-and-failed, and rendering a red cross for an untested destination would be a lie. Drive the badge off `status`, not off the boolean.
+
+**The test result is cleared whenever credentials or the address change.** A stored "connected" describes the keys that were tested, not the ones now saved; a green tick for a key rotated out ten seconds ago is the one thing this field exists to prevent.
+
+`has_credentials` says whether an access key and secret are stored, without returning either. Keys are never in a response.
 
 ---
 
@@ -3551,8 +3971,8 @@ Verify the token is still valid with the provider.
 
 **Request:**
 ```json
-{"name": "S3 Backup", "provider": "s3", "endpoint": "https://s3.amazonaws.com",
- "bucket": "my-backups", "region": "eu-west-1", "access_key": "AKIA…", "secret_key": "…", "path_prefix": "backups/"}
+{"name": "S3 Backup", "endpoint": "https://s3.amazonaws.com",
+ "bucket": "my-backups", "region": "eu-west-1", "access_key": "AKIA…", "secret_key": "…", "prefix": "backups/"}
 ```
 
 Also supports `provider: "local"` for a local disk path.
