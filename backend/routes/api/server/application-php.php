@@ -20,8 +20,9 @@ Route::get('/applications/{application}/php', [ApplicationPhpController::class, 
 Route::put('/applications/{application}/php', [ApplicationPhpController::class, 'update'])
     ->middleware(['permission:app_php,manage', 'throttle:10,1']);
 
+// Repair only, for sites the panel did not provision. There is deliberately
+// no DELETE counterpart: going back to the shared pool means running as the
+// web server's account again, which is the cross-site `.env` read that pool
+// isolation exists to close.
 Route::post('/applications/{application}/php/isolate', [ApplicationPhpController::class, 'isolate'])
-    ->middleware(['permission:app_php,manage', 'throttle:5,1']);
-
-Route::delete('/applications/{application}/php/isolate', [ApplicationPhpController::class, 'unisolate'])
     ->middleware(['permission:app_php,manage', 'throttle:5,1']);

@@ -31,6 +31,7 @@ return [
         'unsupported_stack' => 'Dieser Server nutzt OpenLiteSpeed, das keine PHP-FPM-Pools verwendet.',
         'already_isolated' => 'Diese Seite hat bereits einen eigenen PHP-Pool.',
         'not_isolated' => 'Diese Seite ist nicht isoliert.',
+        'needs_isolation' => 'Diese Website hat noch keinen eigenen PHP-Pool, daher könnten diese Limits nicht durchgesetzt werden. Weise ihr zuerst einen zu und speichere dann.',
         'write_failed' => 'Die Pool-Konfiguration konnte nicht geschrieben werden. Es wurde nichts geändert.',
         'config_test_failed' => 'PHP-FPM hat die Konfiguration abgelehnt, sie wurde nicht angewendet und nichts neu geladen. Die Seite wird weiterhin genau wie zuvor ausgeliefert.',
         'reload_failed' => 'PHP-FPM ließ sich nicht neu laden, daher wurde die vorherige Konfiguration wiederhergestellt.',

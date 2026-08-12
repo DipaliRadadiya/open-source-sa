@@ -1,10 +1,14 @@
 <?php
 
+use App\Contracts\WebServerDriver;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\ServerOpsResult;
+use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -329,14 +333,78 @@ describe('memory budget', function () {
     });
 });
 
-it('can put a site back on the shared pool', function () {
+it('offers no way back onto the shared pool', function () {
     fakePhpServer();
     $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
 
-    $this->actingAs($this->admin)->deleteJson(phpUrl('/isolate'))->assertOk();
+    // Removed deliberately, not forgotten. Going back means running as the
+    // web server's own account again, which is exactly the cross-site `.env`
+    // read pool isolation exists to close — a worse outcome than whatever the
+    // un-isolate button was going to rescue.
+    $this->actingAs($this->admin)->deleteJson(phpUrl('/isolate'))->assertStatus(405);
 
-    expect($this->application->fresh()->isolated_at)->toBeNull()
-        ->and(poolFile())->toBeNull();
+    expect($this->application->fresh()->isolated_at)->not->toBeNull()
+        ->and(poolFile())->not->toBeNull();
+});
+
+it('refuses to store pool limits for a site that has no pool', function () {
+    fakePhpServer();
+
+    // They are enforced by the pool file, so without one they would be saved
+    // and never applied — a 200 that changes nothing on the server.
+    $this->actingAs($this->admin)
+        ->putJson(phpUrl(), ['memory_limit' => '512M'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('settings');
+
+    expect(ApplicationPhpSettings::where('application_id', $this->application->id)->first()?->memory_limit)
+        ->toBeNull();
+});
+
+it('still allows a version change on a site that has no pool', function () {
+    fakePhpServer();
+
+    // The version is carried by the vhost, not the pool, so it means
+    // something either way — refusing it would block a legitimate change.
+    $this->actingAs($this->admin)
+        ->putJson(phpUrl(), ['php_version' => '8.3'])
+        ->assertOk();
+
+    expect($this->application->fresh()->php_version)->toBe('8.3');
+});
+
+describe('php:isolate-all', function () {
+    it('converts every site still on the shared pool', function () {
+        fakePhpServer();
+
+        expect($this->application->fresh()->isolated_at)->toBeNull();
+
+        $this->artisan('php:isolate-all')->assertSuccessful();
+
+        expect($this->application->fresh()->isolated_at)->not->toBeNull()
+            ->and(poolFile())->toContain('siteowner');
+    });
+
+    it('leaves an already-isolated site alone', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+        $isolatedAt = $this->application->fresh()->isolated_at;
+
+        $this->artisan('php:isolate-all')->assertSuccessful();
+
+        expect($this->application->fresh()->isolated_at->timestamp)->toBe($isolatedAt->timestamp);
+    });
+
+    it('carries on and reports the site when a pool will not write', function () {
+        fakePhpServer();
+        PoolFake::$configValid = false;
+
+        // Exits 0 on purpose: the site is still serving, and failing here
+        // would abort an otherwise-good panel update over one site.
+        $this->artisan('php:isolate-all')->assertSuccessful();
+
+        expect($this->application->fresh()->isolated_at)->toBeNull();
+    });
 });
 
 it('says so when the pool has been edited by hand', function () {
@@ -383,4 +451,40 @@ describe('permissions', function () {
             ->getJson("/api/applications/{$static->id}/php")
             ->assertNotFound();
     });
+});
+
+it('writes the vhost at the site\'s real document root when the version changes', function () {
+    // The PHP screen republishes the vhost whenever the version moves. It
+    // built the root itself instead of asking the provisioner, and built it
+    // wrong: domain instead of slug, and no public_html — so the site would
+    // be pointed at a directory that does not exist.
+    fakePhpServer();
+
+    $captured = [];
+
+    $driver = Mockery::mock(WebServerDriver::class);
+    $driver->shouldReceive('name')->andReturn('nginx');
+    $driver->shouldReceive('apply')->andReturnUsing(function ($application, $root) use (&$captured) {
+        $captured[] = $root;
+
+        return new ServerOpsResult(true, 'ref', null);
+    });
+    $driver->shouldReceive('test')->andReturn(new ServerOpsResult(true, 'ref', null));
+    $driver->shouldReceive('reload')->andReturn(new ServerOpsResult(true, 'ref', null));
+
+    $manager = Mockery::mock(WebServerManager::class);
+    $manager->shouldReceive('driver')->andReturn($driver);
+    app()->instance(WebServerManager::class, $manager);
+
+    $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+    $this->actingAs($this->admin)
+        ->putJson(phpUrl(), ['php_version' => '8.3'])
+        ->assertOk();
+
+    expect($captured)->not->toBeEmpty()
+        ->and(end($captured))->toBe(
+            app(ApplicationProvisioner::class)
+                ->documentRoot($this->application->fresh()->load('systemUser'))
+        );
 });

@@ -8,8 +8,8 @@ use App\Http\Resources\ApplicationPhpSettingsResource;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Services\ActivityLogger;
+use App\Services\Server\Php\PoolIsolator;
 use App\Services\Server\Php\PoolManager;
-use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -33,21 +33,22 @@ class ApplicationPhpController extends Controller
     /**
      * Give this site its own pool, running as its own user.
      *
-     * Separate from saving settings because it is a different kind of change:
-     * settings adjust a pool that exists, this one moves the site off the
-     * shared pool and rewrites its vhost. It is also the only reversible-by-
-     * design step — the shared pool keeps working throughout.
+     * Provisioning already does this for every site the panel creates, so
+     * this exists for the ones it did not: adopted from another panel, made
+     * before isolation shipped, or left behind by a failed pool step. It is a
+     * repair, not a mode — there is no supported way back onto the shared
+     * pool, because that means running as the web server's own account again
+     * and letting one compromised site read every other site's `.env`.
      */
     public function isolate(
         Request $request,
         Application $application,
-        PoolManager $pools,
-        WebServerManager $webServers,
+        PoolIsolator $isolator,
         ActivityLogger $activity,
     ): JsonResponse {
         abort_unless($request->user()?->canManage('app_php') ?? false, 403);
 
-        if (! $pools->supported()) {
+        if (! $isolator->supported()) {
             // OpenLiteSpeed spawns LSPHP itself and has no pools at all.
             throw ValidationException::withMessages([
                 'application' => [__('php_settings.errors.unsupported_stack')],
@@ -60,23 +61,13 @@ class ApplicationPhpController extends Controller
             ]);
         }
 
-        $settings = $this->settingsFor($application);
-
-        $result = $pools->apply($application, $settings);
+        $result = $isolator->isolate($application);
 
         if (! $result['ok']) {
-            // Nothing was reloaded, so the site is still being served by the
-            // shared pool exactly as it was a moment ago.
             throw ValidationException::withMessages([
                 'application' => [__('php_settings.errors.'.$result['reason'])],
             ]);
         }
-
-        $application->forceFill(['isolated_at' => now()])->save();
-
-        // Vhost last: it can only point at the socket once the pool that owns
-        // that socket is live, or the site 502s in the gap.
-        $this->republish($application, $webServers);
 
         $activity->log('application.php_isolated', $application, ['name' => $application->name]);
 
@@ -89,12 +80,23 @@ class ApplicationPhpController extends Controller
         SavePhpSettingsRequest $request,
         Application $application,
         PoolManager $pools,
-        WebServerManager $webServers,
+        PoolIsolator $isolator,
         ActivityLogger $activity,
     ): JsonResponse {
         $data = $request->validated();
         $version = $data['php_version'] ?? null;
         unset($data['php_version']);
+
+        // Every value below is enforced by the pool file. Without a pool they
+        // would be stored and never applied — the user changes memory_limit,
+        // gets a 200 and nothing on the server moves. Say so instead. The
+        // version is exempt: it is carried by the vhost and means something
+        // either way.
+        if ($data !== [] && $application->isolated_at === null && $isolator->supported()) {
+            throw ValidationException::withMessages([
+                'settings' => [__('php_settings.errors.needs_isolation')],
+            ]);
+        }
 
         $settings = $this->settingsFor($application);
         $settings->fill($data);
@@ -127,7 +129,7 @@ class ApplicationPhpController extends Controller
         $settings->save();
 
         if ($version !== null) {
-            $this->republish($application, $webServers);
+            $isolator->republish($application);
         }
 
         $activity->log('application.php_settings_updated', $application, ['name' => $application->name]);
@@ -135,51 +137,6 @@ class ApplicationPhpController extends Controller
         return response()->json([
             'php' => ApplicationPhpSettingsResource::make($application->fresh(['phpSettings', 'systemUser']))->resolve(),
         ]);
-    }
-
-    /** Put the site back on the shared pool. The way out if isolation broke it. */
-    public function unisolate(
-        Request $request,
-        Application $application,
-        PoolManager $pools,
-        WebServerManager $webServers,
-        ActivityLogger $activity,
-    ): JsonResponse {
-        abort_unless($request->user()?->canManage('app_php') ?? false, 403);
-
-        if ($application->isolated_at === null) {
-            throw ValidationException::withMessages([
-                'application' => [__('php_settings.errors.not_isolated')],
-            ]);
-        }
-
-        // Vhost first this time, for the mirror-image reason: the site must
-        // stop pointing at the socket before the pool serving it is removed.
-        $application->forceFill(['isolated_at' => null])->save();
-        $this->republish($application, $webServers);
-
-        $pools->remove($application);
-
-        $activity->log('application.php_unisolated', $application, ['name' => $application->name]);
-
-        return response()->json([
-            'php' => ApplicationPhpSettingsResource::make($application->fresh(['phpSettings', 'systemUser']))->resolve(),
-        ]);
-    }
-
-    /** Rewrite this site's vhost and reload — tested before it is applied. */
-    private function republish(Application $application, WebServerManager $webServers): void
-    {
-        $driver = $webServers->driver();
-        $home = rtrim((string) $application->systemUser?->home_path, '/');
-        $webRoot = trim((string) ($application->web_root ?: '/'), '/');
-        $root = "{$home}/{$application->domain}".($webRoot === '' ? '' : '/'.$webRoot);
-
-        $driver->apply($application, $root);
-
-        if ($driver->test()->ok) {
-            $driver->reload();
-        }
     }
 
     private function settingsFor(Application $application): ApplicationPhpSettings

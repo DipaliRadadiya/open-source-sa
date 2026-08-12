@@ -31,6 +31,7 @@ return [
         'unsupported_stack' => 'このサーバーは OpenLiteSpeed を使用しており、PHP-FPM プールはありません。',
         'already_isolated' => 'このサイトにはすでに専用の PHP プールがあります。',
         'not_isolated' => 'このサイトは分離されていません。',
+        'needs_isolation' => 'このサイトにはまだ専用の PHP プールがないため、これらの制限は適用できません。先にプールを割り当ててから保存してください。',
         'write_failed' => 'プール設定を書き込めませんでした。何も変更されていません。',
         'config_test_failed' => 'PHP-FPM が設定を拒否したため、適用も再読み込みもされていません。サイトはこれまでどおり配信されています。',
         'reload_failed' => 'PHP-FPM を再読み込みできなかったため、以前の設定に戻しました。',

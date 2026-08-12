@@ -31,6 +31,7 @@ return [
         'unsupported_stack' => 'Este servidor usa OpenLiteSpeed, que no utiliza pools de PHP-FPM.',
         'already_isolated' => 'Este sitio ya tiene su propio pool de PHP.',
         'not_isolated' => 'Este sitio no está aislado.',
+        'needs_isolation' => 'Este sitio aún no tiene su propio grupo (pool) de PHP, así que estos límites no se podrían aplicar. Asígnale uno primero y luego guarda.',
         'write_failed' => 'No se pudo escribir la configuración del pool. No se cambió nada.',
         'config_test_failed' => 'PHP-FPM rechazó la configuración, así que no se aplicó ni se recargó nada. El sitio se sigue sirviendo exactamente igual que antes.',
         'reload_failed' => 'PHP-FPM no se recargó, así que se restauró la configuración anterior.',
