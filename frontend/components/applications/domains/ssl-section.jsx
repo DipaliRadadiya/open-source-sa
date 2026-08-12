@@ -43,6 +43,7 @@ export function SslSection({
   appId,
   initialCertificate,
   certifiable = true,
+  availableTypes = [],
   canManage = false,
 }) {
   const t = useTranslations("applications.domains");
@@ -305,6 +306,7 @@ export function SslSection({
 
       <IssueCertDialog
         appId={appId}
+        availableTypes={availableTypes}
         open={issueOpen}
         onOpenChange={setIssueOpen}
         onIssued={setCert}

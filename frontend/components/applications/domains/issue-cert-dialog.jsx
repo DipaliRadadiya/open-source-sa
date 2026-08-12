@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FormModal } from "@/components/ui/form-modal";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Select,
   SelectContent,
@@ -18,19 +19,46 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const TYPES = ["letsencrypt", "self_signed", "custom"];
+// Only used when the server sends no catalog at all — an older backend. The
+// server decides what a site can have; this is the last-resort shape, not a
+// preference.
+const FALLBACK_TYPES = [
+  { type: "letsencrypt", available: true, recommended: true },
+  { type: "self_signed", available: true },
+  { type: "custom", available: true },
+];
 
-export function IssueCertDialog({ appId, open, onOpenChange, onIssued }) {
+/**
+ * The method to secure this site with, offered as the server sees it.
+ *
+ * Nothing here decides what is possible: `available` gates each option and
+ * `recommended` picks the default. A site on a nip.io or internal name cannot
+ * have Let's Encrypt but can absolutely have a self-signed certificate, and
+ * guessing that from the domain name is how such a site ends up being told it
+ * cannot have SSL at all.
+ */
+export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange, onIssued }) {
   const t = useTranslations("applications.domains");
-  const [type, setType] = useState("letsencrypt");
+  const types = availableTypes.length ? availableTypes : FALLBACK_TYPES;
+  // The server's recommendation, else the first thing that actually works —
+  // never a fixed default, which is how the dialog came to open on Let's
+  // Encrypt for sites Let's Encrypt refuses.
+  const defaultType =
+    types.find((entry) => entry.recommended && entry.available)?.type ??
+    types.find((entry) => entry.available)?.type ??
+    types[0]?.type;
+
+  const [type, setType] = useState(defaultType);
   const [pem, setPem] = useState({ certificate: "", private_key: "", chain: "" });
   const [submitting, setSubmitting] = useState(false);
   // Per-domain reachability refusals (422 errors.domain). Their presence is what
   // unlocks the "issue anyway" (force) path — never offered up front.
   const [refusals, setRefusals] = useState([]);
 
+  const selected = types.find((entry) => entry.type === type);
+
   function reset() {
-    setType("letsencrypt");
+    setType(defaultType);
     setPem({ certificate: "", private_key: "", chain: "" });
     setRefusals([]);
     setSubmitting(false);
@@ -86,7 +114,11 @@ export function IssueCertDialog({ appId, open, onOpenChange, onIssued }) {
               {t("ssl.forceIssue")}
             </Button>
           ) : null}
-          <Button type="button" disabled={submitting} onClick={() => submit(false)}>
+          <Button
+            type="button"
+            disabled={submitting || selected?.available === false}
+            onClick={() => submit(false)}
+          >
             {submitting && <Loader2 className="size-4 animate-spin" />}
             {t("ssl.issue")}
           </Button>
@@ -100,22 +132,38 @@ export function IssueCertDialog({ appId, open, onOpenChange, onIssued }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {TYPES.map((value) => (
-              <SelectItem key={value} value={value}>
-                {t(`ssl.method_${value}`)}
-              </SelectItem>
+            {types.map((entry) => (
+              <ReasonTooltip
+                key={entry.type}
+                reason={!entry.available ? entry.reason : null}
+              >
+                <SelectItem value={entry.type} disabled={!entry.available}>
+                  {entry.label ?? t(`ssl.method_${entry.type}`)}
+                </SelectItem>
+              </ReasonTooltip>
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">{t(`ssl.methodHint_${type}`)}</p>
       </div>
 
-      {type === "self_signed" ? (
-        <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
+      {/* The server's own words about the selected method. On an available type
+          this is information — self-signed works everywhere and browsers warn
+          about it — so it is toned by `available`, never by having a reason at
+          all. Branching on the reason would refuse a method that works. */}
+      {selected?.reason ? (
+        <p
+          className={
+            selected.available
+              ? "flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning"
+              : "flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          }
+        >
           <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-          <span>{t("ssl.selfSignedWarning")}</span>
+          <span>{selected.reason}</span>
         </p>
-      ) : null}
+      ) : (
+        <p className="text-xs text-muted-foreground">{t(`ssl.methodHint_${type}`)}</p>
+      )}
 
       {type === "custom" ? (
         <div className="space-y-3">

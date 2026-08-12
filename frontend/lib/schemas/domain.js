@@ -46,10 +46,30 @@ export const certificateSchema = z.object({
   reference: z.string().nullish(),
 }).passthrough();
 
+/**
+ * What this site can actually be issued, decided server-side.
+ *
+ * `available` is the only thing that gates a choice. `reason` explains it
+ * either way: on an unavailable type it says what to fix, on an available one
+ * it is informational (self-signed works everywhere, browsers warn) — so
+ * branching on the presence of a reason would refuse a type that works.
+ */
+export const certificateTypeSchema = z.object({
+  type: z.string(),
+  label: z.string(),
+  available: z.boolean().default(false),
+  recommended: z.boolean().default(false),
+  renewable: z.boolean().default(false),
+  reason: z.string().nullish(),
+});
+
 // `null` is a normal answer — "this site has no certificate" is a state to
-// render, not an error.
+// render, not an error. `available_types` sits beside it, not inside it: it
+// describes what the site COULD have, which is exactly the question when there
+// is no certificate yet.
 export const certificateResponseSchema = z.object({
   certificate: certificateSchema.nullable(),
+  available_types: z.array(certificateTypeSchema).default([]),
 });
 
 // Redirect targets used by the add-domain form.

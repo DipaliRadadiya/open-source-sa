@@ -44,13 +44,20 @@ export default async function ApplicationDomainsPage({ params }) {
 
   const [domainList, certificate, capabilities] = await Promise.all([
     settled ? getApplicationDomains(id) : Promise.resolve({ domains: [], failed: false }),
-    settled ? getApplicationCertificate(id) : Promise.resolve({ certificate: null, failed: false }),
+    settled ? getApplicationCertificate(id) : Promise.resolve({ certificate: null, availableTypes: [], failed: false }),
     // The A-record target for unverified domains. The server states its own
     // address; null (a role that cannot read it) falls back to generic guidance.
     settled ? getServerCapabilities().catch(() => null) : Promise.resolve(null),
   ]);
 
-  const certifiable = domainList.domains.some((d) => d.certifiable);
+  // What the SITE can be issued, per the server — not what its domains resolve
+  // to. A nip.io or internal name cannot get Let's Encrypt but can absolutely
+  // have a self-signed certificate, and deriving this from the domains alone
+  // told those sites they could have no SSL at all.
+  const availableTypes = certificate.availableTypes ?? [];
+  const certifiable = availableTypes.length
+    ? availableTypes.some((entry) => entry.available)
+    : domainList.domains.some((d) => d.certifiable);
   const serverIp = capabilities?.serverIp ?? null;
 
   const cert = certificate.certificate;
@@ -94,6 +101,7 @@ export default async function ApplicationDomainsPage({ params }) {
               appId={id}
               initialCertificate={certificate.certificate}
               certifiable={certifiable}
+              availableTypes={availableTypes}
               canManage={canManage}
             />
           }
