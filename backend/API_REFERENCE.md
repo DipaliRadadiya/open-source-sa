@@ -1319,25 +1319,30 @@ Update PHP version and/or pool settings.
 
 **Response `200`:** `{"php": {...updated...}}`
 
+**`422` on `settings`** when the site has `isolated: false` and `isolation_supported: true`. Every limit on this form is enforced by the pool file, so without a pool they would be stored and never applied. Offer the isolate action instead of a save.
+
+`php_version` is exempt — it is carried by the vhost and can be changed either way.
+
 ---
 
 ### POST `/applications/{application}/php/isolate`
 **Permission:** `app_php` (manage) | **Throttle:** 5/min
 
-Give this site its own PHP-FPM pool running as its own user. Pre-condition for per-site memory limits.
+Give this site its own PHP-FPM pool running as its own user.
+
+**This is a repair, not a mode.** Every site the panel provisions already gets its own pool at creation. The only sites that need this are ones the panel did not create: adopted from another panel, made before pool isolation shipped, or left behind by a failed pool step. Surface it only when `isolated: false` **and** `isolation_supported: true`.
 
 **Response `200`:** `{"php": {"isolated": true, "isolated_at": "29-07-2026 10:00:00", …}}`
 
-`422` if already isolated or if the web server is OpenLiteSpeed (OLS has no pools).
+`422` if already isolated or if the web server is OpenLiteSpeed (OLS runs LSPHP and has no pools — `isolation_supported` is `false` there and no isolation UI should show at all).
+
+Server-side, `php artisan php:isolate-all` converts every remaining shared site in one pass.
 
 ---
 
-### DELETE `/applications/{application}/php/isolate`
-**Permission:** `app_php` (manage) | **Throttle:** 5/min
+### ~~DELETE `/applications/{application}/php/isolate`~~ — removed
 
-Return to the shared pool (undoes isolation).
-
-**Response `200`:** `{"php": {"isolated": false, …}}`
+Returns **`405`**. There is no supported way back onto the shared pool: it means running as the web server's own account again, which lets one compromised site read every other site's `.env`. Remove any "un-isolate" / "back to shared pool" control.
 
 ---
 
