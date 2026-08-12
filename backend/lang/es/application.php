@@ -91,7 +91,6 @@ return [
         'mailer_port' => 'Puerto SMTP',
         'mailer_username' => 'Usuario SMTP',
         'mailer_password' => 'Contraseña SMTP',
-        'install_litespeed_cache_plugin' => 'Instalar el plugin LiteSpeed Cache',
     ],
 
     'help' => [
@@ -128,7 +127,6 @@ return [
         'harden' => 'Aplicando ajustes de seguridad',
         'trust_domain' => 'Autorizando el dominio',
         'set_password' => 'Estableciendo la contraseña de administrador',
-        'install_cache' => 'Instalando el complemento de caché',
         'worker' => 'El proceso en segundo plano se detuvo',
     ],
     'port_free' => 'El puerto :port está libre.',

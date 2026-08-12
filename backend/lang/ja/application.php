@@ -91,7 +91,6 @@ return [
         'mailer_port' => 'SMTP ポート',
         'mailer_username' => 'SMTP ユーザー名',
         'mailer_password' => 'SMTP パスワード',
-        'install_litespeed_cache_plugin' => 'LiteSpeed Cache プラグインをインストールする',
     ],
 
     'help' => [
@@ -128,7 +127,6 @@ return [
         'harden' => 'セキュリティ設定を適用しています',
         'trust_domain' => 'ドメインを許可しています',
         'set_password' => '管理者パスワードを設定しています',
-        'install_cache' => 'キャッシュプラグインをインストールしています',
         'worker' => 'バックグラウンド処理が停止しました',
     ],
     'port_free' => 'ポート :port は空いています。',

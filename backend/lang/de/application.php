@@ -91,7 +91,6 @@ return [
         'mailer_port' => 'SMTP-Port',
         'mailer_username' => 'SMTP-Benutzername',
         'mailer_password' => 'SMTP-Passwort',
-        'install_litespeed_cache_plugin' => 'LiteSpeed-Cache-Plugin installieren',
     ],
 
     'help' => [
@@ -128,7 +127,6 @@ return [
         'harden' => 'Sicherheitseinstellungen werden angewendet',
         'trust_domain' => 'Domain wird freigegeben',
         'set_password' => 'Administrator-Passwort wird gesetzt',
-        'install_cache' => 'Cache-Plugin wird installiert',
         'worker' => 'Der Hintergrundprozess wurde beendet',
     ],
     'port_free' => 'Port :port ist frei.',

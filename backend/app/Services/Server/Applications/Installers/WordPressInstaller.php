@@ -95,52 +95,12 @@ class WordPressInstaller extends AbstractPhpInstaller
                 report($e);
             }
         }
-
-        // LSCache plugin: install when the user asked for it, regardless of stack.
-        // When stack is OpenLiteSpeed it is always recommended, so the form default
-        // is true for OLS and false otherwise — but the user toggle overrides that.
-        if ($settings['install_litespeed_cache_plugin'] ?? false) {
-            $this->installLiteSpeedCache($application, $documentRoot);
-        }
     }
 
     /**
      * wp-cli is not part of a base system, so fetch it on first use. Skipped
      * when it is already present, which is the normal case after one install.
      */
-    /**
-     * LiteSpeed Cache, on OpenLiteSpeed only.
-     *
-     * The cache lives in the web server; this plugin is the only way WordPress
-     * can talk to it. Without it an OLS site is a slightly unusual PHP host —
-     * with it, cached pages never reach PHP at all, which is the entire reason
-     * anyone picks OpenLiteSpeed.
-     *
-     * Installed here rather than left to the user because the pairing is not
-     * discoverable: nothing in WordPress hints that this particular plugin is
-     * what makes this particular web server worth running.
-     *
-     * Failures are swallowed deliberately — see below.
-     */
-    private function installLiteSpeedCache(Application $application, string $documentRoot): void
-    {
-        try {
-            $this->runAsSiteUser('install_cache', $application, [
-                $this->phpBinary($application),
-                (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
-                'plugin', 'install', 'litespeed-cache',
-                '--activate',
-                '--path='.$documentRoot,
-            ]);
-        } catch (ProvisioningFailedException $e) {
-            // A working WordPress without a cache plugin beats no WordPress.
-            // This step reaches out to wordpress.org, so it fails on a box with
-            // no egress — and that is not a reason to tear down a site whose
-            // files, database and vhost are all already in place.
-            report($e);
-        }
-    }
-
     private function ensureWpCli(Application $application): void
     {
         $path = (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp');

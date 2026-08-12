@@ -91,7 +91,6 @@ return [
         'mailer_port' => 'SMTP पोर्ट',
         'mailer_username' => 'SMTP उपयोगकर्ता नाम',
         'mailer_password' => 'SMTP पासवर्ड',
-        'install_litespeed_cache_plugin' => 'LiteSpeed Cache प्लगइन इंस्टॉल करें',
     ],
 
     'help' => [
@@ -128,7 +127,6 @@ return [
         'harden' => 'सुरक्षा सेटिंग्स लागू की जा रही हैं',
         'trust_domain' => 'डोमेन को अनुमति दी जा रही है',
         'set_password' => 'एडमिन पासवर्ड सेट किया जा रहा है',
-        'install_cache' => 'कैश प्लगइन इंस्टॉल किया जा रहा है',
         'worker' => 'बैकग्राउंड प्रोसेस रुक गई',
     ],
     'port_free' => 'पोर्ट :port खाली है।',

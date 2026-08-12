@@ -96,7 +96,6 @@ return [
         'mailer_port' => 'SMTP port',
         'mailer_username' => 'SMTP username',
         'mailer_password' => 'SMTP password',
-        'install_litespeed_cache_plugin' => 'Install the LiteSpeed Cache plugin',
     ],
 
     'help' => [
@@ -133,7 +132,6 @@ return [
         'harden' => 'Applying security settings',
         'trust_domain' => 'Trusting the domain',
         'set_password' => 'Setting the admin password',
-        'install_cache' => 'Installing the cache plugin',
         'worker' => 'The background worker stopped',
     ],
     'port_free' => 'Port :port is free.',

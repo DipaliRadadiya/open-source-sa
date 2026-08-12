@@ -129,36 +129,6 @@ it('runs wp-cli under the site own php, not whatever the shebang finds', functio
     });
 });
 
-it('keeps a working WordPress when the cache plugin cannot be fetched', function () {
-    fakeSaltService();
-    ServerCapability::query()->update(['web_server' => 'openlitespeed']);
-
-    Process::fake(fn ($p) => match (true) {
-        // A box with no egress to wordpress.org.
-        in_array('litespeed-cache', $p->command, true) => Process::result(output: '', errorOutput: 'could not resolve host', exitCode: 1),
-        ($p->command[0] ?? '') === 'cat' => Process::result(output: "listener Default {\n  address *:80\n}\n"),
-        default => Process::result(output: ''),
-    });
-
-    $app = wpApp();
-    runProvision($app);
-
-    // Files, database and vhost are all in place. Tearing that down because an
-    // optional plugin could not be downloaded would be the wrong trade.
-    expect($app->refresh()->status->value)->toBe('active');
-});
-
-it('does not install LiteSpeed Cache on a server that cannot use it', function () {
-    fakeSaltService();
-    fakeInstallServer();
-
-    runProvision(wpApp());
-
-    // The cache lives in the LiteSpeed web server. On nginx the plugin would
-    // be dead weight that the user then has to work out how to remove.
-    Process::assertNotRan(fn ($p) => in_array('litespeed-cache', $p->command, true));
-});
-
 it('never puts the admin password on a command line', function () {
     fakeSaltService();
     fakeInstallServer();

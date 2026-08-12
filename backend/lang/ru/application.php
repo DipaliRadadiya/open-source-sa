@@ -91,7 +91,6 @@ return [
         'mailer_port' => 'SMTP-порт',
         'mailer_username' => 'Имя пользователя SMTP',
         'mailer_password' => 'Пароль SMTP',
-        'install_litespeed_cache_plugin' => 'Установить плагин LiteSpeed Cache',
     ],
 
     'help' => [
@@ -128,7 +127,6 @@ return [
         'harden' => 'Применение настроек безопасности',
         'trust_domain' => 'Разрешение домена',
         'set_password' => 'Установка пароля администратора',
-        'install_cache' => 'Установка плагина кеширования',
         'worker' => 'Фоновый процесс остановлен',
     ],
     'port_free' => 'Порт :port свободен.',
