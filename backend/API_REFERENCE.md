@@ -2250,9 +2250,9 @@ Configure or update backup settings.
 
 Run a backup immediately.
 
-**Response `202`:** `{"backup_target": {"id": 1, "schedule": "daily", …}}`
+**Response `202`:** the **backup target**, not the backup — `{"backup_target": {"id": 1, "frequency": "daily", …}}`
 
-Poll the backup's own `GET /backups/{id}` while it runs.
+The `Backup` row does not exist until a queue worker picks the job up, so there is no id to return here. Find the run with `GET /backups?filter[application_id]={id}` (newest first) and poll it from there. `is_due` comes back `true` immediately after dispatch and clears once `last_run_at` is recorded.
 
 `422` if not configured or if a backup is already in progress.
 
@@ -2272,11 +2272,11 @@ Every backup across every application — paginated, filterable.
   "application_name": "shop", "application_domain": "shop.example.com",
   "type": "full", "type_title": "Files and database",
   "is_safety": false,
-  "status": "verified", "status_title": "Verified",
+  "status": "verified", "status_title": "Complete",
   "size_bytes": 52428800,
   "reason": null, "reason_title": null,
-  "log_key": "backup-15",
-  "reference": null,
+  "log_key": "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
+  "reference": "9f8e7d6c-5b4a-4321-9876-0fedcba98765",
   "started_at": "28-07-2026 02:00:00",
   "finished_at": "28-07-2026 02:04:00",
   "verified_at": "28-07-2026 02:04:10",
@@ -2290,7 +2290,9 @@ Every backup across every application — paginated, filterable.
 
 The application is flattened as `application_name` / `application_domain` — there is no nested `application` object, and **no `size_human`**: format `size_bytes` yourself.
 
-`reason` is a classified failure code with `reason_title` its localised sentence; both null unless `status` is `failed`. `log_key` addresses this run's log through the logs endpoints, and `reference` is the id to quote to support.
+Note the label: `status: "verified"` renders as **"Complete"**, not "Verified" — `status_title` is written for the person reading the screen. Render it; do not build your own map from the raw value.
+
+`reason` is a classified failure code with `reason_title` its localised sentence; both null unless `status` is `failed`. `log_key` and `reference` are both **UUIDs assigned when the run starts** — never null, on any status. `log_key` addresses this run's log through the logs endpoints; `reference` is the id to quote to support.
 
 `is_safety: true` marks the automatic pre-restore snapshot rather than a backup anyone scheduled — worth distinguishing in the list so it does not read as a stray extra run.
 
@@ -2348,13 +2350,13 @@ Restore history — what was restored, when, and by whom. Paginated.
   "id": 3, "backup_id": 14, "application_id": 1,
   "application_name": "shop", "application_domain": "shop.example.com",
   "type": "full", "type_title": "Files and database",
-  "status": "succeeded", "status_title": "Restore succeeded",
+  "status": "succeeded", "status_title": "Restored",
   "current_step": null, "current_step_title": null,
   "step_number": null, "total_steps": 7,
   "reason": null, "reason_title": null,
   "safety_backup_id": 16,
   "rollback_path": "/home/siteowner/.rollback-3",
-  "reference": null,
+  "reference": "3c2b1a09-8f7e-4d6c-5b4a-392817465fed",
   "started_at": "28-07-2026 10:00:00", "started_at_human": "3 days ago",
   "finished_at": "28-07-2026 10:05:00", "finished_at_human": "3 days ago"
 }], "meta": {"current_page": 1, "per_page": 20, "total": 3, "last_page": 1}}
@@ -2366,6 +2368,10 @@ The application is flattened as `application_name` / `application_domain` — no
 
 `current_step` is the machine key, `current_step_title` its localised sentence, and `step_number` / `total_steps` turn it into a progress bar. `step_number` is null when nothing has started yet; `total_steps` is always populated, so a bar can be rendered before the first step reports.
 
+The seven keys, in order: `download_artifact` · `verify_download` · `safety_backup` · `extract_archive` · `restore_database` · `swap_files` · `restart_process`. Branch on those, never on `current_step_title` — the title is translated and changes with the viewer's locale.
+
+`status` is `pending` · `running` · `succeeded` · `failed` (labels: Queued · Restoring · Restored · Restore failed). `reference` is a UUID assigned at creation — never null.
+
 ---
 
 ### GET `/restores/{restore}`
@@ -2375,9 +2381,10 @@ Poll a running restore.
 
 ```json
 {"restore": {
-  "id": 3, "status": "running", "status_title": "Restoring…",
-  "reason": null,
-  "current_step": "Restoring files", "step_number": 4, "total_steps": 7,
+  "id": 3, "status": "running", "status_title": "Restoring",
+  "reason": null, "reason_title": null,
+  "current_step": "swap_files", "current_step_title": "Putting the files in place",
+  "step_number": 6, "total_steps": 7,
   "started_at": "28-07-2026 10:00:00", "finished_at": null
 }}
 ```
@@ -2397,9 +2404,23 @@ Restore an application from this backup. **Destructive** — overwrites live dat
 {"type": "full", "confirm": "shop.example.com"}
 ```
 
-`confirm` must match the application's domain exactly (string comparison). `type` = `full | files | database`.
+`confirm` is **required** and must match the application's domain exactly (trimmed, case-sensitive). Everything else in this feature guards against the system going wrong; this guards against the person going wrong, which is the more common failure — so it is typed, not clicked.
 
-**Response `202`:** `{"restore": {"id": 3, "status": "pending", "confirm": "shop.example.com", …}}`
+`type` is **optional** and is one of **`filesystem` · `database` · `full`** — the same vocabulary as everywhere else in this feature. There is no `files`; sending it is a `422`. Omit it and the restore uses whatever the backup itself holds, which is the right default.
+
+**Five separate `422`s, all worth distinguishing in the UI:**
+
+| Condition | Error key on |
+|---|---|
+| Backup is not `status: "verified"` — we cannot prove it arrived intact | `backup` |
+| The backup's application no longer exists | `backup` |
+| A restore for this application is already pending or running | `backup` |
+| `confirm` does not match the domain | `confirm` |
+| Asked for more than the archive holds (`full` from a database-only backup) | `type` |
+
+That last one is a subset check, not a formality: restoring `full` from a database-only backup would swap an empty directory over a working site.
+
+**Response `202`:** the `RestoreResource` — `{"restore": {"id": 3, "status": "pending", "type": "full", "total_steps": 7, …}}`. There is no `confirm` field in the response; it is an input only.
 
 Poll `GET /restores/{id}` until `status` is `succeeded` or `failed`.
 
@@ -4042,7 +4063,9 @@ The field is `driver` (always `"s3"` today), not `provider`, and the path prefix
  "bucket": "my-backups", "region": "eu-west-1", "access_key": "AKIA…", "secret_key": "…", "prefix": "backups/"}
 ```
 
-Also supports `provider: "local"` for a local disk path.
+Required: `name` (unique, single-line), `bucket`, `access_key`, `secret_key`. Optional: `endpoint`, `region`, `prefix`.
+
+**There is no `provider` field and no local-disk driver** — S3-compatible storage is the only option today, and `driver` is a read-only output field. `endpoint` may be omitted for AWS itself and for any provider that carries its region in the bucket host (R2, B2, Wasabi); when sent it must be an `https` URL, and it is refused if it resolves to loopback or the cloud metadata range (the same SSRF rule self-hosted Git providers get). `region` defaults to `us-east-1` when omitted or empty. `bucket` is `[A-Za-z0-9._-]`, `region` is `[A-Za-z0-9-]`, `prefix` is `[A-Za-z0-9._/-]`.
 
 **Response `201`:** `{"storage_destination": {...}}`
 
@@ -4052,7 +4075,7 @@ Also supports `provider: "local"` for a local disk path.
 **Permission:** `storage` (view)
 
 ```json
-{"storage_destination": {"id": 1, "name": "S3 Backup", "provider": "s3", "bucket": "my-backups", …}}
+{"storage_destination": {"id": 1, "name": "S3 Backup", "driver": "s3", "bucket": "my-backups", …}}
 ```
 
 ---
