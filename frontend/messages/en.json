@@ -631,7 +631,10 @@
     "scheduleTime": "Use a time like 02:00",
     "basedirAbsolute": "Each folder must be a full path starting with /",
     "basedirRoot": "Use / here and nothing is restricted — turn the setting off instead",
-    "basedirTraversal": "Folders cannot contain .."
+    "basedirTraversal": "Folders cannot contain ..",
+    "gitRef": "Use letters, numbers, dots, dashes and slashes only",
+    "max65535": "That script is too long",
+    "noTraversal": "Folders cannot contain .."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -2280,6 +2283,10 @@
       "users": "Users",
       "tables": "Tables",
       "backups": "Backups"
+    },
+    "phpmyadmin": {
+      "open": "Open in phpMyAdmin",
+      "failed": "phpMyAdmin could not be opened."
     }
   },
   "git": {
@@ -2915,7 +2922,41 @@
         "off": "Off",
         "offBody": "Auto-deploy is off. Turn it on to deploy on every push to {branch} — your webhook URL and secret are kept."
       },
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "settings": {
+        "branch": "Branch",
+        "branchHint": "The branch each deploy checks out.",
+        "script": "Deploy script",
+        "scriptHint": "Runs after the code is fetched, as your site user.",
+        "scriptFallbackHint": "Nothing custom is set, so this is the build command that runs today. Edit it to make it your own.",
+        "placeholders": "You can use:",
+        "resetScript": "Reset to default",
+        "save": "Save deploy settings",
+        "saveNote": "Applies to the next deploy, not the one running now.",
+        "saved": "Deploy settings saved.",
+        "saveFailed": "Those settings could not be saved.",
+        "noPermission": "You do not have permission to change this.",
+        "nothingToSave": "Nothing to save"
+      },
+      "history": {
+        "empty": {
+          "title": "No deploys yet",
+          "description": "Every deploy will be listed here with its build log."
+        },
+        "noMessage": "No commit message",
+        "system": "System",
+        "redeploy": "Re-run",
+        "redeployStarted": "Re-running that deploy.",
+        "redeployFailed": "That deploy could not be re-run.",
+        "output": "Build log",
+        "copy": "Copy log",
+        "loadingLog": "Loading the build log…",
+        "noOutput": "This deploy produced no output.",
+        "logFailed": "The build log could not be loaded.",
+        "noPermission": "You do not have permission to deploy.",
+        "title": "Deploy history",
+        "subtitle": "Every deploy, newest first. Open one to read its build log."
+      }
     },
     "files": {
       "pageTitle": "Files",
@@ -2954,7 +2995,8 @@
         "compress": "Compress",
         "extract": "Extract",
         "permissions": "Permissions",
-        "delete": "Delete"
+        "delete": "Delete",
+        "folderSize": "Folder size"
       },
       "empty": {
         "title": "This folder is empty",
@@ -3156,6 +3198,9 @@
           "exists": "Something is already at the destination",
           "failed": "The server refused it"
         }
+      },
+      "size": {
+        "failed": "That folder could not be measured."
       }
     },
     "workers": {
@@ -3812,7 +3857,17 @@
       },
       "copyAge": "Copy made {age}"
     },
-    "stagingBadge": "Staging"
+    "stagingBadge": "Staging",
+    "webRoot": {
+      "title": "Change web root",
+      "description": "The directory the web server serves for this site.",
+      "label": "Web root",
+      "hint": "Relative to the site folder, e.g. /public. Leave empty to serve the site folder itself.",
+      "submit": "Change web root",
+      "cancel": "Cancel",
+      "saved": "Web root changed.",
+      "failed": "The web root could not be changed."
+    }
   },
   "panelUpdate": {
     "title": "Panel update",

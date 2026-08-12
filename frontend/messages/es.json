@@ -198,7 +198,10 @@
     "scheduleTime": "Usa una hora como 02:00",
     "basedirAbsolute": "Cada carpeta debe ser una ruta completa que empiece por /",
     "basedirRoot": "Con / aquí no se restringe nada; mejor desactiva el ajuste",
-    "basedirTraversal": "Las carpetas no pueden contener .."
+    "basedirTraversal": "Las carpetas no pueden contener ..",
+    "gitRef": "Usa solo letras, números, puntos, guiones y barras",
+    "max65535": "Ese script es demasiado largo",
+    "noTraversal": "Las carpetas no pueden contener .."
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -2280,6 +2283,10 @@
       "users": "Usuarios",
       "tables": "Tablas",
       "backups": "Copias"
+    },
+    "phpmyadmin": {
+      "open": "Abrir en phpMyAdmin",
+      "failed": "No se pudo abrir phpMyAdmin."
     }
   },
   "git": {
@@ -2915,7 +2922,41 @@
         "off": "Desactivado",
         "offBody": "El despliegue automático está desactivado. Actívalo para desplegar con cada push a {branch}: se conservan tu URL de webhook y el secreto."
       },
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "settings": {
+        "branch": "Rama",
+        "branchHint": "La rama que descarga cada despliegue.",
+        "script": "Script de despliegue",
+        "scriptHint": "Se ejecuta tras descargar el código, con el usuario de tu sitio.",
+        "scriptFallbackHint": "No hay nada personalizado, así que este es el comando de compilación que se ejecuta hoy. Edítalo para hacerlo tuyo.",
+        "placeholders": "Puedes usar:",
+        "resetScript": "Restablecer al valor por defecto",
+        "save": "Guardar ajustes de despliegue",
+        "saveNote": "Se aplica al próximo despliegue, no al que está en curso.",
+        "saved": "Ajustes de despliegue guardados.",
+        "saveFailed": "No se pudieron guardar esos ajustes.",
+        "noPermission": "No tienes permiso para cambiar esto.",
+        "nothingToSave": "Nada que guardar"
+      },
+      "history": {
+        "empty": {
+          "title": "Aún no hay despliegues",
+          "description": "Cada despliegue aparecerá aquí con su registro de compilación."
+        },
+        "noMessage": "Sin mensaje de commit",
+        "system": "Sistema",
+        "redeploy": "Repetir",
+        "redeployStarted": "Repitiendo ese despliegue.",
+        "redeployFailed": "No se pudo repetir ese despliegue.",
+        "output": "Registro de compilación",
+        "copy": "Copiar registro",
+        "loadingLog": "Cargando el registro de compilación…",
+        "noOutput": "Este despliegue no produjo salida.",
+        "logFailed": "No se pudo cargar el registro de compilación.",
+        "noPermission": "No tienes permiso para desplegar.",
+        "title": "Historial de despliegues",
+        "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro."
+      }
     },
     "files": {
       "pageTitle": "Archivos",
@@ -2954,7 +2995,8 @@
         "compress": "Comprimir",
         "extract": "Extraer",
         "permissions": "Permisos",
-        "delete": "Eliminar"
+        "delete": "Eliminar",
+        "folderSize": "Tamaño de la carpeta"
       },
       "empty": {
         "title": "Esta carpeta está vacía",
@@ -3156,6 +3198,9 @@
           "exists": "Ya hay algo en el destino",
           "failed": "El servidor lo rechazó"
         }
+      },
+      "size": {
+        "failed": "No se pudo medir esa carpeta."
       }
     },
     "workers": {
@@ -3812,7 +3857,17 @@
       },
       "copyAge": "Copia hecha {age}"
     },
-    "stagingBadge": "Pruebas"
+    "stagingBadge": "Pruebas",
+    "webRoot": {
+      "title": "Cambiar la raíz web",
+      "description": "El directorio que el servidor web sirve para este sitio.",
+      "label": "Raíz web",
+      "hint": "Relativa a la carpeta del sitio, p. ej. /public. Déjala vacía para servir la carpeta del sitio.",
+      "submit": "Cambiar la raíz web",
+      "cancel": "Cancelar",
+      "saved": "Raíz web cambiada.",
+      "failed": "No se pudo cambiar la raíz web."
+    }
   },
   "panelUpdate": {
     "title": "Actualización del panel",
