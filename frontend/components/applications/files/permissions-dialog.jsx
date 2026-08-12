@@ -4,14 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "next-intl";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, TriangleAlert } from "lucide-react";
 import { setFilePermissions } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
-import { describeMode } from "@/lib/files/describe-mode";
-import { cn } from "@/lib/utils";
+import {
+  AUDIENCES,
+  describeMode,
+  hasPermission,
+  isWorldWritable,
+  withPermission,
+} from "@/lib/files/describe-mode";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +33,6 @@ const PRESETS = [
   { mode: "755", labelKey: "permissionsDialog.preset755" },
   { mode: "600", labelKey: "permissionsDialog.preset600" },
 ];
-const CUSTOM = "custom";
 
 // Mounted fresh per file (see files-panel.jsx), so the pre-selected choice
 // is the initial state directly rather than something an effect resets.
@@ -42,21 +45,26 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
   const locale = useLocale();
   const router = useRouter();
   const currentMode = file?.mode ?? null;
-  const matchingPreset = currentMode && PRESETS.some((p) => p.mode === currentMode) ? currentMode : null;
-  const [choice, setChoice] = useState(() => matchingPreset ?? (currentMode ? CUSTOM : PRESETS[0].mode));
-  const [custom, setCustom] = useState(() => (!matchingPreset && currentMode ? currentMode : ""));
+  // One piece of state: the mode itself. The checkboxes edit its digits, so no
+  // combination can be entered that the server would reject.
+  const [mode, setMode] = useState(() =>
+    /^[0-7]{3}$/.test(currentMode ?? "") ? currentMode : PRESETS[0].mode,
+  );
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
-
-  const mode = choice === CUSTOM ? custom.trim() : choice;
-  const validCustom = /^[0-7]{3}$/.test(custom.trim());
 
   // A live, plain-language readout of whatever's currently selected — not
   // just for Custom (where it matters most, since no preset label is there
   // to lean on), but for the presets too, so "Read-only" doesn't have to be
   // taken on faith. Owner and "everyone else" collapse into one clause when
   // group and other match, which is true for all three presets.
-  const permWords = { read: t("permissionsDialog.read"), write: t("permissionsDialog.write"), execute: t("permissionsDialog.execute") };
+  // Sentence verbs, not the column headers: "Owner: read and write." needs
+  // lowercase verbs, the grid needs capitalised nouns.
+  const permWords = {
+    read: t("permissionsDialog.verbRead"),
+    write: t("permissionsDialog.verbWrite"),
+    execute: t("permissionsDialog.verbExecute"),
+  };
   const listFormat = new Intl.ListFormat(locale, { style: "long", type: "conjunction" });
   function describe(tokens) {
     return tokens.length ? listFormat.format(tokens.map((tok) => permWords[tok])) : t("permissionsDialog.noAccess");
@@ -79,7 +87,7 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (busy || !mode || (choice === CUSTOM && !validCustom)) return;
+    if (busy || !/^[0-7]{3}$/.test(mode)) return;
     setBusy(true);
     setError(null);
     try {
@@ -116,62 +124,85 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2 py-4">
-            {PRESETS.map((p) => (
-              <button
-                key={p.mode}
-                type="button"
-                onClick={() => setChoice(p.mode)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
-                  choice === p.mode ? "border-primary bg-primary/5" : "hover:bg-muted/50",
-                )}
-              >
-                <span className="flex items-center gap-2">
+          <div className="space-y-3 py-4">
+            {/* The three answers almost everyone wants, still one click. */}
+            <div className="flex flex-wrap gap-2">
+              {PRESETS.map((p) => (
+                <Button
+                  key={p.mode}
+                  type="button"
+                  size="sm"
+                  variant={mode === p.mode ? "default" : "outline"}
+                  onClick={() => setMode(p.mode)}
+                >
                   {t(p.labelKey)}
-                  {currentMode === p.mode ? (
-                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      {t("permissionsDialog.currentBadge")}
-                    </span>
-                  ) : null}
-                </span>
-                <span className="font-mono text-xs text-muted-foreground">{p.mode}</span>
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setChoice(CUSTOM)}
-              className={cn(
-                "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
-                choice === CUSTOM ? "border-primary bg-primary/5" : "hover:bg-muted/50",
-              )}
-            >
-              <span>{t("permissionsDialog.custom")}</span>
-            </button>
-            {choice === CUSTOM ? (
-              <div className="space-y-1.5 pl-1">
-                <Label htmlFor="custom-mode" className="sr-only">
-                  {t("permissionsDialog.custom")}
-                </Label>
-                <Input
-                  id="custom-mode"
-                  value={custom}
-                  onChange={(e) => setCustom(e.target.value)}
-                  autoFocus
-                  autoComplete="off"
-                  inputMode="numeric"
-                  placeholder="644"
-                  className="w-24 font-mono"
-                  aria-invalid={Boolean(custom) && !validCustom}
-                />
-                <p className="text-xs text-muted-foreground">{t("permissionsDialog.customHint")}</p>
+                </Button>
+              ))}
+            </div>
+
+            {/* Nine checkboxes rather than a number. "644" is only meaningful
+                to someone who already knows the 4/2/1 mask, and everyone else
+                was being asked to learn octal to change a file. The mode is
+                still what gets sent — it is just no longer what gets typed. */}
+            <div className="overflow-hidden rounded-lg border">
+              <div className="grid grid-cols-[1fr_repeat(3,4.5rem)] items-center gap-y-1 px-3 py-2 text-[11px] font-medium text-muted-foreground">
+                <span />
+                <span className="text-center">{t("permissionsDialog.read")}</span>
+                <span className="text-center">{t("permissionsDialog.write")}</span>
+                <span className="text-center">{t("permissionsDialog.execute")}</span>
               </div>
-            ) : null}
-            {descriptionText ? (
-              <p className="rounded-lg border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                {descriptionText}
+              <div className="divide-y border-t">
+                {AUDIENCES.map((audience) => (
+                  <div
+                    key={audience}
+                    className="grid grid-cols-[1fr_repeat(3,4.5rem)] items-center px-3 py-2"
+                  >
+                    <span className="text-sm font-medium">
+                      {t(`permissionsDialog.audience.${audience}`)}
+                    </span>
+                    {["read", "write", "execute"].map((permission) => (
+                      <span key={permission} className="flex justify-center">
+                        <Checkbox
+                          checked={hasPermission(mode, audience, permission)}
+                          aria-label={t("permissionsDialog.boxLabel", {
+                            audience: t(`permissionsDialog.audience.${audience}`),
+                            permission: permWords[permission],
+                          })}
+                          onCheckedChange={(next) =>
+                            setMode(withPermission(mode, audience, permission, next === true))
+                          }
+                        />
+                      </span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {descriptionText ? (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {descriptionText}
+                </p>
+              ) : (
+                <span />
+              )}
+              {/* Kept, small: the number still means something to people who
+                  know it, and it is what the server is given. */}
+              <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                {mode}
+              </span>
+            </div>
+
+            {/* Anyone with a login on the box could change the file — almost
+                never intended, and the one combination worth interrupting for. */}
+            {isWorldWritable(mode) ? (
+              <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                {t("columns.worldWritableHint")}
               </p>
             ) : null}
+
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
           </div>
 
@@ -179,7 +210,7 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>
               {t("cancel")}
             </Button>
-            <Button type="submit" disabled={busy || (choice === CUSTOM && !validCustom)}>
+            <Button type="submit" disabled={busy}>
               {busy ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("permissionsDialog.submit")}
             </Button>

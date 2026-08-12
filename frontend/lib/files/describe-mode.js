@@ -21,6 +21,34 @@ export function describeMode(mode) {
   };
 }
 
+// Which bit each permission is worth, in the standard 4/2/1 mask.
+export const PERMISSION_BITS = { read: 4, write: 2, execute: 1 };
+
+// The three audiences a mode covers, in the order the digits appear.
+export const AUDIENCES = ["owner", "group", "other"];
+
+// Whether one audience holds one permission in this mode.
+export function hasPermission(mode, audience, permission) {
+  const digit = Number(mode?.[AUDIENCES.indexOf(audience)] ?? 0);
+  return Boolean(digit & PERMISSION_BITS[permission]);
+}
+
+/**
+ * The same mode with one box ticked or cleared.
+ *
+ * Editing the digits directly is what lets the dialog offer nine plain
+ * checkboxes instead of asking for octal: every combination is reachable, and
+ * an invalid one cannot be typed.
+ */
+export function withPermission(mode, audience, permission, on) {
+  const digits = (/^[0-7]{3}$/.test(mode) ? mode : "000").split("").map(Number);
+  const index = AUDIENCES.indexOf(audience);
+  digits[index] = on
+    ? digits[index] | PERMISSION_BITS[permission]
+    : digits[index] & ~PERMISSION_BITS[permission];
+  return digits.join("");
+}
+
 // The "others" digit granting write (bit 2) — anyone with a shell account on
 // the box, not just the site's own user, could modify the file. Almost never
 // intentional, worth flagging wherever a mode is shown rather than only
