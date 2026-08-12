@@ -8,6 +8,7 @@ use App\Enums\DomainType;
 use App\Enums\WafCategory;
 use App\Enums\WafMode;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -216,8 +217,34 @@ class Application extends Model
 
     public function features(): array
     {
-        return app(SiteTypeManager::class)->find($this->site_type)?->features()
+        $features = app(SiteTypeManager::class)->find($this->site_type)?->features()
             ?? ['app_dashboard', 'app_domain', 'app_log'];
+
+        // The 8G Firewall is the one app feature whose availability is a
+        // *server* fact rather than a site-type one: it is rendered into the
+        // vhost, and the OpenLiteSpeed templates carry no WAF rules. Hidden
+        // here rather than shown-and-refused, which also 404s its endpoints
+        // through CheckPermission — same "hide rather than grey" reasoning as
+        // the site-type filter itself. There is nothing the user could do to
+        // turn it on, so a disabled row would only be noise.
+        //
+        // Fails OPEN. driver() throws when the server has no capability row
+        // yet — a freshly provisioned box, or a test that never wrote one —
+        // and this runs on every sidebar and every application route. Hiding
+        // a working screen because the web server is momentarily unknown is
+        // worse than showing one the manager will refuse anyway; Waf8GManager
+        // still guards the write.
+        $wafSupported = rescue(
+            fn (): bool => app(WebServerManager::class)->driver()->supportsWaf(),
+            true,
+            report: false,
+        );
+
+        if (! $wafSupported) {
+            $features = array_values(array_diff($features, ['app_firewall']));
+        }
+
+        return $features;
     }
 
     public function supports(string $feature): bool

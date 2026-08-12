@@ -357,26 +357,39 @@ it('reads the detect log from the file the vhost was told to write', function ()
         ->and($readerPath)->toBe($writerPath);
 });
 
-it('refuses to enable the firewall on a web server that cannot enforce it', function () {
+it('hides the firewall entirely on a web server that cannot enforce it', function () {
     fakeWafWebServer();
 
     // One server runs one web server, so this is a server-wide fact.
     ServerCapability::query()->update(['web_server' => 'openlitespeed', 'stack' => 'ols']);
 
-    $this->withHeaders(wafHeaders())
-        ->getJson('/api/waf-options')
-        ->assertOk()
-        ->assertJsonPath('waf_supported', false);
+    // Not in the application's feature list, so it is not in the sidebar the
+    // panel builds from permissions — hidden rather than shown-and-refused,
+    // because there is nothing the user could do here to turn it on.
+    expect($this->application->fresh()->features())->not->toContain('app_firewall');
 
-    // Previously answered 200 and stored waf_enabled: true, while no OLS vhost
-    // template references the rules and the shared ruleset writer returns
-    // early — a green firewall inspecting nothing.
+    // And CheckPermission 404s the routes off the back of the same list, so
+    // the endpoint does not exist on this server rather than existing and
+    // saying no. Previously this answered 200 and stored waf_enabled: true
+    // while no OLS template references the rules — a green firewall
+    // inspecting nothing.
     $this->withHeaders(wafHeaders())
         ->putJson(wafUrl(), ['enabled' => true, 'mode' => 'enforce'])
-        ->assertStatus(422)
-        ->assertJsonValidationErrors('enabled');
+        ->assertNotFound();
 
     expect($this->application->fresh()->waf_enabled)->toBeFalse();
+});
+
+it('keeps the firewall visible when the web server is not yet known', function () {
+    fakeWafWebServer();
+
+    // A freshly provisioned box has no capability row yet, and features() runs
+    // on every sidebar and every application route. Hiding a working screen
+    // because the web server is momentarily unknown is worse than showing one
+    // the manager would refuse — so this fails open.
+    ServerCapability::query()->delete();
+
+    expect($this->application->fresh()->features())->toContain('app_firewall');
 });
 
 it('still lets an unsupported web server switch the firewall off', function () {

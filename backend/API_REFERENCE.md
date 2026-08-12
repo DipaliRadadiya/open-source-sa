@@ -1842,7 +1842,9 @@ The six categories and two modes, plus whether this server can enforce them at a
 
 The six `value`s are the complete set — there is no `sql_injection`, `xss`, `spam` or `bad_js` category. `title` and `description` are localized; render them rather than mapping the values yourself.
 
-**`waf_supported` is `false` on OpenLiteSpeed**, where the rules are not yet implemented. Hide or disable the whole screen when it is false — enabling answers `422` (see below), and finding that out by pressing the button is not a design. It is server-wide, because one server runs one web server.
+**`waf_supported` is `false` on OpenLiteSpeed**, where the rules are not yet implemented. It is server-wide, because one server runs one web server.
+
+You should not normally need it: on such a server `app_firewall` is **dropped from the application's feature list**, so it never appears in `GET /permissions?level=application&application_id=…` and the sidebar simply has no 8G Firewall item — the same hide-rather-than-grey treatment as a Deployment screen on a WordPress site. The endpoints below answer **`404`** there too, via the same list. `waf_supported` is for the case where you want to explain the absence rather than just omit it.
 
 ---
 
@@ -1887,7 +1889,9 @@ Returns the application resource. The firewall fields on it:
 
 **Response `200`:** `{"application": {...}}`
 
-**Response `422`** — `enabled` — the web server cannot enforce the ruleset (currently OpenLiteSpeed). Pre-empt this with `waf_supported`. Disabling and editing rules are still allowed on such a server, so a site switched on before this guard existed can be switched back off.
+**Response `404`** — the web server cannot enforce the ruleset (currently OpenLiteSpeed), so `app_firewall` is not among the application's features and the route does not exist for it. The screen should already be hidden; this is the backstop.
+
+**Response `422`** — `enabled` — the same refusal from the service layer. Not reachable through this route while the 404 above applies, and kept because the manager is also called from the console and from sync.
 
 **Mode matters more than it looks.** `detect` blocks nothing and logs what *would* have been blocked to a separate file, exposed as the `waf_detect` log key (see Application — Logs). It is listed **only while the mode is `detect`**, because only that mode writes it. The intended flow is detect → read the log → add exceptions → enforce; a UI that pushes straight to `enforce` skips the step that makes this safe to turn on.
 
