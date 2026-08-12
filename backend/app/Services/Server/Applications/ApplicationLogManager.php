@@ -154,9 +154,14 @@ class ApplicationLogManager
             $catalog[] = [
                 'key' => 'waf_detect',
                 'kind' => 'file',
-                // Inside `.panel/`, which every vhost template already denies
-                // over HTTP — nothing new has to keep it unreadable.
-                'path' => $this->provisioner->documentRoot($application).'/.panel/waf-detect.log',
+                // `panelPath()`, which is where the vhost is told to write it
+                // (AbstractWebServerDriver::wafContext). This read the old
+                // pre-relocation location under the document root, so the file
+                // the panel opened was never the file nginx wrote — detect mode
+                // showed an empty log no matter how much it had matched, which
+                // reads as "nothing would be blocked" and invites someone to
+                // enforce a ruleset they have not actually checked.
+                'path' => $application->panelPath().'/waf-detect.log',
             ];
         }
 

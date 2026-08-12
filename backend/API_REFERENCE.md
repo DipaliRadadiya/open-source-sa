@@ -616,7 +616,8 @@ Full application record. Poll this while `status` is `provisioning` or `deployin
   "basic_auth_enabled": false, "basic_auth_username": null,
 
   "ai_bot_policy": "block_training", "ai_bot_policy_title": "Block AI training crawlers",
-  "waf_enabled": true, "waf_mode": "detect", "waf_mode_title": "Detect only",
+  "waf_supported": true,
+  "waf_enabled": true, "waf_mode": "detect", "waf_mode_title": "Just watch, don't block",
   "waf_categories": ["query_string", "request_uri", "user_agent", "referrer", "cookie", "method"],
   "fail2ban_enabled": false,
 
@@ -1811,58 +1812,86 @@ Gated on `app_log` (not `app_bot_blocker`) because it reads the site's access lo
 
 ---
 
-## Application — 8G WAF
+## Application — 8G Firewall
+
+The Perishable Press 8G ruleset (v1.5), applied as web-server config — no daemon and no package. Six independently switchable categories, two modes, and a per-app exceptions/custom-rules list. Permission `app_firewall`; the screen is titled **8G Firewall**.
 
 ### GET `/waf-options`
 **Permission:** `app_firewall` (view)
 
-The six WAF rule categories and two enforcement modes.
+The six categories and two modes, plus whether this server can enforce them at all.
 
 ```json
-{"waf_categories": [
-  {"value": "bad_referers", "title": "Bad Referrers", "description": "Blocks empty referrer and known spam referrers."},
-  {"value": "bad_bots", "title": "Bad Bots", "description": "Blocks known malicious crawlers and scrapers."},
-  …
-], "waf_modes": [
-  {"value": "detect", "title": "Detect only"},
-  {"value": "enforce", "title": "Enforce rules"}
-]}
+{
+  "waf_supported": true,
+  "web_server": "nginx",
+  "waf_categories": [
+    {"value": "query_string", "title": "Bad search terms", "description": "Blocks requests whose search terms carry SQL, script or file-path tricks…"},
+    {"value": "request_uri", "title": "Bad web addresses", "description": "…"},
+    {"value": "user_agent", "title": "Bad visitors", "description": "…"},
+    {"value": "referrer", "title": "Bad links", "description": "…"},
+    {"value": "cookie", "title": "Bad cookies", "description": "…"},
+    {"value": "method", "title": "Bad request types", "description": "…"}
+  ],
+  "waf_modes": [
+    {"value": "detect", "title": "Just watch, don't block"},
+    {"value": "enforce", "title": "Actually block"}
+  ]
+}
 ```
+
+The six `value`s are the complete set — there is no `sql_injection`, `xss`, `spam` or `bad_js` category. `title` and `description` are localized; render them rather than mapping the values yourself.
+
+**`waf_supported` is `false` on OpenLiteSpeed**, where the rules are not yet implemented. Hide or disable the whole screen when it is false — enabling answers `422` (see below), and finding that out by pressing the button is not a design. It is server-wide, because one server runs one web server.
 
 ---
 
 ### GET `/applications/{application}/waf`
 **Permission:** `app_firewall` (view)
 
-Current WAF state for this application.
+Returns the application resource. The firewall fields on it:
 
 ```json
 {"application": {
-  "id": 1, "waf_enabled": true, "waf_mode": "enforce",
-  "waf_categories": {"bad_referers": true, "bad_bots": true, "sql_injection": true, "xss": true, "spam": false, "bad_js": false},
-  "waf_exceptions": [{"kind": "user_agent", "value": "MyClient/1.0"}],
-  "waf_custom_rules": []
+  "id": 1,
+  "waf_supported": true,
+  "waf_enabled": true,
+  "waf_mode": "detect", "waf_mode_title": "Just watch, don't block",
+  "waf_categories": ["query_string", "request_uri", "user_agent", "referrer", "cookie", "method"],
+  "waf_exceptions": ["/wp-admin/admin-ajax.php"],
+  "waf_custom_rules": ["/xmlrpc.php"]
 }}
 ```
+
+`waf_categories` is a **flat array of enabled values**, never an object of booleans. A stored `null` is resolved here to all six, so the frontend never has to know that null and the full list mean the same thing.
+
+`waf_exceptions` and `waf_custom_rules` are **arrays of plain strings** (max 50 each, 1–255 chars), not objects — an exception is matched against the request URI, query string and user agent. Both use `whenLoaded`, so they are **absent** rather than empty when the relation was not loaded.
 
 ---
 
 ### PUT `/applications/{application}/waf`
 **Permission:** `app_firewall` (manage) | **Throttle:** 10/min
 
-Update WAF settings.
-
 **Request:**
 ```json
 {
-  "enabled": true, "mode": "enforce",
-  "categories": {"bad_referers": true, "bad_bots": true, "sql_injection": true, "xss": true, "spam": false, "bad_js": false},
-  "exceptions": [{"kind": "user_agent", "value": "MyClient/1.0"}],
-  "custom_rules": []
+  "enabled": true,
+  "mode": "detect",
+  "categories": ["query_string", "request_uri", "user_agent", "referrer", "cookie", "method"],
+  "exceptions": ["/wp-admin/admin-ajax.php"],
+  "custom_rules": ["/xmlrpc.php"]
 }
 ```
 
-**Response `200`:** `{"application": {...updated...}}`
+`enabled` and `mode` are **required**. `categories`, `exceptions` and `custom_rules` are optional, and **omitting one leaves the stored value alone** — it does not reset it. That matters: absent once meant "all six on", which silently re-enabled the category a user had switched off to fix a false positive. Send an empty array to clear.
+
+**Response `200`:** `{"application": {...}}`
+
+**Response `422`** — `enabled` — the web server cannot enforce the ruleset (currently OpenLiteSpeed). Pre-empt this with `waf_supported`. Disabling and editing rules are still allowed on such a server, so a site switched on before this guard existed can be switched back off.
+
+**Mode matters more than it looks.** `detect` blocks nothing and logs what *would* have been blocked to a separate file, exposed as the `waf_detect` log key (see Application — Logs). It is listed **only while the mode is `detect`**, because only that mode writes it. The intended flow is detect → read the log → add exceptions → enforce; a UI that pushes straight to `enforce` skips the step that makes this safe to turn on.
+
+Applying is atomic: the config is written, tested and reloaded, and rolled back on failure — including the rules, which are not persisted until the config test passes.
 
 ---
 

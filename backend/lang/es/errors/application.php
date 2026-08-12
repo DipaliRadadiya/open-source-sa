@@ -23,6 +23,7 @@ return [
     'bot_agent_search_engine' => 'Eso es un buscador, no un rastreador de IA. Bloquearlo eliminaría tu sitio de los resultados de búsqueda.',
     'web_root_failed' => 'No se pudo cambiar la raíz web en el servidor.',
     'web_root_not_found' => 'No se encontró el directorio raíz web en el servidor. Revisa la raíz web en la configuración de la aplicación y vuelve a aprovisionarla si nunca se creó.',
+    'waf_unsupported' => 'El Firewall 8G aún no está disponible en :server.',
     'waf_failed' => 'No se pudo cambiar la configuración del firewall en el servidor.',
     'staging_failed' => 'La operación de staging falló en el servidor.',
     'clone_failed' => 'La operación de clonación falló en el servidor.',

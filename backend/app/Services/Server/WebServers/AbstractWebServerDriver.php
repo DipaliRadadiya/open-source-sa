@@ -208,6 +208,22 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
+     * Whether this driver can actually enforce the 8G Firewall.
+     *
+     * Asked rather than assumed, because the alternative is what shipped: the
+     * shared ruleset writer matched nginx and apache and fell through to a
+     * silent `return` for anything else, and no OpenLiteSpeed vhost template
+     * references the rules at all. The API answered 200, the record said
+     * `waf_enabled: true`, and not one request was inspected — a panel
+     * claiming protection it is not providing, which is worse than one that
+     * says no.
+     */
+    public function supportsWaf(): bool
+    {
+        return true;
+    }
+
+    /**
      * Null unless the firewall is on and actually has something to check —
      * zero categories and zero custom rules means nothing would ever be
      * blocked, so the template renders no block at all rather than an

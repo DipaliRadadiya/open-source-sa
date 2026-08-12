@@ -33,7 +33,7 @@ return [
     'app_backup' => 'Backups',
     'app_php' => 'PHP Settings',
     'app_security' => 'Password Protection',
-    'app_firewall' => 'Web Firewall',
+    'app_firewall' => '8G Firewall',
     'app_bot_blocker' => 'AI Bot Blocker',
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Staging Area',

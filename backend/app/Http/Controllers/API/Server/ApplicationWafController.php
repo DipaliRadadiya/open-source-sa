@@ -9,14 +9,20 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\UpdateWafRequest;
 use App\Http\Resources\ApplicationResource;
 use App\Models\Application;
+use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Http\JsonResponse;
 
 class ApplicationWafController extends Controller
 {
     /** The six categories and two modes, for the screen's own labels. */
-    public function options(): JsonResponse
+    public function options(WebServerManager $webServers): JsonResponse
     {
         return response()->json([
+            // Server-wide, because one server runs one web server. Lets the
+            // screen say "not available on OpenLiteSpeed" once, up front,
+            // instead of per application.
+            'waf_supported' => $webServers->driver()->supportsWaf(),
+            'web_server' => $webServers->driver()->name(),
             'waf_categories' => collect(WafCategory::cases())->map(fn (WafCategory $category) => [
                 'value' => $category->value,
                 'title' => $category->title(),

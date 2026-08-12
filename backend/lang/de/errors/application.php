@@ -23,6 +23,7 @@ return [
     'bot_agent_search_engine' => 'Das ist eine Suchmaschine, kein KI-Crawler. Eine Blockierung würde Ihre Website aus den Suchergebnissen entfernen.',
     'web_root_failed' => 'Das Ändern des Web-Roots ist auf dem Server fehlgeschlagen.',
     'web_root_not_found' => 'Das Web-Root-Verzeichnis wurde auf dem Server nicht gefunden. Prüfen Sie den Web-Root in den Anwendungseinstellungen und stellen Sie die Anwendung erneut bereit, falls sie nie erstellt wurde.',
+    'waf_unsupported' => 'Die 8G-Firewall ist auf :server noch nicht verfügbar.',
     'waf_failed' => 'Das Ändern der Firewall-Einstellungen ist auf dem Server fehlgeschlagen.',
     'staging_failed' => 'Der Staging-Vorgang ist auf dem Server fehlgeschlagen.',
     'clone_failed' => 'Der Klonvorgang ist auf dem Server fehlgeschlagen.',

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Services\Git\Webhooks\WebhookManager;
 use App\Services\Server\Applications\ProcessSupervisor;
+use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -61,6 +62,11 @@ class ApplicationResource extends JsonResource
             // The 8G Firewall. `waf_categories` is null-resolved to "all six"
             // here too, so the frontend never has to know that null means
             // the same thing as the full list — one place decides that.
+            // Whether this server's web server can enforce it at all. Hide the
+            // control when false rather than letting the user turn on a
+            // firewall that inspects nothing — enabling it answers 422, but
+            // finding that out by pressing the button is not a design.
+            'waf_supported' => app(WebServerManager::class)->driver()->supportsWaf(),
             'waf_enabled' => (bool) $this->waf_enabled,
             'waf_mode' => $this->waf_mode->value,
             'waf_mode_title' => $this->waf_mode->title(),

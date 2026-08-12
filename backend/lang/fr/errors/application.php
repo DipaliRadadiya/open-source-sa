@@ -23,6 +23,7 @@ return [
     'bot_agent_search_engine' => 'C\'est un moteur de recherche, pas un robot d\'IA. Le bloquer retirerait votre site des résultats de recherche.',
     'web_root_failed' => 'La modification de la racine web a échoué sur le serveur.',
     'web_root_not_found' => 'Le répertoire racine web est introuvable sur le serveur. Vérifiez la racine web dans les paramètres de l\'application et reprovisionnez-la si elle n\'a jamais été créée.',
+    'waf_unsupported' => 'Le pare-feu 8G n\'est pas encore disponible sur :server.',
     'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
     'staging_failed' => 'L\'opération de staging a échoué sur le serveur.',
     'clone_failed' => 'L\'opération de clonage a échoué sur le serveur.',

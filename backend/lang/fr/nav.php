@@ -33,7 +33,7 @@ return [
     'app_backup' => 'Sauvegardes',
     'app_php' => 'Paramètres PHP',
     'app_security' => 'Protection par mot de passe',
-    'app_firewall' => 'Pare-feu web',
+    'app_firewall' => 'Pare-feu 8G',
     'app_bot_blocker' => 'Bloqueur de robots IA',
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Zone de préproduction',

@@ -7,8 +7,11 @@ use App\Models\ApplicationWafRule;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Applications\ApplicationLogManager;
+use App\Services\Server\Applications\Waf8GManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The 8G Firewall: six independently switchable categories, detect vs
@@ -316,4 +319,86 @@ it('offers the detect log only while the firewall is watching', function () {
     // Enforcing returns 403 and writes nothing here, so listing it would show
     // an empty file that reads as broken rather than as "not this mode".
     expect($keys())->not->toContain('waf_detect');
+});
+
+it('reads the detect log from the file the vhost was told to write', function () {
+    $written = [];
+    fakeWafWebServer(onWrite: function (array $write) use (&$written) {
+        $written[] = $write;
+    });
+
+    $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
+        'enabled' => true, 'mode' => 'detect',
+    ])->assertOk();
+
+    // Where nginx was actually configured to log, read back out of the vhost
+    // that was written — not recomputed here, which would only restate the
+    // assumption instead of testing it.
+    $vhost = collect($written)->pluck('input')->first(
+        fn (string $body): bool => str_contains($body, 'waf-detect.log'),
+    );
+
+    preg_match('#access_log (\S*waf-detect\.log)#', (string) $vhost, $matches);
+    $writerPath = $matches[1] ?? null;
+
+    // Where the panel looks when the user opens the log.
+    $readerPath = app(ApplicationLogManager::class)
+        ->find($this->application->fresh(), 'waf_detect')['path'] ?? null;
+
+    // These disagreed: the vhost wrote to `panelPath()` while the catalog read
+    // `documentRoot()/.panel`, so detect mode showed an empty file however much
+    // it had matched — and an empty detect log reads as "nothing would be
+    // blocked", which invites enforcing a ruleset nobody has checked.
+    //
+    // The existing test above asserts only that the KEY is offered, which is
+    // exactly why this survived. Comparing the two real sources is the check
+    // that would have caught it.
+    expect($writerPath)->not->toBeNull()
+        ->and($readerPath)->toBe($writerPath);
+});
+
+it('refuses to enable the firewall on a web server that cannot enforce it', function () {
+    fakeWafWebServer();
+
+    // One server runs one web server, so this is a server-wide fact.
+    ServerCapability::query()->update(['web_server' => 'openlitespeed', 'stack' => 'ols']);
+
+    $this->withHeaders(wafHeaders())
+        ->getJson('/api/waf-options')
+        ->assertOk()
+        ->assertJsonPath('waf_supported', false);
+
+    // Previously answered 200 and stored waf_enabled: true, while no OLS vhost
+    // template references the rules and the shared ruleset writer returns
+    // early — a green firewall inspecting nothing.
+    $this->withHeaders(wafHeaders())
+        ->putJson(wafUrl(), ['enabled' => true, 'mode' => 'enforce'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('enabled');
+
+    expect($this->application->fresh()->waf_enabled)->toBeFalse();
+});
+
+it('still lets an unsupported web server switch the firewall off', function () {
+    fakeWafWebServer();
+
+    ServerCapability::query()->update(['web_server' => 'openlitespeed', 'stack' => 'ols']);
+
+    // Asserted against the guard rather than through the HTTP stack, because
+    // rendering an OLS vhost needs a real shared config this fake has no way
+    // to provide — and the guard is the part being tested. A site enabled
+    // before this guard existed must stay recoverable: refusing every write
+    // would strand it permanently on.
+    $refuse = fn (bool $enabled): bool => rescue(
+        function () use ($enabled): bool {
+            app(Waf8GManager::class)->apply($this->application, $enabled, WafMode::Enforce);
+
+            return false;
+        },
+        fn (Throwable $e): bool => $e instanceof ValidationException,
+        false,
+    );
+
+    expect($refuse(true))->toBeTrue()
+        ->and($refuse(false))->toBeFalse();
 });

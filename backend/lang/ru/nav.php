@@ -33,7 +33,7 @@ return [
     'app_backup' => 'Резервные копии',
     'app_php' => 'Настройки PHP',
     'app_security' => 'Защита паролем',
-    'app_firewall' => 'Веб-брандмауэр',
+    'app_firewall' => 'Брандмауэр 8G',
     'app_bot_blocker' => 'Блокировка ИИ-ботов',
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Тестовая площадка',

@@ -23,6 +23,7 @@ return [
     'bot_agent_search_engine' => 'That is a search engine, not an AI crawler. Blocking it would remove your site from search results.',
     'web_root_failed' => 'Changing the web root failed on the server.',
     'web_root_not_found' => 'The web root directory could not be found on the server. Check the web root in the application settings, and re-provision the application if it was never created.',
+    'waf_unsupported' => 'The 8G Firewall is not available on :server yet.',
     'waf_failed' => 'Changing the firewall settings failed on the server.',
     'staging_failed' => 'The staging operation failed on the server.',
     'clone_failed' => 'The clone operation failed on the server.',

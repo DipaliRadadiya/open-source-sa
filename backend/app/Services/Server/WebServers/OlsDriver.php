@@ -72,6 +72,17 @@ class OlsDriver extends AbstractWebServerDriver
         ];
     }
 
+    /**
+     * Not yet. OpenLiteSpeed needs the rules as rewrite directives inside each
+     * site's `vhconf.conf` — `.htaccess` would need a restart, not a reload —
+     * and none of the three OLS templates carry them. Answering `false` here is
+     * what turns "enabled and doing nothing" into a refusal the user can see.
+     */
+    public function supportsWaf(): bool
+    {
+        return false;
+    }
+
     public function name(): string
     {
         return 'openlitespeed';

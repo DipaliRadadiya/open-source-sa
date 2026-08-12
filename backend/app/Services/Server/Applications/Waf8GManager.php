@@ -11,6 +11,7 @@ use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The 8G Firewall (query string / request URI / user agent / referrer /
@@ -47,6 +48,23 @@ class Waf8GManager
         ?array $exceptions = null,
         ?array $customRules = null,
     ): void {
+        // Refused before anything is written. Turning the firewall on where it
+        // cannot be enforced used to answer 200 and store `waf_enabled: true`,
+        // so the screen showed protection that inspected nothing. A 422 naming
+        // the web server is the honest answer, and the frontend can hide the
+        // control entirely using `waf_supported`.
+        //
+        // Only enabling is blocked: disabling, and editing rules on a site that
+        // was enabled before this guard existed, must stay possible — otherwise
+        // an OLS site that got switched on could never be switched back off.
+        if ($enabled && ! $this->webServers->driver()->supportsWaf()) {
+            throw ValidationException::withMessages([
+                'enabled' => __('errors/application.waf_unsupported', [
+                    'server' => $this->webServers->driver()->name(),
+                ]),
+            ]);
+        }
+
         $this->ensureSharedMaps();
 
         $application->loadMissing('wafRules');
