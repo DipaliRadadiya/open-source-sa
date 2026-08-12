@@ -577,6 +577,17 @@ return [
 
     'applications' => [
         'systemd_dir' => env('SERVER_SYSTEMD_DIR', '/etc/systemd/system'),
+
+        /*
+        | Where supervisor keeps its program blocks.
+        |
+        | Read-only, and only by the sync: the panel supervises with systemd.
+        | A migrated box usually runs its queue workers under supervisor,
+        | because that is what every Laravel tutorial teaches, and a sync that
+        | did not look here would report a site with no background processes
+        | while four of them were running.
+        */
+        'supervisor_dir' => env('SERVER_SUPERVISOR_DIR', '/etc/supervisor/conf.d'),
         'port_range' => [
             'from' => (int) env('SERVER_APP_PORT_FROM', 3000),
             'to' => (int) env('SERVER_APP_PORT_TO', 3999),

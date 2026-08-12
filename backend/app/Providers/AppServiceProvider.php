@@ -21,6 +21,7 @@ use App\Services\Server\Sync\Discoverers\ApplicationDiscoverer;
 use App\Services\Server\Sync\Discoverers\PhpSettingsDiscoverer;
 use App\Services\Server\Sync\Discoverers\SshKeyDiscoverer;
 use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
+use App\Services\Server\Sync\Discoverers\WorkerDiscoverer;
 use App\Services\Server\Sync\ServerSync;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -46,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
             $app->make(SshKeyDiscoverer::class),
             $app->make(ApplicationDiscoverer::class),
             $app->make(PhpSettingsDiscoverer::class),
+            $app->make(WorkerDiscoverer::class),
         ]));
 
         // How PHP is served here. Resolved from the web server this box runs,

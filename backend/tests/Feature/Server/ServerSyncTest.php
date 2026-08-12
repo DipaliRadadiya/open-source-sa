@@ -11,6 +11,7 @@ use App\Models\SshKey;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Models\Worker;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\Sync\ServerSync;
 use Database\Seeders\PermissionSeeder;
@@ -838,5 +839,187 @@ describe('importing php settings from the pool that serves a site', function () 
         // Taking the first would import a value the server is not using.
         expect(ApplicationPhpSettings::where('application_id', $this->application->id)->first()->memory_limit)
             ->toBe('2048M');
+    });
+});
+
+/*
+ * Background processes a migrated site is already running.
+ *
+ * The fuzziest resource: nothing on a server says "this is a queue worker".
+ * Attribution is by path — a working directory inside a site the panel knows
+ * — and the kind is a guess off a command line.
+ */
+describe('discovering workers', function () {
+    beforeEach(function () {
+        $this->su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $this->application = Application::forceCreate([
+            'system_user_id' => $this->su->id, 'name' => 'Shop', 'slug' => 'shop',
+            'domain' => 'shop.example.com', 'site_type' => 'git', 'serving_profile' => 'php',
+            'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
+        ]);
+    });
+
+    /** @param  array<string, string>  $files  absolute path => contents */
+    function fakeProcessDefinitions(array $files): void
+    {
+        Process::fake(function ($process) use ($files) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+
+            if ($binary === 'getent') {
+                return Process::result(output: "siteowner:x:1001:1001::/home/siteowner:/bin/bash\n");
+            }
+
+            if ($binary === 'find') {
+                $directory = rtrim((string) ($args[1] ?? ''), '/');
+
+                return Process::result(output: implode("\n", array_filter(
+                    array_keys($files),
+                    fn (string $path): bool => dirname($path) === $directory,
+                )));
+            }
+
+            if ($binary === 'cat') {
+                $path = (string) ($args[1] ?? '');
+
+                return array_key_exists($path, $files)
+                    ? Process::result(output: $files[$path])
+                    : Process::result(exitCode: 1, errorOutput: 'No such file');
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    it('finds a supervisor queue worker and ties it to its site', function () {
+        fakeProcessDefinitions([
+            '/etc/supervisor/conf.d/shop-worker.conf' => implode("\n", [
+                '[program:shop-worker]',
+                'command=php /home/siteowner/shop/artisan queue:work --tries=3',
+                'directory=/home/siteowner/shop',
+                'numprocs=4',
+                'user=siteowner',
+            ]),
+        ]);
+
+        $item = runSync()->items()->where('resource_type', 'worker')->first();
+
+        expect($item->action)->toBe(SyncAction::Found)
+            ->and($item->evidence['source'])->toBe('supervisor')
+            ->and($item->evidence['kind'])->toBe('queue')
+            ->and($item->evidence['processes'])->toBe(4)
+            ->and($item->evidence['application'])->toBe('shop.example.com');
+    });
+
+    it('finds a systemd unit too', function () {
+        fakeProcessDefinitions([
+            '/etc/systemd/system/shop-horizon.service' => implode("\n", [
+                '[Service]',
+                'WorkingDirectory=/home/siteowner/shop',
+                'ExecStart=/usr/bin/php artisan horizon',
+            ]),
+        ]);
+
+        $item = runSync()->items()->where('resource_type', 'worker')->first();
+
+        expect($item->evidence['source'])->toBe('systemd')
+            // Horizon restarts with horizon:terminate, a queue worker with
+            // queue:restart. Guessing wrong means a restart that does not.
+            ->and($item->evidence['kind'])->toBe('horizon');
+    });
+
+    it('ignores a service that has nothing to do with any site', function () {
+        fakeProcessDefinitions([
+            '/etc/systemd/system/nginx.service' => "[Service]\nExecStart=/usr/sbin/nginx -g 'daemon off;'\n",
+        ]);
+
+        // A box is full of services. Listing every one would bury the handful
+        // that matter, and the panel cannot manage what it cannot place.
+        expect(runSync()->items()->where('resource_type', 'worker')->count())->toBe(0);
+    });
+
+    it('skips the panel\'s own units', function () {
+        fakeProcessDefinitions([
+            // The name encodes a worker id from this database. Adopting it
+            // would invent a worker whose unit the panel writes elsewhere.
+            '/etc/systemd/system/sv-worker-7@.service' => "[Service]\nWorkingDirectory=/home/siteowner/shop\nExecStart=/usr/bin/php artisan queue:work\n",
+        ]);
+
+        expect(runSync()->items()->where('resource_type', 'worker')->count())->toBe(0);
+    });
+
+    it('adopts the worker disabled, so it does not race the one already running', function () {
+        fakeProcessDefinitions([
+            '/etc/supervisor/conf.d/shop-worker.conf' => implode("\n", [
+                '[program:shop-worker]',
+                'command=php /home/siteowner/shop/artisan queue:work',
+                'directory=/home/siteowner/shop',
+                'numprocs=2',
+            ]),
+        ]);
+
+        runSync(SyncMode::Apply);
+
+        $worker = Worker::where('application_id', $this->application->id)->firstOrFail();
+
+        // The hazard unique to this resource: starting the panel's copy while
+        // supervisor still runs the original puts two processes on one queue.
+        // For anything touching money that is the failure that matters.
+        expect($worker->enabled)->toBeFalse()
+            ->and($worker->kind)->toBe('queue')
+            ->and($worker->processes)->toBe(2);
+    });
+
+    it('says the original is still running, so the user knows to stop it', function () {
+        fakeProcessDefinitions([
+            '/etc/supervisor/conf.d/shop-worker.conf' => "[program:shop-worker]\ncommand=php /home/siteowner/shop/artisan queue:work\ndirectory=/home/siteowner/shop\n",
+        ]);
+
+        $item = runSync()->items()->where('resource_type', 'worker')->first();
+
+        expect($item->evidence['already_running_elsewhere'])->toBeTrue()
+            // Named, so the user can go and stop the right thing.
+            ->and($item->evidence['path'])->toBe('/etc/supervisor/conf.d/shop-worker.conf');
+    });
+
+    it('is safe to run twice', function () {
+        fakeProcessDefinitions([
+            '/etc/supervisor/conf.d/shop-worker.conf' => "[program:shop-worker]\ncommand=php /home/siteowner/shop/artisan queue:work\ndirectory=/home/siteowner/shop\n",
+        ]);
+
+        runSync(SyncMode::Apply);
+        runSync(SyncMode::Apply);
+
+        expect(Worker::count())->toBe(1);
+    });
+
+    it('does not let one site claim a directory that merely starts with its name', function () {
+        // `/home/siteowner/shop` is a string prefix of
+        // `/home/siteowner/shopping` but not a path prefix. Only one site
+        // exists here, so ordering cannot rescue this — the boundary has to
+        // be the separator.
+        fakeProcessDefinitions([
+            '/etc/supervisor/conf.d/other.conf' => "[program:other]\ncommand=php artisan queue:work\ndirectory=/home/siteowner/shopping/current\n",
+        ]);
+
+        expect(runSync()->items()->where('resource_type', 'worker')->count())->toBe(0);
+    });
+
+    it('gives a nested site its own worker rather than the parent taking it', function () {
+        $inner = Application::forceCreate([
+            'system_user_id' => $this->su->id, 'name' => 'Inner', 'slug' => 'shop-inner',
+            'domain' => 'inner.example.com', 'site_type' => 'git', 'serving_profile' => 'php',
+            'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
+        ]);
+
+        fakeProcessDefinitions([
+            '/etc/supervisor/conf.d/inner.conf' => "[program:inner-worker]\ncommand=php artisan queue:work\ndirectory=/home/siteowner/shop-inner/current\n",
+        ]);
+
+        // `/home/siteowner/shop` is a prefix of `/home/siteowner/shop-inner`
+        // as a string but not as a path. Longest-root-first settles it.
+        expect(runSync()->items()->where('resource_type', 'worker')->first()->evidence['application'])
+            ->toBe($inner->domain);
     });
 });
