@@ -13,7 +13,7 @@ export function TableSkeleton({ rows = 6, columns = 5, withAvatar = false }) {
     <div className="overflow-hidden rounded-xl border">
       <div className="flex h-11 items-center gap-4 border-b bg-muted/40 px-4">
         {Array.from({ length: columns }).map((_, i) => (
-          <div key={i} className={i === columns - 1 ? "w-8 shrink-0" : "flex-1"}>
+          <div key={i} className={i === columns - 1 ? "w-8 shrink-0" : "min-w-0 flex-1"}>
             {i !== columns - 1 ? <Skeleton className="h-3.5 w-16" /> : null}
           </div>
         ))}
@@ -34,14 +34,14 @@ export function TableSkeleton({ rows = 6, columns = 5, withAvatar = false }) {
             }
             if (c === 0 && withAvatar) {
               return (
-                <div key={c} className="flex flex-1 items-center gap-2.5">
+                <div key={c} className="flex min-w-0 flex-1 items-center gap-2.5">
                   <Skeleton className="size-7 shrink-0 rounded-full" />
                   <Skeleton className="h-4 w-28" />
                 </div>
               );
             }
             return (
-              <div key={c} className="flex-1">
+              <div key={c} className="min-w-0 flex-1">
                 <Skeleton
                   className={cn("h-4", BAR_WIDTHS[c % BAR_WIDTHS.length])}
                 />

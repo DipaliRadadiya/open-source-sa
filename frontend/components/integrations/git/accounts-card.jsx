@@ -203,7 +203,7 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
             <>
               {showCreateNudge ? (
                 <div className="border-b py-4">
-                  <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium">{t("onboarding.title")}</p>
                       <p className="text-xs leading-5 text-muted-foreground">

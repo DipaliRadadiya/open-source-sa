@@ -283,7 +283,7 @@ export function CloneApplicationPanel({
               {/* What is about to happen, in the same band as the control that
                   does it: source on the left, the copy's domain filling in as
                   it is typed. */}
-              <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 {canManage ? (
                   <p className="flex min-w-0 items-center gap-2 text-sm">
                     <span className="truncate font-medium">{application.name}</span>

@@ -170,7 +170,7 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
         {done.map(renderComponent)}
       </div>
 
-      <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           {setup.complete ? t("doneHint") : anyInstalling ? t("skipWhileInstalling") : t("skipHint")}
         </p>

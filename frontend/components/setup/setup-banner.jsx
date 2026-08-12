@@ -34,24 +34,32 @@ export function SetupBanner({ remaining }) {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/[0.04] px-4 py-3">
       <Sparkles className="size-4 shrink-0 text-primary" />
-      <p className="min-w-0 flex-1 text-sm">
+      {/* min-w-48, not min-w-0: `flex-1` gives this a basis of 0, so on a phone
+          it kept shrinking to make room for the button rather than pushing it
+          onto the next line — the sentence ended up one word per row. A real
+          minimum is what makes flex-wrap actually wrap. */}
+      <p className="min-w-48 flex-1 text-sm">
         <span className="font-medium">{t("bannerTitle")}</span>{" "}
         <span className="text-muted-foreground">{t("bannerBody", { count: remaining })}</span>
       </p>
-      <Button asChild size="sm" className="shrink-0">
-        <Link href="/setup">
-          {t("bannerAction")}
-          <ArrowRight className="size-3.5" />
-        </Link>
-      </Button>
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label={t("bannerDismiss")}
-        className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-      >
-        <X className="size-4" />
-      </button>
+      {/* One flex child so the action and its dismiss wrap together and stay
+          on the same line as each other. */}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <Button asChild size="sm">
+          <Link href="/setup">
+            {t("bannerAction")}
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </Button>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label={t("bannerDismiss")}
+          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
     </div>
   );
 }

@@ -234,8 +234,10 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                       <FormControl>
                         <Textarea
                           rows={2}
+                          // Same size as every other field — see the note in
+                          // create-system-user-dialog.
                           placeholder={t("sshForm.publicKeyPlaceholder")}
-                          className="font-mono text-xs"
+                          className="font-mono"
                           {...field}
                         />
                       </FormControl>

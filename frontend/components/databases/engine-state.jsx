@@ -93,8 +93,10 @@ export function EngineState({ engines = [], connections = [], canManage }) {
   return (
     <>
       <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex items-center justify-between gap-3 border-b px-5 py-3.5">
-          <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
+          {/* min-w-48 so the heading drops the button to its own row on a phone
+              instead of shrinking to a one-word-per-line column. */}
+          <div className="flex min-w-48 flex-1 items-center gap-2.5">
             <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
               <Database className="size-3.5" />
             </span>

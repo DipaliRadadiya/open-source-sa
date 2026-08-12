@@ -31,6 +31,7 @@ import {
 import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Badge } from "@/components/ui/badge";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
@@ -493,23 +494,28 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
             <div className="border-b px-5 py-3">
               {/* Wraps rather than clips: at 390px the third trigger ran off
                   the card edge with no scroll affordance to say so. */}
-              <TabsList className="!h-auto w-fit flex-wrap gap-1 p-1">
-                {TABS.map(({ key, icon: Icon }) => (
-                  <TabsTrigger key={key} value={key} className="gap-2 px-3 py-1.5">
-                    <Icon className="size-4" />
-                    {t(`tabs.${key}`)}
-                    {/* A change hidden behind another tab still has to be
-                        findable — otherwise "Not saved yet" points at nothing
-                        on screen. */}
-                    {dirtyTabs.has(key) ? (
-                      <span
-                        className="size-1.5 rounded-full bg-warning"
-                        aria-label={t("tabs.unsavedHere")}
-                      />
-                    ) : null}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
+                  reflows to two rows stops reading as one control. ScrollFade is what
+                  says there is more to the side. */}
+              <ScrollFade className="-mx-1 px-1 pb-1">
+                <TabsList className="!h-auto w-fit gap-1 p-1">
+                  {TABS.map(({ key, icon: Icon }) => (
+                    <TabsTrigger key={key} value={key} className="gap-2 px-3 py-1.5">
+                      <Icon className="size-4" />
+                      {t(`tabs.${key}`)}
+                      {/* A change hidden behind another tab still has to be
+                          findable — otherwise "Not saved yet" points at nothing
+                          on screen. */}
+                      {dirtyTabs.has(key) ? (
+                        <span
+                          className="size-1.5 rounded-full bg-warning"
+                          aria-label={t("tabs.unsavedHere")}
+                        />
+                      ) : null}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </ScrollFade>
             </div>
 
             <TabsContent

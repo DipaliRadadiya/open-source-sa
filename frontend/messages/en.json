@@ -1081,7 +1081,7 @@
       "action": "Install fail2ban",
       "noPermission": "You do not have permission to install",
       "started": "Installing — this takes about a minute.",
-      "installing": "Installing… this page updates itself when it is done.",
+      "installing": "This page updates itself when it is done.",
       "done": "Fail2ban installed. Nothing is switched on yet.",
       "failed": "Fail2ban could not be installed.",
       "stalled": "This is taking longer than expected. It may still be working, or it may have failed. Check again to find out.",
@@ -1089,7 +1089,8 @@
       "retry": "Try installing again",
       "stillNotInstalled": "Still not installed.",
       "checking": "Checking…",
-      "checkFailed": "We could not check."
+      "checkFailed": "We could not check.",
+      "installingTitle": "Installing Fail2ban…"
     },
     "jails": {
       "title": "Jails",

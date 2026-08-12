@@ -20,7 +20,7 @@ export function AdminHeader() {
   return (
     // Stickiness is owned by the wrapping cluster in the layout, so the
     // breadcrumb band pins with it — this stays a plain bar.
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6">
+    <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6 max-sm:[&_button]:min-h-11 max-sm:[&_button]:min-w-11">
       <SidebarToggle />
       <div className="ml-auto flex items-center gap-2">
         <LocaleSwitcher />

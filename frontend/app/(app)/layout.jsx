@@ -11,6 +11,7 @@ import { RebootRequiredBanner } from "@/components/sections/reboot-required-bann
 import { getRebootRequired } from "@/lib/server/get-reboot-required";
 import { can } from "@/lib/permissions/can";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarAutoCollapse } from "@/components/sections/sidebar-auto-collapse";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageCrumbProvider } from "@/components/sections/page-crumb";
 import { RateLimited } from "@/components/sections/rate-limited";
@@ -56,6 +57,7 @@ export default async function AppLayout({ children }) {
         <PageCrumbProvider>
           <ApplicationNavProvider>
             <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
+              <SidebarAutoCollapse />
               <AppSidebar items={permissions} />
               {/* min-w-0: without it this flex child keeps min-width:auto and wide
               content (tables/charts) pushes the page into horizontal overflow. */}

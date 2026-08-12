@@ -71,7 +71,7 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
 
   return (
     <Card className="border-primary/25 bg-[color-mix(in_oklab,var(--primary)_5%,var(--card))]">
-      <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Sparkles className="size-5" />

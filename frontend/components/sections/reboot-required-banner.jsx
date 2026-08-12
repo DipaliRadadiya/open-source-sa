@@ -51,7 +51,9 @@ export function RebootRequiredBanner({ canManage }) {
   }
 
   return (
-    <div className="relative flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-b border-warning/30 bg-background px-4 py-2 text-sm text-foreground before:pointer-events-none before:absolute before:inset-0 before:bg-warning/15 before:content-['']">
+    // Same reason as the header bar: these are h-7 buttons, which is a small
+    // target on a phone for an action this consequential.
+    <div className="relative flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-b border-warning/30 bg-background px-4 py-2 text-sm text-foreground before:pointer-events-none before:absolute before:inset-0 before:bg-warning/15 before:content-[''] max-sm:[&_a]:min-h-11 max-sm:[&_button]:min-h-11">
       <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-medium">
         <RotateCcw className="size-4 shrink-0 text-warning" />
         {t("message")}

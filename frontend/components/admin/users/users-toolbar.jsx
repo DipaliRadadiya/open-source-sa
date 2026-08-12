@@ -24,7 +24,7 @@ export function UsersToolbar() {
   const roleValue = searchParams.get("is_admin") ?? "all";
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
         <SearchInput placeholder={t("searchPlaceholder")} />
         <Select

@@ -8,7 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 
 function Field({ icon: Icon, label, value, mono, copyLabel }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
+    // min-w-0: a grid item keeps min-width:auto, so without it this tile grows
+    // to the widest word it contains and `truncate` below never fires — the
+    // value just runs past the card edge, unclipped and with no ellipsis.
+    <div className="flex min-w-0 items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -73,7 +76,7 @@ export async function ServerInfoCard({ facts, health }) {
             this page, so it gets the width the other facts don't need. Three
             fields, not four: at a quarter of the row every value truncated. */}
         <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
-          <div className="flex items-center gap-3 rounded-lg border bg-primary/5 px-3.5 py-2.5 sm:col-span-2">
+          <div className="flex min-w-0 items-center gap-3 rounded-lg border bg-primary/5 px-3.5 py-2.5 sm:col-span-2">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Server className="size-4.5" />
             </span>

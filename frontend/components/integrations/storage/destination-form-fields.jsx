@@ -76,7 +76,7 @@ export function DestinationFormFields({ form, provider, onProviderChange, disabl
               <FormControl>
                 <Input
                   placeholder={t("bucketPlaceholder")}
-                  className="font-mono text-xs"
+                  className="font-mono"
                   autoComplete="off"
                   spellCheck={false}
                   disabled={disabled}
@@ -96,7 +96,7 @@ export function DestinationFormFields({ form, provider, onProviderChange, disabl
               <FormControl>
                 <Input
                   placeholder={t("regionPlaceholder")}
-                  className="font-mono text-xs"
+                  className="font-mono"
                   autoComplete="off"
                   spellCheck={false}
                   disabled={disabled}
@@ -118,7 +118,7 @@ export function DestinationFormFields({ form, provider, onProviderChange, disabl
             <FormControl>
               <Input
                 placeholder={hint || t("endpointPlaceholder")}
-                className="font-mono text-xs"
+                className="font-mono"
                 autoComplete="off"
                 spellCheck={false}
                 disabled={disabled}
@@ -142,7 +142,7 @@ export function DestinationFormFields({ form, provider, onProviderChange, disabl
             <FormControl>
               <Input
                 placeholder={t("prefixPlaceholder")}
-                className="font-mono text-xs"
+                className="font-mono"
                 autoComplete="off"
                 spellCheck={false}
                 disabled={disabled}

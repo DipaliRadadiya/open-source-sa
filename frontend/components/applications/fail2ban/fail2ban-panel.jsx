@@ -18,6 +18,7 @@ import { fail2banConfigFormSchema, missingPlaceholders } from "@/lib/schemas/app
 import { deleteApplicationFail2ban, saveApplicationFail2ban } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
@@ -216,20 +217,25 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
       <Card className="gap-0 overflow-hidden py-0 shadow-sm">
         <Tabs value={tab} onValueChange={setTab} className="gap-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
-            <TabsList className="!h-auto w-fit flex-wrap gap-1 p-1">
-              {FILES.map(({ key, icon: Icon }) => (
-                <TabsTrigger key={key} value={key} className="gap-2 px-3 py-1.5">
-                  <Icon className="size-4" />
-                  {t(`files.${key}`)}
-                  {draft[key] !== saved[key] ? (
-                    <span
-                      className="size-1.5 rounded-full bg-warning"
-                      aria-label={t("unsavedHere")}
-                    />
-                  ) : null}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
+                reflows to two rows stops reading as one control. ScrollFade is what
+                says there is more to the side. */}
+            <ScrollFade className="-mx-1 px-1 pb-1">
+              <TabsList className="!h-auto w-fit gap-1 p-1">
+                {FILES.map(({ key, icon: Icon }) => (
+                  <TabsTrigger key={key} value={key} className="gap-2 px-3 py-1.5">
+                    <Icon className="size-4" />
+                    {t(`files.${key}`)}
+                    {draft[key] !== saved[key] ? (
+                      <span
+                        className="size-1.5 rounded-full bg-warning"
+                        aria-label={t("unsavedHere")}
+                      />
+                    ) : null}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </ScrollFade>
             <p className="text-xs text-muted-foreground">{t(`files.${tab}Hint`)}</p>
           </div>
 

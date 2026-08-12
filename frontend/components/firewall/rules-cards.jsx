@@ -43,7 +43,10 @@ export function RulesCards({
                 <ProtocolText rule={rule} labels={labels} />
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            {/* This card only exists on phones, and its controls are the
+                compact desktop sizes (a 38x28 icon button). A 44px minimum box
+                on each keeps the look and makes them reliably tappable. */}
+            <div className="flex shrink-0 items-center gap-1 max-sm:[&_button:not([role=switch])]:min-h-11 max-sm:[&_button:not([role=switch])]:min-w-11">
               <ReasonTooltip reason={canManage ? null : labels.noPermission}>
                 <Switch
                   checked={rule.enabled !== false}

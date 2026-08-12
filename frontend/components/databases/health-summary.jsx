@@ -61,7 +61,7 @@ export function HealthSummary({ engine, status, processes = [] }) {
 
   return (
     <Card className={cn("gap-0 overflow-hidden py-0", styles.card)}>
-      <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span
             className={cn(

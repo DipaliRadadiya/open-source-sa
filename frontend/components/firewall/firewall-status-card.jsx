@@ -58,7 +58,7 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
           enabled ? "border-success/30 bg-success/5" : "border-warning/40 bg-warning/5"
         }
       >
-        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span
               className={`flex size-10 shrink-0 items-center justify-center rounded-full ${

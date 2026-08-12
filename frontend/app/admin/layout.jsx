@@ -6,6 +6,7 @@ import { AdminSidebar } from "@/components/sections/admin-sidebar";
 import { AdminBreadcrumb } from "@/components/sections/admin-breadcrumb";
 import { AdminHeader } from "@/components/sections/admin-header";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarAutoCollapse } from "@/components/sections/sidebar-auto-collapse";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { RateLimited } from "@/components/sections/rate-limited";
 import { isRateLimited } from "@/lib/api/rate-limited";
@@ -32,6 +33,7 @@ export default async function AdminLayout({ children }) {
     <AuthProvider user={user}>
       <TooltipProvider delayDuration={0}>
         <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
+          <SidebarAutoCollapse />
           <AdminSidebar />
           <SidebarInset className="min-w-0">
             {/* Header + trail ride together as one sticky cluster, same as the

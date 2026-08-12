@@ -157,7 +157,12 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                 <Textarea
                   rows={3}
                   placeholder={t("create.publicKeyPlaceholder")}
-                  className="font-mono text-xs"
+                  // font-mono only: the size comes from Textarea, like every
+                  // other field. An explicit text-xs here made this the one
+                  // field in the form at a different size, and on a phone it
+                  // also opts out of the 16px that stops iOS zooming the page
+                  // when the field is focused.
+                  className="font-mono"
                   {...field}
                 />
               </FormControl>

@@ -16,9 +16,9 @@ export default function Loading() {
             <Skeleton className="h-5 w-56" />
             <Skeleton className="h-4 w-80" />
           </div>
-          <div className="flex items-center justify-between border-t bg-muted/30 px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/30 px-6 py-4">
             <Skeleton className="h-9 w-36" />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Skeleton className="h-9 w-40" />
               <Skeleton className="h-9 w-32" />
             </div>

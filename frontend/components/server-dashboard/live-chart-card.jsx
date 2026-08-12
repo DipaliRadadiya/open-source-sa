@@ -70,15 +70,19 @@ export function LiveChartCard({
     // feed draws a perfectly flat line, which reads as a calm server rather
     // than as no server at all.
     <Card className={cn("h-full transition-opacity", stale && "opacity-60")}>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div className="space-y-1">
+      {/* Wraps, and the title keeps a real minimum width: the badges are
+          shrink-0, so on a phone a wide pair of them (Disk I/O carries four
+          numbers) squeezed the heading into a one-word-per-line column instead
+          of dropping to its own row. */}
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-x-4 gap-y-2 space-y-0">
+        <div className="min-w-48 flex-1 space-y-1">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <Icon className="size-4 text-primary" />
             {title}
           </CardTitle>
           <CardDescription>{description}</CardDescription>
         </div>
-        {badges ? <div className="flex shrink-0 gap-1.5">{badges}</div> : null}
+        {badges ? <div className="flex shrink-0 flex-wrap gap-1.5">{badges}</div> : null}
       </CardHeader>
       <CardContent className="pt-3">
         {/* A line needs two points. Until then say so, rather than drawing a

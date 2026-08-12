@@ -82,7 +82,7 @@ export function WorkerCommandField({ form, presets, onPick, workers = [] }) {
           <FormControl>
             <Textarea
               rows={2}
-              className="font-mono text-xs"
+              className="font-mono"
               autoComplete="off"
               spellCheck={false}
               placeholder="php8.4 artisan queue:work --sleep=3 --tries=3"

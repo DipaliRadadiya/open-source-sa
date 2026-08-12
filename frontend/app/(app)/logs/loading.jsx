@@ -21,9 +21,9 @@ export default function Loading() {
           ))}
         </div>
         <div className="h-[calc(100svh-13rem)] min-h-[24rem] overflow-hidden rounded-xl border">
-          <div className="flex items-center justify-between border-b px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
             <Skeleton className="h-5 w-40" />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Skeleton className="h-9 w-52" />
               <Skeleton className="h-9 w-24" />
               <Skeleton className="h-9 w-28" />

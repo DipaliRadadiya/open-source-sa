@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { UserRound, ShieldCheck, History, TriangleAlert, SearchX } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -56,20 +57,25 @@ export function AccountTabs({ user, entries, meta, filters, isFiltered, activity
 
   return (
     <Tabs value={tab} onValueChange={onChange} className="gap-6">
-      <TabsList className="!h-auto w-fit gap-1 p-1">
-        <TabsTrigger value="profile" className={TRIGGER}>
-          <UserRound className="size-4" />
-          {t("tabs.profile")}
-        </TabsTrigger>
-        <TabsTrigger value="security" className={TRIGGER}>
-          <ShieldCheck className="size-4" />
-          {t("tabs.security")}
-        </TabsTrigger>
-        <TabsTrigger value="activity" className={TRIGGER}>
-          <History className="size-4" />
-          {t("tabs.activity")}
-        </TabsTrigger>
-      </TabsList>
+      {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
+          reflows to two rows stops reading as one control. ScrollFade is what
+          says there is more to the side. */}
+      <ScrollFade className="-mx-1 px-1 pb-1">
+        <TabsList className="!h-auto w-fit gap-1 p-1">
+          <TabsTrigger value="profile" className={TRIGGER}>
+            <UserRound className="size-4" />
+            {t("tabs.profile")}
+          </TabsTrigger>
+          <TabsTrigger value="security" className={TRIGGER}>
+            <ShieldCheck className="size-4" />
+            {t("tabs.security")}
+          </TabsTrigger>
+          <TabsTrigger value="activity" className={TRIGGER}>
+            <History className="size-4" />
+            {t("tabs.activity")}
+          </TabsTrigger>
+        </TabsList>
+      </ScrollFade>
 
       <TabsContent value="profile">
         <ProfileForm user={user} onDirtyChange={setProfileDirty} />

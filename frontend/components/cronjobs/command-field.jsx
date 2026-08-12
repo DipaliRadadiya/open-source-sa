@@ -116,7 +116,7 @@ export function CommandField({ form, presets, placeholder = "{path}", starterKey
             <FormControl>
               <Textarea
                 rows={2}
-                className="font-mono text-xs"
+                className="font-mono"
                 autoComplete="off"
                 spellCheck={false}
                 placeholder="php /home/deploy/myapp/artisan schedule:run"

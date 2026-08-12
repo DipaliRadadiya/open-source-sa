@@ -9,6 +9,7 @@ import { readApplicationLog } from "@/lib/api/application-logs";
 import { LINE_OPTIONS } from "@/lib/schemas/log";
 import { matchesSeverity } from "@/lib/logs/severity";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
 import { apiMessage } from "@/lib/api/error-message";
@@ -217,22 +218,27 @@ export function ApplicationLogsPanel({
     >
       {/* Source picker as tabs: a site has only 2–3 sources, so a full-height
           rail would leave dead space and the console loses width. */}
-      <TabsList className="!h-auto w-fit flex-wrap gap-1 p-1">
-        {sources.map((s) => (
-          <TabsTrigger
-            key={s.key}
-            value={s.key}
-            className="!h-auto gap-2 px-4 py-2"
-          >
-            {s.label}
-            {!s.exists ? (
-              <span className="text-xs font-normal text-muted-foreground">
-                {tApp("empty.badge")}
-              </span>
-            ) : null}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
+          reflows to two rows stops reading as one control. ScrollFade is what
+          says there is more to the side. */}
+      <ScrollFade className="-mx-1 px-1 pb-1">
+        <TabsList className="!h-auto w-fit gap-1 p-1">
+          {sources.map((s) => (
+            <TabsTrigger
+              key={s.key}
+              value={s.key}
+              className="!h-auto gap-2 px-4 py-2"
+            >
+              {s.label}
+              {!s.exists ? (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {tApp("empty.badge")}
+                </span>
+              ) : null}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </ScrollFade>
 
       <section className="flex h-[calc(100svh-16rem)] min-h-[24rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
         <LogToolbar

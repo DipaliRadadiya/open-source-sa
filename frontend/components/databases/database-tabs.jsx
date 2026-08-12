@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /**
@@ -50,22 +51,27 @@ export function DatabaseTabs({ users, tables, backups, counts, initial }) {
         {/* Wraps rather than overflowing: three tabs with a count each are 7px
             too wide for a 390px phone, and `w-fit` on a non-wrapping row means
             the whole page scrolls sideways to hide it. */}
-        <TabsList className="!h-auto w-fit flex-wrap gap-1 p-1">
-          {sections.map((section) => (
-            <TabsTrigger
-              key={section.value}
-              value={section.value}
-              className="!h-auto gap-2 px-4 py-2"
-            >
-              {section.label}
-              {/* Zero is worth showing too: "Users 0" is the fact that nothing
-                  can connect, which is exactly what someone needs to see. */}
-              <Badge variant="secondary" className="ml-1.5 font-normal tabular-nums">
-                {section.count}
-              </Badge>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
+            reflows to two rows stops reading as one control. ScrollFade is what
+            says there is more to the side. */}
+        <ScrollFade className="-mx-1 px-1 pb-1">
+          <TabsList className="!h-auto w-fit gap-1 p-1">
+            {sections.map((section) => (
+              <TabsTrigger
+                key={section.value}
+                value={section.value}
+                className="!h-auto gap-2 px-4 py-2"
+              >
+                {section.label}
+                {/* Zero is worth showing too: "Users 0" is the fact that nothing
+                    can connect, which is exactly what someone needs to see. */}
+                <Badge variant="secondary" className="ml-1.5 font-normal tabular-nums">
+                  {section.count}
+                </Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </ScrollFade>
       </Tabs>
 
       {/* Rendered, not mounted per tab: the sections are already on the page

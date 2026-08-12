@@ -116,22 +116,26 @@ export function InstallPrompt({ canManage }) {
 
   return (
     <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-16 text-center">
+      {/* Once install is under way the card describes THAT, rather than leaving
+          "Fail2ban is not installed" and the case for installing it above a
+          spinner that says the opposite. */}
       <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <ShieldPlus className="size-5" />
+        {installing ? (
+          <Loader2 className="size-5 animate-spin" />
+        ) : (
+          <ShieldPlus className="size-5" />
+        )}
       </span>
       <div className="space-y-1">
-        <p className="font-medium">{t("install.title")}</p>
+        <p className="font-medium">
+          {installing ? t("install.installingTitle") : t("install.title")}
+        </p>
         <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
-          {t("install.body")}
+          {installing ? t("install.installing") : t("install.body")}
         </p>
       </div>
 
-      {installing ? (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {t("install.installing")}
-        </p>
-      ) : (
+      {installing ? null : (
         <div className="flex flex-col items-center gap-3">
           {stalled ? (
             <p role="status" className="max-w-md text-sm text-warning">

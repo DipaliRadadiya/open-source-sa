@@ -38,7 +38,7 @@ export default function Loading() {
                 {Array.from({ length: rows }).map((_, row) => (
                   <div key={row} className="flex items-center gap-3 px-4 py-3">
                     <Skeleton className="size-4 rounded" />
-                    <div className="flex-1 space-y-1.5">
+                    <div className="min-w-0 flex-1 space-y-1.5">
                       <Skeleton className="h-4 w-40" />
                       <Skeleton className="h-3 w-64" />
                     </div>

@@ -37,7 +37,7 @@ export function EngineBar({ engines = [], canManage, summary }) {
   );
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {running.map((engine) => (
           <span key={engine.engine} className="flex items-center gap-2 text-sm">
