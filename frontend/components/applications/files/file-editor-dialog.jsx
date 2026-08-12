@@ -30,7 +30,7 @@ const CodeEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-80 items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <Loader2 className="size-5 animate-spin text-console-muted" />
       </div>
     ),
@@ -124,7 +124,13 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      {/* Sized to the viewport, not to a number. Editing a file is the whole
+          task while this is open — a fixed 320px window over someone's
+          wp-config or nginx conf shows about fifteen lines, so every read means
+          scrolling a peephole. The three rows are header / editor / footer, and
+          `minmax(0,1fr)` is what lets the middle one actually shrink so the
+          editor scrolls internally instead of pushing the footer off-screen. */}
+      <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-6xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -138,11 +144,11 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
         </DialogHeader>
 
         {loading ? (
-          <div className="flex h-80 items-center justify-center rounded-lg border border-console-border bg-console">
+          <div className="flex items-center justify-center rounded-lg border border-console-border bg-console">
             <Loader2 className="size-5 animate-spin text-console-muted" />
           </div>
         ) : blocked ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">
+          <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-center">
             <p className="max-w-sm text-sm text-muted-foreground">{blocked}</p>
             <Button asChild variant="outline" size="sm">
               <a href={fileDownloadUrl(appId, file.path)} download={file.name}>
@@ -152,8 +158,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             </Button>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-console-border bg-console">
-            <div className="flex items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
+          <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-console-border bg-console">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
               <span className="truncate font-mono text-[11px] text-console-muted">{file?.path}</span>
               <div className="flex shrink-0 items-center gap-1">
                 {canEdit && loaded?.backups?.length ? (
@@ -174,7 +180,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
                 />
               </div>
             </div>
-            <div className="h-80 overflow-hidden" aria-label={file?.name}>
+            <div className="min-h-0 flex-1 overflow-hidden" aria-label={file?.name}>
               <CodeEditor
                 filename={file?.name}
                 value={contents}

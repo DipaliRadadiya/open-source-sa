@@ -117,7 +117,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
       </ReasonTooltip>
 
       <Dialog open={open} onOpenChange={(next) => !saving && setOpen(next)}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <div className="flex items-center gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
@@ -145,7 +145,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
               />
             </div>
             {loading ? (
-              <div className="flex h-72 items-center justify-center">
+              <div className="flex h-[55vh] items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-console-muted" />
               </div>
             ) : (
@@ -156,7 +156,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
                 spellCheck={false}
                 // The whole file, edited as a file. A code-editor dependency for
                 // one textarea would be a lot of bundle for syntax colouring.
-                className="console-scroll h-72 resize-none rounded-none border-0 bg-console font-mono text-xs leading-6 text-console-foreground caret-console-foreground shadow-none selection:bg-console-foreground/20 focus-visible:ring-0 dark:bg-console"
+                className="console-scroll h-[55vh] resize-none rounded-none border-0 bg-console font-mono text-xs leading-6 text-console-foreground caret-console-foreground shadow-none selection:bg-console-foreground/20 focus-visible:ring-0 dark:bg-console"
                 aria-label={t("phpIni.title", { version })}
               />
             )}
