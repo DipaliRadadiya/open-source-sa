@@ -172,4 +172,6 @@ return [
     'application.fail2ban_enabled' => 'Включил fail2ban для :name',
     'application.fail2ban_disabled' => 'Отключил fail2ban для :name',
     'sync.started' => 'Запущена синхронизация сервера (:mode)',
+    'sync.ignored' => ':resource_key исключён из синхронизации сервера',
+    'sync.unignored' => ':resource_key возвращён в синхронизацию сервера',
 ];

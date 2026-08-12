@@ -2131,6 +2131,28 @@ Bring existing server databases under panel management.
 
 **Database users are not adopted here** — `POST /server/sync` finds them once the database is tracked. An adopted user has **no password**: the engine stores a hash and a hash is not a password. Such a user comes back with `password_known: false` and `connection_string: null` rather than a string that looks right and fails at connect time. Setting a new password is a deliberate act, since it breaks every application still using the old one.
 
+
+## Server Sync
+
+Reads a migrated server into the panel. `preview` (the default) changes nothing; `apply` writes the rows. Nine resource types, dependency-ordered: system users → ssh keys → applications → php settings → workers → database users → certificates → cron jobs.
+
+### POST `/server/sync`
+**Permission:** `sync` (manage) | **Throttle:** 10/min
+
+`{"mode": "preview|apply", "only": [], "include_firewall": false, "include_ignored": false}` → **202** `{"sync": {"id": 1, "status": "pending"}}`
+
+An omitted `mode` is **preview**. Refused with `422` while another run is live.
+
+### GET `/server/sync/{run}?since=<item id>`
+**Permission:** `sync` (view)
+
+The run plus items **after the cursor**, so a screen can poll ~1s and append — this is the line-by-line feed. Each item: `resource_type`, `resource_key`, `action` (`found|adopted|skipped|failed`), `confidence`, `evidence`, `reason` (localized).
+
+### GET `/server/sync/latest` · GET/POST/DELETE `/server/sync/ignores`
+**Permission:** `sync` (view / manage)
+
+Dismissed items stop appearing in later runs entirely. `POST {"resource_type", "resource_key", "note"}`; re-posting the same pair is the same decision, not an error. Pass `include_ignored: true` on a run to see them again.
+
 ---
 
 ### GET `/databases/{database}/tables`

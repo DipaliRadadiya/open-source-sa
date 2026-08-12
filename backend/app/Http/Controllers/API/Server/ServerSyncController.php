@@ -5,9 +5,11 @@ namespace App\Http\Controllers\API\Server;
 use App\Enums\SyncMode;
 use App\Enums\SyncStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Sync\IgnoreSyncItemRequest;
 use App\Http\Requests\Server\Sync\StartSyncRequest;
 use App\Http\Resources\SyncRunResource;
 use App\Jobs\RunServerSync;
+use App\Models\SyncIgnore;
 use App\Models\SyncRun;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
@@ -47,6 +49,7 @@ class ServerSyncController extends Controller
             'options' => [
                 'only' => $request->validated('only', []),
                 'include_firewall' => (bool) $request->validated('include_firewall', false),
+                'include_ignored' => (bool) $request->validated('include_ignored', false),
             ],
         ]);
 
@@ -74,6 +77,63 @@ class ServerSyncController extends Controller
         );
 
         return response()->json(['sync' => SyncRunResource::make($run)->resolve()]);
+    }
+
+    /**
+     * Things the user has said no to, and the ability to change their mind.
+     *
+     * Without a way back, an ignore made by mistake is permanent from the
+     * screen that made it — so the list is readable and an entry is
+     * removable, both under the same permission that created it.
+     */
+    public function ignores(): JsonResponse
+    {
+        return response()->json([
+            'ignores' => SyncIgnore::query()->latest('id')->get()->map(fn (SyncIgnore $ignore) => [
+                'id' => $ignore->id,
+                'resource_type' => $ignore->resource_type,
+                'resource_key' => $ignore->resource_key,
+                'note' => $ignore->note,
+                'created_at' => $ignore->created_at?->format('d-m-Y H:i:s'),
+            ])->all(),
+        ]);
+    }
+
+    public function ignore(IgnoreSyncItemRequest $request, ActivityLogger $activity): JsonResponse
+    {
+        $validated = $request->validated();
+
+        // updateOrCreate, not create: saying "ignore" twice is one decision,
+        // and the unique index would otherwise turn a double-click into a 500.
+        $ignore = SyncIgnore::updateOrCreate(
+            [
+                'resource_type' => $validated['resource_type'],
+                'resource_key' => $validated['resource_key'],
+            ],
+            [
+                'user_id' => Auth::id(),
+                'note' => $validated['note'] ?? null,
+            ],
+        );
+
+        $activity->log('sync.ignored', $ignore, [
+            'resource_type' => $ignore->resource_type,
+            'resource_key' => $ignore->resource_key,
+        ]);
+
+        return response()->json(['ignore' => ['id' => $ignore->id]], 201);
+    }
+
+    public function unignore(SyncIgnore $ignore, ActivityLogger $activity): JsonResponse
+    {
+        $activity->log('sync.unignored', $ignore, [
+            'resource_type' => $ignore->resource_type,
+            'resource_key' => $ignore->resource_key,
+        ]);
+
+        $ignore->delete();
+
+        return response()->json(null, 204);
     }
 
     /** The most recent run, for a screen reopened after a refresh. */

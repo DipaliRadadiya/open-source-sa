@@ -172,4 +172,6 @@ return [
     'application.fail2ban_enabled' => ':name के लिए fail2ban सक्षम किया',
     'application.fail2ban_disabled' => ':name के लिए fail2ban अक्षम किया',
     'sync.started' => 'सर्वर सिंक शुरू किया (:mode)',
+    'sync.ignored' => 'सर्वर सिंक से :resource_key हटाया',
+    'sync.unignored' => 'सर्वर सिंक में :resource_key वापस जोड़ा',
 ];

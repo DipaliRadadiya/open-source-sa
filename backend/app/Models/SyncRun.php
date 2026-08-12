@@ -55,6 +55,18 @@ class SyncRun extends Model
      * decide it is the panel's to remove, and that is the one mistake here
      * that cannot be undone from the panel.
      */
+    /**
+     * Whether this run should show things the user has already dismissed.
+     *
+     * Off by default — that is what makes ignoring worth doing — but a run
+     * has to be able to show them, or an ignore made by mistake is
+     * unreachable from the screen that made it.
+     */
+    public function includesIgnored(): bool
+    {
+        return (bool) ($this->options['include_ignored'] ?? false);
+    }
+
     public function includesFirewall(): bool
     {
         return (bool) ($this->options['include_firewall'] ?? false);

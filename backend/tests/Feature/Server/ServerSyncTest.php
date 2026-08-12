@@ -15,6 +15,7 @@ use App\Models\Database;
 use App\Models\DatabaseUser;
 use App\Models\ServerCapability;
 use App\Models\SshKey;
+use App\Models\SyncIgnore;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -1372,5 +1373,129 @@ describe('discovering cronjobs', function () {
         // The slug is derived from the command, so without the schedule in
         // the hash the second job would collide with the first and vanish.
         expect(Cronjob::count())->toBe(2);
+    });
+});
+
+/*
+ * Things the user has already said no to.
+ *
+ * Without this every sync re-lists the same items forever. On the box this
+ * was developed against that is twenty-one vhosts the panel can never adopt,
+ * and a list where the same twenty-one lines appear every time is one nobody
+ * reads — which costs the feature the only thing it is for.
+ */
+describe('ignoring an item', function () {
+    it('stops it appearing in later runs', function () {
+        fakeServer();
+
+        expect(itemsWith(runSync(), 'system_user', SyncAction::Found))->toContain('shopuser');
+
+        SyncIgnore::create(['resource_type' => 'system_user', 'resource_key' => 'shopuser']);
+
+        // Not recorded as skipped either. The point of ignoring something is
+        // that it stops appearing, not that it appears differently.
+        expect(itemsWith(runSync(), 'system_user', SyncAction::Found))->not->toContain('shopuser')
+            ->and(runSync()->items()->where('resource_key', 'shopuser')->count())->toBe(0);
+    });
+
+    it('leaves everything else alone', function () {
+        fakeServer();
+        SyncIgnore::create(['resource_type' => 'system_user', 'resource_key' => 'shopuser']);
+
+        expect(itemsWith(runSync(), 'system_user', SyncAction::Found))->toContain('siteowner');
+    });
+
+    it('is scoped to its own resource type', function () {
+        fakeServer();
+
+        // The same key can mean different things for different resources; an
+        // ignore on one must not silently cover the other.
+        SyncIgnore::create(['resource_type' => 'application', 'resource_key' => 'shopuser']);
+
+        expect(itemsWith(runSync(), 'system_user', SyncAction::Found))->toContain('shopuser');
+    });
+
+    it('can be shown again on request', function () {
+        fakeServer();
+        SyncIgnore::create(['resource_type' => 'system_user', 'resource_key' => 'shopuser']);
+
+        // An ignore made by mistake has to be reachable from the screen that
+        // made it, or it is permanent.
+        expect(itemsWith(runSync(SyncMode::Preview, ['include_ignored' => true]), 'system_user', SyncAction::Found))
+            ->toContain('shopuser');
+    });
+
+    it('is never adopted, even in apply mode', function () {
+        fakeServer();
+        SyncIgnore::create(['resource_type' => 'system_user', 'resource_key' => 'shopuser']);
+
+        runSync(SyncMode::Apply);
+
+        expect(SystemUser::where('username', 'shopuser')->exists())->toBeFalse()
+            ->and(SystemUser::where('username', 'siteowner')->exists())->toBeTrue();
+    });
+});
+
+describe('the ignore endpoints', function () {
+    it('records a dismissal with the reason behind it', function () {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/server/sync/ignores', [
+                'resource_type' => 'application',
+                'resource_key' => 'metrics.internal',
+                'note' => 'Our own monitoring box',
+            ])
+            ->assertStatus(201);
+
+        // A decision without a reason is one nobody dares reverse six months
+        // later.
+        expect(SyncIgnore::first()->note)->toBe('Our own monitoring box');
+    });
+
+    it('treats a second dismissal as the same decision', function () {
+        $payload = ['resource_type' => 'application', 'resource_key' => 'metrics.internal'];
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/server/sync/ignores', $payload)->assertStatus(201);
+
+        // The unique index would otherwise turn a double-click into a 500.
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/server/sync/ignores', $payload)->assertStatus(201);
+
+        expect(SyncIgnore::count())->toBe(1);
+    });
+
+    it('refuses a resource type that does not exist', function () {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/server/sync/ignores', [
+                'resource_type' => 'not_a_thing',
+                'resource_key' => 'x',
+            ])
+            // A typo here would create an ignore that silently matches
+            // nothing, forever.
+            ->assertJsonValidationErrors('resource_type');
+    });
+
+    it('can be undone', function () {
+        $ignore = SyncIgnore::create(['resource_type' => 'application', 'resource_key' => 'metrics.internal']);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->deleteJson("/api/server/sync/ignores/{$ignore->id}")
+            ->assertNoContent();
+
+        expect(SyncIgnore::count())->toBe(0);
+    });
+
+    it('lets a viewer read the list but not change it', function () {
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'sync', view: true, manage: false);
+        $token = $viewer->createToken('t')->plainTextToken;
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/server/sync/ignores')->assertOk();
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/server/sync/ignores', [
+                'resource_type' => 'application', 'resource_key' => 'x',
+            ])->assertForbidden();
     });
 });

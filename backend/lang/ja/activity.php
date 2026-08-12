@@ -172,4 +172,6 @@ return [
     'application.fail2ban_enabled' => ':name の fail2ban を有効にしました',
     'application.fail2ban_disabled' => ':name の fail2ban を無効にしました',
     'sync.started' => 'サーバー同期を開始しました (:mode)',
+    'sync.ignored' => 'サーバー同期から :resource_key を除外しました',
+    'sync.unignored' => 'サーバー同期に :resource_key を戻しました',
 ];

@@ -172,4 +172,6 @@ return [
     'application.fail2ban_enabled' => 'A activé fail2ban pour :name',
     'application.fail2ban_disabled' => 'A désactivé fail2ban pour :name',
     'sync.started' => 'A lancé une synchronisation du serveur (:mode)',
+    'sync.ignored' => 'A écarté :resource_key de la synchronisation du serveur',
+    'sync.unignored' => 'A rétabli :resource_key dans la synchronisation du serveur',
 ];

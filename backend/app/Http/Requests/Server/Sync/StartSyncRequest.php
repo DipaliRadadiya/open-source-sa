@@ -31,6 +31,11 @@ class StartSyncRequest extends FormRequest
             // Adopting a rule means a later sync could treat it as the
             // panel's to remove, which is the one irreversible mistake here.
             'include_firewall' => ['sometimes', 'boolean'],
+
+            // Shows what has been dismissed. Off by default — that is what
+            // makes ignoring worth doing — but reachable, or an ignore made
+            // by mistake is unreachable from the screen that made it.
+            'include_ignored' => ['sometimes', 'boolean'],
         ];
     }
 }

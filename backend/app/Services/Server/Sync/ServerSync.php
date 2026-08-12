@@ -5,6 +5,7 @@ namespace App\Services\Server\Sync;
 use App\Contracts\Discoverable;
 use App\Enums\SyncAction;
 use App\Enums\SyncStatus;
+use App\Models\SyncIgnore;
 use App\Models\SyncItem;
 use App\Models\SyncRun;
 use Illuminate\Support\Facades\Log;
@@ -26,6 +27,13 @@ use Throwable;
 class ServerSync
 {
     /**
+     * `type:key` strings the user has already said no to, for this run.
+     *
+     * @var array<int, string>
+     */
+    private array $ignored = [];
+
+    /**
      * @param  array<int, Discoverable>  $discoverers
      */
     public function __construct(private array $discoverers) {}
@@ -41,6 +49,10 @@ class ServerSync
     public function run(SyncRun $run): SyncRun
     {
         $run->forceFill(['status' => SyncStatus::Running, 'started_at' => now()])->save();
+
+        // Loaded once. Asking the database per discovered item would be a
+        // query per vhost on a box with two hundred of them.
+        $this->ignored = $run->includesIgnored() ? [] : SyncIgnore::keys();
 
         $totals = [];
         $completed = [];
@@ -117,6 +129,14 @@ class ServerSync
 
         foreach ($items as $item) {
             $key = (string) $item['key'];
+
+            // Already answered. Not even recorded as skipped: the point of
+            // ignoring something is that it stops appearing, and a list where
+            // the same twenty-one lines show up every run is one nobody
+            // reads.
+            if (in_array($type.':'.$key, $this->ignored, true)) {
+                continue;
+            }
 
             if (isset($item['skip'])) {
                 $this->record($run, $type, $key, SyncAction::Skipped, $item + ['reason' => $item['skip']]);

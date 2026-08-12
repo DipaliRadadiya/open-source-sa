@@ -19,6 +19,16 @@ Route::get('/server/sync/latest', [ServerSyncController::class, 'latest'])
 Route::post('/server/sync', [ServerSyncController::class, 'store'])
     ->middleware(['permission:sync,manage', 'throttle:10,1']);
 
-// After the static path above, so "latest" is never read as a run id.
+Route::get('/server/sync/ignores', [ServerSyncController::class, 'ignores'])
+    ->middleware('permission:sync');
+
+Route::post('/server/sync/ignores', [ServerSyncController::class, 'ignore'])
+    ->middleware(['permission:sync,manage', 'throttle:60,1']);
+
+Route::delete('/server/sync/ignores/{ignore}', [ServerSyncController::class, 'unignore'])
+    ->middleware(['permission:sync,manage', 'throttle:60,1']);
+
+// After the static paths above, so "latest" and "ignores" are never read as
+// a run id.
 Route::get('/server/sync/{run}', [ServerSyncController::class, 'show'])
     ->middleware('permission:sync');
