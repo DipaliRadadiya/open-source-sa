@@ -2676,7 +2676,9 @@
         "label": "Where this site will live"
       },
       "temporaryDomainHint": "Works right away. Use a real domain before launch.",
-      "nameHint": "Only used in the panel — visitors never see it."
+      "nameHint": "Only used in the panel — visitors never see it.",
+      "buildCommandSuperseded": "This will not run — the deploy script replaces it.",
+      "moreLines": "{count, plural, one {+# more line} other {+# more lines}}"
     },
     "actions": {
       "label": "Application actions",

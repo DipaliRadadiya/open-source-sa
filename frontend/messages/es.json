@@ -2676,7 +2676,9 @@
         "label": "Dónde vivirá este sitio"
       },
       "temporaryDomainHint": "Funciona al instante. Usa un dominio real antes de publicar.",
-      "nameHint": "Solo se usa en el panel; los visitantes no lo ven."
+      "nameHint": "Solo se usa en el panel; los visitantes no lo ven.",
+      "buildCommandSuperseded": "Esto no se ejecutará: el script de despliegue lo sustituye.",
+      "moreLines": "{count, plural, one {+# línea más} other {+# líneas más}}"
     },
     "actions": {
       "label": "Acciones de la aplicación",
