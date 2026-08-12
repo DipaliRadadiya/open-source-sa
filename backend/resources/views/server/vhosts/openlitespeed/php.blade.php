@@ -173,6 +173,6 @@ rewrite {
      `(?!well-known)` lookahead, both because .well-known must stay reachable
      for certificate issuance and because OLS's regex support is not
      documented as handling lookaheads. --}}
-context exp:^/\.(git|svn|hg|bzr|env) {
+context exp:^/\.(git|svn|hg|bzr|env|panel) {
   allowBrowse             0
 }

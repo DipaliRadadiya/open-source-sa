@@ -435,7 +435,12 @@ describe('the driver', function () {
         // `context ~ /re/` is nginx. OLS spells it `exp:`, and the wrong one
         // fails the config test — which would have stopped every OLS site from
         // provisioning, not just broken this rule.
-        expect($config)->toContain('context exp:^/\.(git|svn|hg|bzr|env) {')
+        // `panel` is in the list because the Basic-Auth credential file lives
+        // at `{documentRoot}/.panel/.htpasswd` — inside the served directory,
+        // so the deny rule is the only thing keeping the password hash off
+        // the public internet. nginx and Apache get that from a lookahead;
+        // OLS has to name it.
+        expect($config)->toContain('context exp:^/\.(git|svn|hg|bzr|env|panel) {')
             ->and($config)->not->toContain('context ~')
             // .well-known must stay reachable or certificates cannot be issued.
             // The deny rule names the directories it blocks rather than using a

@@ -14,8 +14,11 @@ use Illuminate\Support\Facades\Hash;
  * Whole-site HTTP Basic Auth — one username, one password per application,
  * a single shared credential rather than a table of named users.
  *
- * The credential file lives at `{documentRoot}/.panel/.htpasswd`, the same
- * `.panel/` directory already used for PHP-isolation sessions and file-editor
+ * The credential file lives at `{documentRoot}/.panel/.htpasswd`. Note this
+ * is NOT the same `.panel/` as PHP sessions and the PHP error log, which sit
+ * at `{appRoot}/.panel/` — outside the served directory. This one is inside
+ * it, and is only safe because every vhost template denies dotfile paths.
+ * The file-editor
  * backups — already outside every vhost's served paths (the dotfile deny
  * rule every template carries), so nothing new has to keep it hidden.
  *

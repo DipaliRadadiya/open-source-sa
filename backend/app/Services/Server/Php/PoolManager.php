@@ -188,7 +188,7 @@ class PoolManager
     public function render(Application $application, ApplicationPhpSettings $settings): string
     {
         $effective = $settings->effective();
-        $root = $this->documentRoot($application);
+        $root = $this->appRoot($application);
         $children = max(1, (int) $effective['pm_max_children']);
 
         return View::make('server.pools.fpm', [
@@ -253,12 +253,12 @@ class PoolManager
 
     public function sessionPath(Application $application): string
     {
-        return $this->documentRoot($application).'/.panel/sessions';
+        return $this->appRoot($application).'/.panel/sessions';
     }
 
     public function errorLogPath(Application $application): string
     {
-        return $this->documentRoot($application).'/.panel/php-error.log';
+        return $this->appRoot($application).'/.panel/php-error.log';
     }
 
     /**
@@ -305,10 +305,16 @@ class PoolManager
         return $result->failed() ? null : $result->output();
     }
 
-    private function documentRoot(Application $application): string
+    /**
+     * The app's own root — deliberately NOT the document root.
+     *
+     * Sessions and the PHP error log must sit outside the directory the web
+     * server serves, or they are downloadable. This was named documentRoot()
+     * while returning something else, which is how `.panel` ended up meaning
+     * two different directories in two different services.
+     */
+    private function appRoot(Application $application): string
     {
-        // The session and error log directories live inside the app's own
-        // root directory. See Application::rootPath().
         return $application->rootPath();
     }
 
