@@ -84,6 +84,13 @@ const COMMON_FIELD_NAMES = new Set([
   "branch",
 ]);
 
+// Declared by the API for WordPress, but not a decision to put in front of
+// anyone creating a site: by its own help text it does nothing unless the
+// server runs OpenLiteSpeed, and a plugin choice belongs in the site, not in
+// the form that creates it. Dropped rather than defaulted, so nothing is sent
+// and the backend applies its own `false`.
+const HIDDEN_FIELD_NAMES = new Set(["install_litespeed_cache_plugin"]);
+
 // The API is meant to send a display-ready `label`, but for some one-click app
 // fields it returns the untranslated key itself (`application.fields.shop_name`)
 // when the backend has no translation for it. Never show a raw key to a user —
@@ -262,12 +269,17 @@ function ConfigField({
 }) {
   const t = useTranslations("applications");
   const isAccount = config.source === "git_accounts";
-  const runtimeVersions =
-    config.source === "php_versions"
-      ? phpVersions
-      : config.source === "node_versions"
-        ? nodeVersions
-        : [];
+  // Memoised because the `[]` branch is a fresh array every render, which would
+  // re-run everything downstream that depends on it.
+  const runtimeVersions = useMemo(
+    () =>
+      config.source === "php_versions"
+        ? phpVersions
+        : config.source === "node_versions"
+          ? nodeVersions
+          : [],
+    [config.source, phpVersions, nodeVersions],
+  );
   const runtimeFailed =
     config.source === "php_versions"
       ? phpVersionsFailed
@@ -289,12 +301,25 @@ function ConfigField({
   // options arrive, so it never silently degrades to a free-text box.
   const isChoice = ["select", "enum", "dropdown"].includes(config.type);
   const [reveal, setReveal] = useState(false);
-  const options = config.options?.length
-    ? config.options
-    : runtimeVersions.map((version) => ({
-        value: version.version,
-        label: version.version,
-      }));
+  // Unique by value, always. Two options sharing a value make Radix's trigger
+  // render BOTH items' text — "8.4" twice reads as "8.48.4" — and they collide
+  // on the React key as well. Cheap to guarantee here rather than trusting
+  // every caller and every API list to be clean.
+  const options = useMemo(() => {
+    const raw = config.options?.length
+      ? config.options
+      : runtimeVersions.map((version) => ({
+          value: version.version,
+          label: version.version,
+        }));
+    const seen = new Set();
+    return raw.filter((option) => {
+      const key = String(option.value);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [config.options, runtimeVersions]);
   const runtimeDefault = isRuntime
     ? (options.find((option) => option.is_default)?.value ?? options[0]?.value)
     : undefined;
@@ -610,7 +635,8 @@ export function CreateApplicationForm({
   );
   const isGit = selected?.method === "git" || selected?.name === "git";
   const typeFields = (selected?.fields ?? []).filter(
-    (config) => !COMMON_FIELD_NAMES.has(config.name),
+    (config) =>
+      !COMMON_FIELD_NAMES.has(config.name) && !HIDDEN_FIELD_NAMES.has(config.name),
   );
   const visibleFields = typeFields.filter(
     (config) =>
@@ -792,6 +818,7 @@ export function CreateApplicationForm({
     for (const field of selected.fields ?? []) {
       if (
         COMMON_FIELD_NAMES.has(field.name) ||
+        HIDDEN_FIELD_NAMES.has(field.name) ||
         field.type === "password" ||
         field.source === "php_versions" ||
         field.source === "node_versions" ||

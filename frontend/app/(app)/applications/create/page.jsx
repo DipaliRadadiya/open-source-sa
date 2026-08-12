@@ -34,10 +34,18 @@ export default async function CreateApplicationPage() {
   ]);
 
   const phpVersions = (php.data?.versions ?? []).filter((version) => !version.status || version.status === "ready");
-  const nodeVersions = [
-    ...(node.data?.versions ?? []).filter((version) => !version.status || version.status === "ready"),
-    ...(node.data?.system ? [{ ...node.data.system, status: "ready" }] : []),
-  ];
+  // The system Node is only worth offering when the panel does not already
+  // manage that number. Listing it twice put two options with the SAME value in
+  // the picker, and Radix renders every matching item's text into the trigger —
+  // which is where "24.19.024.19.0" came from.
+  const managedNode = (node.data?.versions ?? []).filter(
+    (version) => !version.status || version.status === "ready",
+  );
+  const systemNode =
+    node.data?.system && !managedNode.some((v) => v.version === node.data.system.version)
+      ? [{ ...node.data.system, status: "ready" }]
+      : [];
+  const nodeVersions = [...managedNode, ...systemNode];
 
   if (!can(permissions, "application", "manage")) redirect("/applications");
   if (types.failed) return <LoadFailed description={t("loadFailed")} />;
