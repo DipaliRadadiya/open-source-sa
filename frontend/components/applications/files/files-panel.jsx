@@ -29,6 +29,8 @@ import { SelectionBar } from "@/components/applications/files/selection-bar";
 import { BulkDialogs } from "@/components/applications/files/bulk-dialogs";
 import { BulkResultPanel } from "@/components/applications/files/bulk-result-panel";
 import { joinPath } from "@/lib/files/path-helpers";
+import { folderSize } from "@/lib/api/files";
+import { apiMessage } from "@/lib/api/error-message";
 
 export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
   const t = useTranslations("applications.files");
@@ -119,7 +121,31 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
   const canWrite = canManage;
   const writeReason = canWrite ? null : t("noPermission");
 
+  // Folder sizes are computed one at a time, on request, and remembered for
+  // as long as the listing is on screen — asking twice for the same folder
+  // makes the backend walk the tree twice for an answer we already have.
+  const [folderSizes, setFolderSizes] = useState({});
+  const [sizingPath, setSizingPath] = useState(null);
+
+  async function measure(file) {
+    setSizingPath(file.path);
+    try {
+      const { data } = await folderSize(appId, file.path);
+      setFolderSizes((current) => ({ ...current, [file.path]: data?.size_human ?? null }));
+    } catch (error) {
+      toast.error(apiMessage(error, t("size.failed")));
+    } finally {
+      setSizingPath(null);
+    }
+  }
+
   function onAction(type, file) {
+    // Answered in place rather than in a dialog: it is one number about one
+    // row, and the row already has a column for it.
+    if (type === "size") {
+      measure(file);
+      return;
+    }
     setAction({ type, file });
   }
 
@@ -282,6 +308,8 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
               selected={selected}
               onToggle={toggleSelected}
               onToggleAll={toggleAll}
+              folderSizes={folderSizes}
+              sizingPath={sizingPath}
             />
           </div>
         </>

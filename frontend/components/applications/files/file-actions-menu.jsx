@@ -2,7 +2,17 @@
 
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Download, ClipboardCopy, PencilLine, Copy, Archive, FolderOpen, Lock, Trash2 } from "lucide-react";
+import {
+  Download,
+  ClipboardCopy,
+  PencilLine,
+  Copy,
+  Archive,
+  FolderOpen,
+  Lock,
+  Scale,
+  Trash2,
+} from "lucide-react";
 import { fileDownloadUrl } from "@/lib/api/files";
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 
@@ -73,6 +83,16 @@ export function FileActionItems({
           </Item>
           {canWrite ? <Separator /> : null}
         </>
+      ) : null}
+
+      {/* Directories only — a file's size is already in the row, and asking
+          the backend to walk a single file would be a request for a fact we
+          were handed. */}
+      {file.type === "dir" ? (
+        <Item onSelect={() => onAction("size", file)}>
+          <Scale className="size-4" />
+          {t("actions.folderSize")}
+        </Item>
       ) : null}
 
       {canWrite ? (

@@ -10,6 +10,17 @@ export function searchFiles(appId, q, { path, signal } = {}) {
   return api.get(`/applications/${appId}/files/search`, { params: { q, path }, signal });
 }
 
+/**
+ * How big a folder is, on demand.
+ *
+ * Not in the listing: the backend walks the tree to answer, so it is a
+ * question you ask about one folder rather than a column the list fills in
+ * for every row.
+ */
+export function folderSize(appId, path) {
+  return api.get(`/applications/${appId}/files/size`, { params: { path } });
+}
+
 export function getFileContent(appId, path) {
   return api.get(`/applications/${appId}/files/content`, { params: { path } });
 }

@@ -128,12 +128,23 @@ function NameCell({ row, table }) {
   );
 }
 
-function SizeCell({ row }) {
+function SizeCell({ row, table }) {
   const file = row.original;
-  // Folder sizes are optional (recursive, potentially expensive for the
-  // backend to compute) — shown when present, "—" otherwise, same as it's
-  // always been for a backend that doesn't send one.
-  return <span className="tabular-nums text-muted-foreground">{file.size_human ?? "—"}</span>;
+  const { folderSizes = {}, sizingPath } = table.options.meta;
+
+  // A folder has no size until someone asks: the backend walks the tree to
+  // work one out, so the listing does not carry it and the dash is honest
+  // rather than a gap.
+  if (sizingPath === file.path) {
+    return <Loader2 className="ml-auto size-3.5 animate-spin text-muted-foreground" />;
+  }
+
+  const measured = folderSizes[file.path];
+  return (
+    <span className="tabular-nums text-muted-foreground">
+      {measured ?? file.size_human ?? "—"}
+    </span>
+  );
 }
 
 function ModifiedCell({ row }) {
@@ -189,7 +200,20 @@ function ActionsCell({ row, table }) {
   return <FileRowActions file={file} appId={appId} canManage={canManage} onAction={onAction} />;
 }
 
-export function FilesTable({ appId, path, data, canManage, onAction, busyPath, highlightPath, selected = [], onToggle, onToggleAll }) {
+export function FilesTable({
+  appId,
+  path,
+  data,
+  canManage,
+  onAction,
+  busyPath,
+  highlightPath,
+  selected = [],
+  onToggle,
+  onToggleAll,
+  folderSizes = {},
+  sizingPath = null,
+}) {
   const t = useTranslations("applications.files");
 
   // Percentages, not px, and they sum to 100 — paired with `fixedLayout`
@@ -254,7 +278,18 @@ export function FilesTable({ appId, path, data, canManage, onAction, busyPath, h
     <DataTable
       columns={columns}
       data={data}
-      meta={{ appId, path, canManage, onAction, busyPath, selected, onToggle, onToggleAll }}
+      meta={{
+        appId,
+        path,
+        canManage,
+        onAction,
+        busyPath,
+        selected,
+        onToggle,
+        onToggleAll,
+        folderSizes,
+        sizingPath,
+      }}
       emptyMessage={t("empty.title")}
       rowClassName={(file) =>
         cn(
