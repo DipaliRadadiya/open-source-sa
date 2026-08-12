@@ -170,7 +170,9 @@
       "fingerprint": "Fingerprint",
       "addedOn": "Added {when}"
     },
-    "noPermission": "You do not have permission to change this."
+    "noPermission": "You do not have permission to change this.",
+    "shellNeedsLogin": "This shell refuses login, so it cannot be set while SSH access is on. Turn SSH off first.",
+    "sshNeedsLoginShell": "The shell is set to “{shell}”, which refuses login. Choose a shell that allows login first."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -358,7 +360,7 @@
       "enabledCount": "{count} of {total} enabled",
       "view": "View",
       "manage": "Manage",
-      "selectAll": "Select all",
+      "selectAll": "All permissions",
       "legendView": "Open and read this section.",
       "legendManage": "Create, edit, and delete — includes View.",
       "generalGroup": "General",
@@ -626,7 +628,10 @@
     "required_confirm": "Type the site's domain to confirm",
     "cloneDomainRequired": "Enter the domain for the copy.",
     "cloneDomainInvalid": "Enter a full domain, like copy.example.com",
-    "scheduleTime": "Use a time like 02:00"
+    "scheduleTime": "Use a time like 02:00",
+    "basedirAbsolute": "Each folder must be a full path starting with /",
+    "basedirRoot": "Use / here and nothing is restricted — turn the setting off instead",
+    "basedirTraversal": "Folders cannot contain .."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1307,7 +1312,8 @@
       "added": "Added {names}.",
       "alreadyThere": "{names} was already allowed — nothing changed.",
       "failed": "That rule could not be added.",
-      "tileRisky": "{name} would be open to the whole internet — use Custom rule and pick “Only my IP”."
+      "tileRisky": "{name} would be open to the whole internet — use Custom rule and pick “Only my IP”.",
+      "tileRemoveHint": "Click to remove this rule"
     },
     "history": {
       "action": "History",
@@ -1580,8 +1586,6 @@
       "confirmRemoveTitle": "Remove PHP {version}?",
       "confirmRemoveBody": "Its extensions and settings go with it. You can install it again later.",
       "confirmCancel": "Cancel",
-      "usedByNames": "Used by {sites}.",
-      "usedByNamesMore": "{count, plural, one {Used by {sites} and # more site} other {Used by {sites} and # more sites}}.",
       "switchLabel": "Settings for:",
       "statusFailed": "Install failed",
       "statusInstalling": "Installing",
@@ -1591,7 +1595,8 @@
       "installingBody": "Extensions will appear once it finishes. This can take a few minutes.",
       "installFailedTitle": "PHP {version} did not install",
       "installFailedBody": "Nothing was installed for this version, so it has no extensions or php.ini. Remove it and install it again, or check the server logs for what went wrong.",
-      "installingSince": "Started {when}. Extensions will appear once it finishes."
+      "installingSince": "Started {when}. Extensions will appear once it finishes.",
+      "moreCount": "+{count} more"
     },
     "extensions": {
       "title": "Extensions",
@@ -1625,7 +1630,8 @@
       "started": "Installing PHP {version} — this takes a few minutes.",
       "already": "PHP {version} was already installed.",
       "failed": "That version could not be installed.",
-      "eolWarning": "PHP {version} no longer gets security fixes. Install it only if a site needs it."
+      "eolWarning": "PHP {version} no longer gets security fixes. Install it only if a site needs it.",
+      "noneAvailable": "No new versions are available to install right now."
     },
     "lifecycle": {
       "active": "Supported",
@@ -1709,8 +1715,6 @@
       "isDefault": "This is the default version.",
       "usedBy": "{count, plural, one {# app uses this version} other {# apps use this version}}.",
       "usedByCount": "{count, plural, one {Used by # app} other {Used by # apps}}.",
-      "usedByNames": "Used by {sites}.",
-      "usedByNamesMore": "{count, plural, one {Used by {sites} and # more app} other {Used by {sites} and # more apps}}.",
       "usedByNone": "No apps use this version yet.",
       "makeDefault": "Make default",
       "remove": "Remove",
@@ -1721,7 +1725,8 @@
       "removeFailed": "That version could not be removed.",
       "confirmRemoveTitle": "Remove Node.js {version}?",
       "confirmRemoveBody": "Anything installed for this version goes with it. You can install it again later.",
-      "confirmCancel": "Cancel"
+      "confirmCancel": "Cancel",
+      "moreCount": "+{count} more"
     },
     "install": {
       "action": "Install version",
@@ -1733,7 +1738,8 @@
       "started": "Installing Node.js {version} — this takes a few minutes.",
       "already": "Node.js {version} was already installed.",
       "failed": "That version could not be installed.",
-      "eolWarning": "Node.js {version} no longer gets security fixes. Install it only if an app needs it."
+      "eolWarning": "Node.js {version} no longer gets security fixes. Install it only if an app needs it.",
+      "noneAvailable": "No new versions are available to install right now."
     },
     "lifecycle": {
       "current": "Current",
@@ -3060,21 +3066,27 @@
         "title": "Permissions for \"{name}\"",
         "subtitle": "Who can read, write and execute this file or folder.",
         "subtitleWithCurrent": "Currently {mode}. Who can read, write and execute this file or folder.",
-        "currentBadge": "Current",
         "preset644": "Read-only — the usual choice for files",
         "preset755": "Standard — the usual choice for folders and scripts",
         "preset600": "Private — only the owner can read or write",
-        "custom": "Custom",
-        "customHint": "Exactly 3 octal digits, e.g. 644 or 755.",
-        "read": "read",
-        "write": "write",
-        "execute": "run it",
+        "read": "Read",
+        "write": "Write",
+        "execute": "Execute",
         "noAccess": "no access",
         "describeSimple": "Owner: {owner}. Everyone else: {rest}.",
         "describeFull": "Owner: {owner}. Group: {group}. Others: {other}.",
         "submit": "Save",
         "done": "Permissions updated for \"{name}\".",
-        "failed": "Couldn't update permissions."
+        "failed": "Couldn't update permissions.",
+        "audience": {
+          "owner": "Owner",
+          "group": "Group",
+          "other": "Everyone else"
+        },
+        "boxLabel": "{audience} can {permission}",
+        "verbRead": "read",
+        "verbWrite": "write",
+        "verbExecute": "run it"
       },
       "delete": {
         "title": "Delete \"{name}\"?",
@@ -3604,21 +3616,16 @@
       "isolation": {
         "onTitle": "This site has its own PHP",
         "onBody": "Its limits apply to this site alone, and its code runs as its own user.",
-        "offTitle": "Shared PHP mode",
-        "offBody": "This site shares PHP with other sites, so per-site limits cannot be changed here.",
+        "offTitle": "This site has no PHP pool of its own",
+        "offBody": "It runs as the web server's account, shared with every other site, so per-site limits cannot be applied.",
         "runsAs": "runs as {user}",
         "sharedBadge": "Shared PHP · runs as {user}",
         "dedicatedBadge": "Dedicated PHP",
         "isolateAction": "Give this site dedicated PHP",
-        "isolateHelper": "Creates an isolated PHP-FPM pool for this site. Site files and database are not changed.",
-        "putBackAction": "Share PHP again",
+        "isolateHelper": "Creates a PHP-FPM pool for this site and moves it onto its own user. Site files and database are not changed.",
         "required": "Give this site its own PHP first",
         "isolated": "This site now has its own PHP.",
-        "putBack": "This site is back on shared PHP.",
         "failed": "That could not be done.",
-        "putBackTitle": "Share PHP again?",
-        "putBackBody": "This site goes back to the shared settings, and the limits set here stop applying to it.",
-        "putBackConfirm": "Share PHP again",
         "unsupportedTitle": "Not available on this web server",
         "unsupportedBody": "OpenLiteSpeed starts PHP itself and has no per-site pools, so these settings cannot be applied here."
       },
@@ -3653,7 +3660,8 @@
           "limits": "Set memory, upload and time limits",
           "security": "Lock down PHP security",
           "directives": "Tune advanced PHP directives"
-        }
+        },
+        "versionHint": "The PHP version lives in the site's web-server config, so it can be changed without a pool."
       },
       "blocked": {
         "description": "PHP refuses to run these. Most sites never need them — they are what an attacker reaches for first.",
@@ -3680,7 +3688,21 @@
       "presetsCustom": "Custom — not one of the presets above.",
       "reset": "Reset",
       "resetDone": "Back to the default.",
-      "resetFailed": "Could not reset this setting."
+      "resetFailed": "Could not reset this setting.",
+      "basedir": {
+        "offHint": "PHP can open any file this site's Linux user can reach.",
+        "previewTrigger": "What turning this on would allow",
+        "previewLabel": "PHP would be limited to these folders",
+        "alwaysLabel": "Always included",
+        "alwaysHint": "Added on every save. Without these the site cannot run.",
+        "extraLabel": "Extra folders",
+        "extraPlaceholder": "/var/www/shared-uploads",
+        "extraHint": "One per line. Full paths only, starting with /.",
+        "unknown": "This site has no PHP pool file yet, so the current value cannot be read.",
+        "disagrees": "The server is enforcing something different from what is saved here.",
+        "disagreesWhy": "Either the pool file was edited by hand, or an open_basedir line in Additional directives is overriding this one.",
+        "liveLabel": "What the server is enforcing now"
+      }
     },
     "fail2ban": {
       "pageTitle": "Attack protection",

@@ -195,7 +195,10 @@
     "required_confirm": "Escribe el dominio del sitio para confirmar",
     "cloneDomainRequired": "Introduce el dominio de la copia.",
     "cloneDomainInvalid": "Introduce un dominio completo, como copia.ejemplo.com",
-    "scheduleTime": "Usa una hora como 02:00"
+    "scheduleTime": "Usa una hora como 02:00",
+    "basedirAbsolute": "Cada carpeta debe ser una ruta completa que empiece por /",
+    "basedirRoot": "Con / aquí no se restringe nada; mejor desactiva el ajuste",
+    "basedirTraversal": "Las carpetas no pueden contener .."
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -429,7 +432,7 @@
       "enabledCount": "{count} de {total} habilitados",
       "view": "Ver",
       "manage": "Gestionar",
-      "selectAll": "Seleccionar todo",
+      "selectAll": "Todos los permisos",
       "legendView": "Abrir y leer esta sección.",
       "legendManage": "Crear, editar y eliminar — incluye Ver.",
       "generalGroup": "General",
@@ -626,7 +629,9 @@
       "fingerprint": "Huella digital",
       "addedOn": "Añadido {when}"
     },
-    "noPermission": "No tienes permiso para cambiar esto."
+    "noPermission": "No tienes permiso para cambiar esto.",
+    "shellNeedsLogin": "Este shell rechaza el inicio de sesión, así que no puede usarse con el acceso SSH activado. Desactiva SSH primero.",
+    "sshNeedsLoginShell": "El shell es «{shell}», que rechaza el inicio de sesión. Elige antes un shell que lo permita."
   },
   "serverDashboard": {
     "title": "Panel",
@@ -1307,7 +1312,8 @@
       "added": "Añadido: {names}.",
       "alreadyThere": "{names} ya estaba permitido — no ha cambiado nada.",
       "failed": "No se pudo añadir esa regla.",
-      "tileRisky": "{name} quedaría abierto a todo internet: usa «Regla personalizada» y elige «Solo mi IP»."
+      "tileRisky": "{name} quedaría abierto a todo internet: usa «Regla personalizada» y elige «Solo mi IP».",
+      "tileRemoveHint": "Haz clic para eliminar esta regla"
     },
     "history": {
       "action": "Historial",
@@ -1580,8 +1586,6 @@
       "confirmRemoveTitle": "¿Quitar PHP {version}?",
       "confirmRemoveBody": "Sus extensiones y ajustes se van con ella. Puedes instalarla de nuevo más tarde.",
       "confirmCancel": "Cancelar",
-      "usedByNames": "La usan {sites}.",
-      "usedByNamesMore": "{count, plural, one {La usan {sites} y # sitio más} other {La usan {sites} y # sitios más}}.",
       "switchLabel": "Ajustes de:",
       "statusFailed": "Instalación fallida",
       "statusInstalling": "Instalando",
@@ -1591,7 +1595,8 @@
       "installingBody": "Las extensiones aparecerán cuando termine. Puede tardar unos minutos.",
       "installFailedTitle": "PHP {version} no se instaló",
       "installFailedBody": "No se instaló nada para esta versión, así que no tiene extensiones ni php.ini. Elimínala e instálala de nuevo, o revisa los registros del servidor.",
-      "installingSince": "Comenzó {when}. Las extensiones aparecerán cuando termine."
+      "installingSince": "Comenzó {when}. Las extensiones aparecerán cuando termine.",
+      "moreCount": "+{count} más"
     },
     "extensions": {
       "title": "Extensiones",
@@ -1625,7 +1630,8 @@
       "started": "Instalando PHP {version}; esto tarda unos minutos.",
       "already": "PHP {version} ya estaba instalada.",
       "failed": "No se pudo instalar esa versión.",
-      "eolWarning": "PHP {version} ya no recibe correcciones de seguridad. Instálala solo si algún sitio la necesita."
+      "eolWarning": "PHP {version} ya no recibe correcciones de seguridad. Instálala solo si algún sitio la necesita.",
+      "noneAvailable": "Ahora mismo no hay versiones nuevas para instalar."
     },
     "lifecycle": {
       "active": "Con soporte",
@@ -1709,8 +1715,6 @@
       "isDefault": "Esta es la versión predeterminada.",
       "usedBy": "{count, plural, one {# aplicación usa esta versión} other {# aplicaciones usan esta versión}}.",
       "usedByCount": "{count, plural, one {La usa # aplicación} other {La usan # aplicaciones}}.",
-      "usedByNames": "La usan {sites}.",
-      "usedByNamesMore": "{count, plural, one {La usan {sites} y # aplicación más} other {La usan {sites} y # aplicaciones más}}.",
       "usedByNone": "Todavía ninguna aplicación usa esta versión.",
       "makeDefault": "Hacer predeterminada",
       "remove": "Eliminar",
@@ -1721,7 +1725,8 @@
       "removeFailed": "No se pudo eliminar esa versión.",
       "confirmRemoveTitle": "¿Eliminar Node.js {version}?",
       "confirmRemoveBody": "Todo lo instalado para esta versión se elimina con ella. Puedes instalarla de nuevo más tarde.",
-      "confirmCancel": "Cancelar"
+      "confirmCancel": "Cancelar",
+      "moreCount": "+{count} más"
     },
     "install": {
       "action": "Instalar versión",
@@ -1733,7 +1738,8 @@
       "started": "Instalando Node.js {version}: esto tarda unos minutos.",
       "already": "Node.js {version} ya estaba instalada.",
       "failed": "No se pudo instalar esa versión.",
-      "eolWarning": "Node.js {version} ya no recibe parches de seguridad. Instálala solo si una aplicación la necesita."
+      "eolWarning": "Node.js {version} ya no recibe parches de seguridad. Instálala solo si una aplicación la necesita.",
+      "noneAvailable": "Ahora mismo no hay versiones nuevas para instalar."
     },
     "lifecycle": {
       "current": "Actual",
@@ -3060,21 +3066,27 @@
         "title": "Permisos de «{name}»",
         "subtitle": "Quién puede leer, escribir y ejecutar este archivo o carpeta.",
         "subtitleWithCurrent": "Actualmente {mode}. Quién puede leer, escribir y ejecutar este archivo o carpeta.",
-        "currentBadge": "Actual",
         "preset644": "Solo lectura — la opción habitual para archivos",
         "preset755": "Estándar — la opción habitual para carpetas y scripts",
         "preset600": "Privado — solo el propietario puede leer o escribir",
-        "custom": "Personalizado",
-        "customHint": "Exactamente 3 dígitos octales, p. ej. 644 o 755.",
-        "read": "leer",
-        "write": "escribir",
-        "execute": "ejecutarlo",
+        "read": "Leer",
+        "write": "Escribir",
+        "execute": "Ejecutar",
         "noAccess": "sin acceso",
         "describeSimple": "Propietario: {owner}. Todos los demás: {rest}.",
         "describeFull": "Propietario: {owner}. Grupo: {group}. Otros: {other}.",
         "submit": "Guardar",
         "done": "Permisos actualizados para «{name}».",
-        "failed": "No se pudieron actualizar los permisos."
+        "failed": "No se pudieron actualizar los permisos.",
+        "audience": {
+          "owner": "Propietario",
+          "group": "Grupo",
+          "other": "Todos los demás"
+        },
+        "boxLabel": "{audience} puede {permission}",
+        "verbRead": "leer",
+        "verbWrite": "escribir",
+        "verbExecute": "ejecutarlo"
       },
       "delete": {
         "title": "¿Eliminar «{name}»?",
@@ -3604,21 +3616,16 @@
       "isolation": {
         "onTitle": "Este sitio tiene su propio PHP",
         "onBody": "Sus límites se aplican solo a este sitio y su código se ejecuta como su propio usuario.",
-        "offTitle": "Modo PHP compartido",
-        "offBody": "Este sitio comparte PHP con otros sitios, así que no se pueden cambiar los límites por sitio aquí.",
+        "offTitle": "Este sitio no tiene su propio pool de PHP",
+        "offBody": "Se ejecuta con la cuenta del servidor web, compartida con todos los demás sitios, así que no se pueden aplicar límites por sitio.",
         "runsAs": "se ejecuta como {user}",
         "sharedBadge": "PHP compartido · se ejecuta como {user}",
         "dedicatedBadge": "PHP dedicado",
         "isolateAction": "Dar PHP propio a este sitio",
-        "isolateHelper": "Crea un pool PHP-FPM aislado para este sitio. Los archivos del sitio y la base de datos no cambian.",
-        "putBackAction": "Volver a compartir PHP",
+        "isolateHelper": "Crea un pool PHP-FPM para este sitio y lo pasa a su propio usuario. Los archivos y la base de datos no cambian.",
         "required": "Primero dale a este sitio su propio PHP",
         "isolated": "Este sitio ya tiene su propio PHP.",
-        "putBack": "Este sitio vuelve a compartir PHP.",
         "failed": "No se pudo completar.",
-        "putBackTitle": "¿Volver a compartir PHP?",
-        "putBackBody": "El sitio vuelve a los ajustes compartidos y los límites de aquí dejan de aplicarse.",
-        "putBackConfirm": "Volver a compartir PHP",
         "unsupportedTitle": "No disponible en este servidor web",
         "unsupportedBody": "OpenLiteSpeed inicia PHP por su cuenta y no tiene pools por sitio, así que estos ajustes no pueden aplicarse."
       },
@@ -3653,7 +3660,8 @@
           "limits": "Ajustar memoria, subida y tiempo",
           "security": "Bloquear funciones peligrosas",
           "directives": "Afinar directivas avanzadas"
-        }
+        },
+        "versionHint": "La versión de PHP está en la configuración del servidor web del sitio, así que se puede cambiar sin un pool."
       },
       "blocked": {
         "description": "PHP se negará a ejecutarlas. Casi ningún sitio las necesita y son lo primero que busca un atacante.",
@@ -3680,7 +3688,21 @@
       "presetsCustom": "Personalizado: no coincide con ninguno de los ajustes anteriores.",
       "reset": "Restablecer",
       "resetDone": "Se ha restablecido el valor predeterminado.",
-      "resetFailed": "No se pudo restablecer este ajuste."
+      "resetFailed": "No se pudo restablecer este ajuste.",
+      "basedir": {
+        "offHint": "PHP puede abrir cualquier archivo al que llegue el usuario Linux de este sitio.",
+        "previewTrigger": "Qué permitiría activarlo",
+        "previewLabel": "PHP quedaría limitado a estas carpetas",
+        "alwaysLabel": "Siempre incluidas",
+        "alwaysHint": "Se añaden en cada guardado. Sin ellas el sitio no puede funcionar.",
+        "extraLabel": "Carpetas adicionales",
+        "extraPlaceholder": "/var/www/shared-uploads",
+        "extraHint": "Una por línea. Solo rutas completas que empiecen por /.",
+        "unknown": "Este sitio aún no tiene archivo de pool de PHP, así que no se puede leer el valor actual.",
+        "disagrees": "El servidor está aplicando algo distinto de lo que está guardado aquí.",
+        "disagreesWhy": "O se editó el archivo de pool a mano, o una línea open_basedir en Directivas adicionales está anulando esta.",
+        "liveLabel": "Lo que el servidor aplica ahora"
+      }
     },
     "fail2ban": {
       "pageTitle": "Protección contra ataques",
