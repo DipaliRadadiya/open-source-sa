@@ -162,6 +162,33 @@ it('refuses to save a file it cannot parse', function () {
     expect($this->written)->toBeNull();
 });
 
+it('lets the user empty the file', function () {
+    fakeSite();
+
+    // Clearing the editor is a legitimate save. `required` counts "" as absent,
+    // so this used to answer "The raw field is required" about the field the
+    // user had just deliberately emptied.
+    $this->actingAs($this->admin)
+        ->putJson(envUrl(), ['raw' => ''])
+        ->assertOk();
+
+    expect($this->written)->toBe("\n");
+});
+
+it('still refuses a request that omits the file entirely', function () {
+    fakeSite();
+
+    // The case `present` keeps catching: no `raw` key at all is a client bug,
+    // and treating it as "empty" would blank someone's environment over a
+    // malformed request.
+    $this->actingAs($this->admin)
+        ->putJson(envUrl(), [])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('raw');
+
+    expect($this->written)->toBeNull();
+});
+
 it('saves a file with warnings, because they are the user\'s business', function () {
     fakeSite();
 
