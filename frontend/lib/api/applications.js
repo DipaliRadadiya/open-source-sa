@@ -148,3 +148,14 @@ export function createApplicationStaging(id, domain) {
 export function pushApplicationStaging(id, mode) {
   return api.post(`/applications/${id}/staging/push`, { mode });
 }
+
+/**
+ * Change the directory the web server serves.
+ *
+ * Creates it if missing, rewrites the vhost, config-tests and reloads — so a
+ * wrong value takes the site down until it is corrected, which is why the
+ * dialog says so before saving.
+ */
+export function updateWebRoot(id, webRoot) {
+  return api.put(`/applications/${id}/web-root`, { web_root: webRoot });
+}

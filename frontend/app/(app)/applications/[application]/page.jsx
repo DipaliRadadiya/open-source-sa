@@ -145,7 +145,7 @@ export default async function ApplicationDetailPage({ params }) {
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="space-y-6">
-            <SiteFactsCard application={application} />
+            <SiteFactsCard application={application} canManage={canManage} />
             {isGit ? <SourceCard application={application} canDeploy={canDeploy} /> : null}
           </div>
           <div className="space-y-6">
