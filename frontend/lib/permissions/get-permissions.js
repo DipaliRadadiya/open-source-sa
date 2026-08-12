@@ -2,6 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { serverLocale } from "@/lib/i18n/server-locale";
 import { fetchWithRetry } from "@/lib/api/retry";
+import { RateLimitedError } from "@/lib/api/rate-limited";
 
 /**
  * `level`/`applicationId` are forwarded verbatim: `?level=application&
@@ -38,6 +39,10 @@ export const getPermissions = cache(async (level, applicationId) => {
   );
 
   if (res.status === 401 || res.status === 419) return [];
+
+  // Rate-limited, not "may do nothing" — returning [] here would redirect the
+  // user out of the page they asked for as though they lacked permission.
+  if (res.status === 429) throw new RateLimitedError("permissions");
 
   if (!res.ok) {
     throw new Error(`permissions responded ${res.status}`);

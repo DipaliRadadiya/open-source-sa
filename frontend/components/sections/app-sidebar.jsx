@@ -130,7 +130,14 @@ export function AppSidebar({ items }) {
                 return (
                   <SidebarMenuItem key={`${item.name}-${item.href}`}>
                     <MobileNavLink item={item} built active={active}>
-                      <Link href={item.href}>
+                      {/* Every one of these routes is dynamic and cookie-gated,
+                          so a prefetch is a full server render against the API
+                          — and the whole menu is on screen at all times. Left
+                          on, opening one page fired ~16 background renders and
+                          burned most of the API's per-minute budget before the
+                          user clicked anything. Intent (hover/touch) still
+                          prefetches; `loading.jsx` covers the rest. */}
+                      <Link href={item.href} prefetch={false}>
                         <NavIcon name={item.icon} />
                         <span>{item.title}</span>
                       </Link>

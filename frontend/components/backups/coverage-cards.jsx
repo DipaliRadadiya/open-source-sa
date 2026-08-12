@@ -46,6 +46,7 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <Link
+                    prefetch={false}
                     href={`/applications/${application.id}/backups`}
                     className="block truncate font-medium underline-offset-4 hover:underline"
                   >

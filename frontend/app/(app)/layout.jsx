@@ -13,17 +13,42 @@ import { can } from "@/lib/permissions/can";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageCrumbProvider } from "@/components/sections/page-crumb";
+import { RateLimited } from "@/components/sections/rate-limited";
+import { isRateLimited } from "@/lib/api/rate-limited";
 import { ApplicationNavProvider } from "@/components/sections/application-nav";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * This layout sits above every error.jsx in the panel, so a throw here escapes
+ * to Next's own unstyled error page — which is exactly what a rate-limited
+ * session looked like. Caught by identity and answered with a screen that says
+ * so; anything else still reaches the boundary.
+ *
+ * The session must be resolved before the redirect, but the other three are
+ * independent of each other, so they go together rather than in a waterfall.
+ */
 export default async function AppLayout({ children }) {
-  const user = await getCurrentUser();
+  let user;
+  try {
+    user = await getCurrentUser();
+  } catch (error) {
+    if (isRateLimited(error)) return <RateLimited />;
+    throw error;
+  }
   if (!user) redirect(await signedOutPath());
 
-  const permissions = await getPermissions();
-  const impersonatedBy = await getImpersonator();
-  const rebootRequired = await getRebootRequired();
+  let permissions, impersonatedBy, rebootRequired;
+  try {
+    [permissions, impersonatedBy, rebootRequired] = await Promise.all([
+      getPermissions(),
+      getImpersonator(),
+      getRebootRequired(),
+    ]);
+  } catch (error) {
+    if (isRateLimited(error)) return <RateLimited />;
+    throw error;
+  }
 
   return (
     <AuthProvider user={user}>

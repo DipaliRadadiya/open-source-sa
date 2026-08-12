@@ -873,7 +873,15 @@
         "title": "No se pudo contactar con el servidor",
         "body": "Puede estar reiniciándose. Inténtalo de nuevo en un momento."
       },
-      "code": "Error {status}"
+      "code": "Error {status}",
+      "rateLimited": {
+        "title": "Demasiadas solicitudes",
+        "body": "El panel consultó al servidor más veces de las permitidas. Espera un momento e inténtalo de nuevo."
+      }
+    },
+    "rateLimited": {
+      "title": "Demasiadas solicitudes",
+      "body": "El panel consultó al servidor más veces de las que permite por minuto. No ha cambiado nada: espera un momento e inténtalo de nuevo."
     }
   },
   "logs": {

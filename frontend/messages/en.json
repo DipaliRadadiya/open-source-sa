@@ -873,7 +873,15 @@
         "title": "Could not reach the server",
         "body": "It may be restarting. Try again in a moment."
       },
-      "code": "Error {status}"
+      "code": "Error {status}",
+      "rateLimited": {
+        "title": "Too many requests",
+        "body": "The panel asked the server more times than it allows. Wait a moment and try again."
+      }
+    },
+    "rateLimited": {
+      "title": "Too many requests",
+      "body": "The panel asked the server more times than it allows in a minute. Nothing has changed — wait a moment and try again."
     }
   },
   "logs": {

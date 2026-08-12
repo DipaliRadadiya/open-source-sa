@@ -2,6 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { serverLocale } from "@/lib/i18n/server-locale";
 import { fetchWithRetry } from "@/lib/api/retry";
+import { RateLimitedError } from "@/lib/api/rate-limited";
 
 // Single cached `/auth/me` fetch per request. Returns the full payload:
 // `{ user, impersonatedBy }`. `getCurrentUser` / `getImpersonator` derive from
@@ -39,6 +40,10 @@ export const getMe = cache(async () => {
   if (res.status === 401 || res.status === 419) {
     return { user: null, impersonatedBy: null };
   }
+
+  // Still rate-limited after the backoffs in fetchWithRetry. Thrown as its own
+  // type so the layout can say "too many requests" instead of "went wrong".
+  if (res.status === 429) throw new RateLimitedError("auth/me");
 
   if (!res.ok) {
     throw new Error(`auth/me responded ${res.status}`);

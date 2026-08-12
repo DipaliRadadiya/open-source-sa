@@ -48,6 +48,7 @@ function SiteCell({ row }) {
     <div className="min-w-0">
       <div className="flex min-w-0 items-center gap-2">
         <Link
+          prefetch={false}
           href={`/applications/${application.id}/backups`}
           className="truncate font-medium underline-offset-4 hover:underline"
         >

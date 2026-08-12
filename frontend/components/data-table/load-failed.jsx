@@ -25,24 +25,17 @@ export function LoadFailed({ description, status = null, failure = null }) {
   const router = useRouter();
 
   /**
-   * Which of the five things went wrong, or null when we cannot tell.
+   * Which of the six things went wrong, or null when we cannot tell.
    *
-   * 403 and 404 are the user's situation rather than a fault; 5xx and a dead
-   * request are ours to fix; a shape mismatch is a bug in this panel and should
-   * not be dressed up as a network blip.
+   * 403, 404 and 429 are the user's situation rather than a fault; 5xx and a
+   * dead request are ours to fix; a shape mismatch is a bug in this panel and
+   * should not be dressed up as a network blip.
    */
+  const BY_STATUS = { 403: "forbidden", 404: "notFound", 429: "rateLimited" };
   const kind =
-    failure === "shape"
-      ? "shape"
-      : failure === "network"
-        ? "network"
-        : status === 403
-          ? "forbidden"
-          : status === 404
-            ? "notFound"
-            : status >= 500
-              ? "server"
-              : null;
+    failure === "shape" || failure === "network"
+      ? failure
+      : (BY_STATUS[status] ?? (status >= 500 ? "server" : null));
 
   // The heading carries the answer, not just the fact that there is one.
   // "This part could not be loaded" above "You do not have permission" made the
@@ -67,8 +60,9 @@ export function LoadFailed({ description, status = null, failure = null }) {
         {/* The code, small and last: meaningless to most people, and the first
             thing anyone asks for when reporting this. Not shown for a shape
             failure — the request succeeded, so printing "Error 200" would
-            point at the one part that worked. */}
-        {status && status >= 400 ? (
+            point at the one part that worked — nor for a rate limit, where
+            waiting is the whole answer and there is nothing to report. */}
+        {status && status >= 400 && kind !== "rateLimited" ? (
           <p className="pt-0.5 font-mono text-xs text-muted-foreground">
             {t("reason.code", { status })}
           </p>

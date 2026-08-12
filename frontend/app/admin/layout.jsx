@@ -7,6 +7,8 @@ import { AdminBreadcrumb } from "@/components/sections/admin-breadcrumb";
 import { AdminHeader } from "@/components/sections/admin-header";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RateLimited } from "@/components/sections/rate-limited";
+import { isRateLimited } from "@/lib/api/rate-limited";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,15 @@ export const dynamic = "force-dynamic";
 // gated purely on is_admin. Separate from the server (user) panel.
 // Real enforcement is the Laravel Policies/Gates — this is the UX guard.
 export default async function AdminLayout({ children }) {
-  const user = await getCurrentUser();
+  let user;
+  try {
+    user = await getCurrentUser();
+  } catch (error) {
+    // Same reason as the server panel: a throw in a layout escapes every
+    // error.jsx below it.
+    if (isRateLimited(error)) return <RateLimited />;
+    throw error;
+  }
   if (!user) redirect(await signedOutPath());
   if (!user.is_admin) redirect("/dashboard");
 
