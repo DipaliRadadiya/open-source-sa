@@ -147,15 +147,6 @@ Each item needs `level` **and** `name` — the same `name` can exist at two leve
 
 ---
 
-### GET `/admin/roles/{role}`
-**Permission:** `access-admin` (view)
-
-```json
-{"role": {"id": 2, "name": "Developer", "slug": "developer", "is_system": false, "description": null, "permissions": [ … ], "created_at": "…", "created_at_human": "…"}}
-```
-
----
-
 ### PUT `/admin/roles/{role}`
 **Permission:** `access-admin` (manage)
 
@@ -201,15 +192,6 @@ Paginated. Filter by `filter[role_id]`, `filter[search]` (username).
 
 ---
 
-### GET `/admin/users/{user}`
-**Permission:** `access-admin` (view)
-
-```json
-{"user": {"id": 2, "username": "dev", "is_admin": false, "roles": [{"id": 2, "name": "Developer"}], "created_at": "…", "last_active_at": null}}
-```
-
----
-
 ### PUT `/admin/users/{user}`
 **Permission:** `access-admin` (manage)
 
@@ -228,12 +210,14 @@ Cannot delete yourself (422).
 
 ---
 
-### PUT `/admin/users/{user}/password`
+### PUT `/admin/users/{user}/reset-password`
 **Permission:** `access-admin` (manage)
 
-**Request:** `{"password": "…"}`
+**Request:** `{"password": "…", "password_confirmation": "…"}`
 
-**Response `200`:** `{"message": "Password reset."}`
+`password_confirmation` is required and must match. Minimum 10 characters, mixed case, at least one number.
+
+**Response `204`:** empty body.
 
 ---
 
@@ -286,6 +270,42 @@ Everything the role form needs: the flat catalog, the same rows pre-grouped, and
 
 ---
 
+### POST `/admin/permissions/sync`
+**Permission:** `access-admin` (manage)
+
+Re-runs the permission catalog seeder and re-syncs the protected Administrator role, so permissions shipped by a new panel version become available without a manual step. Idempotent — safe to press twice.
+
+**Response `200`:** the same body as `GET /admin/permissions`, plus `"synced": 42` (the number of permissions in the catalog afterwards).
+
+Also runs automatically on every deploy; this endpoint exists for the case where the panel was updated some other way.
+
+---
+
+## Admin — Installation Self-check
+
+### GET `/admin/doctor`
+**Permission:** `access-admin` (view) | **Throttle:** 10/min
+
+Runs the same checks as the `panel:doctor` CLI command against the live server: sudo access, service state, the panel's own health endpoint. Read-only — no check changes anything.
+
+Throttled because each call shells out and makes an outbound HTTP request. It is a diagnostic, not something to poll.
+
+```json
+{"doctor": {
+  "healthy": true, "passed": 11, "failed": 0, "warnings": 1,
+  "checks": [
+    {"key": "privilege", "title": "Privileged commands", "status": "pass", "detail": "…", "fix": null},
+    {"key": "frontend_build", "title": "Frontend build", "status": "warn", "detail": "…", "fix": "Rebuild the frontend."}
+  ]
+}}
+```
+
+Twelve checks: `privilege`, `binaries`, `services`, `web_server`, `driver_contention`, `database`, `queue`, `writable_paths`, `health_endpoint`, `php_isolation`, `account_locks`, `frontend_build`.
+
+`status` is `pass`, `warn` or `fail`. **`healthy` counts failures only** — a warning is worth showing and not worth blocking on, so don't derive health from `warnings`. `title` and `fix` arrive localized; `fix` is `null` when there is nothing to do. A check that throws is reported as a `fail` rather than aborting the run.
+
+---
+
 ## Admin — Activity Log (admin-wide)
 
 ### GET `/admin/activity-log/filters`
@@ -329,27 +349,72 @@ Paginated. Filters: `filter[user_id]`, `filter[type]`, `filter[action]`, `search
 
 ## Admin — Panel Updates
 
-### GET `/admin/panel-updates`
-**Permission:** `access-admin` (view)
+### GET `/admin/panel-update`
+**Permission:** `access-admin` (view) | **Throttle:** 30/min
+
+Pass `?refresh=1` for the "check now" button — it bypasses the cached release lookup and calls the release host. Throttled, so don't poll it.
 
 ```json
-{"update": {
-  "current_version": "1.0.0", "latest_version": "1.1.0",
-  "update_available": true, "release_notes": "…",
-  "changelog_url": "https://github.com/…/releases/1.1.0"
+{"panel_update": {
+  "installed": {
+    "version": "1.0.0", "commit_hash": "a1b2c3d…", "commit_short": "a1b2c3d",
+    "branch": "main", "source": "git",
+    "is_git_checkout": true, "has_local_changes": false
+  },
+  "available": {
+    "version": "1.1.0", "published_at": "2026-08-10T09:00:00Z",
+    "notes": "…", "url": "https://github.com/…/releases/tag/v1.1.0"
+  },
+  "update_available": true,
+  "preflight": {
+    "ready": true,
+    "checks": [
+      {"key": "git_checkout", "passed": true, "detail": null},
+      {"key": "clean_working_tree", "passed": true, "detail": null},
+      {"key": "free_disk", "passed": true, "detail": "8 GB"},
+      {"key": "free_memory", "passed": true, "detail": "1 GB"},
+      {"key": "writable_path", "passed": true, "detail": null}
+    ]
+  },
+  "latest_run": null
 }}
 ```
 
+Bind the update button to `preflight.ready` — the `checks` list is for explaining a "no". `is_git_checkout: false` means an in-place update is impossible on this box (a packaged install without `.git` cannot be moved by `git checkout`), and preflight will say so.
+
+`latest_run` is `null` until an update has been started; afterwards it is the same object `POST` and the status endpoint return. It is reconciled against the on-disk state file before answering, so a run whose process died along with the panel restart is still reported correctly.
+
 ---
 
-### POST `/admin/panel-updates`
-**Permission:** `access-admin` (manage)
+### POST `/admin/panel-update`
+**Permission:** `access-admin` (manage) | **Throttle:** 3/min
 
-Runs the panel update. Returns `202` while the update runs in the background.
+Starts the update and returns immediately — the runner is detached and the panel is about to restart itself, so there is nothing to wait for.
+
+**Response `202`:** `{"panel_update": {...}}` (same shape as the status endpoint below)
+
+---
+
+### GET `/admin/panel-update/{panelUpdate}`
+**Permission:** `access-admin` (view) | **Throttle:** 120/min
+
+Deliberately cheap — poll this every few seconds while the progress bar moves.
 
 ```json
-{"message": "Update started.", "reference": "…"}
+{"panel_update": {
+  "id": 4, "status": "running", "status_title": "Running",
+  "current_step": "migrate", "current_step_title": "Running migrations",
+  "step_number": 6, "total_steps": 14,
+  "from_version": "1.0.0", "to_version": "1.1.0",
+  "from_commit": "a1b2c3d", "to_commit": "d4e5f6a",
+  "reason": null, "reason_title": null,
+  "rolled_back": false, "reference": null,
+  "started_at": "12-08-2026 10:15:00", "started_at_human": "2 minutes ago",
+  "finished_at": null, "finished_at_human": null
+}}
 ```
+
+Draw the progress bar from `step_number`/`total_steps` — don't hardcode the step list. On failure, `reason` is a classified key (never raw stderr) and `reason_title` is it localized; `reference` points at the log entry. `rolled_back` says whether the previous release was restored.
 
 ---
 
@@ -990,10 +1055,26 @@ Browse a directory.
 **Response `200`:**
 ```json
 {"path": "/wp-content/plugins", "files": [
-  {"name": "seo-pack", "type": "directory", "size": null, "modified": "27-07-2026 10:00:00", "permissions": "drwxr-xr-x"},
-  {"name": "README.md", "type": "file", "size": 4096, "modified": "25-07-2026 14:30:00", "permissions": "-rw-r--r--"}
+  {"name": "seo-pack", "type": "dir", "size": 4096, "size_human": "4 KB",
+   "modified_at": "27-07-2026 10:00:00", "modified_at_human": "2 weeks ago",
+   "mode": "drwxr-xr-x", "owner": "siteowner", "group": "siteowner",
+   "link_target": null, "link_broken": null},
+  {"name": "README.md", "type": "file", "size": 4096, "size_human": "4 KB",
+   "modified_at": "25-07-2026 14:30:00", "modified_at_human": "3 weeks ago",
+   "mode": "-rw-r--r--", "owner": "siteowner", "group": "siteowner",
+   "link_target": null, "link_broken": null},
+  {"name": "uploads", "type": "symlink", "size": 0, "size_human": "0 B",
+   "modified_at": "25-07-2026 14:30:00", "modified_at_human": "3 weeks ago",
+   "mode": null, "owner": null, "group": null,
+   "link_target": "../shared/uploads", "link_broken": false}
 ]}
 ```
+
+`type` is `file`, `dir` or `symlink` — note `dir`, not `directory`.
+
+`mode` is the full `ls -l` string (type char + permission bits), **not** an octal — `PUT …/files/permissions` takes an octal, so don't echo this value back at it. `owner` and `group` are separate fields, not part of `mode`.
+
+On a **symlink**, `mode`/`owner`/`group` are `null` — a link's own mode is always `lrwxrwxrwx` and its ownership says nothing about the target, so a constant is not shown. `link_target` is where it points, left exactly as written (a relative target stays relative), and `link_broken` is `true` when the target does not exist, is a loop, or could not be read. Both are `null` on non-symlinks.
 
 ---
 
@@ -2134,7 +2215,9 @@ Bring existing server databases under panel management.
 
 ## Server Sync
 
-Reads a migrated server into the panel. `preview` (the default) changes nothing; `apply` writes the rows. Nine resource types, dependency-ordered: system users → ssh keys → applications → php settings → workers → database users → certificates → cron jobs.
+Reads a migrated server into the panel. `preview` (the default) changes nothing; `apply` writes the rows. Nine resource types, dependency-ordered: `system_user` → `ssh_key` → `application` → `php_settings` → `worker` → `database_user` → `certificate` → `cronjob` → `firewall_rule`.
+
+`firewall_rule` is the one that has to be asked for: it is skipped unless `include_firewall: true`, because adopting a rule set is the one step here that can lock you out of the box.
 
 ### POST `/server/sync`
 **Permission:** `sync` (manage) | **Throttle:** 10/min
@@ -2148,7 +2231,7 @@ An omitted `mode` is **preview**. Refused with `422` while another run is live.
 
 The run plus items **after the cursor**, so a screen can poll ~1s and append — this is the line-by-line feed. Each item: `resource_type`, `resource_key`, `action` (`found|adopted|skipped|failed`), `confidence`, `evidence`, `reason` (localized).
 
-### GET `/server/sync/latest` · GET/POST/DELETE `/server/sync/ignores`
+### GET `/server/sync/latest` · GET/POST `/server/sync/ignores` · DELETE `/server/sync/ignores/{ignore}`
 **Permission:** `sync` (view / manage)
 
 Dismissed items stop appearing in later runs entirely. `POST {"resource_type", "resource_key", "note"}`; re-posting the same pair is the same decision, not an error. Pass `include_ignored: true` on a run to see them again.
@@ -3485,6 +3568,22 @@ Always `200` — the request itself succeeded, `test.success` carries the verdic
 
 ## Utility
 
+### GET `/basic-info`
+Unauthenticated. The bootstrap call — safe to make before anyone is logged in, and the thing that decides whether the app shows a login form or a first-run registration form.
+
+```json
+{"basic_info": {
+  "registration_open": false,
+  "app_version": "1.0.0",
+  "locales_available": ["en", "es", "de", "fr", "pt", "ja", "ru", "hi"],
+  "cookie_auth_enabled": true
+}}
+```
+
+`registration_open` is `true` only while **no user exists at all** — it is the first-admin bootstrap, not an open sign-up. Once the first account is created it is `false` forever and `POST /auth/register` stops accepting.
+
+---
+
 ### GET `/timezones`
 Unauthenticated.
 
@@ -3498,6 +3597,48 @@ Unauthenticated.
 Unauthenticated. Health check for load balancers / uptime monitors.
 
 **Response `200`:** `{"status": "ok"}`
+
+---
+
+## Central Management Connection
+
+Lets a central panel drive this OSS install over `Authorization: Bearer <token>`. These three endpoints are the OSS admin's own settings screen and need a normal Sanctum session — they are not the central-facing API.
+
+### POST `/central/enable`
+**Auth:** session
+
+Generates a token, replacing any existing one. Enabling again rotates it and invalidates the old one.
+
+**Response `201`:** `{"central_token": "sv_central_a***************", "message": "…"}`
+
+⚠️ `central_token` is **masked** (first 12 characters, the rest starred) and no endpoint ever returns the raw value. So there is currently nothing in the API carrying the token a user would paste into central. Don't build a "copy token" button against this field — it copies asterisks. Flagged as an API gap, not a frontend one.
+
+### GET `/central/status`
+**Auth:** session
+
+**Response `200`:** `{"central": {"enabled": true, "token": "sv_central_a***************"}}`
+
+`token` is `null` when `enabled` is `false`. Never the raw value.
+
+### DELETE `/central`
+**Auth:** session
+
+Revokes the current token. **Response `200`:** `{"message": "…"}`
+
+---
+
+## Incoming Deploy Webhooks
+
+### POST `/webhooks/deploy/{identifier}`
+**Unauthenticated by design.** This is the URL GitHub/GitLab/Bitbucket call; they carry no session or token, so the HMAC signature over the raw body is the credential. Configure it with `PUT /applications/{application}/webhook`, which returns the `identifier` for the path.
+
+Not a frontend endpoint — documented so it isn't mistaken for a gap. The general `throttle:api` guest limiter is deliberately removed (a provider delivers from shared egress and would trip a per-IP limit); a limiter keyed on the webhook itself applies instead.
+
+**Response `202`:** `{"deployed": true, "reason": null}` — accepted; a deploy may still be declined for a reason such as a non-matching branch, in which case `deployed` is `false` and `reason` says why.
+
+**Response `401`:** `{"deployed": false, "reason": "invalid_signature"}`
+
+A disabled webhook and an identifier that never existed both answer `404`, identically — anything else would confirm which applications exist.
 
 ---
 
