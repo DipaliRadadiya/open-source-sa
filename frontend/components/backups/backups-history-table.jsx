@@ -124,7 +124,8 @@ export function sizeNote(backup, t) {
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
-  const { canRestore, canRun, onRestore, onRetry, busyId } = table.options.meta;
+  const { canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight } =
+    table.options.meta;
   const backup = row.original;
 
   // Download rides alongside whichever action the state earns, including on a
@@ -155,7 +156,9 @@ function ActionsCell({ row, table }) {
     );
   }
 
-  const blocker = canRestore ? restoreBlocker(backup, tr) : t("noPermission");
+  const blocker = canRestore
+    ? restoreBlocker(backup, tr, restoreInFlight)
+    : t("noPermission");
 
   return (
     <div className="flex items-center justify-end gap-2">
@@ -183,6 +186,7 @@ function ActionsCell({ row, table }) {
 export function BackupsHistoryTable({
   backups,
   canRestore,
+  restoreInFlight,
   canRun,
   onRestore,
   onRetry,
@@ -231,7 +235,7 @@ export function BackupsHistoryTable({
       data={backups}
       emptyMessage={emptyMessage ?? t("empty.title")}
       bare={bare}
-      meta={{ canRestore, canRun, onRestore, onRetry, busyId }}
+      meta={{ canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight }}
     />
   );
 }

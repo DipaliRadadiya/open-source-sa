@@ -6,7 +6,12 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BACKUP_IN_FLIGHT, BACKUP_PERIODS, BACKUP_TYPES } from "@/lib/schemas/backup";
+import {
+  BACKUP_IN_FLIGHT,
+  BACKUP_PERIODS,
+  BACKUP_TYPES,
+  RESTORE_IN_FLIGHT,
+} from "@/lib/schemas/backup";
 import { retryBackup } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
@@ -15,6 +20,7 @@ import { BackupsCards } from "@/components/backups/backups-cards";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
+import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { BackupsHistoryTable } from "@/components/backups/backups-history-table";
 
 /**
@@ -37,6 +43,7 @@ export function BackupsHistory({
 }) {
   const t = useTranslations("backups.history");
   const router = useRouter();
+  const { active, start } = useRestoreWatch();
   const [restoring, setRestoring] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
@@ -56,6 +63,13 @@ export function BackupsHistory({
     }
   }
 
+  // `restoreBlocker` has always known how to refuse a second restore while one
+  // is running, but nothing ever passed the flag — so the guard was dead code
+  // and its message unreachable. Two restores over one site is the one thing
+  // here nobody can undo, and finding out from a 422 after typing your own
+  // domain is the wrong moment.
+  const restoreInFlight = RESTORE_IN_FLIGHT.includes(active?.status);
+
   const listProps = {
     backups,
     canRestore,
@@ -63,12 +77,18 @@ export function BackupsHistory({
     onRestore: setRestoring,
     onRetry: retry,
     busyId,
+    restoreInFlight,
   };
 
   // A backup writes for minutes. Without this the row says "Backing up" until
   // someone thinks to reload, which reads as a stuck job rather than a running
   // one. Only while something is actually in flight.
-  const busy = backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status));
+  //
+  // A restore counts too: it takes a safety copy on the way past, so a row this
+  // list has never shown appears partway through — and the restore's own
+  // polling refreshes the banner, not the table underneath it.
+  const busy =
+    backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status)) || restoreInFlight;
 
   return (
     <div className="space-y-4">
@@ -147,8 +167,12 @@ export function BackupsHistory({
         backup={restoring}
         open={Boolean(restoring)}
         onOpenChange={(next) => (next ? null : setRestoring(null))}
-        onStarted={() => {
+        onStarted={(started) => {
           setRestoring(null);
+          // Hand it straight to the banner. Relying on router.refresh() alone
+          // meant the dialog closed onto an unchanged list, and the only way to
+          // see that anything was happening was to reload.
+          if (started) start(started);
           router.refresh();
         }}
       />

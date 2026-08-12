@@ -34,6 +34,21 @@ import { RESTORE_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
  * which is a backup like any other and belongs in the flow that already
  * guards restores rather than in a second, shorter path from a table row.
  */
+/**
+ * What to call this restore's status.
+ *
+ * `t()` THROWS on a key it does not have, and this key is built from an API
+ * value — so a status we have not translated took the whole page down with
+ * "Something went wrong" rather than showing one odd-looking badge. The backup
+ * badge beside it has always guarded with `t.has()`; this list never did.
+ * Falls back to the raw status, which is at least true.
+ */
+function statusLabel(restore, t) {
+  if (restore.status_title) return restore.status_title;
+  const key = `statuses.${restore.status}`;
+  return t.has(key) ? t(key) : restore.status;
+}
+
 export function RestoresList({ restores, applications = [], hasFilters = false }) {
   const t = useTranslations("backups.restores");
 
@@ -139,7 +154,7 @@ function StatusCell({ row }) {
     <div className="min-w-0 space-y-1">
       <Badge variant={meta.variant} className="gap-1.5 font-normal">
         <Icon className={cn("size-3", meta.spin && "animate-spin")} />
-        {restore.status_title ?? t(`statuses.${restore.status}`)}
+        {statusLabel(restore, t)}
       </Badge>
       {/* A restore that failed part-way is the most alarming row anyone will
           ever read here, so it says which step gave out rather than leaving
@@ -222,7 +237,7 @@ function RestoreCards({ restores }) {
                 </div>
                 <Badge variant={meta.variant} className="shrink-0 gap-1.5 font-normal">
                   <Icon className={cn("size-3", meta.spin && "animate-spin")} />
-                  {restore.status_title ?? t(`statuses.${restore.status}`)}
+                  {statusLabel(restore, t)}
                 </Badge>
               </div>
 

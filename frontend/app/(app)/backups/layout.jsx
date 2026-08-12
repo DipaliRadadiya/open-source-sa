@@ -5,7 +5,7 @@ import { can } from "@/lib/permissions/can";
 import { getRestores } from "@/lib/backups/get-backups";
 import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { BackupsTabs } from "@/components/backups/backups-tabs";
-import { ActiveRestore } from "@/components/backups/active-restore";
+import { RestoreWatch } from "@/components/backups/restore-watch";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +36,12 @@ export default async function BackupsLayout({ children }) {
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      {active ? <ActiveRestore restore={active} /> : null}
-
-      <BackupsTabs />
-      {children}
+      {/* Wraps the tabs and the pages so a restore started on any of them can
+          raise the banner here without waiting for the server to notice. */}
+      <RestoreWatch initial={active}>
+        <BackupsTabs />
+        {children}
+      </RestoreWatch>
     </div>
   );
 }

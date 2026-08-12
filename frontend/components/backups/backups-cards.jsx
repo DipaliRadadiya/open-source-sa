@@ -28,6 +28,7 @@ export function BackupsCards({
   onRetry,
   busyId,
   showSite = true,
+  restoreInFlight = false,
 }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
@@ -37,7 +38,9 @@ export function BackupsCards({
     <div className="space-y-3">
       {backups.map((backup) => {
         const duration = apiDuration(backup.started_at, backup.finished_at);
-        const blocker = canRestore ? restoreBlocker(backup, tr) : t("noPermission");
+        const blocker = canRestore
+          ? restoreBlocker(backup, tr, restoreInFlight)
+          : t("noPermission");
 
         return (
           <Card key={backup.id} className="gap-0 py-0 shadow-sm">
