@@ -48,7 +48,7 @@ export default async function CreateApplicationPage() {
   const nodeVersions = [...managedNode, ...systemNode];
 
   if (!can(permissions, "application", "manage")) redirect("/applications");
-  if (types.failed) return <LoadFailed description={t("loadFailed")} />;
+  if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} />;
 
   return (
     <div className="space-y-6">

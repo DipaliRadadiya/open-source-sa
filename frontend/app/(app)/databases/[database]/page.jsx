@@ -37,7 +37,7 @@ export default async function DatabasePage({ params, searchParams }) {
     getExports(),
     getTables(id),
   ]);
-  const { data, failed, status } = live;
+  const { data, failed, status, failure } = live;
 
   if (!can(permissions, "database", "view")) redirect("/dashboard");
   const canManage = can(permissions, "database", "manage");
@@ -45,7 +45,7 @@ export default async function DatabasePage({ params, searchParams }) {
   // A database that was dropped in another tab is gone, not broken — the 404
   // page says that better than "we couldn't load this".
   if (status === 404) notFound();
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} />;
+  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
 
   return (
     <div className="space-y-6">

@@ -851,6 +851,14 @@
       "dashboard": "Back to dashboard",
       "back": "Go back",
       "linksLabel": "Popular pages"
+    },
+    "reason": {
+      "shape": "The server sent something this page did not expect. This is a bug in the panel, not on your server.",
+      "network": "The panel could not reach the server. It may be restarting.",
+      "forbidden": "You do not have permission to see this.",
+      "notFound": "This is no longer here.",
+      "server": "The server had a problem answering. Nothing has changed — try again.",
+      "code": "Error {status}"
     }
   },
   "logs": {

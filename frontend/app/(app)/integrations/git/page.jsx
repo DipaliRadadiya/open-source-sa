@@ -27,7 +27,7 @@ export default async function GitIntegrationsPage() {
   if (!can(permissions, "git", "view")) redirect("/dashboard");
   const canManage = can(permissions, "git", "manage");
 
-  if (list.failed) return <LoadFailed description={t("loadFailed")} />;
+  if (list.failed) return <LoadFailed description={t("loadFailed")} status={list.status} failure={list.failure} />;
 
   return (
     <div className="space-y-6">

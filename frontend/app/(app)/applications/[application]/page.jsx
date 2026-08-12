@@ -48,7 +48,7 @@ export default async function ApplicationDetailPage({ params }) {
 
   if (!can(permissions, "application", "view")) redirect("/dashboard");
   if (result.status === 404) notFound();
-  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} />;
+  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
 
   const application = result.application;
   const canManage = can(permissions, "application", "manage");

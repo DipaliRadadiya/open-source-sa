@@ -37,6 +37,8 @@ export async function getBackups(searchParams = {}) {
     backups: result.data?.backups ?? [],
     meta: result.data?.meta ?? { current_page: 1, per_page: 20, total: 0, last_page: 1 },
     failed: result.failed,
+    status: result.status,
+    failure: result.failure,
   };
 }
 
@@ -106,6 +108,8 @@ export async function getRestores(searchParams = {}) {
     restores: result.data?.restores ?? [],
     meta: result.data?.meta ?? { current_page: 1, per_page: 20, total: 0, last_page: 1 },
     failed: result.failed,
+    status: result.status,
+    failure: result.failure,
   };
 }
 
@@ -141,7 +145,7 @@ export async function getActiveRestore(applicationId) {
  */
 export const getBackupTarget = cache(async function getBackupTarget(applicationId) {
   const result = await read(`/applications/${applicationId}/backup-target`, backupTargetResponseSchema);
-  return { target: result.data?.backup_target ?? null, failed: result.failed };
+  return { target: result.data?.backup_target ?? null, failed: result.failed, status: result.status, failure: result.failure };
 });
 
 /**
@@ -189,6 +193,8 @@ export async function getBackupCoverage() {
     paused: rows.filter((row) => row.state === "paused").length,
     total: meta?.total ?? rows.length,
     failed: result.failed,
+    status: result.status,
+    failure: result.failure,
   };
 }
 

@@ -21,7 +21,7 @@ export default async function ApplicationsPage() {
   ]);
 
   if (!can(permissions, "application", "view")) redirect("/dashboard");
-  if (result.failed) return <LoadFailed description={t("loadFailed")} />;
+  if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
 
   return (
     <div className="space-y-6">

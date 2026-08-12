@@ -4,7 +4,7 @@ import { read } from "@/lib/api/read";
 
 export async function getApplicationDomains(id) {
   const result = await read(`/applications/${id}/domains`, domainsResponseSchema);
-  return { domains: result.data?.domains ?? [], failed: result.failed };
+  return { domains: result.data?.domains ?? [], failed: result.failed, status: result.status, failure: result.failure };
 }
 
 export async function getApplicationCertificate(id) {
@@ -15,5 +15,7 @@ export async function getApplicationCertificate(id) {
     certificate: result.data?.certificate ?? null,
     availableTypes: result.data?.available_types ?? [],
     failed: result.failed,
+    status: result.status,
+    failure: result.failure,
   };
 }

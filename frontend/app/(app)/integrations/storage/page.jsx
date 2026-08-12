@@ -24,7 +24,7 @@ export default async function StorageIntegrationsPage() {
   if (!can(permissions, "storage", "view")) redirect("/dashboard");
   const canManage = can(permissions, "storage", "manage");
 
-  if (list.failed) return <LoadFailed description={t("loadFailed")} />;
+  if (list.failed) return <LoadFailed description={t("loadFailed")} status={list.status} failure={list.failure} />;
 
   return (
     <div className="space-y-6">

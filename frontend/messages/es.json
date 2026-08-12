@@ -851,6 +851,14 @@
       "dashboard": "Volver al panel",
       "back": "Atrás",
       "linksLabel": "Páginas frecuentes"
+    },
+    "reason": {
+      "shape": "El servidor envió algo que esta página no esperaba. Es un fallo del panel, no de tu servidor.",
+      "network": "El panel no pudo contactar con el servidor. Puede estar reiniciándose.",
+      "forbidden": "No tienes permiso para ver esto.",
+      "notFound": "Esto ya no está aquí.",
+      "server": "El servidor tuvo un problema al responder. No ha cambiado nada: inténtalo de nuevo.",
+      "code": "Error {status}"
     }
   },
   "logs": {

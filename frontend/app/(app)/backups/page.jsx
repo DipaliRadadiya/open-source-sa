@@ -20,7 +20,7 @@ export default async function BackupsPage() {
     getTranslations("backups"),
   ]);
 
-  if (coverage.failed) return <LoadFailed description={t("loadFailed")} />;
+  if (coverage.failed) return <LoadFailed description={t("loadFailed")} status={coverage.status} failure={coverage.failure} />;
 
   const canManage = can(appPermissions, "app_backup", "manage", "application");
 

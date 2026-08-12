@@ -14,5 +14,7 @@ export const getStorageDestinations = cache(async function getStorageDestination
   return {
     destinations: result.data?.storage_destinations ?? [],
     failed: result.failed,
+    status: result.status,
+    failure: result.failure,
   };
 });
