@@ -48,7 +48,7 @@ language rather than the language of whoever caused them.
 
 ## Requirements
 
-- Ubuntu 22.04 LTS or 24.04 LTS
+- Ubuntu 22.04 LTS, 24.04 LTS or 26.04 LTS
 - Root access
 - Ports 80 and 443 free
 - 1 GB RAM (the installer adds swap below 2 GB so the frontend build survives)

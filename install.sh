@@ -56,6 +56,9 @@ FNM_DIR="/opt/fnm"
 FNM_BIN="/usr/local/bin/fnm"
 LOG_FILE="/var/log/${PANEL_SLUG}-install.log"
 
+OS_VERSION_ID=""   # 22.04 | 24.04 | 26.04 — set by preflight
+OS_CODENAME=""     # jammy | noble | resolute — set by preflight
+
 DOMAIN=""          # --domain=panel.example.com  (skips nip.io entirely)
 ADMIN_EMAIL=""     # --email= for Let's Encrypt expiry notices
 WANT_SSL=1         # --no-ssl
@@ -220,11 +223,22 @@ preflight() {
     # shellcheck disable=SC1091
     . /etc/os-release
 
-    if [[ "${ID:-}" != "ubuntu" ]] || [[ ! "${VERSION_ID:-}" =~ ^(22\.04|24\.04)$ ]]; then
+    if [[ "${ID:-}" != "ubuntu" ]] || [[ ! "${VERSION_ID:-}" =~ ^(22\.04|24\.04|26\.04)$ ]]; then
         die "unsupported OS: ${PRETTY_NAME:-unknown}
-     Supported: Ubuntu 22.04 LTS, Ubuntu 24.04 LTS.
+     Supported: Ubuntu 22.04 LTS, Ubuntu 24.04 LTS, Ubuntu 26.04 LTS.
      Nothing has been changed on this server."
     fi
+
+    # Kept for the steps that have to branch on the release — the PHP repository
+    # most of all, since the mechanism differs between 24.04 and 26.04. Captured
+    # here rather than re-sourcing /etc/os-release later, so there is one place
+    # that decides what this machine is.
+    OS_VERSION_ID="${VERSION_ID}"
+    OS_CODENAME="${VERSION_CODENAME:-}"
+
+    [[ -n "$OS_CODENAME" ]] || die "cannot determine the Ubuntu codename from /etc/os-release.
+     Nothing has been changed on this server."
+
     ok "${PRETTY_NAME}"
 
     case "$(uname -m)" in
@@ -413,6 +427,91 @@ configure_swap() {
 
 # ─── Packages ────────────────────────────────────────────────────────────────
 
+# The panel offers PHP versions by asking apt what it can install. Without a
+# multi-version repository that answer is "only the one Ubuntu ships", and the
+# whole multi-version PHP feature is inert. It is a prerequisite of the panel
+# working, not a preference — which is why this refuses rather than continues.
+#
+# The mechanism differs by release, and this is the part that would have broken
+# a 26.04 install silently:
+#
+#   22.04 / 24.04  ppa:ondrej/php on Launchpad.
+#   26.04          the PPA does not publish for resolute. The same maintainer's
+#                  packages.sury.org does, so 26.04 uses that instead. Ubuntu
+#                  26.04 also ships PHP 8.5 as its own default, so the pinned
+#                  8.4 exists there ONLY through this repository.
+#
+# The releases already in the wild keep the PPA they were installed with: an
+# existing install has ondrej sources on disk, and switching mechanism under it
+# would leave two sources for the same packages.
+add_php_repository() {
+    if [[ "$OS_VERSION_ID" == "26.04" ]]; then
+        local keyring=/etc/apt/keyrings/sury-php.gpg
+        local list=/etc/apt/sources.list.d/sury-php.list
+
+        if [[ -f "$keyring" && -f "$list" ]]; then
+            skip "sury.org PHP repository"
+            return
+        fi
+
+        run install -d -m 0755 /etc/apt/keyrings
+        run curl -fsSL -o "$keyring" https://packages.sury.org/php/apt.gpg
+        run chmod 0644 "$keyring"
+
+        # Written with signed-by rather than apt-key: apt-key is deprecated and
+        # a key trusted globally would sign for every repository on the box,
+        # not just this one.
+        if (( DRY_RUN )); then
+            printf '     %s$ write %s%s\n' "$DIM" "$list" "$RESET"
+        else
+            printf 'deb [signed-by=%s] https://packages.sury.org/php/ %s main\n' \
+                "$keyring" "$OS_CODENAME" >"$list"
+        fi
+
+        run apt-get update -qq
+        ok "sury.org PHP repository added (${OS_CODENAME})"
+        return
+    fi
+
+    # A glob inside [[ -f ]] is not expanded, so it is matched with compgen —
+    # the naive version silently always thought the repository was missing.
+    if ! compgen -G "/etc/apt/sources.list.d/ondrej*php*" >/dev/null; then
+        run add-apt-repository -y ppa:ondrej/php
+        run apt-get update -qq
+        ok "ondrej/php repository added"
+    else
+        skip "ondrej/php repository"
+    fi
+}
+
+# Proven before anything is installed, not discovered halfway through.
+#
+# Every failure this catches is the same shape: a repository that was added
+# successfully but carries nothing for this release. `add-apt-repository` and a
+# written sources file both succeed in that case, and the install would then
+# die on `apt-get install php8.4-fpm` — after the web server and Redis are
+# already on the box, which is the half-installed state preflight exists to
+# avoid.
+assert_php_available() {
+    if (( DRY_RUN )); then
+        printf '     %s$ apt-cache policy php%s-fpm%s\n' "$DIM" "$PHP_VERSION" "$RESET"
+        return
+    fi
+
+    local candidate
+    candidate=$(apt-cache policy "php${PHP_VERSION}-fpm" 2>/dev/null | awk '/Candidate:/ {print $2; exit}')
+
+    if [[ -z "$candidate" || "$candidate" == "(none)" ]]; then
+        die "PHP ${PHP_VERSION} is not available from apt on ${PRETTY_NAME:-this release}.
+     The PHP repository was added but carries no php${PHP_VERSION} for ${OS_CODENAME}.
+     Check it resolves:
+       apt-cache policy php${PHP_VERSION}-fpm
+     Nothing further has been installed."
+    fi
+
+    ok "PHP ${PHP_VERSION} available (${candidate})"
+}
+
 install_packages() {
     step "Installing packages"
 
@@ -425,19 +524,8 @@ install_packages() {
     # neither. Cheap, and it is the same source Ubuntu's own MOTD uses.
     run apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common
 
-    # The panel offers PHP versions by asking apt what it can install. Without
-    # this repository that answer is "only the one Ubuntu ships", and the whole
-    # multi-version PHP feature is inert. It is a prerequisite of the panel
-    # working, not a preference.
-    # A glob inside [[ -f ]] is not expanded, so it is matched with compgen —
-    # the naive version silently always thought the repository was missing.
-    if ! compgen -G "/etc/apt/sources.list.d/ondrej*php*" >/dev/null; then
-        run add-apt-repository -y ppa:ondrej/php
-        run apt-get update -qq
-        ok "ondrej/php repository added"
-    else
-        skip "ondrej/php repository"
-    fi
+    add_php_repository
+    assert_php_available
 
     # Matches the extensions the panel actually loads. Kept explicit rather than
     # pulling php${V} — the metapackage drags in apache2 as a dependency, which
