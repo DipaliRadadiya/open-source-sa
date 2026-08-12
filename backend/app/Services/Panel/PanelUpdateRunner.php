@@ -61,9 +61,77 @@ class PanelUpdateRunner
         // child keeps the php-fpm request's pipes open and the response never
         // finishes flushing.
         $log = $dir.'/update-'.$update->getKey().'.log';
-        exec(sprintf('setsid %s > %s 2>&1 < /dev/null &', escapeshellarg($path), escapeshellarg($log)));
+
+        $this->launch($path, $log, (string) $update->getKey());
 
         return true;
+    }
+
+    /**
+     * Start the script somewhere it will survive the update restarting the
+     * services the panel runs under.
+     *
+     * `setsid` alone is not enough, and neither is `nohup`. Both deal with
+     * signals — a new session has no controlling terminal, so SIGHUP is never
+     * delivered — but this script is started from an HTTP request and so
+     * inherits the panel's **php-fpm cgroup**. systemd's default
+     * `KillMode=control-group` kills every process in a unit's cgroup when it
+     * restarts, whatever session or process group they are in. A transient
+     * unit is the only thing that actually escapes that.
+     *
+     * It matters because the update restarts the panel's own services partway
+     * through, and the run has to outlive them: the state file it writes is
+     * the only thing the progress screen has to read, so a script killed
+     * mid-step leaves the UI polling a run that will never advance again.
+     *
+     * Falls back to the old `setsid` form when systemd-run is unavailable or
+     * not permitted — a server whose sudoers predates this must keep updating,
+     * and today's behaviour is what it gets.
+     */
+    private function launch(string $path, string $log, string $key): void
+    {
+        $output = [];
+        $status = 0;
+        exec(self::transientCommand($path, $log, $key).' 2>&1', $output, $status);
+
+        if ($status === 0) {
+            return;
+        }
+
+        Log::warning('Panel update fell back to setsid; it will not survive a restart of the panel\'s own services.', [
+            'feature' => 'panel_update',
+            'panel_update' => $key,
+            'detail' => implode(' ', $output),
+        ]);
+
+        exec(self::fallbackCommand($path, $log));
+    }
+
+    /**
+     * The script in a transient systemd unit of its own.
+     *
+     * Built separately from running it so the shape of the command is
+     * testable: `start()` shells out for real, so nothing else here can be
+     * exercised without spawning units on the machine running the suite.
+     */
+    public static function transientCommand(string $path, string $log, string $key): string
+    {
+        return sprintf(
+            'sudo -n systemd-run --collect --quiet --unit=%s /bin/sh -c %s',
+            escapeshellarg('panel-update-'.$key),
+            escapeshellarg(self::redirected($path, $log)),
+        );
+    }
+
+    /** The pre-systemd form, for a server whose sudoers does not allow the above. */
+    public static function fallbackCommand(string $path, string $log): string
+    {
+        return sprintf('setsid %s < /dev/null &', self::redirected($path, $log));
+    }
+
+    private static function redirected(string $path, string $log): string
+    {
+        return sprintf('%s > %s 2>&1', escapeshellarg($path), escapeshellarg($log));
     }
 
     /**

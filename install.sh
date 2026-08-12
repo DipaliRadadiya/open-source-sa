@@ -1333,6 +1333,13 @@ configure_sudoers() {
     local bins=(
         /usr/bin/apt-get /usr/bin/apt-cache /usr/bin/dpkg-query
         /usr/bin/systemctl /usr/bin/journalctl
+        # The panel update starts from an HTTP request and so inherits the
+        # panel's own php-fpm cgroup, which systemd kills wholesale when that
+        # unit restarts -- which the update itself does, partway through.
+        # systemd-run puts the script in a transient unit of its own so it
+        # survives. setsid and nohup do not help: both deal with signals, and
+        # a cgroup kill is not a signal the process gets to ignore.
+        /usr/bin/systemd-run
         /usr/sbin/useradd /usr/sbin/userdel /usr/sbin/usermod /usr/sbin/groupadd
         /usr/sbin/chpasswd /usr/bin/gpasswd /usr/bin/getent /usr/bin/id
         /usr/bin/tee /usr/bin/mkdir /usr/bin/chown /usr/bin/chmod /usr/bin/rm
