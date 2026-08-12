@@ -66,6 +66,7 @@ export default async function FirewallPage() {
             <QuickAddCard
               presets={presets}
               rules={data.rules}
+              enabled={data.enabled}
               sshPort={data.ssh_port ?? null}
               riskyPorts={data.risky_ports}
               canManage={canManage}

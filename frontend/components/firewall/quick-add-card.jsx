@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Check, Database, Globe, Layers, Loader2, TriangleAlert, Zap } from "lucide-react";
+import { Check, Database, Globe, Layers, Loader2, Trash2, TriangleAlert, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createFirewallRule } from "@/lib/api/firewall";
+import { createFirewallRule, deleteFirewallRule } from "@/lib/api/firewall";
 import { riskyExposure } from "@/lib/firewall/exposure";
 import {
   Card,
@@ -15,6 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
 // The ports a server actually needs opened, in the order people need them.
@@ -29,13 +31,16 @@ const STACK_KEYS = ["http", "https", "ssh"];
  * with no parameters. Making that pass through a dialog with eight controls was
  * the actual usability problem; no amount of restyling the dialog fixes it.
  *
- * A tile that already exists as a rule says so and stops being clickable, so
- * this can't quietly produce duplicates or a 422 the user has to interpret.
+ * A tile that already exists as a rule says so and undoes it on the next click,
+ * so this can't quietly produce duplicates or a 422 the user has to interpret —
+ * and the tile that opened the port is also the one that closes it, rather than
+ * sending you to hunt for the row it created in the list below.
  */
-export function QuickAddCard({ presets, rules, canManage, sshPort, riskyPorts = [] }) {
+export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, riskyPorts = [] }) {
   const t = useTranslations("firewall");
   const router = useRouter();
   const [pending, setPending] = useState(null);
+  const [confirming, setConfirming] = useState(null);
 
   // SSH follows the port Settings configured, not the preset's 22. Hardcoding it
   // would open a port nobody listens on and report success, then lock the user
@@ -53,9 +58,11 @@ export function QuickAddCard({ presets, rules, canManage, sshPort, riskyPorts = 
   // and without this check the tile claimed "Added" for a rule that lets
   // nothing through — the worst kind of wrong, since it stops you adding the
   // real one. A rule restricted to one address is also a different rule.
-  function exists(preset) {
+  // Returns the rule itself, not just a yes/no — clicking an added tile removes
+  // the rule it stands for, and that needs its id.
+  function match(preset) {
     const wanted = preset.protocol || "tcp";
-    return rules.some(
+    return rules.find(
       (r) =>
         r.action === "allow" &&
         !r.source_ip &&
@@ -64,6 +71,10 @@ export function QuickAddCard({ presets, rules, canManage, sshPort, riskyPorts = 
         // "all" covers both, so it satisfies a tcp or udp tile.
         ((r.protocol ?? "tcp") === wanted || r.protocol === "all"),
     );
+  }
+
+  function exists(preset) {
+    return Boolean(match(preset));
   }
 
   async function add(items, label) {
@@ -107,6 +118,24 @@ export function QuickAddCard({ presets, rules, canManage, sshPort, riskyPorts = 
     }
   }
 
+  async function remove() {
+    const { rule, key } = confirming;
+    setPending(key);
+    try {
+      await deleteFirewallRule(rule.id);
+      toast.success(t("rules.deleted"));
+      setConfirming(null);
+      router.refresh();
+    } catch (error) {
+      const data = error.response?.data;
+      toast.error(
+        [apiMessage(error, t("rules.deleteFailed")), data?.reference].filter(Boolean).join(" · "),
+      );
+    } finally {
+      setPending(null);
+    }
+  }
+
   if (quick.length === 0) return null;
 
   return (
@@ -121,9 +150,19 @@ export function QuickAddCard({ presets, rules, canManage, sshPort, riskyPorts = 
 
       <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {quick.map((preset) => {
-          const done = exists(preset);
+          const rule = match(preset);
+          const done = Boolean(rule);
           // A database open to the whole internet is not a one-click decision.
           const risky = riskyExposure({ port: preset.port, riskyPorts });
+          // The same lockout guard the rules list applies: SSH and the panel's
+          // own ports stay put while the firewall is on. The tile says why
+          // rather than offering a click the API would refuse.
+          const locked = done && Boolean(rule.protected) && enabled;
+          const reason = !canManage
+            ? t("disabled.noPermission")
+            : locked
+              ? t("rules.protectedReason")
+              : null;
           return (
             <Tile
               key={preset.key}
@@ -143,9 +182,16 @@ export function QuickAddCard({ presets, rules, canManage, sshPort, riskyPorts = 
               }
               done={done}
               doneLabel={t("quick.tileDone")}
-              disabled={!canManage || done || pending !== null}
+              removable={done && !locked && canManage}
+              removeHint={t("quick.tileRemoveHint")}
+              reason={reason}
+              disabled={!canManage || locked || pending !== null}
               pending={pending === preset.key}
-              onClick={() => add([preset], preset.key)}
+              onClick={() =>
+                done
+                  ? setConfirming({ rule, key: preset.key })
+                  : add([preset], preset.key)
+              }
             />
           );
         })}
@@ -163,66 +209,122 @@ export function QuickAddCard({ presets, rules, canManage, sshPort, riskyPorts = 
           />
         ) : null}
       </CardContent>
+
+      {/* The same confirmation the rules list uses, for the same reason: this
+          closes a port that is open right now, and a tile is very easy to click
+          by accident. */}
+      <ConfirmDialog
+        open={confirming !== null}
+        onOpenChange={(open) => !pending && setConfirming(open ? confirming : null)}
+        icon={Trash2}
+        tone="destructive"
+        title={t("rules.confirmTitle")}
+        description={
+          confirming
+            ? t(enabled ? "rules.confirmBodyOn" : "rules.confirmBodyOff", {
+                rule:
+                  confirming.rule.description ||
+                  confirming.rule.summary ||
+                  confirming.rule.port_from,
+              })
+            : ""
+        }
+        cancelLabel={t("common.cancel")}
+        confirmLabel={t("rules.delete")}
+        pending={pending !== null}
+        onConfirm={remove}
+      />
     </Card>
   );
 }
 
-function Tile({ icon: Icon, title, subtitle, done, doneLabel, risky, disabled, pending, onClick }) {
+function Tile({
+  icon: Icon,
+  title,
+  subtitle,
+  done,
+  doneLabel,
+  risky,
+  removable,
+  removeHint,
+  reason,
+  disabled,
+  pending,
+  onClick,
+}) {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-        done
-          ? "cursor-default border-success/30 bg-success/5"
-          : disabled
-            ? "opacity-60"
-            : risky
-              ? "border-warning/40 bg-warning/5 hover:border-warning hover:bg-warning/10"
-              : "hover:border-primary/40 hover:bg-accent",
-      )}
-    >
-      <span
+    <ReasonTooltip reason={reason}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
         className={cn(
-          "flex size-7 shrink-0 items-center justify-center rounded-md",
+          "group flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           done
-            ? "bg-success/15 text-success"
-            : risky
-              ? "bg-warning/15 text-warning"
-              : "bg-muted text-muted-foreground",
+            ? // Green at rest, red under the cursor — the tile that added the
+              // rule removes it, and it has to look like it before the click.
+              removable
+              ? "border-success/30 bg-success/5 hover:border-destructive/40 hover:bg-destructive/5"
+              : "cursor-default border-success/30 bg-success/5"
+            : disabled
+              ? "opacity-60"
+              : risky
+                ? "border-warning/40 bg-warning/5 hover:border-warning hover:bg-warning/10"
+                : "hover:border-primary/40 hover:bg-accent",
         )}
       >
-        {pending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : done ? (
-          <Check className="size-4" />
-        ) : (
-          <Icon className="size-4" />
-        )}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className="min-w-0 truncate text-sm font-medium">{title}</span>
-          {done ? (
-            <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-success">
-              {doneLabel}
-            </span>
-          ) : risky ? (
-            <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-          ) : null}
-        </span>
         <span
           className={cn(
-            "block text-xs leading-relaxed",
-            risky ? "text-warning" : "text-muted-foreground",
+            "flex size-7 shrink-0 items-center justify-center rounded-md",
+            done
+              ? removable
+                ? "bg-success/15 text-success group-hover:bg-destructive/15 group-hover:text-destructive"
+                : "bg-success/15 text-success"
+              : risky
+                ? "bg-warning/15 text-warning"
+                : "bg-muted text-muted-foreground",
           )}
         >
-          {subtitle}
+          {pending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : done ? (
+            <>
+              <Check className={cn("size-4", removable && "group-hover:hidden")} />
+              {removable ? <Trash2 className="hidden size-4 group-hover:block" /> : null}
+            </>
+          ) : (
+            <Icon className="size-4" />
+          )}
         </span>
-      </span>
-    </button>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5">
+            <span className="min-w-0 truncate text-sm font-medium">{title}</span>
+            {done ? (
+              <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-success">
+                {doneLabel}
+              </span>
+            ) : risky ? (
+              <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+            ) : null}
+          </span>
+          <span
+            className={cn(
+              "block text-xs leading-relaxed",
+              risky ? "text-warning" : "text-muted-foreground",
+            )}
+          >
+            {subtitle}
+          </span>
+          {/* Said, not left to hover: on a touch screen there is no hover state
+              to discover the trash icon in. */}
+          {removable ? (
+            <span className="block text-xs text-muted-foreground group-hover:text-destructive">
+              {removeHint}
+            </span>
+          ) : null}
+        </span>
+      </button>
+    </ReasonTooltip>
   );
 }
