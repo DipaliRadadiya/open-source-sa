@@ -109,8 +109,20 @@ Auth-gated. Exit impersonation mode (admin feature).
 **Permission:** `access-admin` (view)
 
 ```json
-{"roles": [{"id": 1, "name": "Administrator", "slug": "administrator", "is_system": true, "permissions": [...], "created_at": "…"}]}
+{"roles": [{
+  "id": 1, "name": "Administrator", "slug": "administrator", "is_system": true, "description": null,
+  "permissions": [
+    {"level": "server", "name": "system_user", "title": "System User", "access": "manage",
+     "permissions": {"view": true, "manage": true}}
+  ],
+  "created_at": "23-07-2026 10:00:00", "created_at_human": "3 weeks ago"
+}]}
 ```
+
+- `permissions` is an array of **objects**, not permission-name strings.
+- `access` is `none` | `view` | `manage` — bind the three-way control to this one field. The `permissions.{view,manage}` pair is the same grant in the older shape and is still returned.
+- `title` is localised (it follows `Accept-Language`, matching the catalog).
+- Only permissions that have a row for this role appear. Merge against `GET /admin/permissions` to render the ungranted ones as `none`.
 
 `is_system: true` — system roles cannot be renamed, deleted, or have their permissions changed (422).
 
@@ -119,7 +131,17 @@ Auth-gated. Exit impersonation mode (admin feature).
 ### POST `/admin/roles`
 **Permission:** `access-admin` (manage)
 
-**Request:** `{"name": "Developer", "permissions": ["application", "database", "logs"]}`
+**Request:**
+```json
+{"name": "Developer", "description": "Can deploy",
+ "permissions": [
+   {"level": "server", "name": "application", "access": "manage"},
+   {"level": "server", "name": "database", "access": "view"},
+   {"level": "server", "name": "logs", "access": "none"}
+ ]}
+```
+
+Each item needs `level` **and** `name` — the same `name` can exist at two levels. Send `access` (`none` | `view` | `manage`); the older `{"view": bool, "manage": bool}` pair is still accepted, and `manage` always implies `view` however it is sent.
 
 **Response `201`:** `{"role": {...}}`
 
@@ -129,7 +151,7 @@ Auth-gated. Exit impersonation mode (admin feature).
 **Permission:** `access-admin` (view)
 
 ```json
-{"role": {"id": 2, "name": "Developer", "slug": "developer", "is_system": false, "permissions": ["application", "database", "logs"], "users_count": 3, "created_at": "…"}}
+{"role": {"id": 2, "name": "Developer", "slug": "developer", "is_system": false, "description": null, "permissions": [ … ], "created_at": "…", "created_at_human": "…"}}
 ```
 
 ---
@@ -137,7 +159,7 @@ Auth-gated. Exit impersonation mode (admin feature).
 ### PUT `/admin/roles/{role}`
 **Permission:** `access-admin` (manage)
 
-**Request:** `{"name": "DevOps", "permissions": ["application", "database", "logs", "cronjob"]}`
+**Request:** same shape as `POST /admin/roles`. The `permissions` array **replaces** the role's grants — send the full set, not a delta.
 
 **Response `200`:** `{"role": {...}}`
 
@@ -238,17 +260,29 @@ Become this user for the session (admin feature). Cannot impersonate yourself or
 ### GET `/admin/permissions`
 **Permission:** `access-admin` (view)
 
-Returns the full flat permission catalog. Used to build the role assignment form.
+Everything the role form needs: the flat catalog, the same rows pre-grouped, and the names of the three states a grant can hold.
 
 ```json
-{"permissions": [
-  {"id": 1, "name": "dashboard", "title": "Dashboard", "level": "server", "sub_level": "server"},
-  {"id": 2, "name": "application", "title": "Applications", "level": "server", "sub_level": "server"},
-  …
-]}
+{
+  "permissions": [
+    {"name": "dashboard", "title": "Dashboard", "level": "server", "sub_level": "server", "sub_level_title": "Server", "icon": null, "url": null},
+    …
+  ],
+  "groups": [
+    {"level": "server", "sub_level": "server", "sub_level_title": "Server", "permissions": [ … ]},
+    {"level": "application", "sub_level": "application", "sub_level_title": "Application", "permissions": [ … ]}
+  ],
+  "access_levels": [
+    {"key": "none",   "title": "No access",    "description": "Hidden from this user. The menu item does not appear at all."},
+    {"key": "view",   "title": "Read only",    "description": "Can open the screen and see everything on it, but cannot change anything."},
+    {"key": "manage", "title": "Read & write", "description": "Can open the screen and make changes — create, edit and delete."}
+  ]
+}
 ```
 
-Grouped in the UI by `level` → `sub_level`. `sub_level_title` is localised.
+- `groups` is `permissions` bucketed by `level` + `sub_level` — use it for section headers and a select-all per section. Keyed on **both**, because `logs` exists at server level and `app_log` at application level as separate permissions.
+- `access_levels` is the vocabulary for the grant control. Render the options from this array; never hardcode the labels or the order — all three are localised from `Accept-Language`.
+- The catalog carries **no grant state**. A role's own grants come from the roles endpoints below.
 
 ---
 
@@ -676,6 +710,23 @@ Promote this domain to primary (renames vhost + log files).
 ```
 
 **Response `200` with `certificate: null`:** no cert installed yet.
+
+The same response carries `available_types` — what this site can actually be given, and why not, where it cannot:
+
+```json
+{"available_types": [
+  {"type": "letsencrypt", "label": "Let's Encrypt", "available": false, "recommended": false, "renewable": true,
+   "reason": "This site's only domains are temporary test domains (shop.203.0.113.10.nip.io). Let's Encrypt cannot issue a certificate for them…"},
+  {"type": "self_signed", "label": "Self-signed", "available": true, "recommended": true, "renewable": false,
+   "reason": "Encrypts traffic immediately and works on any domain, including test and internal ones. Browsers will show a warning…"},
+  {"type": "custom", "label": "Uploaded", "available": true, "recommended": false, "renewable": false, "reason": null}
+]}
+```
+
+- Drive the SSL screen off this array. Disable a type when `available` is `false` and show its `reason`; pre-select the one with `recommended`.
+- `reason` on an **available** type is informational (the self-signed browser warning), not a blocker — check `available`, not `reason`.
+- A test or internal domain is **not** un-securable: `self_signed` works on any name and is recommended there. Let's Encrypt stays refused for temporary domains on purpose — `.test` cannot be validated at all, and `nip.io` shares one weekly issuance limit with everyone using it.
+- All `reason` strings are localised.
 
 ---
 
@@ -2276,8 +2327,10 @@ Kill a process/op (`KILL`).
   "id": 1, "username": "siteowner",
   "home_path": "/home/siteowner",
   "shell": "/bin/bash",
-  "sudo_access": false, "ssh_access": true,
-  "applications_count": 3,
+  "shell_title": "Full shell access (bash)",
+  "shell_allows_login": true,
+  "sudo": false, "ssh_access": false,
+  "password": null,
   "created_at": "23-07-2026 10:00:00", "created_at_human": "3 weeks ago"
 }]}
 ```
@@ -2287,9 +2340,13 @@ Kill a process/op (`KILL`).
 ### POST `/system-users`
 **Permission:** `system_user` (manage)
 
-**Request:** `{"username": "newuser", "password": "…", "shell": "/bin/bash"}`
+**Request:** `{"username": "newuser", "password": "…", "shell": "/bin/bash", "sudo": false, "ssh_access": false, "public_key": null}`
+
+Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` and `ssh_access` default to `false`.
 
 **Response `201`:** `{"system_user": {...}}`
+
+**`422` on `ssh_access`** when it is `true` alongside a shell with `allows_login: false`.
 
 ---
 
@@ -2328,9 +2385,28 @@ Kill a process/op (`KILL`).
 ### PUT `/system-users/{systemUser}/sudo`
 **Permission:** `system_user` (manage)
 
-**Request:** `{"enabled": true}`
+**Request:** `{"sudo": true}`
 
-**Response `200`:** `{"system_user": {"id": 1, "sudo_access": true}}`
+**Response `200`:** `{"system_user": {...}}` (the full resource)
+
+---
+
+### GET `/system-users/shells`
+**Permission:** `system_user` (view)
+
+The shells that may be assigned, in words. Build the picker from this — do not hardcode the paths or invent labels for them.
+
+```json
+{"shells": [
+  {"value": "/bin/bash",        "title": "Full shell access (bash)", "description": "The standard Linux shell. The user can log in over SSH and run commands.", "allows_login": true},
+  {"value": "/bin/sh",          "title": "Basic shell (sh)",         "description": "…", "allows_login": true},
+  {"value": "/usr/bin/zsh",     "title": "Full shell access (zsh)",  "description": "…", "allows_login": true},
+  {"value": "/usr/sbin/nologin","title": "No login",                 "description": "The user owns its files and runs the site, but cannot log in…", "allows_login": false},
+  {"value": "/bin/false",       "title": "No login (legacy)",        "description": "…", "allows_login": false}
+]}
+```
+
+`title` and `description` are localised. Anything outside this list is rejected with `422`.
 
 ---
 
@@ -2339,7 +2415,9 @@ Kill a process/op (`KILL`).
 
 **Request:** `{"shell": "/usr/sbin/nologin"}`
 
-**Response `200`:** `{"system_user": {"id": 1, "shell": "/usr/sbin/nologin"}}`
+**Response `200`:** `{"system_user": {...}}` (the full resource)
+
+**`422` on `shell`** when the user currently has `ssh_access: true` and the chosen shell has `allows_login: false` — sshd would authenticate and the session would close immediately. Turn SSH access off first, or pick a login shell.
 
 ---
 
@@ -2348,7 +2426,11 @@ Kill a process/op (`KILL`).
 
 Enable/disable SSH login for this system user.
 
-**Request:** `{"enabled": false}`
+**`422` on `ssh_access`** when enabling it for a user whose shell has `allows_login: false` — the same contradiction from the other side.
+
+> **Known limitation.** This records intent. Enforcement needs `AllowGroups ssh-users` in `sshd_config`, which the panel does not write yet, so a user with a password and a login shell can still connect while this reads `false`. Do not present it as a hard security control until that lands.
+
+**Request:** `{"ssh_access": false}`
 
 **Response `200`:** `{"system_user": {"id": 1, "ssh_access": false}}`
 
