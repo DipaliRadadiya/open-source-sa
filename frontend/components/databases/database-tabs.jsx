@@ -47,7 +47,10 @@ export function DatabaseTabs({ users, tables, backups, counts, initial }) {
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={select}>
-        <TabsList className="!h-auto w-fit gap-1 p-1">
+        {/* Wraps rather than overflowing: three tabs with a count each are 7px
+            too wide for a 390px phone, and `w-fit` on a non-wrapping row means
+            the whole page scrolls sideways to hide it. */}
+        <TabsList className="!h-auto w-fit flex-wrap gap-1 p-1">
           {sections.map((section) => (
             <TabsTrigger
               key={section.value}
