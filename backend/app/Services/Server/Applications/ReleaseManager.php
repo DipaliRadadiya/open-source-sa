@@ -33,9 +33,7 @@ class ReleaseManager
      */
     public function appRoot(Application $application): string
     {
-        return rtrim((string) $application->systemUser->home_path, '/')
-            .'/'
-            .$application->slug;
+        return $application->rootPath();
     }
 
     /**

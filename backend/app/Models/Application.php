@@ -304,4 +304,27 @@ class Application extends Model
             ->values()
             ->all();
     }
+
+    /**
+     * This site's own directory on disk: `{home}/{slug}`.
+     *
+     * Everything the site owns hangs off here — `public_html`, `.env`,
+     * `releases/`, `.panel/`, its logs. Named by **slug, never domain**: a
+     * domain can be changed or pointed elsewhere, and a path that moves when
+     * it does orphans every file already written under the old one.
+     *
+     * This existed as five hand-built copies of the same concatenation, and
+     * the sixth — OpenLiteSpeed's vhost root — used `domain`, which put the
+     * document root outside the directory `restrained 1` confines the vhost
+     * to. One method so the next caller cannot invent a seventh.
+     */
+    public function rootPath(): string
+    {
+        $home = rtrim((string) $this->systemUser?->home_path, '/');
+
+        // A row from before the slug column would otherwise produce
+        // `{home}/`, which resolves to the system user's home — the directory
+        // every one of its sites would then share.
+        return $this->slug ? "{$home}/{$this->slug}" : $home;
+    }
 }

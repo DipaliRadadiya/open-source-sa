@@ -72,10 +72,13 @@ it('collapses the document root onto the system user home without a slug', funct
         'web_root' => '/',
     ]);
 
-    // Documents the failure mode rather than endorsing it: `//` normalises
-    // away, so this is the home directory itself.
+    // Documents the failure mode rather than endorsing it: with no slug there
+    // is no per-site directory, so this is the home directory itself and every
+    // slugless site of that user would share it. It no longer produces the
+    // `//` it used to — Application::rootPath() drops the empty segment
+    // instead of concatenating one — but the collapse itself is unchanged.
     expect(app(ApplicationProvisioner::class)->documentRoot($application->load('systemUser')))
-        ->toBe('/home/siteowner//public_html');
+        ->toBe('/home/siteowner/public_html');
 });
 
 it('gives every slugged site its own document root', function () {

@@ -449,12 +449,17 @@ describe('the driver', function () {
     it('creates the log directory the vhost names', function () {
         $runs = fakeOls(olsConfig());
 
-        app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop.test');
+        app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
 
         // OLS does not create it, and silently falls back to the server-wide
         // log — so a site's errors land where nobody thinks to look.
+        //
+        // Under the site's own root (slug), not its domain: the vhost root is
+        // also what `restrained 1` confines the vhost to, so a domain-named
+        // one put the document root outside the restraint — and moved a live
+        // site's logs every time someone changed its domain.
         expect(collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'mkdir'))
-            ->toContain('/home/shopuser/shop.test/logs');
+            ->toContain('/home/shopuser/shop/logs');
     });
 
     it('generates rewrites into the vhost rather than relying on .htaccess', function () {

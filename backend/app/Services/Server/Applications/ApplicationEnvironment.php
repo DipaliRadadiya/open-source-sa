@@ -39,10 +39,7 @@ class ApplicationEnvironment
         // immutable after deploy — a .env change must be visible to all of them.
         // documentRoot() returns the current/ symlink path which changes per-release,
         // so use appRoot() instead.
-        return rtrim((string) $application->systemUser->home_path, '/')
-            .'/'
-            .$application->slug
-            .'/.env';
+        return $application->rootPath().'/.env';
     }
 
     public function exists(Application $application): bool

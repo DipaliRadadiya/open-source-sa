@@ -144,9 +144,11 @@ class OlsDriver extends AbstractWebServerDriver
      */
     private function vhRoot(Application $application): string
     {
-        $home = rtrim((string) $application->systemUser->home_path, '/');
-
-        return "{$home}/{$application->domain}";
+        // Slug, not domain. `restrained 1` confines the vhost to this
+        // directory, and the document root is `{root}/public_html/…` — so a
+        // domain-named root put the document root *outside* the restraint,
+        // and moved the site's logs every time a domain changed.
+        return $application->rootPath();
     }
 
     /**

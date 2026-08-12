@@ -68,11 +68,7 @@ class PhpMyAdminInstaller extends AbstractPhpInstaller
         // predates the slug column — an empty path segment would still
         // resolve on disk (a//b === a/b to the filesystem) but would no
         // longer be the exact string anything comparing paths expects.
-        $appRoot = rtrim((string) $application->systemUser->home_path, '/');
-
-        if ($application->slug) {
-            $appRoot .= '/'.$application->slug;
-        }
+        $appRoot = $application->rootPath();
 
         $tempDir = "{$appRoot}/tmp";
         $this->run('configure', ['mkdir', '-p', $tempDir], $application);

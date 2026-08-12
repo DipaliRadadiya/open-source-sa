@@ -307,11 +307,9 @@ class PoolManager
 
     private function documentRoot(Application $application): string
     {
-        $home = rtrim((string) $application->systemUser?->home_path, '/');
-
-        // Slug, not domain — the session and error log directories live inside
-        // the app's root directory which is named by slug, not domain.
-        return "{$home}/{$application->slug}";
+        // The session and error log directories live inside the app's own
+        // root directory. See Application::rootPath().
+        return $application->rootPath();
     }
 
     /**

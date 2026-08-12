@@ -49,14 +49,13 @@ class ApplicationProvisioner
      */
     public function documentRoot(Application $application): string
     {
-        $home = rtrim((string) $application->systemUser->home_path, '/');
         $webRoot = trim((string) $application->web_root, '/');
 
         // slug-based path, not domain-based — stable across domain changes.
         // public_html is the fixed base; user's web_root is appended inside it.
         // web_root = NULL  → /home/<user>/<slug>/public_html/
         // web_root = public → /home/<user>/<slug>/public_html/public/
-        $base = "{$home}/{$application->slug}/public_html";
+        $base = $application->rootPath().'/public_html';
 
         $path = $webRoot === '' ? $base : "{$base}/{$webRoot}";
 
@@ -266,7 +265,7 @@ class ApplicationProvisioner
         if ($removeFiles) {
             // Use slug, not domain — slug is unique and stable, domain is not.
             $this->serverOps->run(
-                ['rm', '-rf', "{$application->systemUser->home_path}/{$application->slug}"],
+                ['rm', '-rf', $application->rootPath()],
                 ['feature' => 'application', 'op' => 'remove_files', 'application' => $application->id],
             );
         }
