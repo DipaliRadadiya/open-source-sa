@@ -200,10 +200,54 @@ class FileBrowser
     }
 
     /**
-     * @return array{name: string, type: string, size: int, size_human: string, modified_at: string, modified_at_human: string, mode: ?string, owner: ?string, group: ?string}
+    /**
+     * Fields every listing asks `find` for, in order.
+     *
+     * `%l` is last on purpose: it is the only field whose value is an
+     * arbitrary path the site's owner chose, so it is the only one that can
+     * contain a tab. Last means a stray tab lands inside the target itself
+     * rather than shifting every field after it.
+     *
+     * `%Y` is the type *after* following the link, which is what makes a
+     * broken symlink identifiable — find reports `N` when the target does not
+     * exist and `L` when the links loop. Identical to `%y` for everything
+     * that is not a link.
      */
-    private function buildEntry(string $name, string $type, string $size, string $mtime, string $mode, string $owner, string $group): array
+    private const PRINTF_FORMAT = "%f\t%y\t%s\t%T@\t%m\t%u\t%g\t%Y\t%l\n";
+
+    private const ENTRY_FIELDS = 9;
+
+    /** The same fields, but named relative to the search scope (`%P`). */
+    private static function searchPrintfFormat(): string
     {
+        return str_replace('%f', '%P', self::PRINTF_FORMAT);
+    }
+
+    /**
+     * @return array<int, string> exactly ENTRY_FIELDS values, padded when find
+     *                            emitted fewer (`%l` is empty for non-links,
+     *                            and a trailing empty field is not preserved
+     *                            by explode alone).
+     */
+    private static function splitEntry(string $line): array
+    {
+        return array_pad(explode("\t", $line, self::ENTRY_FIELDS), self::ENTRY_FIELDS, '');
+    }
+
+    /**
+     * @return array{name: string, type: string, size: int, size_human: string, modified_at: string, modified_at_human: string, mode: ?string, owner: ?string, group: ?string, link_target: ?string, link_broken: ?bool}
+     */
+    private function buildEntry(
+        string $name,
+        string $type,
+        string $size,
+        string $mtime,
+        string $mode,
+        string $owner,
+        string $group,
+        string $targetType = '',
+        string $linkTarget = '',
+    ): array {
         $entryType = match ($type) {
             'd' => 'dir',
             'l' => 'symlink',
@@ -228,6 +272,15 @@ class FileBrowser
             'mode' => $isSymlink ? null : $mode,
             'owner' => $isSymlink ? null : $owner,
             'group' => $isSymlink ? null : $group,
+            // Where it points, verbatim — relative targets are left relative,
+            // because that is what the link actually says and resolving it
+            // here would invent a path the user never wrote.
+            'link_target' => $isSymlink && $linkTarget !== '' ? $linkTarget : null,
+            // `N` is a target that does not exist, `L` a loop, `?` an error
+            // reading it. A link that resolves to nothing looks identical to
+            // a working one in a listing, which is exactly when knowing
+            // matters.
+            'link_broken' => $isSymlink ? in_array($targetType, ['N', 'L', '?'], true) : null,
         ];
     }
 

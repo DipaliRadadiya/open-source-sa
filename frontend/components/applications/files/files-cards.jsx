@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Folder, Link2, Loader2 } from "lucide-react";
+import { Folder, Link2, Loader2, Unlink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,7 +38,11 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
               {file.type === "dir" ? (
                 <Folder className="size-4 shrink-0 text-primary" />
               ) : file.type === "symlink" ? (
-                <Link2 className="size-4 shrink-0 text-muted-foreground" />
+                file.link_broken ? (
+                  <Unlink className="size-4 shrink-0 text-destructive" />
+                ) : (
+                  <Link2 className="size-4 shrink-0 text-muted-foreground" />
+                )
               ) : (
                 <FileThumb file={file} appId={appId} className="size-5" />
               )}
@@ -51,7 +55,20 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
                     {file.name}
                   </Link>
                 ) : file.type === "symlink" ? (
-                  <span className="block truncate font-medium text-muted-foreground">{file.name}</span>
+                  <span
+                    className={cn(
+                      "block truncate font-medium",
+                      file.link_broken ? "text-destructive" : "text-muted-foreground",
+                    )}
+                    // Inline on the card would push the name out of a narrow
+                    // row, so the target lives in the native tooltip here.
+                    title={file.link_target ?? undefined}
+                  >
+                    {file.name}
+                    {file.link_target ? (
+                      <span className="font-mono text-xs text-muted-foreground/70"> → {file.link_target}</span>
+                    ) : null}
+                  </span>
                 ) : (
                   <button
                     type="button"

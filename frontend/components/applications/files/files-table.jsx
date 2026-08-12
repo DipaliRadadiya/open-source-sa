@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { Folder, Link2, Loader2, TriangleAlert } from "lucide-react";
+import { Folder, Link2, Loader2, TriangleAlert, Unlink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable } from "@/components/ui/data-table";
@@ -106,12 +106,33 @@ function NameCell({ row, table }) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span tabIndex={0} className="flex min-w-0 items-center gap-2 rounded text-muted-foreground">
-            <Link2 className="size-4 shrink-0" />
+          <span
+            tabIndex={0}
+            className={cn(
+              "flex min-w-0 items-center gap-2 rounded",
+              file.link_broken ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            {file.link_broken ? (
+              <Unlink className="size-4 shrink-0" />
+            ) : (
+              <Link2 className="size-4 shrink-0" />
+            )}
             <span className="truncate">{file.name}</span>
+            {/* Where it points, inline rather than only on hover: a link is
+                the one row whose name tells you nothing about what it is, and
+                a dangling one is otherwise indistinguishable from a working
+                one. */}
+            {file.link_target ? (
+              <span className="truncate font-mono text-xs text-muted-foreground/70">
+                → {file.link_target}
+              </span>
+            ) : null}
           </span>
         </TooltipTrigger>
-        <TooltipContent className="max-w-60">{t("symlinkHint")}</TooltipContent>
+        <TooltipContent className="max-w-60">
+          {file.link_broken ? t("symlinkBrokenHint") : t("symlinkHint")}
+        </TooltipContent>
       </Tooltip>
     );
   }

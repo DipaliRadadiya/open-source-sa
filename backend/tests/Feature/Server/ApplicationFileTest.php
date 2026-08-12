@@ -283,7 +283,13 @@ function fakeFileBrowserServer(): void
             $owner = $entry['owner'] ?? 'siteowner';
             $group = $entry['group'] ?? 'siteowner';
 
-            return "{$name}\t{$entry['type']}\t".($entry['size'] ?? 0)."\t1700000000\t{$mode}\t{$owner}\t{$group}";
+            // %Y is the type after following the link — the same as %y for
+            // anything that is not one — and %l the target, empty otherwise.
+            $targetType = $entry['target_type'] ?? $entry['type'];
+            $linkTarget = $entry['link_target'] ?? '';
+
+            return "{$name}\t{$entry['type']}\t".($entry['size'] ?? 0)
+                ."\t1700000000\t{$mode}\t{$owner}\t{$group}\t{$targetType}\t{$linkTarget}";
         };
 
         if ($binary === 'find' && ($inner[2] ?? null) === '-mindepth' && ($inner[4] ?? null) === '-maxdepth') {
@@ -583,6 +589,49 @@ describe('browsing', function () {
             ->and($response->json('files.2.mode'))->toBeNull() // shortcut, a symlink
             ->and($response->json('files.2.owner'))->toBeNull()
             ->and($response->json('files.2.group'))->toBeNull();
+    });
+
+    it('says where a symlink points', function () {
+        FileBrowserFake::$fs['shortcut'] = [
+            'type' => 'l',
+            'link_target' => '../shared/uploads',
+            'target_type' => 'd',
+        ];
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)->getJson(filesUrl())->assertOk();
+
+        // Verbatim, not resolved: relative is what the link actually says, and
+        // resolving it here would invent a path the user never wrote.
+        expect($response->json('files.2.link_target'))->toBe('../shared/uploads')
+            ->and($response->json('files.2.link_broken'))->toBeFalse();
+    });
+
+    it('flags a symlink whose target no longer exists', function () {
+        // A dangling link is indistinguishable from a working one in a
+        // listing, which is precisely when knowing matters — `find` reports
+        // `N` for a target that is not there.
+        FileBrowserFake::$fs['shortcut'] = [
+            'type' => 'l',
+            'link_target' => '/home/siteowner/gone',
+            'target_type' => 'N',
+        ];
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)->getJson(filesUrl())->assertOk();
+
+        expect($response->json('files.2.link_broken'))->toBeTrue()
+            ->and($response->json('files.2.link_target'))->toBe('/home/siteowner/gone');
+    });
+
+    it('leaves link fields null for everything that is not a symlink', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)->getJson(filesUrl())->assertOk();
+
+        expect($response->json('files.0.link_target'))->toBeNull()
+            ->and($response->json('files.0.link_broken'))->toBeNull()
+            ->and($response->json('files.1.link_target'))->toBeNull();
     });
 
     it('runs every command as the site\'s own user, never as root', function () {
