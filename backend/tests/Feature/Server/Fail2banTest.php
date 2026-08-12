@@ -3,6 +3,7 @@
 use App\Jobs\InstallFail2ban;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\Runtime\InstallTracker;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -457,4 +458,48 @@ it('denies unban-all to a view-only user', function () {
 
     $this->withHeader('Authorization', "Bearer {$token}")
         ->deleteJson('/api/fail2ban/bans')->assertForbidden();
+});
+
+it('shows an install in flight, and why it failed, instead of a boolean that never moves', function () {
+    fakeFail2ban(installed: false);
+    Queue::fake();
+
+    // Never asked: nothing to report.
+    f2b('GET', '/api/fail2ban')->assertJsonPath('fail2ban.install', null);
+
+    f2b('POST', '/api/fail2ban/install')->assertStatus(202);
+
+    // In flight. `installed` is still false — it is derived from the package
+    // being on disk — so without this the screen cannot tell "apt is working"
+    // from "nothing is happening", for the ten minutes apt is allowed.
+    f2b('GET', '/api/fail2ban')
+        ->assertJsonPath('fail2ban.installed', false)
+        ->assertJsonPath('fail2ban.install.status', 'installing');
+
+    // Failed, with a classified reason rendered in the viewer's locale. This
+    // is the state that used to exist only as an activity-log line: the job
+    // logged and returned, and the screen went on saying false forever.
+    app(InstallTracker::class)->fail(
+        InstallFail2ban::RUNTIME,
+        InstallFail2ban::VERSION,
+        null,
+        'no_space',
+        'ref-123',
+    );
+
+    $response = f2b('GET', '/api/fail2ban')
+        ->assertJsonPath('fail2ban.install.status', 'failed')
+        ->assertJsonPath('fail2ban.install.reason', 'no_space')
+        ->assertJsonPath('fail2ban.install.reference', 'ref-123');
+
+    // Translated, and not the raw apt output — which names paths and cannot
+    // be translated.
+    expect($response->json('fail2ban.install.reason_title'))
+        ->toBe(__('runtime.fail2ban_install_failed.no_space'))
+        ->not->toContain('fail2ban_install_failed');
+
+    // Success deletes the row: `installed` becomes the honest answer again.
+    app(InstallTracker::class)->succeed(InstallFail2ban::RUNTIME, InstallFail2ban::VERSION);
+
+    f2b('GET', '/api/fail2ban')->assertJsonPath('fail2ban.install', null);
 });

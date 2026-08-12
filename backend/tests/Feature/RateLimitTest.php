@@ -119,6 +119,7 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/backups/{backup}',
         'api/restores/{restore}',
         'api/clones/{clone}',
+        'api/fail2ban',
     ]);
 });
 

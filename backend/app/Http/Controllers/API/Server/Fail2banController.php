@@ -8,6 +8,7 @@ use App\Http\Requests\Server\Fail2ban\BanIpRequest;
 use App\Http\Requests\Server\Fail2ban\UpdateFail2banRequest;
 use App\Jobs\InstallFail2ban;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Fail2ban\Fail2banManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,15 +20,36 @@ class Fail2banController extends Controller
      * Everything the screen needs in one call: whether fail2ban is even here,
      * the settings we manage, the jails, and who is currently banned.
      */
-    public function index(Request $request, Fail2banManager $fail2ban): JsonResponse
+    public function index(Request $request, Fail2banManager $fail2ban, InstallTracker $installs): JsonResponse
     {
         $installed = $fail2ban->installed();
+
+        // `installed` alone cannot tell "installing" from "failed" from "never
+        // asked" — it is derived from the package being on disk, so all three
+        // read as false. apt is allowed ten minutes here, which is a long time
+        // to show someone a boolean that has not moved.
+        $install = $installs->versions(InstallFail2ban::RUNTIME)->get(InstallFail2ban::VERSION);
 
         return response()->json([
             'fail2ban' => [
                 'installed' => $installed,
                 'running' => $installed && $fail2ban->running(),
                 'version' => $fail2ban->version(),
+                // Null once it is on disk: the row is deleted on success, and
+                // `installed` is then the honest answer.
+                'install' => $install === null ? null : [
+                    'status' => $install->status->value,
+                    // A classified code, never raw apt output — it names paths
+                    // and cannot be translated. Rendered in the viewer's
+                    // locale by the same keys the PHP screen uses.
+                    'reason' => $install->reason,
+                    'reason_title' => $install->reason === null
+                        ? null
+                        : __('runtime.fail2ban_install_failed.'.$install->reason),
+                    'reference' => $install->reference,
+                    'started_at' => $install->started_at?->format('d-m-Y H:i:s'),
+                    'finished_at' => $install->finished_at?->format('d-m-Y H:i:s'),
+                ],
                 // The caller's own address, so the UI can offer to add it to
                 // the ignore list before they enable the SSH jail. Knowing it
                 // is the difference between an informed click and a lockout.
@@ -50,11 +72,16 @@ class Fail2banController extends Controller
      * Install fail2ban (manage). Queued — apt is far too slow to hold a
      * request open for.
      */
-    public function install(Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
+    public function install(Fail2banManager $fail2ban, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
         if ($fail2ban->installed()) {
             return response()->json(['message' => __('errors/fail2ban.already_installed')], 422);
         }
+
+        // Before dispatch, not inside the job: otherwise there is a window
+        // between this 202 and a worker picking the job up where the install
+        // exists and nothing can see it — the exact blindness the row removes.
+        $installs->start(InstallFail2ban::RUNTIME, InstallFail2ban::VERSION);
 
         InstallFail2ban::dispatch(Auth::id());
         $log->log('fail2ban.install_started');

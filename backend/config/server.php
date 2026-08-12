@@ -1369,6 +1369,19 @@ return [
             'php_url' => env('RUNTIME_LIFECYCLE_PHP_URL', 'https://endoflife.date/api/php.json'),
         ],
 
+        'fail2ban' => [
+            // Same apt output as PHP, so the same four codes — kept as its own
+            // entry rather than pointed at PHP's, because the classifier looks
+            // up by runtime name and a shared list would silently give
+            // fail2ban PHP's reasons the moment either one diverges.
+            'failure_reasons' => [
+                'package_not_found' => '/Unable to locate package|has no installation candidate/i',
+                'apt_lock' => '/Could not get lock|Unable to acquire the dpkg frontend lock/i',
+                'network' => '/Temporary failure resolving|Failed to fetch|Connection timed out/i',
+                'no_space' => '/No space left on device/i',
+            ],
+        ],
+
         'php' => [
             /*
             | Why an install failed, matched against apt's output in order.

@@ -32,4 +32,13 @@ return [
         'enable_failed' => ':extension se instaló pero no se pudo activar. Vuelve a intentarlo con el interruptor.',
     ],
 
+    'fail2ban_install_failed' => [
+        'package_not_found' => 'No hay ningún paquete de fail2ban disponible. Comprueba que las fuentes de paquetes del servidor estén configuradas y accesibles.',
+        'apt_lock' => 'Ya se está ejecutando otra operación de paquetes. Inténtalo de nuevo en un momento.',
+        'network' => 'No se pudo acceder al repositorio de paquetes. Comprueba que el servidor tenga acceso a la red.',
+        'no_space' => 'El servidor se ha quedado sin espacio en disco.',
+        'worker' => 'La instalación se detuvo inesperadamente. Puede que haya caducado; inténtalo de nuevo.',
+        'unknown' => 'La instalación de fail2ban falló. Indica la referencia de abajo al soporte.',
+    ],
+
 ];

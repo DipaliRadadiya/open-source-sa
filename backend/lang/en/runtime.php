@@ -32,4 +32,13 @@ return [
         'enable_failed' => ':extension was installed but could not be switched on. Try the toggle again.',
     ],
 
+    'fail2ban_install_failed' => [
+        'package_not_found' => 'No fail2ban package is available. Check the server\'s package sources are configured and reachable.',
+        'apt_lock' => 'Another package operation is already running. Try again in a moment.',
+        'network' => 'The package repository could not be reached. Check the server has network access.',
+        'no_space' => 'The server has run out of disk space.',
+        'worker' => 'The install stopped unexpectedly. It may have timed out — try again.',
+        'unknown' => 'Installing fail2ban failed. Quote the reference below to support.',
+    ],
+
 ];
