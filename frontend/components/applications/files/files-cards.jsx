@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FileRowActions } from "@/components/applications/files/file-row-actions";
 import { FileThumb } from "@/components/applications/files/file-thumb";
 import { isImageFile } from "@/lib/files/file-icon";
-import { isWorldWritable } from "@/lib/files/describe-mode";
+import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 
 export function FilesCards({ appId, data, canManage, onAction, busyPath, highlightPath, selected = [], onToggle }) {
   const t = useTranslations("applications.files");
@@ -66,8 +66,11 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
                   {file.mode ? (
                     <>
                       {file.size_human || file.modified_at_human ? " · " : ""}
-                      <span className={isWorldWritable(file.mode) ? "font-medium text-destructive" : undefined}>
-                        {file.mode}
+                      <span
+                        className={isWorldWritable(file.mode) ? "font-medium text-destructive" : undefined}
+                        title={file.mode}
+                      >
+                        {symbolicMode(file.mode, file.type) ?? file.mode}
                       </span>
                     </>
                   ) : null}

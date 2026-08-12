@@ -21,6 +21,52 @@ export function describeMode(mode) {
   };
 }
 
+// One octal digit -> its rwx triad, indexed by value.
+const TRIADS = ["---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"];
+
+/**
+ * Replaces a triad's execute character with the setuid/setgid/sticky marker.
+ *
+ * Uppercase when the execute bit is *not* set, which is `ls`'s way of saying
+ * the special bit is on but does nothing — the distinction matters, because a
+ * lowercase `s` and an uppercase `S` are a working setuid binary and a broken
+ * one.
+ */
+function withSpecialBit(triad, marker) {
+  return triad.slice(0, 2) + (triad[2] === "x" ? marker : marker.toUpperCase());
+}
+
+/**
+ * A mode as `ls -l` writes it — `drwxr-xr-x` rather than `755`.
+ *
+ * Octal is exact but has to be decoded in your head; the symbolic form is what
+ * anyone who has used a shell already reads at a glance, and it shows *which*
+ * of read/write/execute is missing rather than only that something is.
+ *
+ * Accepts 4-digit modes as well as 3: `find -printf %m` emits the leading
+ * digit whenever setuid, setgid or the sticky bit is set, so a 3-digit-only
+ * reading silently gave up on exactly the files whose permissions are most
+ * worth looking at.
+ */
+export function symbolicMode(mode, type) {
+  if (!/^[0-7]{3,4}$/.test(String(mode ?? ""))) return null;
+
+  const digits = String(mode).padStart(4, "0");
+  const special = Number(digits[0]);
+  const triads = digits
+    .slice(1)
+    .split("")
+    .map((digit) => TRIADS[Number(digit)]);
+
+  if (special & 4) triads[0] = withSpecialBit(triads[0], "s");
+  if (special & 2) triads[1] = withSpecialBit(triads[1], "s");
+  if (special & 1) triads[2] = withSpecialBit(triads[2], "t");
+
+  const prefix = type === "dir" ? "d" : type === "symlink" ? "l" : "-";
+
+  return prefix + triads.join("");
+}
+
 // Which bit each permission is worth, in the standard 4/2/1 mask.
 export const PERMISSION_BITS = { read: 4, write: 2, execute: 1 };
 

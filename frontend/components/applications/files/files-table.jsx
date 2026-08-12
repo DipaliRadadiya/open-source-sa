@@ -12,7 +12,7 @@ import { FileRowActions } from "@/components/applications/files/file-row-actions
 import { FileActionItems } from "@/components/applications/files/file-actions-menu";
 import { FileThumb } from "@/components/applications/files/file-thumb";
 import { isImageFile } from "@/lib/files/file-icon";
-import { isWorldWritable } from "@/lib/files/describe-mode";
+import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 
 // Cells are module-level so flexRender's identity stays stable across
 // re-renders — see the same note in workers-table.jsx.
@@ -171,7 +171,16 @@ function PermissionsCell({ row }) {
     <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
       {file.owner ? <span className="truncate">{file.owner}</span> : null}
       {file.owner ? <span className="text-muted-foreground/50">·</span> : null}
-      <span className={worldWritable ? "font-medium text-destructive" : undefined}>{file.mode}</span>
+      {/* Symbolic, with the octal kept on hover: `drwxr-xr-x` is what anyone
+          reads at a glance, but `755` is what the chmod dialog and every
+          how-to guide talk in, so throwing it away would cost more than it
+          saves. */}
+      <span
+        className={worldWritable ? "font-medium text-destructive" : undefined}
+        title={file.mode}
+      >
+        {symbolicMode(file.mode, file.type) ?? file.mode}
+      </span>
       {worldWritable ? (
         <Tooltip>
           <TooltipTrigger asChild>
