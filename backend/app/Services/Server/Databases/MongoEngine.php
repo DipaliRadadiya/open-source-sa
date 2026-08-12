@@ -58,6 +58,44 @@ class MongoEngine implements DatabaseEngine
         ));
     }
 
+    public function listUsers(): array
+    {
+        // Mongo keeps users per database rather than server-wide, so the
+        // database a user belongs to is not a grant to parse — it is where
+        // the account lives.
+        $result = $this->run(
+            'db.adminCommand({ usersInfo: { forAllDBs: true } }).users'
+            .'.forEach(u => print(u.user + "\t" + u.db));'
+        );
+
+        if ($result->failed()) {
+            return [];
+        }
+
+        $system = (array) config('server.databases.system_users', []);
+        $users = [];
+
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            [$username, $database] = array_pad(preg_split('/\t/', trim($line)) ?: [], 2, '');
+            $username = trim((string) $username);
+
+            if ($username === '' || in_array($username, $system, true)) {
+                continue;
+            }
+
+            $users[] = [
+                'username' => $username,
+                // Mongo authenticates against a database, not a host, so the
+                // panel's `host` column has no counterpart. localhost is the
+                // honest default rather than a value read from nowhere.
+                'host' => 'localhost',
+                'databases' => array_filter([trim((string) $database)]),
+            ];
+        }
+
+        return $users;
+    }
+
     public function createDatabase(string $name, ?string $charset, ?string $collation): void
     {
         // Mongo creates a DB lazily; make a placeholder collection so it lists.

@@ -1,17 +1,22 @@
 <?php
 
+use App\Contracts\DatabaseEngine;
 use App\Enums\SyncAction;
 use App\Enums\SyncMode;
 use App\Enums\SyncStatus;
+use App\Http\Resources\DatabaseUserResource;
 use App\Jobs\RunServerSync;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
+use App\Models\Database;
+use App\Models\DatabaseUser;
 use App\Models\ServerCapability;
 use App\Models\SshKey;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Models\Worker;
+use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\Sync\ServerSync;
 use Database\Seeders\PermissionSeeder;
@@ -1022,4 +1027,126 @@ describe('discovering workers', function () {
         expect(runSync()->items()->where('resource_type', 'worker')->first()->evidence['application'])
             ->toBe($inner->domain);
     });
+});
+
+/*
+ * Accounts that can reach an adopted database.
+ *
+ * Databases were already adoptable and their users were not, so an adopted
+ * database showed an empty user list — which reads as "nobody can connect to
+ * this" while four applications were connecting to it perfectly well.
+ *
+ * The password is the part that cannot be recovered, and the tests below are
+ * mostly about the panel saying so rather than covering for it.
+ */
+describe('discovering database users', function () {
+    beforeEach(function () {
+        $this->database = Database::create([
+            'name' => 'shop_db', 'engine' => 'mysql',
+        ]);
+    });
+
+    /** @param  array<int, array{username: string, host: string, databases: array<int, string>}>  $users */
+    function fakeEngineUsers(array $users): void
+    {
+        $engine = Mockery::mock(DatabaseEngine::class);
+        $engine->shouldReceive('available')->andReturn(true);
+        $engine->shouldReceive('listUsers')->andReturn($users);
+
+        $manager = Mockery::mock(DatabaseManager::class);
+        $manager->shouldReceive('engineNames')->andReturn(['mysql']);
+        $manager->shouldReceive('engine')->with('mysql')->andReturn($engine);
+
+        app()->instance(DatabaseManager::class, $manager);
+
+        Process::fake(fn () => Process::result(exitCode: 0));
+    }
+
+    it('finds an account granted on a database the panel tracks', function () {
+        fakeEngineUsers([
+            ['username' => 'shop_user', 'host' => 'localhost', 'databases' => ['shop_db']],
+        ]);
+
+        $item = runSync()->items()->where('resource_type', 'database_user')->first();
+
+        expect($item->action)->toBe(SyncAction::Found)
+            ->and($item->evidence['username'])->toBe('shop_user')
+            ->and($item->evidence['database'])->toBe('shop_db');
+    });
+
+    it('says out loud that the password cannot be recovered', function () {
+        fakeEngineUsers([
+            ['username' => 'shop_user', 'host' => 'localhost', 'databases' => ['shop_db']],
+        ]);
+
+        // The engine holds a hash. Anything the panel displayed as a password
+        // here would be invented.
+        expect(runSync()->items()->where('resource_type', 'database_user')->first()->evidence['password_recoverable'])
+            ->toBeFalse();
+    });
+
+    it('ignores an account on a database the panel has not adopted', function () {
+        fakeEngineUsers([
+            ['username' => 'other_user', 'host' => 'localhost', 'databases' => ['some_other_db']],
+        ]);
+
+        // Adopting the database is the step that comes first; a user with
+        // nothing to hang off is not a finding.
+        expect(runSync()->items()->where('resource_type', 'database_user')->count())->toBe(0);
+    });
+
+    it('adopts with no password rather than an invented one', function () {
+        fakeEngineUsers([
+            ['username' => 'shop_user', 'host' => 'localhost', 'databases' => ['shop_db']],
+        ]);
+
+        runSync(SyncMode::Apply);
+
+        $user = DatabaseUser::where('username', 'shop_user')->firstOrFail();
+
+        expect($user->password)->toBeNull()
+            ->and($user->database_id)->toBe($this->database->id);
+    });
+
+    it('records what the grant actually allows, not the narrowest reading', function () {
+        fakeEngineUsers([
+            ['username' => 'remote_user', 'host' => '%', 'databases' => ['shop_db']],
+        ]);
+
+        runSync(SyncMode::Apply);
+
+        // A user granted from `%` can connect from anywhere. Recording that
+        // as localhost would describe the account as narrower than it is —
+        // the wrong direction for anything anyone later audits.
+        expect(DatabaseUser::where('username', 'remote_user')->firstOrFail()->connection_preference)
+            ->toBe('anywhere');
+    });
+
+    it('is safe to run twice', function () {
+        fakeEngineUsers([
+            ['username' => 'shop_user', 'host' => 'localhost', 'databases' => ['shop_db']],
+        ]);
+
+        runSync(SyncMode::Apply);
+        runSync(SyncMode::Apply);
+
+        expect(DatabaseUser::count())->toBe(1);
+    });
+});
+
+it('never hands out a connection string it knows will not work', function () {
+    $database = Database::create(['name' => 'shop_db', 'engine' => 'mysql']);
+
+    $adopted = DatabaseUser::create([
+        'database_id' => $database->id, 'username' => 'shop_user',
+        'password' => null, 'connection_preference' => 'localhost', 'host' => 'localhost',
+    ]);
+
+    $payload = DatabaseUserResource::make($adopted->load('database'))->resolve();
+
+    // `mysql://shop_user:@127.0.0.1:3306/shop_db` looks right and fails at
+    // connect time, which moves the confusion somewhere much harder to debug
+    // than this screen.
+    expect($payload['password_known'])->toBeFalse()
+        ->and($payload['connection_string'])->toBeNull();
 });

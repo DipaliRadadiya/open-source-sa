@@ -59,6 +59,84 @@ class SqlEngine implements DatabaseEngine
         ));
     }
 
+    public function listUsers(): array
+    {
+        // `mysql.user` rather than a SHOW: it is the only place that lists an
+        // account with no grants at all, and an account nobody can see is
+        // exactly the one worth surfacing on a migrated box.
+        $result = $this->run(
+            "SELECT CONCAT(user, '\t', host) FROM mysql.user WHERE user <> '';"
+        );
+
+        if ($result->failed()) {
+            return [];
+        }
+
+        $system = (array) config('server.databases.system_users', []);
+        $users = [];
+
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            [$username, $host] = array_pad(preg_split('/\t/', $line) ?: [], 2, 'localhost');
+            $username = trim((string) $username);
+
+            if ($username === '' || in_array($username, $system, true)) {
+                continue;
+            }
+
+            $users[] = [
+                'username' => $username,
+                'host' => trim((string) $host) ?: 'localhost',
+                'databases' => $this->grantedDatabases($username, trim((string) $host)),
+            ];
+        }
+
+        return $users;
+    }
+
+    /**
+     * The databases one account has been granted something on.
+     *
+     * Parsed from SHOW GRANTS rather than information_schema, because that is
+     * the only view that accounts for grants made at the table level as well
+     * as the database level. A `*.*` grant is skipped: an account with
+     * server-wide privileges is an admin account, not a site's database user,
+     * and attaching it to one database would misdescribe it.
+     *
+     * @return array<int, string>
+     */
+    private function grantedDatabases(string $username, string $host): array
+    {
+        $result = $this->run(sprintf(
+            "SHOW GRANTS FOR '%s'@'%s';",
+            $this->esc($username),
+            $this->esc($host ?: 'localhost'),
+        ));
+
+        if ($result->failed()) {
+            return [];
+        }
+
+        $databases = [];
+
+        // GRANT ... ON `shop`.* TO ... — the backticks are optional in the
+        // output depending on server version, so both forms are matched.
+        if (preg_match_all('/\sON\s+`?([^`\s.]+)`?\.\S+\s+TO\s/i', $result->output(), $matches)) {
+            foreach ($matches[1] as $database) {
+                if ($database !== '*' && ! in_array($database, $databases, true)) {
+                    $databases[] = $database;
+                }
+            }
+        }
+
+        return $databases;
+    }
+
     public function createDatabase(string $name, ?string $charset, ?string $collation): void
     {
         $sql = 'CREATE DATABASE '.$this->ident($name);

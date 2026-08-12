@@ -18,6 +18,7 @@ use App\Services\Server\Setup\Components\PhpComponent;
 use App\Services\Server\Setup\Components\RedisComponent;
 use App\Services\Server\Setup\SetupCatalog;
 use App\Services\Server\Sync\Discoverers\ApplicationDiscoverer;
+use App\Services\Server\Sync\Discoverers\DatabaseUserDiscoverer;
 use App\Services\Server\Sync\Discoverers\PhpSettingsDiscoverer;
 use App\Services\Server\Sync\Discoverers\SshKeyDiscoverer;
 use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
@@ -48,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
             $app->make(ApplicationDiscoverer::class),
             $app->make(PhpSettingsDiscoverer::class),
             $app->make(WorkerDiscoverer::class),
+            $app->make(DatabaseUserDiscoverer::class),
         ]));
 
         // How PHP is served here. Resolved from the web server this box runs,

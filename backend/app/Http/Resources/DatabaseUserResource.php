@@ -19,10 +19,17 @@ class DatabaseUserResource extends JsonResource
             'database_id' => $this->database_id,
             'username' => $this->username,
             // Decryptable + shown so the owner can build the connection string.
+            // Null for a user adopted from a migrated server: the engine holds
+            // a hash, and a hash is not a password.
             'password' => $this->password,
+            'password_known' => $this->password !== null,
             'connection_preference' => $this->connection_preference,
             'host' => $this->host,
-            'connection_string' => $database ? $this->connectionString() : null,
+            // Null rather than a string with an empty password in it. A
+            // connection string that looks right and does not work is worse
+            // than none — it moves the confusion to somewhere much harder to
+            // debug than this screen.
+            'connection_string' => $database && $this->password !== null ? $this->connectionString() : null,
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
         ];

@@ -2128,6 +2128,9 @@ Bring existing server databases under panel management.
 
 **Response `201`:** `{"databases": [{"id": 5, "name": "legacy_app_db", …}]}`
 
+
+**Database users are not adopted here** — `POST /server/sync` finds them once the database is tracked. An adopted user has **no password**: the engine stores a hash and a hash is not a password. Such a user comes back with `password_known: false` and `connection_string: null` rather than a string that looks right and fails at connect time. Setting a new password is a deliberate act, since it breaks every application still using the old one.
+
 ---
 
 ### GET `/databases/{database}/tables`

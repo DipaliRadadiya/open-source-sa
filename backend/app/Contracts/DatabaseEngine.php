@@ -30,6 +30,17 @@ interface DatabaseEngine
      */
     public function listDatabases(): array;
 
+    /**
+     * Accounts that exist in the engine, with the databases each can reach.
+     *
+     * Read-only, for adopting a migrated server. The password is deliberately
+     * absent: the engine holds a hash, and a hash cannot be turned back into
+     * one — see the nullable `database_users.password` column.
+     *
+     * @return array<int, array{username: string, host: string, databases: array<int, string>}>
+     */
+    public function listUsers(): array;
+
     public function createDatabase(string $name, ?string $charset, ?string $collation): void;
 
     public function dropDatabase(string $name): void;
