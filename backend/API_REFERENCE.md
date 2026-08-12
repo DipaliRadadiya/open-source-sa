@@ -314,21 +314,27 @@ Twelve checks: `privilege`, `binaries`, `services`, `web_server`, `driver_conten
 Returns every `type` and `action` value the system has ever recorded, for building filter dropdowns.
 
 ```json
-{"types": ["user", "role", "system_user", "application", "database", …], "actions": {"all": ["created", "updated", "deleted", …], "user": ["registered", "logged_in", "password_changed", …]}}
+{"types": ["user", "role", "system_user", "application", "database", …],
+ "actions": {"all": ["created", "updated", "deleted", …], "user": ["registered", "logged_in", "password_changed", …]},
+ "scopes": [{"value": "account", "label": "Account"}, {"value": "server", "label": "Server"}]}
 ```
+
+`scopes` comes back with its labels **already translated into the viewer's locale** — the frontend must not carry a second copy of these names in eight languages. Same reason the sidebar section headers come from the API.
 
 ---
 
 ### GET `/admin/activity-log`
 **Permission:** `access-admin` (view)
 
-Paginated. Filters: `filter[user_id]`, `filter[type]`, `filter[action]`, `search` (free-text on type + action + actor name).
+Paginated (**`per_page` defaults to 10**, not 20). Filters: `filter[user_id]`, `filter[scope]`, `filter[type]`, `filter[action]`, `search` (free-text on type + action + actor name).
+
+**`filter[scope]` is the coarse one** — pass `account` or `server` and the backend expands it to that scope's type list server-side. Do not build it client-side by sending several `filter[type]` values; there is no multi-type filter, and the map lives in `config/activity.php`.
 
 ```json
-{"activity_log": [{"id": 1, "type": "user", "action": "registered", "scope": "account", "description": "Registered", "user": {"id": 1, "username": "admin"}, "is_system": false, "properties": {}, "created_at": "…", "created_at_human": "2 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 150, "last_page": 8}}
+{"activity_log": [{"id": 1, "type": "user", "action": "registered", "scope": "account", "description": "Registered", "user": {"id": 1, "username": "admin"}, "is_system": false, "created_at": "…", "created_at_human": "2 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 150, "last_page": 8}}
 ```
 
-`description` is built at read time from `__('activity.'.$type.'.'.$action, $properties)` in the viewer's locale — not stored.
+`description` is built at read time from `__('activity.'.$type.'.'.$action, $properties)` in the viewer's locale — not stored. **The `properties` bag itself is not returned** on any activity endpoint: it is the input to that sentence, not a field to read values out of.
 
 `scope` is which half of the panel the row is about — `account` (users, roles, permissions, central consent) or `server` (everything operational) — so the frontend can badge or group without keeping its own copy of the type→scope map. It is null for a type not yet in the map.
 
@@ -425,12 +431,22 @@ Draw the progress bar from `step_number`/`total_steps` — don't hardcode the st
 ## Activity Log (own history)
 
 ### GET `/activity-log/filters`
-Auth-gated. Same shape as `/admin/activity-log/filters` but scoped to the authenticated user.
+Auth-gated — no permission needed.
+
+Same `{types, actions, scopes}` shape as `/admin/activity-log/filters`, so one component renders both. **The contents are built from the caller's own rows, not from the catalog** — a user who has never touched databases does not get a `database` option that is guaranteed to match nothing. A brand-new account therefore gets empty arrays; that is correct, not a failure.
 
 ---
 
 ### GET `/activity-log`
-Auth-gated. Own history only. No `user` field in each row (redundant — it's you).
+Auth-gated — no permission needed. Own history only; the self-scope is applied first and no filter combination can widen it to another user's rows.
+
+Paginated, `per_page` defaults to **10**. Filters: `filter[scope]`, `filter[type]`, `filter[action]`, `search` (type + action only — there is no actor to search, every row is yours).
+
+```json
+{"activity_log": [{"id": 1, "type": "user", "action": "logged_in", "scope": "account", "description": "Logged in", "is_system": false, "created_at": "12-08-2026 09:00:00", "created_at_human": "2 hours ago"}], "meta": {"current_page": 1, "per_page": 10, "total": 42, "last_page": 5}}
+```
+
+**The `user` key is absent entirely** — not null. The relation is deliberately not loaded (it would be you on every row), and `whenLoaded` drops the key rather than emitting null. Do not read `row.user.username` here.
 
 ---
 
@@ -2510,8 +2526,12 @@ Field limits differ and the difference is not arbitrary: `name` allows up to **6
 Size is re-measured on this single-record view (exact figure worth one query).
 
 ```json
-{"database": {"id": 1, "name": "shop_db", …, "users": [{"id": 1, "username": "shopuser"}]}}
+{"database": {"id": 1, "name": "shop_db", …, "users": [{…full user object…}]}}
 ```
+
+**The list and the single record carry different keys, and neither carries both.** `GET /databases` returns `users_count` and no `users`; this endpoint returns `users` and no `users_count` — each is omitted, not null, when the query did not ask for it. Do not write `db.users?.length ?? db.users_count`; branch on which endpoint you called.
+
+Each entry in `users` is the **full** `DatabaseUserResource` documented under `GET /databases/{database}/users` — password and connection string included, not the `{id, username}` stub. `POST /databases/adopt` and the update endpoints return neither key.
 
 ---
 
@@ -3051,10 +3071,18 @@ There is **no `human` field** (render the expression client-side or use the sche
 
 **Request:**
 ```json
-{"user_id": 1, "application_id": null, "command": "cd /home/siteowner/shop.example.com && php artisan schedule:run", "expression": "*/5 * * * *", "active": true}
+{"name": "Laravel scheduler", "system_user_id": 1, "username": null,
+ "command": "cd /home/siteowner/shop.example.com && php artisan schedule:run",
+ "expression": "*/5 * * * *", "active": true}
 ```
 
-`application_id` optional — if set, the cron runs as the app's system user; otherwise uses `user_id`.
+**`name` is required and unique** — it is the job's identity on disk (slugified into `/etc/cron.d/<slug>`), so a duplicate is a `422` on `name`, not a second file. Reserved cron filenames are refused.
+
+**The account is one of two fields, not one:** send `system_user_id` to target a panel-managed System User, or `username` for a raw OS account that the panel does not manage (the normal case on a migrated server). `username` is `required_without:system_user_id`, so a request carrying neither is a `422` — there is no `user_id` field.
+
+`command` must be a single line, max 1000 chars, and may not still contain the `{path}` placeholder from a command preset — an unresolved placeholder is rejected rather than written to cron as literal text. `expression` is validated as a real cron expression.
+
+**`application_id` is not accepted on create or update.** It exists as a column and as a *filter* on the list endpoint, but nothing sets it through the API yet — do not send it, it is silently ignored.
 
 **Response `201`:** `{"cronjob": {...}}`
 
@@ -3063,14 +3091,18 @@ There is **no `human` field** (render the expression client-side or use the sche
 ### GET `/cronjobs/{cronjob}`
 **Permission:** `cronjob` (view)
 
+Same shape as one row of the list endpoint — there is no `user_id` on it.
+
 ```json
-{"cronjob": {"id": 1, "user_id": 1, "system_user": {"id": 1, "username": "siteowner"}, …}}
+{"cronjob": {"id": 1, "name": "Laravel scheduler", "slug": "laravel-scheduler", "username": "siteowner", "system_user": {"id": 1, "username": "siteowner"}, …}}
 ```
 
 ---
 
 ### PUT `/cronjobs/{cronjob}`
 **Permission:** `cronjob` (manage)
+
+Every field is `sometimes` — send only what changed. Accepts `name`, `command`, `expression`, `active`. **The account cannot be changed after creation** (`system_user_id`/`username` are not accepted here); delete and recreate to move a job to another account.
 
 **Request:** `{"expression": "*/10 * * * *", "active": false}`
 
@@ -3124,7 +3156,7 @@ Current snapshot — poll every 2–5s for live gauges. **Network and disk I/O a
 }}
 ```
 
-`cpu_percent` is null on the first read (needs two samples). Show `—` for one tick.
+**Nothing here is ever null.** CPU percent needs two samples, and on the very first poll there is no previous one — the endpoint compares the reading against itself, so `cpu.percent` comes back as `0` (a float), not `null`. Same for `network` and `disk_io`, which are per-second rates. A first-poll `0` is therefore indistinguishable from a genuinely idle server: discard the first sample rather than rendering it, or accept one tick of understated load.
 
 ---
 
@@ -3423,8 +3455,12 @@ Server-level events only: cronjob, disk_cleaner, service, fail2ban, firewall, gi
 **Query:** `?filter[type]=cronjob&filter[action]=created&search=something&page=1&per_page=20`
 
 ```json
-{"activity_log": [{"id": 1, "type": "cronjob", "action": "created", "description": "Cronjob created", "user": {"id": 1, "username": "admin"}, "properties": {}, "created_at": "29-07-2026 10:00:00", "created_at_human": "3 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 45, "last_page": 3}}
+{"activity_log": [{"id": 1, "type": "cronjob", "action": "created", "scope": "server", "description": "Cronjob created", "user": {"id": 1, "username": "admin"}, "is_system": false, "created_at": "29-07-2026 10:00:00", "created_at_human": "3 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 45, "last_page": 3}}
 ```
+
+**There is no `properties` field on the row.** The raw properties bag is the *input* to `description` — it is interpolated into the localised sentence server-side and never returned, so do not plan a UI that reads values out of it. Every row here has `scope: "server"` by construction.
+
+`search` matches on `type` and `action` only — unlike the admin-wide log, it does not reach the actor's name.
 
 ---
 
