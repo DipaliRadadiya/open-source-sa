@@ -487,7 +487,9 @@ Create + queue provisioning. Poll `GET /applications/{id}` until `status` leaves
   "git_account_id": null,
   "repository": null,
   "branch": null,
-  "package_manager": null
+  "package_manager": null,
+  "build_command": null,
+  "deploy_script": null
 }
 ```
 
@@ -495,6 +497,14 @@ Create + queue provisioning. Poll `GET /applications/{id}` until `status` leaves
 ```json
 {"application": {"id": 1, "name": "shop", …, "status": "provisioning"}}
 ```
+
+**`deploy_script` matters most on a `git` site, and only there.** Creating a git site queues an automatic first deploy as soon as provisioning finishes (`DeploymentTrigger::Initial`), and that deploy runs the script — so a script added afterwards on the Deployment screen has already missed the run that decides whether the site comes up. For a Laravel repository whose `php artisan migrate` lives here, that is the difference between a working site and a 500 until someone deploys again by hand.
+
+`deploy_script` wins over `build_command` when both are given, exactly as on any later deploy. Windows line endings are normalised on save.
+
+Never send the raw field list — `GET /site-types` publishes the fields for each type, including this one, with localized labels and help text.
+
+**No other site type deploys after creation.** The ten marketplace PHP types and four marketplace Node types install during provisioning; `php` and `static` sites start from a placeholder. Only `git` has `app_deployment` in its feature list at all.
 
 ---
 

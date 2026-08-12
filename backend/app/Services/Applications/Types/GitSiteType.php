@@ -136,6 +136,15 @@ class GitSiteType extends AbstractSiteType
                 'help' => __('application.help.build_command'),
             ]),
 
+            // Offered at creation, not only on the Deployment screen. The very
+            // first deploy runs automatically once provisioning finishes, and
+            // it is the one deploy that decides whether the site works at all
+            // — a Laravel repository whose migrations live here came up 500ing
+            // until somebody found the screen and deployed a second time.
+            $this->field('deploy_script', 'textarea', advanced: true, extra: [
+                'help' => __('application.help.deploy_script'),
+            ]),
+
             // Only meaningful for server-side rendering — `depends_on` tells
             // the form to hide them otherwise rather than collecting answers
             // that would then be refused.
@@ -176,6 +185,13 @@ class GitSiteType extends AbstractSiteType
             ],
             'branch' => ['required', 'string', 'max:255'],
             'build_command' => ['nullable', 'string', 'max:500'],
+
+            // Same cap and same deliberate lack of content validation as the
+            // Deployment screen's own rule: this is a shell script the user
+            // wrote to run as their own site user, and refusing characters
+            // would be theatre. The control that matters is the privilege
+            // drop, not a denylist.
+            'deploy_script' => ['nullable', 'string', 'max:65535'],
 
             // Required for a Node app (it has to install dependencies
             // somehow), refused otherwise — a PHP or static site has no

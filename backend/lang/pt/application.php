@@ -70,6 +70,7 @@ return [
         'app_port' => 'Porta do aplicativo',
         'web_root' => 'Raiz web',
         'build_command' => 'Comando de build',
+        'deploy_script' => 'Script de implantação',
         'start_command' => 'Comando de início',
         'package_manager' => 'Gestor de pacotes',
         'git_source' => 'Origem',
@@ -99,6 +100,7 @@ return [
         'rendering_type' => 'A renderização no servidor executa a sua app e faz proxy para ela. As outras duas compilam ficheiros que o servidor web entrega diretamente — mais rápido e sem nada a manter em execução.',
         'repository_url' => 'Um repositório público — sem necessidade de conta. Deve ser um endereço https://.',
         'build_command' => 'Executado após baixar o código, ex.: composer install --no-dev',
+        'deploy_script' => 'Executa depois de obter o código, como o utilizador do site. Deixe vazio para usar o comando de build.',
         'package_manager' => 'O que instala e compila as suas dependências. Preenche o comando de build abaixo — edite livremente depois.',
     ],
 

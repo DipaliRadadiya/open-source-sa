@@ -70,6 +70,7 @@ return [
         'app_port' => 'App-Port',
         'web_root' => 'Web-Root',
         'build_command' => 'Build-Befehl',
+        'deploy_script' => 'Deploy-Skript',
         'start_command' => 'Startbefehl',
         'package_manager' => 'Paketmanager',
         'git_source' => 'Quelle',
@@ -99,6 +100,7 @@ return [
         'rendering_type' => 'Server-Rendering führt deine App aus und leitet an sie weiter. Die anderen beiden bauen Dateien, die der Webserver direkt ausliefert – schneller, und nichts muss laufen.',
         'repository_url' => 'Ein öffentliches Repository — kein Konto nötig. Muss eine https://-Adresse sein.',
         'build_command' => 'Läuft nach dem Abrufen des Codes, z. B. composer install --no-dev',
+        'deploy_script' => 'Läuft nach dem Abrufen des Codes, als dein Website-Benutzer. Leer lassen, um den Build-Befehl zu verwenden.',
         'package_manager' => 'Was deine Abhängigkeiten installiert und baut. Füllt den Build-Befehl unten aus – danach frei bearbeitbar.',
     ],
 

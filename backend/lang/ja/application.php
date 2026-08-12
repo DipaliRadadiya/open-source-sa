@@ -70,6 +70,7 @@ return [
         'app_port' => 'アプリのポート',
         'web_root' => 'ウェブルート',
         'build_command' => 'ビルドコマンド',
+        'deploy_script' => 'デプロイスクリプト',
         'start_command' => '起動コマンド',
         'package_manager' => 'パッケージマネージャー',
         'git_source' => 'ソース',
@@ -99,6 +100,7 @@ return [
         'rendering_type' => 'サーバーサイドレンダリングはアプリを実行してプロキシします。他の 2 つは Web サーバーが直接配信するファイルにビルドします — 高速で、常駐させるものがありません。',
         'repository_url' => '公開リポジトリ — アカウント不要。https:// のアドレスを指定してください。',
         'build_command' => 'コード取得後に実行されます。例: composer install --no-dev',
+        'deploy_script' => 'コード取得後に、サイトのユーザーとして実行されます。空にするとビルドコマンドが使われます。',
         'package_manager' => '依存関係のインストールとビルドに使うツールです。下のビルドコマンドを自動入力します — 後から自由に編集できます。',
     ],
 

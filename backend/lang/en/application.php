@@ -75,6 +75,7 @@ return [
         'app_port' => 'App port',
         'web_root' => 'Web root',
         'build_command' => 'Build command',
+        'deploy_script' => 'Deploy script',
         'start_command' => 'Start command',
         'package_manager' => 'Package manager',
         'git_source' => 'Source',
@@ -104,6 +105,7 @@ return [
         'rendering_type' => 'Server-side rendering runs your app and proxies to it. The other two build to files the web server hands out directly — faster, and nothing to keep running.',
         'repository_url' => 'A public repository — no account needed. Must be an https:// address.',
         'build_command' => 'Run after the code is fetched, e.g. composer install --no-dev',
+        'deploy_script' => 'Runs after the code is fetched, as your site user. Leave empty to use the build command.',
         'package_manager' => 'What installs and builds your dependencies. Fills in the build command below — edit it freely afterward.',
     ],
 

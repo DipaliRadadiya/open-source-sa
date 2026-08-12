@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -146,4 +147,42 @@ describe('the resolver', function () {
         // the site is served.
         expect(ServingProfile::resolve(null, ['name' => 'Renamed'], 'node'))->toBe('node');
     });
+});
+
+/*
+ * The deploy script has to be settable at creation, not only afterwards on the
+ * Deployment screen. The first deploy runs automatically once provisioning
+ * finishes, so a script added later has already missed the deploy that decides
+ * whether the site comes up at all.
+ */
+it('stores a deploy script given at creation', function () {
+    createRendered(['deploy_script' => "npm ci\nnpm run build"])->assertCreated();
+
+    expect(Application::where('name', 'App')->first()->deploy_script)
+        ->toBe("npm ci\nnpm run build");
+});
+
+it('normalises Windows line endings in a deploy script', function () {
+    // `sh` reads the \r as part of the command, producing "command not found:
+    // npm\r" — an error that is invisible in a log. The Deployment screen
+    // already normalises this; creating a site has to do the same.
+    createRendered(['deploy_script' => "npm ci\r\nnpm run build"])->assertCreated();
+
+    expect(Application::where('name', 'App')->first()->deploy_script)
+        ->toBe("npm ci\nnpm run build")
+        ->not->toContain("\r");
+});
+
+it('publishes the deploy script as a field on the git site type', function () {
+    // The frontend renders this form from the API, so a field the schema does
+    // not list is a field the user never sees.
+    $fields = test()->withHeaders(['Authorization' => 'Bearer '.test()->token])
+        ->getJson('/api/site-types')
+        ->assertOk()
+        ->json();
+
+    $git = collect(data_get($fields, 'site_types', $fields))
+        ->firstWhere('name', 'git');
+
+    expect(collect($git['fields'])->pluck('name'))->toContain('deploy_script');
 });

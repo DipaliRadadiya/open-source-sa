@@ -63,6 +63,13 @@ class CreateApplication
             // application served from its root publishes its own source.
             'web_root' => $data['web_root'] ?? $type?->defaultWebRoot() ?? '/',
             'build_command' => $data['build_command'] ?? null,
+            // Normalised the same way UpdateDeploySettingsRequest does: a
+            // script pasted from Windows carries \r, and `sh` reads it as part
+            // of the command — "command not found: composer\r" is impossible
+            // to see in a log.
+            'deploy_script' => isset($data['deploy_script'])
+                ? str_replace("\r\n", "\n", (string) $data['deploy_script'])
+                : null,
             'start_command' => $data['start_command'] ?? null,
             'git_account_id' => $data['git_account_id'] ?? null,
             'repository' => $data['repository'] ?? null,

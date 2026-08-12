@@ -251,3 +251,60 @@ it('does not deploy when provisioning failed', function () {
     expect($app->fresh()->status->value)->toBe('failed');
     Queue::assertNotPushed(DeployApplication::class);
 });
+
+/*
+ * The deploy script at creation time.
+ *
+ * The first deploy runs on its own the moment provisioning finishes, and it is
+ * the one deploy that decides whether the site works at all — a Laravel
+ * repository whose `php artisan migrate` lives in the deploy script came up
+ * 500ing, because the field could only be filled in afterwards on the
+ * Deployment screen and the automatic first deploy had already run without it.
+ */
+describe('a deploy script given at creation', function () {
+    it('runs on the very first deploy', function () {
+        $ran = fakeFirstDeploy();
+
+        $application = firstDeployApp(['deploy_script' => 'php artisan migrate --force']);
+
+        runFirstDeploy($application);
+
+        expect(firstDeployRan($ran, fn (array $args): bool => collect($args)
+            ->contains(fn ($a) => is_string($a) && str_contains($a, 'php artisan migrate --force'))))
+            ->toBeTrue();
+    });
+
+    it('is preferred over the build command, the same as any later deploy', function () {
+        $ran = fakeFirstDeploy();
+
+        $application = firstDeployApp([
+            'build_command' => 'composer install',
+            'deploy_script' => 'php artisan migrate --force',
+        ]);
+
+        runFirstDeploy($application);
+
+        $script = collect(iterator_to_array($ran))
+            ->flatten()
+            ->filter(fn ($a) => is_string($a) && str_contains($a, 'artisan migrate'))
+            ->first();
+
+        // Not both, and not the older field: GitDeployer::script() prefers
+        // deploy_script and falls back to build_command, and the first deploy
+        // must not be an exception to that.
+        expect($script)->not->toBeNull()
+            ->and($script)->not->toContain('composer install');
+    });
+
+    it('still falls back to the build command when no script was given', function () {
+        $ran = fakeFirstDeploy();
+
+        $application = firstDeployApp(['build_command' => 'composer install --no-dev']);
+
+        runFirstDeploy($application);
+
+        expect(firstDeployRan($ran, fn (array $args): bool => collect($args)
+            ->contains(fn ($a) => is_string($a) && str_contains($a, 'composer install --no-dev'))))
+            ->toBeTrue();
+    });
+});
