@@ -81,10 +81,10 @@ export function isolateApplicationPhp(id) {
   return api.post(`/applications/${id}/php/isolate`);
 }
 
-/** Put it back on the shared pool — the way out if isolation broke something. */
-export function unisolateApplicationPhp(id) {
-  return api.delete(`/applications/${id}/php/isolate`);
-}
+// There is no un-isolate. `DELETE /applications/{id}/php/isolate` was removed
+// (405 since backend 9ff978c): on the shared pool a site runs as the web
+// server's own account, so one compromised site can read every other site's
+// .env. It is not a mode anyone gets to choose any more.
 
 /**
  * The policy and this site's own exceptions, in one request.

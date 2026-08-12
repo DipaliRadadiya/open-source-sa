@@ -26,7 +26,6 @@ import { budgetWith, phpSettingsFormSchema, phpSizeToBytes } from "@/lib/schemas
 import {
   isolateApplicationPhp,
   resetApplicationPhpFields,
-  unisolateApplicationPhp,
   updateApplicationPhp,
 } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
@@ -36,7 +35,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { Combobox } from "@/components/ui/combobox";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -46,6 +44,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -89,7 +92,12 @@ const TAB_FIELDS = {
     "max_execution_time",
     "max_input_vars",
   ],
-  security: ["open_basedir_enabled", "allow_url_fopen", "disable_functions"],
+  security: [
+    "open_basedir_enabled",
+    "open_basedir_paths",
+    "allow_url_fopen",
+    "disable_functions",
+  ],
   advanced: [
     "pm_type",
     "pm_max_requests",
@@ -123,7 +131,6 @@ export function PhpPanel({ appId, php, timezones = [], canManage }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [confirmPutBack, setConfirmPutBack] = useState(false);
 
   const settings = php.settings;
 
@@ -140,29 +147,9 @@ export function PhpPanel({ appId, php, timezones = [], canManage }) {
     }
   }
 
-  async function putBack() {
-    setBusy(true);
-    try {
-      await unisolateApplicationPhp(appId);
-      setConfirmPutBack(false);
-      toast.success(t("isolation.putBack"));
-      router.refresh();
-    } catch (error) {
-      toast.error(apiMessage(error, t("isolation.failed")));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="max-w-4xl space-y-4">
-      <IsolationCard
-        php={php}
-        canManage={canManage}
-        busy={busy}
-        onIsolate={isolate}
-        onPutBack={() => setConfirmPutBack(true)}
-      />
+      <IsolationCard php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
 
       {/* Said before they press save, not after their work has gone. */}
       {php.isolated && !php.managed ? (
@@ -181,23 +168,12 @@ export function PhpPanel({ appId, php, timezones = [], canManage }) {
           canManage={canManage}
           saving={saving}
           setSaving={setSaving}
+          onIsolate={isolate}
         />
       ) : (
         /** Shared mode — clean locked state */
         <SharedPhpState php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
       )}
-
-      <ConfirmDialog
-        open={confirmPutBack}
-        onOpenChange={setConfirmPutBack}
-        icon={TriangleAlert}
-        tone="warning"
-        title={t("isolation.putBackTitle")}
-        description={t("isolation.putBackBody")}
-        confirmLabel={t("isolation.putBackConfirm")}
-        pending={busy}
-        onConfirm={putBack}
-      />
     </div>
   );
 }
@@ -208,7 +184,32 @@ function SharedPhpState({ php, canManage, busy, onIsolate }) {
   const t = useTranslations("applications.php");
   const tShared = useTranslations("applications.php.shared");
   const tIsolation = useTranslations("applications.php.isolation");
+  const router = useRouter();
   const settings = php.settings;
+
+  // The version is the one thing a pool-less site CAN still change: it lives in
+  // the vhost, not the pool, and the API strips it before refusing the rest.
+  // This screen offered it nowhere, so those sites were stuck on whatever
+  // version they were created with.
+  const [version, setVersion] = useState(php.php_version ?? "");
+  const [savingVersion, setSavingVersion] = useState(false);
+  const versions = php.available_versions ?? [];
+  const versionChanged = version !== (php.php_version ?? "");
+
+  async function saveVersion() {
+    setSavingVersion(true);
+    try {
+      // Only the version. Sending the settings alongside it earns a 422 for the
+      // whole request — they need a pool file and there isn't one.
+      await updateApplicationPhp(php.application_id, { php_version: version });
+      toast.success(t("saved"));
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("saveFailed")));
+    } finally {
+      setSavingVersion(false);
+    }
+  }
 
   return (
     <Card className="overflow-hidden shadow-sm">
@@ -237,11 +238,6 @@ function SharedPhpState({ php, canManage, busy, onIsolate }) {
               show the same five facts two different ways. */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
             <Stat
-              icon={Cpu}
-              label={tShared("version")}
-              value={php.php_version ? `PHP ${php.php_version}` : "—"}
-            />
-            <Stat
               icon={MemoryStick}
               label={tShared("memory")}
               value={settings.memory_limit ?? "—"}
@@ -258,6 +254,37 @@ function SharedPhpState({ php, canManage, busy, onIsolate }) {
             />
             <Stat icon={User} label={tShared("runsAs")} value={php.runs_as ?? "www-data"} />
           </div>
+        </div>
+
+        {/* Promoted out of the read-only strip above, because unlike every
+            other value there this one is still changeable without a pool. */}
+        <div className="flex flex-wrap items-end justify-between gap-3 border-t px-5 py-4">
+          <div className="min-w-0 space-y-1.5">
+            <p className="text-sm font-medium">{t("fields.version")}</p>
+            <Select
+              value={version}
+              onValueChange={setVersion}
+              disabled={!canManage || savingVersion || versions.length === 0}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder={php.php_version ?? "—"} />
+              </SelectTrigger>
+              <SelectContent>
+                {versions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {t("versionLabel", { version: option })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{tShared("versionHint")}</p>
+          </div>
+          {canManage ? (
+            <Button type="button" onClick={saveVersion} disabled={!versionChanged || savingVersion}>
+              {savingVersion ? <Loader2 className="size-4 animate-spin" /> : null}
+              {t("saveAction")}
+            </Button>
+          ) : null}
         </div>
 
         {/* Preview of what dedicated PHP unlocks — withheld where the web
@@ -301,10 +328,13 @@ function SharedPhpState({ php, canManage, busy, onIsolate }) {
 
 // ─── Dedicated PHP mode ──────────────────────────────────────────────────────
 
-function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving }) {
+function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving, onIsolate }) {
   const t = useTranslations("applications.php");
   const router = useRouter();
   const [tab, setTab] = useState("basic");
+  // The API's own sentence, kept when it refuses a save because the pool file
+  // is gone. Null the rest of the time.
+  const [needsPool, setNeedsPool] = useState(null);
   const settings = php.settings;
 
   const defaults = {
@@ -320,6 +350,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
     pm_max_children: settings.pm_max_children,
     pm_max_requests: settings.pm_max_requests,
     open_basedir_enabled: settings.open_basedir_enabled,
+    open_basedir_paths: settings.open_basedir_paths ?? "",
     disable_functions: settings.disable_functions ?? "",
     allow_url_fopen: settings.allow_url_fopen,
     php_timezone: settings.php_timezone ?? "",
@@ -372,13 +403,21 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
 
   async function save(values) {
     setSaving(true);
+    setNeedsPool(null);
     try {
       await updateApplicationPhp(appId, values);
       toast.success(t("saved"));
       form.reset(values);
       router.refresh();
     } catch (error) {
-      if (error.response?.data?.errors) {
+      const errors = error.response?.data?.errors;
+      // `settings` is not a field on this form, so setError would file it
+      // against nothing and the save would fail in silence. It means the pool
+      // went away underneath us — every limit here is written by that file, so
+      // the answer is not a red input, it is restoring the pool.
+      if (errors?.settings) {
+        setNeedsPool(errors.settings[0]);
+      } else if (errors) {
         handleValidationError(error, form);
       } else {
         toast.error(apiMessage(error, t("saveFailed")));
@@ -414,6 +453,24 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
     >
     <Form {...form}>
       <form onSubmit={form.handleSubmit(save)} className="space-y-3">
+        {/* The pool vanished between loading this screen and pressing save, so
+            nothing here can be applied. Persistent rather than a toast: it is
+            not a message about the click, it is the state the site is in until
+            someone fixes it. */}
+        {needsPool ? (
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
+            <p className="flex min-w-0 items-start gap-2.5 text-sm">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+              <span>{needsPool}</span>
+            </p>
+            {canManage && onIsolate ? (
+              <Button type="button" size="sm" onClick={onIsolate} disabled={saving}>
+                {t("isolation.isolateAction")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Its own strip above the form, not the form's first row: it is what
             the site IS, not something you edit. It still tracks the fields,
             so an unsaved change is visible as the value it would become. */}
@@ -582,24 +639,19 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
               hidden={tab !== "security"}
               className="space-y-5 px-5 py-5"
             >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ToggleRow
-                  form={form}
-                  name="open_basedir_enabled"
-                  label={t("fields.openBasedir")}
-                  directive="open_basedir"
-                  hint={t("hints.openBasedir")}
-                  disabled={saving}
-                />
-                <ToggleRow
-                  form={form}
-                  name="allow_url_fopen"
-                  label={t("fields.allowUrlFopen")}
-                  directive="allow_url_fopen"
-                  hint={t("hints.allowUrlFopen")}
-                  disabled={saving}
-                />
-              </div>
+              {/* Promoted out of the toggle pair: it is the only setting here
+                  that has a value, a state the server may disagree with, and a
+                  state we cannot read at all. A switch could say none of that. */}
+              <OpenBasedir form={form} php={php} disabled={saving} />
+
+              <ToggleRow
+                form={form}
+                name="allow_url_fopen"
+                label={t("fields.allowUrlFopen")}
+                directive="allow_url_fopen"
+                hint={t("hints.allowUrlFopen")}
+                disabled={saving}
+              />
 
               <BlockedFunctions form={form} php={php} disabled={saving} />
             </TabsContent>
@@ -852,7 +904,18 @@ function Stat({ icon: Icon, label, value }) {
   );
 }
 
-function IsolationCard({ php, canManage, busy, onIsolate, onPutBack }) {
+/**
+ * Whether this site has its own PHP pool, and the way to give it one.
+ *
+ * No longer a switch between two modes. The shared pool runs every site as the
+ * web server's account, so one compromised site can read every other site's
+ * `.env` — the backend removed the way back (405), and a button offering it
+ * would be promising something the API refuses.
+ *
+ * What is left is a repair: sites created before pools existed still have none,
+ * and this converts them.
+ */
+function IsolationCard({ php, canManage, busy, onIsolate }) {
   const t = useTranslations("applications.php.isolation");
 
   // Nothing can be done about this one — no action, no decision, no way to
@@ -890,16 +953,17 @@ function IsolationCard({ php, canManage, busy, onIsolate, onPutBack }) {
           </div>
         </div>
 
-        {canManage ? (
+        {/* Only on a site that still lacks a pool. An isolated site has nothing
+            to do here — the card is a statement of fact, not a control. */}
+        {canManage && !php.isolated ? (
           <Button
             type="button"
-            variant={php.isolated ? "outline" : "default"}
-            onClick={php.isolated ? onPutBack : onIsolate}
+            onClick={onIsolate}
             disabled={busy}
             className="justify-self-start sm:justify-self-end"
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {php.isolated ? t("putBackAction") : t("isolateAction")}
+            {t("isolateAction")}
           </Button>
         ) : null}
       </CardContent>
@@ -1206,6 +1270,175 @@ function ToggleRow({ form, name, label, directive, hint, disabled }) {
         </FormItem>
       )}
     />
+  );
+}
+
+// One path per line, however it was stored (the API joins with `:`, the
+// textarea gives back newlines, and a paste from a php.ini uses either).
+function splitPaths(value) {
+  return (value ?? "")
+    .split(/[:\n,]+/)
+    .map((path) => path.trim())
+    .filter(Boolean);
+}
+
+/**
+ * open_basedir: the fence, what is inside it, and whether the server agrees.
+ *
+ * The three answers the API gives can all differ, and the difference is the
+ * point — see `open_basedir_live` in the schema. A switch alone said none of
+ * it: someone could be looking at "on" while PHP enforced something else
+ * entirely, or at "off" with no idea what turning it on would cost them.
+ *
+ * The three paths the backend always prepends are shown as fixed chips rather
+ * than seeded into the textarea. Seeding them reads as "yours to edit", and
+ * deleting one would simply bring it back on the next save.
+ */
+function OpenBasedir({ form, php, disabled }) {
+  const t = useTranslations("applications.php");
+  const tb = useTranslations("applications.php.basedir");
+
+  const enabled = useWatch({ control: form.control, name: "open_basedir_enabled" });
+
+  const live = php.open_basedir_live ?? null;
+  const effective = php.open_basedir_effective ?? null;
+  const recommended = splitPaths(php.open_basedir_recommended);
+
+  // Distinct from "off" on purpose. Null is "we could not find out", and
+  // drawing that as "nothing is restricted" would be a guess, wrong about half
+  // the time, about a security control.
+  const unknown = enabled && live === null;
+
+  // Compared as sets: the pool file may list the same paths in another order,
+  // and re-ordering a colon list changes nothing about what PHP allows.
+  const sameAsSaved = (() => {
+    if (live === null || effective === null) return false;
+    const [a, b] = [splitPaths(live), splitPaths(effective)];
+    return a.length === b.length && [...a].sort().join(":") === [...b].sort().join(":");
+  })();
+
+  /**
+   * Strictly "the live value is not the saved one".
+   *
+   * Deliberately NOT `|| php.managed === false`: a hand-edited pool may have
+   * touched anything, and if its open_basedir still matches ours then this
+   * particular setting is fine — saying otherwise would be a false alarm
+   * pointing at the wrong line. The panel already carries its own banner for
+   * hand-edited pools, which is the right place for that.
+   *
+   * Only once the setting is on: with it off `effective` is null by definition,
+   * so every site would wear a permanent warning. And never while `live` is
+   * unknown — not knowing what the server enforces is its own state, not
+   * evidence of disagreement.
+   */
+  const disagrees = enabled && !unknown && !sameAsSaved;
+
+  return (
+    <div className="space-y-3 rounded-lg border p-3">
+      <FormField
+        control={form.control}
+        name="open_basedir_enabled"
+        render={({ field }) => (
+          <FormItem className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <Label label={t("fields.openBasedir")} name="open_basedir_enabled" />
+              <Directive name="open_basedir" />
+              <p className="text-xs text-muted-foreground">
+                {enabled ? t("hints.openBasedir") : tb("offHint")}
+              </p>
+            </div>
+            <FormControl>
+              <Switch
+                className="mt-0.5"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                disabled={disabled}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
+      {/* Above the fields, not below them: this is the answer to "why is my
+          site still reaching that folder", and it is worth reading before
+          anyone edits a path. */}
+      {disagrees ? (
+        <div className="space-y-1.5 rounded-lg border border-warning/40 bg-warning/10 p-3">
+          <p className="flex items-start gap-2 text-sm">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+            <span>{tb("disagrees")}</span>
+          </p>
+          <p className="text-xs text-muted-foreground">{tb("disagreesWhy")}</p>
+          {live ? <PathList paths={splitPaths(live)} label={tb("liveLabel")} /> : null}
+        </div>
+      ) : null}
+
+      {enabled ? (
+        <div className="space-y-3">
+          {unknown ? (
+            <p className="rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground">
+              {tb("unknown")}
+            </p>
+          ) : null}
+
+          <PathList paths={recommended} label={tb("alwaysLabel")} hint={tb("alwaysHint")} />
+
+          <FormField
+            control={form.control}
+            name="open_basedir_paths"
+            render={({ field }) => (
+              <FormItem>
+                <Label label={tb("extraLabel")} name="open_basedir_paths" />
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    rows={3}
+                    spellCheck={false}
+                    placeholder={tb("extraPlaceholder")}
+                    className="font-mono text-xs"
+                    disabled={disabled}
+                  />
+                </FormControl>
+                <FormDescription>{tb("extraHint")}</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      ) : (
+        // What it would cost, before committing to it. Someone deciding whether
+        // to switch this on is really asking "will it break my site", and the
+        // honest answer is this list.
+        <Collapsible>
+          <CollapsibleTrigger className="text-xs text-muted-foreground underline-offset-2 hover:underline">
+            {tb("previewTrigger")}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <PathList paths={recommended} label={tb("previewLabel")} />
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+    </div>
+  );
+}
+
+function PathList({ paths, label, hint }) {
+  if (paths.length === 0) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium">{label}</p>
+      <ul className="flex flex-wrap gap-1.5">
+        {paths.map((path) => (
+          <li
+            key={path}
+            className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs break-all text-muted-foreground"
+          >
+            {path}
+          </li>
+        ))}
+      </ul>
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
   );
 }
 

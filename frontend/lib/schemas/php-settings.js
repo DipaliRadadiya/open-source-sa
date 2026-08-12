@@ -106,6 +106,9 @@ export const applicationPhpSchema = z
         pm_max_children: z.number().default(5),
         pm_max_requests: z.number().default(500),
         open_basedir_enabled: z.boolean().default(false),
+        // Only the paths the user ADDED. The three the backend always prepends
+        // (app root, this site's sessions, /tmp) are not in here.
+        open_basedir_paths: z.string().nullish(),
         disable_functions: z.string().nullish(),
         allow_url_fopen: z.boolean().default(true),
         php_timezone: z.string().nullish(),
@@ -140,6 +143,28 @@ export const applicationPhpSchema = z
         this_site: z.number().default(0),
       })
       .default({ total: 0, committed: 0, available: 0, over_committed: false, sites: 0, this_site: 0 }),
+    /**
+     * Three answers to "what is open_basedir here", and they can all differ.
+     *
+     * `effective`   — what the panel would write from the stored row. Null when
+     *                 the setting is off.
+     * `live`        — what the pool file on disk actually says, READ not
+     *                 derived. Null means the panel could not find out (no pool
+     *                 file, or the pool sets nothing) — which is not the same
+     *                 as "no restriction" and must never render as one.
+     * `recommended` — the whole value you would get by turning it on and adding
+     *                 nothing. Note this is the RESULT, not a value to paste
+     *                 into the paths box: the box holds extras only.
+     *
+     * `live` differing from `effective` means PHP is enforcing something other
+     * than what this screen says — someone hand-edited the pool, or put their
+     * own `open_basedir` in the additional-directives box, where it lands after
+     * ours and wins.
+     */
+    open_basedir_effective: z.string().nullish(),
+    open_basedir_live: z.string().nullish(),
+    open_basedir_recommended: z.string().nullish(),
+
     suggested_disable_functions: z.string().default(""),
     // Starting points for `disable_functions`, safest first, titles and
     // descriptions already localised by the API. Read this rather than the
@@ -180,6 +205,38 @@ export const phpSettingsFormSchema = z.object({
   pm_max_children: z.coerce.number().int("integer").min(1, "range").max(MAX_CHILDREN, "range"),
   pm_max_requests: z.coerce.number().int("integer").min(0, "range").max(100000, "range"),
   open_basedir_enabled: z.boolean().default(false),
+  /**
+   * Extra folders, one per line. The rules are the backend's own
+   * (`SavePhpSettingsRequest`), repeated here so nobody learns them from a 422:
+   * absolute only (a relative path resolves against the worker's working
+   * directory, which nobody can see), never bare `/` (that allows everything,
+   * so the pool would claim open_basedir is on while enforcing nothing), and no
+   * `..`.
+   */
+  open_basedir_paths: z
+    .string()
+    .trim()
+    .max(2000, "max2000")
+    .superRefine((value, ctx) => {
+      for (const raw of value.split(/[:\n,]+/)) {
+        const path = raw.trim();
+        if (path === "") continue;
+        const problem = !path.startsWith("/")
+          ? "basedirAbsolute"
+          : path.replace(/\/+$/, "") === ""
+            ? "basedirRoot"
+            : path.includes("..")
+              ? "basedirTraversal"
+              : null;
+        // No placeholder in the message: FormMessage translates the key with
+        // no values, so a `{path}` in the string would throw at render.
+        if (problem) {
+          ctx.addIssue({ code: "custom", message: problem });
+          return;
+        }
+      }
+    })
+    .default(""),
   // A comma-separated list of function names and nothing else: it lands in the
   // pool file verbatim.
   disable_functions: z
