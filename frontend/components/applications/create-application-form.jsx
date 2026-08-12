@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useBranding } from "@/components/branding-provider";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { PasswordInput } from "@/components/ui/password-input";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -257,6 +258,19 @@ function startCommandProblem(value) {
   return null;
 }
 
+/**
+ * One line for the review panel.
+ *
+ * Multi-line values (a deploy script) get their first line plus a count of what
+ * follows — collapsing them into a single run of text looks like the newlines
+ * were eaten, which is exactly the bug this field used to have.
+ */
+function summariseValue(value, t) {
+  const lines = value.split("\n").filter((line) => line.trim());
+  if (lines.length <= 1) return value;
+  return `${lines[0]} ${t("form.moreLines", { count: lines.length - 1 })}`;
+}
+
 function ConfigField({
   config,
   form,
@@ -297,6 +311,25 @@ function ConfigField({
   const isPort = config.name === "app_port";
   const isStartCommand = config.name === "start_command";
   const isToggle = config.type === "toggle";
+  /**
+   * Declared by the API for anything multi-line.
+   *
+   * Without this branch the field fell through to a single-line `<input>`, and
+   * a shell script pasted into one loses every newline — silently, so the site
+   * deploys with one mangled line.
+   *
+   * It also takes the full row of the two-column grid: a script in half the
+   * width soft-wraps every real command, so half the lines you read are not
+   * lines you wrote.
+   */
+  const isTextarea = config.type === "textarea";
+  // `GitDeployer::script()` runs the deploy script when there is one and falls
+  // back to build_command otherwise. Both fields sit in the same Advanced
+  // section, so filling both is easy and the loser goes quiet — the API's own
+  // hint says so, but it lives under the OTHER field, which nobody re-reads.
+  const deployScript = useWatch({ control: form.control, name: "deploy_script" });
+  const supersededByDeployScript =
+    config.name === "build_command" && String(deployScript ?? "").trim() !== "";
   // A field the backend declares as a choice — render a chooser even before its
   // options arrive, so it never silently degrades to a free-text box.
   const isChoice = ["select", "enum", "dropdown"].includes(config.type);
@@ -348,7 +381,7 @@ function ConfigField({
       name={config.name}
       defaultValue={runtimeDefault}
       render={({ field }) => (
-        <FormItem className="min-w-0 self-start">
+        <FormItem className={cn("min-w-0 self-start", isTextarea && "md:col-span-2")}>
           {/* Fixed row height so the input below starts at the same Y whether or not
         the label carries Generate/copy actions — otherwise a field with them
         sits lower than its neighbour in the two-column grid. */}
@@ -506,6 +539,20 @@ function ConfigField({
                 value={field.value ?? ""}
               />
             </FormControl>
+          ) : isTextarea ? (
+            <FormControl>
+              <Textarea
+                rows={6}
+                spellCheck={false}
+                placeholder={placeholder}
+                // Mono: every textarea field the API declares today is a
+                // command or a script, where alignment and a literal space
+                // carry meaning.
+                className="font-mono text-xs"
+                {...field}
+                value={field.value ?? ""}
+              />
+            </FormControl>
           ) : (
             <FormControl>
               <Input
@@ -524,6 +571,11 @@ function ConfigField({
             <FormDescription className="flex items-start gap-1.5 text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               {t(`form.startCommand.${startCommandProblem(field.value)}`)}
+            </FormDescription>
+          ) : supersededByDeployScript ? (
+            <FormDescription className="flex items-start gap-1.5 text-warning">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+              {t("form.buildCommandSuperseded")}
             </FormDescription>
           ) : config.help ? (
             <FormDescription>{config.help}</FormDescription>
@@ -678,10 +730,14 @@ export function CreateApplicationForm({
         : null;
     })
     .filter(Boolean);
+  // A deploy script makes the build command dead weight, so the last thing
+  // read before pressing Create must not list it as set and ready.
+  const hasDeployScript = String(values?.deploy_script ?? "").trim() !== "";
   const advancedSummaryItems = advancedFields
     .filter(
       (config) =>
-        config.type === "toggle" || String(values?.[config.name] ?? "").trim(),
+        !(config.name === "build_command" && hasDeployScript) &&
+        (config.type === "toggle" || String(values?.[config.name] ?? "").trim()),
     )
     .map((config) => ({
       key: `advanced-${config.name}`,
@@ -693,7 +749,9 @@ export function CreateApplicationForm({
           ? toggleValue(values?.[config.name])
             ? t("form.toggleOn")
             : t("form.toggleOff")
-          : String(values[config.name]),
+          : // A script joined onto one line reads as though the newlines were
+            // lost. Say how many lines there are instead of pretending.
+            summariseValue(String(values[config.name]), t),
       ready: true,
     }));
   const readinessItems = [
@@ -1045,8 +1103,14 @@ export function CreateApplicationForm({
                 control={form.control}
                 name="site_type"
                 render={({ field }) => (
-                  <FormItem>
-                    <div id="application-type-heading">
+                  <FormItem className="min-w-0">
+                    {/* min-w-0 on both: this is a grid item, and a grid item
+                        keeps min-width:auto, so it grows to its content's
+                        min-content width instead of its track. The trigger
+                        carries a long tagline, which pushed the whole page into
+                        horizontal scroll on a phone — the truncate inside never
+                        got a chance because nothing above it was constrained. */}
+                    <div id="application-type-heading" className="min-w-0">
                       <SiteTypePicker
                         types={siteTypes}
                         value={field.value}
