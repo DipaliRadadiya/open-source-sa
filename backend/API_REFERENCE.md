@@ -551,6 +551,7 @@ Create + queue provisioning. Poll `GET /applications/{id}` until `status` leaves
 {
   "name": "shop",
   "domain": "shop.example.com",
+  "domain_type": "custom",
   "site_type": "wordpress",
   "php_version": "8.4",
   "system_user_id": 1,
@@ -573,6 +574,8 @@ Create + queue provisioning. Poll `GET /applications/{id}` until `status` leaves
 **`deploy_script` matters most on a `git` site, and only there.** Creating a git site queues an automatic first deploy as soon as provisioning finishes (`DeploymentTrigger::Initial`), and that deploy runs the script — so a script added afterwards on the Deployment screen has already missed the run that decides whether the site comes up. For a Laravel repository whose `php artisan migrate` lives here, that is the difference between a working site and a 500 until someone deploys again by hand.
 
 `deploy_script` wins over `build_command` when both are given, exactly as on any later deploy. Windows line endings are normalised on save.
+
+**`domain_type` is `custom` or `temp`, and it is optional — but send it.** It records whether the user brought their own name or took the panel's offered `<name>.<ip>.nip.io` hostname. Omitted, the domain is treated as the user's own. It matters for one thing: a `temp` domain is never put on a Let's Encrypt certificate, because nip.io is not on the Public Suffix List and every certificate issued for it worldwide draws on one shared weekly quota. If your create form offers a "use a temporary domain for now" option, it must send `"domain_type": "temp"` — otherwise the SSL screen will offer to issue a certificate that would burn a quota the panel does not own. (A wildcard-DNS suffix is caught server-side regardless of the label, so this is a correctness aid, not the only defence.)
 
 Never send the raw field list — `GET /site-types` publishes the fields for each type, including this one, with localized labels and help text.
 
@@ -1027,28 +1030,56 @@ Update branch, deploy script, auto-deploy toggle.
 What each provider (GitHub/GitLab/Bitbucket) needs from the user and which direction the secret travels.
 
 ```json
-{"webhook_providers": {
-  "github": {"fields": ["repository", "branch"], "secret_direction": "panel_sets_secret"},
-  "gitlab": {"fields": ["repository", "branch"], "secret_direction": "panel_sets_secret"},
-  "bitbucket": {"fields": ["repository"], "secret_direction": "panel_sets_secret"}
-}}
+{"webhook_providers": [
+  {"name": "github", "title": "GitHub", "secret_source": "generate", "instructions": "…"},
+  {"name": "gitlab", "title": "GitLab", "secret_source": "either", "instructions": "…"},
+  {"name": "bitbucket", "title": "Bitbucket", "secret_source": "generate", "instructions": "…"}
+]}
 ```
+
+**This is a list, not an object keyed by provider** — key it yourself on `name` if you need lookup. `title` and `instructions` are already localized; render `instructions` as the setup help next to the URL, rather than shipping three hardcoded sets of steps in the frontend.
+
+**`secret_source` decides what the secret field does**, and the three values are not interchangeable:
+
+| value | provider | what the UI must do |
+|---|---|---|
+| `generate` | GitHub, Bitbucket | Leave `secret` out. The panel mints one (64 hex chars) and returns it in full — show a copy button. |
+| `either` | GitLab | Offer the choice, and **make the signing token the default**. GitLab alone mints a signing token itself, and the panel cannot generate one; leaving `secret` out does not fail, it silently falls back to GitLab's *legacy plaintext* secret. Read `webhook.verification` from the response to see which check ended up in force — `signature` (strong) or `token` (plaintext shared value). |
+| `paste` | — | Defined in the contract but returned by no provider today. The provider would mint the secret and `secret` would be required. Handle it if you switch on this field exhaustively. |
 
 ---
 
 ### PUT `/applications/{application}/webhook`
 **Permission:** `app_deployment` (manage)
 
-Configure deploy-on-push.
+Turn deploy-on-push on or off. **This endpoint does not set the repository or branch** — those live on the application itself; sending them here does nothing.
 
 **Request:**
 ```json
-{"provider": "github", "repository": "user/shop", "branch": "main", "secret": "…"}
+{"enabled": true, "provider": "github", "secret": "…", "rotate": false}
 ```
 
-**Response `200`:** `{"application": {"webhook_enabled": true, "webhook_identifier": "abc123"}}`
+| field | rule |
+|---|---|
+| `enabled` | **required**, boolean. Sending only `{"provider": …}` is a `422`. |
+| `provider` | required when `enabled` is true; nullable otherwise. One of the `name` values from `GET /webhook-providers`. Required outright for a public repository, which has no connected account to infer it from. |
+| `secret` | optional, `min:16`, `max:255`. Omit it and the panel generates one — but only on the first configure. On a later call an existing stored secret is **kept**, not regenerated, so a plain on/off toggle never invalidates a webhook the user has already pasted into their provider. |
+| `rotate` | optional boolean. The only way to replace a stored secret without pasting one — mints a new value and invalidates the old, for a secret that leaked. Without it, `enabled: true` on an already-configured webhook is a no-op on the secret. |
 
-The `webhook_identifier` is the unique path segment the provider calls — displayed in the provider's webhook UI as the callback URL.
+The `min:16` on `secret` is enforced with its own message: a four-character "secret" is findable in a few thousand requests, so the field rejects it rather than accepting a value that only looks like protection.
+
+**Response `200`:** the **full application object** (the same shape as `GET /applications/{id}`), not a webhook-only payload. Read the nested `webhook` object from it:
+
+```json
+{"application": {"…": "…", "webhook": {
+  "enabled": true, "provider": "github",
+  "url": "https://panel.example.com/api/webhooks/deploy/abc123",
+  "secret": "…", "verification": "signature",
+  "last_delivered_at": null, "last_delivered_at_human": null
+}}}
+```
+
+There is no `webhook_enabled` or `webhook_identifier` key in the response — the identifier is already baked into `webhook.url`, which is assembled server-side so the frontend never builds the path or gets the host wrong. Show `webhook.url` as the callback URL the user pastes into the provider. `last_delivered_at` is how you tell "configured" from "actually working"; a webhook that has never fired is worth surfacing.
 
 ---
 
