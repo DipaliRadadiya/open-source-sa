@@ -32,8 +32,12 @@ beforeEach(function () {
     $this->files = [
         '/var/log/nginx/logged-site.access.log' => "GET / 200\nGET /about 200\nGET /missing 404\n",
         '/var/log/nginx/logged-site.error.log' => "PHP Warning: something\n",
+        // The unit writes stdout and stderr beside public_html, not under it:
+        // everything under the document root is a URL, and an error log is
+        // not something to publish.
+        '/home/logowner/logged-site/logs/app.log' => "sv-app: listening on 3000\n",
+        '/home/logowner/logged-site/logs/app-error.log' => "Error: connect ECONNREFUSED\n",
     ];
-    $this->journal = "-- Logs begin --\nsv-app: listening on 3000\n";
 });
 
 function fakeLogs(): void
@@ -53,10 +57,6 @@ function fakeLogs(): void
             return array_key_exists($path, $files)
                 ? Process::result(output: $files[$path])
                 : Process::result(errorOutput: 'No such file', exitCode: 1);
-        }
-
-        if ($binary === 'journalctl') {
-            return Process::result(output: test()->journal);
         }
 
         return Process::result(exitCode: 0);
@@ -82,7 +82,7 @@ it('lists the sources this application has, with localized labels', function () 
 it('offers the process output only for an application that runs one', function () {
     fakeLogs();
 
-    // A PHP site has no process — a journal source for it would be a screen
+    // A PHP site has no process — an output source for it would be a screen
     // about nothing.
     expect(collect($this->actingAs($this->admin)->getJson(logUrl())->json('logs'))->pluck('key'))
         ->not->toContain('application');
@@ -93,8 +93,14 @@ it('offers the process output only for an application that runs one', function (
 
     // For a Node site the web-server logs describe the proxy, so without this
     // the screen would be confidently useless when it matters most.
+    //
+    // Two sources, both files in the site's own directory rather than one
+    // journal stream: "what did it print" and "what went wrong" are different
+    // questions, and merging them buries the second in the first.
     expect($logs->pluck('key'))->toContain('application')
-        ->and($logs->firstWhere('key', 'application')['kind'])->toBe('journal');
+        ->toContain('application_error')
+        ->and($logs->firstWhere('key', 'application')['kind'])->toBe('file')
+        ->and($logs->firstWhere('key', 'application_error')['kind'])->toBe('file');
 });
 
 it('reads a log', function () {
@@ -120,12 +126,22 @@ it('filters literally, not as a regex', function () {
         ->toBe([]);
 });
 
-it('reads the process output from the journal', function () {
+it('reads the process output from the site\'s own log directory', function () {
     $this->application->update(['start_command' => 'node server.js']);
     fakeLogs();
 
     expect($this->actingAs($this->admin)->getJson(logUrl('/application'))->json('log.lines'))
         ->toContain('sv-app: listening on 3000');
+});
+
+it('keeps the process\'s errors in a source of their own', function () {
+    // Merged into stdout, a stack trace is one line among thousands of
+    // request logs; separate, it is the first thing on the screen.
+    $this->application->update(['start_command' => 'node server.js']);
+    fakeLogs();
+
+    expect($this->actingAs($this->admin)->getJson(logUrl('/application_error'))->json('log.lines'))
+        ->toContain('Error: connect ECONNREFUSED');
 });
 
 it('answers calmly when the file does not exist yet', function () {

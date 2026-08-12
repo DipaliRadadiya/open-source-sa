@@ -5,6 +5,7 @@ return [
         'access' => 'Journal d\'accès',
         'error' => 'Journal d\'erreurs',
         'application' => 'Sortie de l\'application',
+        'application_error' => 'Erreurs de l\'application',
         'waf_detect' => 'Détections du pare-feu',
     ],
 

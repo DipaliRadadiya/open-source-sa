@@ -66,6 +66,12 @@ class ProcessSupervisor
     {
         $context = ['feature' => 'application', 'op' => 'unit_write', 'application' => $application->id];
 
+        // Before the unit, not after: systemd creates the log *files* for
+        // `append:` but not the directory holding them, and a unit whose
+        // StandardOutput cannot be opened fails to start with an error that
+        // says nothing about a missing directory.
+        $this->ensureLogDirectory($application);
+
         $written = $this->files->put($this->unitPath($application), $this->render($application, $documentRoot), $context);
 
         if ($written->failed()) {
@@ -115,6 +121,12 @@ class ProcessSupervisor
         $this->systemctl('stop', $application);
         $this->systemctl('disable', $application);
         $this->files->delete($this->unitPath($application), [
+            'feature' => 'application', 'op' => 'unit_remove', 'application' => $application->id,
+        ]);
+        // The logs themselves go with the site's directory; this is only the
+        // rotation policy, which would otherwise be left pointing at a path
+        // that no longer exists and warn on every logrotate run.
+        $this->files->delete($this->logrotatePath($application), [
             'feature' => 'application', 'op' => 'unit_remove', 'application' => $application->id,
         ]);
         $this->daemonReload();
@@ -193,11 +205,97 @@ class ProcessSupervisor
         )->ok;
     }
 
+    /**
+     * Create the log directory, owned by the site, and give it a logrotate
+     * policy.
+     *
+     * The rotation is not optional. journald vacuumed itself; a plain file
+     * does not, and this one sits on the disk every hosted site shares — an
+     * application logging a stack trace per request would fill it and take
+     * down every site on the box, which is the failure the upload guard
+     * exists to prevent and would be silly to reintroduce here.
+     *
+     * `copytruncate` specifically: systemd opens these files once and holds
+     * the descriptor for the life of the process. A normal rotate renames the
+     * file and leaves systemd writing to an inode nobody can read any more,
+     * so the logs simply stop appearing with nothing to explain why.
+     */
+    private function ensureLogDirectory(Application $application): void
+    {
+        $dir = self::logDir($application);
+        $user = $application->systemUser->username;
+        $context = ['feature' => 'application', 'op' => 'unit_logs', 'application' => $application->id];
+
+        $this->serverOps->run(['mkdir', '-p', $dir], $context);
+        $this->serverOps->run(['chown', "{$user}:{$user}", $dir], $context);
+        // Readable by the owner only: an application's own log is as sensitive
+        // as whatever it decided to print, which is not a decision the panel
+        // gets to audit.
+        $this->serverOps->run(['chmod', '0750', $dir], $context);
+
+        $this->files->put($this->logrotatePath($application), $this->renderLogrotate($application), $context);
+    }
+
+    public function logrotatePath(Application $application): string
+    {
+        return '/etc/logrotate.d/sv-app-'.$application->id;
+    }
+
+    private function renderLogrotate(Application $application): string
+    {
+        $user = $application->systemUser->username;
+        $dir = self::logDir($application);
+
+        return <<<CONF
+        # Managed by the panel. Rewritten whenever the application's unit is.
+        {$dir}/*.log {
+            daily
+            rotate 14
+            maxsize 50M
+            missingok
+            notifempty
+            compress
+            delaycompress
+            # systemd holds these open for the life of the process — a rename
+            # would leave it writing to an unreachable inode.
+            copytruncate
+            # The files live in the site's own tree and belong to it, so
+            # logrotate has to act as that user rather than root.
+            su {$user} {$user}
+            create 0640 {$user} {$user}
+        }
+
+        CONF;
+    }
+
+    /**
+     * Where this application's stdout and stderr are written.
+     *
+     * Beside `public_html`, never inside it: everything under the document
+     * root is reachable as a URL, and an error log is the last thing to
+     * publish. Inside the site rather than /var/log so it belongs to the
+     * application — visible in the file manager, reachable over SFTP, and
+     * gone when the site is.
+     */
+    public static function logDir(Application $application): string
+    {
+        return $application->rootPath().'/logs';
+    }
+
+    /** @return array<string, string> the log files this unit writes, by key. */
+    public static function logFiles(Application $application): array
+    {
+        $dir = self::logDir($application);
+
+        return ['application' => "{$dir}/app.log", 'application_error' => "{$dir}/app-error.log"];
+    }
+
     private function render(Application $application, string $documentRoot): string
     {
         return View::make('server.units.node', [
             'application' => $application,
             'documentRoot' => $documentRoot,
+            'logDir' => self::logDir($application),
             'user' => $application->systemUser->username,
             'exec' => $this->execStart($application),
             'path' => $this->path($application),

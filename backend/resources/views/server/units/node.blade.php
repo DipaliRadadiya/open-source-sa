@@ -48,10 +48,20 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=full
 ProtectHome=read-only
-ReadWritePaths={{ $documentRoot }}
+{{-- The log directory sits beside public_html, not under it, so it needs
+     naming here in its own right: ProtectHome=read-only makes the rest of
+     /home unwritable, and systemd cannot append to a file it cannot write. --}}
+ReadWritePaths={{ $documentRoot }} {{ $logDir }}
 
-StandardOutput=journal
-StandardError=journal
+{{-- Files in the site's own directory rather than the journal, so the logs
+     live with the application they belong to and an operator can reach them
+     over SFTP without root. Kept out of public_html: anything under the
+     document root is a URL, and an error log is not something to publish.
+
+     systemd holds these files open for the life of the process, so logrotate
+     must use copytruncate — see LogRotation, which writes that config. --}}
+StandardOutput=append:{{ $logDir }}/app.log
+StandardError=append:{{ $logDir }}/app-error.log
 SyslogIdentifier=sv-app-{{ $application->id }}
 
 [Install]

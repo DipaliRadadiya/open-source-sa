@@ -127,7 +127,10 @@ return [
         // array in install.sh's configure_sudoers().
         'binaries' => [
             'apt-get', 'apt-cache', 'dpkg-query',
-            'systemctl', 'journalctl',
+            // systemd-run puts the panel update in a transient unit of its
+            // own, so restarting the panel's services partway through the
+            // update does not kill the update — see PanelUpdateRunner.
+            'systemctl', 'journalctl', 'systemd-run',
             'useradd', 'userdel', 'usermod', 'groupadd',
             'chpasswd', 'gpasswd', 'getent', 'id',
             'tee', 'mkdir', 'chown', 'chmod', 'rm',

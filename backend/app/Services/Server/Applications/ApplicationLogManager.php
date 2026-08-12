@@ -131,7 +131,14 @@ class ApplicationLogManager
         // the journal. Without this source the screen would be confidently
         // useless at exactly the moment it is needed.
         if ($this->processes->runs($application)) {
-            $catalog[] = ['key' => 'application', 'kind' => 'journal', 'path' => ''];
+            // Files in the site's own directory, not the journal: the unit
+            // writes stdout and stderr there so the logs belong to the
+            // application rather than to the host, and stderr is kept apart
+            // because "what did it print" and "what went wrong" are different
+            // questions and mixing them buries the second in the first.
+            foreach (ProcessSupervisor::logFiles($application) as $key => $path) {
+                $catalog[] = ['key' => $key, 'kind' => 'file', 'path' => $path];
+            }
         }
 
         // The firewall's detect-mode log: the requests that *would* have been

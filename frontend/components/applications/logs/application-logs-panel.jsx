@@ -16,7 +16,7 @@ import { apiMessage } from "@/lib/api/error-message";
 const POLL_MS = 3000;
 // Access logs are a firehose on a busy site — open them paused; error and the
 // app's own output are the ones you usually want tailing.
-const AUTO_FOLLOW_KEYS = new Set(["error", "application"]);
+const AUTO_FOLLOW_KEYS = new Set(["error", "application", "application_error"]);
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
 
 // Access lines carry an HTTP status (color by 2xx/3xx/4xx/5xx); everything else
@@ -36,9 +36,16 @@ export function ApplicationLogsPanel({
   const searchParams = useSearchParams();
 
   const source = sources.find((s) => s.key === selected) ?? null;
-  // A journal "application" source only exists on a site that runs a process;
-  // when it does, access/error describe the reverse proxy, not the app.
-  const hasAppOutput = sources.some((s) => s.kind === "journal");
+  // An "application" source only exists on a site that runs a process; when it
+  // does, access/error describe the reverse proxy, not the app.
+  //
+  // Keyed on the source key, not its kind: these used to be the only journal
+  // sources, so `kind === "journal"` was a workable stand-in until the unit
+  // started writing to files in the site's own directory — at which point the
+  // test silently stopped matching anything and the hint explaining that
+  // access/error are the *proxy's* logs stopped appearing on exactly the sites
+  // that need it.
+  const hasAppOutput = sources.some((s) => s.key.startsWith("application"));
 
   const [lines, setLines] = useState(initial?.log?.lines ?? []);
   const [status, setStatus] = useState(initial?.status ?? "ok");

@@ -71,7 +71,11 @@ describe('the unit', function () {
 
         app(ProcessSupervisor::class)->apply(nodeApp(), '/home/appuser/api.test');
 
-        $unit = $written[0] ?? '';
+        // Picked by content, not position: applying a unit also writes a
+        // logrotate policy for the log files it now appends to, and indexing
+        // into the list made this assert against whichever happened to be
+        // written first.
+        $unit = collect($written)->first(fn (string $body): bool => str_contains($body, '[Unit]')) ?? '';
 
         expect($unit)
             ->toContain('User=appuser')
