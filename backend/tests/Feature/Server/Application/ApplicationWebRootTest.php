@@ -113,11 +113,16 @@ it('creates the new directory, re-renders the vhost and reloads', function () {
 
     // The directory has to exist before the vhost points at it — otherwise
     // every request is a 403 that looks like a permissions bug.
-    expect(webRootRan(fn ($args) => ($args[0] ?? '') === 'mkdir'
-        && in_array('/home/siteowner/blog.test/public/.panel', $args, true)))->toBeTrue();
-
+    // Slug-based and under public_html — the layout the provisioner has
+    // always written. These asserted `{home}/{domain}/{web_root}`, which is
+    // the string the PHP screen used to build and no directory that exists.
     expect(webRootRan(fn ($args) => ($args[0] ?? '') === 'chown'
-        && in_array('/home/siteowner/blog.test/public', $args, true)))->toBeTrue();
+        && in_array('/home/siteowner/blog/public_html/public', $args, true)))->toBeTrue();
+
+    // No `.panel` inside the new root: the panel's own files live above the
+    // document root now, so moving the root does not move them.
+    expect(webRootRan(fn ($args) => ($args[0] ?? '') === 'mkdir'
+        && in_array('/home/siteowner/blog/public_html/public', $args, true)))->toBeTrue();
 
     expect(webRootRan(fn ($args) => ($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t'))->toBeTrue();
 });

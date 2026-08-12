@@ -70,8 +70,6 @@ class WebRootManager
             return;
         }
 
-        $previousCredentials = $this->basicAuth->credentialsPath($application);
-
         $application->web_root = $next;
 
         $documentRoot = $this->provisioner->documentRoot($application);
@@ -81,8 +79,9 @@ class WebRootManager
         // 403, which looks exactly like a permissions bug and is not one.
         $this->prepareDirectory($application, $documentRoot);
 
-        // Written while the old file is still in place, so whichever config is
-        // live at any moment has its credential file present.
+        // The credential file no longer moves with the document root — it
+        // lives above it now — so this is only here to guarantee it exists
+        // before the vhost that references it goes live.
         $this->basicAuth->publish($application);
 
         // The pool before the vhost, for the same reason isolating a site
@@ -114,13 +113,6 @@ class WebRootManager
         // next start, and the old credential file must outlive the config that
         // referenced it.
         $this->republishUnit($application, $documentRoot);
-
-        if ($application->basic_auth_enabled && $previousCredentials !== $this->basicAuth->credentialsPath($application)) {
-            $this->serverOps->run(
-                ['rm', '-f', $previousCredentials],
-                $this->context($application, 'web_root_remove_stale_credentials'),
-            );
-        }
     }
 
     /**
@@ -145,8 +137,11 @@ class WebRootManager
     {
         $user = $application->systemUser?->username;
 
+        // Just the document root now. `.panel/` used to be created here
+        // because the credential file lived inside it; it lives above the
+        // document root, so moving the root no longer moves it.
         $created = $this->serverOps->run(
-            ['mkdir', '-p', $documentRoot.'/.panel'],
+            ['mkdir', '-p', $documentRoot],
             $this->context($application, 'web_root_mkdir'),
         );
 
@@ -162,7 +157,7 @@ class WebRootManager
         // `chown -R` over a directory this call did not create is a bigger
         // claim than moving a web root should make.
         $owned = $this->serverOps->run(
-            ['chown', "{$user}:{$user}", $documentRoot, $documentRoot.'/.panel'],
+            ['chown', "{$user}:{$user}", $documentRoot],
             $this->context($application, 'web_root_chown'),
         );
 

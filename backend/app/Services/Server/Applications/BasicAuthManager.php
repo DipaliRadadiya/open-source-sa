@@ -14,13 +14,12 @@ use Illuminate\Support\Facades\Hash;
  * Whole-site HTTP Basic Auth — one username, one password per application,
  * a single shared credential rather than a table of named users.
  *
- * The credential file lives at `{documentRoot}/.panel/.htpasswd`. Note this
- * is NOT the same `.panel/` as PHP sessions and the PHP error log, which sit
- * at `{appRoot}/.panel/` — outside the served directory. This one is inside
- * it, and is only safe because every vhost template denies dotfile paths.
- * The file-editor
- * backups — already outside every vhost's served paths (the dotfile deny
- * rule every template carries), so nothing new has to keep it hidden.
+ * The credential file lives at `{appRoot}/.panel/.htpasswd` — the same
+ * `.panel/` as PHP sessions and the PHP error log, above the served
+ * directory. It has to be 0644 so the web server's worker can read it at
+ * request time, so keeping it out of the document root is what actually
+ * makes it unreachable over HTTP; a vhost deny rule is a second line, not
+ * the first. See `Application::basicAuthPath()`.
  *
  * Enable/disable/change-credential all funnel through the same apply-then-
  * test-then-reload sequence `ApplicationProvisioner::disable()`/`enable()`
@@ -38,6 +37,17 @@ class BasicAuthManager
     ) {}
 
     public function credentialsPath(Application $application): string
+    {
+        return $application->basicAuthPath();
+    }
+
+    /**
+     * Where the file used to live, before it moved above the webroot.
+     *
+     * Sites protected before that change still have a world-readable copy
+     * sitting in their document root; writing the new one removes it.
+     */
+    private function legacyCredentialsPath(Application $application): string
     {
         return $this->provisioner->documentRoot($application).'/.panel/.htpasswd';
     }
@@ -177,6 +187,17 @@ class BasicAuthManager
             ['chmod', '0644', $path],
             $this->context($application, 'basic_auth_chmod'),
         );
+
+        // Only after the new one is in place: the old file must outlive the
+        // config still pointing at it, never the other way round.
+        $legacy = $this->legacyCredentialsPath($application);
+
+        if ($legacy !== $path) {
+            $this->serverOps->run(
+                ['rm', '-f', $legacy],
+                $this->context($application, 'basic_auth_remove_legacy'),
+            );
+        }
     }
 
     private function applyVhost(Application $application): ServerOpsResult

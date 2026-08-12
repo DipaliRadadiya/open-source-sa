@@ -4,6 +4,7 @@ use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Services\Panel\UpdateScript;
+use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\SiteConfigResyncer;
 use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
@@ -119,9 +120,17 @@ it('skips a site whose config is already current', function () {
     $site = makeSite('one.test');
 
     // Feed back exactly what the renderer produces, so nothing has drifted.
+    // Rendered against the provisioner's own document root, not a
+    // hand-written one: the resyncer uses that, so a literal here was
+    // comparing the shipped config against a config for a different path and
+    // could only ever report drift.
     $current = app(WebServerManager::class)
         ->driver()
-        ->renderConfig($site->load('systemUser'), '/home/siteowner/one.test');
+        ->renderConfig(
+            $site->load('systemUser'),
+            app(ApplicationProvisioner::class)
+                ->documentRoot($site->load('systemUser')),
+        );
 
     fakeResyncServer(onDisk: $current);
 

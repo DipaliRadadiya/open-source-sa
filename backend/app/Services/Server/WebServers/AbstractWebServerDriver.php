@@ -29,6 +29,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      */
     public function apply(Application $application, string $documentRoot): ServerOpsResult
     {
+        $this->ensurePanelDirectory($application);
+
         $written = $this->files->put(
             $this->configPath($application),
             $this->renderConfig($application, $documentRoot),
@@ -43,6 +45,22 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             $this->configPath($application),
             $this->enabledPath($application),
             ['feature' => 'application', 'op' => 'enable_config', 'application' => $application->id],
+        );
+    }
+
+    /**
+     * The rendered config can name files inside `.panel/` — the WAF detect
+     * log, the Basic Auth credential — and nginx refuses to start when a log
+     * directory does not exist. Nothing created this at provision time, so
+     * turning WAF detect mode on for a site that had never had its web root
+     * moved wrote a config that could not pass `nginx -t`, and the failure
+     * looked like a bad ruleset rather than a missing directory.
+     */
+    protected function ensurePanelDirectory(Application $application): void
+    {
+        $this->serverOps->run(
+            ['mkdir', '-p', $application->panelPath()],
+            ['feature' => 'application', 'op' => 'ensure_panel_dir', 'application' => $application->id],
         );
     }
 
@@ -173,11 +191,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'appName' => 'sv-app-'.$application->id,
             // Null when off, so every template gates the whole block behind
             // one `@if` instead of re-checking `basic_auth_enabled` itself.
-            // The credential file lives inside `.panel/`, which every profile
-            // already denies serving over HTTP — nothing new to hide here.
+            // The path comes from the model rather than being rebuilt here:
+            // this copy and BasicAuthManager's had to agree, and when the
+            // file moved above the webroot only one of them would have.
             'basicAuth' => $application->basic_auth_enabled ? [
                 'realm' => 'sv-app-'.$application->id,
-                'htpasswdPath' => $documentRoot.'/.panel/.htpasswd',
+                'htpasswdPath' => $application->basicAuthPath(),
             ] : null,
             // A single regex-ready, alternation-joined string — already
             // escaped — or null when the policy blocks nothing. Resolved
@@ -220,7 +239,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'categories' => $categories,
             'exceptions' => $exceptions,
             'customRules' => $customRules,
-            'detectLogPath' => $documentRoot.'/.panel/waf-detect.log',
+            'detectLogPath' => $application->panelPath().'/waf-detect.log',
         ];
     }
 

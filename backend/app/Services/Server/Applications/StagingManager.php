@@ -224,7 +224,10 @@ class StagingManager
             return;
         }
 
-        $directory = $this->provisioner->documentRoot($production).'/.panel/staging-backups';
+        // Above the document root: this is a full dump of the production
+        // database, and inside the served directory the only thing between it
+        // and the internet is a vhost deny rule.
+        $directory = $production->panelPath().'/staging-backups';
         $path = $directory.'/pre-push-'.now()->format('Ymd-His').'.sql';
 
         $this->serverOps->run(['mkdir', '-p', $directory], ['feature' => 'application', 'op' => 'staging_safety_dir', 'application' => $production->id]);

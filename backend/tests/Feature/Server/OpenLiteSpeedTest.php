@@ -463,7 +463,13 @@ describe('the driver', function () {
         // also what `restrained 1` confines the vhost to, so a domain-named
         // one put the document root outside the restraint — and moved a live
         // site's logs every time someone changed its domain.
-        expect(collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'mkdir'))
+        // Every mkdir, not just the first: apply() also guarantees the
+        // `.panel/` directory, so picking one command and hoping it is the
+        // right one makes this assertion depend on call order.
+        expect(collect($runs)->pluck('command')
+            ->filter(fn ($c) => ($c[0] ?? '') === 'mkdir')
+            ->flatten()
+            ->all())
             ->toContain('/home/shopuser/shop/logs');
     });
 

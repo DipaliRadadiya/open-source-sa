@@ -327,4 +327,42 @@ class Application extends Model
         // every one of its sites would then share.
         return $this->slug ? "{$home}/{$this->slug}" : $home;
     }
+
+    /**
+     * The HTTP Basic Auth credential file.
+     *
+     * Under the app root, deliberately **not** under the document root. The
+     * file has to be 0644 for the web server's worker to read it at request
+     * time, so inside the served directory the only thing standing between a
+     * bcrypt hash and the public internet is the vhost's dotfile deny rule —
+     * which OpenLiteSpeed did not apply to `.panel`. Above the webroot it is
+     * unreachable over HTTP no matter what any vhost says.
+     *
+     * It also stops the path moving when `web_root` changes, which used to
+     * need the credential file relocating in step or protection failed.
+     *
+     * Both the manager that writes it and the driver that points the vhost at
+     * it read this, because they each built the string themselves and would
+     * otherwise have to be changed in lockstep forever.
+     */
+    public function basicAuthPath(): string
+    {
+        return $this->panelPath().'/.htpasswd';
+    }
+
+    /**
+     * Where the panel keeps its own bookkeeping for this site.
+     *
+     * Above the document root, never inside it. Everything that lands here is
+     * something the panel wrote and no visitor should ever fetch: the Basic
+     * Auth credential, PHP sessions, the PHP error log, the WAF detect log,
+     * and the database dump taken before a staging push. Inside the served
+     * directory the only thing hiding any of it is the vhost's dotfile deny
+     * rule — one line, per web server, that OpenLiteSpeed did not apply to
+     * this directory at all.
+     */
+    public function panelPath(): string
+    {
+        return $this->rootPath().'/.panel';
+    }
 }

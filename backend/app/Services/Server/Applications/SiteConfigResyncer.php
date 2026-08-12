@@ -44,6 +44,7 @@ class SiteConfigResyncer
         private ApplicationProvisioner $provisioner,
         private ManagedFile $files,
         private ServerOps $serverOps,
+        private BasicAuthManager $basicAuth,
     ) {}
 
     /**
@@ -73,6 +74,16 @@ class SiteConfigResyncer
             // claiming the same names, and a web server picking one — so the
             // stale file goes first, while its name is still derivable.
             $this->removeLegacyConfig($driver, $application);
+
+            // Before the vhost is rendered, never after. The credential file
+            // moved above the document root, so a site protected before that
+            // change still has it in the old place — and the config about to
+            // be written points at the new one. Rendering first would leave a
+            // protected site pointing at a file that is not there, which fails
+            // closed: every visitor gets a 500 until someone re-saves the
+            // password. Rewritten from the stored hash, so it needs nothing
+            // from the user.
+            $this->basicAuth->publish($application);
 
             $path = $driver->configPath($application);
             $previous = $this->read($path);

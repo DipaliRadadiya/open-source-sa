@@ -104,6 +104,11 @@ class OlsDriver extends AbstractWebServerDriver
     {
         $context = ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id];
 
+        // This driver overrides apply(), so it does not inherit the base
+        // class's guarantee that `.panel/` exists before a config naming it
+        // goes live.
+        $this->ensurePanelDirectory($application);
+
         // The config directory, and the log directory the vhost names.
         // OpenLiteSpeed does not create the latter — it silently falls back to
         // the server-wide log, so a site's own errors go somewhere nobody

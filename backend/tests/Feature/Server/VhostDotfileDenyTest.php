@@ -4,6 +4,8 @@ use App\Models\Application;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\WebServers\WebServerManager;
+use Illuminate\Support\Facades\Process;
 
 /**
  * No vhost may serve the panel's own bookkeeping directory.
@@ -101,6 +103,44 @@ it('keeps the ACME challenge path reachable while denying dotfiles', function ()
             expect($source)->toContain('(?!well-known)');
         }
     }
+});
+
+it('keeps everything the panel writes outside the served directory', function () {
+    // One rule, all of it: the Basic Auth credential, PHP sessions, the PHP
+    // error log, the WAF detect log and the pre-push database dump. Inside
+    // the document root each of these is one vhost deny rule away from being
+    // downloadable, and that rule is per-web-server — OpenLiteSpeed's did not
+    // cover `.panel` at all.
+    $documentRoot = app(ApplicationProvisioner::class)->documentRoot($this->application);
+
+    expect($this->application->panelPath())->not->toStartWith($documentRoot)
+        ->and($this->application->basicAuthPath())->not->toStartWith($documentRoot)
+        ->and($this->application->basicAuthPath())->toStartWith($this->application->panelPath())
+        // Still the site's own directory — above the webroot, not outside
+        // the site.
+        ->and($this->application->panelPath())->toStartWith($this->application->rootPath());
+});
+
+it('creates the bookkeeping directory before a config that names it goes live', function () {
+    // nginx refuses to start when a log directory is missing, so a vhost
+    // naming the WAF detect log has to be preceded by the mkdir. Nothing
+    // created this at provision time, which made WAF detect mode unturn-on-able
+    // on a site whose web root had never been moved.
+    $ran = [];
+
+    Process::fake(function ($process) use (&$ran) {
+        $ran[] = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        return Process::result(exitCode: 0);
+    });
+
+    app(WebServerManager::class)
+        ->driver()
+        ->apply($this->application, app(ApplicationProvisioner::class)->documentRoot($this->application));
+
+    $mkdirs = collect($ran)->filter(fn (array $c): bool => ($c[0] ?? '') === 'mkdir')->flatten();
+
+    expect($mkdirs)->toContain($this->application->panelPath());
 });
 
 it('keeps PHP sessions and the error log outside the served directory', function () {
