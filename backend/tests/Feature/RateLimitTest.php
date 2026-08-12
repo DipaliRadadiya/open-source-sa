@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Application;
+use App\Providers\AppServiceProvider;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -89,5 +93,48 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/applications/{application}/files/uploads',
         'api/applications/{application}/files/uploads/{uploadId}',
         'api/applications/{application}/files/uploads/{uploadId}/finalize',
+        // Progress feeds. Watched screens poll these for as long as the work
+        // runs, so sharing one budget with the rest of the panel meant a long
+        // install ended in a 429 that read as the install having failed.
+        'api/applications/{application}',
+        'api/applications/{application}/sidebar',
+        'api/applications/{application}/deployments/{deployment}',
+        'api/server/sync/{run}',
+        'api/admin/panel-update/{panelUpdate}',
     ]);
+});
+
+it('keys the progress limiter on identity, not on the record being polled', function () {
+    $application = Application::factory()->create(['status' => 'provisioning']);
+
+    $scope = function () use ($application): string {
+        $request = Request::create("/api/applications/{$application->id}");
+        $route = new RoutingRoute('GET', '/api/applications/{application}', fn () => null);
+        $route->bind($request);
+        $route->setParameter('application', $application->fresh());
+        $request->setRouteResolver(fn () => $route);
+
+        $method = new ReflectionMethod(AppServiceProvider::class, 'routeScope');
+
+        return $method->invoke(app(AppServiceProvider::class, ['app' => app()]), $request);
+    };
+
+    $before = $scope();
+
+    // Exactly what provisioning does, and the reason this test exists: the key
+    // used to be built by interpolating the bound model, which is `toJson()` in
+    // string context. Every status change produced a different key, so every
+    // poll opened a fresh bucket and the limit never engaged — a limiter that
+    // reads like protection and is not one.
+    $legacyBefore = '1|'.$application->fresh();
+
+    $application->update(['status' => 'active', 'steps' => ['install' => 'done']]);
+
+    expect($scope())->toBe($before)
+        // Asserted so this test cannot quietly become vacuous: the old
+        // expression really did produce a different key for the same record,
+        // which is the whole defect. If a future change made a stringified
+        // model stable, this line fails and the test above stops proving
+        // anything worth proving.
+        ->and('1|'.$application->fresh())->not->toBe($legacyBefore);
 });

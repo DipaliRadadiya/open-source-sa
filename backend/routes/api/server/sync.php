@@ -30,5 +30,9 @@ Route::delete('/server/sync/ignores/{ignore}', [ServerSyncController::class, 'un
 
 // After the static paths above, so "latest" and "ignores" are never read as
 // a run id.
+// The line-by-line feed, polled from a cursor for as long as the run takes —
+// so it is bounded by `throttle:progress` on its own rather than sharing the
+// global budget with whatever else the user is doing while they watch.
 Route::get('/server/sync/{run}', [ServerSyncController::class, 'show'])
-    ->middleware('permission:sync');
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:sync', 'throttle:progress']);

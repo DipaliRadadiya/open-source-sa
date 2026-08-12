@@ -20,6 +20,10 @@ Route::post('/panel-update', [PanelUpdateController::class, 'store'])
     ->middleware('throttle:3,1');
 
 // Polled every few seconds while the progress bar moves, so it is deliberately
-// cheap — no release-host call, just the row and its state file.
+// cheap — no release-host call, just the row and its state file. On
+// `throttle:progress` and outside the global limiter for the same reason as the
+// other progress feeds: an update is the one time the panel is least able to
+// afford telling its own admin to slow down.
 Route::get('/panel-update/{panelUpdate}', [PanelUpdateController::class, 'status'])
-    ->middleware('throttle:120,1');
+    ->withoutMiddleware('throttle:api')
+    ->middleware('throttle:progress');

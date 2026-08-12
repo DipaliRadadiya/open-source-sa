@@ -1623,6 +1623,13 @@ return [
     'rate_limits' => [
         'api' => (int) env('RATE_LIMIT_API', 180),
         'guest' => (int) env('RATE_LIMIT_GUEST', 20),
+        // Progress-polling endpoints only, and they are exempt from the `api`
+        // budget above rather than sharing it — so this number stands on its
+        // own instead of being capped by the lower of the two. High on purpose:
+        // these are watched screens polling for as long as a job runs, and the
+        // thing being prevented is a panel telling its own user that watching
+        // an install too closely is an attack.
+        'progress' => (int) env('RATE_LIMIT_PROGRESS', 600),
     ],
 
 ];

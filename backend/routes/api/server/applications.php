@@ -25,10 +25,18 @@ Route::get('/applications', [ApplicationController::class, 'index'])->middleware
 Route::post('/applications', [ApplicationController::class, 'store'])->middleware('permission:application,manage');
 Route::get('/applications/port-check', [ApplicationController::class, 'portCheck'])
     ->middleware('permission:application');
+// The two the app screen polls while provisioning runs, which is why they drop
+// the global limiter rather than sharing it: a per-route throttle stacks with
+// `throttle:api` instead of replacing it, so polling used to spend the same
+// budget as everything else the user was doing and a long install ended in a
+// 429 that looked like the install had failed. `throttle:progress` is what
+// bounds them now.
 Route::get('/applications/{application}', [ApplicationController::class, 'show'])
-    ->middleware(['permission:application', 'throttle:status']);
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:application', 'throttle:progress']);
 Route::get('/applications/{application}/sidebar', [ApplicationController::class, 'sidebar'])
-    ->middleware(['permission:application', 'throttle:status']);
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:application', 'throttle:progress']);
 Route::put('/applications/{application}', [ApplicationController::class, 'update'])->middleware('permission:application,manage');
 Route::post('/applications/{application}/provision', [ApplicationController::class, 'provision'])->middleware('permission:application,manage');
 // Deploy is the Deployment screen's action, so it is gated by that screen's
@@ -104,8 +112,10 @@ Route::get('/applications/{application}/deployments', [DeploymentController::cla
     ->middleware('permission:app_deployment');
 Route::post('/applications/{application}/deployments', [DeploymentController::class, 'store'])
     ->middleware('permission:app_deployment,manage');
+// Polled line-by-line while a deploy runs — same reasoning as the two above.
 Route::get('/applications/{application}/deployments/{deployment}', [DeploymentController::class, 'show'])
-    ->middleware('permission:app_deployment');
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:app_deployment', 'throttle:progress']);
 Route::post('/applications/{application}/deployments/{deployment}/redeploy', [DeploymentController::class, 'redeploy'])
     ->middleware('permission:app_deployment,manage');
 Route::put('/applications/{application}/deployment-settings', [DeploymentController::class, 'updateSettings'])

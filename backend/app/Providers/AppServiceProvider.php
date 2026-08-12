@@ -28,6 +28,7 @@ use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
 use App\Services\Server\Sync\Discoverers\WorkerDiscoverer;
 use App\Services\Server\Sync\ServerSync;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -121,22 +122,30 @@ class AppServiceProvider extends ServiceProvider
             ? Limit::perMinute((int) config('server.rate_limits.api', 180))->by($request->user()->id)
             : Limit::perMinute((int) config('server.rate_limits.guest', 20))->by($request->ip()));
 
-        // Status-polling endpoints: a per-user-per-app bucket, so one app's
-        // polling cannot starve another app's.
+        // Progress-polling endpoints — provisioning, deployments, sync runs,
+        // panel updates. These are the screens someone sits and watches, so
+        // they poll for as long as the work takes and the work can take
+        // minutes. They are exempt from the global limiter (see the routes),
+        // and this is the budget that actually bounds them.
         //
-        // Note what this does NOT do, because the comment here used to claim
-        // it: polling still consumes the global `api` budget. That limiter is
-        // prepended to every API route in bootstrap/app.php and a second
-        // throttle stacks with it rather than replacing it — escaping it takes
-        // an explicit `withoutMiddleware('throttle:api')`, as the deploy
-        // webhook and the upload endpoints do. Left in place here deliberately:
-        // these are ordinary read endpoints, and exempting them would mean the
-        // global limit bounds nothing on the busiest routes in the panel.
+        // Deliberately generous: the failure it prevents is a user watching a
+        // long install get told "Too Many Attempts" by their own panel, which
+        // reads as the install having broken. These are cheap reads of one row.
         //
-        // 120/min per app is ~2/sec — enough for 5s polling intervals.
-        RateLimiter::for('status', fn (Request $request) => $request->user()
-            ? Limit::perMinute(120)->by($request->user()->id.'|'.$request->route('application'))
-            : Limit::perMinute(20)->by($request->ip()));
+        // The key is per user AND per polled resource, so watching one
+        // deployment cannot exhaust the budget for another.
+        //
+        // It is built from route parameter KEYS, not the parameters themselves.
+        // This previously interpolated the bound model directly — and a model
+        // in string context is `toJson()`, so the bucket key contained the
+        // whole record. During provisioning `status` and `steps` change on
+        // almost every poll, so every request landed in a brand-new bucket and
+        // the limit never engaged at all. A limiter that silently stops
+        // limiting is worse than no limiter, because it still reads like one.
+        RateLimiter::for('progress', fn (Request $request) => $request->user()
+            ? Limit::perMinute((int) config('server.rate_limits.progress', 600))
+                ->by($request->user()->id.'|'.$this->routeScope($request))
+            : Limit::perMinute((int) config('server.rate_limits.guest', 20))->by($request->ip()));
 
         // Deploy webhooks: keyed on the webhook, not the caller's IP. A provider
         // delivers from shared egress, so an IP bucket would have one busy
@@ -145,5 +154,25 @@ class AppServiceProvider extends ServiceProvider
         // any real push rate and far below what would keep the queue busy.
         RateLimiter::for('webhook', fn (Request $request) => Limit::perMinute(60)
             ->by((string) $request->route('identifier')));
+    }
+
+    /**
+     * A stable identifier for whatever the route is about.
+     *
+     * Route parameters are resolved models by the time a limiter runs, and a
+     * model cast to string is its entire JSON — which changes as the record
+     * changes, so a key built that way silently reopens the bucket. Only the
+     * primary key is taken, which is the part that identifies the thing and
+     * does not move while it is being polled.
+     */
+    private function routeScope(Request $request): string
+    {
+        $parameters = $request->route()?->parameters() ?? [];
+
+        return collect($parameters)
+            ->map(fn (mixed $parameter): string => $parameter instanceof Model
+                ? $parameter::class.':'.$parameter->getKey()
+                : (string) $parameter)
+            ->implode('|');
     }
 }
