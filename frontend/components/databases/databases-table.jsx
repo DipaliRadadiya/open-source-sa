@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ChevronRight, Database, Plus, SearchX, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -115,7 +116,11 @@ function CreatedCell({ row }) {
 
 function RowActionsCell({ row, table }) {
   return (
-    <RowActions database={row.original} onDelete={table.options.meta.onDelete} />
+    <RowActions
+      database={row.original}
+      onDelete={table.options.meta.onDelete}
+      canManage={table.options.meta.canManage}
+    />
   );
 }
 
@@ -124,7 +129,7 @@ function RowActionsCell({ row, table }) {
  * reveal one item costs a click and hides the only thing you can do. When a
  * second action arrives (export is the likely one) this goes back to a menu.
  */
-function RowActions({ database, onDelete }) {
+function RowActions({ database, onDelete, canManage }) {
   const t = useTranslations("databases");
   const href = `/databases/${database.id}`;
 
@@ -139,6 +144,11 @@ function RowActions({ database, onDelete }) {
           <ChevronRight className="size-3.5" />
         </Link>
       </Button>
+
+      {/* On the row, not only on the detail page: opening the database is
+          what most visits to this list are for, and making it cost a page
+          load first is the difference between a shortcut and a detour. */}
+      <PhpmyadminButton database={database} canManage={canManage} compact />
 
       <Tooltip>
         <TooltipTrigger asChild>

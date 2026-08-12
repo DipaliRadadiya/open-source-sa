@@ -5,6 +5,7 @@ import { Plug } from "lucide-react";
 import { primaryUser, connectionAddress } from "@/lib/databases/connection-parts";
 import { Card, CardContent } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
+import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
 
 /**
  * The five values an application needs, at the top of the page.
@@ -17,7 +18,7 @@ import { CopyButton } from "@/components/ui/copy-button";
  * Rendered only when something can actually connect. A database with no users
  * has no credentials to show, and the Users tab says so properly.
  */
-export function ConnectionDetails({ database }) {
+export function ConnectionDetails({ database, canManage = false }) {
   const t = useTranslations("databases.credentials");
   const user = primaryUser(database);
   if (!user) return null;
@@ -53,13 +54,20 @@ export function ConnectionDetails({ database }) {
         {/* Labelled, not a bare icon: it sits alone in the header with no value
             beside it to say what it would copy — and on a phone the masked
             preview is too wide to show at all. */}
-        {user.connection_string ? (
-          <CopyButton
-            value={user.connection_string}
-            label={t("copyString")}
-            text
-          />
-        ) : null}
+        {/* Both ways in, together: the connection string is how an
+            application reaches this database, phpMyAdmin is how a person does.
+            Someone who wants to look at their data starts here — the page
+            header was where it was easy to put, not where it is looked for. */}
+        <div className="flex flex-wrap items-center gap-2">
+          {user.connection_string ? (
+            <CopyButton
+              value={user.connection_string}
+              label={t("copyString")}
+              text
+            />
+          ) : null}
+          <PhpmyadminButton database={database} canManage={canManage} />
+        </div>
       </div>
 
       <CardContent className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-3 lg:grid-cols-5">

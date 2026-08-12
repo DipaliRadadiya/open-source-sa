@@ -63,12 +63,13 @@ export default async function DatabasePage({ params, searchParams }) {
           </div>
           <DatabaseFacts database={data} />
         </div>
+
       </div>
 
       <div className="max-w-4xl space-y-4">
         {/* Above the tabs: connecting an application is what this page is
             opened for, and it was three clicks deep inside Users. */}
-        <ConnectionDetails database={data} />
+        <ConnectionDetails database={data} canManage={canManage} />
 
         <DatabaseTabs
           initial={sp?.tab}

@@ -137,3 +137,19 @@ export function optimizeDatabase(databaseId) {
 export function repairDatabase(databaseId) {
   return api.post(`/databases/${databaseId}/repair`);
 }
+
+/**
+ * A one-click login to phpMyAdmin for this database.
+ *
+ * Answers a `redirect_url` carrying a token good for 60 seconds, which the
+ * shim on the phpMyAdmin site consumes once — so the browser has to be sent
+ * there immediately rather than the link being stored or shown.
+ *
+ * MySQL and MariaDB only, and only when a phpMyAdmin site exists on this
+ * server. Both refusals come back as 422 with the reason in the message.
+ */
+export function phpmyadminSso(databaseId, databaseUserId) {
+  return api.post(`/databases/${databaseId}/phpmyadmin-sso`, null, {
+    params: databaseUserId ? { database_user_id: databaseUserId } : undefined,
+  });
+}
