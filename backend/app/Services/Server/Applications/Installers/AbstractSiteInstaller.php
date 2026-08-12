@@ -208,7 +208,21 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      */
     private function runtimePhpOwner(Application $application): string
     {
-        $user = $application->isolated_at !== null
+        // Only a *PHP* site's secrets are read by php-fpm. A node site has no
+        // pool at all — its systemd unit runs as the site's own user — and
+        // `isolated_at` is never set for one, because that flag is written by
+        // the create_php_pool step which only runs for serving_profile=php.
+        //
+        // So the www-data branch was being taken for every node site, handing
+        // its `.env` to a user that has nothing to do with running it. systemd
+        // reads EnvironmentFile as root and so still started the app, which is
+        // what made this quiet: the site came up, and only the things running
+        // *as the site* — the file manager, the app's own tooling — found a
+        // file they could neither read nor write.
+        $runsAsSiteUser = $application->serving_profile !== 'php'
+            || $application->isolated_at !== null;
+
+        $user = $runsAsSiteUser
             ? $application->systemUser->username
             : (string) config('server.web_server_user', 'www-data');
 
