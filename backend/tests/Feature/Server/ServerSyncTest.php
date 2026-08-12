@@ -1,6 +1,7 @@
 <?php
 
 use App\Contracts\DatabaseEngine;
+use App\Enums\DomainType;
 use App\Enums\SyncAction;
 use App\Enums\SyncMode;
 use App\Enums\SyncStatus;
@@ -8,6 +9,8 @@ use App\Http\Resources\DatabaseUserResource;
 use App\Jobs\RunServerSync;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
+use App\Models\Certificate;
+use App\Models\Cronjob;
 use App\Models\Database;
 use App\Models\DatabaseUser;
 use App\Models\ServerCapability;
@@ -1149,4 +1152,225 @@ it('never hands out a connection string it knows will not work', function () {
     // than this screen.
     expect($payload['password_known'])->toBeFalse()
         ->and($payload['connection_string'])->toBeNull();
+});
+
+/*
+ * Certificates already issued on the box.
+ *
+ * Without these an adopted site reads as having no TLS while it is serving
+ * HTTPS — and the panel would offer to issue a certificate for a name that
+ * already has one, spending a weekly rate limit to replace something working.
+ */
+describe('discovering certificates', function () {
+    beforeEach(function () {
+        $su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $this->application = Application::forceCreate([
+            'system_user_id' => $su->id, 'name' => 'Shop', 'slug' => 'shop',
+            'domain' => 'shop.example.com', 'site_type' => 'php', 'serving_profile' => 'php',
+            'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
+        ]);
+
+        $this->application->domains()->create([
+            'domain' => 'shop.example.com', 'type' => DomainType::Primary,
+        ]);
+    });
+
+    /** @param  array<int, string>  $liveDirs */
+    function fakeCertbot(array $liveDirs, string $enddate = 'notAfter=Dec  1 12:00:00 2026 GMT'): void
+    {
+        Process::fake(function ($process) use ($liveDirs, $enddate) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+
+            if ($binary === 'getent') {
+                return Process::result(output: "siteowner:x:1001:1001::/home/siteowner:/bin/bash\n");
+            }
+
+            if ($binary === 'find' && str_contains((string) ($args[1] ?? ''), 'letsencrypt')) {
+                return Process::result(output: implode("\n", $liveDirs));
+            }
+
+            if ($binary === 'openssl') {
+                return Process::result(output: $enddate);
+            }
+
+            if ($binary === 'find' || $binary === 'cat' || $binary === 'crontab') {
+                return Process::result(exitCode: 1, errorOutput: 'nothing');
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    it('finds a certificate and ties it to the site it covers', function () {
+        fakeCertbot(['/etc/letsencrypt/live/shop.example.com']);
+
+        $item = runSync()->items()->where('resource_type', 'certificate')->first();
+
+        expect($item->action)->toBe(SyncAction::Found)
+            ->and($item->evidence['application'])->toBe('shop.example.com');
+    });
+
+    it('handles certbot\'s re-issue suffix', function () {
+        // certbot appends -0001 when a certificate is re-issued under a
+        // changed set of names. The directory is not the domain.
+        fakeCertbot(['/etc/letsencrypt/live/shop.example.com-0001']);
+
+        expect(runSync()->items()->where('resource_type', 'certificate')->first()->evidence['application'])
+            ->toBe('shop.example.com');
+    });
+
+    it('leaves a certificate for a name the panel does not serve', function () {
+        fakeCertbot(['/etc/letsencrypt/live/someone-else.example.com']);
+
+        // A certificate on the wrong application is worse than one the panel
+        // simply does not know about.
+        expect(runSync()->items()->where('resource_type', 'certificate')->count())->toBe(0);
+    });
+
+    it('adopts it as renewing, because certbot already renews it', function () {
+        fakeCertbot(['/etc/letsencrypt/live/shop.example.com']);
+
+        runSync(SyncMode::Apply);
+
+        $certificate = Certificate::where('application_id', $this->application->id)->firstOrFail();
+
+        expect($certificate->auto_renew)->toBeTrue()
+            ->and($certificate->expires_at)->not->toBeNull()
+            // Not inferred: whether the site redirects to HTTPS is a vhost
+            // decision the panel has not read.
+            ->and($certificate->force_https)->toBeFalse();
+    });
+
+    it('is safe to run twice', function () {
+        fakeCertbot(['/etc/letsencrypt/live/shop.example.com']);
+
+        runSync(SyncMode::Apply);
+        runSync(SyncMode::Apply);
+
+        expect(Certificate::count())->toBe(1);
+    });
+});
+
+/*
+ * Scheduled jobs. The resource people notice last and miss most: a cron job
+ * that stops after a migration is discovered a week later, by whatever did
+ * not happen.
+ */
+describe('discovering cronjobs', function () {
+    beforeEach(function () {
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    /**
+     * @param  array<string, string>  $cronD  path => contents
+     * @param  array<string, string>  $crontabs  username => contents
+     */
+    function fakeCron(array $cronD = [], array $crontabs = []): void
+    {
+        Process::fake(function ($process) use ($cronD, $crontabs) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+
+            if ($binary === 'getent') {
+                return Process::result(output: "siteowner:x:1001:1001::/home/siteowner:/bin/bash\n");
+            }
+
+            if ($binary === 'find' && str_contains((string) ($args[1] ?? ''), 'cron.d')) {
+                return Process::result(output: implode("\n", array_keys($cronD)));
+            }
+
+            if ($binary === 'crontab') {
+                $user = (string) ($args[3] ?? '');
+
+                return array_key_exists($user, $crontabs)
+                    ? Process::result(output: $crontabs[$user])
+                    : Process::result(exitCode: 1, errorOutput: 'no crontab');
+            }
+
+            if ($binary === 'cat' && array_key_exists((string) ($args[1] ?? ''), $cronD)) {
+                return Process::result(output: $cronD[$args[1]]);
+            }
+
+            return Process::result(exitCode: 1, errorOutput: 'nothing');
+        });
+    }
+
+    it('finds a cron.d job belonging to a managed account', function () {
+        fakeCron(cronD: [
+            '/etc/cron.d/shop-backup' => "SHELL=/bin/sh\n0 3 * * * siteowner /usr/bin/php /home/siteowner/shop/artisan backup:run\n",
+        ]);
+
+        $item = runSync()->items()->where('resource_type', 'cronjob')->first();
+
+        expect($item->action)->toBe(SyncAction::Found)
+            ->and($item->evidence['expression'])->toBe('0 3 * * *')
+            ->and($item->evidence['username'])->toBe('siteowner');
+    });
+
+    it('leaves root\'s cron alone', function () {
+        fakeCron(cronD: [
+            '/etc/cron.d/certbot' => "0 */12 * * * root test -x /usr/bin/certbot && certbot -q renew\n",
+        ]);
+
+        // Root's cron is the operating system's. A panel that offered to
+        // manage certbot renewals would eventually be asked to delete one.
+        expect(runSync()->items()->where('resource_type', 'cronjob')->count())->toBe(0);
+    });
+
+    it('reads a user\'s own crontab too', function () {
+        fakeCron(crontabs: [
+            'siteowner' => "MAILTO=\"\"\n*/5 * * * * /usr/bin/php /home/siteowner/shop/artisan schedule:run\n",
+        ]);
+
+        $item = runSync()->items()->where('resource_type', 'cronjob')->first();
+
+        // Where a developer puts things by hand, and where a cron.d-only
+        // sync would have reported a site with no schedule at all.
+        expect($item->evidence['source'])->toBe('crontab')
+            ->and($item->evidence['expression'])->toBe('*/5 * * * *');
+    });
+
+    it('ignores comments and environment lines', function () {
+        fakeCron(cronD: [
+            '/etc/cron.d/shop' => implode("\n", [
+                '# Managed by the old panel',
+                'SHELL=/bin/sh',
+                'PATH=/usr/local/bin:/usr/bin:/bin',
+                'MAILTO=""',
+                '0 3 * * * siteowner /usr/bin/php artisan backup:run',
+            ]),
+        ]);
+
+        // A cron file opens with assignments. Parsed as jobs they would be
+        // adopted as nonsense schedules.
+        expect(runSync()->items()->where('resource_type', 'cronjob')->count())->toBe(1);
+    });
+
+    it('is safe to run twice', function () {
+        fakeCron(cronD: [
+            '/etc/cron.d/shop' => "0 3 * * * siteowner /usr/bin/php artisan backup:run\n",
+        ]);
+
+        runSync(SyncMode::Apply);
+        runSync(SyncMode::Apply);
+
+        expect(Cronjob::count())->toBe(1);
+    });
+
+    it('keeps two jobs that run the same command on different schedules', function () {
+        fakeCron(cronD: [
+            '/etc/cron.d/shop' => implode("\n", [
+                '0 3 * * * siteowner /usr/bin/php artisan backup:run',
+                '0 15 * * * siteowner /usr/bin/php artisan backup:run',
+            ]),
+        ]);
+
+        runSync(SyncMode::Apply);
+
+        // The slug is derived from the command, so without the schedule in
+        // the hash the second job would collide with the first and vanish.
+        expect(Cronjob::count())->toBe(2);
+    });
 });
