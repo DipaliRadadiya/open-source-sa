@@ -853,11 +853,26 @@
       "linksLabel": "Popular pages"
     },
     "reason": {
-      "shape": "The server sent something this page did not expect. This is a bug in the panel, not on your server.",
-      "network": "The panel could not reach the server. It may be restarting.",
-      "forbidden": "You do not have permission to see this.",
-      "notFound": "This is no longer here.",
-      "server": "The server had a problem answering. Nothing has changed — try again.",
+      "forbidden": {
+        "title": "You do not have access",
+        "body": "Ask an administrator to give you permission for this."
+      },
+      "notFound": {
+        "title": "This is no longer here",
+        "body": "It may have been deleted, or the link may be out of date."
+      },
+      "server": {
+        "title": "The server had a problem",
+        "body": "Nothing has changed. Try again in a moment."
+      },
+      "shape": {
+        "title": "The panel could not read this",
+        "body": "The server's answer was not the shape this page expects. This is a bug in the panel, not on your server."
+      },
+      "network": {
+        "title": "Could not reach the server",
+        "body": "It may be restarting. Try again in a moment."
+      },
       "code": "Error {status}"
     }
   },
@@ -2977,6 +2992,7 @@
       "breadcrumbLabel": "Folder path",
       "root": "Site root",
       "symlinkHint": "Symbolic links aren't supported by this feature.",
+      "symlinkBrokenHint": "This link points to something that no longer exists.",
       "notProvisioned": {
         "title": "No files here",
         "description": "We couldn't find any files for this application yet."

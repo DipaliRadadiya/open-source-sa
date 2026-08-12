@@ -24,21 +24,32 @@ export function LoadFailed({ description, status = null, failure = null }) {
   const t = useTranslations("errors");
   const router = useRouter();
 
-  // Said in the user's terms first. 403 and 404 are their situation, not a
-  // fault; 5xx and a dead request are ours to fix; a shape mismatch is a bug
-  // in this panel and should not be dressed up as a network blip.
-  const reason =
+  /**
+   * Which of the five things went wrong, or null when we cannot tell.
+   *
+   * 403 and 404 are the user's situation rather than a fault; 5xx and a dead
+   * request are ours to fix; a shape mismatch is a bug in this panel and should
+   * not be dressed up as a network blip.
+   */
+  const kind =
     failure === "shape"
-      ? t("reason.shape")
+      ? "shape"
       : failure === "network"
-        ? t("reason.network")
+        ? "network"
         : status === 403
-          ? t("reason.forbidden")
+          ? "forbidden"
           : status === 404
-            ? t("reason.notFound")
+            ? "notFound"
             : status >= 500
-              ? t("reason.server")
+              ? "server"
               : null;
+
+  // The heading carries the answer, not just the fact that there is one.
+  // "This part could not be loaded" above "You do not have permission" made the
+  // reader read two lines to learn one thing, and the first of them was the
+  // same sentence on every failure.
+  const heading = kind ? t(`reason.${kind}.title`) : t("partial.title");
+  const reason = kind ? t(`reason.${kind}.body`) : null;
 
   return (
     <div
@@ -49,7 +60,7 @@ export function LoadFailed({ description, status = null, failure = null }) {
         <TriangleAlert className="size-5" />
       </span>
       <div className="space-y-1">
-        <p className="font-medium">{t("partial.title")}</p>
+        <p className="font-medium">{heading}</p>
         <p className="max-w-sm text-sm text-muted-foreground">
           {reason ?? description ?? t("partial.description")}
         </p>

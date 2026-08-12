@@ -853,11 +853,26 @@
       "linksLabel": "Páginas frecuentes"
     },
     "reason": {
-      "shape": "El servidor envió algo que esta página no esperaba. Es un fallo del panel, no de tu servidor.",
-      "network": "El panel no pudo contactar con el servidor. Puede estar reiniciándose.",
-      "forbidden": "No tienes permiso para ver esto.",
-      "notFound": "Esto ya no está aquí.",
-      "server": "El servidor tuvo un problema al responder. No ha cambiado nada: inténtalo de nuevo.",
+      "forbidden": {
+        "title": "No tienes acceso",
+        "body": "Pide a un administrador que te dé permiso para esto."
+      },
+      "notFound": {
+        "title": "Esto ya no está aquí",
+        "body": "Puede que se haya eliminado, o que el enlace esté obsoleto."
+      },
+      "server": {
+        "title": "El servidor tuvo un problema",
+        "body": "No ha cambiado nada. Inténtalo de nuevo en un momento."
+      },
+      "shape": {
+        "title": "El panel no pudo leer esto",
+        "body": "La respuesta del servidor no tiene la forma que esta página espera. Es un fallo del panel, no de tu servidor."
+      },
+      "network": {
+        "title": "No se pudo contactar con el servidor",
+        "body": "Puede estar reiniciándose. Inténtalo de nuevo en un momento."
+      },
       "code": "Error {status}"
     }
   },
@@ -2977,6 +2992,7 @@
       "breadcrumbLabel": "Ruta de la carpeta",
       "root": "Raíz del sitio",
       "symlinkHint": "Los enlaces simbólicos no son compatibles con esta función.",
+      "symlinkBrokenHint": "Este enlace apunta a algo que ya no existe.",
       "notProvisioned": {
         "title": "No hay archivos aquí",
         "description": "Todavía no encontramos ningún archivo para esta aplicación."
