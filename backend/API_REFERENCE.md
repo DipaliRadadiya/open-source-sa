@@ -812,12 +812,18 @@ Issue a new certificate (queued, `202`) or upload an existing one (synchronous, 
 
 **Request:**
 ```json
-{"type": "letsencrypt", "domains": ["shop.example.com", "www.example.com"], "force": false}
+{"type": "letsencrypt", "force": false}
 ```
 OR
 ```json
-{"type": "custom", "cert": "-----BEGIN CERTIFICATE-----…", "key": "-----BEGIN PRIVATE KEY-----…", "chain": "-----BEGIN CERTIFICATE-----…"}
+{"type": "custom", "certificate": "-----BEGIN CERTIFICATE-----…", "private_key": "-----BEGIN PRIVATE KEY-----…", "chain": "-----BEGIN CERTIFICATE-----…"}
 ```
+
+The upload fields are `certificate` and `private_key` — not `cert`/`key`. Both are required when `type` is `custom`, must start with `-----BEGIN`, and are checked as a **pair before anything is written**: a mismatched certificate and key are accepted by the filesystem, fail the web server's config test, and take the site down over a copy-paste. `chain` is optional.
+
+There is **no `domains` field**. A Let's Encrypt request covers the application's own domains — add or remove domains first, then issue. See `certifiable` and `missing_domains` on the certificate object for which of them made it in.
+
+`force` skips the reachability dry run. Don't default it on: the dry run is what stops a doomed attempt from spending one of the five authorisation failures per hour Let's Encrypt allows. The one legitimate use is a server behind NAT whose public address does not answer to itself — the dry run fails there, but the real challenge arrives from outside and would succeed.
 
 **Response `202`** (Let's Encrypt): `{"certificate": {"status": "pending", "type": "letsencrypt"}}`
 **Response `201`** (upload): `{"certificate": {...}}`
@@ -1083,16 +1089,24 @@ On a **symlink**, `mode`/`owner`/`group` are `null` — a link's own mode is alw
 
 Recursive filename search.
 
-**Query:** `?path=/&search=config`
+**Query:** `?q=config&path=/`
+
+`q` is **required** (1–255 chars) — the parameter is `q`, not `search`. `path` is optional and defaults to the site root; it scopes the search to a subtree. Glob metacharacters in `q` are escaped, so the query matches literally rather than as a wildcard pattern.
 
 **Response `200`:**
 ```json
 {"path": "/", "query": "config", "files": [
-  {"name": "wp-config.php", "type": "file", "path": "/wp-config.php", "size": 4096, "modified": "25-07-2026 14:30:00"}
+  {"path": "/wp-config.php", "name": "wp-config.php", "type": "file",
+   "size": 4096, "size_human": "4 KB",
+   "modified_at": "25-07-2026 14:30:00", "modified_at_human": "3 weeks ago",
+   "mode": "-rw-r--r--", "owner": "siteowner", "group": "siteowner",
+   "link_target": null, "link_broken": null}
 ], "truncated": false}
 ```
 
-`truncated: true` — results exceeded a server-side cap.
+Each entry is the **same shape as a browse entry** (see `GET …/files` above) with one extra field, `path`, holding the location relative to the site root — the browse listing has no `path` because everything in it sits in the directory you asked for.
+
+`truncated: true` means the result was capped at 200 matches; narrow the query or the `path`.
 
 ---
 
@@ -2162,10 +2176,19 @@ Test reachability of the admin connection.
 
 **Request:**
 ```json
-{"name": "shop_db", "engine": "mariadb", "charset": "utf8mb4", "collation": "utf8mb4_unicode_ci", "application_id": 1}
+{"name": "shop_db", "engine": "mariadb", "charset": "utf8mb4", "collation": "utf8mb4_unicode_ci", "application_id": 1,
+ "create_user": {"username": "shop_user", "password": "…", "connection_preference": "localhost", "host": null}}
 ```
 
 **Response `201`:** `{"database": {…}}`
+
+`create_user` is **optional** — send it to create the database and its first user in one call instead of a second round trip. Omit it entirely for a bare database; if present, `create_user.username` is required.
+
+Field limits differ and the difference is not arbitrary: `name` allows up to **63** characters, `create_user.username` only **32**, which is MySQL 8's hard limit on a user name. Both are `[A-Za-z0-9_]` only — identifiers cannot be parameterised in DDL, so the regex *is* the injection guard, and anything outside it is rejected rather than escaped. `password` may be omitted and one is generated.
+
+`connection_preference` is `localhost` | `remote` | `anywhere`. **`host` is required when it is `remote`** and must be an IPv4 address or CIDR.
+
+`collation` must belong to the chosen `charset` — a valid-but-mismatched pair fails validation on `collation`, it is not silently corrected. Reserved system schema names are refused.
 
 ---
 
@@ -2930,11 +2953,25 @@ Install fail2ban if not present.
 ### PUT `/fail2ban`
 **Permission:** `fail2ban` (manage)
 
-Update jail settings.
+Update ban settings and which jails are on. The thresholds are **server-wide, not per jail** — the request is flat, with `jails` as an on/off map:
 
-**Request:** `{"jails": [{"name": "sshd", "enabled": true, "max_retry": 5, "find_time": 600, "bantime": 3600}]}`
+**Request:**
+```json
+{
+  "bantime": 3600, "findtime": 600, "maxretry": 5,
+  "ignore_ips": ["203.0.113.5", "10.0.0.0/8"],
+  "jails": {"sshd": true, "nginx-http-auth": false},
+  "acknowledged": false
+}
+```
 
-**Response `200`:** `{"fail2ban": {...}}`
+`bantime`, `findtime` and `maxretry` are **required**. `bantime` accepts `-1` for a permanent ban; otherwise the floor is 60 seconds, because a shorter ban expires before it inconveniences anyone and only looks like protection. The ceiling is a year. `findtime` is 30–86400. `maxretry` is 2–100 — one failure is a typo, not an attack.
+
+`ignore_ips` is an array of IPs or CIDRs (max 100). `jails` is an object keyed by jail name with boolean values; omitted jails keep their current state. Omitting `ignore_ips` or `jails` entirely leaves them as they are.
+
+**`acknowledged` is the lockout guard.** Enabling a jail flagged as lockout-risky (the SSH jail) while the caller's own IP is *not* in `ignore_ips` is refused with **`422`** — that request can lock the user out of their own server. The frontend should catch that 422, warn, and offer either "add my IP to the ignore list" or a re-submit with `acknowledged: true`. The guard does not fire if the jail is already active, or if the caller's IP is already ignored.
+
+**Response `200`:** `{"fail2ban": {"settings": {...}, "jails": [...]}}`
 
 ---
 
@@ -3136,7 +3173,7 @@ Manual + scheduled run history, paginated.
 
 Schedule a server reboot.
 
-**Request:** `{"delay_minutes": 5}` — `0` = now.
+**Request:** `{"delay_minutes": 5}` — optional, 0–60, defaults to `0`. `0` = now.
 
 **Response `202`:** `{"reboot": {"scheduled": true, "when": "+5"}}`
 
@@ -3156,7 +3193,11 @@ Schedule a server reboot.
 ### PUT `/settings/updates`
 **Permission:** `setting` (manage)
 
-**Request:** `{"security_updates_enabled": true, "auto_reboot": true, "reboot_time": "06:00"}`
+**Request:** `{"security_updates_enabled": true, "auto_reboot": true, "reboot_time": "06:00", "reboot_with_users": false}`
+
+`reboot_time` is `HH:MM` (24-hour) or the literal string `"now"`.
+
+`reboot_with_users` decides whether an automatic reboot proceeds while someone is logged in over SSH. It is optional so an older client keeps working, and **absent means `false`** — note that this inverts the upstream unattended-upgrades default of `true`, so send it explicitly rather than relying on the default matching what the OS would do on its own.
 
 **Response `200`:** `{"updates": {...}}`
 
