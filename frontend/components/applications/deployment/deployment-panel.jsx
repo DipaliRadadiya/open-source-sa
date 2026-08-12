@@ -9,12 +9,20 @@ import { applicationSchema } from "@/lib/schemas/application";
 import { apiMessage } from "@/lib/api/error-message";
 import { DeployCard } from "@/components/applications/deployment/deploy-card";
 import { WebhookCard } from "@/components/applications/deployment/webhook-card";
+import { DeploySettingsCard } from "@/components/applications/deployment/deploy-settings-card";
+import { DeployHistoryCard } from "@/components/applications/deployment/deploy-history-card";
 
 // A deploy flips status to "provisioning" while it runs; poll the resource so
 // steps[] and the commit/timestamp update in place without leaving the page.
 const POLL_MS = 2500;
 
-export function DeploymentPanel({ application: initial, providers, canManage }) {
+export function DeploymentPanel({
+  application: initial,
+  providers,
+  canManage,
+  deployments = [],
+  settings = null,
+}) {
   const t = useTranslations("applications.deployment");
   const [application, setApplication] = useState(initial);
   const [deploying, setDeploying] = useState(false);
@@ -79,11 +87,26 @@ export function DeploymentPanel({ application: initial, providers, canManage }) 
         canManage={canManage}
         onDeploy={deploy}
       />
+      {/* What a deploy runs, before the record of what it ran. */}
+      {settings ? (
+        <DeploySettingsCard
+          applicationId={application.id}
+          settings={settings}
+          canManage={canManage}
+        />
+      ) : null}
+
       <WebhookCard
         application={application}
         providers={providers}
         canManage={canManage}
         onChange={setApplication}
+      />
+
+      <DeployHistoryCard
+        applicationId={application.id}
+        deployments={deployments}
+        canManage={canManage}
       />
     </div>
   );

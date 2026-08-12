@@ -5,6 +5,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getWebhookProviders } from "@/lib/applications/get-webhook-providers";
+import { getDeployments } from "@/lib/applications/get-deployments";
 import { DeploymentPanel } from "@/components/applications/deployment/deployment-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -45,7 +46,12 @@ export default async function ApplicationDeploymentPage({ params }) {
 
   const canManage = can(appPermissions, "app_deployment", "manage", "application");
   const settled = application.status === "active";
-  const { providers } = await getWebhookProviders();
+  const [{ providers }, history] = await Promise.all([
+    getWebhookProviders(),
+    // History and settings arrive together; a failure here must not blank the
+    // Deploy button, so the panel simply renders without them.
+    getDeployments(id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -63,6 +69,8 @@ export default async function ApplicationDeploymentPage({ params }) {
           application={application}
           providers={providers}
           canManage={canManage}
+          deployments={history.deployments}
+          settings={history.settings}
         />
       )}
     </div>
