@@ -330,7 +330,7 @@ class PoolManager
      */
     public function liveOpenBasedir(Application $application): ?string
     {
-        $path = $this->poolPath($application);
+        $path = $this->livePoolPath($application);
 
         if ($path === null) {
             return null;
@@ -430,6 +430,84 @@ class PoolManager
         ]);
 
         return ['adopted' => true, 'kept' => $kept, 'dropped' => $dropped];
+    }
+
+    /**
+     * The pool file that actually serves this site, whatever it is called.
+     *
+     * `poolPath()` builds a name from the panel's own slug, which is right
+     * for a site the panel created and wrong for every site it did not. A box
+     * migrated from another panel names its pools that panel's way — so the
+     * constructed path points at nothing, `liveOpenBasedir()` reads null, and
+     * the adoption built to rescue exactly those sites quietly did nothing.
+     *
+     * So: try our name first (cheap, and correct for our own sites), then
+     * look for a pool that declares this site's Linux user. That is the one
+     * property a pool cannot fake — it is what FPM drops privileges to.
+     */
+    public function livePoolPath(Application $application): ?string
+    {
+        $ours = $this->poolPath($application);
+
+        if ($ours !== null && $this->readable($ours)) {
+            return $ours;
+        }
+
+        $username = $application->systemUser?->username;
+
+        if ($username === null || $ours === null) {
+            return null;
+        }
+
+        $directory = dirname($ours);
+
+        $listing = $this->serverOps->run(
+            ['find', $directory, '-maxdepth', '1', '-type', 'f'],
+            ['feature' => 'php', 'op' => 'locate_pool', 'application' => $application->id],
+            timeout: 30,
+        );
+
+        if ($listing->failed()) {
+            return null;
+        }
+
+        foreach (preg_split('/\r?\n/', trim($listing->output())) ?: [] as $candidate) {
+            $candidate = trim($candidate);
+
+            if ($candidate === '') {
+                continue;
+            }
+
+            $contents = $this->read($candidate);
+
+            if ($contents === null) {
+                continue;
+            }
+
+            // `user = <name>` is what the pool runs as. Matched on its own
+            // line so a path that merely contains the username elsewhere in
+            // the file cannot claim the pool.
+            if (preg_match('/^\s*user\s*=\s*'.preg_quote($username, '/').'\s*$/m', $contents)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A pool file's contents, memoized. Public so the sync discoverer reads
+     * through the same cache rather than shelling out for the same bytes a
+     * second time on the same request.
+     */
+    public function readPool(string $path): ?string
+    {
+        return $this->read($path);
+    }
+
+    private function readable(string $path): bool
+    {
+        return $this->read($path) !== null;
     }
 
     /**

@@ -5,11 +5,13 @@ use App\Enums\SyncMode;
 use App\Enums\SyncStatus;
 use App\Jobs\RunServerSync;
 use App\Models\Application;
+use App\Models\ApplicationPhpSettings;
 use App\Models\ServerCapability;
 use App\Models\SshKey;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Php\PoolManager;
 use App\Services\Server\Sync\ServerSync;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
@@ -682,5 +684,159 @@ describe('excluding what is not a customer site', function () {
 
         expect(runSync()->items()->where('resource_type', 'application')->first()->action)
             ->toBe(SyncAction::Found);
+    });
+});
+
+/*
+ * The limits a migrated site is actually running under.
+ *
+ * Without this an adopted site shows the panel's defaults while FPM enforces
+ * whatever the old panel wrote — the screen describing a server it is not
+ * looking at, and the first save quietly replacing real limits with invented
+ * ones.
+ */
+describe('importing php settings from the pool that serves a site', function () {
+    beforeEach(function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        $this->su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $this->application = Application::forceCreate([
+            'system_user_id' => $this->su->id, 'name' => 'Shop', 'slug' => 'shop',
+            'domain' => 'shop.example.com', 'site_type' => 'php', 'serving_profile' => 'php',
+            'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
+        ]);
+    });
+
+    /** @param  array<string, string>  $pools  absolute path => contents */
+    function fakePools(array $pools): void
+    {
+        Process::fake(function ($process) use ($pools) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+
+            if ($binary === 'getent') {
+                return Process::result(output: "siteowner:x:1001:1001::/home/siteowner:/bin/bash\n");
+            }
+
+            if ($binary === 'find') {
+                $directory = (string) ($args[1] ?? '');
+
+                return Process::result(output: implode("\n", array_filter(
+                    array_keys($pools),
+                    fn (string $path): bool => dirname($path) === rtrim($directory, '/'),
+                )));
+            }
+
+            if ($binary === 'cat') {
+                $path = (string) ($args[1] ?? '');
+
+                return array_key_exists($path, $pools)
+                    ? Process::result(output: $pools[$path])
+                    : Process::result(exitCode: 1, errorOutput: 'No such file');
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    it('finds the pool by the user it runs as, not by the name we would have used', function () {
+        // The bug this exists for: poolPath() builds a name from our own slug,
+        // so on a box migrated from another panel it pointed at nothing and
+        // the import silently did nothing at all.
+        fakePools([
+            '/etc/php/8.4/fpm/pool.d/oldpanel_shop_example_com.conf' => "[oldpanel]\nuser = siteowner\nphp_admin_value[memory_limit] = 1024M\n",
+        ]);
+
+        expect(app(PoolManager::class)->livePoolPath($this->application->load('systemUser')))
+            ->toBe('/etc/php/8.4/fpm/pool.d/oldpanel_shop_example_com.conf');
+    });
+
+    it('does not claim a pool belonging to a different site', function () {
+        fakePools([
+            '/etc/php/8.4/fpm/pool.d/other.conf' => "[other]\nuser = someoneelse\n",
+        ]);
+
+        // `user =` is the one property a pool cannot fake — it is what FPM
+        // drops privileges to. Matching anything looser would attach one
+        // site's limits to another.
+        expect(app(PoolManager::class)->livePoolPath($this->application->load('systemUser')))->toBeNull();
+    });
+
+    it('imports the limits the pool states', function () {
+        fakePools([
+            '/etc/php/8.4/fpm/pool.d/oldpanel_shop.conf' => implode("\n", [
+                '[oldpanel]',
+                'user = siteowner',
+                'php_admin_value[memory_limit] = 1024M',
+                'php_value[upload_max_filesize] = 512M',
+                'php_admin_value[max_execution_time] = 300',
+            ]),
+        ]);
+
+        runSync(SyncMode::Apply);
+
+        $settings = ApplicationPhpSettings::where('application_id', $this->application->id)->firstOrFail();
+
+        // php_value as well as php_admin_value: plenty of hand-written pools
+        // use the first, and a site running under it is running under it.
+        expect($settings->memory_limit)->toBe('1024M')
+            ->and($settings->upload_max_filesize)->toBe('512M')
+            ->and((int) $settings->max_execution_time)->toBe(300);
+    });
+
+    it('leaves unstated limits unset rather than inventing them', function () {
+        fakePools([
+            '/etc/php/8.4/fpm/pool.d/oldpanel_shop.conf' => "[oldpanel]\nuser = siteowner\nphp_admin_value[memory_limit] = 1024M\n",
+        ]);
+
+        runSync(SyncMode::Apply);
+
+        $settings = ApplicationPhpSettings::where('application_id', $this->application->id)->firstOrFail();
+
+        // A limit the old pool did not set is one PHP was taking from its own
+        // ini. Storing a number here would turn a server default into a
+        // decision that then stops following the server.
+        expect($settings->memory_limit)->toBe('1024M')
+            ->and($settings->post_max_size)->toBeNull()
+            ->and($settings->max_input_vars)->toBeNull();
+    });
+
+    it('never overwrites settings a user already chose', function () {
+        ApplicationPhpSettings::create([
+            'application_id' => $this->application->id,
+            'memory_limit' => '128M',
+        ]);
+
+        fakePools([
+            '/etc/php/8.4/fpm/pool.d/oldpanel_shop.conf' => "[oldpanel]\nuser = siteowner\nphp_admin_value[memory_limit] = 1024M\n",
+        ]);
+
+        runSync(SyncMode::Apply);
+
+        // A migrated pool must not overrule a decision made inside the panel.
+        expect(ApplicationPhpSettings::where('application_id', $this->application->id)->first()->memory_limit)
+            ->toBe('128M');
+    });
+
+    it('takes the last of a repeated directive, the way FPM does', function () {
+        fakePools([
+            '/etc/php/8.4/fpm/pool.d/oldpanel_shop.conf' => implode("\n", [
+                '[oldpanel]',
+                'user = siteowner',
+                'php_admin_value[memory_limit] = 256M',
+                '; someone appended an override further down',
+                'php_admin_value[memory_limit] = 2048M',
+            ]),
+        ]);
+
+        runSync(SyncMode::Apply);
+
+        // Taking the first would import a value the server is not using.
+        expect(ApplicationPhpSettings::where('application_id', $this->application->id)->first()->memory_limit)
+            ->toBe('2048M');
     });
 });
