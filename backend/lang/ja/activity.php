@@ -171,4 +171,5 @@ return [
     'application.cloned' => ':name を :domain に複製しました',
     'application.fail2ban_enabled' => ':name の fail2ban を有効にしました',
     'application.fail2ban_disabled' => ':name の fail2ban を無効にしました',
+    'sync.started' => 'サーバー同期を開始しました (:mode)',
 ];

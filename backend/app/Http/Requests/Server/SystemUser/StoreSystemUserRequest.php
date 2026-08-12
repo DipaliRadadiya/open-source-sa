@@ -15,7 +15,12 @@ class StoreSystemUserRequest extends FormRequest
     /**
      * Linux system accounts that must never be created/managed by the panel.
      */
-    private const RESERVED = [
+    /**
+     * Names the panel refuses to create — and, read from the sync discoverer,
+     * names it refuses to adopt. Shared rather than copied so the two lists
+     * cannot drift into disagreeing about what counts as a system account.
+     */
+    public const RESERVED = [
         'root', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp', 'mail',
         'news', 'uucp', 'proxy', 'www-data', 'backup', 'list', 'irc', 'gnats',
         'nobody', 'systemd-network', 'mysql', 'postgres', 'mongodb', 'redis',

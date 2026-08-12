@@ -171,4 +171,5 @@ return [
     'application.cloned' => ':name को :domain पर क्लोन किया',
     'application.fail2ban_enabled' => ':name के लिए fail2ban सक्षम किया',
     'application.fail2ban_disabled' => ':name के लिए fail2ban अक्षम किया',
+    'sync.started' => 'सर्वर सिंक शुरू किया (:mode)',
 ];

@@ -51,6 +51,11 @@ class PermissionCatalog
             // guardrails rather than two.
             ['name' => 'backup', 'title' => 'Backup', 'icon' => 'archive', 'url' => '/backups', 'order' => 14],
             ['name' => 'activity_log', 'title' => 'Activity Log', 'icon' => 'history', 'url' => '/activity-log', 'order' => 15],
+            // Reading a migrated server into the panel. Its own permission
+            // rather than riding on `setting`: a sync writes rows for users,
+            // sites and databases at once, which is a wider blast radius than
+            // anything else on the Settings screen.
+            ['name' => 'sync', 'title' => 'Server Sync', 'icon' => 'refresh-cw', 'url' => '/sync', 'order' => 16],
 
             // Integrations — externally-connected accounts/credentials the
             // features consume (git accounts for app deploys, storage

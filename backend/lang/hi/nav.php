@@ -16,6 +16,7 @@ return [
     'setting' => 'सेटिंग',
     'disk_cleaner' => 'डिस्क क्लीनर',
     'activity_log' => 'गतिविधि लॉग',
+    'sync' => 'सर्वर सिंक',
     'git' => 'Git',
     'storage' => 'स्टोरेज',
 

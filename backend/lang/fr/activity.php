@@ -171,4 +171,5 @@ return [
     'application.cloned' => 'A cloné :name vers :domain',
     'application.fail2ban_enabled' => 'A activé fail2ban pour :name',
     'application.fail2ban_disabled' => 'A désactivé fail2ban pour :name',
+    'sync.started' => 'A lancé une synchronisation du serveur (:mode)',
 ];

@@ -16,6 +16,7 @@ return [
     'setting' => 'Configurações',
     'disk_cleaner' => 'Limpeza de disco',
     'activity_log' => 'Registro de atividades',
+    'sync' => 'Sincronização do servidor',
     'git' => 'Git',
     'storage' => 'Armazenamento',
 

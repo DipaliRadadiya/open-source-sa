@@ -17,6 +17,9 @@ use App\Services\Server\Setup\Components\NodeComponent;
 use App\Services\Server\Setup\Components\PhpComponent;
 use App\Services\Server\Setup\Components\RedisComponent;
 use App\Services\Server\Setup\SetupCatalog;
+use App\Services\Server\Sync\Discoverers\SshKeyDiscoverer;
+use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
+use App\Services\Server\Sync\ServerSync;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -32,6 +35,14 @@ class AppServiceProvider extends ServiceProvider
     {
         // The firewall engine — UFW today; swap the binding for firewalld later.
         $this->app->bind(Firewall::class, UfwFirewall::class);
+
+        // The sync registry. Order here is the intended run order; ServerSync
+        // still resolves dependsOn() itself, so adding one in the wrong place
+        // is a tidiness problem rather than a correctness one.
+        $this->app->bind(ServerSync::class, fn ($app) => new ServerSync([
+            $app->make(SystemUserDiscoverer::class),
+            $app->make(SshKeyDiscoverer::class),
+        ]));
 
         // How PHP is served here. Resolved from the web server this box runs,
         // because nginx and Apache use PHP-FPM and OpenLiteSpeed cannot —

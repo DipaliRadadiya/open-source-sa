@@ -39,6 +39,9 @@ return [
             'server',
             'service',
             'setting',
+            // Reading a migrated box into the panel. Squarely a machine
+            // operation: it creates users, sites and databases in one go.
+            'sync',
             'system_user',
         ],
     ],

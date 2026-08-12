@@ -16,6 +16,7 @@ return [
     'setting' => 'Setting',
     'disk_cleaner' => 'Disk Cleaner',
     'activity_log' => 'Activity Log',
+    'sync' => 'Server Sync',
     'git' => 'Git',
     'storage' => 'Storage',
 
