@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ChevronDown, FileText, ShieldCheck, Sliders } from "lucide-react";
+import { ChevronDown, ShieldCheck, Sliders } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateApplicationWaf } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
@@ -34,7 +34,6 @@ const DESCRIBED_CATEGORIES = new Set([
 // Watch mode writes matches into the site's own document root. There is no API
 // that reads it, but the Files browser can open the folder — a real route to
 // the evidence rather than a dead end.
-const DETECT_LOG_DIR = ".panel";
 
 const COLLAPSIBLE_ANIMATION =
   "overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down";
@@ -56,7 +55,7 @@ function sameList(a, b) {
  * per-section Save buttons would imply an independence the endpoint does not
  * have.
  */
-export function FirewallSection({ appId, application, categories: catalog, modes, canManage }) {
+export function FirewallSection({ appId, application, categories: catalog, modes, canManage, detectCount = 0 }) {
   const t = useTranslations("applications.firewall");
   const router = useRouter();
 
@@ -216,19 +215,15 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                     }))}
                   />
                   {showDetectLog ? (
-                    <div className="space-y-1.5 pt-1">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/applications/${appId}/files?path=${DETECT_LOG_DIR}`}>
-                          <FileText className="size-3.5" />
-                          {t("detectLog")}
-                        </Link>
-                      </Button>
-                      {/* The folder is created by the first match, not by
-                          turning watching on — without this, "nothing has been
-                          caught yet" arrives as a "this folder is gone" error
-                          page and reads as something broken. */}
-                      <p className="text-xs text-muted-foreground">{t("detectLogHint")}</p>
-                    </div>
+                    // Points down the page at the real evidence rather than
+                    // out to the file browser. The number is here, next to the
+                    // switch, so turning blocking on is a decision with a
+                    // figure in front of it instead of a guess.
+                    <p className="pt-1 text-xs text-muted-foreground">
+                      {detectCount > 0
+                        ? t("detectCaught", { count: detectCount })
+                        : t("detectNothingYet")}
+                    </p>
                   ) : null}
                 </div>
 

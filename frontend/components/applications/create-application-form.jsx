@@ -85,13 +85,6 @@ const COMMON_FIELD_NAMES = new Set([
   "branch",
 ]);
 
-// Declared by the API for WordPress, but not a decision to put in front of
-// anyone creating a site: by its own help text it does nothing unless the
-// server runs OpenLiteSpeed, and a plugin choice belongs in the site, not in
-// the form that creates it. Dropped rather than defaulted, so nothing is sent
-// and the backend applies its own `false`.
-const HIDDEN_FIELD_NAMES = new Set(["install_litespeed_cache_plugin"]);
-
 // The API is meant to send a display-ready `label`, but for some one-click app
 // fields it returns the untranslated key itself (`application.fields.shop_name`)
 // when the backend has no translation for it. Never show a raw key to a user —
@@ -688,7 +681,7 @@ export function CreateApplicationForm({
   const isGit = selected?.method === "git" || selected?.name === "git";
   const typeFields = (selected?.fields ?? []).filter(
     (config) =>
-      !COMMON_FIELD_NAMES.has(config.name) && !HIDDEN_FIELD_NAMES.has(config.name),
+      !COMMON_FIELD_NAMES.has(config.name),
   );
   const visibleFields = typeFields.filter(
     (config) =>
@@ -876,7 +869,6 @@ export function CreateApplicationForm({
     for (const field of selected.fields ?? []) {
       if (
         COMMON_FIELD_NAMES.has(field.name) ||
-        HIDDEN_FIELD_NAMES.has(field.name) ||
         field.type === "password" ||
         field.source === "php_versions" ||
         field.source === "node_versions" ||

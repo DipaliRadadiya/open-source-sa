@@ -1082,15 +1082,12 @@
       "noPermission": "No tienes permiso para instalar",
       "started": "Instalando — tarda un minuto.",
       "installing": "Esta página se actualiza sola cuando termine.",
-      "done": "Fail2ban instalado. Todavía no hay nada activado.",
       "failed": "No se pudo instalar fail2ban.",
-      "stalled": "Está tardando más de lo normal. Puede seguir trabajando o puede haber fallado. Comprueba de nuevo para saberlo.",
-      "checkAgain": "Comprobar de nuevo",
+      "stalled": "Está tardando más de lo normal. Puede que siga trabajando.",
       "retry": "Intentar instalar otra vez",
-      "stillNotInstalled": "Sigue sin instalarse.",
-      "checking": "Comprobando…",
-      "checkFailed": "No hemos podido comprobarlo.",
-      "installingTitle": "Instalando Fail2ban…"
+      "installingTitle": "Instalando Fail2ban…",
+      "failedTitle": "No se pudo instalar Fail2ban",
+      "failedUnknown": "La instalación no terminó. No ha cambiado nada en tu servidor: puedes volver a intentarlo."
     },
     "jails": {
       "title": "Jaulas",
@@ -3455,7 +3452,7 @@
       "nothingToSave": "Nada que guardar"
     },
     "firewall": {
-      "pageTitle": "Cortafuegos web",
+      "pageTitle": "Firewall 8G",
       "pageSubtitle": "Rechaza los ataques más comunes antes de que lleguen a este sitio.",
       "loadFailed": "No se pudo cargar esto.",
       "provisioning": "Este sitio todavía se está configurando. El cortafuegos estará disponible cuando esté en funcionamiento.",
@@ -3473,8 +3470,6 @@
       "modeLabel": "¿Qué hacer con una solicitud sospechosa?",
       "modeDetectHint": "No se bloquea nada. Las coincidencias se escriben en un registro para que primero revises si hay errores.",
       "modeEnforceHint": "Las solicitudes coincidentes se rechazan de inmediato. Cambia a esto cuando la observación se vea limpia.",
-      "detectLog": "Ver lo que ha detectado",
-      "detectLogHint": "El archivo de registro aparece la primera vez que algo coincide; hasta entonces la carpeta puede estar vacía.",
       "categoriesLabel": "Qué revisa",
       "categoriesHint": "Desactiva una si está estorbando algo legítimo de tu sitio.",
       "categoryHints": {
@@ -3488,7 +3483,7 @@
       "lastCategory": "Al menos una comprobación debe seguir activa. Para dejar de revisar por completo, desactiva el cortafuegos.",
       "advanced": "Ajuste fino",
       "exceptionsTitle": "Dejar pasar esto",
-      "exceptionsHint": "Una solicitud que contenga cualquiera de estas palabras se salta todas las comprobaciones. Úsalo cuando algo legítimo quede atrapado: la dirección propia de un plugin o una página cuyo nombre parezca sospechoso.",
+      "exceptionsHint": "Una solicitud que contenga cualquiera de estas palabras se salta todas las comprobaciones: se busca en la dirección web, en la parte posterior al ?, y en el nombre del navegador. Sé específico: una palabra corta o común desactiva el cortafuegos en gran parte de tu sitio.",
       "exceptionsPlaceholder": "p. ej. nombre-de-mi-plugin",
       "exceptionsEmpty": "No se está dejando pasar nada.",
       "blocksTitle": "Bloquear siempre esto",
@@ -3509,7 +3504,16 @@
       "saved": "Ajustes del cortafuegos guardados.",
       "saveFailed": "No se pudo guardar.",
       "noPermission": "No tienes permiso para gestionar esto.",
-      "nothingToSave": "Nada que guardar"
+      "nothingToSave": "Nada que guardar",
+      "detectCaught": "{count, plural, one {Se habría bloqueado # solicitud hasta ahora} other {Se habrían bloqueado # solicitudes hasta ahora}}.",
+      "detectNothingYet": "Todavía no se ha detectado nada.",
+      "detect": {
+        "title": "Lo que detectó",
+        "subtitle": "Solicitudes que se habrían bloqueado. No se rechazó ninguna.",
+        "count": "{count, plural, one {# solicitud} other {# solicitudes}}",
+        "empty": "Todavía no se ha detectado nada. La lista se irá llenando conforme lleguen visitas.",
+        "unreadable": "No se pudo leer. Tus ajustes no se han visto afectados."
+      }
     },
     "clone": {
       "pageTitle": "Clonar sitio",

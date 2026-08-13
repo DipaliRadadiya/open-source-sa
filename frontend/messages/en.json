@@ -1082,15 +1082,12 @@
       "noPermission": "You do not have permission to install",
       "started": "Installing — this takes about a minute.",
       "installing": "This page updates itself when it is done.",
-      "done": "Fail2ban installed. Nothing is switched on yet.",
       "failed": "Fail2ban could not be installed.",
-      "stalled": "This is taking longer than expected. It may still be working, or it may have failed. Check again to find out.",
-      "checkAgain": "Check again",
+      "stalled": "This is taking longer than usual. It may still be working.",
       "retry": "Try installing again",
-      "stillNotInstalled": "Still not installed.",
-      "checking": "Checking…",
-      "checkFailed": "We could not check.",
-      "installingTitle": "Installing Fail2ban…"
+      "installingTitle": "Installing Fail2ban…",
+      "failedTitle": "Fail2ban could not be installed",
+      "failedUnknown": "The install did not finish. Nothing has changed on your server — you can try again."
     },
     "jails": {
       "title": "Jails",
@@ -3455,7 +3452,7 @@
       "nothingToSave": "Nothing to save"
     },
     "firewall": {
-      "pageTitle": "Web Firewall",
+      "pageTitle": "8G Firewall",
       "pageSubtitle": "Turn away common attacks before they reach this site.",
       "loadFailed": "This couldn't be loaded.",
       "provisioning": "This site is still being set up. The firewall will be available once it's running.",
@@ -3473,8 +3470,6 @@
       "modeLabel": "What should happen to a suspicious request?",
       "modeDetectHint": "Nothing is blocked. Matches are written to a log so you can check for mistakes first.",
       "modeEnforceHint": "Matching requests are refused immediately. Switch to this once watching looks clean.",
-      "detectLog": "See what it caught",
-      "detectLogHint": "The log file appears the first time something matches — until then the folder may be empty.",
       "categoriesLabel": "What it checks",
       "categoriesHint": "Turn one off if it's getting in the way of something legitimate on your site.",
       "categoryHints": {
@@ -3488,7 +3483,7 @@
       "lastCategory": "At least one check has to stay on. To stop checking altogether, turn the firewall off.",
       "advanced": "Fine-tuning",
       "exceptionsTitle": "Let these through",
-      "exceptionsHint": "A request containing any of these words skips every check. Use it when something legitimate gets caught — a plugin's own address, or a page whose name happens to look suspicious.",
+      "exceptionsHint": "A request containing any of these words skips every check — matched against the web address, the part after the ?, and the browser name. Keep them specific: a short or common word switches the firewall off across much of your site.",
       "exceptionsPlaceholder": "e.g. my-plugin-name",
       "exceptionsEmpty": "Nothing is being let through.",
       "blocksTitle": "Always block these",
@@ -3509,7 +3504,16 @@
       "saved": "Firewall settings saved.",
       "saveFailed": "That couldn't be saved.",
       "noPermission": "You don't have permission to manage this.",
-      "nothingToSave": "Nothing to save"
+      "nothingToSave": "Nothing to save",
+      "detectCaught": "{count, plural, one {# request would have been blocked so far} other {# requests would have been blocked so far}}.",
+      "detectNothingYet": "Nothing has been caught yet.",
+      "detect": {
+        "title": "What it caught",
+        "subtitle": "Requests that would have been blocked. Nothing was refused.",
+        "count": "{count, plural, one {# request} other {# requests}}",
+        "empty": "Nothing has been caught yet. The list fills in as visitors arrive.",
+        "unreadable": "This could not be read. Your settings are unaffected."
+      }
     },
     "clone": {
       "pageTitle": "Site Clone",

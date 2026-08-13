@@ -10,6 +10,9 @@ import {
   getWafOptions,
 } from "@/lib/applications/get-applications";
 import { FirewallSection } from "@/components/applications/firewall/firewall-section";
+import { DetectLogCard } from "@/components/applications/firewall/detect-log-card";
+import { getApplicationLog } from "@/lib/applications/get-application-logs";
+import { parseDetectLog } from "@/lib/firewall/parse-detect-log";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +56,18 @@ export default async function ApplicationFirewallPage({ params }) {
     ? await Promise.all([getWafOptions(), getServerCapabilities()])
     : [{ categories: [], modes: [], failed: false }, { webServer: null }];
 
+  // Watching mode is the only mode that writes this, and the API only lists
+  // the key while it is on — so this read is conditional on the same thing.
+  const watching = settled && application.waf_enabled && application.waf_mode === "detect";
+  const detect = watching
+    ? await getApplicationLog(id, "waf_detect", { lines: 200 })
+    : null;
+  // 'missing' is a 404 for the file, which is the NORMAL state until the first
+  // match — it must read as "nothing caught yet", never as a failure. Only a
+  // read error or a permission refusal is a failure.
+  const detectFailed = detect?.status === "failed" || detect?.status === "locked";
+  const detectRows = detect?.log?.lines?.length ? parseDetectLog(detect.log.lines) : [];
+
   const unsupported = webServer === "openlitespeed";
 
   return (
@@ -85,7 +100,11 @@ export default async function ApplicationFirewallPage({ params }) {
             categories={categories}
             modes={modes}
             canManage={canManage}
+            detectCount={detectRows.length}
           />
+          {watching ? (
+            <DetectLogCard rows={detectRows} failed={detectFailed} />
+          ) : null}
         </>
       )}
     </div>

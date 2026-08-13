@@ -123,12 +123,17 @@ export const applicationSchema = z.object({
   // The 8G Firewall. `waf_exceptions`/`waf_custom_rules` are `whenLoaded` on the
   // backend — they come back from GET /applications/{id}/waf and from nowhere
   // else, so a page that needs them cannot reuse the plain application read.
+  //
+  // Deliberately NOT defaulted to []: absent means "not loaded", and defaulting
+  // would render that as "this site has no exceptions" — a wrong answer that
+  // looks like a real one. Callers that have loaded them coalesce at the point
+  // of use; anywhere else `undefined` is the honest value.
   waf_enabled: z.boolean().default(false),
   waf_mode: z.string().nullish(),
   waf_mode_title: z.string().nullish(),
   waf_categories: z.array(z.string()).default([]),
-  waf_exceptions: z.array(z.string()).default([]),
-  waf_custom_rules: z.array(z.string()).default([]),
+  waf_exceptions: z.array(z.string()).optional(),
+  waf_custom_rules: z.array(z.string()).optional(),
   last_commit: z.union([z.string(), z.record(z.string(), z.unknown())]).nullish(),
   last_deployed_at: z.string().nullish(),
   last_deployed_at_human: z.string().nullish(),

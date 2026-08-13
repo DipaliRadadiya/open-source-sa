@@ -51,7 +51,13 @@ export default async function Fail2banPage() {
       {failed || !data ? (
         <LoadFailed description={t("loadFailed")} />
       ) : !data.installed ? (
-        <InstallPrompt canManage={canManage} />
+        <>
+          {/* Only while the server says an install is running. apt gets ten
+              minutes, so the page has to keep asking — and `/fail2ban` is on
+              the API's polling allowance, so this costs nothing. */}
+          {data.install?.status === "installing" ? <AutoRefresh intervalMs={4000} /> : null}
+          <InstallPrompt canManage={canManage} install={data.install ?? null} />
+        </>
       ) : (
         <div className="space-y-4">
           {/* Bans expire on their own and new ones arrive without us asking,

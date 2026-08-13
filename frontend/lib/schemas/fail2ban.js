@@ -44,9 +44,31 @@ export const bantimePresetSchema = z.object({
   label: z.string(),
 });
 
+/**
+ * The install, as the SERVER sees it — `null` once fail2ban is on disk.
+ *
+ * `installed` alone cannot carry this screen: apt is allowed ten minutes, so a
+ * page built on the boolean shows nothing for ten minutes and nothing at all
+ * when it fails. Same shape the PHP/Node runtime installs use.
+ */
+export const fail2banInstallSchema = z.object({
+  // installing | failed
+  status: z.string(),
+  // A stable code (package_not_found, apt_lock, network, no_space, worker,
+  // unknown) and the API's own rendering of it in the viewer's locale. We show
+  // the title and never invent our own words for someone else's failure.
+  reason: z.string().nullable().optional(),
+  reason_title: z.string().nullable().optional(),
+  // Locates the server-ops log entry — the thing support asks for.
+  reference: z.string().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  finished_at: z.string().nullable().optional(),
+});
+
 export const fail2banSchema = z.object({
   // `false` is a normal state on a fresh server, not an error.
   installed: z.boolean(),
+  install: fail2banInstallSchema.nullable().optional(),
   running: z.boolean().optional(),
   version: z.string().nullable().optional(),
   // The caller's own address — the one-click answer to "don't ban me".
