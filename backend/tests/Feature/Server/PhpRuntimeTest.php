@@ -1,7 +1,11 @@
 <?php
 
+use App\Enums\InstallStatus;
+use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Jobs\InstallPhpVersion;
+use App\Jobs\RemovePhpVersion;
 use App\Models\Application;
+use App\Models\RuntimeInstall;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Runtimes\PhpRuntime;
@@ -133,34 +137,54 @@ it('refuses to remove a version a site is pinned to, naming the site', function 
         ->assertJsonFragment(['message' => 'PHP 8.3 is used by Legacy shop. Change those sites first.']);
 });
 
-it('removes a version nothing depends on', function () {
-    $runs = fakePhp(default: '8.4');
+it('queues the removal instead of purging inside the request', function () {
+    Queue::fake();
+    fakePhp(default: '8.4');
 
-    phpCall('DELETE', '/api/php/versions/8.3')->assertNoContent();
+    // 202, not 204. apt takes minutes and nginx ends a request at
+    // fastcgi_read_timeout, so purging here handed the browser a timeout
+    // while the work carried on — the screen never refreshed, the version
+    // disappeared on its own, and pressing Remove again answered 404.
+    phpCall('DELETE', '/api/php/versions/8.3')->assertStatus(202);
 
-    expect(collect($runs)->pluck('command'))->toContain(['apt-get', 'purge', '-y', 'php8.3-*']);
+    Queue::assertPushed(RemovePhpVersion::class, fn ($job) => $job->version === '8.3');
 });
 
-it('clears out what the purge cannot, so the version stops being listed', function () {
+it('marks the version as removing before the worker picks it up', function () {
+    Queue::fake();
+    fakePhp(default: '8.4');
+
+    phpCall('DELETE', '/api/php/versions/8.3')->assertStatus(202);
+
+    // Recorded before dispatch: a client reloading straight after the 202
+    // must see the version marked rather than watch it sit there looking
+    // untouched.
+    expect(RuntimeInstall::where('version', '8.3')->first()?->status)
+        ->toBe(InstallStatus::Removing);
+});
+
+it('purges and then clears what the purge cannot', function () {
     // The panel writes a pool file per site into <version>/fpm/pool.d. dpkg
     // does not own those, so a directory still holding them survives the
     // purge — and detection reads exactly these directories, which is why a
     // removed version stayed on the screen through a reload.
     $runs = fakePhp(default: '8.4');
 
-    phpCall('DELETE', '/api/php/versions/8.3')->assertNoContent();
+    app(PhpRuntime::class)->uninstall('8.3');
 
     expect(collect($runs)->pluck('command'))
+        ->toContain(['apt-get', 'purge', '-y', 'php8.3-*'])
         ->toContain(['rm', '-rf', config('server.php_dir').'/8.3']);
 });
 
 it('does not clear the directory when the purge failed', function () {
-    // Removing a version's configuration after apt refused to remove the
+    // Stripping a version's configuration after apt refused to remove the
     // version would leave a working PHP with no config at all — worse than
-    // the leftover directory this exists to sweep up.
+    // the leftovers this exists to sweep up.
     $runs = fakePhp(default: '8.4', ok: false);
 
-    phpCall('DELETE', '/api/php/versions/8.3')->assertStatus(500);
+    expect(fn () => app(PhpRuntime::class)->uninstall('8.3'))
+        ->toThrow(SettingOperationException::class);
 
     expect(collect($runs)->pluck('command'))
         ->not->toContain(['rm', '-rf', config('server.php_dir').'/8.3']);

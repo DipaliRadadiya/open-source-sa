@@ -1614,6 +1614,7 @@
       "defaultSet": "PHP {version} is now the default.",
       "defaultFailed": "That version could not be made the default.",
       "removed": "PHP {version} removed.",
+      "removing": "Removing PHP {version} — this takes a few minutes.",
       "removeFailed": "That version could not be removed.",
       "confirmRemoveTitle": "Remove PHP {version}?",
       "confirmRemoveBody": "Its extensions and settings go with it. You can install it again later.",
@@ -1628,6 +1629,8 @@
         "configuring": "Configuring"
       },
       "stillInstalling": "This version is still installing.",
+      "stillRemoving": "This version is being removed.",
+      "statusRemoving": "Removing",
       "installFailedShort": "This version did not install.",
       "installingTitle": "PHP {version} is still installing",
       "installingBody": "Extensions will appear once it finishes. This can take a few minutes.",

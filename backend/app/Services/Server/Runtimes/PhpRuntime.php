@@ -191,13 +191,14 @@ class PhpRuntime implements Runtime
     /**
      * @throws SettingOperationException
      */
-    public function uninstall(string $version): void
+    public function uninstall(string $version, ?callable $onOutput = null): void
     {
         $this->must($this->serverOps->run(
             ['apt-get', 'purge', '-y', $this->stack->packagePrefix($version).'*'],
             ['feature' => 'runtime', 'op' => 'php_uninstall', 'version' => $version],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
+            onOutput: $onOutput,
         ));
 
         // Only after the purge succeeded, and only for a version that was

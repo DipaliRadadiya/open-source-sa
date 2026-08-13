@@ -54,18 +54,29 @@ export function VersionSummary({
   const notReadyReason = installState
     ? installState === "installing"
       ? t("versions.stillInstalling")
-      : t("versions.installFailedShort")
+      : // Removing is in-flight like installing, so everything that reads or
+        // writes this version has to be refused while it runs — including
+        // Remove itself, which used to be pressable a second time and
+        // answered 404 once apt had finished.
+        installState === "removing"
+        ? t("versions.stillRemoving")
+        : t("versions.installFailedShort")
     : null;
 
   const removeReason = !canManage
     ? t("noPermission")
-    : version.in_use_by_panel
-      ? t("versions.panelRuns")
-      : version.is_default
-        ? t("versions.isDefault")
-        : usedBy > 0
-          ? t("versions.usedBy", { count: usedBy })
-          : null;
+    : // Already going. Pressing Remove again used to send a second DELETE,
+      // which answered 404 the moment apt had finished the first — the error
+      // that made this look broken when it had actually worked.
+      installState === "removing"
+      ? t("versions.stillRemoving")
+      : version.in_use_by_panel
+        ? t("versions.panelRuns")
+        : version.is_default
+          ? t("versions.isDefault")
+          : usedBy > 0
+            ? t("versions.usedBy", { count: usedBy })
+            : null;
 
   async function makeDefault() {
     setPending(true);
@@ -84,7 +95,10 @@ export function VersionSummary({
     setPending(true);
     try {
       await removePhpVersion(version.version);
-      toast.success(t("versions.removed", { version: version.version }));
+      // "Removing", not "removed": this is a 202 now, and apt has minutes of
+      // work ahead of it. Saying it was done was the reason a version still
+      // sitting there looked like a bug rather than a purge in progress.
+      toast.success(t("versions.removing", { version: version.version }));
       setConfirming(false);
       router.refresh();
     } catch (error) {
@@ -122,6 +136,15 @@ export function VersionSummary({
           {installState === "failed" ? (
             <Badge variant="destructive" className="font-normal">
               {t("versions.statusFailed")}
+            </Badge>
+          ) : installState === "removing" ? (
+            // Its own state rather than hiding the card the moment the button
+            // is pressed: the purge takes minutes, and a card that vanished
+            // immediately would leave nothing to look at while it happened —
+            // and nothing to show if it failed.
+            <Badge variant="warning" className="font-normal">
+              <Loader2 className="size-3 animate-spin" />
+              {t("versions.statusRemoving")}
             </Badge>
           ) : installState === "installing" ? (
             <Badge variant="warning" className="font-normal">

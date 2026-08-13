@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Download, Loader2, Plus, TriangleAlert } from "lucide-react";
@@ -41,6 +41,7 @@ export function InstallVersionButton({
 }) {
   const t = useTranslations(runtime);
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [version, setVersion] = useState(installable[0]?.version ?? "");
   const [pending, setPending] = useState(false);
@@ -65,6 +66,14 @@ export function InstallVersionButton({
           : t("install.started", { version }),
       );
       setOpen(false);
+      // Land on the version that was just asked for, rather than leaving the
+      // operator on whichever tab they happened to be on and expecting them to
+      // go find it. The install takes minutes and now reports its progress on
+      // that tab, so this is where the answer to "is it working?" lives.
+      //
+      // `replace`, not `push`: Back should return to whatever they were
+      // looking at before, not step through each version they installed.
+      router.replace(`${pathname}?version=${encodeURIComponent(version)}`);
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("install.failed")));

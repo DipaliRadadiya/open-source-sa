@@ -43,6 +43,21 @@ class InstallTracker
         );
     }
 
+    /**
+     * The same row, for a purge rather than an install.
+     *
+     * Shares the table deliberately: the screen asks one question — "is
+     * anything happening to this version?" — and two tables would mean two
+     * answers, free to disagree about a version being installed and removed
+     * at once.
+     */
+    public function startRemoval(string $runtime, string $version): RuntimeInstall
+    {
+        return tap($this->start($runtime, $version), fn (RuntimeInstall $row) => $row
+            ->forceFill(['status' => InstallStatus::Removing])
+            ->save());
+    }
+
     /** The in-flight row for one install, so a job can report progress to it. */
     public function current(string $runtime, string $version, ?string $extension = null): ?RuntimeInstall
     {

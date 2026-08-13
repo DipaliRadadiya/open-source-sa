@@ -3,6 +3,7 @@
 use App\Enums\InstallStatus;
 use App\Models\RuntimeInstall;
 use App\Services\Runtime\InstallProgress;
+use App\Services\Runtime\InstallTracker;
 
 /*
  * The step has to come out of apt's own output, not a timer.
@@ -119,7 +120,7 @@ it('clears the last attempt\'s progress when an install is retried', function ()
     $progress->push("E: Could not get lock\n");
     $progress->persist();
 
-    app(App\Services\Runtime\InstallTracker::class)->start('php', '8.4');
+    app(InstallTracker::class)->start('php', '8.4');
 
     // Showing the previous attempt's failure under a fresh spinner would have
     // the operator reading an error that has already been retried.

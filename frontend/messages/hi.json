@@ -1614,6 +1614,7 @@
       "defaultSet": "अब PHP {version} डिफ़ॉल्ट है।",
       "defaultFailed": "यह वर्शन डिफ़ॉल्ट नहीं बनाया जा सका।",
       "removed": "PHP {version} हटा दिया गया।",
+      "removing": "PHP {version} हटाया जा रहा है — इसमें कुछ मिनट लगेंगे।",
       "removeFailed": "यह वर्शन हटाया नहीं जा सका।",
       "confirmRemoveTitle": "PHP {version} हटाएँ?",
       "confirmRemoveBody": "इसके एक्सटेंशन और सेटिंग्स भी चली जाएँगी। बाद में दोबारा इंस्टॉल कर सकते हैं।",
@@ -1628,6 +1629,8 @@
         "configuring": "कॉन्फ़िगर हो रहा है"
       },
       "stillInstalling": "यह संस्करण अभी इंस्टॉल हो रहा है।",
+      "stillRemoving": "यह संस्करण हटाया जा रहा है।",
+      "statusRemoving": "हटाया जा रहा है",
       "installFailedShort": "यह संस्करण इंस्टॉल नहीं हुआ।",
       "installingTitle": "PHP {version} अभी इंस्टॉल हो रहा है",
       "installingBody": "पूरा होने पर एक्सटेंशन दिखेंगे। इसमें कुछ मिनट लग सकते हैं।",

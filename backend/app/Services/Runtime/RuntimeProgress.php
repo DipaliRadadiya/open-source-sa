@@ -53,7 +53,14 @@ class RuntimeProgress
             // something already underway.
             'installable' => array_values(array_filter(
                 $installable,
-                fn (array $row) => $installs->get($row['version'])?->status !== InstallStatus::Installing,
+                // Removing counts as busy too: offering Install for a version
+                // apt is midway through purging would start the two against
+                // each other on the same package.
+                fn (array $row) => ! in_array(
+                    $installs->get($row['version'])?->status,
+                    [InstallStatus::Installing, InstallStatus::Removing],
+                    true,
+                ),
             )),
         ];
     }

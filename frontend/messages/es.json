@@ -1614,6 +1614,7 @@
       "defaultSet": "PHP {version} ya es la predeterminada.",
       "defaultFailed": "No se pudo hacer predeterminada esa versión.",
       "removed": "PHP {version} eliminada.",
+      "removing": "Eliminando PHP {version}: esto tarda unos minutos.",
       "removeFailed": "No se pudo eliminar esa versión.",
       "confirmRemoveTitle": "¿Quitar PHP {version}?",
       "confirmRemoveBody": "Sus extensiones y ajustes se van con ella. Puedes instalarla de nuevo más tarde.",
@@ -1628,6 +1629,8 @@
         "configuring": "Configurando"
       },
       "stillInstalling": "Esta versión aún se está instalando.",
+      "stillRemoving": "Esta versión se está eliminando.",
+      "statusRemoving": "Eliminando",
       "installFailedShort": "Esta versión no se instaló.",
       "installingTitle": "PHP {version} aún se está instalando",
       "installingBody": "Las extensiones aparecerán cuando termine. Puede tardar unos minutos.",

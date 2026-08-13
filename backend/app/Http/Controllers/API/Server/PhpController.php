@@ -9,6 +9,7 @@ use App\Http\Requests\Server\Php\PhpVersionRequest;
 use App\Http\Requests\Server\Php\UpdatePhpIniRequest;
 use App\Jobs\InstallPhpExtension;
 use App\Jobs\InstallPhpVersion;
+use App\Jobs\RemovePhpVersion;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
@@ -74,7 +75,7 @@ class PhpController extends Controller
      * on PHP itself, and removing the version underneath it would take the
      * panel offline from inside the panel — with no way back in to undo it.
      */
-    public function destroy(string $version, PhpRuntime $php, ActivityLogger $log): JsonResponse
+    public function destroy(string $version, PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
         abort_unless($php->installed($version), 404);
 
@@ -94,10 +95,22 @@ class PhpController extends Controller
             return response()->json(['message' => __('errors/php.version_is_default')], 422);
         }
 
-        $php->uninstall($version);
-        $log->log('php.uninstalled', null, ['version' => $version]);
+        // Queued, and recorded before dispatch for the same reason installing
+        // is: a client that reloads straight after this must see the version
+        // marked `removing` rather than watch it sit there looking untouched.
+        //
+        // It used to purge inside this request. apt takes minutes and nginx
+        // ends a request at fastcgi_read_timeout, so the browser got a
+        // timeout while the purge carried on — the screen never refreshed,
+        // the version vanished on its own a minute later, and pressing Remove
+        // again answered 404 for something already gone.
+        $installs->startRemoval('php', $version);
+        RemovePhpVersion::dispatch($version, Auth::id());
 
-        return response()->json(null, 204);
+        return response()->json(
+            ['message' => __('php.uninstall_started', ['version' => $version])],
+            202,
+        );
     }
 
     /**
