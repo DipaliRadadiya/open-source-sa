@@ -3224,8 +3224,6 @@
         "compressDone": "{count, plural, one {# elemento comprimido.} other {# elementos comprimidos.}}",
         "permissionsTitle": "Permisos de {count, plural, one {# elemento} other {# elementos}}",
         "permissionsDescription": "Se aplica el mismo modo a todo lo seleccionado.",
-        "modeLabel": "Modo",
-        "modeHint": "Tres dígitos, p. ej. 644. No 0644.",
         "permissionsDone": "{count, plural, one {# elemento actualizado.} other {# elementos actualizados.}}",
         "deleteTitle": "¿Eliminar {count, plural, one {# elemento} other {# elementos}}?",
         "deleteDescription": "Se eliminan del servidor. Esto no se puede deshacer.",

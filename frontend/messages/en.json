@@ -3224,8 +3224,6 @@
         "compressDone": "{count, plural, one {# item compressed.} other {# items compressed.}}",
         "permissionsTitle": "Permissions for {count, plural, one {# item} other {# items}}",
         "permissionsDescription": "The same mode is applied to everything selected.",
-        "modeLabel": "Mode",
-        "modeHint": "Three digits, e.g. 644. Not 0644.",
         "permissionsDone": "{count, plural, one {# item updated.} other {# items updated.}}",
         "deleteTitle": "Delete {count, plural, one {# item} other {# items}}?",
         "deleteDescription": "These are removed from the server. This cannot be undone.",

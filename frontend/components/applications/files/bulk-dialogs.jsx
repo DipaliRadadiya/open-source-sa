@@ -25,10 +25,9 @@ import { dirname, joinPath } from "@/lib/files/path-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PermissionModeField } from "@/components/applications/files/permission-mode-field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormModal } from "@/components/ui/form-modal";
-
-const MODES = ["644", "755", "600"];
 
 /**
  * The dialogs behind the selection bar. One component because all four share
@@ -43,7 +42,7 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
   const [target, setTarget] = useState(() =>
     action === "compress" ? joinPath(path, "archive.zip") : path,
   );
-  const [mode, setMode] = useState(MODES[0]);
+  const [mode, setMode] = useState("644");
   const [error, setError] = useState(null);
 
   async function run(call) {
@@ -151,41 +150,20 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
           </Button>
           <Button type="submit" disabled={busy || (!isPermissions && !target.trim())}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {t(`bulk.${action}`)}
+            {/* "Permissions" is the name of the job, not something you can do —
+                the single-file dialog says Save here, and so does this one. */}
+            {isPermissions ? t("permissionsDialog.submit") : t(`bulk.${action}`)}
           </Button>
         </>
       }
     >
       {isPermissions ? (
-        <div className="space-y-2">
-          <Label htmlFor="bulk-mode">{t("bulk.modeLabel")}</Label>
-          <div className="flex flex-wrap gap-2">
-            {MODES.map((option) => (
-              <Button
-                key={option}
-                type="button"
-                size="sm"
-                variant={mode === option ? "default" : "outline"}
-                onClick={() => setMode(option)}
-                className="font-mono"
-              >
-                {option}
-              </Button>
-            ))}
-          </div>
-          {/* Three digits, never four. The API refuses a leading 0 outright,
-              and `0644` is what everyone types out of habit. */}
-          <Input
-            id="bulk-mode"
-            value={mode}
-            onChange={(event) => setMode(event.target.value.trim())}
-            inputMode="numeric"
-            maxLength={3}
-            className="w-24 font-mono"
-            aria-invalid={Boolean(error)}
-          />
-          <p className="text-xs text-muted-foreground">{t("bulk.modeHint")}</p>
-        </div>
+        // The same control as a single file's Permissions dialog. This was a row
+        // of raw octal buttons and a number box — asking people to know the
+        // 4/2/1 mask for exactly the job the single-file dialog had already
+        // decided they should not have to. No label above it: the picker names
+        // its own rows and columns, and the dialog is titled "Permissions".
+        <PermissionModeField mode={mode} onChange={setMode} invalid={Boolean(error)} />
       ) : (
         <div className="space-y-2">
           <Label htmlFor="bulk-target">{meta.label}</Label>

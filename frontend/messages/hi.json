@@ -3224,8 +3224,6 @@
         "compressDone": "{count, plural, one {# आइटम संपीड़ित हुआ।} other {# आइटम संपीड़ित हुए।}}",
         "permissionsTitle": "{count, plural, one {# आइटम} other {# आइटम}} की अनुमतियाँ",
         "permissionsDescription": "चुने गए सब पर वही मोड लागू होता है।",
-        "modeLabel": "मोड",
-        "modeHint": "तीन अंक, जैसे 644। 0644 नहीं।",
         "permissionsDone": "{count, plural, one {# आइटम अपडेट हुआ।} other {# आइटम अपडेट हुए।}}",
         "deleteTitle": "{count, plural, one {# आइटम} other {# आइटम}} हटाएँ?",
         "deleteDescription": "ये सर्वर से हटा दिए जाते हैं। इसे पूर्ववत नहीं किया जा सकता।",
