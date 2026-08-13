@@ -1621,6 +1621,12 @@
       "switchLabel": "Ajustes de:",
       "statusFailed": "Instalación fallida",
       "statusInstalling": "Instalando",
+      "steps": {
+        "preparing": "Preparando",
+        "downloading": "Descargando",
+        "unpacking": "Descomprimiendo",
+        "configuring": "Configurando"
+      },
       "stillInstalling": "Esta versión aún se está instalando.",
       "installFailedShort": "Esta versión no se instaló.",
       "installingTitle": "PHP {version} aún se está instalando",

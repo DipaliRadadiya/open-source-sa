@@ -126,7 +126,14 @@ export function VersionSummary({
           ) : installState === "installing" ? (
             <Badge variant="warning" className="font-normal">
               <Loader2 className="size-3 animate-spin" />
-              {t("versions.statusInstalling")}
+              {/* The phase apt reported, not a percentage. There is no honest
+                  percentage available: the install is one apt call and its
+                  total is unknown until it finishes, so a number would be
+                  invented. A named phase is something the server actually
+                  said. */}
+              {version.current_step
+                ? t(`versions.steps.${version.current_step}`)
+                : t("versions.statusInstalling")}
             </Badge>
           ) : (
             <LifecycleBadge
@@ -193,6 +200,26 @@ export function VersionSummary({
               }`
             : null}
         </CardDescription>
+
+        {/* apt's own output, while it is installing and after it has failed.
+            The badge says which phase it reached; only this says why it
+            stopped there — "unable to locate package" and "could not get
+            lock" are the same failed install without it, and both have
+            different answers.
+
+            Kept after the failure too, deliberately: the moment someone wants
+            to read the output is the moment it went wrong. */}
+        {installState && version.output ? (
+          <pre
+            className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-[11px] leading-relaxed text-muted-foreground"
+            // Announced politely: this updates every poll while an install
+            // runs, and an assertive region would interrupt a screen reader
+            // several times a minute for output nobody asked to hear.
+            aria-live="polite"
+          >
+            {version.output.trimEnd()}
+          </pre>
+        ) : null}
 
         {/* Tags, not prose: each name is one scannable unit, so the near-
             duplicates stop reading as one long string. The API sends at most

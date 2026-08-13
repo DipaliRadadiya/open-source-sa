@@ -32,10 +32,21 @@ class InstallTracker
                 // A retry clears the last failure rather than stacking on it.
                 'reason' => null,
                 'reference' => null,
+                // Likewise the last run's progress: showing the previous
+                // attempt's output under a fresh spinner would have the
+                // operator reading a failure that has already been retried.
+                'current_step' => null,
+                'output' => null,
                 'started_at' => now(),
                 'finished_at' => null,
             ],
         );
+    }
+
+    /** The in-flight row for one install, so a job can report progress to it. */
+    public function current(string $runtime, string $version, ?string $extension = null): ?RuntimeInstall
+    {
+        return $this->query($runtime, $version, $extension)->first();
     }
 
     /**

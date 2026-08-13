@@ -70,6 +70,11 @@ class RuntimeProgress
             'reason' => null,
             'message' => null,
             'reference' => null,
+            // Named here too, so every version carries the same keys whether
+            // or not an install touched it — a field that appears only
+            // sometimes is one the frontend has to guard on every read.
+            'current_step' => null,
+            'output' => null,
         ];
     }
 }

@@ -1621,6 +1621,12 @@
       "switchLabel": "Settings for:",
       "statusFailed": "Install failed",
       "statusInstalling": "Installing",
+      "steps": {
+        "preparing": "Preparing",
+        "downloading": "Downloading",
+        "unpacking": "Unpacking",
+        "configuring": "Configuring"
+      },
       "stillInstalling": "This version is still installing.",
       "installFailedShort": "This version did not install.",
       "installingTitle": "PHP {version} is still installing",

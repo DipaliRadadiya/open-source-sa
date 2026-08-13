@@ -1621,6 +1621,12 @@
       "switchLabel": "सेटिंग्स — किसके लिए:",
       "statusFailed": "इंस्टॉल विफल",
       "statusInstalling": "इंस्टॉल हो रहा है",
+      "steps": {
+        "preparing": "तैयारी हो रही है",
+        "downloading": "डाउनलोड हो रहा है",
+        "unpacking": "अनपैक हो रहा है",
+        "configuring": "कॉन्फ़िगर हो रहा है"
+      },
       "stillInstalling": "यह संस्करण अभी इंस्टॉल हो रहा है।",
       "installFailedShort": "यह संस्करण इंस्टॉल नहीं हुआ।",
       "installingTitle": "PHP {version} अभी इंस्टॉल हो रहा है",

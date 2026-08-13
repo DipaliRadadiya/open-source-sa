@@ -34,6 +34,13 @@ export const phpVersionSchema = z.object({
   // When the install began — the answer to "is this stuck?".
   started_at: z.string().nullable().optional(),
   started_at_human: z.string().nullable().optional(),
+  // Which phase apt is in, read out of its own output rather than timed.
+  // Null until it has said something recognisable, which the screen shows as
+  // "starting" instead of inventing a first step.
+  current_step: z.string().nullable().optional(),
+  // apt's own words, tail only. The step says where an install stopped; this
+  // is the only thing that says why.
+  output: z.string().nullable().optional(),
   source: z.string().nullable().optional(),
   // The version the panel itself runs on. Removing it would take the panel
   // offline from inside the panel, so the control is hidden, not just refused.

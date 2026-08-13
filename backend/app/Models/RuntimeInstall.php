@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class RuntimeInstall extends Model
 {
     protected $fillable = [
-        'runtime', 'version', 'extension', 'status', 'reason', 'reference', 'started_at', 'finished_at',
+        'runtime', 'version', 'extension', 'status', 'reason', 'reference',
+        'current_step', 'output', 'started_at', 'finished_at',
     ];
 
     protected function casts(): array
@@ -59,6 +60,16 @@ class RuntimeInstall extends Model
             'reason' => $this->reason,
             'message' => $this->message(),
             'reference' => $this->reference,
+            // What apt is doing, read out of its own output rather than
+            // guessed — see InstallProgress. Null until it has said something
+            // recognisable, which the screen shows as "starting" rather than
+            // inventing a first step.
+            'current_step' => $this->current_step,
+            // apt's own words, tail only. The step says where an install
+            // stopped; this is the only thing that says why, and "unable to
+            // locate package" and "could not get lock" are the same failed
+            // install without it.
+            'output' => $this->output,
         ];
     }
 }

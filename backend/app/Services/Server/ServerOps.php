@@ -46,7 +46,27 @@ class ServerOps
      *                                      the place for secrets, since a
      *                                      child process inherits it.
      */
-    public function run(array $command, array $context = [], int $timeout = 60, mixed $input = null, ?string $cwd = null, array $env = []): ServerOpsResult
+    /**
+     * @param  callable|null  $onOutput  Called with each chunk as it arrives,
+     *                                   for a command slow enough that someone
+     *                                   is watching it — an apt install runs
+     *                                   for minutes and says nothing useful
+     *                                   until it is over.
+     *
+     *                                   Deliberately here rather than in
+     *                                   `stream()`: this keeps the transient
+     *                                   retry, the failure classification and
+     *                                   the ops-log entry, all of which
+     *                                   streaming gives up. An apt install
+     *                                   losing its lock retry to gain a
+     *                                   progress bar would be a poor trade.
+     *
+     *                                   Called once per chunk *per attempt*;
+     *                                   a retry replays from the start, so a
+     *                                   consumer that accumulates should
+     *                                   expect to see the beginning twice.
+     */
+    public function run(array $command, array $context = [], int $timeout = 60, mixed $input = null, ?string $cwd = null, array $env = [], ?callable $onOutput = null): ServerOpsResult
     {
         $command = $this->elevate($command);
 
@@ -95,7 +115,9 @@ class ServerOps
                 if ($env !== []) {
                     $pending = $pending->env($env);
                 }
-                $result = $pending->run($command);
+                $result = $onOutput === null
+                    ? $pending->run($command)
+                    : $pending->run($command, fn (string $type, string $chunk) => $onOutput($chunk));
                 $ok = $result->successful();
                 $exitCode = $result->exitCode();
                 $stderr = $result->errorOutput();

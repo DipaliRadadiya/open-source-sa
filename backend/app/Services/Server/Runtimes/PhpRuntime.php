@@ -146,7 +146,7 @@ class PhpRuntime implements Runtime
      *
      * @throws RuntimeInstallException
      */
-    public function install(string $version): void
+    public function install(string $version, ?callable $onOutput = null): void
     {
         $result = $this->serverOps->run(
             ['apt-get', 'install', '-y', '--no-install-recommends', ...$this->stack->versionPackages($version)],
@@ -155,6 +155,11 @@ class PhpRuntime implements Runtime
             // apt refuses to run unattended without this, and a prompt with
             // nobody to answer it hangs until the timeout.
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
+            // Passed through so the caller can report progress while this runs.
+            // Nothing here interprets it: what apt's output *means* is
+            // InstallProgress's job, and this method should not grow a second
+            // one.
+            onOutput: $onOutput,
         );
 
         // Classified here, where the output still exists. Past this point only
