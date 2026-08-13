@@ -6,6 +6,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\FileBrowser;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Process;
 
@@ -2087,5 +2088,32 @@ describe('trash', function () {
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/trash/restore'), ['batch' => '../../etc', 'path' => 'old.txt'])
             ->assertStatus(422);
+    });
+});
+
+describe('trash retention', function () {
+    it('is actually scheduled, not merely written', function () {
+        // The reason this test exists: pruneTrash() shipped with zero call
+        // sites. The retention was real code, the config key was real, the API
+        // reference said it happened — and nothing ever ran it. A method
+        // nobody calls is indistinguishable from a method nobody wrote, except
+        // that it reads as done.
+        $events = collect(app(Schedule::class)->events())
+            ->map(fn ($event): string => (string) $event->command);
+
+        expect($events->contains(fn (string $c): bool => str_contains($c, 'files:prune-trash')))->toBeTrue();
+    });
+
+    it('sweeps every application, and one bad site does not stop the rest', function () {
+        fakeFileBrowserServer();
+
+        $this->artisan('files:prune-trash')->assertSuccessful();
+
+        // The sweep is a find per site, with the configured window in it.
+        $days = (int) config('server.applications.trash_retention_days');
+
+        expect(collect(FileBrowserFake::$ran)->contains(
+            fn (string $c): bool => str_contains($c, 'trash') && str_contains($c, '-mtime') && str_contains($c, '+'.$days)
+        ))->toBeTrue();
     });
 });

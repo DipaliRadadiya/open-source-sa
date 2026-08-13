@@ -46,3 +46,10 @@ Schedule::command('certificates:refresh-expiry')->daily()->withoutOverlapping();
 // self-gates on each target's DB schedule. No cron file, so it can never
 // drift with the user-managed Cronjobs feature.
 Schedule::command('backups:run-due')->everyMinute()->withoutOverlapping();
+
+// File manager trash. Every delete keeps a full copy, so without a sweep this
+// is a slow disk-space leak on a machine whose whole job is running out of
+// disk quietly. Daily because the unit is days — and scheduled at all because
+// the retention was written first and wired up second, which for a while meant
+// the API promised a sweep that never ran.
+Schedule::command('files:prune-trash')->daily()->withoutOverlapping();
