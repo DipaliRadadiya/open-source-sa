@@ -32,12 +32,27 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->dir));
 
-function fakeSettings(): void
+function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
 {
     $redis = test()->redisCli;
-    Process::fake(function ($process) use ($redis) {
+    $swapFile = test()->swapFile;
+    Process::fake(function ($process) use ($redis, $swapActive, $swapoffOk, $swapFile) {
         $cmd = $process->command;
         $bin = $cmd[0] ?? '';
+
+        // Checked before the `swapon` case below, which is the activation
+        // call rather than the query and shares its binary.
+        if ($bin === 'swapon' && ($cmd[1] ?? '') === '--show=NAME') {
+            return Process::result(output: $swapActive ? $swapFile."\n" : '');
+        }
+
+        if ($bin === 'swapoff') {
+            // What the kernel says when there is not enough free RAM to take
+            // back the pages that are currently swapped out.
+            return $swapoffOk
+                ? Process::result(exitCode: 0)
+                : Process::result(exitCode: 255, errorOutput: 'swapoff: '.$swapFile.': Cannot allocate memory');
+        }
 
         // Config writes go through ServerOps now rather than File::put, so
         // the fake has to perform them — otherwise the file never appears
@@ -126,6 +141,51 @@ it('disables swap and strips only its fstab line', function () {
     expect(File::get($this->fstab))
         ->toContain('UUID=abc / ext4 defaults 0 1')
         ->not->toContain($this->swapFile);
+});
+
+it('deletes the swap file before allocating, so a smaller size really shrinks', function () {
+    // fallocate only ever allocates: given a length smaller than the file
+    // already has it succeeds and changes nothing. Resizing 2 GB down to
+    // 1.5 GB left a 2 GB file, mkswap made 2 GB of swap, and the screen came
+    // back showing the old number — which is what "downgrading doesn't work"
+    // was. Growing worked, so it only ever looked broken one way.
+    fakeSettings(swapActive: true);
+    File::put(test()->swapFile, 'x');
+
+    test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->putJson('/api/settings/swap', ['size_mb' => 1536])->assertOk();
+
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', test()->swapFile]);
+    Process::assertRan(fn ($p) => $p->command === ['fallocate', '-l', '1536M', test()->swapFile]);
+});
+
+it('refuses to resize swap the server cannot give up, and says why', function () {
+    // swapoff reads every swapped-out page back into RAM and refuses when
+    // there is not enough free memory — the state a server changing its swap
+    // is most likely to be in. This used to be ignored.
+    fakeSettings(swapActive: true, swapoffOk: false);
+
+    test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->putJson('/api/settings/swap', ['size_mb' => 1536])
+        ->assertStatus(422)
+        ->assertJsonPath('message', __('errors/setting.swap_in_use'));
+
+    // The part that matters: mkswap must not have rewritten the header of a
+    // swap file the kernel is still using.
+    Process::assertNotRan(fn ($p) => $p->command === ['mkswap', test()->swapFile]);
+    Process::assertNotRan(fn ($p) => $p->command === ['rm', '-f', test()->swapFile]);
+});
+
+it('refuses to disable swap the server cannot give up', function () {
+    fakeSettings(swapActive: true, swapoffOk: false);
+    File::put(test()->swapFile, 'x');
+
+    test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->putJson('/api/settings/swap', ['size_mb' => 0])
+        ->assertStatus(422);
+
+    // Deleting the file out from under an active swap is worse than refusing.
+    expect(File::exists(test()->swapFile))->toBeTrue();
 });
 
 it('rejects a swap size over the configured ceiling', function () {

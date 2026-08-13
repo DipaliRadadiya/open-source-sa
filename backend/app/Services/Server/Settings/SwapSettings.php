@@ -69,9 +69,35 @@ class SwapSettings implements SettingGroup
         $file = $this->path();
 
         // Take an existing managed swap file offline before resizing it.
+        //
+        // A failure here used to be ignored. It cannot be: `swapoff` reads
+        // every swapped-out page back into RAM first, and refuses when there
+        // is not enough free memory to hold them — which is exactly the state
+        // a server is in when someone decides to change its swap. Carrying on
+        // meant running `mkswap` over a file the kernel was still swapping to,
+        // rewriting the header underneath it.
+        //
+        // 422 with a reason of its own, not the generic "settings change
+        // failed": this one is not a fault, it is the server saying it needs
+        // that swap right now, and the answer is to free memory first.
         if ($this->isActive()) {
-            $this->run(['swapoff', $file], allowFailure: true);
+            $off = $this->serverOps->run(
+                ['swapoff', $file],
+                ['feature' => 'setting', 'group' => 'swap', 'op' => 'swapoff'],
+                // Reading gigabytes back off disk is slow, and being cut off
+                // partway is how a half-disabled swap happens.
+                timeout: 300,
+            );
+
+            abort_if($off->failed(), 422, __('errors/setting.swap_in_use'));
         }
+
+        // Removed rather than resized in place. `fallocate` only ever
+        // allocates: given a smaller length than the file already has it
+        // succeeds and changes nothing, so 2 GB asked down to 1.5 GB stayed
+        // 2 GB and the screen showed the old number back. Growing worked,
+        // which is why this only ever looked broken in one direction.
+        $this->run(['rm', '-f', $file]);
 
         $this->run(['fallocate', '-l', "{$sizeMb}M", $file]);
         $this->run(['chmod', '600', $file]);
@@ -85,8 +111,18 @@ class SwapSettings implements SettingGroup
     {
         $file = $this->path();
 
+        // Same rule as resizing, and for the same reason: deleting the file
+        // out from under an active swap is worse than refusing to. Turning
+        // swap off entirely is the case most likely to be refused, since it
+        // has to take back every page at once.
         if ($this->isActive()) {
-            $this->run(['swapoff', $file], allowFailure: true);
+            $off = $this->serverOps->run(
+                ['swapoff', $file],
+                ['feature' => 'setting', 'group' => 'swap', 'op' => 'swapoff'],
+                timeout: 300,
+            );
+
+            abort_if($off->failed(), 422, __('errors/setting.swap_in_use'));
         }
 
         $this->removeFstab($file);
@@ -163,11 +199,19 @@ class SwapSettings implements SettingGroup
     /**
      * @param  array<int, string>  $command
      */
-    private function run(array $command, bool $allowFailure = false): void
+    /**
+     * Every command here must succeed.
+     *
+     * There was an `allowFailure` flag, used only to ignore a failing
+     * `swapoff` — which is the one failure in this class that must never be
+     * ignored. Both callers now check that themselves and report why, so the
+     * flag has no remaining use and is gone rather than left as an invitation.
+     */
+    private function run(array $command): void
     {
         $result = $this->serverOps->run($command, ['feature' => 'setting', 'group' => 'swap', 'op' => 'apply']);
 
-        if (! $allowFailure && $result->failed()) {
+        if ($result->failed()) {
             throw new SettingOperationException($result->reference);
         }
     }
