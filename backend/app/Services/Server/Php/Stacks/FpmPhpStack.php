@@ -23,9 +23,19 @@ class FpmPhpStack implements PhpStack
     }
 
     /**
-     * Detected from the FPM config directories rather than from a package
-     * list: a version whose files are on disk is a version the panel can act
-     * on, whatever apt believes.
+     * Detected from the FPM config directories *and* the binary that runs
+     * them, rather than from a package list.
+     *
+     * The config directory alone is not enough, which is what this used to
+     * check. `apt remove php8.5-fpm` leaves `/etc/php/8.5/fpm` behind — its
+     * contents are conffiles, and only `purge` deletes those — and the panel's
+     * own pool files under `pool.d/` are not dpkg's to remove at all, so that
+     * directory can outlive the package permanently. A removed version
+     * therefore stayed on the PHP screen forever, offering settings for a
+     * runtime that was gone and reloads of a service that could not start.
+     *
+     * The binary is the honest test: it is what actually serves a site, and
+     * apt does take it away.
      *
      * @return array<int, string>
      */
@@ -37,14 +47,32 @@ class FpmPhpStack implements PhpStack
             return [];
         }
 
-        $versions = array_map(
-            fn (string $fpm) => basename(dirname($fpm)),
-            glob($dir.'/*/fpm', GLOB_ONLYDIR) ?: [],
+        $versions = array_filter(
+            array_map(
+                fn (string $fpm) => basename(dirname($fpm)),
+                glob($dir.'/*/fpm', GLOB_ONLYDIR) ?: [],
+            ),
+            fn (string $version): bool => is_file($this->fpmBinaryPath($version)),
         );
 
         usort($versions, fn (string $a, string $b) => version_compare($b, $a));
 
-        return $versions;
+        return array_values($versions);
+    }
+
+    /**
+     * The FPM binary for a version — `/usr/sbin/php-fpm8.3` on Debian and
+     * Ubuntu. Distinct from `binaryPath()`, which is the CLI: a server can
+     * have `php8.3` without `php8.3-fpm`, and only the second one can serve a
+     * site.
+     */
+    public function fpmBinaryPath(string $version): string
+    {
+        return str_replace(
+            '{version}',
+            $version,
+            (string) config('server.php_fpm_binary_pattern', '/usr/sbin/php-fpm{version}'),
+        );
     }
 
     public function installed(string $version): bool

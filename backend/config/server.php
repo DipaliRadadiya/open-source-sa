@@ -539,6 +539,13 @@ return [
     // runs on the same PHP that will serve it.
     'php_binary_pattern' => env('SERVER_PHP_BINARY_PATTERN', '/usr/bin/php{version}'),
 
+    // How a version maps to its *FPM* binary. Separate from the CLI above:
+    // a server can have php8.3 without php8.3-fpm, and only the second can
+    // serve a site. This is what decides whether a version is really
+    // installed — `apt remove` takes the binary but leaves /etc/php/<v>/fpm
+    // behind, so the config directory alone would list versions that are gone.
+    'php_fpm_binary_pattern' => env('SERVER_PHP_FPM_BINARY_PATTERN', '/usr/sbin/php-fpm{version}'),
+
     // Applications distributed through Composer are built rather than
     // unpacked, so it has to be present for those cards to work.
     'composer_binary' => env('SERVER_COMPOSER_BINARY', 'composer'),

@@ -37,6 +37,14 @@
              prefix on every one of them would assert the prefix instead.
              ServerOpsPrivilegeTest enables it and covers the prefixing. -->
         <env name="SERVER_OPS_SUDO" value="false"/>
+        <!-- A version counts as installed only when its FPM binary is really
+             there, which is what stops a removed version lingering on the PHP
+             screen. Every suite that fakes `php_dir` invents versions this
+             machine does not have, and none of them are about detection, so
+             the check is pointed at a path that always exists. `{version}`
+             never appears in it, so it resolves the same for any version.
+             FpmPhpStackDetectionTest overrides this to assert the real rule. -->
+        <env name="SERVER_PHP_FPM_BINARY_PATTERN" value="/bin/sh"/>
         <!-- Keep test runs out of the real operations log. Left alone the
              suite appended ~570k lines to it. `single` (not daily) so a test
              that reads the file knows its exact name. -->
