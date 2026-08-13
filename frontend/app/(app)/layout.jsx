@@ -17,6 +17,7 @@ import { PageCrumbProvider } from "@/components/sections/page-crumb";
 import { RateLimited } from "@/components/sections/rate-limited";
 import { isRateLimited } from "@/lib/api/rate-limited";
 import { ApplicationNavProvider } from "@/components/sections/application-nav";
+import { AppChromeHeight } from "@/components/sections/app-chrome-height";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,10 @@ export default async function AppLayout({ children }) {
                 {/* Banner + header ride together as one sticky cluster, so while
                 impersonating the indicator and its escape never scroll away. */}
                 <div className="sticky top-0 z-20">
+                  {/* Publishes this cluster's measured height as `--app-chrome`
+                      so anything else that sticks can clear it. Its height is
+                      conditional — see the component. */}
+                  <AppChromeHeight />
                   {impersonatedBy ? (
                     <ImpersonationBanner
                       username={user.username}
