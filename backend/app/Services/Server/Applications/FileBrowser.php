@@ -379,26 +379,10 @@ class FileBrowser
      */
     public function backups(Application $application, string $target): array
     {
-        $result = $this->serverOps->run(
-            $this->asUser($application, [
-                'find', $this->backupsDirectory($target), '-maxdepth', '1',
-                '-name', basename($target).'.bak-*', '-printf', '%f\n',
-            ]),
-            ['feature' => 'application', 'op' => 'file_backups', 'application' => $application->id],
-            timeout: 15,
-        );
-
-        if ($result->failed()) {
-            return [];
-        }
-
-        $names = array_values(array_filter(array_map('trim', explode("\n", $result->output()))));
-        rsort($names);
-
-        return array_map(fn (string $name): array => [
-            'name' => $name,
-            'created_at' => $this->timestampFromBackupName($name),
-        ], $names);
+        return array_map(fn (array $entry): array => [
+            'name' => $entry['name'],
+            'created_at' => $entry['created_at'],
+        ], $this->backupEntries($application, $target));
     }
 
     /**
@@ -418,18 +402,95 @@ class FileBrowser
             __('errors/application.unknown_backup'),
         );
 
-        $source = "{$this->backupsDirectory($target)}/{$name}";
-        $stat = $this->stat($application, $source);
-        abort_if($stat === null, 404);
+        // Located rather than assumed: a copy taken before the relocation is
+        // still in the old directory, and restoring it has to keep working.
+        $entry = collect($this->backupEntries($application, $target))->firstWhere('name', $name);
+        abort_if($entry === null, 404);
+
+        $source = "{$entry['dir']}/{$name}";
 
         $content = $this->run($application, ['cat', $source], 'read_backup')->output();
 
         $this->write($application, $path, $content);
     }
 
-    private function backupsDirectory(string $target): string
+    /**
+     * Where a file's saved copies live: under the application's own `.panel`
+     * directory, which sits ABOVE the document root.
+     *
+     * This used to be `dirname($target).'/.panel/backups'` — a `.panel` folder
+     * beside the edited file, inside the served tree. That was safe only for as
+     * long as every web server blocked dot-directories at every depth, and
+     * OpenLiteSpeed's rule is anchored at the web root, so a nested one may not
+     * have been covered. The payload made it worth moving rather than arguing
+     * about: back up `wp-config.php` once and that copy holds live database
+     * credentials.
+     *
+     * Above the document root there is nothing to block. It also matches the
+     * rule the rest of the panel already follows — nothing the panel writes
+     * lives under the document root.
+     *
+     * The file's directory (relative to the web root) is kept in the path, so
+     * `wp-config.php` and `wp-content/plugins/config.php` cannot collide.
+     */
+    private function backupsDirectory(Application $application, string $target): string
+    {
+        $root = rtrim($this->provisioner->documentRoot($application), '/');
+        $relative = trim(str_starts_with(dirname($target), $root)
+            ? substr(dirname($target), strlen($root))
+            : '', '/');
+
+        return rtrim($application->panelPath().'/file-backups/'.$relative, '/');
+    }
+
+    /**
+     * The pre-relocation location. Still read, so nobody loses the history
+     * they had, and still pruned, so those copies drain out of the served
+     * tree over time rather than sitting there indefinitely.
+     */
+    private function legacyBackupsDirectory(string $target): string
     {
         return dirname($target).'/.panel/backups';
+    }
+
+    /**
+     * Every saved copy of one file, newest first, across both locations.
+     *
+     * @return array<int, array{name: string, dir: string, created_at: string}>
+     */
+    private function backupEntries(Application $application, string $target): array
+    {
+        $entries = [];
+
+        foreach ([$this->backupsDirectory($application, $target), $this->legacyBackupsDirectory($target)] as $directory) {
+            $result = $this->serverOps->run(
+                $this->asUser($application, [
+                    'find', $directory, '-maxdepth', '1',
+                    '-name', basename($target).'.bak-*', '-printf', '%f\n',
+                ]),
+                ['feature' => 'application', 'op' => 'file_backups', 'application' => $application->id],
+                timeout: 15,
+            );
+
+            if ($result->failed()) {
+                continue;
+            }
+
+            foreach (array_filter(array_map('trim', explode("\n", $result->output()))) as $name) {
+                // Keyed by name so a copy present in both locations is listed
+                // once — the new location wins, since it is read first.
+                $entries[$name] ??= [
+                    'name' => $name,
+                    'dir' => $directory,
+                    'created_at' => $this->timestampFromBackupName($name),
+                ];
+            }
+        }
+
+        $entries = array_values($entries);
+        usort($entries, fn (array $a, array $b): int => strcmp($b['name'], $a['name']));
+
+        return $entries;
     }
 
     private function backup(Application $application, string $target): void
@@ -442,7 +503,7 @@ class FileBrowser
             return;
         }
 
-        $directory = $this->backupsDirectory($target);
+        $directory = $this->backupsDirectory($application, $target);
         $this->run($application, ['mkdir', '-p', $directory], 'backup_dir');
 
         $name = basename($target).'.bak-'.now()->format('Ymd-His');
@@ -452,12 +513,17 @@ class FileBrowser
         $this->pruneBackups($application, $target);
     }
 
+    /**
+     * Keeps the newest N across both locations. Deleting from whichever
+     * directory a copy actually sits in also drains the pre-relocation ones
+     * out of the served tree as a file is edited over time.
+     */
     private function pruneBackups(Application $application, string $target): void
     {
-        $surplus = array_slice($this->backups($application, $target), self::KEEP_BACKUPS);
+        $surplus = array_slice($this->backupEntries($application, $target), self::KEEP_BACKUPS);
 
         foreach ($surplus as $backup) {
-            $this->run($application, ['rm', '-f', "{$this->backupsDirectory($target)}/{$backup['name']}"], 'backup_prune');
+            $this->run($application, ['rm', '-f', "{$backup['dir']}/{$backup['name']}"], 'backup_prune');
         }
     }
 

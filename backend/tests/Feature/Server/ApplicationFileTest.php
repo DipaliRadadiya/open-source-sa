@@ -232,7 +232,16 @@ function fakeFileBrowserServer(): void
         $inner = ($args[0] ?? null) === 'runuser' ? array_slice($args, 4) : $args;
         $binary = $inner[0] ?? null;
 
-        $relative = fn (string $target): string => $target === $root ? '' : ltrim(substr($target, strlen($root)), '/');
+        // Paths under the web root are keyed relative to it; anything above
+        // it — the panel's own `.panel` directory, where file backups now
+        // live — is keyed by its absolute path. Blindly substr()-ing the root
+        // off a path that does not start with it produced mid-string garbage,
+        // which is why a backup written outside the root appeared to vanish.
+        $relative = fn (string $target): string => match (true) {
+            $target === $root => '',
+            str_starts_with($target, $root.'/') => ltrim(substr($target, strlen($root)), '/'),
+            default => $target,
+        };
 
         // `-maxdepth 0` stats the named paths themselves. One target with
         // `%y\t%s` is stat(); many with `%p\t%y\t%m` is statMany(), which
@@ -720,7 +729,7 @@ describe('browsing', function () {
             ->assertNotFound();
     });
 
-    it('backs up the previous content before overwriting, in .panel/backups', function () {
+    it('backs up the previous content before overwriting, above the web root', function () {
         fakeFileBrowserServer();
 
         $this->actingAs($this->admin)
@@ -729,11 +738,41 @@ describe('browsing', function () {
 
         $backupKeys = array_filter(
             array_keys(FileBrowserFake::$fs),
-            fn (string $k) => str_starts_with($k, '.panel/backups/index.php.bak-'),
+            fn (string $k) => str_starts_with($k, '/home/siteowner/shop/.panel/file-backups/index.php.bak-'),
         );
 
         expect($backupKeys)->toHaveCount(1);
         expect(FileBrowserFake::$fs[array_values($backupKeys)[0]]['content'])->toBe('<?php echo "hi";');
+    });
+
+    it('never writes a backup inside the served tree', function () {
+        fakeFileBrowserServer();
+
+        // wp-config.php is the case that matters: its backup holds live
+        // database credentials, and a copy of it under the document root is
+        // reachable over HTTP the moment any web server fails to block
+        // dot-directories at that depth — which OpenLiteSpeed's rule, anchored
+        // at the web root, may not.
+        FileBrowserFake::$fs['wp-config.php'] = ['type' => 'f', 'size' => 20, 'content' => "define('DB_PASSWORD', 'hunter2');"];
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'wp-config.php', 'content' => 'updated'])
+            ->assertOk();
+
+        $backups = array_filter(
+            array_keys(FileBrowserFake::$fs),
+            fn (string $k): bool => str_contains($k, 'wp-config.php.bak-'),
+        );
+
+        expect($backups)->toHaveCount(1);
+
+        // Keyed absolutely means it resolved outside the web root — a relative
+        // key is by definition inside it. Asserted this way round because the
+        // point is not "which directory" but "not the served one".
+        foreach ($backups as $key) {
+            expect($key)->toStartWith('/home/siteowner/shop/.panel/')
+                ->and($key)->not->toStartWith('.panel/');
+        }
     });
 
     it('lists a file\'s backups alongside its content', function () {
@@ -1542,10 +1581,13 @@ describe('restoring a backup', function () {
             ->and(ActivityLog::where('action', 'file_restored')->exists())->toBeTrue();
 
         // Restoring is itself a write, so it backs up what "v2" was before
-        // being replaced — restoring the wrong one is itself undoable.
+        // being replaced — restoring the wrong one is itself undoable. The new
+        // copy lands above the web root; the one it restored FROM was seeded in
+        // the pre-relocation location, so this also proves those are still
+        // readable rather than stranded.
         $backupKeys = array_filter(
             array_keys(FileBrowserFake::$fs),
-            fn (string $k) => str_starts_with($k, '.panel/backups/index.php.bak-') && $k !== '.panel/backups/index.php.bak-20260805-090000',
+            fn (string $k) => str_starts_with($k, '/home/siteowner/shop/.panel/file-backups/index.php.bak-'),
         );
         expect($backupKeys)->toHaveCount(1);
     });
@@ -1882,6 +1924,15 @@ describe('bulk operations', function () {
 describe('upload throttling', function () {
     it('lets an upload run past the global api limit', function () {
         fakeFileBrowserServer();
+
+        // Pinned rather than read from the environment. This derived its loop
+        // count from the configured global limit but asserts against the
+        // route's own 240/min — so the moment a developer raised
+        // RATE_LIMIT_API above 210 in their .env, the loop overshot 240 and the
+        // test failed on the very limit it exists to prove is working. A test
+        // whose premise depends on an untracked local file is not testing what
+        // it claims.
+        config(['server.rate_limits.api' => 180]);
 
         // Past the global budget entirely: anything beyond it proves the
         // route's own limit is the one in force.
