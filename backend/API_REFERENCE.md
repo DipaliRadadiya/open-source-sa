@@ -640,6 +640,7 @@ Full application record. Poll this while `status` is `provisioning` or `deployin
 
   "settings": {},
   "steps": [], "failed_step": null,
+  "provisioning_started_at": null, "provisioning_started_at_human": null,
   "last_commit": null, "last_deployed_at": null, "last_deployed_at_human": null,
   "reference": null,
 
@@ -648,6 +649,12 @@ Full application record. Poll this while `status` is `provisioning` or `deployin
 ```
 
 **`status` is `pending` · `provisioning` · `active` · `failed`** — there is no `running`.
+
+**Use `provisioning_started_at` for elapsed time, never `created_at`.** It is
+restamped on every run *including a retry*, whereas `created_at` is the row's
+birthday — so after a retry, elapsed time built on `created_at` counts from the
+original attempt and keeps climbing. `null` on a site that has never been
+provisioned.
 
 **`status` and `is_disabled` are two different axes.** A healthy site can be paused — the vhost is swapped to an "unavailable" page — without its provisioning `status` changing. The enable/disable button switches on `is_disabled`, never on `status`. `deployed` is simply `status === "active"`, exposed so a "pending" badge cannot imply the site is reachable.
 
@@ -1702,6 +1709,19 @@ Update PHP version and/or pool settings.
 ```
 
 **Response `200`:** `{"php": {...updated...}}`
+
+**Send `null` to clear an override and fall back to the server default.** Every
+field that can be overridden accepts it — including `pm_type`,
+`pm_max_children`, `pm_max_requests` and `allow_url_fopen`, which until
+2026-08-13 could be set but never cleared, so "reset to default" was only ever
+half a feature.
+
+One exception, and it is not an oversight: **`open_basedir_enabled` is a plain
+boolean** with a column default of `false`. It has no override to clear, so
+"reset" for that one is `false`, not `null`.
+
+Omitting a field leaves it as it is; sending `null` is what clears it. The two
+are different requests.
 
 `GET .../php` reports open_basedir three ways, and they are allowed to disagree:
 
@@ -3481,18 +3501,54 @@ Enable or disable the firewall entirely.
 
 ```json
 {"fail2ban": {
-  "installed": true, "running": true, "version": "0.11.2",
+  "installed": true,
+  "running": true,
+  "version": "0.11.2",
+  "install": null,
+  "your_ip": "203.0.113.5",
+  "settings": {"bantime": 3600, "findtime": 600, "maxretry": 5, "ignore_ips": ["203.0.113.5"]},
   "jails": [{
-    "name": "sshd", "enabled": true, "status": "active",
-    "total_bans": 12, "current_bans": 0,
-    "ignore_policies": ["127.0.0.1", "::1"],
-    "actions": ["iptables"],
-    "lockout_risk": "low"
-  }]
+    "name": "sshd", "label": "SSH", "lockout_risk": true,
+    "options": {"mode": "aggressive", "port": "{ssh_port}"},
+    "enabled": true,
+    "banned": ["198.51.100.9"],
+    "stats": {"total_bans": 12, "current_bans": 1}
+  }],
+  "banned": ["198.51.100.9"],
+  "bantime_presets": [{"key": "hour", "seconds": 3600, "label": "1 hour"}]
 }}
 ```
 
-`lockout_risk: "low | medium | high"` — warns when enabling a jail that could lock out the caller.
+`lockout_risk` is a **boolean**, not a level — it marks the jails that watch SSH
+and can therefore lock the caller out of their own server. `your_ip` is the
+caller's own address, so the UI can offer "add my IP to the ignore list" before
+they enable one. See `PUT /fail2ban` for the 422 that enforces this.
+
+`settings` and `banned` are `null`/`[]` until fail2ban is installed. A jail that
+is not enabled reports `banned: []` and `stats: null` rather than zeros — not
+running and nothing caught are different statements.
+
+**`install` is the progress of an install in flight**, and `null` once fail2ban
+is on disk:
+
+```json
+{"install": {
+  "status": "installing",
+  "reason": null, "reason_title": null, "reference": null,
+  "started_at": "12-08-2026 15:20:11", "finished_at": null
+}}
+```
+
+`status` is `installing` or `failed`. On failure `reason` is a stable code
+(`package_not_found`, `apt_lock`, `network`, `no_space`, `worker`, `unknown`),
+`reason_title` is that rendered in the caller's locale, and `reference` locates
+the server-ops log entry for support.
+
+**The screen needs three states, not one boolean.** `installed` is derived from
+the package being on disk and apt is allowed ten minutes, so a UI built on
+`installed` alone shows nothing at all for ten minutes and nothing when it
+fails. Render *installing* (progress), *failed* (`reason_title` + retry +
+`reference`), and *installed*.
 
 ---
 
