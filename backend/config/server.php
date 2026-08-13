@@ -589,6 +589,16 @@ return [
         'systemd_dir' => env('SERVER_SYSTEMD_DIR', '/etc/systemd/system'),
 
         /*
+        | How long a file manager delete stays recoverable.
+        |
+        | The trash keeps a full copy of everything deleted, so without a
+        | window it is a slow disk-space leak on a machine whose whole job is
+        | running out of disk quietly. A week is long enough to notice a
+        | mistake and short enough that nobody is storing a backup in it.
+        */
+        'trash_retention_days' => (int) env('SERVER_TRASH_RETENTION_DAYS', 7),
+
+        /*
         | Where supervisor keeps its program blocks.
         |
         | Read-only, and only by the sync: the panel supervises with systemd.

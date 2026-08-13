@@ -666,7 +666,20 @@ class FileBrowser
      * the target; that would be deleting the whole site through a "delete
      * one thing" button.
      */
-    public function delete(Application $application, string $path): void
+    /**
+     * Deletes a file or directory — to the trash by default, permanently when
+     * asked.
+     *
+     * Trashing is a `mv`, not a copy. On the same filesystem that is a rename:
+     * instant, and it costs no extra disk. A copy of a 40 GB directory would
+     * take minutes and could fill the disk while "deleting" it, which is a
+     * strange way to run out of space.
+     *
+     * Permanent stays available and is not a second-class path: someone
+     * deleting 40 GB to free space and seeing nothing freed would rightly call
+     * that a bug, so "delete" still means delete when they say so.
+     */
+    public function delete(Application $application, string $path, bool $permanent = false): void
     {
         abort_if($path === '', 422, __('errors/application.cannot_delete_root'));
 
@@ -674,9 +687,154 @@ class FileBrowser
         $stat = $this->stat($application, $target);
         abort_if($stat === null, 404);
 
+        if (! $permanent) {
+            $this->moveToTrash($application, $path, $target);
+
+            return;
+        }
+
         $command = $stat['type'] === 'd' ? ['rm', '-rf', $target] : ['rm', '-f', $target];
 
         $this->run($application, $command, 'delete');
+    }
+
+    /**
+     * Moves one path into the trash, keeping where it came from.
+     *
+     * The original relative path is preserved inside the timestamped folder so
+     * a restore knows where to put it back, and so two files called
+     * `config.php` from different directories cannot collide.
+     */
+    private function moveToTrash(Application $application, string $relative, string $target): void
+    {
+        $destination = $this->trashDirectory($application).'/'.now()->format('Ymd-His').'/'.ltrim($relative, '/');
+
+        $this->run($application, ['mkdir', '-p', dirname($destination)], 'trash_dir');
+        $this->run($application, ['mv', $target, $destination], 'trash');
+    }
+
+    /**
+     * Above the document root, for the same reason the backups are: a deleted
+     * `wp-config.php` still holds live database credentials, and the trash
+     * would otherwise be a directory of other people's secrets inside the
+     * served tree.
+     */
+    private function trashDirectory(Application $application): string
+    {
+        return $application->panelPath().'/trash';
+    }
+
+    /**
+     * What is in the trash: one entry per deleted path, newest first.
+     *
+     * Reported with the batch it was deleted in, so a selection deleted
+     * together can be restored together — and with its original location,
+     * because "config.php" alone does not tell anyone which one it was.
+     *
+     * @return array<int, array{batch: string, path: string, deleted_at: string}>
+     */
+    public function trash(Application $application): array
+    {
+        $root = $this->trashDirectory($application);
+
+        $result = $this->serverOps->run(
+            $this->asUser($application, ['find', $root, '-mindepth', '2', '-printf', '%P\n']),
+            ['feature' => 'application', 'op' => 'trash_list', 'application' => $application->id],
+            timeout: 30,
+        );
+
+        if ($result->failed()) {
+            return [];
+        }
+
+        $entries = [];
+
+        foreach (array_filter(array_map('trim', explode("\n", $result->output()))) as $line) {
+            // `%P` gives `<batch>/<original/relative/path>`.
+            [$batch, $path] = array_pad(explode('/', $line, 2), 2, '');
+
+            if ($path === '' || ! preg_match('/^\d{8}-\d{6}$/', $batch)) {
+                continue;
+            }
+
+            // Only the top of each deleted tree is listed. A deleted directory
+            // is one thing the user deleted, not four hundred, and listing its
+            // contents would bury the entry they are looking for.
+            if (collect($entries)->contains(fn (array $e): bool => $e['batch'] === $batch && str_starts_with($path.'/', $e['path'].'/'))) {
+                continue;
+            }
+
+            $entries[] = [
+                'batch' => $batch,
+                'path' => $path,
+                'deleted_at' => $this->timestampFromBackupName($batch),
+            ];
+        }
+
+        usort($entries, fn (array $a, array $b): int => strcmp($b['batch'], $a['batch']));
+
+        return $entries;
+    }
+
+    /**
+     * Puts one trashed path back where it came from.
+     *
+     * Refuses rather than overwrites if something is there again — the same
+     * rule rename() and copy() keep, and the one case where silently winning
+     * would destroy the thing the user kept.
+     */
+    public function restoreFromTrash(Application $application, string $batch, string $path): void
+    {
+        abort_unless(preg_match('/^\d{8}-\d{6}$/', $batch) === 1, 422, __('errors/application.unknown_backup'));
+
+        $source = $this->trashDirectory($application).'/'.$batch.'/'.ltrim($path, '/');
+        abort_if($this->stat($application, $source) === null, 404);
+
+        $target = $this->resolve($application, $path);
+        abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
+
+        $this->run($application, ['mkdir', '-p', dirname($target)], 'trash_restore_dir');
+        $this->run($application, ['mv', $source, $target], 'trash_restore');
+    }
+
+    /**
+     * Empties the trash — the whole thing, or one batch.
+     *
+     * This is the only unrecoverable operation the file manager offers, and it
+     * is meant to be: it exists so the disk space actually comes back.
+     */
+    public function emptyTrash(Application $application, ?string $batch = null): void
+    {
+        if ($batch !== null) {
+            abort_unless(preg_match('/^\d{8}-\d{6}$/', $batch) === 1, 422, __('errors/application.unknown_backup'));
+
+            $this->run($application, ['rm', '-rf', $this->trashDirectory($application).'/'.$batch], 'trash_empty');
+
+            return;
+        }
+
+        $this->run($application, ['rm', '-rf', $this->trashDirectory($application)], 'trash_empty');
+    }
+
+    /**
+     * Drops batches older than the retention window.
+     *
+     * Without this the trash is a slow disk-space leak: every delete keeps a
+     * full copy forever, on a server whose whole job is running out of disk
+     * quietly.
+     */
+    public function pruneTrash(Application $application): void
+    {
+        $days = (int) config('server.applications.trash_retention_days', 7);
+
+        $this->serverOps->run(
+            $this->asUser($application, [
+                'find', $this->trashDirectory($application), '-mindepth', '1', '-maxdepth', '1',
+                '-type', 'd', '-mtime', '+'.$days, '-exec', 'rm', '-rf', '{}', '+',
+            ]),
+            ['feature' => 'application', 'op' => 'trash_prune', 'application' => $application->id],
+            timeout: 60,
+        );
     }
 
     /**
@@ -1008,7 +1166,7 @@ class FileBrowser
      * @param  list<string>  $paths
      * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
      */
-    public function deleteMany(Application $application, array $paths): array
+    public function deleteMany(Application $application, array $paths, bool $permanent = false): array
     {
         $this->assertRootExists($application);
 
@@ -1025,6 +1183,23 @@ class FileBrowser
         foreach (array_keys($found) as $relative) {
             $target = $this->resolve($application, $relative);
             $found[$relative]['type'] === 'd' ? $directories[] = $target : $files[] = $target;
+        }
+
+        // One timestamp for the whole selection, so "the twelve things I
+        // deleted together" restore together rather than scattering across
+        // twelve folders a second apart.
+        if (! $permanent) {
+            $stamp = now()->format('Ymd-His');
+
+            foreach (array_keys($found) as $relative) {
+                $destination = $this->trashDirectory($application).'/'.$stamp.'/'.ltrim($relative, '/');
+
+                $this->tolerant($application, ['mkdir', '-p', dirname($destination)], 'trash_dir');
+                $this->tolerant($application, ['mv', $this->resolve($application, $relative), $destination], 'trash');
+            }
+
+            $directories = [];
+            $files = [];
         }
 
         if ($directories !== []) {

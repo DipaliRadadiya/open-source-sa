@@ -150,6 +150,7 @@ return [
     'application.files_compressed' => ':name पर :path को :target में संपीड़ित किया',
     'application.file_restored' => ':name पर :path का पिछला सेव पुनर्स्थापित किया',
     'application.file_chmod' => ':name पर :path की अनुमतियाँ :mode पर सेट कीं',
+    'application.trash_emptied' => ':name पर ट्रैश खाली किया',
     'application.file_deleted' => ':name पर :path हटाई',
     'application.worker_created' => ':name में वर्कर :worker जोड़ा',
     'application.worker_updated' => ':name का वर्कर :worker अद्यतन किया',

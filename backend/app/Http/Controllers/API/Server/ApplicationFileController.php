@@ -9,9 +9,11 @@ use App\Http\Requests\Server\Application\CompressFileRequest;
 use App\Http\Requests\Server\Application\CopyFileRequest;
 use App\Http\Requests\Server\Application\CreateDirectoryRequest;
 use App\Http\Requests\Server\Application\DeleteFileRequest;
+use App\Http\Requests\Server\Application\EmptyTrashRequest;
 use App\Http\Requests\Server\Application\ExtractFileRequest;
 use App\Http\Requests\Server\Application\RenameFileRequest;
 use App\Http\Requests\Server\Application\RestoreFileBackupRequest;
+use App\Http\Requests\Server\Application\RestoreTrashRequest;
 use App\Http\Requests\Server\Application\SaveFileRequest;
 use App\Http\Requests\Server\Application\SearchFilesRequest;
 use App\Http\Requests\Server\Application\UploadFileRequest;
@@ -271,6 +273,55 @@ class ApplicationFileController extends Controller
         return response()->json(array_merge(['chmoded' => $result['failed'] === []], $result));
     }
 
+    /**
+     * What is recoverable, newest first. Empty is a normal answer.
+     */
+    public function trash(BrowseFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
+    {
+        return response()->json(['trash' => $files->trash($application)]);
+    }
+
+    /**
+     * Put one trashed path back where it came from. Refused if something is
+     * there again — the same non-overwrite rule rename and copy keep.
+     */
+    public function restoreTrash(
+        RestoreTrashRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->restoreFromTrash($application, $request->batch(), $request->path());
+
+        $activity->log('application.file_restored', $application, [
+            'name' => $application->name,
+            'path' => $request->path(),
+        ]);
+
+        return response()->json(['trash' => $files->trash($application)]);
+    }
+
+    /**
+     * Empty the trash, or one batch of it. The only unrecoverable thing the
+     * file manager does, and deliberately so — it is how the disk space comes
+     * back.
+     */
+    public function emptyTrash(
+        EmptyTrashRequest $request,
+        Application $application,
+        FileBrowser $files,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        $files->emptyTrash($application, $request->batch());
+
+        $activity->log('application.trash_emptied', $application, [
+            'name' => $application->name,
+            'batch' => $request->batch() ?? '—',
+        ]);
+
+        return response()->json(['trash' => $files->trash($application)]);
+    }
+
     public function destroy(
         DeleteFileRequest $request,
         Application $application,
@@ -279,9 +330,11 @@ class ApplicationFileController extends Controller
     ): JsonResponse {
         $paths = $request->selectedPaths();
 
+        $permanent = $request->permanent();
+
         $result = $request->isBulk()
-            ? $files->deleteMany($application, $paths)
-            : $this->single(fn () => $files->delete($application, $paths[0]), $paths[0]);
+            ? $files->deleteMany($application, $paths, $permanent)
+            : $this->single(fn () => $files->delete($application, $paths[0], $permanent), $paths[0]);
 
         // One entry for the whole operation, with the count. N entries would
         // bury every other kind of activity the moment someone clears a cache
@@ -290,6 +343,9 @@ class ApplicationFileController extends Controller
             'name' => $application->name,
             'path' => $paths[0],
             'count' => count($paths),
+            // Recorded because "deleted" and "deleted permanently" are
+            // different events to whoever reads this afterwards.
+            'permanent' => $permanent ? 'yes' : 'no',
         ]);
 
         return response()->json(array_merge(['deleted' => $result['failed'] === []], $result));

@@ -150,6 +150,7 @@ return [
     'application.files_compressed' => 'Compressed :path into :target on :name',
     'application.file_restored' => 'Restored a previous save of :path on :name',
     'application.file_chmod' => 'Set permissions on :path to :mode on :name',
+    'application.trash_emptied' => 'Emptied the trash on :name',
     'application.file_deleted' => 'Deleted :path on :name',
     'application.worker_created' => 'Added worker :worker to :name',
     'application.worker_updated' => 'Updated worker :worker on :name',

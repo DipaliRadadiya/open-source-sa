@@ -150,6 +150,7 @@ return [
     'application.files_compressed' => 'Сжал :path в :target на :name',
     'application.file_restored' => 'Восстановил предыдущую версию :path на :name',
     'application.file_chmod' => 'Установил права :mode для :path на :name',
+    'application.trash_emptied' => 'Очистил корзину на :name',
     'application.file_deleted' => 'Удалил :path на :name',
     'application.worker_created' => 'Добавил обработчик :worker в :name',
     'application.worker_updated' => 'Обновил обработчик :worker в :name',

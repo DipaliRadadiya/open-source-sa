@@ -108,6 +108,19 @@ Route::get('/applications/{application}/files/download', [ApplicationFileControl
 Route::post('/applications/{application}/files/extract', [ApplicationFileController::class, 'extract'])
     ->middleware(['permission:app_file,manage', 'throttle:5,1']);
 
+// Trash. Deleting moves here by default, so these are what make that a
+// safety net rather than a slower way to lose a file.
+Route::get('/applications/{application}/files/trash', [ApplicationFileController::class, 'trash'])
+    ->middleware(['permission:app_file', 'throttle:60,1']);
+
+Route::post('/applications/{application}/files/trash/restore', [ApplicationFileController::class, 'restoreTrash'])
+    ->middleware(['permission:app_file,manage', 'throttle:30,1']);
+
+// The one unrecoverable action here, which is the point of it: this is how
+// the disk space comes back.
+Route::delete('/applications/{application}/files/trash', [ApplicationFileController::class, 'emptyTrash'])
+    ->middleware(['permission:app_file,manage', 'throttle:10,1']);
+
 Route::post('/applications/{application}/files/directories', [ApplicationFileController::class, 'createDirectory'])
     ->middleware(['permission:app_file,manage', 'throttle:20,1']);
 

@@ -18,6 +18,12 @@ class DeleteFileRequest extends FormRequest
     /**
      * @return array<string, mixed>
      */
+    /** Trash unless the caller explicitly asked for permanent. */
+    public function permanent(): bool
+    {
+        return $this->boolean('permanent');
+    }
+
     public function rules(): array
     {
         return array_merge($this->pathRules(), [
@@ -26,6 +32,12 @@ class DeleteFileRequest extends FormRequest
             // not need the heavier "type the name" guard Restore uses for a
             // whole-site operation, but it needs more than a bare request.
             'confirm' => ['required', 'accepted'],
+
+            // Trash by default; permanent only when asked for explicitly.
+            // Absent means recoverable, which is the safer reading of an
+            // ambiguous request — and it keeps every existing client working
+            // unchanged, just with a safety net they did not have.
+            'permanent' => ['sometimes', 'boolean'],
 
             // The caller states how many it believes it is deleting, and the
             // request is refused if that disagrees with the selection. A

@@ -301,6 +301,32 @@ function fakeFileBrowserServer(): void
                 ."\t1700000000\t{$mode}\t{$owner}\t{$group}\t{$targetType}\t{$linkTarget}";
         };
 
+        // `find <trash> -mindepth 2 -printf '%P\n'` — everything under the
+        // trash root, path relative to it. Keys in the fake are absolute for
+        // anything above the web root, so this strips the root prefix the same
+        // way real find's %P does.
+        if ($binary === 'find' && ($inner[2] ?? null) === '-mindepth' && ($inner[3] ?? null) === '2') {
+            $root = rtrim($inner[1], '/');
+            $lines = [];
+
+            foreach (array_keys(FileBrowserFake::$fs) as $path) {
+                if (! str_starts_with($path, $root.'/')) {
+                    continue;
+                }
+
+                $suffix = substr($path, strlen($root) + 1);
+
+                // -mindepth 2: at least two levels below the root.
+                if (! str_contains($suffix, '/')) {
+                    continue;
+                }
+
+                $lines[] = $suffix;
+            }
+
+            return Process::result(output: $lines === [] ? '' : implode("\n", $lines)."\n");
+        }
+
         if ($binary === 'find' && ($inner[2] ?? null) === '-mindepth' && ($inner[4] ?? null) === '-maxdepth') {
             $rel = $relative($inner[1]);
             $lines = [];
@@ -1506,9 +1532,25 @@ describe('deleting', function () {
             ->deleteJson(filesUrl(), ['path' => 'old.txt', 'confirm' => true])
             ->assertOk();
 
+        // Gone from where it was, but moved rather than destroyed: delete is
+        // recoverable unless the caller asks otherwise.
         expect(FileBrowserFake::$fs)->not->toHaveKey('old.txt')
-            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- rm')))->toBeTrue()
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- mv')))->toBeTrue()
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- rm')))->toBeFalse()
             ->and(ActivityLog::where('action', 'file_deleted')->exists())->toBeTrue();
+    });
+
+    it('deletes permanently when asked, and only then', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'old.txt', 'confirm' => true, 'permanent' => true])
+            ->assertOk();
+
+        // The escape hatch has to stay real: someone deleting to free disk
+        // space and seeing nothing freed would be right to call that a bug.
+        expect(FileBrowserFake::$fs)->not->toHaveKey('old.txt')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- rm')))->toBeTrue();
     });
 
     it('deletes a directory recursively', function () {
@@ -1715,7 +1757,7 @@ describe('bulk operations', function () {
         FileBrowserFake::$fs['keep'] = ['type' => 'd'];
     });
 
-    it('deletes a whole selection in one pair of commands', function () {
+    it('deletes a whole selection to the trash, keeping the batch together', function () {
         fakeFileBrowserServer();
 
         $this->actingAs($this->admin)
@@ -1723,6 +1765,33 @@ describe('bulk operations', function () {
                 'paths' => ['cache/a.txt', 'cache/b.txt', 'cache/sub'],
                 'confirm' => true,
                 'count' => 3,
+            ])
+            ->assertOk()
+            ->assertJsonPath('deleted', true);
+
+        expect(FileBrowserFake::$fs)->not->toHaveKey('cache/a.txt')
+            ->and(FileBrowserFake::$fs)->not->toHaveKey('cache/b.txt')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_contains($c, ' rm ')))->toBeFalse();
+
+        // One timestamp for the selection, so twelve things deleted together
+        // come back together rather than scattering across twelve folders.
+        $batches = collect(array_keys(FileBrowserFake::$fs))
+            ->filter(fn (string $k) => str_contains($k, '/.panel/trash/'))
+            ->map(fn (string $k) => explode('/', explode('/.panel/trash/', $k)[1])[0])
+            ->unique();
+
+        expect($batches)->toHaveCount(1);
+    });
+
+    it('deletes a whole selection in one pair of commands when permanent', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), [
+                'paths' => ['cache/a.txt', 'cache/b.txt', 'cache/sub'],
+                'confirm' => true,
+                'count' => 3,
+                'permanent' => true,
             ])
             ->assertOk()
             ->assertJsonPath('deleted', true)
@@ -1959,5 +2028,64 @@ describe('upload throttling', function () {
         }
 
         expect($statuses)->toContain(429);
+    });
+});
+
+describe('trash', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'size' => 5, 'content' => 'gone?'];
+    });
+
+    it('lists what was deleted, puts it back, and refuses to overwrite', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'old.txt', 'confirm' => true])
+            ->assertOk();
+
+        // Listed with where it came from — "config.php" alone does not tell
+        // anyone which one it was.
+        $trash = $this->actingAs($this->admin)->getJson(filesUrl('/trash'))->assertOk()->json('trash');
+
+        expect($trash)->toHaveCount(1)
+            ->and($trash[0]['path'])->toBe('old.txt')
+            ->and($trash[0]['batch'])->toMatch('/^\d{8}-\d{6}$/');
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/trash/restore'), ['batch' => $trash[0]['batch'], 'path' => 'old.txt'])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('old.txt');
+    });
+
+    it('refuses to restore over something that is there again', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'old.txt', 'confirm' => true])
+            ->assertOk();
+
+        $batch = $this->actingAs($this->admin)->getJson(filesUrl('/trash'))->json('trash.0.batch');
+
+        // Something new at the same path. Restoring must not win silently:
+        // the file that is there now is the one somebody kept.
+        FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'size' => 3, 'content' => 'new'];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/trash/restore'), ['batch' => $batch, 'path' => 'old.txt'])
+            ->assertStatus(422);
+
+        expect(FileBrowserFake::$fs['old.txt']['content'])->toBe('new');
+    });
+
+    it('refuses a batch name that is not a timestamp', function () {
+        fakeFileBrowserServer();
+
+        // It is half a filesystem path. The only thing keeping `..` out of it
+        // is that it can never be anything but digits and a dash.
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/trash/restore'), ['batch' => '../../etc', 'path' => 'old.txt'])
+            ->assertStatus(422);
     });
 });

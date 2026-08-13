@@ -150,6 +150,7 @@ return [
     'application.files_compressed' => ':path auf :name nach :target komprimiert',
     'application.file_restored' => 'Eine frühere Version von :path auf :name wiederhergestellt',
     'application.file_chmod' => 'Berechtigungen von :path auf :mode auf :name gesetzt',
+    'application.trash_emptied' => 'Papierkorb auf :name geleert',
     'application.file_deleted' => ':path auf :name gelöscht',
     'application.worker_created' => 'Worker :worker zu :name hinzugefügt',
     'application.worker_updated' => 'Worker :worker von :name aktualisiert',

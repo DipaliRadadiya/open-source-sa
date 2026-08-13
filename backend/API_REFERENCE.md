@@ -1524,7 +1524,67 @@ number of paths or the request is refused with `422` — a stale selection is
 the realistic bulk-delete accident, and `confirm` cannot catch it because it
 is true either way. Send `paths.length`; do not hardcode it.
 
+**Deleting moves to the trash by default.** Add `"permanent": true` to destroy
+instead. Omitting it means recoverable, which is the safer reading of an
+ambiguous request — so existing clients gain a safety net without changing.
+
+Offer both in the UI. Permanent has to stay reachable: someone deleting 40 GB
+to free disk space and seeing nothing freed would rightly call that a bug.
+
+A trashed selection keeps one batch id, so twelve things deleted together are
+restored together rather than one at a time.
+
 **Response `200`:** `{"deleted": true, "succeeded": […], "failed": […]}`
+
+---
+
+### GET `/applications/{application}/files/trash`
+**Permission:** `app_file` (view) | **Throttle:** 60/min
+
+What is recoverable, newest first. An empty list is a normal answer.
+
+```json
+{"trash": [
+  {"batch": "20260813-104500", "path": "wp-content/old-plugin", "deleted_at": "13-08-2026 10:45:00"}
+]}
+```
+
+`path` is where it came from, which is also where it goes back to — `plugin.php`
+alone would not say which one it was. Only the top of a deleted tree is listed:
+a deleted directory is one thing the user deleted, not four hundred.
+
+Everything lives above the document root, so nothing here is reachable over
+HTTP — a deleted `wp-config.php` still holds live credentials.
+
+---
+
+### POST `/applications/{application}/files/trash/restore`
+**Permission:** `app_file` (manage) | **Throttle:** 30/min
+
+**Request:** `{"batch": "20260813-104500", "path": "wp-content/old-plugin"}`
+
+Puts one path back where it came from. **Refused with `422` if something is
+there again** — the same non-overwrite rule `rename` and `copy` keep; the file
+sitting there now is the one somebody kept.
+
+`batch` must be `YYYYMMDD-HHMMSS`. It is half a filesystem path, so anything
+else is refused rather than sanitised.
+
+**Response `200`:** the updated `{"trash": [...]}`.
+
+---
+
+### DELETE `/applications/{application}/files/trash`
+**Permission:** `app_file` (manage) | **Throttle:** 10/min
+
+**Request:** `{"confirm": true}` — everything, or `{"batch": "…", "confirm": true}`
+for one batch.
+
+**This is the only unrecoverable action the file manager has, deliberately: it
+is how the disk space comes back.** Trash is swept automatically after
+`SERVER_TRASH_RETENTION_DAYS` (default 7).
+
+**Response `200`:** the updated `{"trash": [...]}`.
 
 ---
 
