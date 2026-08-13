@@ -3204,7 +3204,6 @@
         "move": "Move",
         "copy": "Copy",
         "compress": "Compress",
-        "permissions": "Permissions",
         "delete": "Delete",
         "tooMany": "Pick at most {limit} at a time. {count} are selected.",
         "oneFolderOnly": "Everything has to be in the same folder to go into one archive.",

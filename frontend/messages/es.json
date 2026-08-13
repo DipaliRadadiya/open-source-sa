@@ -3204,7 +3204,6 @@
         "move": "Mover",
         "copy": "Copiar",
         "compress": "Comprimir",
-        "permissions": "Permisos",
         "delete": "Eliminar",
         "tooMany": "Elige como máximo {limit} a la vez. Hay {count} seleccionados.",
         "oneFolderOnly": "Todo tiene que estar en la misma carpeta para ir en un archivo.",
