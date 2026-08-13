@@ -46,7 +46,7 @@ return [
 
     'path_exists' => 'Ya existe algo en esa ruta.',
     'cannot_delete_root' => 'No se puede eliminar la carpeta raíz del sitio.',
-    'target_not_zip' => 'El nombre del nuevo archivo debe terminar en .zip.',
+    'target_not_archive' => 'El nombre del nuevo archivo comprimido debe terminar en .zip, .tar.gz o .tgz.',
     'unknown_backup' => 'Esa no es una copia de seguridad conocida de este archivo.',
 
     'upload_directory_missing' => 'La carpeta de destino de esta subida ya no existe.',

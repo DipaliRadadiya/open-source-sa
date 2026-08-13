@@ -46,7 +46,7 @@ return [
 
     'path_exists' => 'Quelque chose existe déjà à ce chemin.',
     'cannot_delete_root' => 'Le dossier racine du site ne peut pas être supprimé.',
-    'target_not_zip' => 'Le nom de la nouvelle archive doit se terminer par .zip.',
+    'target_not_archive' => 'Le nom de la nouvelle archive doit se terminer par .zip, .tar.gz ou .tgz.',
     'unknown_backup' => 'Ce n\'est pas une sauvegarde connue de ce fichier.',
 
     'upload_directory_missing' => 'Le dossier de destination de cet envoi n\'existe plus.',

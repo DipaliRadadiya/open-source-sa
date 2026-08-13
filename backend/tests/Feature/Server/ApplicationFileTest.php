@@ -569,6 +569,14 @@ function fakeFileBrowserServer(): void
             return Process::result(exitCode: 0);
         }
 
+        // ['tar', '-czf', $target, '--', $name…] writing an archive, as
+        // opposed to the -xzf/-tvzf reads handled elsewhere.
+        if ($binary === 'tar' && ($inner[1] ?? '') === '-czf') {
+            FileBrowserFake::$fs[$relative($inner[2])] = ['type' => 'f', 'size' => 1, 'content' => 'tarred'];
+
+            return Process::result(exitCode: 0);
+        }
+
         if ($binary === 'rm') {
             $flagged = in_array($inner[1] ?? '', ['-rf', '-f'], true);
 
@@ -1464,6 +1472,37 @@ describe('compressing', function () {
         FileBrowserFake::$fs['my-plugin'] = ['type' => 'd'];
         FileBrowserFake::$fs['my-plugin/plugin.php'] = ['type' => 'f', 'content' => 'x'];
         FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+    });
+
+    it('packages a folder into a tar.gz, the format extract already accepted', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.tar.gz'])
+            ->assertOk();
+
+        // The panel could open a .tar.gz and not write one. It also matters
+        // beyond symmetry: ZIP does not carry Unix permissions, so a site
+        // zipped and unzipped loses a 0600 wp-config.php.
+        expect(FileBrowserFake::$fs)->toHaveKey('wp-content/backup.tar.gz')
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- tar -czf')))->toBeTrue()
+            // Same cwd discipline as zip: bare names, so the archive does not
+            // carry the server's directory layout inside it.
+            ->and(FileBrowserFake::$cwds)->toContain('/home/siteowner/shop/public_html');
+    });
+
+    it('accepts .tgz too, and still refuses a name that is not an archive', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.tgz'])
+            ->assertOk();
+
+        // The extension decides the format, so an unrecognised one has no
+        // command to run — refused rather than guessed at.
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.rar'])
+            ->assertStatus(422);
     });
 
     it('packages a folder into a new zip, running with the source\'s parent as cwd', function () {

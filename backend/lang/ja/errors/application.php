@@ -46,7 +46,7 @@ return [
 
     'path_exists' => 'そのパスにはすでに何かが存在します。',
     'cannot_delete_root' => 'サイトのルートフォルダは削除できません。',
-    'target_not_zip' => '新しいアーカイブの名前は .zip で終わる必要があります。',
+    'target_not_archive' => '新しいアーカイブ名は .zip、.tar.gz、.tgz のいずれかで終わる必要があります。',
     'unknown_backup' => 'それはこのファイルの既知のバックアップではありません。',
 
     'upload_directory_missing' => 'このアップロード先のフォルダーは存在しなくなりました。',

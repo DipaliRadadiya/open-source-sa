@@ -1492,16 +1492,26 @@ A destination that is already occupied is refused, never overwritten.
 ### POST `/applications/{application}/files/compress`
 **Permission:** `app_file` (manage) | **Throttle:** 10/min
 
-Compress into a **`.zip`** (the target name must end in `.zip`; `422`
-otherwise).
+**The target's extension chooses the format:** `.zip`, `.tar.gz` or `.tgz`.
+Anything else is `422` — the extension is what selects the command, so an
+unrecognised one has nothing to run rather than a default to guess at. Same set
+`POST …/files/extract` accepts, from the same function, so the panel can always
+open what it writes.
 
-**Single:** `{"path": "wp-content", "target": "wp-content-backup.zip"}`
+**Single:** `{"path": "wp-content", "target": "wp-content-backup.tar.gz"}`
 **Bulk:** `{"paths": ["cache/a.txt", "cache/b.txt"], "target": "cache/bundle.zip"}`
 
-Bulk sources must all sit in **the same folder** (`422` otherwise): `zip` runs
-from that folder so the archive holds bare names, and there is no folder to
-run from once the sources are spread across the tree. Disable the button when
-a selection spans folders.
+**Prefer `.tar.gz` for site content.** ZIP does not carry Unix permissions, so
+a folder zipped and later extracted comes back with whatever modes the
+extractor decided — a `wp-config.php` at `0600` does not stay `0600`. `tar.gz`
+preserves mode, ownership and symlinks, and compresses better across many small
+files. Offer `.zip` for portability, and default to `.tar.gz` for "keep a copy
+before I change this".
+
+Bulk sources must all sit in **the same folder** (`422` otherwise): the command
+runs from that folder so the archive holds bare names rather than the server's
+directory layout, and there is no folder to run from once the sources are
+spread across the tree. Disable the button when a selection spans folders.
 
 **Response `200`:** `{"compressed": true}`
 

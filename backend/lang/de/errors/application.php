@@ -46,7 +46,7 @@ return [
 
     'path_exists' => 'An diesem Pfad existiert bereits etwas.',
     'cannot_delete_root' => 'Der Stammordner der Website kann nicht gelöscht werden.',
-    'target_not_zip' => 'Der Name des neuen Archivs muss auf .zip enden.',
+    'target_not_archive' => 'Der Name des neuen Archivs muss auf .zip, .tar.gz oder .tgz enden.',
     'unknown_backup' => 'Das ist keine bekannte Sicherung dieser Datei.',
 
     'upload_directory_missing' => 'Der Ordner für diesen Upload existiert nicht mehr.',

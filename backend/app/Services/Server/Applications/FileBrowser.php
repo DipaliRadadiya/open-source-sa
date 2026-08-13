@@ -645,7 +645,10 @@ class FileBrowser
         $sourceStat = $this->stat($application, $source);
         abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
 
-        abort_unless(str_ends_with(strtolower($targetPath), '.zip'), 422, __('errors/application.target_not_zip'));
+        // Decided by the same function `extract()` reads, so the formats the
+        // panel can write and the formats it can open cannot drift apart.
+        $format = $this->archiveFormat($targetPath);
+        abort_if($format === null, 422, __('errors/application.target_not_archive'));
 
         $target = $this->resolve($application, $targetPath);
         abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
@@ -653,7 +656,7 @@ class FileBrowser
 
         $this->run(
             $application,
-            ['zip', '-r', $target, basename($source)],
+            $this->compressCommand($format, $target, [basename($source)]),
             'compress',
             cwd: dirname($source),
         );
@@ -898,6 +901,32 @@ class FileBrowser
             : ['tar', '-xzf', $archive, '-C', $target];
 
         $this->run($application, $command, 'extract');
+    }
+
+    /**
+     * The command that writes one archive, by format.
+     *
+     * Both run from the sources' own directory (`cwd`) and are given bare
+     * names, so the archive contains `plugin/…` rather than
+     * `home/siteowner/shop/public_html/wp-content/plugins/plugin/…` — an
+     * archive carrying the server's directory layout is both useless to
+     * extract elsewhere and a small disclosure of where things live.
+     *
+     * tar.gz is worth having as more than symmetry with extract(): ZIP does
+     * not preserve Unix permissions, so a site zipped and unzipped comes back
+     * with whatever modes the extractor chose — a 0600 wp-config.php does not
+     * stay 0600. tar keeps mode, ownership and symlinks, which is what "keep a
+     * copy of this folder before I touch it" actually needs.
+     *
+     * @param  array<int, string>  $names
+     * @return array<int, string>
+     */
+    private function compressCommand(string $format, string $target, array $names): array
+    {
+        return $format === 'zip'
+            ? array_merge(['zip', '-r', $target], $names)
+            // `--` so a name beginning with a dash is a path, not an option.
+            : array_merge(['tar', '-czf', $target, '--'], $names);
     }
 
     private function archiveFormat(string $path): ?string
@@ -1346,7 +1375,8 @@ class FileBrowser
     {
         $this->assertRootExists($application);
 
-        abort_unless(str_ends_with(strtolower($targetPath), '.zip'), 422, __('errors/application.target_not_zip'));
+        $format = $this->archiveFormat($targetPath);
+        abort_if($format === null, 422, __('errors/application.target_not_archive'));
 
         $parents = array_unique(array_map(
             fn (string $path): string => trim(dirname('/'.$path), '/'),
@@ -1365,7 +1395,7 @@ class FileBrowser
 
         $this->run(
             $application,
-            array_merge(['zip', '-r', $target], array_map('basename', $paths)),
+            $this->compressCommand($format, $target, array_map('basename', $paths)),
             'compress_many',
             cwd: $this->resolve($application, reset($parents) ?: ''),
         );

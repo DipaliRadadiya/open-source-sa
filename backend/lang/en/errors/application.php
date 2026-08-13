@@ -46,7 +46,7 @@ return [
 
     'path_exists' => 'Something already exists at that path.',
     'cannot_delete_root' => 'The site\'s own root folder cannot be deleted.',
-    'target_not_zip' => 'The new archive\'s name must end in .zip.',
+    'target_not_archive' => 'The new archive\'s name must end in .zip, .tar.gz or .tgz.',
     'unknown_backup' => 'That is not a known backup of this file.',
 
     'upload_directory_missing' => 'The folder this upload was going to no longer exists.',
