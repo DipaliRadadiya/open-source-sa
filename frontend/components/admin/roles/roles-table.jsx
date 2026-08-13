@@ -12,17 +12,8 @@ import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { SyncPermissionsButton } from "@/components/admin/roles/sync-permissions-button";
 import { RoleRowActions } from "@/components/admin/roles/role-row-actions";
-import { ACCESS_NONE, accessFromGrant } from "@/lib/schemas/role";
-
-// Counts on `access`, not on the boolean pair: the API now sends the level and
-// may omit the pair entirely, which would have made every role read as zero.
-function grantedCount(role) {
-  return (role.permissions ?? []).filter(
-    (entry) =>
-      (entry.access ?? accessFromGrant(entry.permissions?.view, entry.permissions?.manage)) !==
-      ACCESS_NONE,
-  ).length;
-}
+import { RolesCards } from "@/components/admin/roles/roles-cards";
+import { grantedCount } from "@/lib/roles/granted-count";
 
 /* Cells at module level: flexRender treats a cell function's identity as the
  * component type, and this table re-renders on every keystroke in its search
@@ -105,7 +96,7 @@ export function RolesTable({ data }) {
           onChange={setQuery}
           placeholder={t("searchPlaceholder")}
         />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
           <SyncPermissionsButton />
           <Button asChild>
@@ -145,7 +136,15 @@ export function RolesTable({ data }) {
           />
         )
       ) : (
-        <DataTable columns={columns} data={filtered} />
+        <>
+          {/* Cards below lg, the table from lg up. */}
+          <div className="lg:hidden">
+            <RolesCards roles={filtered} />
+          </div>
+          <div className="hidden lg:block">
+            <DataTable columns={columns} data={filtered} />
+          </div>
+        </>
       )}
     </div>
   );

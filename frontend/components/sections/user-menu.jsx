@@ -17,16 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { apiMessage } from "@/lib/api/error-message";
-
-function initials(name) {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
+import { initials } from "@/lib/format/initials";
 
 /**
  * Avatar dropdown shared by both panels' headers. `extraItems` slots panel-

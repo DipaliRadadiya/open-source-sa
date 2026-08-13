@@ -98,7 +98,15 @@ export function MyActivityTable({ data, emptyMessage }) {
       cell: EventCell,
       meta: { className: "hidden md:table-cell" },
     },
-    { accessorKey: "description", header: t("table.description"), cell: DescriptionCell },
+    {
+      accessorKey: "description",
+      header: t("table.description"),
+      cell: DescriptionCell,
+      // TableCell is whitespace-nowrap for everything, which suits short values
+      // and ruins this one: at 320 the sentence ran straight off the card with
+      // no scrollbar to suggest it. A log line is the one cell that should wrap.
+      meta: { className: "whitespace-normal" },
+    },
   ];
 
   return <DataTable columns={columns} data={data} emptyMessage={emptyMessage} />;

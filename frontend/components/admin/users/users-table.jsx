@@ -12,16 +12,8 @@ import { useSetQuery } from "@/hooks/use-set-query";
 import { useNavPending } from "@/components/data-table/nav-transition";
 import { UserRowActions } from "@/components/admin/users/user-row-actions";
 import { useCreateUser } from "@/components/admin/users/users-view";
-
-function initials(name) {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
+import { initials } from "@/lib/format/initials";
+import { UsersCards } from "@/components/admin/users/users-cards";
 
 const MAX_ROLE_BADGES = 2;
 
@@ -158,7 +150,17 @@ export function UsersTable({ data, roles = [], currentUserId, hasFilters }) {
         isPending && "pointer-events-none opacity-60",
       )}
     >
-      <DataTable columns={columns} data={data} meta={{ roles, currentUserId }} />
+      {/* Cards below lg, the table from lg up. */}
+      <div className="lg:hidden">
+        <UsersCards
+          users={data}
+          roles={roles}
+          currentUserId={currentUserId}
+        />
+      </div>
+      <div className="hidden lg:block">
+        <DataTable columns={columns} data={data} meta={{ roles, currentUserId }} />
+      </div>
     </div>
   );
 }

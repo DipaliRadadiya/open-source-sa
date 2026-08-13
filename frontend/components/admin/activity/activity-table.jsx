@@ -85,8 +85,16 @@ export function ActivityTable({ data, hasFilters }) {
   const columns = [
     { accessorKey: "created_at_human", header: t("columns.when"), cell: WhenCell },
     { id: "user", header: t("columns.user"), cell: UserCell },
-    { id: "event", header: t("columns.event"), cell: EventCell },
-    { accessorKey: "description", header: t("columns.description"), cell: DescriptionCell },
+    // Event is shorthand for the description — "Php" + "Install started" against
+    // "Started installing PHP 8.5". A phone has room for one of the two, and the
+    // sentence is the one worth keeping. Same call as the self-service log.
+    { id: "event", header: t("columns.event"), cell: EventCell, meta: { className: "hidden md:table-cell" } },
+    {
+      accessorKey: "description",
+      header: t("columns.description"),
+      cell: DescriptionCell,
+      meta: { className: "whitespace-normal" },
+    },
   ];
 
   return <DataTable columns={columns} data={data} />;

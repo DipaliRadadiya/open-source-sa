@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { ChevronRight, CircleAlert, Globe2, Plus, SearchX, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import { RefreshButton } from "@/components/data-table/refresh-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
+import { ApplicationsCards } from "@/components/applications/applications-cards";
 
 const STATUS_VARIANTS = { active: "success", failed: "destructive", provisioning: "warning", pending: "secondary" };
 
@@ -66,9 +68,23 @@ function NameCell({ row }) {
 // its last deploy may have failed while the old code keeps serving. `status`
 // alone reads green in both cases, so the list would otherwise hide the two
 // things a user most needs to catch at a glance.
-function StatusCell({ row }) {
+/**
+ * Status is split in two because the card and the table place the parts
+ * differently — the card puts the badge inline on its facts line and the notes
+ * underneath — but both sides still read from one definition, so the
+ * provisioning step, the failure reference and the process/deploy markers
+ * cannot drift apart.
+ */
+export function ApplicationStatusBadge({ application }) {
+  return (
+    <Badge variant={STATUS_VARIANTS[application.status] ?? "secondary"} className="font-normal">
+      {application.status_title ?? application.status}
+    </Badge>
+  );
+}
+
+export function ApplicationStatusNotes({ application, className }) {
   const t = useTranslations("applications");
-  const application = row.original;
   const processDown =
     application.status === "active" &&
     application.has_process &&
@@ -80,21 +96,20 @@ function StatusCell({ row }) {
   // marker is too, even if a non-git app somehow carried a failed_step.
   const isGit = Boolean(application.repository || application.repository_url);
   const deployFailed = isGit && application.status === "active" && Boolean(application.failed_step);
+  const provisioning =
+    (application.status === "pending" || application.status === "provisioning") && application.steps?.length;
+  const reference = application.status === "failed" && application.reference;
+  if (!provisioning && !reference && !processDown && !deployFailed) return null;
   return (
-    <div className="space-y-1">
-      <Badge variant={STATUS_VARIANTS[application.status] ?? "secondary"} className="font-normal">
-        {application.status_title ?? application.status}
-      </Badge>
+    <div className={cn("space-y-1", className)}>
       {/* The API sends raw step identifiers (`create_php_pool`), which were
           being printed straight into the row. */}
-      {(application.status === "pending" || application.status === "provisioning") && application.steps?.length ? (
+      {provisioning ? (
         <p className="max-w-40 truncate text-xs text-muted-foreground">
           {provisionStepLabel(application.steps.at(-1), t, "details.")}
         </p>
       ) : null}
-      {application.status === "failed" && application.reference ? (
-        <p className="font-mono text-xs text-destructive">{application.reference}</p>
-      ) : null}
+      {reference ? <p className="font-mono text-xs text-destructive">{application.reference}</p> : null}
       {processDown ? (
         <p className="flex items-center gap-1 text-xs text-destructive">
           <CircleAlert className="size-3 shrink-0" />
@@ -107,6 +122,15 @@ function StatusCell({ row }) {
           {t("markers.deployFailed")}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function StatusCell({ row }) {
+  return (
+    <div className="space-y-1">
+      <ApplicationStatusBadge application={row.original} />
+      <ApplicationStatusNotes application={row.original} />
     </div>
   );
 }
@@ -151,6 +175,6 @@ export function ApplicationsTable({ applications = [], canManage = false }) {
   );
   const filters = <Filters query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} typeFilter={typeFilter} setTypeFilter={setTypeFilter} statusOptions={statusOptions} typeOptions={typeOptions} t={t} />;
   if (applications.length === 0) return <ApplicationEmptyState canManage={canManage} />;
-  if (!filtered.length) return <div className="space-y-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">{filters}<div className="flex items-center gap-2"><RefreshButton />{createButton}</div></div><EmptyState icon={SearchX} title={t("empty.filteredTitle")} description={t("empty.filteredDescription")} action={<Button variant="outline" onClick={() => { setQuery(""); setStatusFilter("all"); setTypeFilter("all"); }}>{t("empty.clearSearch")}</Button>} /></div>;
-  return <div className="space-y-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">{filters}<div className="flex items-center gap-2"><RefreshButton />{createButton}</div></div><div className="flex flex-wrap gap-2">{statusOptions.map(([status, label]) => <Badge key={status} variant={STATUS_VARIANTS[status] ?? "secondary"} className="font-normal">{label} {applications.filter((application) => application.status === status).length}</Badge>)}</div><DataTable columns={columns} data={filtered} sortable defaultSorting={[{ id: "created", desc: true }]} meta={{ canManage }} /></div>;
+  if (!filtered.length) return <div className="space-y-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">{filters}<div className="flex flex-wrap items-center gap-2"><RefreshButton />{createButton}</div></div><EmptyState icon={SearchX} title={t("empty.filteredTitle")} description={t("empty.filteredDescription")} action={<Button variant="outline" onClick={() => { setQuery(""); setStatusFilter("all"); setTypeFilter("all"); }}>{t("empty.clearSearch")}</Button>} /></div>;
+  return <div className="space-y-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">{filters}<div className="flex flex-wrap items-center gap-2"><RefreshButton />{createButton}</div></div><div className="flex flex-wrap gap-2">{statusOptions.map(([status, label]) => <Badge key={status} variant={STATUS_VARIANTS[status] ?? "secondary"} className="font-normal">{label} {applications.filter((application) => application.status === status).length}</Badge>)}</div>{/* Cards below lg, the table from lg up — same rule as services and workers. Six columns cannot fit a phone, and the table quietly hid five of them. */}<div className="lg:hidden"><ApplicationsCards applications={filtered} canManage={canManage} /></div><div className="hidden lg:block"><DataTable columns={columns} data={filtered} sortable defaultSorting={[{ id: "created", desc: true }]} meta={{ canManage }} /></div></div>;
 }

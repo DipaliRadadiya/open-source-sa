@@ -15,6 +15,7 @@ import { ShellSelect } from "@/components/system-users/shell-select";
 import { AppsCell } from "@/components/system-users/apps-cell";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
 import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
+import { SystemUsersCards } from "@/components/system-users/system-users-cards";
 
 /* ---------------------------------------------------------------------------
  * Cells are module-level components on purpose.
@@ -127,7 +128,7 @@ export function SystemUsersTable({ data, shells = [], canManage = false }) {
           onChange={setQuery}
           placeholder={t("searchPlaceholder")}
         />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
           <ReasonTooltip reason={canManage ? null : t("noPermission")}>
             <Button disabled={!canManage} onClick={() => setCreateOpen(true)}>
@@ -169,7 +170,15 @@ export function SystemUsersTable({ data, shells = [], canManage = false }) {
           />
         )
       ) : (
-        <DataTable columns={columns} data={filtered} meta={{ canManage, shells }} />
+        <>
+          {/* Cards below lg, the table from lg up. */}
+          <div className="lg:hidden">
+            <SystemUsersCards users={filtered} shells={shells} canManage={canManage} />
+          </div>
+          <div className="hidden lg:block">
+            <DataTable columns={columns} data={filtered} meta={{ canManage, shells }} />
+          </div>
+        </>
       )}
 
       {canManage ? (

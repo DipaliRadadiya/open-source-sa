@@ -44,7 +44,7 @@ export function UsersToolbar() {
         </Select>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <RefreshButton />
         <Button onClick={openCreate}>
           <Plus className="size-4" />
