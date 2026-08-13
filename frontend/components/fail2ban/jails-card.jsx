@@ -8,7 +8,7 @@ import { ShieldAlert, TriangleAlert, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateFail2ban } from "@/lib/api/fail2ban";
 import { settingsPayload } from "@/lib/fail2ban/settings-payload";
-import { Switch } from "@/components/ui/switch";
+import { PendingSwitch } from "@/components/ui/pending-switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -47,13 +47,25 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
   const t = useTranslations("fail2ban");
   const router = useRouter();
   const [pending, setPending] = useState(null);
+  // What the user asked for, held until the server catches up. Stored WITH the
+  // value it was based on, so once the server moves off that value the answer
+  // has landed and the override retires itself. Without this the switch did not
+  // move on click and still read "on" after a successful off, because `checked`
+  // was the server value and the refresh had not come back yet.
+  const [asked, setAsked] = useState({});
   const [guarding, setGuarding] = useState(null);
   const [explaining, setExplaining] = useState(false);
 
   const ipIgnored = Boolean(yourIp) && ignoreIps.includes(yourIp);
 
+  const shown = (jail) => {
+    const override = asked[jail.name];
+    return override && override.from === jail.enabled ? override.value : jail.enabled;
+  };
+
   async function apply(jail, enabled, { addMyIp = false, acknowledged = false } = {}) {
     setPending(jail.name);
+    setAsked((current) => ({ ...current, [jail.name]: { value: enabled, from: jail.enabled } }));
     try {
       await updateFail2ban({
         // The settings numbers ride along on every call — this endpoint rewrites
@@ -73,6 +85,13 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
       router.refresh();
     } catch (error) {
       const data = error.response?.data;
+      // Put the switch back where it was: it must not sit showing a state the
+      // server refused.
+      setAsked((current) => {
+        const next = { ...current };
+        delete next[jail.name];
+        return next;
+      });
       // The server's own lockout refusal, in case our pre-check missed a case.
       if (data?.errors?.["fail2ban.lockout_risk"]) {
         setGuarding({ jail, enabled });
@@ -164,9 +183,10 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
                   </div>
 
                   <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
-                    <Switch
-                      checked={jail.enabled}
-                      disabled={!canManage || pending === jail.name}
+                    <PendingSwitch
+                      checked={shown(jail)}
+                      pending={pending === jail.name}
+                      disabled={!canManage}
                       onCheckedChange={(next) => toggle(jail, next)}
                       aria-label={t("jails.toggle", { name: jail.label })}
                     />
