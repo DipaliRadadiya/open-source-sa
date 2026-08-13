@@ -70,10 +70,15 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
                     ) : null}
                   </span>
                 ) : (
+                  // w-full is not redundant next to `block`. A <button> is a form
+                  // control and sizes to its own content even when block-level,
+                  // so `truncate` was clipping at the button's width — which was
+                  // already wider than the column — and the name spilled across
+                  // the row's action icons instead of ellipsing.
                   <button
                     type="button"
                     onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
-                    className="block truncate text-left font-medium hover:underline"
+                    className="block w-full truncate text-left font-medium hover:underline"
                   >
                     {file.name}
                   </button>

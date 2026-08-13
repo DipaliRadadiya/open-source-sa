@@ -374,42 +374,45 @@ function ConfigField({
       name={config.name}
       defaultValue={runtimeDefault}
       render={({ field }) => (
-        <FormItem className={cn("min-w-0 self-start", isTextarea && "md:col-span-2")}>
-          {/* Fixed row height so the input below starts at the same Y whether or not
-        the label carries Generate/copy actions — otherwise a field with them
-        sits lower than its neighbour in the two-column grid. */}
-          <div className="flex min-h-6 items-center justify-between gap-2">
-            {/* Truncate rather than wrap: a wrapped label is taller and drops the
-          input below its neighbour in the two-column grid on narrow widths. */}
-            <FormLabel className="min-w-0 truncate" required={config.required}>
+        <FormItem className={cn("min-w-0 self-start", isTextarea && "@2xl:col-span-2")}>
+          {/* Every label row in this form is exactly h-7, whether or not it
+              carries an action — that fixed height is what keeps the two
+              inputs in a grid row starting at the same Y. The label truncates
+              and the action never shrinks, so the row cannot overflow even if
+              the column is narrower than the container query expected. */}
+          <div className="flex min-h-7 items-center justify-between gap-2">
+            <FormLabel className="min-w-0" required={config.required}>
               {label}
             </FormLabel>
-            <div className="flex shrink-0 items-center gap-2">
-              {/* A generated password is shown once and never again — a copy control
-            beside it means it can be saved without hand-selecting the field. */}
-              {isPassword && field.value ? (
-                <CopyButton value={String(field.value)} className="size-6" />
-              ) : null}
-              {/* Fields the schema marks generatable (WordPress admin password, DB
-            passwords) get a one-click strong value, revealed so it can be
-            copied before it is submitted. */}
-              {isPassword && config.generate ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    form.setValue(config.name, generatePassword(), {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    });
-                    setReveal(true);
-                  }}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  <Wand2 className="size-3" />
-                  {t("form.generate")}
-                </button>
-              ) : null}
-            </div>
+            {isPassword && (config.generate || field.value) ? (
+              <div className="flex shrink-0 items-center gap-2">
+                {/* Fields the schema marks generatable (WordPress admin
+                    password, DB passwords) get a one-click strong value,
+                    revealed so it can be copied before it is submitted. */}
+                {config.generate ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      form.setValue(config.name, generatePassword(), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      setReveal(true);
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    <Wand2 className="size-3" />
+                    {t("form.generate")}
+                  </button>
+                ) : null}
+                {/* A generated password is shown once and never again — a copy
+                    control beside it means it can be saved without
+                    hand-selecting the field. */}
+                {field.value ? (
+                  <CopyButton value={String(field.value)} className="size-6" />
+                ) : null}
+              </div>
+            ) : null}
           </div>
           {isAccount ? (
             <Select
@@ -1081,7 +1084,13 @@ export function CreateApplicationForm({
         className="mx-auto max-w-6xl"
       >
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="min-w-0 space-y-6">
+          {/* @container, not a viewport breakpoint. How much room these fields
+              actually have depends on the sidebar, the summary panel beside
+              them and the reader.'s zoom — never on the window width. At 120%
+              zoom this column is ~450px at any window size, so a viewport rule
+              kept promising two columns that could not fit. The threshold is in
+              rem, so it grows with the text it has to hold. */}
+          <div className="@container min-w-0 space-y-6">
             <section
               className="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
               aria-labelledby="application-type-heading"
@@ -1124,17 +1133,19 @@ export function CreateApplicationForm({
                 title={t("form.detailsTitle")}
                 description={t("form.detailsHint")}
               />
-              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem>
-                      {/* Same fixed-height label row as Domain's, which
-                          carries a control in it. Two cells side by side only
-                          line up if their heads are the same height. */}
-                      <div className="flex h-7 items-center">
-                        <FormLabel required>{t("name")}</FormLabel>
+                    <FormItem className="min-w-0">
+                      {/* Empty right side, same h-7 as Domain, which carries a
+                          control: two cells side by side only line up if their
+                          heads are the same height. */}
+                      <div className="flex min-h-7 items-center">
+                        <FormLabel className="min-w-0" required>
+                          {t("name")}
+                        </FormLabel>
                       </div>
                       <FormControl>
                         <Input
@@ -1157,16 +1168,14 @@ export function CreateApplicationForm({
                   control={form.control}
                   name="domain"
                   render={({ field }) => (
-                    <FormItem>
-                      {/* On the label row, not above the input.
-                          Stacked options gave this cell a taller head than
-                          Name's, so the two inputs no longer lined up and the
-                          left column ended in dead space. A segmented control
-                          rides in the label's own line: both cells keep the
-                          shape "one label row, one input", and the grid stays
-                          level. */}
-                      <div className="flex h-7 items-center justify-between gap-2">
-                        <FormLabel required>{t("domain")}</FormLabel>
+                    // min-w-0: a grid item keeps min-width:auto, so without this
+                    // its contents set the column's floor and the widest of them
+                    // hangs over the card's edge at larger text sizes.
+                    <FormItem className="min-w-0">
+                      <div className="flex min-h-7 items-center justify-between gap-2">
+                        <FormLabel className="min-w-0" required>
+                          {t("domain")}
+                        </FormLabel>
                         {canUseTemporary ? (
                           <div
                             role="group"
@@ -1223,6 +1232,7 @@ export function CreateApplicationForm({
                           ? t("form.temporaryDomainHint")
                           : t("form.domainHint")}
                       </FormDescription>
+
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1231,14 +1241,14 @@ export function CreateApplicationForm({
                   control={form.control}
                   name="system_user_id"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      {/* Create sits on the label row and stays there whether or
-                          not users already exist. Wanting a dedicated user for
-                          a new site is the normal case, not a recovery from an
-                          empty list — hiding it behind "you have none" meant
-                          leaving the form to go and make one. */}
-                      <div className="flex min-h-6 items-center justify-between gap-2">
-                        <FormLabel required>{t("systemUser")}</FormLabel>
+                    <FormItem className="min-w-0 @2xl:col-span-2">
+                      <div className="flex min-h-7 items-center justify-between gap-2">
+                        <FormLabel className="min-w-0" required>
+                          {t("systemUser")}
+                        </FormLabel>
+                        {/* Shows whether or not users already exist: wanting a
+                            dedicated user for a new site is the normal case,
+                            not a recovery from an empty list. */}
                         {canCreateSystemUser ? (
                           <button
                             type="button"
@@ -1318,12 +1328,12 @@ export function CreateApplicationForm({
                         ]}
                       />
                       {gitSource === "account" ? (
-                        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                        <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">
                           <FormField
                             control={form.control}
                             name="git_account_id"
                             render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="min-w-0">
                                 <FormLabel>{t("gitAccount")}</FormLabel>
                                 <FormControl>
                                   <Combobox
@@ -1366,7 +1376,7 @@ export function CreateApplicationForm({
                             control={form.control}
                             name="repository"
                             render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="min-w-0">
                                 <FormLabel>{t("repository")}</FormLabel>
                                 <ReasonTooltip
                                   reason={
@@ -1411,7 +1421,7 @@ export function CreateApplicationForm({
                             control={form.control}
                             name="branch"
                             render={({ field }) => (
-                              <FormItem className="md:col-span-2">
+                              <FormItem className="min-w-0 @2xl:col-span-2">
                                 <FormLabel>{t("branch")}</FormLabel>
                                 <ReasonTooltip
                                   reason={
@@ -1456,12 +1466,12 @@ export function CreateApplicationForm({
                           />
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                        <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">
                           <FormField
                             control={form.control}
                             name="repository_url"
                             render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="min-w-0">
                                 <FormLabel>{t("publicRepository")}</FormLabel>
                                 <FormControl>
                                   <Input
@@ -1481,7 +1491,7 @@ export function CreateApplicationForm({
                             control={form.control}
                             name="branch"
                             render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="min-w-0">
                                 <FormLabel>{t("branch")}</FormLabel>
                                 <FormControl>
                                   <Input
@@ -1498,7 +1508,7 @@ export function CreateApplicationForm({
                     </div>
                   ) : null}
                   {standardFields.length ? (
-                    <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                    <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">
                       {standardFields.map((config) => (
                         <ConfigField
                           key={config.name}
@@ -1543,7 +1553,7 @@ export function CreateApplicationForm({
                           <ChevronDown className="size-4" />
                         </Button>
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="grid grid-cols-1 items-start gap-4 pt-4 md:grid-cols-2">
+                      <CollapsibleContent className="grid grid-cols-1 items-start gap-4 pt-4 @2xl:grid-cols-2">
                         {advancedFields.map((config) => (
                           <ConfigField
                             key={config.name}
@@ -1599,7 +1609,10 @@ export function CreateApplicationForm({
               </div>
             </div>
           </div>
-          <aside className="lg:sticky lg:top-20">
+          {/* Clears the shell's sticky chrome, whatever it currently is — a
+              fixed offset slid this panel under the breadcrumb as soon as a
+              banner appeared above the header. */}
+          <aside className="lg:sticky lg:top-[calc(var(--app-chrome,7rem)_+_1.5rem)]">
             {selected ? <CreateReadinessPanel items={readinessItems} /> : null}
           </aside>
         </div>

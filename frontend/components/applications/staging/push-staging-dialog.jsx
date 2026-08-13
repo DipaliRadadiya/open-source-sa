@@ -73,7 +73,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
 
   return (
     <AlertDialog open={open} onOpenChange={pending ? undefined : onOpenChange}>
-      <AlertDialogContent className="w-full sm:!max-w-2xl">
+      <AlertDialogContent className="sm:!max-w-2xl">
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">

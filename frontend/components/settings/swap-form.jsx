@@ -185,11 +185,11 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                     it beside the presets made two controls for one value, and
                     left people wondering which one counted. */}
                 {custom ? (
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex items-center gap-2 pt-1 sm:w-fit">
                     <FormControl>
                       <Input
                         placeholder="2048"
-                        className="w-28 font-mono"
+                        className="w-full font-mono sm:w-28"
                         inputMode="numeric"
                         autoComplete="off"
                         disabled={!canManage}

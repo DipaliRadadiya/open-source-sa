@@ -35,6 +35,7 @@ import {
   FormItem,
   FormLabel,
   FormControl,
+  FormDescription,
   FormMessage,
 } from "@/components/ui/form";
 import { CreatedCredentials } from "@/components/databases/created-credentials";
@@ -372,7 +373,7 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
                       }}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full font-mono">
+                        <SelectTrigger className="w-full font-mono data-placeholder:font-sans">
                           <SelectValue placeholder={t("create.defaultOption")} />
                         </SelectTrigger>
                       </FormControl>
@@ -401,14 +402,8 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
                       disabled={collations.length === 0}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full font-mono">
-                          <SelectValue
-                            placeholder={
-                              values.charset
-                                ? t("create.defaultOption")
-                                : t("create.chooseCharsetFirst")
-                            }
-                          />
+                        <SelectTrigger className="w-full font-mono data-placeholder:font-sans">
+                          <SelectValue placeholder={t("create.defaultOption")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -419,6 +414,14 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
                         ))}
                       </SelectContent>
                     </Select>
+                    {/* Why it is disabled goes under the control, not inside it.
+                        As a placeholder this sentence set the trigger's minimum
+                        width and pushed it past the dialog's edge at larger text
+                        sizes — and a hint no one can finish reading is not a
+                        hint. */}
+                    {!values.charset ? (
+                      <FormDescription>{t("create.chooseCharsetFirst")}</FormDescription>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}

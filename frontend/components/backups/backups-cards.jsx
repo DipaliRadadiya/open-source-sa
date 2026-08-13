@@ -6,7 +6,7 @@ import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { BackupStatusBadge, SafetyBadge } from "@/components/backups/backup-status-badge";
 import { DownloadBackupButton } from "@/components/backups/download-backup-button";
 import { restoreBlocker } from "@/components/backups/restore-dialog";
@@ -35,7 +35,7 @@ export function BackupsCards({
   const format = useFormatter();
 
   return (
-    <div className="space-y-3">
+    <CardList>
       {backups.map((backup) => {
         const duration = apiDuration(backup.started_at, backup.finished_at);
         const blocker = canRestore
@@ -43,50 +43,61 @@ export function BackupsCards({
           : t("noPermission");
 
         return (
-          <Card key={backup.id} className="gap-0 py-0 shadow-sm">
-            <CardContent className="space-y-3 p-4">
-              <div className="flex items-start justify-between gap-3">
-                {showSite ? (
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {backup.application_name ?? t("unknownApplication")}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {backup.application_domain ?? ""}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="min-w-0 truncate font-medium">
-                    {backup.type_title ?? backup.type}
+          <CardListItem key={backup.id}>
+            <div className="flex items-start justify-between gap-3">
+              {showSite ? (
+                <div className="min-w-0">
+                  <p className="truncate font-medium">
+                    {backup.application_name ?? t("unknownApplication")}
                   </p>
-                )}
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <BackupStatusBadge backup={backup} />
-                  {backup.is_safety ? <SafetyBadge /> : null}
+                  <p className="truncate text-xs text-muted-foreground">
+                    {backup.application_domain ?? ""}
+                  </p>
                 </div>
-              </div>
-
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-3">
-                {showSite ? (
-                  <Fact label={t("columns.type")} value={backup.type_title ?? backup.type} />
-                ) : null}
-                <Fact
-                  label={t("columns.when")}
-                  value={backup.created_at_human ?? backup.created_at}
-                  hint={duration}
-                />
-                <Fact
-                  label={t("columns.size")}
-                  value={backup.size_bytes ? formatBytes(backup.size_bytes, format) : sizeNote(backup, t)}
-                />
-              </dl>
-
-              {backup.status === "failed" ? (
-                <p className="text-xs text-muted-foreground">
-                  {reasonText(backup.reason_title, t("unknownReason"))}
+              ) : (
+                <p className="min-w-0 truncate font-medium">
+                  {backup.type_title ?? backup.type}
                 </p>
-              ) : null}
+              )}
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <BackupStatusBadge backup={backup} />
+                {backup.is_safety ? <SafetyBadge /> : null}
+              </div>
+            </div>
 
+            <CardFacts>
+              {showSite ? (
+                <CardFact label={t("columns.type")} value={backup.type_title ?? backup.type} />
+              ) : null}
+              <CardFact label={t("columns.when")}>
+                <span className="tabular-nums">{backup.created_at_human ?? backup.created_at}</span>
+                {duration ? (
+                  <span className="block text-xs tabular-nums text-muted-foreground">
+                    {duration}
+                  </span>
+                ) : null}
+              </CardFact>
+              <CardFact
+                label={t("columns.size")}
+                value={backup.size_bytes ? formatBytes(backup.size_bytes, format) : sizeNote(backup, t)}
+              />
+            </CardFacts>
+
+            {backup.status === "failed" ? (
+              <p className="text-xs text-muted-foreground">
+                {reasonText(backup.reason_title, t("unknownReason"))}
+              </p>
+            ) : null}
+
+            {/* mt-auto pins the buttons to the bottom edge when a neighbouring
+                card in the same grid row is taller. The blocker gets its own
+                line above them: inline, it pushed the last button onto a second
+                row by itself, which reads as a layout fault rather than a
+                wrapped sentence. */}
+            <div className="mt-auto flex flex-col items-end gap-2">
+              {blocker && backup.status !== "failed" ? (
+                <span className="text-xs text-muted-foreground">{blocker}</span>
+              ) : null}
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {/* Labelled here rather than an icon: on a phone there is room
                     for the word, and no hover to explain a lone glyph. */}
@@ -105,36 +116,21 @@ export function BackupsCards({
                     </Button>
                   ) : null
                 ) : (
-                  <>
-                    {blocker ? (
-                      <span className="text-xs text-muted-foreground">{blocker}</span>
-                    ) : null}
-                    <Button
-                      size="sm"
-                      variant={blocker ? "outline" : "destructive"}
-                      disabled={Boolean(blocker)}
-                      onClick={() => onRestore(backup)}
-                    >
-                      <History className="size-4" />
-                      {t("restoreShort")}
-                    </Button>
-                  </>
+                  <Button
+                    size="sm"
+                    variant={blocker ? "outline" : "destructive"}
+                    disabled={Boolean(blocker)}
+                    onClick={() => onRestore(backup)}
+                  >
+                    <History className="size-4" />
+                    {t("restoreShort")}
+                  </Button>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardListItem>
         );
       })}
-    </div>
-  );
-}
-
-function Fact({ label, value, hint }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="truncate text-sm tabular-nums">{value}</dd>
-      {hint ? <dd className="truncate text-xs tabular-nums text-muted-foreground">{hint}</dd> : null}
-    </div>
+    </CardList>
   );
 }

@@ -84,7 +84,7 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
           `sm:group-data-[size=default]`, so the title and icon fell back to
           centred and this became the one confirmation in the panel that did
           not match the others. `!` wins the width without leaving the group. */}
-      <AlertDialogContent className="w-full sm:!max-w-2xl">
+      <AlertDialogContent className="sm:!max-w-2xl">
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">

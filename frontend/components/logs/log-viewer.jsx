@@ -178,7 +178,7 @@ export function LogViewer({
 
 function Notice({ icon: Icon, title, body }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-console px-6 py-16 text-center">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-console px-6 py-10 text-center sm:py-16">
       <span className="flex size-11 items-center justify-center rounded-full bg-console-foreground/10 text-console-muted">
         <Icon className="size-5" />
       </span>

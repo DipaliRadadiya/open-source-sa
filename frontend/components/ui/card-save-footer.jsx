@@ -66,9 +66,11 @@ export function CardSaveFooter({
       {!saving && !dirty && showReason && saveReason ? (
         <p className="mr-auto text-xs text-muted-foreground">{saveReason}</p>
       ) : null}
-      {/* Discard and save stay on one line together — split across two rows
-          they read as two separate decisions. */}
-      <div className="flex shrink-0 items-center gap-2">
+      {/* Discard and save prefer one line — split across two rows they read as
+          two separate decisions — but they may wrap rather than overflow. With
+          shrink-0 under a justify-end parent the group overflowed to the LEFT,
+          pushing Discard outside the card. */}
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         {dirty && onDiscard ? (
           <Button type="button" variant="ghost" onClick={onDiscard} disabled={saving}>
             {t("discard")}
@@ -80,6 +82,10 @@ export function CardSaveFooter({
             variant={quietWhenClean && !dirty && !saving ? "secondary" : "default"}
             onClick={submit ? undefined : onSave}
             disabled={Boolean(saveReason) || saving}
+            // Save labels are named after what they save ("Turn on attack
+            // protection") and grow again in other locales, so the label wraps
+            // instead of forcing the button wider than the card.
+            className="h-auto max-w-full py-2 text-center whitespace-normal"
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
             {saving ? t("saving") : (saveLabel ?? t("save"))}

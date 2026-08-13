@@ -149,17 +149,17 @@ export function FirewallSection({ appId, application, categories: catalog, modes
           {/* A real <label> so the whole row toggles, not just the switch. */}
           <label
             className={cn(
-              "flex flex-row items-center justify-between gap-4 rounded-xl border p-4 transition-colors",
+              "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
               blocking && "border-success/30 bg-success/5",
               enabled && !blocking && "border-warning/30 bg-warning/5",
               !enabled && "bg-muted/40",
               locked ? "cursor-not-allowed" : "cursor-pointer",
             )}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
               <span
                 className={cn(
-                  "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full",
+                  "mt-0.5 hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
                   blocking && "bg-success/15 text-success",
                   enabled && !blocking && "bg-warning/15 text-warning",
                   !enabled && "bg-muted-foreground/10 text-muted-foreground",
@@ -242,28 +242,33 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                         <label
                           key={category.value}
                           className={cn(
-                            "flex items-center justify-between gap-4 p-3.5 transition-colors",
+                            "flex flex-col gap-1 p-3.5 transition-colors",
                             locked || lastOne ? "cursor-not-allowed" : "cursor-pointer hover:bg-muted/40",
                           )}
                         >
-                          <div className="min-w-0 space-y-0.5">
-                            <span className="block text-sm font-medium">{category.title}</span>
-                            {DESCRIBED_CATEGORIES.has(category.value) ? (
-                              <span className="block text-xs leading-relaxed text-muted-foreground">
-                                {t(`categoryHints.${category.value}`)}
-                              </span>
-                            ) : null}
+                          {/* The switch pairs with the TITLE, and the
+                              explanation runs the full width beneath. Sharing a
+                              row with the switch left the sentence 148px wide
+                              over four lines on a narrow screen — the switch is
+                              44px of a 208px row and never gives any of it up. */}
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="min-w-0 text-sm font-medium">{category.title}</span>
+                            <ReasonTooltip reason={lastOne ? t("lastCategory") : null}>
+                              <div className="flex h-5 shrink-0 items-center">
+                                <Switch
+                                  checked={checked}
+                                  onCheckedChange={(value) => toggleCategory(category.value, value)}
+                                  disabled={locked || lastOne}
+                                  aria-label={category.title}
+                                />
+                              </div>
+                            </ReasonTooltip>
                           </div>
-                          <ReasonTooltip reason={lastOne ? t("lastCategory") : null}>
-                            <div className="flex h-5 shrink-0 items-center">
-                              <Switch
-                                checked={checked}
-                                onCheckedChange={(value) => toggleCategory(category.value, value)}
-                                disabled={locked || lastOne}
-                                aria-label={category.title}
-                              />
-                            </div>
-                          </ReasonTooltip>
+                          {DESCRIBED_CATEGORIES.has(category.value) ? (
+                            <span className="block text-xs leading-relaxed text-muted-foreground">
+                              {t(`categoryHints.${category.value}`)}
+                            </span>
+                          ) : null}
                         </label>
                       );
                     })}

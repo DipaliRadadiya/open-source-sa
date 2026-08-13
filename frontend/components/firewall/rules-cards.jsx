@@ -4,6 +4,7 @@ import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { CardList, CardListItem } from "@/components/data-table/card-list";
 import {
   RuleName,
   ActionBadge,
@@ -31,9 +32,9 @@ export function RulesCards({
   labels,
 }) {
   return (
-    <ul className="space-y-3">
+    <CardList>
       {rules.map((rule) => (
-        <li key={rule.id} className="rounded-xl border bg-card p-4 shadow-sm">
+        <CardListItem key={rule.id}>
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 space-y-2">
               <RuleName rule={rule} muted={!enabled} labels={labels} />
@@ -80,8 +81,8 @@ export function RulesCards({
           <p className="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
             {labels.from} <SourceText rule={rule} labels={labels} />
           </p>
-        </li>
+        </CardListItem>
       ))}
-    </ul>
+    </CardList>
   );
 }

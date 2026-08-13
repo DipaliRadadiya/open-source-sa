@@ -240,7 +240,7 @@ export function ApplicationLogsPanel({
         </TabsList>
       </ScrollFade>
 
-      <section className="flex h-[calc(100svh-16rem)] min-h-[24rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+      <section className="flex h-[calc(100svh-16rem)] min-h-[34rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:min-h-[24rem]">
         <LogToolbar
           label={source?.label ?? t("noSource")}
           shown={visible.length}

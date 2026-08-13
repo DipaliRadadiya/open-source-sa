@@ -107,7 +107,7 @@ export function SiteSearchResults({ appId, query, onAction }) {
                   <button
                     type="button"
                     onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
-                    className="block truncate text-left font-medium hover:underline"
+                    className="block w-full truncate text-left font-medium hover:underline"
                   >
                     {file.name}
                   </button>

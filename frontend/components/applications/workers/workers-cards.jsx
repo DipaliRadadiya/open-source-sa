@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { WorkerStatusBadge } from "@/components/applications/workers/worker-status-badge";
 import { WorkerActions } from "@/components/applications/workers/worker-actions";
 import { WorkerRowActions } from "@/components/applications/workers/worker-row-actions";
+import { CardList, CardListItem } from "@/components/data-table/card-list";
 
 function WorkerMeta({ worker, t }) {
   const meta = worker.created_at_human
@@ -37,14 +38,11 @@ export function WorkersCards({ data, appId, presets = [], canManage, busy, setRo
   const t = useTranslations("applications.workers");
 
   return (
-    <ul className="space-y-3">
+    <CardList>
       {data.map((worker) => (
-        <li
+        <CardListItem
           key={worker.id}
-          className={cn(
-            "rounded-xl border bg-card p-4 shadow-sm",
-            worker.state === "degraded" && "border-warning/30 bg-warning/5",
-          )}
+          className={cn(worker.state === "degraded" && "border-warning/30 bg-warning/5")}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -77,8 +75,8 @@ export function WorkersCards({ data, appId, presets = [], canManage, busy, setRo
             />
             <WorkerRowActions worker={worker} appId={appId} presets={presets} workers={data} canManage={canManage} />
           </div>
-        </li>
+        </CardListItem>
       ))}
-    </ul>
+    </CardList>
   );
 }

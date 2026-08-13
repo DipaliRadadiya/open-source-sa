@@ -275,7 +275,7 @@ function UpdatesSection({ updates, canManage }) {
                       <Input
                         placeholder="03:00"
                         type="time"
-                        className="w-32 font-mono"
+                        className="w-full font-mono sm:w-32"
                         disabled={!canManage}
                         {...field}
                       />
@@ -401,7 +401,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
                       disabled={!canManage}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-44">
+                        <SelectTrigger className="w-full sm:w-44">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -429,7 +429,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
                         disabled={!canManage}
                       >
                         <FormControl>
-                          <SelectTrigger className="w-44">
+                          <SelectTrigger className="w-full sm:w-44">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
@@ -461,7 +461,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
                         disabled={!canManage}
                       >
                         <FormControl>
-                          <SelectTrigger className="w-44">
+                          <SelectTrigger className="w-full sm:w-44">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
@@ -494,7 +494,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
                       disabled={!canManage}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-44">
+                        <SelectTrigger className="w-full sm:w-44">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>

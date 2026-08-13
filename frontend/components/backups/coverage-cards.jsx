@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
 
 /**
@@ -31,7 +32,7 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
   }
 
   return (
-    <div className="space-y-3">
+    <CardList>
       {rows.map(({ application, target, state }) => {
         const meta = COVERAGE_STATE[state];
         const Icon = meta.icon;
@@ -41,62 +42,62 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
           : (target?.next_run_at_human ? t("nextRun", { when: target.next_run_at_human }) : null);
 
         return (
-          <Card key={application.id} className="gap-0 py-0 shadow-sm">
-            <CardContent className="space-y-3 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <Link
-                    prefetch={false}
-                    href={`/applications/${application.id}/backups`}
-                    className="block truncate font-medium underline-offset-4 hover:underline"
-                  >
-                    {application.name}
-                  </Link>
-                  <p className="truncate text-xs text-muted-foreground">{application.domain}</p>
-                </div>
-                <Badge variant={meta.variant} className="shrink-0 gap-1.5 font-normal">
-                  <Icon className="size-3" />
-                  {t(`status.${state}`)}
-                </Badge>
+          <CardListItem key={application.id}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link
+                  prefetch={false}
+                  href={`/applications/${application.id}/backups`}
+                  className="block truncate font-medium underline-offset-4 hover:underline"
+                >
+                  {application.name}
+                </Link>
+                <p className="truncate text-xs text-muted-foreground">{application.domain}</p>
               </div>
+              <Badge variant={meta.variant} className="shrink-0 gap-1.5 font-normal">
+                <Icon className="size-3" />
+                {t(`status.${state}`)}
+              </Badge>
+            </div>
 
-              {/* An unconfigured site shows the same four facts as a
-                  configured one, each saying it is not set rather than being
-                  omitted — so the card never looks half-rendered. */}
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-3">
-                <Fact
-                  label={t("columns.type")}
-                  value={target ? (target.type_title ?? target.type) : t("placeholders.type")}
-                  muted={!target}
-                />
-                <Fact
-                  label={t("columns.schedule")}
-                  value={
-                    target
-                      ? `${target.frequency_title ?? target.frequency} · ${t("keeps", { count: target.retention_count })}`
-                      : t("placeholders.schedule")
-                  }
-                  muted={!target}
-                />
-                <Fact
-                  label={t("columns.storage")}
-                  value={target?.storage_destination_name ?? t("placeholders.storage")}
-                  muted={!target}
-                />
-                <Fact
-                  label={t("columns.lastRun")}
-                  value={
-                    target
-                      ? (target.last_run_at_human ?? t("neverRunShort"))
-                      : t("placeholders.lastRun")
-                  }
-                  hint={next}
-                  muted={!target}
-                />
-              </dl>
+            {/* An unconfigured site shows the same four facts as a configured
+                one, each saying it is not set rather than being omitted — so the
+                card never looks half-rendered. */}
+            <CardFacts>
+              <CardFact
+                label={t("columns.type")}
+                className={cn(!target && "text-muted-foreground/70")}
+                value={target ? (target.type_title ?? target.type) : t("placeholders.type")}
+              />
+              <CardFact
+                label={t("columns.schedule")}
+                className={cn(!target && "text-muted-foreground/70")}
+                value={
+                  target
+                    ? `${target.frequency_title ?? target.frequency} · ${t("keeps", { count: target.retention_count })}`
+                    : t("placeholders.schedule")
+                }
+              />
+              <CardFact
+                label={t("columns.storage")}
+                className={cn(!target && "text-muted-foreground/70")}
+                value={target?.storage_destination_name ?? t("placeholders.storage")}
+              />
+              <CardFact
+                label={t("columns.lastRun")}
+                className={cn(!target && "text-muted-foreground/70")}
+              >
+                <span className="block truncate">
+                  {target ? (target.last_run_at_human ?? t("neverRunShort")) : t("placeholders.lastRun")}
+                </span>
+                {next ? (
+                  <span className="block truncate text-xs text-muted-foreground">{next}</span>
+                ) : null}
+              </CardFact>
+            </CardFacts>
 
-              {canManage || !target ? (
-                <div className="flex justify-end gap-2">
+            {canManage || !target ? (
+              <div className="mt-auto flex flex-wrap justify-end gap-2">
                   {state === "unprotected" ? (
                     canManage ? (
                       <Button size="sm" variant="outline" onClick={() => onSetUp(application.id)}>
@@ -125,22 +126,11 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
                       </Button>
                     </>
                   )}
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
+              </div>
+            ) : null}
+          </CardListItem>
         );
       })}
-    </div>
-  );
-}
-
-function Fact({ label, value, hint, muted }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn("truncate text-sm", muted && "text-muted-foreground/70")}>{value}</dd>
-      {hint ? <dd className="truncate text-xs text-muted-foreground">{hint}</dd> : null}
-    </div>
+    </CardList>
   );
 }

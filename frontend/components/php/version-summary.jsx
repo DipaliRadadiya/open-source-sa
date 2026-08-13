@@ -170,7 +170,13 @@ export function VersionSummary({
           {/* Every action for this version on one line, with the version it
               acts on. A footer bar underneath repeated the card's own subject
               and split the controls across two places for no reason. */}
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {/* Not shrink-0. A shrink-0 flex item takes its max-content width —
+              all three buttons on one line — and refuses to give any of it
+              back, so its own flex-wrap never gets the chance to wrap and the
+              row runs past the card instead. Longer locales hit this first:
+              "Hacer predeterminada" is half again the width of "Make
+              default". */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {children}
 
             {!showMakeDefault ? null : (

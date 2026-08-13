@@ -18,7 +18,7 @@
 export function PageHeader({ title, subtitle, children }) {
   return (
     <div className="space-y-1">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight break-words">{title}</h1>
       {subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
       {children}
     </div>

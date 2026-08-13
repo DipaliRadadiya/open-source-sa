@@ -30,16 +30,24 @@ export function FormModal({
 }) {
   const inner = (
     <>
-      <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4 text-left">
+      {/* pe-10 reserves the close button's corner. It is absolutely positioned,
+          so it takes no space in the flow — a long title happily runs underneath
+          it and the last word becomes unreadable. */}
+      <DialogHeader className="shrink-0 space-y-0 border-b py-4 pe-10 ps-6 text-left">
         <div className="flex items-center gap-3">
           {Icon ? (
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Icon className="size-5" />
             </span>
           ) : null}
-          <div className="space-y-1">
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
+          {/* min-w-0 + break-words: titles carry user-supplied names ("Add a
+              user to wp_1395988213_nip_io_zi6nod"), and an unbreakable 26-char
+              token in a flex item with min-width:auto made the whole dialog
+              wider than the phone it was on — every control cut off at the
+              right edge. */}
+          <div className="min-w-0 space-y-1">
+            <DialogTitle className="break-words">{title}</DialogTitle>
+            <DialogDescription className="break-words">{description}</DialogDescription>
           </div>
         </div>
       </DialogHeader>

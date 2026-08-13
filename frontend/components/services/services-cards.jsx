@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ServiceActions } from "@/components/services/service-actions";
 import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
+import { CardList, CardListItem } from "@/components/data-table/card-list";
 
 /**
  * The same services as cards, for screens too narrow for six columns.
@@ -19,21 +20,18 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
   const format = useFormatter();
 
   return (
-    <ul className="space-y-3">
+    <CardList>
       {data.map((service) => {
         const php = phpVersions.find((v) => v.service === service.key);
         const usage = service.usage;
         const cpu = usage?.cpu_percent;
 
         return (
-          <li
+          <CardListItem
             key={service.key}
-            className={cn(
-              "rounded-xl border bg-card p-4 shadow-sm",
-              // Same signal as the table's tinted row: a failed unit is why you
-              // opened the page.
-              service.status === "failed" && "border-destructive/30 bg-destructive/5",
-            )}
+            // Same signal as the table's tinted row: a failed unit is why you
+            // opened the page.
+            className={cn(service.status === "failed" && "border-destructive/30 bg-destructive/5")}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -96,10 +94,10 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
                 onBusyChange={(action) => setRowBusy(service.key, action)}
               />
             </div>
-          </li>
+          </CardListItem>
         );
       })}
-    </ul>
+    </CardList>
   );
 }
 

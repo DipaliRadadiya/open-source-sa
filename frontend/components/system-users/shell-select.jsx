@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import { setSystemUserShell } from "@/lib/api/system-users";
 import {
   Select,
@@ -27,7 +28,7 @@ import { apiMessage } from "@/lib/api/error-message";
  * rejects that pair, so the option is disabled here with the reason rather
  * than sent and bounced.
  */
-export function ShellSelect({ user, shells = [], canManage = true }) {
+export function ShellSelect({ user, shells = [], canManage = true, className }) {
   const t = useTranslations("systemUsers");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -63,7 +64,7 @@ export function ShellSelect({ user, shells = [], canManage = true }) {
 
   return (
     <Select value={user.shell} disabled={busy} onValueChange={onChange}>
-      <SelectTrigger className="h-8 w-48 text-xs">
+      <SelectTrigger className={cn("h-8 w-48 text-xs", className)}>
         {/* Title only. Radix copies the selected item's children into the
             trigger, so without this the path (and any description) rides along
             and the row grows a second line it does not need. */}

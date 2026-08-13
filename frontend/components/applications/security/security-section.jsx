@@ -118,15 +118,15 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                       at the small switch itself stops being the only way in. */}
                   <label
                     className={cn(
-                      "flex flex-row items-center justify-between gap-4 rounded-xl border p-4 transition-colors",
+                      "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
                       field.value ? "border-success/30 bg-success/5" : "bg-muted/40",
                       !canManage || submitting ? "cursor-not-allowed" : "cursor-pointer",
                     )}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
                       <span
                         className={cn(
-                          "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full",
+                          "mt-0.5 hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
                           field.value ? "bg-success/15 text-success" : "bg-muted-foreground/10 text-muted-foreground",
                         )}
                       >

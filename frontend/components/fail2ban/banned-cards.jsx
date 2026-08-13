@@ -4,6 +4,7 @@ import { ShieldOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { CardList, CardListItem } from "@/components/data-table/card-list";
 
 /**
  * The same bans as cards, for screens too narrow for five columns.
@@ -20,9 +21,9 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 // decision, and a mis-tap on a phone is a lot easier than a mis-click.
 export function BannedCards({ data, canManage, onRequestUnban, unbanning, t, renderExpiry }) {
   return (
-    <ul className="space-y-3">
+    <CardList>
       {data.map((ban) => (
-        <li key={`${ban.jail}-${ban.ip}`} className="rounded-xl border bg-card p-4 shadow-sm">
+        <CardListItem key={`${ban.jail}-${ban.ip}`}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate font-mono text-sm font-medium">{ban.ip}</p>
@@ -54,8 +55,8 @@ export function BannedCards({ data, canManage, onRequestUnban, unbanning, t, ren
               </Button>
             </ReasonTooltip>
           </div>
-        </li>
+        </CardListItem>
       ))}
-    </ul>
+    </CardList>
   );
 }

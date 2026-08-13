@@ -16,9 +16,16 @@ export async function SystemNodeNote({ system }) {
   return (
     <p className="flex items-start gap-2 rounded-lg border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
       <Info className="mt-0.5 size-4 shrink-0" />
-      <span>
+      {/* min-w-0 + break-all: the path is one unbreakable token that is longer
+          than a phone is wide, so without them it set this note's minimum width
+          and ran off the right of the card. break-all rather than break-words
+          because a path has no break opportunities of its own — it would
+          otherwise sit on one line and overflow regardless. */}
+      <span className="min-w-0">
         {t("system.note", { version: system.version })}
-        {system.path ? <span className="ml-1 font-mono text-xs">{system.path}</span> : null}
+        {system.path ? (
+          <span className="ml-1 font-mono text-xs break-all">{system.path}</span>
+        ) : null}
       </span>
     </p>
   );

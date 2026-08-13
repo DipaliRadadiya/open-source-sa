@@ -112,7 +112,7 @@ export function SslSection({
       return (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-muted/30 p-4">
           <ShieldOff className="size-5 shrink-0 text-muted-foreground" />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-40 flex-1">
             <p className="text-sm font-medium">{t("ssl.none")}</p>
             <p className="text-sm text-muted-foreground">
               {certifiable ? t("ssl.noneBody") : t("ssl.notCertifiable")}
@@ -152,9 +152,9 @@ export function SslSection({
       const noRetry = NO_RETRY.has(cert.reason);
       return (
         <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <div className="flex items-start gap-3">
+          <div className="flex flex-wrap items-start gap-3">
             <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-40 flex-1">
               <p className="text-sm font-medium text-destructive">
                 {t("ssl.failed")}
               </p>
@@ -205,9 +205,9 @@ export function SslSection({
         : "text-muted-foreground";
     return (
       <div className="space-y-4 rounded-xl border border-success/30 bg-success/5 p-4">
-        <div className="flex items-start gap-3">
+        <div className="flex flex-wrap items-start gap-3">
           <ShieldCheck className="mt-0.5 size-5 shrink-0 text-success" />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-40 flex-1">
             <p className="text-sm font-medium">
               {t("ssl.active")}
               {cert.type_title ? (

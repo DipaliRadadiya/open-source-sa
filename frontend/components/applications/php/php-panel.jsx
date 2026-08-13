@@ -932,10 +932,11 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
   return (
     <Card className="gap-0 overflow-hidden border-blue-200 bg-blue-50/60 py-0 shadow-sm dark:border-blue-800 dark:bg-blue-950/20">
       <CardContent className="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center">
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           {/* The chip is back. A bare 16px icon against a wide tinted card left
-              the row looking like a toolbar rather than a header. */}
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+              the row looking like a toolbar rather than a header. Hidden on the
+              narrowest screens, where it costs a quarter of the column. */}
+          <div className="hidden size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 sm:flex dark:bg-blue-900">
             <Lock className="size-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="min-w-0 space-y-1.5">
@@ -943,7 +944,11 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
               {php.isolated ? t("onTitle") : t("offTitle")}
               <Badge
                 variant="outline"
-                className="border-blue-300 bg-blue-100/60 text-xs font-normal text-blue-700 dark:border-blue-700 dark:bg-blue-900/60 dark:text-blue-300"
+                // whitespace-normal: this badge carries a sentence with the
+                // pool user in it ("Shared PHP · runs as www-data"), and a badge
+                // is nowrap and shrink-0 by default — 234px that could not fit a
+                // 244px card, so it pushed the whole row past the edge.
+                className="h-auto border-blue-300 bg-blue-100/60 py-0.5 text-xs font-normal whitespace-normal text-blue-700 dark:border-blue-700 dark:bg-blue-900/60 dark:text-blue-300"
               >
                 {php.isolated
                   ? t("dedicatedBadge")
@@ -966,7 +971,11 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
             type="button"
             onClick={onIsolate}
             disabled={busy}
-            className="justify-self-start sm:justify-self-end"
+            // "Give this site dedicated PHP" is 28 characters and a button is
+            // whitespace-nowrap, so as a grid item with min-width:auto it set the
+            // whole card|s minimum width and pushed the copy flush against the
+            // right edge. It wraps instead.
+            className="h-auto max-w-full justify-self-start py-2 text-center whitespace-normal sm:justify-self-end"
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
             {t("isolateAction")}

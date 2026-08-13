@@ -40,10 +40,17 @@ export function EngineBar({ engines = [], canManage, summary }) {
     <div className="flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {running.map((engine) => (
-          <span key={engine.engine} className="flex items-center gap-2 text-sm">
+          <span
+            key={engine.engine}
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+          >
             <span className="font-medium">{t(`engines.${engine.engine}`)}</span>
             {engine.version ? (
-              <span className="font-mono text-xs text-muted-foreground">
+              // whitespace-nowrap: a version is one token. Left to wrap it broke
+              // at the hyphen — "8.0.46-" above "0ubuntu0.24.04.3" — which reads
+              // as two different numbers. It moves to its own line intact
+              // instead, which is what the wrap on the row is for.
+              <span className="font-mono text-xs whitespace-nowrap text-muted-foreground">
                 {engine.version}
               </span>
             ) : null}
@@ -54,7 +61,7 @@ export function EngineBar({ engines = [], canManage, summary }) {
         ))}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {/* A caption beside the engine, not a stat tile — nobody makes a
             decision from "4 databases". */}
         {summary ? (

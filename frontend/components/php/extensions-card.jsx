@@ -149,7 +149,11 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
               setPage(1);
             }}
             variant="outline"
-            className="gap-1"
+            // flex-wrap: with `gap-1` these are three separate bordered buttons,
+            // not a joined segmented bar, so they can drop to a second line
+            // rather than run past the card. "Todas / Activadas / Desactivadas"
+            // is wider than the English on a narrow card.
+            className="flex-wrap gap-1"
           >
             <ToggleGroupItem value="all" className="px-3">
               {t("extensions.filterAll")}

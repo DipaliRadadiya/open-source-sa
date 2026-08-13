@@ -108,7 +108,11 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
             />
           </CardTitle>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {/* Not shrink-0 — same fault the PHP card had. A shrink-0 flex item
+              takes its max-content width, all three buttons on one line, and
+              refuses to give any back, so its own flex-wrap never gets a chance
+              to fire and Remove ends up under the card's edge. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {/* npm ships inside Node and is updated separately. Null means it
                 couldn't be read — no number is better than a wrong one, so the
                 control goes away rather than claiming to update nothing. */}

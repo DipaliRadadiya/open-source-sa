@@ -367,7 +367,7 @@ export function BotBlockerSection({
                       <RadioGroupItem value={key} id={`ai-bot-${key}`} />
                       <span
                         className={cn(
-                          "flex size-9 items-center justify-center rounded-full",
+                          "hidden size-9 items-center justify-center rounded-full sm:flex",
                           checked && warn && "bg-warning/15 text-warning",
                           checked && !warn && "bg-primary/10 text-primary",
                           !checked && "bg-muted-foreground/10 text-muted-foreground",
@@ -470,8 +470,13 @@ export function BotBlockerSection({
           {effective.length > 0 ? (
             <Collapsible open={showBots} onOpenChange={setShowBots}>
               <CollapsibleTrigger asChild>
-                <Button type="button" variant="outline" size="sm">
-                  <ChevronDown className={cn("size-3.5 transition-transform", showBots && "rotate-180")} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-auto max-w-full py-1.5 text-left whitespace-normal"
+                >
+                  <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showBots && "rotate-180")} />
                   {showBots ? t("hideBots") : t("showBots", { count: effective.length })}
                 </Button>
               </CollapsibleTrigger>
