@@ -1646,6 +1646,7 @@
       "enabled": "{name} activada.",
       "disabled": "{name} desactivada.",
       "installing": "Instalando {name}; esto tarda unos minutos.",
+      "installingShort": "Iniciando",
       "failed": "No se pudo cambiar esa extensión.",
       "summary": "{on} de {total} activadas. Activa las que necesiten tus sitios.",
       "filterAll": "Todas",

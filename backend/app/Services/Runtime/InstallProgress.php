@@ -45,14 +45,25 @@ class InstallProgress
     public const STEPS = ['preparing', 'downloading', 'unpacking', 'configuring'];
 
     /**
-     * First match wins per line, cheapest first.
+     * The phrases each installer announces its phases with.
+     *
+     * Two vocabularies, because two tools do the installing: apt for PHP,
+     * extensions and database engines, and fnm for Node. Both are matched
+     * here rather than in per-runtime subclasses — the phases genuinely are
+     * the same three, and the alternative is three classes differing by a
+     * regex.
+     *
+     * Anchored at the start of a line wherever the tool puts them there, so a
+     * package *named* "unpacking-tools" scrolling past in a list cannot move
+     * the step. `Downloading` is fnm's and appears mid-line, so it is matched
+     * as a word rather than anchored.
      *
      * @var array<string, string>
      */
     private const MARKERS = [
-        'downloading' => '/^\s*Get:\d+\s/mi',
-        'unpacking' => '/^\s*(Unpacking|Preparing to unpack)\s/mi',
-        'configuring' => '/^\s*Setting up\s/mi',
+        'downloading' => '/^\s*Get:\d+\s|\bDownloading\b/mi',
+        'unpacking' => '/^\s*(Unpacking|Preparing to unpack)\s|\bExtracting\b/mi',
+        'configuring' => '/^\s*Setting up\s|\bInstalling Node\b/mi',
     ];
 
     private string $buffer = '';

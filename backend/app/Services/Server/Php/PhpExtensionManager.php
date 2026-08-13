@@ -143,7 +143,7 @@ class PhpExtensionManager
      * Install the package behind an extension. Slow — apt — so this is called
      * from a job, never from a request.
      */
-    public function install(string $version, string $name): void
+    public function install(string $version, string $name, ?callable $onOutput = null): void
     {
         $this->assertVersion($version);
 
@@ -152,6 +152,10 @@ class PhpExtensionManager
             ['feature' => 'php', 'op' => 'extension_install', 'version' => $version, 'extension' => $name],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
+            // Same apt call as a version install, so the same phases and the
+            // same output — an extension that fails on a missing package
+            // deserves to say so as plainly as a version does.
+            onOutput: $onOutput,
         );
 
         // Same classification as a version install: the screen shows both in
@@ -225,6 +229,11 @@ class PhpExtensionManager
             'reason' => null,
             'message' => null,
             'reference' => null,
+            // Same keys whether or not an install touched this extension: a
+            // field that appears only sometimes is one the frontend has to
+            // guard on every read.
+            'current_step' => null,
+            'output' => null,
         ];
     }
 

@@ -1646,6 +1646,7 @@
       "enabled": "{name} turned on.",
       "disabled": "{name} turned off.",
       "installing": "Installing {name} — this takes a few minutes.",
+      "installingShort": "Starting",
       "failed": "That extension could not be changed.",
       "summary": "{on} of {total} turned on. Turn on what your sites need.",
       "filterAll": "All",

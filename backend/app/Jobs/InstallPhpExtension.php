@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\PhpExtensionManager;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -38,14 +39,31 @@ class InstallPhpExtension implements ShouldBeUnique, ShouldQueue
     {
         $properties = ['version' => $this->version, 'extension' => $this->extension];
 
+        $row = $installs->current('php', $this->version, $this->extension);
+        $progress = $row ? new InstallProgress($row) : null;
+
         try {
-            $extensions->install($this->version, $this->extension);
+            $extensions->install(
+                $this->version,
+                $this->extension,
+                $progress === null ? null : function (string $chunk) use ($progress) {
+                    // On a step change only — apt emits hundreds of chunks and
+                    // a write each would cost more than the install.
+                    if ($progress->push($chunk)) {
+                        $progress->persist();
+                    }
+                },
+            );
         } catch (RuntimeInstallException $e) {
+            // Flushed before the row is marked failed, so the output that
+            // explains the failure is there when the screen reads it.
+            $progress?->persist();
             $installs->fail('php', $this->version, $this->extension, $e->reason, $e->reference);
             $log->log('php.extension_install_failed', null, [...$properties, 'reason' => $e->reason], actor: $this->actor());
 
             throw $e;
         } catch (Throwable $e) {
+            $progress?->persist();
             $installs->fail('php', $this->version, $this->extension, 'unknown');
             $log->log('php.extension_install_failed', null, $properties, actor: $this->actor());
 

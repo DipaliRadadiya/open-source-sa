@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -42,14 +43,23 @@ class InstallNodeVersion implements ShouldBeUnique, ShouldQueue
 
     public function handle(NodeRuntime $node, ActivityLogger $log, InstallTracker $installs): void
     {
+        $row = $installs->current('node', $this->version);
+        $progress = $row ? new InstallProgress($row) : null;
+
         try {
-            $node->install($this->version);
+            $node->install($this->version, $progress === null ? null : function (string $chunk) use ($progress) {
+                if ($progress->push($chunk)) {
+                    $progress->persist();
+                }
+            });
         } catch (RuntimeInstallException $e) {
+            $progress?->persist();
             $installs->fail('node', $this->version, null, $e->reason, $e->reference);
             $log->log('node.install_failed', null, ['version' => $this->version, 'reason' => $e->reason], actor: $this->actor());
 
             throw $e;
         } catch (Throwable $e) {
+            $progress?->persist();
             $installs->fail('node', $this->version, null, 'unknown');
             $log->log('node.install_failed', null, ['version' => $this->version], actor: $this->actor());
 

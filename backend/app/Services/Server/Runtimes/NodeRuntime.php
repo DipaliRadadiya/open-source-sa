@@ -174,9 +174,13 @@ class NodeRuntime implements Runtime
     /**
      * @throws SettingOperationException
      */
-    public function install(string $version): void
+    public function install(string $version, ?callable $onOutput = null): void
     {
-        $result = $this->fnm(['install', $version], timeout: (int) config('server.runtimes.node.install_timeout', 900));
+        $result = $this->fnm(
+            ['install', $version],
+            timeout: (int) config('server.runtimes.node.install_timeout', 900),
+            onOutput: $onOutput,
+        );
 
         // Classified here, where fnm's output still exists — past this point
         // only the reason code travels.
@@ -267,12 +271,13 @@ class NodeRuntime implements Runtime
     /**
      * @param  array<int, string>  $args
      */
-    private function fnm(array $args, int $timeout = 60): ServerOpsResult
+    private function fnm(array $args, int $timeout = 60, ?callable $onOutput = null): ServerOpsResult
     {
         return $this->serverOps->run(
             [$this->fnmBinary(), '--fnm-dir', (string) config('server.runtimes.node.dir', '/opt/fnm'), ...$args],
             ['feature' => 'runtime', 'op' => 'fnm.'.($args[0] ?? 'run')],
             timeout: $timeout,
+            onOutput: $onOutput,
         );
     }
 

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { SearchX, TriangleAlert } from "lucide-react";
+import { Loader2, SearchX, TriangleAlert } from "lucide-react";
 import { setPhpExtension } from "@/lib/api/php";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -206,6 +206,26 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
                         {t.has(`extensionInfo.${extension.name}`) ? (
                           <span className="block truncate text-xs text-muted-foreground">
                             {t(`extensionInfo.${extension.name}`)}
+                          </span>
+                        ) : null}
+
+                        {/* apt's last words, while this extension is installing
+                            and after it has failed. A toast said "installing"
+                            and then vanished; when the install failed minutes
+                            later there was nothing on the row to say why, and
+                            "could not get lock" and "unable to locate package"
+                            need different answers. */}
+                        {extension.status === "installing" || extension.status === "failed" ? (
+                          <span className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            {extension.status === "installing" ? (
+                              <Loader2 className="size-3 shrink-0 animate-spin" />
+                            ) : null}
+                            <span className="truncate font-mono">
+                              {extension.output?.trimEnd().split("\n").pop() ||
+                                (extension.current_step
+                                  ? t(`versions.steps.${extension.current_step}`)
+                                  : t("extensions.installingShort"))}
+                            </span>
                           </span>
                         ) : null}
                       </TableCell>

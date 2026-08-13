@@ -67,6 +67,31 @@ it('takes the furthest step when one chunk carries several', function () {
     expect($progress->step())->toBe('configuring');
 });
 
+it('reads fnm\'s phases too, not only apt\'s', function () {
+    // Node installs through fnm, which announces the same three phases in
+    // different words. Without these the step would sit at "preparing" for
+    // the whole install — honest, but useless.
+    $progress = new InstallProgress($this->install);
+
+    expect($progress->push("Downloading https://nodejs.org/dist/v20.11.0/node-v20.11.0-linux-x64.tar.xz\n"))->toBeTrue()
+        ->and($progress->step())->toBe('downloading');
+
+    $progress->push("Extracting...\n");
+    expect($progress->step())->toBe('unpacking');
+
+    $progress->push("Installing Node v20.11.0\n");
+    expect($progress->step())->toBe('configuring');
+});
+
+it('is not moved by a package that merely has a phase in its name', function () {
+    $progress = new InstallProgress($this->install);
+
+    // apt lists package names in prose; "Setting up" and "Unpacking" are
+    // anchored to the start of a line so a name cannot impersonate them.
+    expect($progress->push("The following NEW packages will be installed:\n  unpacking-tools\n"))->toBeFalse()
+        ->and($progress->step())->toBe('preparing');
+});
+
 it('keeps the end of the output, which is the part that explains a failure', function () {
     $progress = new InstallProgress($this->install);
 
