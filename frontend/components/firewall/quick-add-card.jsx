@@ -184,6 +184,7 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
               doneLabel={t("quick.tileDone")}
               removable={done && !locked && canManage}
               removeHint={t("quick.tileRemoveHint")}
+              addHint={!done && canManage && !risky ? t("quick.tileAddHint") : null}
               reason={reason}
               disabled={!canManage || locked || pending !== null}
               pending={pending === preset.key}
@@ -203,6 +204,7 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
             subtitle={t("quick.stackBody", { names: stack.map((p) => p.label).join(" + ") })}
             doneLabel={t("quick.tileDone")}
             done={stack.every(exists)}
+            addHint={!stack.every(exists) && canManage ? t("quick.stackAddHint") : null}
             disabled={!canManage || stack.every(exists) || pending !== null}
             pending={pending === "stack"}
             onClick={() => add(stack, "stack")}
@@ -247,6 +249,7 @@ function Tile({
   risky,
   removable,
   removeHint,
+  addHint,
   reason,
   disabled,
   pending,
@@ -283,7 +286,7 @@ function Tile({
                 : "bg-success/15 text-success"
               : risky
                 ? "bg-warning/15 text-warning"
-                : "bg-muted text-muted-foreground",
+                : "bg-muted text-muted-foreground group-hover:bg-primary/15 group-hover:text-primary",
           )}
         >
           {pending ? (
@@ -317,10 +320,17 @@ function Tile({
             {subtitle}
           </span>
           {/* Said, not left to hover: on a touch screen there is no hover state
-              to discover the trash icon in. */}
+              to discover the trash icon in. Both directions get a line — an
+              added tile explained that clicking removes the rule while an empty
+              one explained nothing, so the tile only looked clickable once it
+              had already been clicked. */}
           {removable ? (
             <span className="block text-xs text-muted-foreground group-hover:text-destructive">
               {removeHint}
+            </span>
+          ) : addHint ? (
+            <span className="block text-xs text-muted-foreground group-hover:text-primary">
+              {addHint}
             </span>
           ) : null}
         </span>

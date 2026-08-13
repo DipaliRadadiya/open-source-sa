@@ -1345,7 +1345,9 @@
       "alreadyThere": "{names} was already allowed — nothing changed.",
       "failed": "That rule could not be added.",
       "tileRisky": "{name} would be open to the whole internet — use Custom rule and pick “Only my IP”.",
-      "tileRemoveHint": "Click to remove this rule"
+      "tileRemoveHint": "Click to remove this rule",
+      "tileAddHint": "Click to add this rule",
+      "stackAddHint": "Click to add these rules"
     },
     "history": {
       "action": "History",

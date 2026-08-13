@@ -1345,7 +1345,9 @@
       "alreadyThere": "{names} ya estaba permitido — no ha cambiado nada.",
       "failed": "No se pudo añadir esa regla.",
       "tileRisky": "{name} quedaría abierto a todo internet: usa «Regla personalizada» y elige «Solo mi IP».",
-      "tileRemoveHint": "Haz clic para eliminar esta regla"
+      "tileRemoveHint": "Haz clic para eliminar esta regla",
+      "tileAddHint": "Haz clic para añadir esta regla",
+      "stackAddHint": "Haz clic para añadir estas reglas"
     },
     "history": {
       "action": "Historial",
