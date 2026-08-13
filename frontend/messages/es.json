@@ -3915,6 +3915,11 @@
       "cancel": "Cancelar",
       "saved": "Raíz web cambiada.",
       "failed": "No se pudo cambiar la raíz web."
+    },
+    "missing": {
+      "title": "Este sitio ya no existe",
+      "description": "Puede que se haya eliminado o que su configuración se haya revertido. No ha cambiado nada más en tu servidor.",
+      "action": "Volver a los sitios"
     }
   },
   "panelUpdate": {

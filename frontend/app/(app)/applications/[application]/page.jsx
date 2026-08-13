@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ExternalLink } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
@@ -47,7 +47,9 @@ export default async function ApplicationDetailPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) redirect("/dashboard");
-  if (result.status === 404) notFound();
+  // The site is gone. Land on the list — the only place left to go — and say
+  // why on arrival, rather than parking on a dead end that offers one link.
+  if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
 
   const application = result.application;
@@ -79,7 +81,7 @@ export default async function ApplicationDetailPage({ params }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight">{application.name}</h1>
+              <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">{application.name}</h1>
               <Badge
                 variant={STATUS_VARIANTS[application.status] ?? "secondary"}
                 className="font-normal"

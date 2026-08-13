@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/ui/page-header";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -34,7 +34,9 @@ export default async function ApplicationDomainsPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) redirect("/dashboard");
-  if (result.status === 404) notFound();
+  // The site is gone. Land on the list — the only place left to go — and say
+  // why on arrival, rather than parking on a dead end that offers one link.
+  if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
 
   const application = result.application;

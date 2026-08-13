@@ -30,7 +30,9 @@ export default async function ApplicationDeploymentPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) redirect("/dashboard");
-  if (result.status === 404) notFound();
+  // The site is gone. Land on the list — the only place left to go — and say
+  // why on arrival, rather than parking on a dead end that offers one link.
+  if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
     return <LoadFailed description={t("loadFailed")} />;
 

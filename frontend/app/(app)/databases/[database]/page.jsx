@@ -54,7 +54,7 @@ export default async function DatabasePage({ params, searchParams }) {
       <div className="space-y-3">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-2xl font-semibold tracking-tight">
+            <h1 className="min-w-0 font-mono text-2xl font-semibold tracking-tight break-words">
               {data.name}
             </h1>
             <Badge variant="secondary" className="font-normal">

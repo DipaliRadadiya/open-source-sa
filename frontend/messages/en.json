@@ -3915,6 +3915,11 @@
       "cancel": "Cancel",
       "saved": "Web root changed.",
       "failed": "The web root could not be changed."
+    },
+    "missing": {
+      "title": "This site is no longer here",
+      "description": "It may have been deleted, or its setup was rolled back. Nothing else on your server has changed.",
+      "action": "Back to sites"
     }
   },
   "panelUpdate": {

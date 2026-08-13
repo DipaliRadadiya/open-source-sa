@@ -69,14 +69,19 @@ export function AppSidebar({ items }) {
   const { state, isMobile } = useSidebar();
 
   const applicationId = params?.application;
-  const currentPanel = applicationId ? "application" : "server";
   const iconOnly = state === "collapsed" && !isMobile;
 
   // Inside an application, prefer the catalog its layout fetched: only that one
   // is filtered by what this site type supports. Until it arrives, the shared
   // catalog renders the same items minus that filter.
-  const { items: applicationItems } = useApplicationNav();
-  const source = currentPanel === "application" ? (applicationItems ?? items) : items;
+  const { items: applicationItems, resolved } = useApplicationNav();
+  // Once the layout has answered and the answer is "no menu", this site does not
+  // exist. Fall back to the SERVER panel rather than rendering the shared
+  // catalog against a dead id — that produced a full site menu whose every link
+  // 404s, on a page telling you the site could not be found.
+  const insideApplication = Boolean(applicationId) && (applicationItems !== null || !resolved);
+  const currentPanel = insideApplication ? "application" : "server";
+  const source = insideApplication ? (applicationItems ?? items) : items;
 
   // Every application screen the catalog advertises is shown, so the sidebar is
   // the site's full feature map. The ones whose route hasn't shipped yet render

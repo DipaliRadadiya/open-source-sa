@@ -17,16 +17,18 @@ import { createContext, useContext, useEffect, useState } from "react";
 const ApplicationNavContext = createContext(null);
 
 export function ApplicationNavProvider({ children }) {
-  const [items, setItems] = useState(null);
+  const [state, setState] = useState({ items: null, resolved: false });
   return (
-    <ApplicationNavContext.Provider value={{ items, setItems }}>
+    <ApplicationNavContext.Provider value={{ ...state, setState }}>
       {children}
     </ApplicationNavContext.Provider>
   );
 }
 
 export function useApplicationNav() {
-  return useContext(ApplicationNavContext) ?? { items: null, setItems: () => {} };
+  return (
+    useContext(ApplicationNavContext) ?? { items: null, resolved: false, setState: () => {} }
+  );
 }
 
 /**
@@ -34,12 +36,15 @@ export function useApplicationNav() {
  * never inherits the last application's menu.
  */
 export function ApplicationNav({ items }) {
-  const { setItems } = useApplicationNav();
+  const { setState } = useApplicationNav();
 
   useEffect(() => {
-    setItems(items);
-    return () => setItems(null);
-  }, [items, setItems]);
+    // Rendered even when `items` is null — that IS the answer for a site that no
+    // longer exists, and the sidebar needs to hear it. Saying nothing left the
+    // sidebar to guess, and it guessed a full menu of links that all 404.
+    setState({ items, resolved: true });
+    return () => setState({ items: null, resolved: false });
+  }, [items, setState]);
 
   return null;
 }
