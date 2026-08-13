@@ -199,6 +199,26 @@ class PhpRuntime implements Runtime
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
         ));
+
+        // Only after the purge succeeded, and only for a version that was
+        // detected on disk to begin with — the caller checks that, which is
+        // what keeps a client string out of this path.
+        //
+        // The purge cannot do this itself: the panel writes a pool file per
+        // site into <version>/fpm/pool.d, dpkg does not own them, and a
+        // directory still holding unknown files survives. The version then
+        // went on being listed after it was removed, because detection reads
+        // exactly these directories — and the stale pools sat there waiting
+        // for the next install of that version to pick them up, referring to
+        // sites that may no longer exist.
+        $residual = $this->stack->residualDir($version);
+
+        if ($residual !== null) {
+            $this->serverOps->run(
+                ['rm', '-rf', $residual],
+                ['feature' => 'runtime', 'op' => 'php_uninstall_residual', 'version' => $version],
+            );
+        }
     }
 
     private function must(ServerOpsResult $result): void

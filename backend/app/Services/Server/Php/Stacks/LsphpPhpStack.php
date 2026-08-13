@@ -189,6 +189,17 @@ class LsphpPhpStack implements PhpStack
         return 'lsphp'.$this->compact($version).'-';
     }
 
+    /**
+     * None. LSPHP has no per-version directory the panel writes into — it
+     * spawns its own processes rather than being handed pool files — so there
+     * is nothing left behind for an uninstall to sweep up, and pointing this
+     * at `lsphpNN/` would have a purge delete parts of the web server.
+     */
+    public function residualDir(string $version): ?string
+    {
+        return null;
+    }
+
     public function extensionPackage(string $version, string $extension): string
     {
         return $this->packagePrefix($version).$extension;

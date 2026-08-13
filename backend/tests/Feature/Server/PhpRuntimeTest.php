@@ -31,13 +31,19 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->phpDir));
 
-function fakePhp(string $default = '8.4'): ArrayObject
+function fakePhp(string $default = '8.4', bool $ok = true): ArrayObject
 {
     $runs = new ArrayObject;
 
-    Process::fake(function ($process) use ($runs, $default) {
+    Process::fake(function ($process) use ($runs, $default, $ok) {
         $runs[] = ['command' => $process->command, 'env' => $process->environment ?? []];
         $command = $process->command;
+
+        // `$ok: false` fails the mutating commands only — the reads still have
+        // to answer, or a test cannot get as far as the operation it is about.
+        if (! $ok && ($command[0] ?? '') === 'apt-get') {
+            return Process::result(exitCode: 1, errorOutput: 'E: Could not get lock');
+        }
 
         return match (true) {
             ($command[0] ?? '') === 'update-alternatives' && in_array('--query', $command, true) => Process::result(
@@ -133,6 +139,31 @@ it('removes a version nothing depends on', function () {
     phpCall('DELETE', '/api/php/versions/8.3')->assertNoContent();
 
     expect(collect($runs)->pluck('command'))->toContain(['apt-get', 'purge', '-y', 'php8.3-*']);
+});
+
+it('clears out what the purge cannot, so the version stops being listed', function () {
+    // The panel writes a pool file per site into <version>/fpm/pool.d. dpkg
+    // does not own those, so a directory still holding them survives the
+    // purge — and detection reads exactly these directories, which is why a
+    // removed version stayed on the screen through a reload.
+    $runs = fakePhp(default: '8.4');
+
+    phpCall('DELETE', '/api/php/versions/8.3')->assertNoContent();
+
+    expect(collect($runs)->pluck('command'))
+        ->toContain(['rm', '-rf', config('server.php_dir').'/8.3']);
+});
+
+it('does not clear the directory when the purge failed', function () {
+    // Removing a version's configuration after apt refused to remove the
+    // version would leave a working PHP with no config at all — worse than
+    // the leftover directory this exists to sweep up.
+    $runs = fakePhp(default: '8.4', ok: false);
+
+    phpCall('DELETE', '/api/php/versions/8.3')->assertStatus(500);
+
+    expect(collect($runs)->pluck('command'))
+        ->not->toContain(['rm', '-rf', config('server.php_dir').'/8.3']);
 });
 
 it('installs a usable PHP, not a bare interpreter', function () {

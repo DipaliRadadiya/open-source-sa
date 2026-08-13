@@ -85,6 +85,19 @@ class FpmPhpStack implements PhpStack
         return $this->root()."/{$version}/fpm/php.ini";
     }
 
+    /**
+     * `/etc/php/8.5` — everything for one version, config the panel wrote
+     * included.
+     *
+     * Safe to remove only after a purge has succeeded, which is the one place
+     * this is called from: at that point the interpreter is gone and its
+     * configuration means nothing.
+     */
+    public function residualDir(string $version): ?string
+    {
+        return $this->root()."/{$version}";
+    }
+
     public function binaryPath(string $version): string
     {
         $pattern = (string) config('server.php_binary_pattern', '/usr/bin/php{version}');

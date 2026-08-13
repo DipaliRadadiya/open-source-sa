@@ -103,6 +103,19 @@ interface PhpStack
      */
     public function packagePrefix(string $version): string;
 
+    /**
+     * The directory an uninstall should clear out afterwards, or null when the
+     * stack has none.
+     *
+     * `apt purge` cannot empty it on its own: the panel writes a pool file per
+     * site into `<version>/fpm/pool.d`, dpkg does not own those, and a
+     * directory with unknown files in it survives the purge. The version then
+     * stayed on the PHP screen after being removed, because detection reads
+     * these directories — and a stale pool for a site that no longer exists is
+     * left where the next install of that version will pick it up.
+     */
+    public function residualDir(string $version): ?string;
+
     /** The package that provides an extension: php8.4-mysql | lsphp84-mysql. */
     public function extensionPackage(string $version, string $extension): string;
 
