@@ -51,10 +51,22 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
   }
 
   function addFiles(fileList) {
+    // Copied out of the FileList *before* the state updater, not inside it.
+    // `FileList` is live: `<input>.value = ""` empties it, and a dropped
+    // `dataTransfer` is neutered when the event ends. React runs an updater
+    // during the next render — after both of those have happened — so reading
+    // the list in there iterated nothing and the picked files vanished with no
+    // error. It survived review because the very first pick works: with no
+    // update queued React evaluates the updater eagerly, inside the call,
+    // while the list still has contents. Every pick after that was silently
+    // dropped.
+    const picked = Array.from(fileList);
+    if (!picked.length) return;
+
     setItems((prev) => {
       const seen = new Set(prev.map((i) => fileKey(i.file)));
       const next = [];
-      for (const file of fileList) {
+      for (const file of picked) {
         const key = fileKey(file);
         if (seen.has(key)) continue;
         seen.add(key);

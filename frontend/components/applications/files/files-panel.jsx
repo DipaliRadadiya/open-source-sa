@@ -177,7 +177,10 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
     dragDepth.current = 0;
     setDragOver(false);
     if (e.dataTransfer.files?.length) {
-      setDroppedFiles(e.dataTransfer.files);
+      // A snapshot, not the live FileList: `dataTransfer` is neutered once the
+      // drop event finishes, and this is read later — during the dialog's
+      // render, by which time the live list is empty.
+      setDroppedFiles(Array.from(e.dataTransfer.files));
       setUploadOpen(true);
     }
   }
