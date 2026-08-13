@@ -2,7 +2,6 @@
 
 namespace App\Services\Server\Applications;
 
-use App\Enums\WafMode;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
 use App\Services\Server\WebServers\WebServerManager;
@@ -146,11 +145,21 @@ class ApplicationLogManager
         // user no way to see what happened made detect mode close to
         // pointless.
         //
-        // Only in detect mode, because only detect mode writes it — an
-        // enforcing site returns 403 and logs nothing here, so listing it
-        // there would show an empty file that reads as broken rather than as
-        // "this mode does not produce one".
-        if ($application->waf_enabled && $application->waf_mode === WafMode::Detect) {
+        // Listed in BOTH modes, not just detect.
+        //
+        // It used to appear only while the mode was `detect`, on the reasoning
+        // that an enforcing site writes nothing here so an empty file would
+        // read as broken. That reasoning had it backwards: the intended flow is
+        // detect → read this → add exceptions → enforce, so the log vanished
+        // from the UI at the exact moment someone acted on it, and
+        // `GET /logs/{key}` 404'd with it. Checking your work afterwards is not
+        // an edge case, it is the point.
+        //
+        // The empty-file worry is already handled: `list()` reports `exists`
+        // per source, so "enforcing, nothing recorded" and "detect, nothing
+        // matched yet" are both visible as an existing key with no content —
+        // which is a different statement from the key not being offered.
+        if ($application->waf_enabled) {
             $catalog[] = [
                 'key' => 'waf_detect',
                 'kind' => 'file',

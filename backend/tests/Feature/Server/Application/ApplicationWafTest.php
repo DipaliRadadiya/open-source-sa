@@ -316,8 +316,16 @@ it('offers the detect log only while the firewall is watching', function () {
         'enabled' => true, 'mode' => 'enforce',
     ])->assertOk();
 
-    // Enforcing returns 403 and writes nothing here, so listing it would show
-    // an empty file that reads as broken rather than as "not this mode".
+    // Still listed after enforcing. The flow is detect → read this → add
+    // exceptions → enforce, so hiding it here removed the evidence at the
+    // moment someone acted on it, and GET /logs/{key} 404'd with it.
+    expect($keys())->toContain('waf_detect');
+
+    // Off entirely: nothing writes it and nothing claims to.
+    $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
+        'enabled' => false, 'mode' => 'enforce',
+    ])->assertOk();
+
     expect($keys())->not->toContain('waf_detect');
 });
 

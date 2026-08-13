@@ -159,6 +159,12 @@ class ApplicationResource extends JsonResource
             // instead of a bare spinner.
             'steps' => $this->steps ?? [],
             'failed_step' => $this->failed_step,
+            // When the CURRENT run started, restamped on every retry —
+            // `created_at` is the row's birthday and is wrong for elapsed
+            // time the moment anyone retries. Null on a site that has
+            // never been provisioned.
+            'provisioning_started_at' => $this->provisioning_started_at?->format('d-m-Y H:i:s'),
+            'provisioning_started_at_human' => $this->provisioning_started_at?->diffForHumans(),
             // What is actually on disk right now — the only honest answer to
             // "which version is running".
             'last_commit' => $this->last_commit,

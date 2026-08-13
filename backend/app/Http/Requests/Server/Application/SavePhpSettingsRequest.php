@@ -41,9 +41,9 @@ class SavePhpSettingsRequest extends FormRequest
             'max_input_vars' => ['sometimes', 'nullable', 'integer', 'min:100', 'max:100000'],
             'session_gc_maxlifetime' => ['sometimes', 'nullable', 'integer', 'min:60', 'max:604800'],
 
-            'pm_type' => ['sometimes', Rule::in(ApplicationPhpSettings::PM_TYPES)],
-            'pm_max_children' => ['sometimes', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
-            'pm_max_requests' => ['sometimes', 'integer', 'min:0', 'max:100000'],
+            'pm_type' => ['sometimes', 'nullable', Rule::in(ApplicationPhpSettings::PM_TYPES)],
+            'pm_max_children' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
+            'pm_max_requests' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100000'],
 
             'open_basedir_enabled' => ['sometimes', 'boolean'],
             'open_basedir_paths' => [
@@ -88,7 +88,7 @@ class SavePhpSettingsRequest extends FormRequest
             // lands in the pool file verbatim, so anything that is not a
             // function name has no business being here.
             'disable_functions' => ['sometimes', 'nullable', 'string', 'max:2000', 'regex:/^[A-Za-z0-9_,\s]*$/'],
-            'allow_url_fopen' => ['sometimes', 'boolean'],
+            'allow_url_fopen' => ['sometimes', 'nullable', 'boolean'],
             'php_timezone' => ['sometimes', 'nullable', 'timezone'],
             'auto_prepend_file' => ['sometimes', 'nullable', 'string', 'max:255', 'not_regex:/\.\./'],
 

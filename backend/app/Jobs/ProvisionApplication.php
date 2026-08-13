@@ -60,7 +60,16 @@ class ProvisionApplication implements ShouldQueue
             return;
         }
 
-        $application->update(['status' => ApplicationStatus::Provisioning, 'steps' => [], 'reference' => null]);
+        // Stamped on every run, including a retry — which is the whole reason
+        // it exists. `created_at` only records when the row was made, so after
+        // a retry an elapsed-time display built on it counts from the original
+        // attempt and keeps climbing.
+        $application->update([
+            'status' => ApplicationStatus::Provisioning,
+            'steps' => [],
+            'reference' => null,
+            'provisioning_started_at' => now(),
+        ]);
 
         try {
             $steps = $provisioner->provision($application);

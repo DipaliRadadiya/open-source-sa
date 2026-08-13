@@ -120,6 +120,13 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/restores/{restore}',
         'api/clones/{clone}',
         'api/fail2ban',
+
+        // Not tied to a job at all: these two are polled every 3s for as long
+        // as their page is open, which spends the interactive budget faster
+        // than anything above. Reported by the frontend rather than found by a
+        // 429, which is the way round we asked for.
+        'api/server/metrics/live',
+        'api/services',
     ]);
 });
 

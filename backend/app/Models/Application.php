@@ -26,7 +26,7 @@ use Illuminate\Support\Str;
     'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
     'build_command', 'deploy_script', 'start_command', 'package_manager',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
-    'steps', 'failed_step', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes',
+    'steps', 'failed_step', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes',
     'current_release_id', 'previous_release_path',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
     'webhook_last_delivered_at',
@@ -44,6 +44,7 @@ class Application extends Model
     {
         return [
             'isolated_at' => 'datetime',
+            'provisioning_started_at' => 'datetime',
             'disabled_at' => 'datetime',
             'basic_auth_enabled' => 'boolean',
             'ai_bot_policy' => AiBotPolicy::class,
