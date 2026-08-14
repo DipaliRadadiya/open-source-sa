@@ -130,6 +130,24 @@ it('enables the firewall, seeding default rules first', function () {
     Process::assertRan(fn ($p) => $p->command === ['ufw', '--force', 'enable']);
 });
 
+it('refuses to enable the firewall when a default recovery rule cannot be applied', function () {
+    Process::fake(function ($process) {
+        return in_array('ufw', $process->command, true)
+            && in_array('allow', $process->command, true)
+            && in_array('22/tcp', $process->command, true)
+            ? Process::result(exitCode: 1, errorOutput: 'rule failed')
+            : Process::result(exitCode: 0);
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/firewall/toggle', ['enabled' => true])
+        ->assertStatus(500);
+
+    Process::assertNotRan(fn ($p) => in_array('ufw', $p->command, true)
+        && in_array('--force', $p->command, true)
+        && in_array('enable', $p->command, true));
+});
+
 it('disables the firewall but keeps the rules', function () {
     fakeUfw('inactive');
     FirewallRule::create(['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);

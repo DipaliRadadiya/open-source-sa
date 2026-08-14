@@ -57,7 +57,13 @@ class ToggleFirewall
                 ['origin' => 'default'],
             );
 
-            $this->firewall->apply($rule);
+            $result = $this->firewall->apply($rule);
+
+            // Never enable deny-incoming UFW unless every recovery rule was
+            // accepted. Otherwise a failed SSH rule can lock out the server.
+            if ($result->failed()) {
+                throw new FirewallOperationException($result->reference);
+            }
         }
     }
 }
