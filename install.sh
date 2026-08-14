@@ -1171,7 +1171,10 @@ UNIT
     # longer rides on it.
     run systemctl enable "php${PHP_VERSION}-fpm"
     run systemctl daemon-reload
-    run systemctl enable --now "${PANEL_SLUG}-fpm.service"
+    # enable + restart, not enable --now: on a re-run the pool config may have
+    # changed and --now would leave the old master running with the old config.
+    run systemctl enable "${PANEL_SLUG}-fpm.service"
+    run systemctl restart "${PANEL_SLUG}-fpm.service"
     ok "panel pool on /run/php/${PANEL_SLUG}-fpm.sock (dedicated master ${PANEL_SLUG}-fpm.service)"
 }
 
@@ -1536,8 +1539,19 @@ CRON
     chmod 644 /etc/cron.d/${PANEL_SLUG}-scheduler
 
     run systemctl daemon-reload
-    run systemctl enable --now ${PANEL_SLUG}-frontend.service
-    run systemctl enable --now ${PANEL_SLUG}-queue.service
+    # enable --now only *starts* a stopped unit; on a re-run it is a no-op, and
+    # the already-running process keeps serving the build that build_frontend
+    # just replaced underneath it. For Next that means the standalone output and
+    # its client reference manifests change on disk while the old server holds
+    # the old ones, and every affected route 500s with "the client reference
+    # manifest for route X does not exist". Restart explicitly so a re-run
+    # actually serves what it just built — the installer promises re-runs are
+    # safe, so they must also be correct. Same reason the queue worker restarts:
+    # it holds the old code in memory until it does.
+    run systemctl enable ${PANEL_SLUG}-frontend.service
+    run systemctl enable ${PANEL_SLUG}-queue.service
+    run systemctl restart ${PANEL_SLUG}-frontend.service
+    run systemctl restart ${PANEL_SLUG}-queue.service
     ok "panel, queue worker and scheduler running"
 }
 
