@@ -1,16 +1,16 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import {
   AUDIENCES,
-  describeMode,
   hasPermission,
   isWorldWritable,
   withPermission,
 } from "@/lib/files/describe-mode";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
 
 // Presets first, an escape hatch for the rest — same pattern as Cron Jobs'
 // schedule field. Most people setting permissions want one of these three;
@@ -34,36 +34,22 @@ const PRESETS = [
  */
 export function PermissionModeField({ mode, onChange, invalid = false }) {
   const t = useTranslations("applications.files");
-  const locale = useLocale();
-
-  // A live, plain-language readout of whatever is selected — not just for a
-  // custom value, but for the presets too, so "Read-only" does not have to be
-  // taken on faith. Owner and "everyone else" collapse into one clause when
-  // group and other match, which is true for all three presets.
+  const sentenceFor = useModeSentence();
+  // Only for the checkbox labels — the sentence itself comes from the shared hook.
   const permWords = {
     read: t("permissionsDialog.verbRead"),
     write: t("permissionsDialog.verbWrite"),
     execute: t("permissionsDialog.verbExecute"),
   };
-  const listFormat = new Intl.ListFormat(locale, { style: "long", type: "conjunction" });
-  const describe = (tokens) =>
-    tokens.length
-      ? listFormat.format(tokens.map((tok) => permWords[tok]))
-      : t("permissionsDialog.noAccess");
 
-  const description = describeMode(mode);
-  const descriptionText = description
-    ? description.group.join() === description.other.join()
-      ? t("permissionsDialog.describeSimple", {
-          owner: describe(description.owner),
-          rest: describe(description.group),
-        })
-      : t("permissionsDialog.describeFull", {
-          owner: describe(description.owner),
-          group: describe(description.group),
-          other: describe(description.other),
-        })
-    : null;
+  // A live, plain-language readout of whatever is selected — not just for a
+  // custom value, but for the presets too, so "Read-only" does not have to be
+  // taken on faith. Owner and "everyone else" collapse into one clause when
+  // group and other match, which is true for all three presets.
+  // Shared with the whole-site reset dialog, which describes its fixed 755 and
+  // 644 the same way. Two copies of this sentence would drift the first time
+  // either was reworded.
+  const descriptionText = sentenceFor(mode);
 
   return (
     <div className="space-y-3">

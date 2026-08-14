@@ -5,10 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ArrowLeft, RotateCcw, Trash2, TriangleAlert, Undo2 } from "lucide-react";
+import { ArrowLeft, File as FileIcon, RotateCcw, Trash2, TriangleAlert, Undo2 } from "lucide-react";
 import { emptyTrash, restoreTrashed } from "@/lib/api/files";
+import { basename, dirname } from "@/lib/files/path-helpers";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -77,34 +80,45 @@ export function TrashPanel({ appId, trash, failed, canManage, backHref }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-48 space-y-1">
-          <h2 className="text-base font-medium">{t("title")}</h2>
-          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+    <Card>
+      {/* A card, like every other panel on this screen. This section used to
+          float straight on the page background under the page's own title, so
+          the screen read as two stacked headings and a loose list. */}
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-48 space-y-1">
+            <CardTitle className="text-base font-semibold">{t("title")}</CardTitle>
+            <CardDescription>{t("subtitle")}</CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href={backHref} prefetch={false}>
+                <ArrowLeft className="size-3.5" />
+                {t("backToFiles")}
+              </Link>
+            </Button>
+            {trash.length > 0 ? (
+              <ReasonTooltip reason={manageReason}>
+                {/* Outline, not solid. Two solid red buttons on one screen —
+                    this and the per-batch one — competed for the eye, and the
+                    one you want most of the time is Restore. */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={!canManage}
+                  onClick={() => setConfirming({ batch: null })}
+                >
+                  <Trash2 className="size-3.5" />
+                  {t("emptyAll")}
+                </Button>
+              </ReasonTooltip>
+            ) : null}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={backHref} prefetch={false}>
-              <ArrowLeft className="size-3.5" />
-              {t("backToFiles")}
-            </Link>
-          </Button>
-          {trash.length > 0 ? (
-            <ReasonTooltip reason={manageReason}>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={!canManage}
-                onClick={() => setConfirming({ batch: null })}
-              >
-                <Trash2 className="size-3.5" />
-                {t("emptyAll")}
-              </Button>
-            </ReasonTooltip>
-          ) : null}
-        </div>
-      </div>
+      </CardHeader>
+
+      <CardContent>
 
       {failed ? (
         <LoadFailed description={t("loadFailed")} />
@@ -116,14 +130,17 @@ export function TrashPanel({ appId, trash, failed, canManage, backHref }) {
         <div className="space-y-3">
           {[...batches].map(([batch, entries]) => (
             <div key={batch} className="rounded-xl border">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2.5">
+                {/* Labelled. A bare `14-08-2026 07:05:53` sitting where a title
+                    goes reads as an id, not as when this happened. */}
                 <div className="flex min-w-48 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <span className="text-sm font-medium">
+                  <span className="text-xs text-muted-foreground">{t("deletedAt")}</span>
+                  <span className="text-sm font-medium tabular-nums">
                     {entries[0].deleted_at ?? batch}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <Badge variant="secondary" className="font-normal">
                     {t("itemCount", { count: entries.length })}
-                  </span>
+                  </Badge>
                 </div>
                 <ReasonTooltip reason={manageReason}>
                   <Button
@@ -145,12 +162,23 @@ export function TrashPanel({ appId, trash, failed, canManage, backHref }) {
                   return (
                     <li
                       key={`${entry.batch}:${entry.path}`}
-                      className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+                      className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
                     >
-                      {/* The full original path, not just the name: "config.php"
-                          alone does not say which one it was, and the path is
-                          also exactly where it goes back to. */}
-                      <span className="min-w-48 font-mono text-xs break-all">{entry.path}</span>
+                      {/* Name first, folder underneath. The row used to be one
+                          long mono path and a button an inch of empty space
+                          away — the thing you are looking for was the hardest
+                          part to read. The folder still has to be there:
+                          "config.php" alone does not say which one it was, and
+                          it is exactly where Restore puts it back. */}
+                      <div className="flex min-w-48 items-start gap-2.5">
+                        <FileIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="font-medium break-all">{basename(entry.path)}</p>
+                          <p className="font-mono text-xs break-all text-muted-foreground">
+                            {dirname(entry.path) || t("siteRoot")}
+                          </p>
+                        </div>
+                      </div>
                       <ReasonTooltip reason={manageReason}>
                         <Button
                           variant="outline"
@@ -170,6 +198,7 @@ export function TrashPanel({ appId, trash, failed, canManage, backHref }) {
           ))}
         </div>
       )}
+      </CardContent>
 
       <ConfirmDialog
         open={confirming !== null}
@@ -183,6 +212,6 @@ export function TrashPanel({ appId, trash, failed, canManage, backHref }) {
         pending={pending !== null}
         onConfirm={() => empty(confirming?.batch ?? null)}
       />
-    </div>
+    </Card>
   );
 }

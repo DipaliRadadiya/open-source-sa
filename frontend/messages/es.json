@@ -3327,7 +3327,9 @@
         "confirmBatch": {
           "title": "¿Borrar definitivamente {count, plural, one {# elemento} other {# elementos}}?",
           "description": "Se destruyen en el servidor. Esto no se puede deshacer."
-        }
+        },
+        "deletedAt": "Borrado",
+        "siteRoot": "Raíz del sitio"
       }
     },
     "workers": {

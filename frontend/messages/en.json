@@ -3327,7 +3327,9 @@
         "confirmBatch": {
           "title": "Delete {count, plural, one {# item} other {# items}} for good?",
           "description": "These are destroyed on the server. This can't be undone."
-        }
+        },
+        "deletedAt": "Deleted",
+        "siteRoot": "Site root"
       }
     },
     "workers": {

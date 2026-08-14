@@ -3327,7 +3327,9 @@
         "confirmBatch": {
           "title": "{count, plural, one {# चीज़} other {# चीज़ें}} हमेशा के लिए हटाएँ?",
           "description": "ये सर्वर से मिटा दी जाती हैं। यह वापस नहीं हो सकता।"
-        }
+        },
+        "deletedAt": "हटाया गया",
+        "siteRoot": "साइट रूट"
       }
     },
     "workers": {
