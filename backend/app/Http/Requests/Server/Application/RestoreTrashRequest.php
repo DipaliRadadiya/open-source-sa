@@ -24,8 +24,9 @@ class RestoreTrashRequest extends FormRequest
             // but digits and a dash.
             'batch' => ['required', 'string', 'regex:/^\d{8}-\d{6}$/'],
 
-            // Where it came from, which is also where it goes back to.
-            'path' => ['required', 'string', 'max:1024', new SafeRelativePath],
+            // Optional for a whole batch; when present, restore only this
+            // original relative path.
+            'path' => ['nullable', 'string', 'max:1024', new SafeRelativePath],
         ];
     }
 
@@ -34,8 +35,10 @@ class RestoreTrashRequest extends FormRequest
         return (string) $this->validated('batch');
     }
 
-    public function path(): string
+    public function path(): ?string
     {
-        return (string) $this->validated('path');
+        $path = $this->validated('path');
+
+        return $path === null ? null : (string) $path;
     }
 }

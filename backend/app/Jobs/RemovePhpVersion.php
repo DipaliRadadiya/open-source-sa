@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\Server\ServerOperationException;
 use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallProgress;
@@ -51,9 +52,16 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
                     $progress->persist();
                 }
             });
-        } catch (Throwable $e) {
+        } catch (ServerOperationException $e) {
             // Flushed first: apt's last words are the only thing that explains
-            // a purge that would not complete.
+            // a purge that would not complete. Keep its reference too: the
+            // API never exposes apt output, so this is the support trail.
+            $progress?->persist();
+            $installs->fail('php', $this->version, null, 'remove_failed', $e->reference);
+            $log->log('php.uninstall_failed', null, ['version' => $this->version], actor: $this->actor());
+
+            throw $e;
+        } catch (Throwable $e) {
             $progress?->persist();
             $installs->fail('php', $this->version, null, 'remove_failed');
             $log->log('php.uninstall_failed', null, ['version' => $this->version], actor: $this->actor());
@@ -73,6 +81,6 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandon('php', $this->version);
+        app(InstallTracker::class)->abandonRemoval('php', $this->version);
     }
 }

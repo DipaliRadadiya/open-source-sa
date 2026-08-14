@@ -33,13 +33,19 @@ class RuntimeInstall extends Model
             return null;
         }
 
-        // Separate wording for the two, because "PHP 8.3 could not be found"
-        // and "the redis package could not be found" are different sentences
-        // and a shared one would be vague enough to be useless.
-        $group = $this->extension === '' ? 'install_failed' : 'extension_install_failed';
+        // A removal's terminal status is `failed`, same as an install's, so
+        // its reason carries the operation prefix. Do not tell an operator an
+        // uninstall was an installation failure — the remedy is different.
+        $removing = str_starts_with((string) $this->reason, 'remove_');
+        $group = $removing
+            ? 'uninstall_failed'
+            : ($this->extension === '' ? 'install_failed' : 'extension_install_failed');
+        $reason = $removing
+            ? (substr((string) $this->reason, strlen('remove_')) ?: 'unknown')
+            : ($this->reason ?: 'unknown');
         $replace = ['version' => $this->version, 'extension' => $this->extension];
 
-        $key = "runtime.{$group}.".($this->reason ?: 'unknown');
+        $key = "runtime.{$group}.{$reason}";
 
         // An unrecognised reason falls back rather than rendering the key at
         // the user: a missing translation must not become UI text.

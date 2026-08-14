@@ -278,12 +278,16 @@ class ApplicationFileController extends Controller
      */
     public function trash(BrowseFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
     {
-        return response()->json(['trash' => $files->trash($application)]);
+        return response()->json([
+            ...$files->trashDetails($application),
+            'retention_days' => (int) config('server.applications.trash_retention_days', 7),
+        ]);
     }
 
     /**
-     * Put one trashed path back where it came from. Refused if something is
-     * there again — the same non-overwrite rule rename and copy keep.
+     * Put one trashed path, or every path in one batch, back where it came
+     * from. Batch restores report per-path outcomes rather than letting one
+     * occupied destination hide every other successful restore.
      */
     public function restoreTrash(
         RestoreTrashRequest $request,
@@ -291,14 +295,25 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $files->restoreFromTrash($application, $request->batch(), $request->path());
+        $path = $request->path();
+        $result = $path === null
+            ? $files->restoreBatchFromTrash($application, $request->batch())
+            : $this->single(fn () => $files->restoreFromTrash($application, $request->batch(), $path), $path);
 
-        $activity->log('application.file_restored', $application, [
-            'name' => $application->name,
-            'path' => $request->path(),
+        if ($result['succeeded'] !== []) {
+            $activity->log('application.file_restored', $application, [
+                'name' => $application->name,
+                'path' => $path ?? $request->batch(),
+                'count' => count($result['succeeded']),
+            ]);
+        }
+
+        return response()->json([
+            'restored' => $result['failed'] === [],
+            ...$result,
+            ...$files->trashDetails($application),
+            'retention_days' => (int) config('server.applications.trash_retention_days', 7),
         ]);
-
-        return response()->json(['trash' => $files->trash($application)]);
     }
 
     /**

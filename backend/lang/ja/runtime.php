@@ -22,6 +22,12 @@ return [
         'grant_failed' => 'インストールはされましたが、パネル自身のアカウントを作成できませんでした。',
     ],
 
+    'uninstall_failed' => [
+        'failed' => 'PHP :version を削除できませんでした。以下の参照番号をサポートにお伝えください。',
+        'worker' => 'PHP :version の削除が予期せず停止しました。タイムアウトの可能性があります — もう一度お試しください。',
+        'unknown' => 'PHP :version を削除できませんでした。以下の参照番号をサポートにお伝えください。',
+    ],
+
     'extension_install_failed' => [
         'package_not_found' => 'PHP :version 用の :extension パッケージがありません。このバージョンには存在しない可能性があります。',
         'apt_lock' => '別のパッケージ操作が実行中です。しばらくしてからもう一度お試しください。',

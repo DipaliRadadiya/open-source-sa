@@ -380,16 +380,27 @@ function fakeFileBrowserServer(): void
         }
 
         if ($binary === 'du' && ($inner[1] ?? null) === '-sb') {
-            $rel = $relative($inner[2]);
-            $total = 0;
+            $lines = [];
 
-            foreach (FileBrowserFake::$fs as $path => $entry) {
-                if ($path === $rel || ($rel === '' && $path !== '') || str_starts_with($path, "{$rel}/")) {
-                    $total += $entry['size'] ?? 0;
+            foreach (array_slice($inner, 2) as $target) {
+                $rel = $relative($target);
+
+                if (! array_key_exists($rel, FileBrowserFake::$fs)) {
+                    continue;
                 }
+
+                $total = 0;
+
+                foreach (FileBrowserFake::$fs as $path => $entry) {
+                    if ($path === $rel || ($rel === '' && $path !== '') || str_starts_with($path, "{$rel}/")) {
+                        $total += $entry['size'] ?? 0;
+                    }
+                }
+
+                $lines[] = "{$total}\t{$target}";
             }
 
-            return Process::result(output: "{$total}\t{$inner[2]}\n");
+            return Process::result(output: $lines === [] ? '' : implode("\n", $lines)."\n");
         }
 
         if ($binary === 'find' && ($inner[2] ?? null) === '-maxdepth' && ($inner[3] ?? null) === '1') {
@@ -2077,7 +2088,7 @@ describe('trash', function () {
         FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'size' => 5, 'content' => 'gone?'];
     });
 
-    it('lists what was deleted, puts it back, and refuses to overwrite', function () {
+    it('lists what was deleted with its size and retention, then puts it back', function () {
         fakeFileBrowserServer();
 
         $this->actingAs($this->admin)
@@ -2085,18 +2096,51 @@ describe('trash', function () {
             ->assertOk();
 
         // Listed with where it came from — "config.php" alone does not tell
-        // anyone which one it was.
-        $trash = $this->actingAs($this->admin)->getJson(filesUrl('/trash'))->assertOk()->json('trash');
+        // anyone which one it was — and the reclaimable bytes are measured
+        // recursively, rather than reporting a directory inode's tiny size.
+        $response = $this->actingAs($this->admin)->getJson(filesUrl('/trash'))->assertOk();
+        $trash = $response->json('trash');
 
         expect($trash)->toHaveCount(1)
             ->and($trash[0]['path'])->toBe('old.txt')
-            ->and($trash[0]['batch'])->toMatch('/^\d{8}-\d{6}$/');
+            ->and($trash[0]['batch'])->toMatch('/^\d{8}-\d{6}$/')
+            ->and($trash[0]['size'])->toBe(5)
+            ->and($trash[0]['size_human'])->not->toBeNull()
+            ->and($response->json('total_size'))->toBe(5)
+            ->and($response->json('retention_days'))->toBe((int) config('server.applications.trash_retention_days'));
 
-        $this->actingAs($this->admin)
+        $restore = $this->actingAs($this->admin)
             ->postJson(filesUrl('/trash/restore'), ['batch' => $trash[0]['batch'], 'path' => 'old.txt'])
             ->assertOk();
 
-        expect(FileBrowserFake::$fs)->toHaveKey('old.txt');
+        expect($restore->json('restored'))->toBeTrue()
+            ->and($restore->json('succeeded'))->toBe(['old.txt'])
+            ->and($restore->json('failed'))->toBe([])
+            ->and(FileBrowserFake::$fs)->toHaveKey('old.txt');
+    });
+
+    it('restores a batch independently, reporting occupied paths without blocking others', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['other.txt'] = ['type' => 'f', 'size' => 7, 'content' => 'also gone'];
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['paths' => ['old.txt', 'other.txt'], 'count' => 2, 'confirm' => true])
+            ->assertOk();
+
+        $batch = $this->actingAs($this->admin)->getJson(filesUrl('/trash'))->json('trash.0.batch');
+
+        // The live file wins. Batch restore must still recover other.txt.
+        FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'size' => 3, 'content' => 'new'];
+
+        $response = $this->actingAs($this->admin)
+            ->postJson(filesUrl('/trash/restore'), ['batch' => $batch])
+            ->assertOk();
+
+        expect($response->json('restored'))->toBeFalse()
+            ->and($response->json('succeeded'))->toBe(['other.txt'])
+            ->and($response->json('failed'))->toBe([['path' => 'old.txt', 'reason' => 'exists']])
+            ->and(FileBrowserFake::$fs['old.txt']['content'])->toBe('new')
+            ->and(FileBrowserFake::$fs)->toHaveKey('other.txt');
     });
 
     it('refuses to restore over something that is there again', function () {

@@ -25,10 +25,16 @@ class InstallTracker
      */
     public function start(string $runtime, string $version, ?string $extension = null): RuntimeInstall
     {
-        return RuntimeInstall::query()->updateOrCreate(
-            ['runtime' => $runtime, 'version' => $version, 'extension' => (string) $extension],
-            [
-                'status' => InstallStatus::Installing,
+        $identity = ['runtime' => $runtime, 'version' => $version, 'extension' => (string) $extension];
+        $now = now();
+
+        // `updateOrCreate()` reads first, so two simultaneous requests can
+        // both try to insert and one loses to the unique index. Upsert lets
+        // the database make that decision atomically on every supported DB.
+        RuntimeInstall::query()->upsert(
+            [[
+                ...$identity,
+                'status' => InstallStatus::Installing->value,
                 // A retry clears the last failure rather than stacking on it.
                 'reason' => null,
                 'reference' => null,
@@ -37,10 +43,16 @@ class InstallTracker
                 // operator reading a failure that has already been retried.
                 'current_step' => null,
                 'output' => null,
-                'started_at' => now(),
+                'started_at' => $now,
                 'finished_at' => null,
-            ],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]],
+            ['runtime', 'version', 'extension'],
+            ['status', 'reason', 'reference', 'current_step', 'output', 'started_at', 'finished_at', 'updated_at'],
         );
+
+        return $this->query($runtime, $version, $extension)->firstOrFail();
     }
 
     /**
@@ -92,13 +104,13 @@ class InstallTracker
      */
     public function abandon(string $runtime, string $version, ?string $extension = null): void
     {
-        $this->query($runtime, $version, $extension)
-            ->where('status', InstallStatus::Installing->value)
-            ->update([
-                'status' => InstallStatus::Failed,
-                'reason' => 'worker',
-                'finished_at' => now(),
-            ]);
+        $this->abandonStatus($runtime, $version, $extension, InstallStatus::Installing, 'worker');
+    }
+
+    /** Mark a stranded removal failed without overwriting a recorded failure. */
+    public function abandonRemoval(string $runtime, string $version): void
+    {
+        $this->abandonStatus($runtime, $version, null, InstallStatus::Removing, 'remove_worker');
     }
 
     /**
@@ -128,6 +140,17 @@ class InstallTracker
             ->where('extension', '!=', '')
             ->get()
             ->keyBy('extension');
+    }
+
+    private function abandonStatus(string $runtime, string $version, ?string $extension, InstallStatus $status, string $reason): void
+    {
+        $this->query($runtime, $version, $extension)
+            ->where('status', $status->value)
+            ->update([
+                'status' => InstallStatus::Failed,
+                'reason' => $reason,
+                'finished_at' => now(),
+            ]);
     }
 
     private function query(string $runtime, string $version, ?string $extension)

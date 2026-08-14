@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\InstallStatus;
+use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Jobs\InstallPhpExtension;
 use App\Jobs\InstallPhpVersion;
+use App\Jobs\RemovePhpVersion;
 use App\Models\RuntimeInstall;
 use App\Models\User;
 use App\Services\Runtime\InstallFailureClassifier;
@@ -162,6 +164,43 @@ it('does not let a dead worker overwrite a real reason', function () {
         ->toBe('package_not_found');
 });
 
+it('marks a stranded removal failed when the worker dies', function () {
+    $tracker = app(InstallTracker::class);
+    $tracker->startRemoval('php', '8.4');
+
+    (new RemovePhpVersion('8.4'))->failed(null);
+
+    $row = collect(phpOverview()['versions'])->firstWhere('version', '8.4');
+
+    expect($row['status'])->toBe('failed')
+        ->and($row['reason'])->toBe('remove_worker')
+        ->and($row['message'])->toContain('Removing PHP 8.4 stopped unexpectedly');
+});
+
+it('reports a failed removal with its support reference', function () {
+    $tracker = app(InstallTracker::class);
+    $tracker->startRemoval('php', '8.4');
+    $tracker->fail('php', '8.4', null, 'remove_failed', 'ref-remove-1');
+
+    $row = collect(phpOverview()['versions'])->firstWhere('version', '8.4');
+
+    expect($row['status'])->toBe('failed')
+        ->and($row['reference'])->toBe('ref-remove-1')
+        ->and($row['message'])->toContain('PHP 8.4 could not be removed');
+});
+
+it('keeps the server-operation reference when a removal fails', function () {
+    $php = Mockery::mock(\App\Services\Server\Runtimes\PhpRuntime::class);
+    $php->shouldReceive('uninstall')->once()->andThrow(new SettingOperationException('ref-remove-actual'));
+
+    $installs = Mockery::mock(InstallTracker::class);
+    $installs->shouldReceive('current')->once()->andReturnNull();
+    $installs->shouldReceive('fail')->once()->with('php', '8.4', null, 'remove_failed', 'ref-remove-actual');
+
+    expect(fn () => (new RemovePhpVersion('8.4'))->handle($php, app(\App\Services\ActivityLogger::class), $installs))
+        ->toThrow(SettingOperationException::class);
+});
+
 it('retrying clears the previous failure', function () {
     $tracker = app(InstallTracker::class);
     $tracker->start('php', '8.3');
@@ -173,6 +212,15 @@ it('retrying clears the previous failure', function () {
     expect($row->status)->toBe(InstallStatus::Installing)
         ->and($row->reason)->toBeNull()
         ->and($row->reference)->toBeNull();
+});
+
+it('keeps one tracker row when the same install starts twice', function () {
+    $tracker = app(InstallTracker::class);
+    $tracker->start('php', '8.3');
+    $tracker->start('php', '8.3');
+
+    expect(RuntimeInstall::query()->where('runtime', 'php')->where('version', '8.3')->count())
+        ->toBe(1);
 });
 
 describe('extensions', function () {

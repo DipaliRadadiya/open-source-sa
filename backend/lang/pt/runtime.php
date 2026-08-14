@@ -22,6 +22,12 @@ return [
         'grant_failed' => 'Está instalado, mas o painel não conseguiu criar a própria conta nele.',
     ],
 
+    'uninstall_failed' => [
+        'failed' => 'Não foi possível remover o PHP :version. Informe a referência abaixo ao suporte.',
+        'worker' => 'A remoção do PHP :version parou inesperadamente. Pode ter excedido o tempo — tente novamente.',
+        'unknown' => 'Não foi possível remover o PHP :version. Informe a referência abaixo ao suporte.',
+    ],
+
     'extension_install_failed' => [
         'package_not_found' => 'Nenhum pacote para :extension no PHP :version. Pode não existir para esta versão.',
         'apt_lock' => 'Outra operação de pacotes já está em execução. Tente novamente em instantes.',

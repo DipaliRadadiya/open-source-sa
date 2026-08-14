@@ -22,6 +22,12 @@ return [
         'grant_failed' => 'C\'est installé mais le panneau n\'a pas pu y créer son propre compte.',
     ],
 
+    'uninstall_failed' => [
+        'failed' => 'PHP :version n\'a pas pu être supprimé. Communiquez la référence ci-dessous au support.',
+        'worker' => 'La suppression de PHP :version s\'est arrêtée de façon inattendue. Elle a peut-être expiré — réessayez.',
+        'unknown' => 'PHP :version n\'a pas pu être supprimé. Communiquez la référence ci-dessous au support.',
+    ],
+
     'extension_install_failed' => [
         'package_not_found' => 'Aucun paquet pour :extension sur PHP :version. Il n\'existe peut-être pas pour cette version.',
         'apt_lock' => 'Une autre opération de paquets est déjà en cours. Réessayez dans un instant.',

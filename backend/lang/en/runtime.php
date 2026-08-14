@@ -22,6 +22,12 @@ return [
         'grant_failed' => 'It is installed but the panel could not create its own account on it.',
     ],
 
+    'uninstall_failed' => [
+        'failed' => 'PHP :version could not be removed. Quote the reference below to support.',
+        'worker' => 'Removing PHP :version stopped unexpectedly. It may have timed out — try again.',
+        'unknown' => 'PHP :version could not be removed. Quote the reference below to support.',
+    ],
+
     'extension_install_failed' => [
         'package_not_found' => 'No package for :extension on PHP :version. It may not exist for this version.',
         'apt_lock' => 'Another package operation is already running. Try again in a moment.',

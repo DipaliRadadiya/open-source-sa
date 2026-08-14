@@ -1562,13 +1562,20 @@ What is recoverable, newest first. An empty list is a normal answer.
 
 ```json
 {"trash": [
-  {"batch": "20260813-104500", "path": "wp-content/old-plugin", "deleted_at": "13-08-2026 10:45:00"}
-]}
+  {"batch": "20260813-104500", "path": "wp-content/old-plugin", "deleted_at": "13-08-2026 10:45:00", "size": 48234496, "size_human": "46 MB"}
+], "total_size": 48234496, "total_size_human": "46 MB", "retention_days": 7}
 ```
 
 `path` is where it came from, which is also where it goes back to — `plugin.php`
 alone would not say which one it was. Only the top of a deleted tree is listed:
 a deleted directory is one thing the user deleted, not four hundred.
+
+`size` is the reclaimable on-disk footprint of that entry (directories included),
+not its inode size. `size` and `size_human` are `null` if that entry cannot be
+read; `total_size` and `total_size_human` are also `null` when any entry is
+unreadable, rather than claiming an incomplete total. `retention_days` is the
+operator-configurable automatic-retention window — use this value, never a
+frontend constant.
 
 Everything lives above the document root, so nothing here is reachable over
 HTTP — a deleted `wp-config.php` still holds live credentials.
@@ -1578,16 +1585,35 @@ HTTP — a deleted `wp-config.php` still holds live credentials.
 ### POST `/applications/{application}/files/trash/restore`
 **Permission:** `app_file` (manage) | **Throttle:** 30/min
 
-**Request:** `{"batch": "20260813-104500", "path": "wp-content/old-plugin"}`
+**Single-path request:** `{"batch": "20260813-104500", "path": "wp-content/old-plugin"}`
 
-Puts one path back where it came from. **Refused with `422` if something is
-there again** — the same non-overwrite rule `rename` and `copy` keep; the file
-sitting there now is the one somebody kept.
+**Restore-all request:** `{"batch": "20260813-104500"}`
+
+With `path`, restores only that path. Without it, restores every top-level
+entry in the batch independently. An occupied destination never blocks the
+other entries in its batch.
 
 `batch` must be `YYYYMMDD-HHMMSS`. It is half a filesystem path, so anything
 else is refused rather than sanitised.
 
-**Response `200`:** the updated `{"trash": [...]}`.
+**Response `200`:**
+```json
+{
+  "restored": false,
+  "succeeded": ["wp-content/old-plugin"],
+  "failed": [{"path": "wp-config.php.bak", "reason": "exists"}],
+  "trash": [],
+  "total_size": 0,
+  "total_size_human": "0 B",
+  "retention_days": 7
+}
+```
+
+`restored` is true only when every requested item was restored. For a
+single-path request, an occupied destination remains a `422`; batch restore
+instead reports it in `failed` and continues. `reason` is `exists`,
+`not_found`, or `failed`. `trash`, totals, and `retention_days` use the same
+shape as `GET .../files/trash`.
 
 ---
 
@@ -3889,11 +3915,11 @@ Omit `password` to leave it unchanged. `{"remove_password": true}` clears it.
 }}
 ```
 
-**`status`** on every row: `installing | ready | failed`. `ready` is never stored — detected from the filesystem.
+**`status`** on every row: `installing | ready | removing | failed`. `ready` is never stored — detected from the filesystem.
 
 **`failed` rows persist** until retried. `reason`: `package_not_found | apt_lock | no_space | network | worker | enable_failed | unknown`. `message` is localised. `reference` locates raw apt output.
 
-**`installing` rows have no other fields** — nothing is on disk yet.
+**`installing` and `removing` rows have no other fields** — the requested filesystem state is still changing.
 
 ---
 
@@ -4349,6 +4375,19 @@ Not a frontend endpoint — documented so it isn't mistaken for a gap. The gener
 **Response `401`:** `{"deployed": false, "reason": "invalid_signature"}`
 
 A disabled webhook and an identifier that never existed both answer `404`, identically — anything else would confirm which applications exist.
+
+---
+
+## Admin API Error Logs
+
+### GET `/admin/error-logs`
+**Auth:** administrator session or token. Returns the latest safe records from the rotating API error log; it is file-backed, not database-backed.
+
+**Query:** `lines` integer, optional, `1–500` (default `100`).
+
+**Response `200`:** `{"error_logs":[{"occurred_at":"…","status":500,"method":"POST","route":"api/applications/{application}","exception":"…","message":"Unexpected API error.","reference":"…","user_id":1}],"meta":{"truncated":false}}`
+
+Only unexpected API failures (`5xx`) are recorded. Validation, authentication, authorization, and not-found responses are excluded. Entries never expose request bodies, credentials, cookies, tokens, SQL bindings, command output, or stack traces. The log rotates automatically and retains 30 days by default.
 
 ---
 

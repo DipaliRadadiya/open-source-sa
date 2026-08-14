@@ -780,6 +780,85 @@ class FileBrowser
     }
 
     /**
+     * The recoverable entries together with their actual disk footprint.
+     *
+     * One `du` invocation measures every top-level entry. That makes a
+     * directory's size useful (unlike its inode size from `find`) without
+     * turning one trash listing into one process per deleted file.
+     *
+     * @return array{trash: array<int, array{batch: string, path: string, deleted_at: string, size: ?int, size_human: ?string}>, total_size: ?int, total_size_human: ?string}
+     */
+    public function trashDetails(Application $application): array
+    {
+        $entries = $this->trash($application);
+        $sizes = $this->trashSizes($application, $entries);
+        $complete = true;
+        $total = 0;
+
+        foreach ($entries as &$entry) {
+            $key = $entry['batch']."/".$entry['path'];
+            $size = $sizes[$key] ?? null;
+            $entry['size'] = $size;
+            $entry['size_human'] = $size === null ? null : Bytes::human($size);
+
+            if ($size === null) {
+                $complete = false;
+            } else {
+                $total += $size;
+            }
+        }
+        unset($entry);
+
+        return [
+            'trash' => $entries,
+            'total_size' => $complete ? $total : null,
+            'total_size_human' => $complete ? Bytes::human($total) : null,
+        ];
+    }
+
+    /**
+     * @param  array<int, array{batch: string, path: string, deleted_at: string}>  $entries
+     * @return array<string, int> keyed by `<batch>/<path>`
+     */
+    private function trashSizes(Application $application, array $entries): array
+    {
+        if ($entries === []) {
+            return [];
+        }
+
+        $sources = [];
+        $bySource = [];
+
+        foreach ($entries as $entry) {
+            $key = $entry['batch']."/".$entry['path'];
+            $source = $this->trashDirectory($application).'/'.$key;
+            $sources[] = $source;
+            $bySource[$source] = $key;
+        }
+
+        // `du` may fail for one unreadable entry while still printing sizes
+        // for the rest. Its output, not its aggregate exit code, is therefore
+        // the per-entry source of truth.
+        $result = $this->serverOps->run(
+            $this->asUser($application, array_merge(['du', '-sb'], $sources)),
+            ['feature' => 'application', 'op' => 'trash_sizes', 'application' => $application->id],
+            timeout: 60,
+        );
+
+        $sizes = [];
+
+        foreach (array_filter(explode("\n", $result->output())) as $line) {
+            [$size, $source] = array_pad(explode("\t", $line, 2), 2, '');
+
+            if (ctype_digit($size) && array_key_exists($source, $bySource)) {
+                $sizes[$bySource[$source]] = (int) $size;
+            }
+        }
+
+        return $sizes;
+    }
+
+    /**
      * Puts one trashed path back where it came from.
      *
      * Refuses rather than overwrites if something is there again — the same
@@ -798,6 +877,56 @@ class FileBrowser
 
         $this->run($application, ['mkdir', '-p', dirname($target)], 'trash_restore_dir');
         $this->run($application, ['mv', $source, $target], 'trash_restore');
+    }
+
+    /**
+     * Restores every top-level deletion in a batch independently. One path
+     * being occupied must not make the remaining recoverable files stay in
+     * trash, and the response must identify precisely what happened.
+     *
+     * @return array{succeeded: list<string>, failed: list<array{path: string, reason: string}>}
+     */
+    public function restoreBatchFromTrash(Application $application, string $batch): array
+    {
+        abort_unless(preg_match('/^\d{8}-\d{6}$/', $batch) === 1, 422, __('errors/application.unknown_backup'));
+
+        $entries = array_values(array_filter(
+            $this->trash($application),
+            fn (array $entry): bool => $entry['batch'] === $batch,
+        ));
+        abort_if($entries === [], 404);
+
+        $succeeded = [];
+        $failed = [];
+
+        foreach ($entries as $entry) {
+            $path = $entry['path'];
+            $source = $this->trashDirectory($application).'/'.$batch.'/'.ltrim($path, '/');
+            $target = $this->resolve($application, $path);
+
+            if ($this->stat($application, $source) === null) {
+                $failed[] = ['path' => $path, 'reason' => 'not_found'];
+
+                continue;
+            }
+
+            if ($this->stat($application, $target) !== null) {
+                $failed[] = ['path' => $path, 'reason' => 'exists'];
+
+                continue;
+            }
+
+            $this->tolerant($application, ['mkdir', '-p', dirname($target)], 'trash_restore_dir');
+            $this->tolerant($application, ['mv', $source, $target], 'trash_restore');
+
+            if ($this->stat($application, $source) === null && $this->stat($application, $target) !== null) {
+                $succeeded[] = $path;
+            } else {
+                $failed[] = ['path' => $path, 'reason' => 'failed'];
+            }
+        }
+
+        return ['succeeded' => $succeeded, 'failed' => $failed];
     }
 
     /**
