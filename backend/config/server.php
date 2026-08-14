@@ -1145,7 +1145,7 @@ return [
     'config_tests' => [
         'nginx' => ['nginx', '-t'],
         'apache' => ['apachectl', 'configtest'],
-        'openlitespeed' => ['/usr/local/lsws/bin/lswsctrl', 'status'],
+        'openlitespeed' => ['/usr/local/lsws/bin/lswsctrl', 'config_test'],
     ],
 
     'services' => [

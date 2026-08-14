@@ -62,6 +62,17 @@ it('runs the right test command per service', function () {
     Process::assertRan(fn ($p) => $p->command === ['/usr/sbin/php-fpm8.4', '-t']);
 });
 
+it('uses the OpenLiteSpeed configuration validator', function () {
+    fakeSystemd();
+
+    $this->withHeaders(svcHeaders())->postJson('/api/services/openlitespeed/config-test')
+        ->assertOk()
+        ->assertJsonPath('config_test.ok', true);
+
+    Process::assertRan(fn ($p) => $p->command === ['/usr/local/lsws/bin/lswsctrl', 'config_test']);
+    Process::assertNotRan(fn ($p) => $p->command === ['/usr/local/lsws/bin/lswsctrl', 'status']);
+});
+
 it('reports a failing configuration without reloading anything', function () {
     Process::fake(fn ($process) => match (true) {
         ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(output: "LoadState=loaded\nActiveState=active\nUnitFileState=enabled\n"),
