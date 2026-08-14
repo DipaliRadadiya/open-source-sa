@@ -2,6 +2,7 @@
 
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\Server\LogManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 
@@ -71,6 +72,21 @@ it('returns only bytes appended since the cursor', function () {
 
     $response = $this->withHeader('Authorization', "Bearer {$this->token}")->getJson("/api/logs/nginx_error?after={$cursor}")->assertOk();
     expect($response->json('log.lines'))->toBe(['c', 'd']);
+});
+
+it('caps an incremental read to a bounded byte window', function () {
+    $line = "entry\n";
+    File::put(
+        $this->logDir.'/nginx-error.log',
+        str_repeat($line, intdiv(LogManager::MAX_INCREMENTAL_BYTES, strlen($line)) + 10),
+    );
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/logs/nginx_error?after=0')
+        ->assertOk();
+
+    expect($response->json('log.lines'))->toHaveCount(LogManager::MAX_LINES);
+    expect($response->json('log.truncated'))->toBeTrue();
 });
 
 it('returns 404 for an unknown source key', function () {

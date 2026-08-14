@@ -23,6 +23,10 @@ class LogManager
 
     public const MAX_LINES = 5000;
 
+    // An incremental poll can be arbitrarily far behind. Cap its byte window
+    // before reading so a busy log cannot exhaust an FPM worker's memory.
+    public const MAX_INCREMENTAL_BYTES = 1048576;
+
     public function __construct(private PhpStack $stack) {}
 
     /**
@@ -227,13 +231,20 @@ class LogManager
             return ['lines' => [], 'truncated' => false];
         }
 
-        fseek($handle, $offset);
-        $content = (string) stream_get_contents($handle);
+        $start = max($offset, (int) filesize($path) - self::MAX_INCREMENTAL_BYTES);
+        $byteTruncated = $start > $offset;
+
+        fseek($handle, $start);
+        $content = (string) stream_get_contents($handle, self::MAX_INCREMENTAL_BYTES);
         fclose($handle);
 
         $lines = $this->split($content);
-        $truncated = false;
+        if ($byteTruncated) {
+            // The capped window may begin halfway through a line.
+            array_shift($lines);
+        }
 
+        $truncated = $byteTruncated;
         if (count($lines) > self::MAX_LINES) {
             $lines = array_slice($lines, -self::MAX_LINES);
             $truncated = true;
