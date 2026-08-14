@@ -32,6 +32,7 @@ import {
   ArchiveFormatField,
   useArchiveFormat,
 } from "@/components/applications/files/archive-format-field";
+import { PermanentDeleteField } from "@/components/applications/files/permanent-delete-field";
 
 /**
  * The dialogs behind the selection bar. One component because all four share
@@ -49,6 +50,9 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
   const [mode, setMode] = useState("644");
   const [error, setError] = useState(null);
   const archiveFormat = useArchiveFormat();
+  // Off every time the dialog mounts. BulkDialogs is mounted per action by the
+  // panel, so there is no stale value to carry between two deletes.
+  const [permanent, setPermanent] = useState(false);
 
   async function run(call) {
     if (busy) return;
@@ -57,7 +61,7 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
     try {
       const { data } = await call();
       const result = bulkResult(data, paths);
-      onResult(action, result);
+      onResult(action, result, { permanent });
       onOpenChange(false);
       router.refresh();
     } catch (err) {
@@ -85,11 +89,19 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
         icon={TriangleAlert}
         tone="destructive"
         title={t("bulk.deleteTitle", { count: paths.length })}
-        description={t("bulk.deleteDescription")}
+        description={
+          permanent ? t("bulk.deleteDescriptionPermanent") : t("bulk.deleteDescription")
+        }
         cancelLabel={t("cancel")}
-        confirmLabel={busy ? t("bulk.deleting") : t("bulk.deleteSubmit")}
+        confirmLabel={
+          busy
+            ? t("bulk.deleting")
+            : permanent
+              ? t("bulk.deleteSubmitForever")
+              : t("bulk.deleteSubmit")
+        }
         pending={busy}
-        onConfirm={() => run(() => deleteFiles(appId, paths))}
+        onConfirm={() => run(() => deleteFiles(appId, paths, { permanent }))}
       >
         {/* Named, not counted. "Delete 12 items?" is not something anyone can
             check; a list is. Bounded and scrolling so 250 of them cannot push
@@ -101,6 +113,12 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
             </li>
           ))}
         </ul>
+        <PermanentDeleteField
+          id="bulk-delete-permanent"
+          checked={permanent}
+          onChange={setPermanent}
+          disabled={busy}
+        />
       </ConfirmDialog>
     );
   }

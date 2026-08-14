@@ -7,7 +7,9 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getFiles } from "@/lib/applications/get-files";
+import { getTrash } from "@/lib/applications/get-trash";
 import { FilesPanel } from "@/components/applications/files/files-panel";
+import { TrashPanel } from "@/components/applications/files/trash-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Button } from "@/components/ui/button";
@@ -34,8 +36,12 @@ export async function generateMetadata({ params }) {
 
 export default async function ApplicationFilesPage({ params, searchParams }) {
   const { application: id } = await params;
-  const { path: rawPath } = await searchParams;
+  const { path: rawPath, trash: rawTrash } = await searchParams;
   const path = typeof rawPath === "string" ? rawPath : "";
+  // The trash is a view of this same screen, not a route of its own — see
+  // memory/research-file-trash.md. Every panel that has one reaches it from the
+  // file manager's toolbar.
+  const showTrash = rawTrash === "1";
 
   const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
@@ -59,7 +65,11 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
 
   if (!isSafePath(path)) redirect(`/applications/${id}/files`);
 
-  const filesResult = settled ? await getFiles(id, path) : { path: "", files: [], failed: false, notFound: false };
+  const filesResult =
+    settled && !showTrash
+      ? await getFiles(id, path)
+      : { path: "", files: [], failed: false, notFound: false };
+  const trashResult = settled && showTrash ? await getTrash(id) : null;
 
   return (
     <div className="space-y-6">
@@ -72,6 +82,14 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
         <div className="rounded-2xl border bg-muted/30 p-6 text-sm text-muted-foreground">
           {t("provisioning")}
         </div>
+      ) : showTrash ? (
+        <TrashPanel
+          appId={id}
+          trash={trashResult.trash}
+          failed={trashResult.failed}
+          canManage={canManage}
+          backHref={`/applications/${id}/files`}
+        />
       ) : filesResult.notFound && !path ? (
         // Root 404 means nothing was ever provisioned here — a different
         // situation from a subfolder vanishing, and "deleted since you last

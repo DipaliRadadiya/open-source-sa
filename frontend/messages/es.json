@@ -3179,11 +3179,18 @@
       },
       "delete": {
         "title": "¿Eliminar «{name}»?",
-        "description": "Esto no se puede deshacer.",
-        "descriptionDir": "Esto elimina la carpeta y todo su contenido. Esto no se puede deshacer.",
+        "description": "Esto va a la papelera. Puedes recuperarlo desde allí.",
+        "descriptionDir": "La carpeta y todo lo que contiene van a la papelera. Puedes recuperarlo desde allí.",
         "confirm": "Eliminar",
-        "done": "«{name}» eliminado.",
-        "failed": "No se pudo eliminar este elemento."
+        "done": "\"{name}\" movido a la papelera.",
+        "failed": "No se pudo eliminar este elemento.",
+        "descriptionPermanent": "Esto se destruye en el servidor de inmediato. No se puede deshacer.",
+        "confirmForever": "Borrar definitivamente",
+        "doneForever": "\"{name}\" borrado definitivamente.",
+        "permanent": {
+          "label": "Borrar definitivamente en su lugar",
+          "hint": "Se salta la papelera y libera el espacio en disco ahora. Nada podrá recuperarlo."
+        }
       },
       "fixPermissions": {
         "action": "Corregir permisos",
@@ -3228,10 +3235,10 @@
         "permissionsDescription": "Se aplica el mismo modo a todo lo seleccionado.",
         "permissionsDone": "{count, plural, one {# elemento actualizado.} other {# elementos actualizados.}}",
         "deleteTitle": "¿Eliminar {count, plural, one {# elemento} other {# elementos}}?",
-        "deleteDescription": "Se eliminan del servidor. Esto no se puede deshacer.",
+        "deleteDescription": "Estos van a la papelera. Puedes recuperarlos desde allí.",
         "deleteSubmit": "Eliminar",
         "deleting": "Eliminando…",
-        "deleteDone": "{count, plural, one {# elemento eliminado.} other {# elementos eliminados.}}",
+        "deleteDone": "{count, plural, one {# elemento movido a la papelera.} other {# elementos movidos a la papelera.}}",
         "partlyDone": "{done} de {total} hechos. El resto no se pudo:",
         "noneDone": "Ninguno de los {total} se pudo hacer:",
         "dismiss": "Descartar",
@@ -3240,7 +3247,10 @@
           "not_found": "Ya no está",
           "exists": "Ya hay algo en el destino",
           "failed": "El servidor lo rechazó"
-        }
+        },
+        "deleteDescriptionPermanent": "Estos se destruyen en el servidor de inmediato. Esto no se puede deshacer.",
+        "deleteSubmitForever": "Borrar definitivamente",
+        "deleteDoneForever": "{count, plural, one {# elemento borrado definitivamente.} other {# elementos borrados definitivamente.}}"
       },
       "size": {
         "failed": "No se pudo medir esa carpeta."
@@ -3257,6 +3267,39 @@
             "label": ".tar.gz",
             "hint": "Conserva permisos, propietarios y enlaces simbólicos. La copia más segura antes de cambiar algo."
           }
+        }
+      },
+      "trash": {
+        "action": "Papelera",
+        "title": "Papelera",
+        "subtitle": "Lo que has borrado y de dónde venía. Recupera algo o libera el espacio definitivamente.",
+        "backToFiles": "Volver a los archivos",
+        "emptyAll": "Vaciar la papelera",
+        "emptyBatch": "Borrar esto definitivamente",
+        "emptying": "Vaciando…",
+        "restore": "Restaurar",
+        "restoring": "Restaurando…",
+        "restored": "\"{name}\" ha vuelto a su sitio.",
+        "restoreFailed": "No se pudo restaurar esto.",
+        "emptied": "Papelera vaciada.",
+        "batchEmptied": "Borrado definitivamente.",
+        "emptyFailed": "No se pudo vaciar la papelera.",
+        "itemCount": "{count, plural, one {# elemento} other {# elementos}}",
+        "noPermission": "No tienes permiso para modificar los archivos de este sitio.",
+        "loadFailed": "No se pudo cargar la papelera.",
+        "cancel": "Cancelar",
+        "confirmSubmit": "Borrar definitivamente",
+        "empty": {
+          "title": "La papelera está vacía",
+          "description": "Todo lo que borres se queda aquí, para que puedas recuperarlo, hasta que el servidor lo limpie."
+        },
+        "confirmAll": {
+          "title": "¿Vaciar la papelera?",
+          "description": "Todo lo que hay aquí se destruye en el servidor. Es lo único de esta pantalla que no se puede deshacer, y es como se recupera el espacio en disco."
+        },
+        "confirmBatch": {
+          "title": "¿Borrar definitivamente {count, plural, one {# elemento} other {# elementos}}?",
+          "description": "Se destruyen en el servidor. Esto no se puede deshacer."
         }
       }
     },

@@ -3179,11 +3179,18 @@
       },
       "delete": {
         "title": "Delete \"{name}\"?",
-        "description": "This can't be undone.",
-        "descriptionDir": "This deletes the folder and everything inside it. This can't be undone.",
+        "description": "This moves to the trash. You can put it back from there.",
+        "descriptionDir": "The folder and everything inside it moves to the trash. You can put it back from there.",
         "confirm": "Delete",
-        "done": "\"{name}\" deleted.",
-        "failed": "Couldn't delete this item."
+        "done": "\"{name}\" moved to the trash.",
+        "failed": "Couldn't delete this item.",
+        "descriptionPermanent": "This is destroyed on the server straight away. It can't be undone.",
+        "confirmForever": "Delete forever",
+        "doneForever": "\"{name}\" deleted for good.",
+        "permanent": {
+          "label": "Delete permanently instead",
+          "hint": "Skips the trash and frees the disk space now. Nothing can bring it back."
+        }
       },
       "fixPermissions": {
         "action": "Fix permissions",
@@ -3228,10 +3235,10 @@
         "permissionsDescription": "The same mode is applied to everything selected.",
         "permissionsDone": "{count, plural, one {# item updated.} other {# items updated.}}",
         "deleteTitle": "Delete {count, plural, one {# item} other {# items}}?",
-        "deleteDescription": "These are removed from the server. This cannot be undone.",
+        "deleteDescription": "These move to the trash. You can put them back from there.",
         "deleteSubmit": "Delete",
         "deleting": "Deleting…",
-        "deleteDone": "{count, plural, one {# item deleted.} other {# items deleted.}}",
+        "deleteDone": "{count, plural, one {# item moved to the trash.} other {# items moved to the trash.}}",
         "partlyDone": "{done} of {total} done. The rest could not be:",
         "noneDone": "None of the {total} could be done:",
         "dismiss": "Dismiss",
@@ -3240,7 +3247,10 @@
           "not_found": "No longer there",
           "exists": "Something is already at the destination",
           "failed": "The server refused it"
-        }
+        },
+        "deleteDescriptionPermanent": "These are destroyed on the server straight away. This can't be undone.",
+        "deleteSubmitForever": "Delete forever",
+        "deleteDoneForever": "{count, plural, one {# item deleted for good.} other {# items deleted for good.}}"
       },
       "size": {
         "failed": "That folder could not be measured."
@@ -3257,6 +3267,39 @@
             "label": ".tar.gz",
             "hint": "Keeps permissions, owners and symlinks. The safer copy before you change something."
           }
+        }
+      },
+      "trash": {
+        "action": "Trash",
+        "title": "Trash",
+        "subtitle": "What you deleted, and where it came from. Put something back, or clear the space for good.",
+        "backToFiles": "Back to files",
+        "emptyAll": "Empty trash",
+        "emptyBatch": "Delete these for good",
+        "emptying": "Emptying…",
+        "restore": "Restore",
+        "restoring": "Restoring…",
+        "restored": "\"{name}\" is back where it was.",
+        "restoreFailed": "Couldn't restore this.",
+        "emptied": "Trash emptied.",
+        "batchEmptied": "Deleted for good.",
+        "emptyFailed": "Couldn't empty the trash.",
+        "itemCount": "{count, plural, one {# item} other {# items}}",
+        "noPermission": "You don't have permission to change files on this site.",
+        "loadFailed": "Couldn't load the trash.",
+        "cancel": "Cancel",
+        "confirmSubmit": "Delete forever",
+        "empty": {
+          "title": "Nothing in the trash",
+          "description": "Anything you delete stays here, so you can put it back — until the server clears it out."
+        },
+        "confirmAll": {
+          "title": "Empty the trash?",
+          "description": "Everything here is destroyed on the server. This is the only thing here that can't be undone, and it is how the disk space comes back."
+        },
+        "confirmBatch": {
+          "title": "Delete {count, plural, one {# item} other {# items}} for good?",
+          "description": "These are destroyed on the server. This can't be undone."
         }
       }
     },

@@ -26,6 +26,21 @@ export const filesResponseSchema = z.object({
   files: z.array(fileEntrySchema).default([]),
 });
 
+// One entry per deleted path, newest first. `batch` is the timestamped folder
+// one delete produced (`YYYYMMDD-HHMMSS`), shared by everything removed in that
+// action; `path` is where it came from, which is also where it goes back to.
+// There is no size and no expiry date — the API does not report either, so the
+// screen cannot claim them (see memory/backend-asks.md).
+export const trashEntrySchema = z.object({
+  batch: z.string(),
+  path: z.string(),
+  deleted_at: z.string().nullish(),
+});
+
+export const trashResponseSchema = z.object({
+  trash: z.array(trashEntrySchema).default([]),
+});
+
 // Sitewide search results span multiple folders, so each entry carries its
 // own full relative `path` — everything else is the same shape the listing
 // endpoint already returns.

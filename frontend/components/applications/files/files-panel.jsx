@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe } from "lucide-react";
+import Link from "next/link";
+import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -102,13 +103,16 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
     );
   }
 
-  function onBulkResult(action, result) {
+  function onBulkResult(action, result, { permanent = false } = {}) {
     setSelected([]);
     // Everything worked — a toast is enough, and the panel stays out of the
     // way. Anything else is left on screen to be read.
     if (!result.failed.length) {
       setBulkOutcome(null);
-      toast.success(t(`bulk.${action}Done`, { count: result.succeeded.length }));
+      // A permanent delete must not report itself as "moved to the trash" —
+      // it is the one delete nothing can undo.
+      const key = action === "delete" && permanent ? "bulk.deleteDoneForever" : `bulk.${action}Done`;
+      toast.success(t(key, { count: result.succeeded.length }));
       return;
     }
     setBulkOutcome(result);
@@ -211,6 +215,15 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
         </Button>
       </ReasonTooltip>
       <FixPermissionsButton appId={appId} canManage={canManage} />
+      {/* Every panel that has a trash reaches it from this toolbar — cPanel and
+          Plesk both use a button here that swaps the list. Nobody gives it its
+          own page, and a tab would compete with the breadcrumb. */}
+      <Button variant="ghost" size="sm" asChild>
+        <Link href={`/applications/${appId}/files?trash=1`} prefetch={false}>
+          <Trash2 className="size-3.5" />
+          {t("trash.action")}
+        </Link>
+      </Button>
     </div>
   );
 

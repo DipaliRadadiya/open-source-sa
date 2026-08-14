@@ -180,8 +180,13 @@ export function setFilePermissions(appId, path, mode) {
   return api.put(`/applications/${appId}/files/permissions`, { path, mode });
 }
 
-export function deleteFile(appId, path) {
-  return api.delete(`/applications/${appId}/files`, { data: { path, confirm: true } });
+// `permanent` destroys instead of moving to the trash. Omitting it means
+// recoverable, which is what the API defaults to — the flag is only ever sent
+// because someone deliberately ticked a box.
+export function deleteFile(appId, path, { permanent = false } = {}) {
+  return api.delete(`/applications/${appId}/files`, {
+    data: { path, confirm: true, ...(permanent ? { permanent: true } : null) },
+  });
 }
 
 /**
@@ -224,9 +229,31 @@ export function setFilesPermissions(appId, paths, mode) {
 // `count` must equal paths.length or the server refuses: `confirm` is true
 // either way, so it cannot catch the realistic accident, which is acting on a
 // selection that changed under you. Always send the real length.
-export function deleteFiles(appId, paths) {
+export function deleteFiles(appId, paths, { permanent = false } = {}) {
   return api.delete(`/applications/${appId}/files`, {
-    data: { paths, confirm: true, count: paths.length },
+    data: {
+      paths,
+      confirm: true,
+      count: paths.length,
+      ...(permanent ? { permanent: true } : null),
+    },
+  });
+}
+
+/* The trash. Restore and empty both answer with the refreshed list, so neither
+ * needs a follow-up GET. */
+
+// One path per call: the API takes a single {batch, path} and has no bulk form,
+// which is why there is no "restore everything" in the UI — twelve restores
+// would be twelve requests against a 30/min throttle. See memory/backend-asks.md.
+export function restoreTrashed(appId, batch, path) {
+  return api.post(`/applications/${appId}/files/trash/restore`, { batch, path });
+}
+
+// The whole trash, or one batch of it. The only unrecoverable action here.
+export function emptyTrash(appId, batch = null) {
+  return api.delete(`/applications/${appId}/files/trash`, {
+    data: { confirm: true, ...(batch ? { batch } : null) },
   });
 }
 
