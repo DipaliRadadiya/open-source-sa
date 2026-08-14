@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
+import { RuntimeStatusBadge, versionState } from "@/components/runtime/version-status";
 import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
 import { setDefaultNodeVersion, removeNodeVersion, updateNodeNpm } from "@/lib/api/node";
 import { apiMessage } from "@/lib/api/error-message";
@@ -35,13 +36,35 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
 
   const usedBy = version.in_use_by ?? 0;
   const sites = version.sites ?? [];
+
+  // This card had no notion of install state at all: a version mid-install
+  // rendered exactly like a healthy one, with working buttons that acted on
+  // something not yet on disk. PHP has handled these four states for a while;
+  // now both read the same helper.
+  const installState = versionState(version);
+
+  // Nothing is on disk while it installs or purges, so anything that reads or
+  // writes this version fails. Removing is not an exception for Node the way it
+  // is for a failed PHP install: pressing Remove twice sent a second request
+  // that answered 404 the moment the first finished.
+  const notReadyReason =
+    installState === "installing"
+      ? t("versions.stillInstalling")
+      : installState === "removing"
+        ? t("versions.stillRemoving")
+        : installState === "failed"
+          ? t("versions.installFailedShort")
+          : null;
+
   const removeReason = !canManage
     ? t("noPermission")
-    : version.is_default
-      ? t("versions.isDefault")
-      : usedBy > 0
-        ? t("versions.usedBy", { count: usedBy })
-        : null;
+    : installState === "installing" || installState === "removing"
+      ? notReadyReason
+      : version.is_default
+        ? t("versions.isDefault")
+        : usedBy > 0
+          ? t("versions.usedBy", { count: usedBy })
+          : null;
 
   async function makeDefault() {
     setPending(true);
@@ -101,6 +124,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
                 {t("versions.default")}
               </Badge>
             ) : null}
+            <RuntimeStatusBadge version={version} namespace="node" />
             <LifecycleBadge
               lifecycle={version.lifecycle}
               namespace="node"
@@ -117,11 +141,11 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
                 couldn't be read — no number is better than a wrong one, so the
                 control goes away rather than claiming to update nothing. */}
             {npm ? (
-              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+              <ReasonTooltip reason={canManage ? notReadyReason : t("noPermission")}>
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!canManage || pending}
+                  disabled={!canManage || pending || Boolean(notReadyReason)}
                   onClick={upgradeNpm}
                 >
                   {pending ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -131,11 +155,11 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
             ) : null}
 
             {version.is_default ? null : (
-              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+              <ReasonTooltip reason={canManage ? notReadyReason : t("noPermission")}>
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!canManage || pending}
+                  disabled={!canManage || pending || Boolean(notReadyReason)}
                   onClick={makeDefault}
                 >
                   {t("versions.makeDefault")}

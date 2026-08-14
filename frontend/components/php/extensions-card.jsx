@@ -4,14 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, SearchX, TriangleAlert } from "lucide-react";
+import { ChevronDown, Loader2, SearchX, TriangleAlert } from "lucide-react";
 import { setPhpExtension } from "@/lib/api/php";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
-import { Pager } from "@/components/data-table/pager";
 import {
   Table,
   TableBody,
@@ -28,8 +26,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
-
-const PER_PAGE = 15;
 
 /**
  * Which SAPIs disagree, if any.
@@ -63,16 +59,22 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  const [page, setPage] = useState(1);
   const [pending, setPending] = useState(null);
 
-  // "What's on?" and "how do I add X?" are the two questions people arrive
-  // with. Search answers the second; without a filter the first meant reading
-  // 96 rows.
-  const onCount = extensions.filter((extension) => extension.enabled).length;
+  // Two lists, not one. A real server reports 96 extensions of which 16 are
+  // compiled into PHP and can never be switched — and they sorted alphabetically
+  // through the rest, so the first two pages were rows nobody can act on. They
+  // are also the only rows with no description, which is what made the list
+  // lurch between tall and short rows.
+  const builtins = extensions.filter((extension) => extension.builtin);
+  const changeable = extensions.filter((extension) => !extension.builtin);
+
+  // Counted over what you can actually change. "29 of 96" included the 16 that
+  // are on because they cannot be off.
+  const onCount = changeable.filter((extension) => extension.enabled).length;
 
   const term = query.trim().toLowerCase();
-  const matched = extensions
+  const matched = changeable
     .filter((extension) =>
       filter === "all" ? true : filter === "on" ? extension.enabled : !extension.enabled,
     )
@@ -86,12 +88,17 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
       return t.has(key) && t(key).toLowerCase().includes(term);
     });
 
-  // The whole list is already in the browser, so paging is a display choice:
-  // 96 rows in one column is a page you scroll past rather than read.
-  const lastPage = Math.max(1, Math.ceil(matched.length / PER_PAGE));
-  // Searching down to two matches while on page 4 would otherwise show nothing.
-  const current = Math.min(page, lastPage);
-  const shown = matched.slice((current - 1) * PER_PAGE, current * PER_PAGE);
+  // No pager. Seven pages of a list that already has a search box and an
+  // on/off filter is paging you have to navigate to use a filter you can see —
+  // and it hid the answer to "is mysql on?" behind page 4. The list scrolls
+  // inside a fixed height instead, so the card stays the same size whether it
+  // holds three matches or eighty.
+  const shown = matched;
+
+  // Did the search only miss because the answer is compiled into PHP?
+  const builtinMatch = term
+    ? builtins.find((extension) => extension.name.toLowerCase().includes(term))
+    : null;
 
   async function toggle(extension) {
     const next = !extension.enabled;
@@ -123,7 +130,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
       <CardHeader>
         <CardTitle className="text-base font-semibold">{t("extensions.title")}</CardTitle>
         <CardDescription>
-          {t("extensions.summary", { on: onCount, total: extensions.length })}
+          {t("extensions.summary", { on: onCount, total: changeable.length })}
         </CardDescription>
       </CardHeader>
 
@@ -133,7 +140,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
-              setPage(1);
             }}
             placeholder={t("extensions.search")}
             className="sm:max-w-64"
@@ -146,7 +152,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
             onValueChange={(next) => {
               if (!next) return;
               setFilter(next);
-              setPage(1);
             }}
             variant="outline"
             // flex-wrap: with `gap-1` these are three separate bordered buttons,
@@ -168,17 +173,23 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
         </div>
 
         {shown.length === 0 ? (
-          <p className="flex items-center gap-2 py-8 text-center text-sm text-muted-foreground">
-            <SearchX className="size-4" />
-            {t("extensions.noMatches")}
+          <p className="flex items-center justify-center gap-2 py-8 text-center text-sm text-muted-foreground">
+            <SearchX className="size-4 shrink-0" />
+            {/* Searching for a built-in used to answer "no extensions match",
+                which reads as "it is not here" about something PHP always has.
+                Name it instead. */}
+            {builtinMatch
+              ? t("extensions.noMatchesBuiltin", { name: builtinMatch.name })
+              : t("extensions.noMatches")}
           </p>
         ) : (
-          <div className="overflow-hidden rounded-lg border">
+          <div className="relative">
+            <div className="max-h-[32rem] overflow-y-auto rounded-lg border">
             <Table>
               <TableHeader>
                 {/* The right column holds a switch on one row and a badge on the
                     next; unlabelled, they read as unrelated things. */}
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableRow className="sticky top-0 z-10 bg-muted hover:bg-muted">
                   <TableHead>{t("extensions.colName")}</TableHead>
                   {/* Narrow on a phone: at 390px a fixed 14rem column pushed the
                       switches off the screen entirely, so the one control on the
@@ -199,7 +210,11 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
 
                   return (
                     <TableRow key={extension.name}>
+                      {/* min-h keeps every row the same height. Not every
+                          extension has a description, and a list that jumps
+                          between 47px and 61px rows cannot be scanned. */}
                       <TableCell className="max-w-0">
+                        <span className="flex min-h-9 flex-col justify-center">
                         <span className="font-mono text-sm font-medium">{extension.name}</span>
 
                         {/* What it's FOR, in plain words. Only the extensions we
@@ -232,6 +247,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
                             </span>
                           </span>
                         ) : null}
+                        </span>
                       </TableCell>
 
                       <TableCell className="text-right">
@@ -239,26 +255,22 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
                             refuses. Listed anyway so searching for it finds it.
                             The old "Built in" tag beside the name said the same
                             thing twice — this column is the answer. */}
-                        {extension.builtin ? (
-                          <Badge variant="secondary" className="font-normal">
-                            {t("extensions.alwaysOn")}
-                          </Badge>
-                        ) : required ? (
-                          // Amber, not grey: this one is locked to keep the panel
-                          // running, which is a caution rather than a fact.
-                          <Badge variant="warning" className="font-normal">
-                            {t("extensions.panelNeedsShort")}
-                          </Badge>
-                        ) : (
-                          <ReasonTooltip reason={reason}>
-                            <Switch
-                              checked={extension.enabled}
-                              onCheckedChange={() => toggle(extension)}
-                              disabled={Boolean(reason) || pending === extension.name}
-                              aria-label={t("extensions.toggle", { name: extension.name })}
-                            />
-                          </ReasonTooltip>
-                        )}
+                        {/* One shape for every row in this list: a switch, on
+                            the same spot, every time. A panel-required row used
+                            to swap the switch for an amber pill, so the right
+                            edge of the table alternated between three unrelated
+                            shapes and could not be scanned. It is still locked —
+                            disabled, with the reason on hover — but it now reads
+                            as "this one is fixed on", not as a different kind of
+                            thing. */}
+                        <ReasonTooltip reason={reason}>
+                          <Switch
+                            checked={extension.enabled}
+                            onCheckedChange={() => toggle(extension)}
+                            disabled={Boolean(reason) || pending === extension.name}
+                            aria-label={t("extensions.toggle", { name: extension.name })}
+                          />
+                        </ReasonTooltip>
 
                         {/* Sits with the switch because it explains the switch:
                             `enabled` is all-or-nothing, so a manual `phpdismod`
@@ -277,20 +289,35 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
                 })}
               </TableBody>
             </Table>
+            </div>
+            {/* The cut-off row at the bottom looked like a rendering fault. */}
+            <div className="pointer-events-none absolute inset-x-px bottom-px h-8 rounded-b-lg bg-gradient-to-t from-background to-transparent" />
           </div>
         )}
 
-        {/* One page of results needs no pager — the arrows would only ever be
-            disabled, which reads as something being broken. */}
-        {lastPage > 1 ? (
-          <div className="flex justify-end pt-1">
-            <Pager
-              page={current}
-              lastPage={lastPage}
-              total={matched.length}
-              onPageChange={setPage}
-            />
-          </div>
+        {/* The ones compiled into PHP. Kept — searching for `json` should find
+            it and be told why there is no switch — but folded away, because
+            there is nothing to decide about any of them. */}
+        {builtins.length > 0 ? (
+          <details className="group rounded-lg border">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground">
+              <span>{t("extensions.builtinTitle", { count: builtins.length })}</span>
+              <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="border-t px-3 py-2">
+              <p className="pb-2 text-xs text-muted-foreground">{t("extensions.builtinBody")}</p>
+              <ul className="flex flex-wrap gap-1.5">
+                {builtins.map((extension) => (
+                  <li
+                    key={extension.name}
+                    className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground"
+                  >
+                    {extension.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
         ) : null}
       </CardContent>
     </Card>

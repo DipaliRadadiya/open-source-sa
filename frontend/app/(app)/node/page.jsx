@@ -10,6 +10,9 @@ import { VersionSummary } from "@/components/node/version-summary";
 import { SystemNodeNote } from "@/components/node/system-node-note";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
+import { RuntimeStatusNotice } from "@/components/runtime/version-status";
+import { anyInFlight, RUNTIME_POLL_MS, RUNTIME_POLL_STOP_MS } from "@/lib/runtime/in-flight";
 
 export const dynamic = "force-dynamic";
 
@@ -45,8 +48,16 @@ export default async function NodePage({ searchParams }) {
 
   const current = versions.find((version) => version.version === selected) ?? null;
 
+  // Same reason as PHP: fnm takes minutes and finishes silently, so a page
+  // rendered once sits on "Installing" until you navigate away and back.
+  const inFlight = anyInFlight(versions);
+
   return (
     <div className="space-y-6">
+      {inFlight ? (
+        <AutoRefresh intervalMs={RUNTIME_POLL_MS} stopAfterMs={RUNTIME_POLL_STOP_MS} />
+      ) : null}
+
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
@@ -114,6 +125,11 @@ export default async function NodePage({ searchParams }) {
               lifecycleAvailable={lifecycleAvailable}
             />
           ) : null}
+
+          {/* What is happening to this version, when it is not simply ready.
+              Node had nothing here at all — an install in flight looked like a
+              finished one. Shared with PHP so the two cannot drift. */}
+          <RuntimeStatusNotice version={current} versionLabel={selected} namespace="node" />
 
           <SystemNodeNote system={node?.system} />
         </div>

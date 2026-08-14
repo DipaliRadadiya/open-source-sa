@@ -1641,7 +1641,10 @@
       "installFailedTitle": "PHP {version} no se instaló",
       "installFailedBody": "No se instaló nada para esta versión, así que no tiene extensiones ni php.ini. Elimínala e instálala de nuevo, o revisa los registros del servidor.",
       "installingSince": "Comenzó {when}. Las extensiones aparecerán cuando termine.",
-      "moreCount": "+{count} más"
+      "moreCount": "+{count} más",
+      "removingTitle": "Eliminando PHP {version}",
+      "removingBody": "Esto tarda unos minutos. La página se actualiza sola.",
+      "removingSince": "Empezó {when}. La página se actualiza sola."
     },
     "extensions": {
       "title": "Extensiones",
@@ -1664,7 +1667,10 @@
       "colStatus": "Estado",
       "driftWebOnly": "Activa para los sitios, desactivada para la línea de comandos",
       "driftCliOnly": "Activa para la línea de comandos, desactivada para los sitios",
-      "driftPartial": "Activa solo para algunos usos"
+      "driftPartial": "Activa solo para algunos usos",
+      "builtinTitle": "Incluidas en PHP ({count})",
+      "builtinBody": "Vienen compiladas y siempre están disponibles. No hay nada que activar, y PHP no puede funcionar sin ellas.",
+      "noMatchesBuiltin": "{name} viene incluida en PHP: siempre está disponible. Mira la lista de abajo."
     },
     "install": {
       "action": "Instalar versión",
@@ -1772,7 +1778,28 @@
       "confirmRemoveTitle": "¿Eliminar Node.js {version}?",
       "confirmRemoveBody": "Todo lo instalado para esta versión se elimina con ella. Puedes instalarla de nuevo más tarde.",
       "confirmCancel": "Cancelar",
-      "moreCount": "+{count} más"
+      "moreCount": "+{count} más",
+      "statusFailed": "Falló la instalación",
+      "statusInstalling": "Instalando",
+      "statusRemoving": "Eliminando",
+      "steps": {
+        "preparing": "Preparando",
+        "downloading": "Descargando",
+        "unpacking": "Descomprimiendo",
+        "configuring": "Configurando"
+      },
+      "stillInstalling": "Esta versión aún se está instalando.",
+      "stillRemoving": "Esta versión se está eliminando.",
+      "installFailedShort": "Esta versión no se instaló.",
+      "installingTitle": "Instalando Node.js {version}",
+      "installingBody": "Esto tarda unos minutos. La página se actualiza sola.",
+      "installingSince": "Empezó {when}. La página se actualiza sola.",
+      "removingTitle": "Eliminando Node.js {version}",
+      "removingBody": "Esto tarda unos minutos. La página se actualiza sola.",
+      "installFailedTitle": "Node.js {version} no se instaló",
+      "installFailedBody": "El servidor no dijo por qué. Prueba a instalarlo de nuevo.",
+      "removing": "Eliminando Node.js {version}…",
+      "removingSince": "Empezó {when}. La página se actualiza sola."
     },
     "install": {
       "action": "Instalar versión",

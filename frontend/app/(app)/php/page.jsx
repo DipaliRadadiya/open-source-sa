@@ -11,7 +11,10 @@ import { ExtensionsCard } from "@/components/php/extensions-card";
 import { IniEditor } from "@/components/php/ini-editor";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
-import { FileCode2, Loader2, TriangleAlert } from "lucide-react";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
+import { RuntimeStatusNotice } from "@/components/runtime/version-status";
+import { anyInFlight, RUNTIME_POLL_MS, RUNTIME_POLL_STOP_MS } from "@/lib/runtime/in-flight";
+import { FileCode2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -56,8 +59,18 @@ export default async function PhpPage({ searchParams }) {
     ? { data: null }
     : await getPhpExtensions(selected);
 
+  // An install or a purge takes minutes and finishes without telling anyone, so
+  // a page rendered once sits on "Installing" until you navigate away and back.
+  // That is what made a finished install look stuck. Polling only while
+  // something is actually running: a settled server asks for nothing.
+  const inFlight = anyInFlight(versions) || anyInFlight(extensions?.extensions ?? []);
+
   return (
     <div className="space-y-6">
+      {inFlight ? (
+        <AutoRefresh intervalMs={RUNTIME_POLL_MS} stopAfterMs={RUNTIME_POLL_STOP_MS} />
+      ) : null}
+
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
@@ -121,11 +134,15 @@ export default async function PhpPage({ searchParams }) {
                 version={selected}
                 canManage={canManage}
                 unavailableReason={
-                  installState
-                    ? installState === "installing"
-                      ? t("versions.stillInstalling")
-                      : t("versions.installFailedShort")
-                    : null
+                  // Removing had no branch here either, so a purge in progress
+                  // told you the install had failed.
+                  installState === "installing"
+                    ? t("versions.stillInstalling")
+                    : installState === "removing"
+                      ? t("versions.stillRemoving")
+                      : installState
+                        ? t("versions.installFailedShort")
+                        : null
                 }
               />
             </VersionSummary>
@@ -134,33 +151,10 @@ export default async function PhpPage({ searchParams }) {
           {/* Where the extensions card would be. Rendering nothing read as a
               broken page; the reason is a fact the version list already knows. */}
           {installState ? (
-            <EmptyState
-              icon={installState === "installing" ? Loader2 : TriangleAlert}
-              title={
-                installState === "installing"
-                  ? t("versions.installingTitle", { version: selected })
-                  : t("versions.installFailedTitle", { version: selected })
-              }
-              description={
-                installState === "installing"
-                  ? // "Started 17 minutes ago" is what tells you whether it is
-                    // progressing or wedged; "a few minutes" never does.
-                    current?.started_at_human
-                    ? t("versions.installingSince", { when: current.started_at_human })
-                    : t("versions.installingBody")
-                  : // The server's own explanation, when it has one. Ours is a
-                    // guess about a failure we did not witness. The reference
-                    // gets its own line — it is a string to copy, not prose.
-                    <>
-                      {current?.message || t("versions.installFailedBody")}
-                      {current?.reference ? (
-                        <span className="mt-1.5 block font-mono text-xs break-all">
-                          {current.reference}
-                        </span>
-                      ) : null}
-                    </>
-              }
-            />
+            // Shared with Node so the two pages cannot drift. This branch used
+            // to be `installing ? … : failed`, so a version being REMOVED
+            // announced "Install failed" — a failure that had not happened.
+            <RuntimeStatusNotice version={current} versionLabel={selected} namespace="php" />
           ) : extensions ? (
             <ExtensionsCard
               version={selected}

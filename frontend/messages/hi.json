@@ -1641,7 +1641,10 @@
       "installFailedTitle": "PHP {version} इंस्टॉल नहीं हुआ",
       "installFailedBody": "इस संस्करण के लिए कुछ भी इंस्टॉल नहीं हुआ, इसलिए इसमें एक्सटेंशन या php.ini नहीं हैं। इसे हटाकर दोबारा इंस्टॉल करें, या सर्वर लॉग देखें।",
       "installingSince": "{when} शुरू हुआ। पूरा होने पर एक्सटेंशन दिखेंगे।",
-      "moreCount": "+{count} और"
+      "moreCount": "+{count} और",
+      "removingTitle": "PHP {version} हटाया जा रहा है",
+      "removingBody": "इसमें कुछ मिनट लगते हैं। पेज अपने आप अपडेट होता है।",
+      "removingSince": "{when} शुरू हुआ। पेज अपने आप अपडेट होता है।"
     },
     "extensions": {
       "title": "एक्सटेंशन",
@@ -1664,7 +1667,10 @@
       "colStatus": "स्थिति",
       "driftWebOnly": "वेबसाइटों के लिए चालू, कमांड लाइन के लिए बंद",
       "driftCliOnly": "कमांड लाइन के लिए चालू, वेबसाइटों के लिए बंद",
-      "driftPartial": "सिर्फ़ कुछ उपयोगों के लिए चालू"
+      "driftPartial": "सिर्फ़ कुछ उपयोगों के लिए चालू",
+      "builtinTitle": "PHP में शामिल ({count})",
+      "builtinBody": "ये PHP में ही बनी हैं और हमेशा उपलब्ध रहती हैं। इनमें बदलने को कुछ नहीं है, और इनके बिना PHP चल नहीं सकता।",
+      "noMatchesBuiltin": "{name} PHP में ही शामिल है — यह हमेशा उपलब्ध रहती है। नीचे दी गई सूची देखें।"
     },
     "install": {
       "action": "वर्शन इंस्टॉल करें",
@@ -1772,7 +1778,28 @@
       "confirmRemoveTitle": "Node.js {version} हटाएँ?",
       "confirmRemoveBody": "इस वर्शन के लिए इंस्टॉल की गई हर चीज़ भी हट जाएगी। आप इसे बाद में फिर से इंस्टॉल कर सकते हैं।",
       "confirmCancel": "रद्द करें",
-      "moreCount": "+{count} और"
+      "moreCount": "+{count} और",
+      "statusFailed": "इंस्टॉल विफल",
+      "statusInstalling": "इंस्टॉल हो रहा है",
+      "statusRemoving": "हटाया जा रहा है",
+      "steps": {
+        "preparing": "तैयारी",
+        "downloading": "डाउनलोड",
+        "unpacking": "अनपैक",
+        "configuring": "कॉन्फ़िगर"
+      },
+      "stillInstalling": "यह वर्शन अभी इंस्टॉल हो रहा है।",
+      "stillRemoving": "यह वर्शन हटाया जा रहा है।",
+      "installFailedShort": "यह वर्शन इंस्टॉल नहीं हुआ।",
+      "installingTitle": "Node.js {version} इंस्टॉल हो रहा है",
+      "installingBody": "इसमें कुछ मिनट लगते हैं। पेज अपने आप अपडेट होता है।",
+      "installingSince": "{when} शुरू हुआ। पेज अपने आप अपडेट होता है।",
+      "removingTitle": "Node.js {version} हटाया जा रहा है",
+      "removingBody": "इसमें कुछ मिनट लगते हैं। पेज अपने आप अपडेट होता है।",
+      "installFailedTitle": "Node.js {version} इंस्टॉल नहीं हुआ",
+      "installFailedBody": "सर्वर ने कारण नहीं बताया। दोबारा इंस्टॉल करके देखें।",
+      "removing": "Node.js {version} हटाया जा रहा है…",
+      "removingSince": "{when} शुरू हुआ। पेज अपने आप अपडेट होता है।"
     },
     "install": {
       "action": "वर्शन इंस्टॉल करें",

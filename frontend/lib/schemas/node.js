@@ -16,8 +16,19 @@ export const nodeVersionSchema = z.object({
   // Read from THIS version's own npm. Null when it couldn't be read — show
   // nothing rather than the default version's number next to every row.
   npm_version: z.string().nullable().optional(),
-  // ready | installing | failed. Only ready versions can be selected by an application.
+  // ready | installing | removing | failed. Only ready versions can be selected
+  // by an application.
   status: z.string().nullable().optional(),
+  // Everything below was missing, so Zod stripped it before the card ever saw
+  // it: the screen could say "Installing" but never for how long, and "did not
+  // install" but never why. The PHP schema has carried these all along —
+  // an install that fails on Node looked identical to one that failed silently.
+  reason: z.string().nullable().optional(),
+  message: z.string().nullable().optional(),
+  reference: z.string().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  started_at_human: z.string().nullable().optional(),
+  current_step: z.string().nullable().optional(),
   // How many sites pin this version, and up to five by name — "3 sites" doesn't
   // tell you whether removing it breaks staging or the shop.
   in_use_by: z.number().nullable().optional(),
