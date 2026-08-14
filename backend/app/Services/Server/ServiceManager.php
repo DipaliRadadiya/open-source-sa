@@ -3,6 +3,7 @@
 namespace App\Services\Server;
 
 use App\Contracts\PhpStack;
+use App\Services\Server\Capabilities\ServerCapabilities;
 
 /**
  * Manages system services via systemctl. No DB — state is read live from
@@ -24,6 +25,7 @@ class ServiceManager
         private ConfigTester $tester,
         private LogManager $logs,
         private PhpStack $stack,
+        private ServerCapabilities $capabilities,
     ) {}
 
     /**
@@ -122,7 +124,28 @@ class ServiceManager
 
     public function isProtected(string $unit): bool
     {
-        return in_array($unit, config('server.protected_services', []), true);
+        return in_array($unit, $this->protectedUnits(), true);
+    }
+
+    /**
+     * The panel's web server is determined by the recorded installation stack
+     * (or brownfield capability detection), not by a static nginx assumption.
+     *
+     * @return array<int, string>
+     */
+    private function protectedUnits(): array
+    {
+        $units = (array) config('server.protected_services', []);
+        $webServer = $this->capabilities->webServer();
+
+        foreach ((array) config('server.services', []) as $service) {
+            if (($service['key'] ?? null) === $webServer) {
+                $units[] = $service['unit'];
+                break;
+            }
+        }
+
+        return array_values(array_unique($units));
     }
 
     /**

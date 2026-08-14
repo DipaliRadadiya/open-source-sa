@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ServerCapability;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
@@ -76,6 +77,44 @@ it('auto-detects installed php-fpm versions from php_dir', function () {
     expect($php)->not->toBeNull();
     expect($php['label'])->toBe('PHP 8.4 FPM');
     expect($php['protected'])->toBeTrue(); // php8.4-fpm is in the default protected set
+});
+
+it('protects Apache when it is the recorded web server', function () {
+    ServerCapability::create([
+        'stack' => 'lamp',
+        'web_server' => 'apache',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer',
+    ]);
+    fakeServices(['apache2' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/services')
+        ->assertOk()
+        ->assertJsonPath('services.0.protected', true)
+        ->assertJsonPath('services.0.actions', ['restart', 'reload', 'enable']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/apache', ['action' => 'stop'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('action');
+});
+
+it('protects OpenLiteSpeed when it is the recorded web server', function () {
+    ServerCapability::create([
+        'stack' => 'ols',
+        'web_server' => 'openlitespeed',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer',
+    ]);
+    fakeServices(['lshttpd' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/openlitespeed', ['action' => 'disable'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('action');
+
+    Process::assertNotRan(fn ($p) => $p->command === ['systemctl', 'disable', 'lshttpd']);
 });
 
 it('restarts a service via systemctl', function () {
