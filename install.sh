@@ -171,6 +171,18 @@ run() {
     fi
 }
 
+# Keep apt/network noise in the log, but make every long operation visible in
+# the terminal so a download is never mistaken for a stalled installer.
+run_progress() {
+    local label="$1"
+    shift
+    local started=$SECONDS
+
+    say "     → ${label}..."
+    run "$@"
+    ok "${label} ($((SECONDS - started))s)"
+}
+
 # ─── Arguments ───────────────────────────────────────────────────────────────
 
 for arg in "$@"; do
@@ -455,7 +467,7 @@ add_php_repository() {
         fi
 
         run install -d -m 0755 /etc/apt/keyrings
-        run curl -fsSL -o "$keyring" https://packages.sury.org/php/apt.gpg
+        run_progress "Downloading the PHP repository signing key" curl -fsSL -o "$keyring" https://packages.sury.org/php/apt.gpg
         run chmod 0644 "$keyring"
 
         # Written with signed-by rather than apt-key: apt-key is deprecated and
@@ -468,7 +480,7 @@ add_php_repository() {
                 "$keyring" "$OS_CODENAME" >"$list"
         fi
 
-        run apt-get update -qq
+        run_progress "Refreshing package lists from the PHP repository" apt-get update -qq
         ok "sury.org PHP repository added (${OS_CODENAME})"
         return
     fi
@@ -476,8 +488,8 @@ add_php_repository() {
     # A glob inside [[ -f ]] is not expanded, so it is matched with compgen —
     # the naive version silently always thought the repository was missing.
     if ! compgen -G "/etc/apt/sources.list.d/ondrej*php*" >/dev/null; then
-        run add-apt-repository -y ppa:ondrej/php
-        run apt-get update -qq
+        run_progress "Adding the ondrej/php repository" add-apt-repository -y ppa:ondrej/php
+        run_progress "Refreshing package lists from the PHP repository" apt-get update -qq
         ok "ondrej/php repository added"
     else
         skip "ondrej/php repository"
@@ -517,12 +529,12 @@ install_packages() {
 
     export DEBIAN_FRONTEND=noninteractive
 
-    run apt-get update -qq
+    run_progress "Refreshing system package lists" apt-get update -qq
     # update-notifier-common provides `apt-check`, which is how the panel counts
     # pending and security updates. Without it the Settings page cannot tell the
     # difference between "nothing waiting" and "could not look", so it reports
     # neither. Cheap, and it is the same source Ubuntu's own MOTD uses.
-    run apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common
+    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common
 
     add_php_repository
     assert_php_available
@@ -545,7 +557,7 @@ install_packages() {
         apache) web_pkgs=(apache2) ;;
     esac
 
-    run apt-get install -y "${web_pkgs[@]}" redis-server sqlite3 "${php_pkgs[@]}"
+    run_progress "Installing ${WEB_SERVER}, Redis, SQLite, and PHP ${PHP_VERSION}" apt-get install -y "${web_pkgs[@]}" redis-server sqlite3 "${php_pkgs[@]}"
     ok "${WEB_SERVER}, redis, sqlite, PHP ${PHP_VERSION}"
 
     if ! command -v composer >/dev/null 2>&1; then
