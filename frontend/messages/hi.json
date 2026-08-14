@@ -176,7 +176,6 @@
     "noSlashes": "यह फ़ील्ड एक नाम है, पथ नहीं — कोई / वर्ण नहीं",
     "required_target": "एक पथ दर्ज करें",
     "invalidPath": "एक मान्य पथ दर्ज करें",
-    "mustEndInZip": "लक्ष्य .zip पर समाप्त होना चाहिए",
     "invalidMode": "ठीक 3 ऑक्टल अंक दर्ज करें, जैसे 644",
     "required_bucket": "बकेट ज़रूरी है",
     "required_accessKey": "एक्सेस की ज़रूरी है",
@@ -201,7 +200,8 @@
     "basedirTraversal": "फ़ोल्डर में .. नहीं हो सकता",
     "gitRef": "केवल अक्षर, अंक, बिंदु, डैश और स्लैश का उपयोग करें",
     "max65535": "यह स्क्रिप्ट बहुत लंबी है",
-    "noTraversal": "फ़ोल्डर में .. नहीं हो सकता"
+    "noTraversal": "फ़ोल्डर में .. नहीं हो सकता",
+    "mustBeArchive": "नाम .zip या .tar.gz पर ख़त्म होना चाहिए"
   },
   "admin": {
     "switchToAdmin": "एडमिन पैनल",
@@ -3136,7 +3136,7 @@
       },
       "compressDialog": {
         "title": "\"{name}\" संपीड़ित करें",
-        "subtitle": "इसे एक नए .zip संग्रह में पैक करता है।",
+        "subtitle": "इसे इसके बगल में एक नए आर्काइव में पैक करता है।",
         "submit": "संपीड़ित करें",
         "done": "\"{name}\" संपीड़ित किया गया।",
         "failed": "यह आइटम संपीड़ित नहीं किया जा सका।"
@@ -3204,6 +3204,7 @@
         "move": "ले जाएँ",
         "copy": "कॉपी करें",
         "compress": "संपीड़ित करें",
+        "permissions": "अनुमतियाँ",
         "delete": "हटाएँ",
         "tooMany": "एक बार में अधिकतम {limit} चुनें। अभी {count} चुने गए हैं।",
         "oneFolderOnly": "एक ही आर्काइव में जाने के लिए सब कुछ एक ही फ़ोल्डर में होना चाहिए।",
@@ -3218,8 +3219,8 @@
         "copyHint": "साइट रूट से पथ, जैसे wp-content/keep",
         "copyDone": "{count, plural, one {# आइटम कॉपी हुआ।} other {# आइटम कॉपी हुए।}}",
         "compressTitle": "{count, plural, one {# आइटम} other {# आइटम}} संपीड़ित करें",
-        "compressDescription": "एक ज़िप फ़ाइल, नामों के साथ जैसे वे अभी हैं।",
-        "compressHint": ".zip से समाप्त होना चाहिए। चुना गया सब कुछ {folder} में है।",
+        "compressDescription": "एक ही आर्काइव, नाम जैसे अभी हैं वैसे ही।",
+        "compressHint": "चुना गया सब कुछ {folder} में है।",
         "compressDone": "{count, plural, one {# आइटम संपीड़ित हुआ।} other {# आइटम संपीड़ित हुए।}}",
         "permissionsTitle": "{count, plural, one {# आइटम} other {# आइटम}} की अनुमतियाँ",
         "permissionsDescription": "चुने गए सब पर वही मोड लागू होता है।",
@@ -3241,6 +3242,20 @@
       },
       "size": {
         "failed": "उस फ़ोल्डर को मापा नहीं जा सका।"
+      },
+      "archiveFormat": {
+        "legend": "आर्काइव फ़ॉर्मैट",
+        "mustBeArchive": "नाम .zip या .tar.gz पर ख़त्म होना चाहिए।",
+        "options": {
+          "zip": {
+            "label": ".zip",
+            "hint": "हर जगह खुलती है, Windows पर भी। Unix अनुमतियाँ सुरक्षित नहीं रखती।"
+          },
+          "targz": {
+            "label": ".tar.gz",
+            "hint": "अनुमतियाँ, मालिक और सिमलिंक सुरक्षित रखती है। कुछ बदलने से पहले की सुरक्षित कॉपी।"
+          }
+        }
       }
     },
     "workers": {

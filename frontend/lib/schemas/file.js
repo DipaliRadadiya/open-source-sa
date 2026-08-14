@@ -89,7 +89,10 @@ export const compressSchema = z.object({
     .trim()
     .min(1, "required_target")
     .regex(SAFE_PATH, "invalidPath")
-    .refine((v) => v.toLowerCase().endsWith(".zip"), "mustEndInZip"),
+    // zip and tar.gz both, because the API writes both — and tar is the one
+    // that keeps Unix modes, so it is the right pick for "copy this before I
+    // touch it". `.tgz` is accepted as the alias it is.
+    .refine((v) => /\.(zip|tar\.gz|tgz)$/i.test(v), "mustBeArchive"),
 });
 
 export const extractSchema = z.object({

@@ -55,6 +55,13 @@ export function TargetPathDialog({
   // dialog genuinely requires a non-empty target.
   allowEmpty = false,
   emptyPlaceholder,
+  // Rendered above the path field, and handed the field's own state — Compress
+  // uses it for the format choice, which has to rewrite the extension in the
+  // path rather than live beside it as a second source of truth.
+  renderExtra,
+  // Checked before the request goes out, so a wrong extension is an inline
+  // message under the field instead of a toast after a round trip.
+  validate,
 }) {
   const t = useTranslations("applications.files");
   const router = useRouter();
@@ -90,6 +97,11 @@ export function TargetPathDialog({
     e.preventDefault();
     const trimmed = value.trim();
     if ((!trimmed && !allowEmpty) || busy) return;
+    const invalid = validate?.(trimmed);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -125,6 +137,9 @@ export function TargetPathDialog({
           </DialogHeader>
 
           <div className="space-y-2 py-4">
+            {renderExtra ? (
+              <div className="pb-2">{renderExtra({ value, setValue, busy })}</div>
+            ) : null}
             <Label htmlFor="target-path">{t("targetDialog.pathLabel")}</Label>
             <Input
               id="target-path"

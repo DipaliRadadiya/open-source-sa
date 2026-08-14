@@ -609,7 +609,6 @@
     "noSlashes": "This field is a name, not a path — no / characters",
     "required_target": "Enter a path",
     "invalidPath": "Enter a valid path",
-    "mustEndInZip": "The target must end in .zip",
     "invalidMode": "Enter exactly 3 octal digits, e.g. 644",
     "required_bucket": "Bucket is required",
     "required_accessKey": "Access key is required",
@@ -634,7 +633,8 @@
     "basedirTraversal": "Folders cannot contain ..",
     "gitRef": "Use letters, numbers, dots, dashes and slashes only",
     "max65535": "That script is too long",
-    "noTraversal": "Folders cannot contain .."
+    "noTraversal": "Folders cannot contain ..",
+    "mustBeArchive": "The name has to end in .zip or .tar.gz"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3136,7 +3136,7 @@
       },
       "compressDialog": {
         "title": "Compress \"{name}\"",
-        "subtitle": "Packages this into a new .zip archive.",
+        "subtitle": "Packages this into a new archive next to it.",
         "submit": "Compress",
         "done": "\"{name}\" compressed.",
         "failed": "Couldn't compress this item."
@@ -3204,6 +3204,7 @@
         "move": "Move",
         "copy": "Copy",
         "compress": "Compress",
+        "permissions": "Permissions",
         "delete": "Delete",
         "tooMany": "Pick at most {limit} at a time. {count} are selected.",
         "oneFolderOnly": "Everything has to be in the same folder to go into one archive.",
@@ -3218,8 +3219,8 @@
         "copyHint": "Path from the site root, e.g. wp-content/keep",
         "copyDone": "{count, plural, one {# item copied.} other {# items copied.}}",
         "compressTitle": "Compress {count, plural, one {# item} other {# items}}",
-        "compressDescription": "One zip file, holding the names as they are now.",
-        "compressHint": "Must end in .zip. Everything selected is in {folder}.",
+        "compressDescription": "One archive, holding the names as they are now.",
+        "compressHint": "Everything selected is in {folder}.",
         "compressDone": "{count, plural, one {# item compressed.} other {# items compressed.}}",
         "permissionsTitle": "Permissions for {count, plural, one {# item} other {# items}}",
         "permissionsDescription": "The same mode is applied to everything selected.",
@@ -3241,6 +3242,20 @@
       },
       "size": {
         "failed": "That folder could not be measured."
+      },
+      "archiveFormat": {
+        "legend": "Archive format",
+        "mustBeArchive": "The name has to end in .zip or .tar.gz.",
+        "options": {
+          "zip": {
+            "label": ".zip",
+            "hint": "Opens anywhere, including on Windows. Does not keep Unix permissions."
+          },
+          "targz": {
+            "label": ".tar.gz",
+            "hint": "Keeps permissions, owners and symlinks. The safer copy before you change something."
+          }
+        }
       }
     },
     "workers": {

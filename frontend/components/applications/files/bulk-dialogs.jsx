@@ -28,6 +28,10 @@ import { Label } from "@/components/ui/label";
 import { PermissionModeField } from "@/components/applications/files/permission-mode-field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormModal } from "@/components/ui/form-modal";
+import {
+  ArchiveFormatField,
+  useArchiveFormat,
+} from "@/components/applications/files/archive-format-field";
 
 /**
  * The dialogs behind the selection bar. One component because all four share
@@ -44,6 +48,7 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
   );
   const [mode, setMode] = useState("644");
   const [error, setError] = useState(null);
+  const archiveFormat = useArchiveFormat();
 
   async function run(call) {
     if (busy) return;
@@ -133,6 +138,13 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
       asForm
       onSubmit={(event) => {
         event.preventDefault();
+        if (action === "compress") {
+          const invalid = archiveFormat.validate(target.trim());
+          if (invalid) {
+            setError(invalid);
+            return;
+          }
+        }
         run(isPermissions ? () => setFilesPermissions(appId, paths, mode) : meta.submit);
       }}
       icon={meta.icon}
@@ -166,6 +178,11 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
         <PermissionModeField mode={mode} onChange={setMode} invalid={Boolean(error)} />
       ) : (
         <div className="space-y-2">
+          {action === "compress" ? (
+            <div className="pb-2">
+              <ArchiveFormatField {...archiveFormat} value={target} setValue={setTarget} busy={busy} />
+            </div>
+          ) : null}
           <Label htmlFor="bulk-target">{meta.label}</Label>
           <Input
             id="bulk-target"

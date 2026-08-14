@@ -176,7 +176,6 @@
     "noSlashes": "Este campo es un nombre, no una ruta — sin caracteres /",
     "required_target": "Introduce una ruta",
     "invalidPath": "Introduce una ruta válida",
-    "mustEndInZip": "El destino debe terminar en .zip",
     "invalidMode": "Introduce exactamente 3 dígitos octales, p. ej. 644",
     "required_bucket": "El bucket es obligatorio",
     "required_accessKey": "La clave de acceso es obligatoria",
@@ -201,7 +200,8 @@
     "basedirTraversal": "Las carpetas no pueden contener ..",
     "gitRef": "Usa solo letras, números, puntos, guiones y barras",
     "max65535": "Ese script es demasiado largo",
-    "noTraversal": "Las carpetas no pueden contener .."
+    "noTraversal": "Las carpetas no pueden contener ..",
+    "mustBeArchive": "El nombre debe terminar en .zip o .tar.gz"
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -3136,7 +3136,7 @@
       },
       "compressDialog": {
         "title": "Comprimir «{name}»",
-        "subtitle": "Lo empaqueta en un nuevo archivo .zip.",
+        "subtitle": "Lo empaqueta en un nuevo archivo comprimido junto a él.",
         "submit": "Comprimir",
         "done": "«{name}» comprimido.",
         "failed": "No se pudo comprimir este elemento."
@@ -3204,6 +3204,7 @@
         "move": "Mover",
         "copy": "Copiar",
         "compress": "Comprimir",
+        "permissions": "Permisos",
         "delete": "Eliminar",
         "tooMany": "Elige como máximo {limit} a la vez. Hay {count} seleccionados.",
         "oneFolderOnly": "Todo tiene que estar en la misma carpeta para ir en un archivo.",
@@ -3218,8 +3219,8 @@
         "copyHint": "Ruta desde la raíz del sitio, p. ej. wp-content/keep",
         "copyDone": "{count, plural, one {# elemento copiado.} other {# elementos copiados.}}",
         "compressTitle": "Comprimir {count, plural, one {# elemento} other {# elementos}}",
-        "compressDescription": "Un solo archivo zip, con los nombres tal como están ahora.",
-        "compressHint": "Debe terminar en .zip. Todo lo seleccionado está en {folder}.",
+        "compressDescription": "Un solo archivo comprimido, con los nombres tal como están ahora.",
+        "compressHint": "Todo lo seleccionado está en {folder}.",
         "compressDone": "{count, plural, one {# elemento comprimido.} other {# elementos comprimidos.}}",
         "permissionsTitle": "Permisos de {count, plural, one {# elemento} other {# elementos}}",
         "permissionsDescription": "Se aplica el mismo modo a todo lo seleccionado.",
@@ -3241,6 +3242,20 @@
       },
       "size": {
         "failed": "No se pudo medir esa carpeta."
+      },
+      "archiveFormat": {
+        "legend": "Formato del archivo comprimido",
+        "mustBeArchive": "El nombre debe terminar en .zip o .tar.gz.",
+        "options": {
+          "zip": {
+            "label": ".zip",
+            "hint": "Se abre en cualquier sitio, también en Windows. No conserva los permisos de Unix."
+          },
+          "targz": {
+            "label": ".tar.gz",
+            "hint": "Conserva permisos, propietarios y enlaces simbólicos. La copia más segura antes de cambiar algo."
+          }
+        }
       }
     },
     "workers": {
