@@ -23,7 +23,11 @@
 #     ondrej repository or the panel can only ever offer the one version Ubuntu
 #     ships.
 #
-set -euo pipefail
+# -E (errtrace) is load-bearing: the ERR trap below reports the ~200 commands
+# that do not go through run(). Without errtrace that trap is NOT inherited by
+# shell functions/subshells — and since every step runs inside a function, a
+# failure there would abort silently (set -e stops, trap never fires). Keep -E.
+set -Eeuo pipefail
 
 # Runtime trees must be readable by nginx and executable by the panel account.
 # Secret files (installer log, .env rewrite, auth files) set restrictive modes
