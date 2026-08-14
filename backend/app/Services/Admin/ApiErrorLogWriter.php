@@ -20,7 +20,7 @@ class ApiErrorLogWriter
         }
 
         try {
-            Log::channel('api-errors')->error('api.error', [
+            Log::channel('server-ops')->error('api.error', [
                 'reference' => (string) Str::uuid(),
                 'status' => $this->status($exception),
                 'method' => $request->method(),

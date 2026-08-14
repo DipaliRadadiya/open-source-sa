@@ -14,6 +14,9 @@ class ListApiErrorLogRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['lines' => ['sometimes', 'integer', 'min:1', 'max:'.ApiErrorLogReader::MAX_LINES]];
+        return [
+            'lines' => ['sometimes', 'integer', 'min:1', 'max:'.ApiErrorLogReader::MAX_LINES],
+            'reference' => ['sometimes', 'uuid'],
+        ];
     }
 }

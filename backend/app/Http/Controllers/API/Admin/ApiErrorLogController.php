@@ -12,7 +12,10 @@ class ApiErrorLogController extends Controller
 {
     public function index(ListApiErrorLogRequest $request, ApiErrorLogReader $logs): JsonResponse
     {
-        $result = $logs->latest((int) $request->validated('lines', ApiErrorLogReader::DEFAULT_LINES));
+        $result = $logs->latest(
+            (int) $request->validated('lines', ApiErrorLogReader::DEFAULT_LINES),
+            $request->validated('reference'),
+        );
 
         return response()->json([
             'error_logs' => ApiErrorLogResource::collection($result['entries'])->resolve(),

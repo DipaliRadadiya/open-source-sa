@@ -85,13 +85,6 @@ return [
             'days' => (int) env('LOG_SERVER_OPS_DAYS', 30),
             'level' => 'debug',
             'replace_placeholders' => true,
-        ],
-
-        'api-errors' => [
-            'driver' => 'daily',
-            'path' => env('LOG_API_ERRORS_PATH', storage_path('logs/api-errors.log')),
-            'days' => (int) env('LOG_API_ERRORS_DAYS', 30),
-            'level' => 'error',
             'tap' => [App\Logging\JsonLineFormatter::class],
         ],
 
