@@ -117,6 +117,25 @@ it('protects OpenLiteSpeed when it is the recorded web server', function () {
     Process::assertNotRan(fn ($p) => $p->command === ['systemctl', 'disable', 'lshttpd']);
 });
 
+it('protects Redis because the panel depends on it', function () {
+    fakeServices(['redis-server' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/services')
+        ->assertOk();
+
+    $redis = collect($response->json('services'))->firstWhere('key', 'redis');
+    expect($redis['protected'])->toBeTrue()
+        ->and($redis['actions'])->toBe(['restart', 'reload', 'enable']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/redis', ['action' => 'stop'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('action');
+
+    Process::assertNotRan(fn ($p) => $p->command === ['systemctl', 'stop', 'redis-server']);
+});
+
 it('restarts a service via systemctl', function () {
     fakeServices(['mariadb' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
 

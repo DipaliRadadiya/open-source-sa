@@ -135,7 +135,9 @@ class ServiceManager
      */
     private function protectedUnits(): array
     {
-        $units = (array) config('server.protected_services', []);
+        // Redis backs the panel's queues and cache. It may be optional for a
+        // user app, but it is not optional for the panel itself.
+        $units = [...(array) config('server.protected_services', []), 'redis-server'];
         $webServer = $this->capabilities->webServer();
 
         foreach ((array) config('server.services', []) as $service) {
