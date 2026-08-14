@@ -50,6 +50,7 @@ export function RegisterForm() {
   return (
     <Form {...form}>
       <form
+        method="post"
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="grid gap-4"
       >

@@ -60,6 +60,7 @@ export function ChangePasswordForm() {
   return (
     <Form {...form}>
       <form
+        method="post"
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="max-w-3xl space-y-6"
       >

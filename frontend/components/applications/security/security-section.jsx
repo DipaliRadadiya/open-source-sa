@@ -100,7 +100,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())} className="max-w-4xl">
+      <form method="post" onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())} className="max-w-4xl">
         <Card className="gap-0 overflow-hidden py-0 shadow-sm">
           <CardContent className="space-y-5 p-5">
             {/* The toggle IS the feature — it gets a full-width tinted row of

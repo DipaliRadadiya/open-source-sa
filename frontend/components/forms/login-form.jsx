@@ -44,6 +44,9 @@ export function LoginForm() {
   return (
     <Form {...form}>
       <form
+        // Unhydrated, a form with no method falls back to GET and puts the
+        // password in the URL. React intercepts this before it ever submits.
+        method="post"
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="grid gap-4"
       >
