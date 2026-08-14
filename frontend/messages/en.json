@@ -25,7 +25,11 @@
     "soon": "Soon",
     "required": "Required",
     "breadcrumbServer": "Server",
-    "breadcrumbApplications": "Applications"
+    "breadcrumbApplications": "Applications",
+    "unsavedTitle": "Leave without saving?",
+    "unsavedDescription": "Your changes on this page have not been saved. They will be lost.",
+    "unsavedStay": "Stay on this page",
+    "unsavedLeave": "Leave and lose changes"
   },
   "systemUsers": {
     "title": "System Users",
@@ -195,7 +199,8 @@
       "roles": "Roles",
       "activityLog": "Activity Log",
       "panelUpdate": "Panel Update",
-      "doctor": "System Health"
+      "doctor": "System Health",
+      "errorLogs": "Error Log"
     },
     "dashboardTitle": "Admin Dashboard",
     "dashboardSubtitle": "Overview of users, roles, and activity.",
@@ -1007,7 +1012,7 @@
       "reload": "Reload",
       "enable": "Enable",
       "disable": "Disable",
-      "more": "More actions"
+      "more": "Actions"
     },
     "confirm": {
       "cancel": "Cancel",
@@ -2779,7 +2784,7 @@
       "moreLines": "{count, plural, one {+# more line} other {+# more lines}}"
     },
     "actions": {
-      "label": "Application actions",
+      "label": "Actions",
       "open": "Open dashboard",
       "visit": "Visit site",
       "visitHint": "The site is served once provisioning finishes.",
@@ -4318,7 +4323,7 @@
         "filesystem": "Files only",
         "database": "Database only"
       },
-      "moreActions": "More actions",
+      "moreActions": "Actions",
       "placeholders": {
         "type": "Not configured",
         "schedule": "Not scheduled",

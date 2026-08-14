@@ -4,7 +4,6 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getSettings } from "@/lib/settings/get-settings";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
-import { UnsavedProvider } from "@/components/settings/unsaved-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -45,12 +44,10 @@ export default async function SettingsLayout({ children }) {
           move between sections. */}
       {/* The tabs need to know whether the section below them has unsaved
           edits, and only a shared provider can carry that across the boundary. */}
-      <UnsavedProvider>
-        <div className="max-w-[48rem] space-y-6">
+      <div className="max-w-[48rem] space-y-6">
           <SettingsTabs badges={badges} />
           {children}
         </div>
-      </UnsavedProvider>
     </div>
   );
 }

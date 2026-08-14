@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -277,6 +278,10 @@ export function BotBlockerSection({
   // Nothing blocked is not a protected state — it is the default for every new
   // site, so it must not be dressed in the same green as one that blocks.
   const isProtected = savedEffective.length > 0;
+  // A sidebar click is a client-side route change; without this the edit
+  // vanishes with no warning. See components/ui/unsaved-guard.jsx.
+  useWatchUnsaved("app-bot-blocker", isDirty);
+
   const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
 
   // One list at a time: a bot named in both would be resolved by the backend in

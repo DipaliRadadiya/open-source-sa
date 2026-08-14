@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +52,9 @@ export function DeploySettingsCard({ applicationId, settings, canManage }) {
       deploy_script: settings.deploy_script ?? "",
     },
   });
+
+  // Without this a sidebar click throws the edit away silently.
+  useWatchUnsaved("app-deploy-settings", form.formState.isDirty);
 
   const script = useWatch({ control: form.control, name: "deploy_script" });
   const isDefault = script === (settings.default_deploy_script ?? "");

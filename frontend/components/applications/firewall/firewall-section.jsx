@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -85,6 +86,10 @@ export function FirewallSection({ appId, application, categories: catalog, modes
     !sameList(active, saved.categories) ||
     !sameList(exceptions, saved.exceptions) ||
     !sameList(blocks, saved.blocks);
+
+  // A sidebar click is a client-side route change; without this the edit
+  // vanishes with no warning. See components/ui/unsaved-guard.jsx.
+  useWatchUnsaved("app-firewall", isDirty);
 
   const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
   const blocking = enabled && mode === "enforce";

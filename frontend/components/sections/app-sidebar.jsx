@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useParams } from "next/navigation";
+import { usePathname, useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   groupBySubLevel,
@@ -13,6 +15,8 @@ import {
 } from "@/lib/navigation";
 import { useApplicationNav } from "@/components/sections/application-nav";
 import { Logo } from "@/components/logo";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { NavIcon } from "@/components/nav-icon";
 import {
   Sidebar,
@@ -27,11 +31,32 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-/** Closes the mobile sidebar sheet after a nav link click. */
+/**
+ * Closes the mobile sidebar sheet after a nav link click — and stops the click
+ * when the page behind it has edits nobody saved.
+ *
+ * Every nav item funnels through here, which is the only reason this is one
+ * change rather than one per screen. `beforeunload` covers reload and close,
+ * but a sidebar click is a client-side route change the browser never hears
+ * about: flipping a switch on 8G Firewall and clicking "Files" threw the edit
+ * away with no warning at all.
+ */
 function MobileNavLink({ item, built, active, children }) {
   const { isMobile, setOpenMobile } = useSidebar()
   const t = useTranslations("common")
-  const handleClick = () => { if (isMobile) setOpenMobile(false) }
+  const router = useRouter()
+  const { hasUnsaved } = useUnsaved()
+  const [leavingTo, setLeavingTo] = useState(null)
+  const handleClick = (event) => {
+    // `asChild` merges this onto the anchor itself, so preventDefault is enough
+    // to stop Next from navigating.
+    if (hasUnsaved && !active && item.href) {
+      event.preventDefault()
+      setLeavingTo(item.href)
+      return
+    }
+    if (isMobile) setOpenMobile(false)
+  }
   if (!built) {
     return (
       <SidebarMenuButton
@@ -50,15 +75,34 @@ function MobileNavLink({ item, built, active, children }) {
     )
   }
   return (
-    <SidebarMenuButton
-      asChild
-      isActive={active}
-      tooltip={item.title}
-      className={NAV_ITEM_CLASS}
-      onClick={handleClick}
-    >
-      {children}
-    </SidebarMenuButton>
+    <>
+      <SidebarMenuButton
+        asChild
+        isActive={active}
+        tooltip={item.title}
+        className={NAV_ITEM_CLASS}
+        onClick={handleClick}
+      >
+        {children}
+      </SidebarMenuButton>
+
+      <ConfirmDialog
+        open={leavingTo !== null}
+        onOpenChange={(open) => !open && setLeavingTo(null)}
+        icon={TriangleAlert}
+        tone="warning"
+        title={t("unsavedTitle")}
+        description={t("unsavedDescription")}
+        cancelLabel={t("unsavedStay")}
+        confirmLabel={t("unsavedLeave")}
+        onConfirm={() => {
+          const href = leavingTo
+          setLeavingTo(null)
+          if (isMobile) setOpenMobile(false)
+          router.push(href)
+        }}
+      />
+    </>
   )
 }
 

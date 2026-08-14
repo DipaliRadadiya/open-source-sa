@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useUnsaved } from "@/components/settings/unsaved-guard";
+import { useUnsaved } from "@/components/ui/unsaved-guard";
 
 const SECTIONS = [
   { key: "server", href: "/settings/server", icon: Server },

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState } from "react";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -364,6 +365,9 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
     mode: "onBlur",
     defaultValues: defaults,
   });
+
+  // Without this a sidebar click throws the edit away silently.
+  useWatchUnsaved("app-php-settings", form.formState.isDirty);
 
   const version = useWatch({ control: form.control, name: "php_version" });
   const memoryLimit = useWatch({ control: form.control, name: "memory_limit" });

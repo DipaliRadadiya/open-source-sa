@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useWatchUnsaved } from "@/components/settings/unsaved-guard";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 
 /**
  * One settings row: name and helper text on the left, the control on the right.

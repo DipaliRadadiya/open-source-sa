@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -96,6 +97,10 @@ export function SecuritySection({ appId, application, domain, canManage }) {
 
   const submitting = form.formState.isSubmitting;
   const isDirty = form.formState.isDirty;
+  // A sidebar click is a client-side route change; without this the edit
+  // vanishes with no warning. See components/ui/unsaved-guard.jsx.
+  useWatchUnsaved("app-security", isDirty);
+
   const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
 
   return (

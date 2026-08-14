@@ -101,12 +101,14 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
             name="timezone"
             render={({ field }) => (
               <Row label={t("timezone")} hint={t("timezoneHint")}>
-                <TimezoneField
-                  value={field.value}
-                  onChange={field.onChange}
-                  disabled={!canManage}
-                  groups={timezones}
-                />
+                <FormControl>
+                  <TimezoneField
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={!canManage}
+                    groups={timezones}
+                  />
+                </FormControl>
               </Row>
             )}
           />

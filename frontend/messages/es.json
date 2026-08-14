@@ -25,7 +25,11 @@
     "soon": "Pronto",
     "required": "Obligatorio",
     "breadcrumbServer": "Servidor",
-    "breadcrumbApplications": "Aplicaciones"
+    "breadcrumbApplications": "Aplicaciones",
+    "unsavedTitle": "¿Salir sin guardar?",
+    "unsavedDescription": "Los cambios de esta página no se han guardado. Se perderán.",
+    "unsavedStay": "Quedarme en esta página",
+    "unsavedLeave": "Salir y perder los cambios"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",
@@ -213,7 +217,8 @@
       "roles": "Roles",
       "activityLog": "Registro de actividad",
       "panelUpdate": "Actualización del panel",
-      "doctor": "Estado del sistema"
+      "doctor": "Estado del sistema",
+      "errorLogs": "Registro de errores"
     },
     "dashboardTitle": "Panel de administración",
     "dashboardSubtitle": "Resumen de usuarios, roles y actividad.",
@@ -1007,7 +1012,7 @@
       "reload": "Recargar",
       "enable": "Activar",
       "disable": "Desactivar",
-      "more": "Más acciones"
+      "more": "Acciones"
     },
     "confirm": {
       "cancel": "Cancelar",
@@ -2779,7 +2784,7 @@
       "moreLines": "{count, plural, one {+# línea más} other {+# líneas más}}"
     },
     "actions": {
-      "label": "Acciones de la aplicación",
+      "label": "Acciones",
       "open": "Abrir panel",
       "visit": "Visitar sitio",
       "visitHint": "El sitio se sirve cuando termina el aprovisionamiento.",
@@ -4318,7 +4323,7 @@
         "filesystem": "Solo archivos",
         "database": "Solo base de datos"
       },
-      "moreActions": "Más acciones",
+      "moreActions": "Acciones",
       "placeholders": {
         "type": "Sin configurar",
         "schedule": "Sin programación",

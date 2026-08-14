@@ -25,7 +25,11 @@
     "soon": "जल्द",
     "required": "आवश्यक",
     "breadcrumbServer": "सर्वर",
-    "breadcrumbApplications": "ऐप्लिकेशन"
+    "breadcrumbApplications": "ऐप्लिकेशन",
+    "unsavedTitle": "बिना सहेजे बाहर जाएँ?",
+    "unsavedDescription": "इस पेज पर किए बदलाव सहेजे नहीं गए हैं। वे चले जाएँगे।",
+    "unsavedStay": "इसी पेज पर रहें",
+    "unsavedLeave": "बाहर जाएँ और बदलाव खोएँ"
   },
   "auth": {
     "loginTitle": "साइन इन करें",
@@ -213,7 +217,8 @@
       "roles": "भूमिकाएं",
       "activityLog": "गतिविधि लॉग",
       "panelUpdate": "पैनल अपडेट",
-      "doctor": "सिस्टम स्वास्थ्य"
+      "doctor": "सिस्टम स्वास्थ्य",
+      "errorLogs": "त्रुटि लॉग"
     },
     "dashboardTitle": "एडमिन डैशबोर्ड",
     "dashboardSubtitle": "उपयोगकर्ताओं, भूमिकाओं और गतिविधि का अवलोकन।",
@@ -1007,7 +1012,7 @@
       "reload": "फिर से लोड करें",
       "enable": "सक्षम करें",
       "disable": "निष्क्रिय करें",
-      "more": "और कार्रवाइयाँ"
+      "more": "क्रियाएं"
     },
     "confirm": {
       "cancel": "रद्द करें",
@@ -2779,7 +2784,7 @@
       "moreLines": "{count, plural, one {+# और पंक्ति} other {+# और पंक्तियाँ}}"
     },
     "actions": {
-      "label": "एप्लिकेशन क्रियाएँ",
+      "label": "क्रियाएं",
       "open": "डैशबोर्ड खोलें",
       "visit": "साइट देखें",
       "visitHint": "प्रोविज़निंग पूरी होने पर साइट सर्व होने लगती है।",
@@ -4318,7 +4323,7 @@
         "filesystem": "केवल फ़ाइलें",
         "database": "केवल डेटाबेस"
       },
-      "moreActions": "और क्रियाएँ",
+      "moreActions": "क्रियाएं",
       "placeholders": {
         "type": "कॉन्फ़िगर नहीं",
         "schedule": "कोई शेड्यूल नहीं",

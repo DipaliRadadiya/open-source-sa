@@ -17,6 +17,7 @@ import { PageCrumbProvider } from "@/components/sections/page-crumb";
 import { RateLimited } from "@/components/sections/rate-limited";
 import { isRateLimited } from "@/lib/api/rate-limited";
 import { ApplicationNavProvider } from "@/components/sections/application-nav";
+import { UnsavedProvider } from "@/components/ui/unsaved-guard";
 import { AppChromeHeight } from "@/components/sections/app-chrome-height";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +56,9 @@ export default async function AppLayout({ children }) {
   return (
     <AuthProvider user={user}>
       <TooltipProvider delayDuration={0}>
+        {/* Panel-wide, not settings-only. Any screen with its own Save can
+            lose an edit to a sidebar click, and every one of them did. */}
+        <UnsavedProvider>
         <PageCrumbProvider>
           <ApplicationNavProvider>
             <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
@@ -108,6 +112,7 @@ export default async function AppLayout({ children }) {
             </SidebarProvider>
           </ApplicationNavProvider>
         </PageCrumbProvider>
+        </UnsavedProvider>
       </TooltipProvider>
     </AuthProvider>
   );

@@ -19,7 +19,7 @@ import {
  * "Calcutta" and has no `Etc/UTC` at all — so this server's own setting
  * rendered as an empty dropdown.
  */
-export function TimezoneField({ value, onChange, disabled, groups = [] }) {
+export function TimezoneField({ value, onChange, disabled, groups = [], id }) {
   const t = useTranslations("settings.server");
   const format = useFormatter();
 
@@ -43,7 +43,11 @@ export function TimezoneField({ value, onChange, disabled, groups = [] }) {
   return (
     <div className="space-y-1.5">
       <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger className="w-full max-w-xs">
+        {/* The Row renders a <label for> pointing at the FormItem id, and this
+            is the one control that never received it — so a screen reader
+            announced the timezone picker as its own value ("UTC (+00:00),
+            combobox") and never said what it was for. */}
+        <SelectTrigger id={id} className="w-full max-w-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="max-h-72">
