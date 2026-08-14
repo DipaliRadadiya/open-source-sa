@@ -56,6 +56,11 @@ FNM_DIR="/opt/fnm"
 FNM_BIN="/usr/local/bin/fnm"
 LOG_FILE="/var/log/${PANEL_SLUG}-install.log"
 
+# How long to wait for another package manager before giving up. A fresh cloud
+# server runs unattended-upgrades on first boot, so an installer that refuses to
+# wait fails on exactly the machines it is meant for.
+APT_LOCK_WAIT=900
+
 OS_VERSION_ID=""   # 22.04 | 24.04 | 26.04 — set by preflight
 OS_CODENAME=""     # jammy | noble | resolute — set by preflight
 
@@ -524,10 +529,114 @@ assert_php_available() {
     ok "PHP ${PHP_VERSION} available (${candidate})"
 }
 
+# ─── apt locks ───────────────────────────────────────────────────────────────
+#
+# Ubuntu allows one package operation at a time, arbitrated by locks on
+# /var/lib/dpkg/lock-frontend, /var/lib/apt/lists/lock and
+# /var/cache/apt/archives/lock. A server that booted minutes ago is usually
+# still running unattended-upgrades, and apt's default behaviour on a held lock
+# is to print "Could not get lock" and exit — which killed the install.
+#
+# Two layers, because either alone is wrong:
+#
+#   configure_apt_lock_wait  makes apt itself block for the lock instead of
+#                            erroring. This is the part that is actually
+#                            correct: the lock is taken atomically, so nothing
+#                            can slip in between a check and our command. It is
+#                            a config drop-in rather than a flag on each call
+#                            because apt is also invoked by things we do not
+#                            control — add-apt-repository, certbot, and later
+#                            the panel itself.
+#
+#   wait_for_apt_lock        explains the delay. Without it apt blocks silently
+#                            and a ten-minute wait is indistinguishable from a
+#                            hung installer.
+#
+# Never: kill the holder, delete a lock file, or run `dpkg --configure -a`
+# blindly. Each of those can leave the package database permanently broken —
+# far worse than the wait they save.
+configure_apt_lock_wait() {
+    local conf="/etc/apt/apt.conf.d/99${PANEL_SLUG}-lock-wait"
+
+    if (( DRY_RUN )); then
+        printf '     %s$ write %s%s\n' "$DIM" "$conf" "$RESET"
+        return 0
+    fi
+
+    printf 'DPkg::Lock::Timeout "%s";\n' "$APT_LOCK_WAIT" >"$conf"
+    chmod 0644 "$conf"
+}
+
+# Asks apt whether the lock is free, by having apt try to take it and refuse to
+# wait. This is deliberately not a process check: unattended-upgrades leaves a
+# long-lived helper process running on an idle server, so "is something named
+# apt alive" reports busy on a machine where the lock is free — a false wait
+# followed by a false failure, which is worse than the problem being fixed.
+#
+# `apt-get check` is read-only and takes the same locks a real operation does.
+# It can also fail for reasons that are not locks — broken dependencies, most
+# often — so only the two messages apt emits for a *contended* lock count as
+# held. Matching "unable to acquire the dpkg frontend lock" more loosely would
+# be wrong: apt says that to a non-root caller too, where the lock is free and
+# the problem is permission. LC_ALL=C keeps the message in English on a
+# localised server.
+apt_lock_is_held() {
+    local output
+
+    output=$(LC_ALL=C apt-get -o DPkg::Lock::Timeout=0 check 2>&1) && return 1
+
+    grep -qiE 'it is held by process|temporarily unavailable' <<<"$output"
+}
+
+# Best-effort, for the message only — it is never what decides to wait.
+apt_lock_holder() {
+    local pid name
+
+    for pid in $(pgrep -x 'apt|apt-get|dpkg|unattended-upgr' 2>/dev/null); do
+        [[ "$pid" == "$$" ]] && continue
+        name=$(tr '\0' ' ' <"/proc/${pid}/cmdline" 2>/dev/null | cut -c1-60)
+        printf '%s, PID %s' "${name:-package manager}" "$pid"
+        return 0
+    done
+
+    printf 'another package manager'
+}
+
+wait_for_apt_lock() {
+    local holder waited=0
+
+    (( DRY_RUN )) && return 0
+    apt_lock_is_held || return 0
+    holder=$(apt_lock_holder)
+
+    say "     → Another package manager is running (${holder})."
+    say "       Waiting up to $((APT_LOCK_WAIT / 60)) minutes for it to finish..."
+
+    while apt_lock_is_held; do
+        if (( waited >= APT_LOCK_WAIT )); then
+            printf '\n' >&2
+            die "another package manager is still running after $((waited / 60)) minutes:
+       ${holder}
+     It was left alone deliberately — killing it can corrupt this server's
+     package database. Wait for it to finish, then run this installer again."
+        fi
+
+        sleep 5
+        waited=$((waited + 5))
+        printf '\r       waiting... %ss' "$waited"
+    done
+
+    (( waited > 0 )) && printf '\r%s\r' "                                        "
+    ok "the other package manager finished (${waited}s)"
+}
+
 install_packages() {
     step "Installing packages"
 
     export DEBIAN_FRONTEND=noninteractive
+
+    configure_apt_lock_wait
+    wait_for_apt_lock
 
     run_progress "Refreshing system package lists" apt-get update -qq
     # update-notifier-common provides `apt-check`, which is how the panel counts
