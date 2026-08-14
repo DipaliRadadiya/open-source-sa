@@ -4126,7 +4126,19 @@
     "unknownRoute": "Unknown route",
     "unknownTime": "time unknown",
     "signedOut": "Not signed in",
-    "userId": "User #{id}"
+    "userId": "User #{id}",
+    "operationTitle": "Server operation: {operation}",
+    "unknownOperation": "unnamed operation",
+    "unknownFeature": "unknown feature",
+    "exitCode": "Exit {code}",
+    "reference": "Reference {reference}",
+    "referenceLabel": "Look up a reference",
+    "referencePlaceholder": "Paste a reference",
+    "referenceSubmit": "Look up",
+    "referenceClear": "Clear the reference",
+    "referenceInvalid": "That doesn't look like a reference. Copy the whole thing from the error message.",
+    "referenceNotFoundTitle": "No failure with that reference",
+    "referenceNotFoundDescription": "Nothing in the log matches it. Check the reference was copied in full, or that it came from this server."
   },
   "setup": {
     "title": "Set up your server",

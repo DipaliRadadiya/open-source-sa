@@ -4126,7 +4126,19 @@
     "unknownRoute": "Ruta desconocida",
     "unknownTime": "hora desconocida",
     "signedOut": "Sin iniciar sesión",
-    "userId": "Usuario n.º {id}"
+    "userId": "Usuario n.º {id}",
+    "operationTitle": "Operación del servidor: {operation}",
+    "unknownOperation": "operación sin nombre",
+    "unknownFeature": "función desconocida",
+    "exitCode": "Salida {code}",
+    "reference": "Referencia {reference}",
+    "referenceLabel": "Buscar una referencia",
+    "referencePlaceholder": "Pega una referencia",
+    "referenceSubmit": "Buscar",
+    "referenceClear": "Borrar la referencia",
+    "referenceInvalid": "Eso no parece una referencia. Copia el texto completo del mensaje de error.",
+    "referenceNotFoundTitle": "No hay ningún fallo con esa referencia",
+    "referenceNotFoundDescription": "Nada en el registro coincide. Comprueba que copiaste la referencia entera y que viene de este servidor."
   },
   "setup": {
     "title": "Configura tu servidor",

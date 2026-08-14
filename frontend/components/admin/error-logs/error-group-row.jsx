@@ -31,6 +31,7 @@ function statusMeta(status) {
 export function ErrorGroupRow({ group, now }) {
   const t = useTranslations("errorLogs");
   const format = useFormatter();
+  const isOperation = group.kind === "operation";
   const meta = statusMeta(group.status);
   const { Icon } = meta;
 
@@ -53,11 +54,22 @@ export function ErrorGroupRow({ group, now }) {
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium leading-tight">
-              {group.exceptionShort ?? t("unknownException")}
+              {isOperation
+                ? t("operationTitle", { operation: group.operation ?? t("unknownOperation") })
+                : group.exceptionShort ?? t("unknownException")}
             </p>
             {group.status ? (
               <Badge variant={meta.pill} className="font-normal">
                 {group.status}
+              </Badge>
+            ) : null}
+            {/* An exit code is the operation's equivalent of a status: it is
+                what distinguishes "apt could not get the lock" from "the
+                package does not exist", and both otherwise render as the same
+                sentence. */}
+            {isOperation && group.exitCode != null ? (
+              <Badge variant={meta.pill} className="font-normal tabular-nums">
+                {t("exitCode", { code: group.exitCode })}
               </Badge>
             ) : null}
             {/* The count is the reason this screen groups at all — one fault hit
@@ -69,13 +81,26 @@ export function ErrorGroupRow({ group, now }) {
             ) : null}
           </div>
 
-          {/* Where it happened. The route is a pattern, not a URL — mono so it
-              reads as the literal string the backend matched. */}
+          {/* Where it happened. For an API failure that is a route pattern; for
+              an operation it is the feature that ran the command. Both are the
+              backend's own identifiers, so both are mono and neither is
+              translated — `feature`/`op` are free-form strings with hundreds of
+              combinations, and a lookup table for them would be wrong the day
+              a new one is added. */}
           <p className="flex min-w-0 flex-wrap items-center gap-x-2 font-mono text-xs text-muted-foreground">
-            {group.method ? (
-              <span className="font-semibold text-foreground/70">{group.method}</span>
-            ) : null}
-            <span className="break-all">{group.route ?? t("unknownRoute")}</span>
+            {isOperation ? (
+              <span className="break-all">
+                {group.feature ?? t("unknownFeature")}
+                {group.operation ? ` · ${group.operation}` : null}
+              </span>
+            ) : (
+              <>
+                {group.method ? (
+                  <span className="font-semibold text-foreground/70">{group.method}</span>
+                ) : null}
+                <span className="break-all">{group.route ?? t("unknownRoute")}</span>
+              </>
+            )}
           </p>
 
           {/* Full class name, kept but demoted — the namespace is the same on
@@ -112,19 +137,43 @@ export function ErrorGroupRow({ group, now }) {
             {group.occurrences.map((entry, index) => (
               <li
                 key={`${entry.reference ?? "entry"}-${index}`}
-                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 text-sm"
+                className="space-y-1 border-b pb-1.5 last:border-0 last:pb-0"
               >
-                <span className="tabular-nums">
-                  {exact(entry.at) ?? t("unknownTime")}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {/* A bare id is all the log carries — no name, no username —
-                      so it is labelled as an id rather than dressed up as a
-                      person we cannot actually identify. */}
-                  {entry.user_id == null
-                    ? t("signedOut")
-                    : t("userId", { id: entry.user_id })}
-                </span>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 text-sm">
+                  <span className="tabular-nums">
+                    {exact(entry.at) ?? t("unknownTime")}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {/* A bare id is all the log carries — no name, no username —
+                        so it is labelled as an id rather than dressed up as a
+                        person we cannot actually identify. */}
+                    {entry.user_id == null
+                      ? t("signedOut")
+                      : t("userId", { id: entry.user_id })}
+                  </span>
+                </div>
+
+                {/* The command's own stderr, already redacted and truncated to
+                    1000 characters by the backend. This is the only field that
+                    says what broke — everything else says where. Kept as
+                    pre-wrapped mono because it is command output, and
+                    reflowing it destroys the alignment that makes it
+                    readable. */}
+                {entry.error ? (
+                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/60 p-2 font-mono text-[11px] leading-4 text-muted-foreground">
+                    {entry.error}
+                  </pre>
+                ) : null}
+
+                {/* Shown only for operations. On an API exception the
+                    reference is a uuid minted at log time that never reached
+                    anyone, so offering it for a lookup would be inviting a
+                    search that cannot succeed. */}
+                {isOperation && entry.reference ? (
+                  <p className="font-mono text-[11px] text-muted-foreground/70">
+                    {t("reference", { reference: entry.reference })}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>

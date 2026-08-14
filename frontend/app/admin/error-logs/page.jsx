@@ -1,7 +1,11 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 import { CircleCheck, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getErrorLogs, linesFromSearchParams } from "@/lib/admin/get-error-logs";
+import {
+  getErrorLogs,
+  linesFromSearchParams,
+  referenceFromSearchParams,
+} from "@/lib/admin/get-error-logs";
 import { groupErrorLogs } from "@/lib/admin/group-error-logs";
 import { ErrorLogPanel } from "@/components/admin/error-logs/error-log-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -17,16 +21,23 @@ export async function generateMetadata() {
 export default async function AdminErrorLogsPage({ searchParams }) {
   const sp = await searchParams;
   const lines = linesFromSearchParams(sp);
+  const reference = referenceFromSearchParams(sp);
 
   const [t, format, { data, failed, status, failure }] = await Promise.all([
     getTranslations("errorLogs"),
     getFormatter(),
-    getErrorLogs(lines),
+    getErrorLogs(lines, reference),
   ]);
 
   const entries = data?.error_logs ?? [];
   const groups = groupErrorLogs(entries);
-  const healthy = groups.length === 0;
+
+  /* "Nothing recorded" only means the server is healthy when the whole log was
+     asked for. During a reference lookup the same empty result means the log is
+     fine and that one reference is not in it — so the band is suppressed and
+     the panel says which of the two happened. */
+  const healthy = groups.length === 0 && !reference;
+  const showSummary = groups.length > 0 || !reference;
 
   /* One clock for the whole page. Relative times are formatted against this on
      both sides of hydration; letting the client read its own clock re-renders
@@ -46,6 +57,7 @@ export default async function AdminErrorLogsPage({ searchParams }) {
         <>
           {/* Same neutral summary band as System Health: status is carried by
               the coloured icon, not by tinting the whole surface. */}
+          {showSummary ? (
           <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-muted/40 p-4">
             <span
               className={cn(
@@ -82,6 +94,7 @@ export default async function AdminErrorLogsPage({ searchParams }) {
               ) : null}
             </div>
           </div>
+          ) : null}
 
           {/* Rendered even with nothing to show: the panel keeps its Refresh
               action, which would otherwise disappear exactly when someone came
@@ -92,6 +105,7 @@ export default async function AdminErrorLogsPage({ searchParams }) {
               now={now}
               truncated={Boolean(data?.meta?.truncated)}
               lines={lines}
+              reference={reference}
             />
           </NavTransitionProvider>
         </>

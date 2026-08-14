@@ -4126,7 +4126,19 @@
     "unknownRoute": "अज्ञात रूट",
     "unknownTime": "समय अज्ञात",
     "signedOut": "साइन इन नहीं",
-    "userId": "उपयोगकर्ता #{id}"
+    "userId": "उपयोगकर्ता #{id}",
+    "operationTitle": "सर्वर ऑपरेशन: {operation}",
+    "unknownOperation": "बिना नाम का ऑपरेशन",
+    "unknownFeature": "अज्ञात सुविधा",
+    "exitCode": "एग्ज़िट {code}",
+    "reference": "संदर्भ {reference}",
+    "referenceLabel": "संदर्भ से खोजें",
+    "referencePlaceholder": "संदर्भ पेस्ट करें",
+    "referenceSubmit": "खोजें",
+    "referenceClear": "संदर्भ हटाएँ",
+    "referenceInvalid": "यह संदर्भ जैसा नहीं लगता। त्रुटि संदेश से पूरा टेक्स्ट कॉपी करें।",
+    "referenceNotFoundTitle": "उस संदर्भ वाली कोई विफलता नहीं मिली",
+    "referenceNotFoundDescription": "लॉग में कुछ भी मेल नहीं खाता। जाँचें कि संदर्भ पूरा कॉपी हुआ है और वह इसी सर्वर से आया है।"
   },
   "setup": {
     "title": "अपना सर्वर सेट करें",

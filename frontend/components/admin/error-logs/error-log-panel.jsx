@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ErrorGroupRow } from "@/components/admin/error-logs/error-group-row";
+import { ReferenceLookup } from "@/components/admin/error-logs/reference-lookup";
 import {
   Select,
   SelectContent,
@@ -21,12 +22,21 @@ import {
 /**
  * The grouped error list plus its controls.
  *
- * Search is in-memory because the endpoint has no filter parameters at all —
- * `lines` is the only thing it accepts. That one goes through the URL like
- * every other list control in the panel, so changing it re-runs the server
- * component instead of fetching from the browser.
+ * Two searches, deliberately, because they answer different questions:
+ *
+ * The text box filters in memory. It narrows what is already on screen by
+ * exception, route, feature or operation — a browsing tool.
+ *
+ * The reference lookup goes through the URL to the server's `?reference=`
+ * parameter, because the entry being asked for is frequently NOT on screen:
+ * someone is holding a reference from a failure older than the last 100 lines,
+ * and an in-memory filter over those lines could only ever answer "not found".
+ *
+ * `lines` goes through the URL for the same reason every other list control in
+ * the panel does — it re-runs the server component rather than fetching from
+ * the browser.
  */
-export function ErrorLogPanel({ groups, now, truncated, lines }) {
+export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
   const t = useTranslations("errorLogs");
   const setQuery = useSetQuery();
   const [search, setSearch] = useState("");
@@ -44,7 +54,15 @@ export function ErrorLogPanel({ groups, now, truncated, lines }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-start gap-2">
+        {/* Kept even with an empty list, unlike the text search: "nothing
+            recorded in the last 100 lines" is exactly when someone arrives
+            holding a reference from a failure that happened yesterday. */}
+        <ReferenceLookup
+          value={reference}
+          onSubmit={(value) => setQuery({ reference: value })}
+          onClear={() => setQuery({ reference: null })}
+        />
         {hasEntries ? (
           <LocalSearchInput
             value={search}
@@ -88,9 +106,17 @@ export function ErrorLogPanel({ groups, now, truncated, lines }) {
         </p>
       ) : null}
 
-      {/* Nothing to list, and the summary band above has already said so in
-          better words than a second empty box could. */}
-      {!hasEntries ? null : visible.length === 0 ? (
+      {/* A lookup that found nothing needs its own words. The healthy-state
+          band above says "no failures recorded", which read against a specific
+          reference means the opposite of what happened — the log is fine, that
+          one reference is not in it. */}
+      {!hasEntries && reference ? (
+        <EmptyState
+          icon={SearchX}
+          title={t("referenceNotFoundTitle")}
+          description={t("referenceNotFoundDescription")}
+        />
+      ) : !hasEntries ? null : visible.length === 0 ? (
         <EmptyState
           icon={SearchX}
           title={t("noMatchesTitle")}
