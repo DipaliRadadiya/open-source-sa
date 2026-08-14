@@ -81,18 +81,16 @@ function tally(items, predicate) {
   return items.some(predicate) ? "indeterminate" : false;
 }
 
-export function PermissionMatrix({ groups = [], accessLevels = [], value, onChange }) {
+export function PermissionMatrix({ groups = [], value, onChange }) {
   const t = useTranslations("roles.form");
 
   const accessFor = (item) => value[permKey(item.level, item.name)] ?? ACCESS_NONE;
 
-  // Prefer the server's own words for the two levels these boxes represent,
-  // so a locale change lands here too; the local strings stay as the fallback
-  // for a backend that sends no catalog.
-  const labels = {
-    view: accessLevels.find((level) => level.key === ACCESS_VIEW)?.title ?? t("view"),
-    manage: accessLevels.find((level) => level.key === ACCESS_MANAGE)?.title ?? t("manage"),
-  };
+  // Our own words, not the catalog's. The API titles these two levels "Read
+  // only" and "Read & write", which is a different vocabulary from the one the
+  // rest of the panel — and the permission itself — uses. `view` and `manage`
+  // are what a grant is called everywhere else, so that is what the boxes say.
+  const labels = { view: t("view"), manage: t("manage") };
 
   const allItems = groups.flatMap((group) => group.permissions);
 
@@ -102,10 +100,14 @@ export function PermissionMatrix({ groups = [], accessLevels = [], value, onChan
     onChange({ ...value, ...updates });
   }
 
+  // `t.has()`, not a comparison against the key. next-intl answers a missing
+  // key with the FULL path (`roles.form.permDesc.app_file`), never the relative
+  // one this was comparing to — so the test never passed and every permission
+  // without copy printed its own key on screen. The permission names come from
+  // the API, so a new one lands here before anybody writes a line for it.
   const permDesc = (name) => {
     const key = `permDesc.${name}`;
-    const text = t(key);
-    return text === key ? "" : text;
+    return t.has(key) ? t(key) : "";
   };
 
   if (!allItems.length) {
@@ -120,7 +122,13 @@ export function PermissionMatrix({ groups = [], accessLevels = [], value, onChan
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold">{t("selectAll")}</p>
-          <p className="text-xs text-muted-foreground">{t("legendLine")}</p>
+          {/* Named with the labels actually on the checkboxes. The API supplies
+              those titles ("Read only" / "Read & write" on this server), so a
+              sentence that said "View" and "Manage" was explaining two words
+              that appear nowhere on the screen. */}
+          <p className="text-xs text-muted-foreground">
+            {t("legendLine", { view: labels.view, manage: labels.manage })}
+          </p>
         </div>
         <AccessToggles
           idBase="setall-everything"

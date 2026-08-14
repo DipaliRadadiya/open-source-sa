@@ -184,7 +184,6 @@ export function RoleForm({ mode = "create", role, catalog }) {
           <CardContent>
             <PermissionMatrix
               groups={catalog.groups ?? []}
-              accessLevels={catalog.accessLevels ?? []}
               value={matrix}
               onChange={setMatrix}
             />
