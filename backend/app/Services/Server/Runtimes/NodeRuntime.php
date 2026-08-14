@@ -8,6 +8,7 @@ use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Node.js versions, managed with fnm.
@@ -203,8 +204,36 @@ class NodeRuntime implements Runtime
      */
     public function setDefault(string $version): void
     {
-        $this->must($this->fnm(['alias', $version, 'default']));
+        $previous = $this->default();
 
+        // Refuse before changing the alias if an incomplete fnm install left
+        // one of the binaries absent.
+        $this->assertBinaries($version);
+
+        try {
+            $this->must($this->fnm(['alias', $version, 'default']));
+            $this->linkBinaries($version);
+        } catch (SettingOperationException $e) {
+            $this->restoreDefault($previous, $version);
+
+            throw $e;
+        }
+    }
+
+    private function assertBinaries(string $version): void
+    {
+        $binDir = dirname($this->binaryPath($version));
+
+        foreach (['node', 'npm', 'npx'] as $binary) {
+            $this->must($this->serverOps->run(
+                ['test', '-x', "{$binDir}/{$binary}"],
+                ['feature' => 'runtime', 'op' => 'verify_default_binary', 'version' => $version, 'binary' => $binary],
+            ));
+        }
+    }
+
+    private function linkBinaries(string $version): void
+    {
         $binDir = dirname($this->binaryPath($version));
 
         foreach (['node', 'npm', 'npx'] as $binary) {
@@ -212,6 +241,37 @@ class NodeRuntime implements Runtime
                 ['ln', '-sfn', "{$binDir}/{$binary}", "/usr/local/bin/{$binary}"],
                 ['feature' => 'runtime', 'op' => 'link_default', 'version' => $version],
             ));
+        }
+    }
+
+    private function restoreDefault(?string $previous, string $attempted): void
+    {
+        if ($previous === null) {
+            // There was no previous default to restore. Remove any links made
+            // by this failed first selection rather than leaving a mixed set.
+            foreach (['node', 'npm', 'npx'] as $binary) {
+                $this->warnOnFailure($this->serverOps->run(
+                    ['rm', '-f', "/usr/local/bin/{$binary}"],
+                    ['feature' => 'runtime', 'op' => 'rollback_default_link', 'version' => $attempted, 'binary' => $binary],
+                ));
+            }
+
+            return;
+        }
+
+        $this->warnOnFailure($this->fnm(['alias', $previous, 'default']));
+
+        try {
+            $this->linkBinaries($previous);
+        } catch (SettingOperationException $e) {
+            Log::warning('node default rollback failed', ['reference' => $e->reference]);
+        }
+    }
+
+    private function warnOnFailure(ServerOpsResult $result): void
+    {
+        if ($result->failed()) {
+            Log::warning('node default rollback failed', ['reference' => $result->reference]);
         }
     }
 

@@ -186,6 +186,33 @@ it('moves the symlinks when the default changes, and no unit files', function ()
     expect($commands->flatten()->filter(fn ($a) => str_contains((string) $a, 'systemd')))->toBeEmpty();
 });
 
+it('restores the prior default when a binary link fails', function () {
+    $runs = new ArrayObject;
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+        $command = $process->command;
+
+        return match (true) {
+            str_contains(implode(' ', $command), 'fnm') && in_array('list', $command, true) => Process::result(
+                output: "* v20.11.0\n* v18.20.4 default\n"
+            ),
+            ($command[0] ?? '') === 'test' => Process::result(exitCode: 0),
+            ($command[0] ?? '') === 'ln' && str_contains((string) ($command[2] ?? ''), 'v20.11.0')
+                && str_ends_with((string) ($command[2] ?? ''), '/npm') => Process::result(exitCode: 1, errorOutput: 'link failed'),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    nodeCall('PUT', '/api/node/default', ['default' => '20.11.0'])->assertStatus(500);
+
+    expect(collect($runs))->toContain([
+        '/usr/local/bin/fnm', '--fnm-dir', '/opt/fnm', 'alias', '18.20.4', 'default',
+    ]);
+    expect(collect($runs))->toContain([
+        'ln', '-sfn', '/opt/fnm/node-versions/v18.20.4/installation/bin/node', '/usr/local/bin/node',
+    ]);
+});
+
 it('refuses a default that is not installed', function () {
     fakeNode(installed: ['20.11.0']);
 
