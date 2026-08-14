@@ -2017,7 +2017,7 @@ Applying is atomic: the config is written, tested and reloaded, and rolled back 
 
 ## Application — Per-site Fail2ban
 
-Per-application fail2ban watches one site's own access log. The jail and filter are raw INI files written verbatim to `/etc/fail2ban/{jail,filter}.d/sVoss-<slug>.conf` and reloaded into the daemon — the same shape the commercial ServerAvatar API exposes. Any feature fail2ban's INI supports (custom regex, multiple logpaths, additional actions) is reachable from the form, not just the structured `maxretry/findtime/bantime` of the previous implementation.
+Per-application fail2ban watches one site's own access log. The jail and filter are raw INI files written verbatim to `/etc/fail2ban/{jail,filter}.d/<app-slug>.conf` and reloaded into the daemon. Any feature fail2ban's INI supports (custom regex, multiple logpaths, additional actions) is reachable from the form, not just the structured `maxretry/findtime/bantime` of the previous implementation.
 
 On `GET`, applications with the old structured columns still on disk are migrated to the new INI form on the first read, after which the structured columns are dropped on the next migration. New applications start with `fail2ban: null` and the templates below.
 
@@ -2034,19 +2034,19 @@ Response when configured — `fail2ban` carries the saved values, and the templa
 
 ```json
 {"fail2ban": {
-  "jail_name": "sVoss-shop",
-  "jail_content": "[sVoss-shop]\nenabled  = true\nport     = http,https\nfilter   = sVoss-shop\nlogpath  = /var/log/nginx/shop.access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
-  "filter_content": "[sVoss-shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n"
-}, "jail_template": "[sVoss-shop]\nenabled  = true\nport     = http,https\n...", "filter_template": "[sVoss-shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n..."}
+  "jail_name": "shop",
+  "jail_content": "[shop]\nenabled  = true\nport     = http,https\nfilter   = shop\nlogpath  = /var/log/nginx/shop.access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
+  "filter_content": "[shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n"
+}, "jail_template": "[shop]\nenabled  = true\nport     = http,https\n...", "filter_template": "[shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n..."}
 ```
 
 The jail file template:
 
 ```ini
-[sVoss-{slug}]
+[{slug}]
 enabled  = true
 port     = http,https
-filter   = sVoss-{slug}
+filter   = {slug}
 logpath  = {webroot}/logs/access.log
 maxretry = 3
 bantime  = 3600
@@ -2056,7 +2056,7 @@ findtime = 600
 The filter file template:
 
 ```ini
-[sVoss-{slug}]
+[{slug}]
 failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
            ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
            ^<HOST> .* "(POST|PUT|DELETE) .*wp-admin.*
@@ -2074,7 +2074,7 @@ Validate, dry-run against `fail2ban-client -t`, save, write to disk, reload. The
 
 **Request:**
 ```json
-{"jail_config_content": "[sVoss-shop]\nenabled  = true\n...\n", "filter_config_content": "[sVoss-shop]\nfailregex = ^<HOST>\n...\n"}
+{"jail_config_content": "[shop]\nenabled  = true\n...\n", "filter_config_content": "[shop]\nfailregex = ^<HOST>\n...\n"}
 ```
 
 Both fields are required, must be strings, and are capped at 65,535 characters.
@@ -3620,7 +3620,7 @@ Update ban settings and which jails are on. The thresholds are **server-wide, no
 
 **Response `200`:** `{"fail2ban": {"settings": {...}, "jails": [...]}}`
 
-Updates are rollback-safe: the panel validates the new `panel.local` with `fail2ban-client -t` before reload. If validation or reload fails, it restores the prior configuration and reloads that known-good version. The API returns the original operation failure with its support reference; the frontend should refetch `GET /fail2ban` after a failed save rather than keeping optimistic form values.
+Updates are rollback-safe: the panel validates the new `/etc/fail2ban/jail.local` with `fail2ban-client -t` before reload. If validation or reload fails, it restores the prior configuration and reloads that known-good version. The API returns the original operation failure with its support reference; the frontend should refetch `GET /fail2ban` after a failed save rather than keeping optimistic form values.
 
 ---
 

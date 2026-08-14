@@ -18,8 +18,8 @@ use App\Services\Server\WebServers\WebServerManager;
  * orphaning it under the old name.
  *
  * Writes the jail to /etc/fail2ban/jail.d/ and the filter to
- * /etc/fail2ban/filter.d/ — both namespaced `sVoss-<slug>` so they never
- * collide with another tool's drop-ins — and reloads the daemon so the new
+ * /etc/fail2ban/filter.d/ — both named with the application's unique safe
+ * slug — and reloads the daemon so the new
  * config is live by the time the response returns. Reload, not restart, for
  * the same reason the server-level manager uses reload: a restart forgets
  * every active ban, and the whole point of fail2ban is the bans it remembers.
@@ -59,7 +59,7 @@ class ApplicationFail2banManager
      */
     public function jailName(Application $application): string
     {
-        return 'sVoss-'.$this->slug($application);
+        return $this->slug($application);
     }
 
     /**
@@ -69,14 +69,14 @@ class ApplicationFail2banManager
      */
     public function getJailPath(Application $application): string
     {
-        $directory = rtrim((string) config('server.fail2ban.jail_d', '/etc/fail2ban/jail.d'), '/');
+        $directory = rtrim((string) config('server.fail2ban_apps.jail_d', '/etc/fail2ban/jail.d'), '/');
 
         return "{$directory}/{$this->jailName($application)}.conf";
     }
 
     public function getFilterPath(Application $application): string
     {
-        $directory = rtrim((string) config('server.fail2ban.filter_d', '/etc/fail2ban/filter.d'), '/');
+        $directory = rtrim((string) config('server.fail2ban_apps.filter_d', '/etc/fail2ban/filter.d'), '/');
 
         return "{$directory}/{$this->jailName($application)}.conf";
     }
@@ -125,7 +125,7 @@ class ApplicationFail2banManager
     /**
      * Default jail INI for new applications. Matches the convention the
      * commercial API exposes — WordPress-friendly logpath and the
-     * sVoss-<slug> filter reference.
+     * slug-based filter reference.
      */
     public function defaultJailContent(): string
     {

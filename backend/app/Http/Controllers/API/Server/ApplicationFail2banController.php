@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Schema;
  * fail2ban's jail and filter files are arbitrary INI, and any feature
  * worth exposing (custom regex, additional action, multiple logpaths) needs
  * the raw form. This controller stores raw INI for both halves and writes
- * them as-is to /etc/fail2ban/{jail,filter}.d/sVoss-<slug>.conf.
+ * them as-is to /etc/fail2ban/{jail,filter}.d/<app-slug>.conf.
  *
  * The auto-migrate block in show() is the bridge from the old schema: any
  * application that still has structured values, gets a one-time conversion
@@ -164,22 +164,22 @@ class ApplicationFail2banController extends Controller
 
         $slug = (string) ($application->slug ?: $application->domain ?: ('app-'.$application->id));
 
-        $jail = "[sVoss-{$slug}]\n"
+        $jail = "[{$slug}]\n"
             ."enabled  = true\n"
             ."port     = http,https\n"
-            ."filter   = sVoss-{$slug}\n"
+            ."filter   = {$slug}\n"
             ."logpath  = /var/log/nginx/{$slug}.access.log\n"
             .'maxretry = '.((int) ($maxretry ?: $defaults['maxretry']))."\n"
             .'bantime  = '.((int) ($bantime ?: $defaults['bantime']))."\n"
             .'findtime = '.((int) ($findtime ?: $defaults['findtime']))."\n";
 
-        $filter = "[sVoss-{$slug}]\n"
+        $filter = "[{$slug}]\n"
             ."failregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n"
             ."           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n"
             ."           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\n"
             ."ignoreregex =\n";
 
-        $application->fail2ban_jail_name = "sVoss-{$slug}";
+        $application->fail2ban_jail_name = $slug;
         $application->fail2ban_jail_content = $jail;
         $application->fail2ban_filter_content = $filter;
 

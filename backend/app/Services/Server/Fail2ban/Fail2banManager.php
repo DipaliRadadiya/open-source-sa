@@ -449,8 +449,7 @@ class Fail2banManager
 
     public function dropInPath(): string
     {
-        return rtrim((string) config('server.fail2ban.jail_d'), '/')
-            .'/'.(string) config('server.fail2ban.drop_in', 'panel.local');
+        return (string) config('server.fail2ban.jail_local', '/etc/fail2ban/jail.local');
     }
 
     /**

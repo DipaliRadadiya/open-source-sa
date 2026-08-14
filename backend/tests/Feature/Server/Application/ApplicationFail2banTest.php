@@ -41,8 +41,10 @@ beforeEach(function () {
     $this->filterD = sys_get_temp_dir().'/sv-oss-f2b-filter-'.getmypid();
     @mkdir($this->jailD, 0755, true);
     @mkdir($this->filterD, 0755, true);
-    config(['server.fail2ban.jail_d' => $this->jailD]);
-    config(['server.fail2ban.filter_d' => $this->filterD]);
+    config([
+        'server.fail2ban_apps.jail_d' => $this->jailD,
+        'server.fail2ban_apps.filter_d' => $this->filterD,
+    ]);
 });
 
 afterEach(function () {
@@ -124,14 +126,14 @@ function appFail2banUrl(): string
 /**
  * Create an application the same way the production CreateApplication action
  * does — most importantly, sets `slug` from the name via uniqueSlug(). Without
- * a slug the fail2ban jail name falls back to the domain (`sVoss-shop.test`)
- * and the test assertions miss the cleaner `sVoss-shop` form.
+ * a slug the fail2ban jail name falls back to the domain (`shop.test`)
+ * and the test assertions miss the cleaner `shop` form.
  */
 function createFail2banApp(string $name, string $domain, string $siteType = 'php', array $extra = []): Application
 {
     // forceCreate: `slug` is not in $fillable (it is server-derived) but the
-    // test wants the resolved slug on the row so the jail name is sVoss-shop,
-    // not sVoss-shop.test. CreateApplication uses forceCreate too for the same
+    // test wants the resolved slug on the row so the jail name is shop,
+    // not shop.test. CreateApplication uses forceCreate too for the same
     // reason — we mirror that here.
     return Application::forceCreate(array_merge([
         'system_user_id' => test()->systemUser->id,
@@ -165,8 +167,8 @@ it('saves INI, tests it, and applies the configuration on success', function () 
     // closures capture by value, so the outer $writes is still empty until
     // we look at the same in-memory array through this alias.
 
-    $jail = "[sVoss-shop]\nenabled  = true\nfilter   = sVoss-shop\nlogpath  = /tmp/log\nmaxretry = 5\n";
-    $filter = "[sVoss-shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\nignoreregex =\n";
+    $jail = "[shop]\nenabled  = true\nfilter   = shop\nlogpath  = /tmp/log\nmaxretry = 5\n";
+    $filter = "[shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\nignoreregex =\n";
 
     $this->withHeaders(appFail2banHeaders())
         ->postJson(appFail2banUrl(), [
@@ -177,18 +179,18 @@ it('saves INI, tests it, and applies the configuration on success', function () 
         ->assertJsonPath('testOk', true);
 
     $application = $this->application->fresh();
-    expect($application->fail2ban_jail_name)->toBe('sVoss-shop')
+    expect($application->fail2ban_jail_name)->toBe('shop')
         ->and($application->fail2ban_jail_content)->toContain('maxretry = 5')
         ->and($application->fail2ban_filter_content)->toContain('failregex');
 
     // The jail and filter files were actually written to disk via tee.
-    expect($writes)->toHaveKey($this->jailD.'/sVoss-shop.conf')
-        ->and($writes)->toHaveKey($this->filterD.'/sVoss-shop.conf');
+    expect($writes)->toHaveKey($this->jailD.'/shop.conf')
+        ->and($writes)->toHaveKey($this->filterD.'/shop.conf');
 
     // The manager replaces {name}/{filter}/{logpath}/{slug} placeholders, so
     // the on-disk file must reference the resolved logpath, not the literal
     // placeholder string.
-    expect($writes[$this->jailD.'/sVoss-shop.conf'])->toContain('logpath  = ')
+    expect($writes[$this->jailD.'/shop.conf'])->toContain('logpath  = ')
         ->not->toContain('{logpath}');
 });
 
@@ -213,13 +215,13 @@ it('refuses to save when fail2ban-client -t reports a bad configuration', functi
 
 it('disables fail2ban and clears the stored content', function () {
     $this->application = createFail2banApp('Shop', 'shop.test', 'php', [
-        'fail2ban_jail_name' => 'sVoss-shop',
-        'fail2ban_jail_content' => "[sVoss-shop]\nenabled  = true\n",
-        'fail2ban_filter_content' => "[sVoss-shop]\nfailregex = ^<HOST>\n",
+        'fail2ban_jail_name' => 'shop',
+        'fail2ban_jail_content' => "[shop]\nenabled  = true\n",
+        'fail2ban_filter_content' => "[shop]\nfailregex = ^<HOST>\n",
     ]);
 
-    $jailFile = $this->jailD.'/sVoss-shop.conf';
-    file_put_contents($jailFile, "[sVoss-shop]\nenabled  = true\n");
+    $jailFile = $this->jailD.'/shop.conf';
+    file_put_contents($jailFile, "[shop]\nenabled  = true\n");
 
     fakeAppFail2ban();
 
@@ -272,7 +274,7 @@ it('auto-migrates structured columns to raw INI on first GET', function () {
     $this->withHeaders(appFail2banHeaders())
         ->getJson(appFail2banUrl())
         ->assertOk()
-        ->assertJsonPath('fail2ban.jail_name', 'sVoss-blog');
+        ->assertJsonPath('fail2ban.jail_name', 'blog');
 
     $fresh = $this->application->fresh();
 

@@ -924,9 +924,8 @@ return [
     | fail2ban
     |--------------------------------------------------------------------------
     |
-    | Brute-force containment. Config goes to a drop-in under `jail.d`, never
-    | to `jail.local` — a server migrated from another panel probably owns
-    | that file, and ours has no business overwriting it.
+    | Brute-force containment. Server-level settings live in jail.local.
+    | Per-application jails remain isolated under jail.d.
     |
     | The ban action is left to fail2ban's default rather than set to `ufw`.
     | Routing bans through UFW would mean the Firewall screen's on/off switch
@@ -939,7 +938,7 @@ return [
     'fail2ban' => [
         'client' => env('SERVER_FAIL2BAN_CLIENT', 'fail2ban-client'),
         'jail_d' => env('SERVER_FAIL2BAN_JAIL_D', '/etc/fail2ban/jail.d'),
-        'drop_in' => env('SERVER_FAIL2BAN_DROP_IN', 'panel.local'),
+        'jail_local' => env('SERVER_FAIL2BAN_JAIL_LOCAL', '/etc/fail2ban/jail.local'),
 
         'defaults' => [
             'bantime' => (int) env('SERVER_FAIL2BAN_BANTIME', 3600),

@@ -19,7 +19,10 @@ beforeEach(function () {
     File::deleteDirectory($this->jailD);
     File::makeDirectory($this->jailD, 0755, true);
 
-    config(['server.fail2ban.jail_d' => $this->jailD]);
+    config([
+        'server.fail2ban.jail_d' => $this->jailD,
+        'server.fail2ban.jail_local' => $this->jailD.'/jail.local',
+    ]);
 });
 
 afterEach(fn () => File::deleteDirectory($this->jailD));
@@ -79,7 +82,7 @@ function f2b(string $method, string $uri, array $body = []): TestResponse
 
 function dropIn(): string
 {
-    return (string) @file_get_contents(test()->jailD.'/panel.local');
+    return (string) @file_get_contents(test()->jailD.'/jail.local');
 }
 
 it('reports honestly when fail2ban is not installed, instead of failing', function () {
