@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Server\Database\ExportDatabase;
+use App\Contracts\Firewall;
 use App\Enums\ExportStatus;
 use App\Jobs\RunDatabaseExport;
 use App\Models\Database;
@@ -13,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
+use App\Services\Server\ServerOpsResult;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -92,6 +94,24 @@ it('creates a database with a user and returns its connection string', function 
         ->assertJsonPath('database.users.0.connection_string', 'mysql://shop_user:S3cretPass99@127.0.0.1:3306/shop');
 });
 
+it('rolls back a new database when its requested initial user cannot be created', function () {
+    Process::fake(function ($process) {
+        $sql = (string) ($process->input ?? '');
+
+        return str_contains($sql, 'CREATE USER')
+            ? Process::result(exitCode: 1, errorOutput: 'user create failed')
+            : Process::result(exitCode: 0);
+    });
+
+    test()->withHeaders(dbAuth())->postJson('/api/databases', [
+        'name' => 'shop', 'engine' => 'mysql',
+        'create_user' => ['username' => 'shop_user', 'password' => 'S3cretPass99'],
+    ])->assertStatus(500);
+
+    expect(Database::where('name', 'shop')->exists())->toBeFalse();
+    Process::assertRan(fn ($p) => str_contains((string) ($p->input ?? ''), 'DROP DATABASE IF EXISTS'));
+});
+
 it('generates a password when none is given', function () {
     fakeDb();
 
@@ -138,6 +158,35 @@ it('adds a user to an existing database', function () {
     expect(DatabaseUser::where('username', 'later_user')->first()->connection_preference)->toBe('remote');
 });
 
+it('removes an engine user when remote firewall setup fails', function () {
+    fakeDb();
+    app()->instance(Firewall::class, new class implements Firewall {
+        public function status(): array
+        {
+            return ['enabled' => true, 'default_policy' => ['incoming' => 'deny', 'outgoing' => 'allow']];
+        }
+
+        public function apply(\App\Models\FirewallRule $rule): ServerOpsResult
+        {
+            return new ServerOpsResult(false, 'firewall-failed', null);
+        }
+
+        public function remove(\App\Models\FirewallRule $rule): ServerOpsResult { return new ServerOpsResult(true, 'unused', null); }
+        public function enable(): ServerOpsResult { return new ServerOpsResult(true, 'unused', null); }
+        public function disable(): ServerOpsResult { return new ServerOpsResult(true, 'unused', null); }
+    });
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/users", [
+        'username' => 'remote_user', 'password' => 'AnotherPass88',
+        'connection_preference' => 'remote', 'host' => '10.0.0.5',
+    ])->assertStatus(500);
+
+    expect(DatabaseUser::where('username', 'remote_user')->exists())->toBeFalse();
+    Process::assertRan(fn ($p) => str_contains((string) ($p->input ?? ''), 'CREATE USER'));
+    Process::assertRan(fn ($p) => str_contains((string) ($p->input ?? ''), 'DROP USER'));
+});
+
 it('rejects a system database username', function () {
     fakeDb();
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
@@ -178,6 +227,47 @@ it('deletes a database and cascades its users', function () {
 
     expect(Database::find($db->id))->toBeNull();
     expect(DatabaseUser::where('database_id', $db->id)->count())->toBe(0);
+});
+
+it('keeps users and the panel record when dropping the database fails', function () {
+    Process::fake(function ($process) {
+        $sql = (string) ($process->input ?? '');
+
+        return str_contains($sql, 'DROP DATABASE IF EXISTS')
+            ? Process::result(exitCode: 1, errorOutput: 'drop failed')
+            : Process::result(exitCode: 0);
+    });
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+    $user = $db->users()->create(['username' => 'u', 'password' => 'p', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/{$db->id}")->assertStatus(500);
+
+    expect(Database::find($db->id))->not->toBeNull();
+    expect(DatabaseUser::find($user->id))->not->toBeNull();
+    Process::assertNotRan(fn ($process) => str_contains((string) ($process->input ?? ''), 'DROP USER'));
+});
+
+it('can retry cleanup after the database was dropped but a user cleanup failed', function () {
+    $dropUserFails = true;
+    Process::fake(function ($process) use (&$dropUserFails) {
+        $sql = (string) ($process->input ?? '');
+
+        if (str_contains($sql, 'DROP USER') && $dropUserFails) {
+            return Process::result(exitCode: 1, errorOutput: 'user drop failed');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+    $db->users()->create(['username' => 'u', 'password' => 'p', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/{$db->id}")->assertStatus(500);
+    expect(Database::find($db->id))->not->toBeNull();
+
+    $dropUserFails = false;
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/{$db->id}")->assertNoContent();
+
+    expect(Database::find($db->id))->toBeNull();
 });
 
 it('lists untracked server databases', function () {
@@ -410,7 +500,8 @@ it('does not strand an export at running when the worker dies', function () {
     (new RunDatabaseExport($export->id))->failed(null);
 
     expect($export->refresh()->status)->toBe(ExportStatus::Failed)
-        ->and($export->reason)->toBe('worker');
+        ->and($export->reason)->toBe('worker')
+        ->and($export->reference)->not->toBeEmpty();
 });
 
 it('404s a missing or traversal export filename', function () {

@@ -9,6 +9,8 @@ use App\Services\ActivityLogger;
 use App\Services\Server\AccountLock;
 use App\Services\Server\ServerOps;
 use App\Services\Server\SystemUsers\SshUsersGroup;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class CreateSystemUser
 {
@@ -75,38 +77,57 @@ class CreateSystemUser
                 );
             }
 
-            // `useradd -m` on Ubuntu 22.04+ creates the home directory at 0750
-            // — no execute bit for "others". nginx/Apache run as www-data,
-            // which is neither the owner nor in the user's own group, so every
-            // hosted site under this account would 404: the web server can't
-            // even stat() its way down to the vhost's document root, let alone
-            // serve from it. `o+x` only grants traversal into a *known* path —
-            // not directory listing or read access to anything inside — which
-            // is exactly what serving needs and nothing more.
-            $this->serverOps->run(
-                ['chmod', 'o+x', $homePath],
-                ['feature' => 'system_user', 'op' => 'grant_web_server_traversal', 'system_user' => $username],
-            );
+            $systemUser = null;
 
-            $systemUser = SystemUser::create([
-                'username' => $username,
-                'home_path' => $homePath,
-                'shell' => $shell,
-                'sudo' => (bool) ($data['sudo'] ?? false),
-                'ssh_access' => (bool) ($data['ssh_access'] ?? false),
-            ]);
+            try {
+                // `useradd -m` on Ubuntu 22.04+ creates the home directory at 0750.
+                $traversal = $this->serverOps->run(
+                    ['chmod', 'o+x', $homePath],
+                    ['feature' => 'system_user', 'op' => 'grant_web_server_traversal', 'system_user' => $username],
+                );
 
-            if (! empty($data['public_key'])) {
-                $this->addSshKey->execute($systemUser, ['name' => 'default', 'public_key' => $data['public_key']]);
+                if ($traversal->failed()) {
+                    throw new SystemUserCreateFailedException($traversal->reference);
+                }
+
+                $systemUser = SystemUser::create([
+                    'username' => $username,
+                    'home_path' => $homePath,
+                    'shell' => $shell,
+                    'sudo' => (bool) ($data['sudo'] ?? false),
+                    'ssh_access' => (bool) ($data['ssh_access'] ?? false),
+                ]);
+
+                if (! empty($data['public_key'])) {
+                    $this->addSshKey->execute($systemUser, ['name' => 'default', 'public_key' => $data['public_key']]);
+                }
+
+                if (! empty($data['password'])) {
+                    $this->setPassword($systemUser, $data['password']);
+                }
+
+                $this->activityLogger->log('system_user.created', $systemUser, ['username' => $username]);
+
+                return $systemUser;
+            } catch (Throwable $exception) {
+                // useradd succeeded but a later step did not. Do not leave an
+                // untracked OS account (or a panel row) behind.
+                $systemUser?->delete();
+
+                $cleanup = $this->serverOps->run(
+                    ['userdel', '-r', $username],
+                    ['feature' => 'system_user', 'op' => 'cleanup_failed_create', 'system_user' => $username],
+                );
+
+                if ($cleanup->failed()) {
+                    Log::warning('system user cleanup after failed create also failed', [
+                        'username' => $username,
+                        'reference' => $cleanup->reference,
+                    ]);
+                }
+
+                throw $exception;
             }
-
-            if (! empty($data['password'])) {
-                $this->setPassword($systemUser, $data['password']);
-            }
-
-            $this->activityLogger->log('system_user.created', $systemUser, ['username' => $username]);
-
-            return $systemUser;
         });
     }
 

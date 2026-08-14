@@ -36,6 +36,10 @@ class EditDatabaseUser
         $renamed = $newUsername !== $user->username || $newHost !== $user->host;
         $passwordChanged = ! empty($data['password']);
 
+        // Firewall setup can fail; perform it before mutating credentials so
+        // the panel cannot be left describing an account the engine changed.
+        $this->firewall->sync($database->engine, $newPreference, $newHost);
+
         if ($renamed) {
             // SQL RENAME preserves the password; Mongo recreates with $newPassword.
             $engine->renameUser($user->username, $user->host, $newUsername, $newHost, $newPassword, $database->name);
@@ -45,8 +49,6 @@ class EditDatabaseUser
         } elseif ($passwordChanged) {
             $engine->setPassword($newUsername, $newHost, $newPassword, $database->name);
         }
-
-        $this->firewall->sync($database->engine, $newPreference, $newHost);
 
         $user->update([
             'username' => $newUsername,

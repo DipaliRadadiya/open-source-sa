@@ -129,22 +129,41 @@ it('rejects a weak password at creation', function () {
         ->assertJsonValidationErrors('password');
 });
 
-it('does not persist the row when chpasswd fails after user creation succeeds', function () {
-    Process::fake([
-        'useradd*' => Process::result(exitCode: 0),
-        'chpasswd*' => Process::result(exitCode: 1, errorOutput: 'boom'),
-    ]);
+it('removes the OS account and panel row when chpasswd fails after user creation', function () {
+    Process::fake(fn ($process) => in_array('chpasswd', $process->command, true)
+        ? Process::result(exitCode: 1, errorOutput: 'boom')
+        : Process::result(exitCode: 0));
     $admin = User::factory()->admin()->create();
     $token = $admin->createToken('t')->plainTextToken;
 
-    $response = $this->withHeader('Authorization', "Bearer {$token}")
-        ->postJson('/api/system-users', ['username' => 'deploy', 'password' => 'Str0ngPassword!']);
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/system-users', ['username' => 'deploy', 'password' => 'Str0ngPassword!'])
+        ->assertStatus(500);
 
-    $response->assertStatus(500);
-    // The user row itself was created before the password step ran — this
-    // documents current behavior (not transactional across the two OS
-    // commands), consistent with every other multi-step server operation.
-    expect(SystemUser::where('username', 'deploy')->first())->password->toBeNull();
+    expect(SystemUser::where('username', 'deploy')->exists())->toBeFalse();
+    Process::assertRan(fn ($process) => in_array('userdel', $process->command, true)
+        && in_array('-r', $process->command, true)
+        && in_array('deploy', $process->command, true));
+});
+
+it('removes the OS account and panel row when SSH-key setup fails', function () {
+    Process::fake(fn ($process) => in_array('tee', $process->command, true)
+        ? Process::result(exitCode: 1, errorOutput: 'boom')
+        : Process::result(exitCode: 0));
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('t')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->postJson('/api/system-users', [
+            'username' => 'deploy',
+            'public_key' => 'ssh-ed25519 AQIDBA== test',
+        ])
+        ->assertStatus(500);
+
+    expect(SystemUser::where('username', 'deploy')->exists())->toBeFalse();
+    Process::assertRan(fn ($process) => in_array('userdel', $process->command, true)
+        && in_array('-r', $process->command, true)
+        && in_array('deploy', $process->command, true));
 });
 
 it('rejects reserved usernames', function () {

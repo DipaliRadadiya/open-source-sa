@@ -17,12 +17,16 @@ class DeleteDatabase
     {
         $engine = $this->manager->engine($database->engine);
 
-        // Drop the DB's owned users first (no orphans), then the database.
+        // Keep the database and its credentials together until the database
+        // drop has succeeded. Removing users first can leave a live database
+        // unreachable if its drop then fails.
+        $engine->dropDatabase($database->name);
+
+        // A failed user cleanup deliberately leaves the panel record intact.
+        // SQL drops are idempotent, so a retry can finish cleanup safely.
         foreach ($database->users as $user) {
             $engine->dropUser($user->username, $user->host, $database->name);
         }
-
-        $engine->dropDatabase($database->name);
 
         $this->activityLogger->log('database.deleted', null, ['name' => $database->name, 'engine' => $database->engine]);
 

@@ -3,6 +3,7 @@
 namespace App\Services\Server\Databases;
 
 use App\Contracts\Firewall;
+use App\Exceptions\Server\Database\DatabaseOperationException;
 use App\Models\FirewallRule;
 
 /**
@@ -37,6 +38,10 @@ class DatabaseFirewall
             ['origin' => 'default', 'description' => strtoupper($engine).' remote access'],
         );
 
-        $this->firewall->apply($rule);
+        $result = $this->firewall->apply($rule);
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference, $result->busy, $result->staleLock);
+        }
     }
 }

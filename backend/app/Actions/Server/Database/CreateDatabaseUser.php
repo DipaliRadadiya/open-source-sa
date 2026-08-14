@@ -8,6 +8,8 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseFirewall;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class CreateDatabaseUser
 {
@@ -27,23 +29,42 @@ class CreateDatabaseUser
         $password = ($data['password'] ?? null) ?: DatabasePassword::generate();
 
         $engine = $this->manager->engine($database->engine);
-        $engine->createUser($data['username'], $host, $password, $database->name);
+        $engineUserCreated = false;
 
-        $this->firewall->sync($database->engine, $preference, $host);
+        try {
+            $engine->createUser($data['username'], $host, $password, $database->name);
+            $engineUserCreated = true;
 
-        $user = $database->users()->create([
-            'username' => $data['username'],
-            'password' => $password,
-            'connection_preference' => $preference,
-            'host' => $host,
-        ]);
+            $this->firewall->sync($database->engine, $preference, $host);
 
-        $this->activityLogger->log('database.user_created', $user, [
-            'username' => $data['username'],
-            'database' => $database->name,
-        ]);
+            $user = $database->users()->create([
+                'username' => $data['username'],
+                'password' => $password,
+                'connection_preference' => $preference,
+                'host' => $host,
+            ]);
 
-        return $user;
+            $this->activityLogger->log('database.user_created', $user, [
+                'username' => $data['username'],
+                'database' => $database->name,
+            ]);
+
+            return $user;
+        } catch (Throwable $exception) {
+            if ($engineUserCreated) {
+                try {
+                    $engine->dropUser($data['username'], $host, $database->name);
+                } catch (Throwable $cleanupException) {
+                    Log::warning('database user cleanup after failed create also failed', [
+                        'database' => $database->name,
+                        'username' => $data['username'],
+                        'exception' => $cleanupException::class,
+                    ]);
+                }
+            }
+
+            throw $exception;
+        }
     }
 
     private function resolveHost(string $preference, ?string $host): string

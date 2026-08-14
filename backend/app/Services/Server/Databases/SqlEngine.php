@@ -151,7 +151,9 @@ class SqlEngine implements DatabaseEngine
 
     public function dropDatabase(string $name): void
     {
-        $this->must('DROP DATABASE '.$this->ident($name).';');
+        // A deletion can have dropped the schema but failed while cleaning up
+        // its owned users. Retrying must finish that cleanup, not fail here.
+        $this->must('DROP DATABASE IF EXISTS '.$this->ident($name).';');
     }
 
     public function databaseSize(string $name): int

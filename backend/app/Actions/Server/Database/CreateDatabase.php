@@ -6,6 +6,8 @@ use App\Models\Database;
 use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseManager;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class CreateDatabase
 {
@@ -29,22 +31,43 @@ class CreateDatabase
 
             $engine->createDatabase($data['name'], $charset, $collation);
 
-            $database = Database::create([
-                'name' => $data['name'],
-                'engine' => $engineName,
-                'charset' => $charset,
-                'collation' => $collation,
-                'application_id' => $data['application_id'] ?? null,
-                'size_bytes' => $engine->databaseSize($data['name']),
-            ]);
+            $database = null;
 
-            $this->activityLogger->log('database.created', $database, ['name' => $data['name'], 'engine' => $engineName]);
+            try {
+                $database = Database::create([
+                    'name' => $data['name'],
+                    'engine' => $engineName,
+                    'charset' => $charset,
+                    'collation' => $collation,
+                    'application_id' => $data['application_id'] ?? null,
+                    'size_bytes' => $engine->databaseSize($data['name']),
+                ]);
 
-            if (! empty($data['create_user'])) {
-                $this->createUser->execute($database, $data['create_user']);
+                $this->activityLogger->log('database.created', $database, ['name' => $data['name'], 'engine' => $engineName]);
+
+                if (! empty($data['create_user'])) {
+                    $this->createUser->execute($database, $data['create_user']);
+                }
+
+                return $database->load('users');
+            } catch (Throwable $exception) {
+                // This request created the schema. If its requested initial
+                // user cannot be completed, remove both sides so retrying is
+                // safe rather than leaving an invisible partial database.
+                $database?->delete();
+
+                try {
+                    $engine->dropDatabase($data['name']);
+                } catch (Throwable $cleanupException) {
+                    Log::warning('database cleanup after failed create also failed', [
+                        'database' => $data['name'],
+                        'engine' => $engineName,
+                        'exception' => $cleanupException::class,
+                    ]);
+                }
+
+                throw $exception;
             }
-
-            return $database->load('users');
         });
     }
 }

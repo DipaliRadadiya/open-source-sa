@@ -8,6 +8,8 @@ use App\Exceptions\Server\Database\DatabaseOperationException;
 use App\Models\DatabaseExport;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -76,11 +78,20 @@ class RunDatabaseExport implements ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
+        $reference = (string) Str::uuid();
+
+        Log::error('database export job died at the worker level', [
+            'reference' => $reference,
+            'export_id' => $this->exportId,
+            'exception' => $e ? $e::class.': '.$e->getMessage() : null,
+        ]);
+
         DatabaseExport::where('id', $this->exportId)
             ->whereIn('status', [ExportStatus::Queued->value, ExportStatus::Running->value])
             ->update([
                 'status' => ExportStatus::Failed->value,
                 'reason' => 'worker',
+                'reference' => $reference,
                 'finished_at' => now(),
             ]);
     }
