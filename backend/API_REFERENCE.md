@@ -4383,13 +4383,13 @@ A disabled webhook and an identifier that never existed both answer `404`, ident
 ## Admin API Error Logs
 
 ### GET `/admin/error-logs`
-**Auth:** administrator session or token. Returns the latest safe records from the rotating API error log; it is file-backed, not database-backed.
+**Auth:** administrator session or token. Returns failed API requests and server operations from the rotating structured `server-ops` log; it is file-backed, not database-backed.
 
-**Query:** `lines` integer, optional, `1–500` (default `100`).
+**Query:** `lines` integer, optional, `1–500` (default `100`); `reference` UUID, optional (exact lookup).
 
-**Response `200`:** `{"error_logs":[{"occurred_at":"…","status":500,"method":"POST","route":"api/applications/{application}","exception":"…","message":"Unexpected API error.","reference":"…","user_id":1}],"meta":{"truncated":false}}`
+**Response `200`:** `{"error_logs":[{"occurred_at":"…","status":500,"method":"POST","route":"api/applications/{application}","exception":"…","message":"Unexpected API error.","reference":"…","user_id":1,"feature":null,"operation":null,"exit_code":null,"error":null}],"meta":{"truncated":false}}`
 
-Only unexpected API failures (`5xx`) are recorded. Validation, authentication, authorization, and not-found responses are excluded. Entries never expose request bodies, credentials, cookies, tokens, SQL bindings, command output, or stack traces. The log rotates automatically and retains 30 days by default.
+Server-operation records use `feature`, `operation`, `exit_code`, and a redacted, 1,000-character `error` summary to make a support reference actionable. API failures use the existing fields. Validation, authentication, authorization, and not-found responses are excluded. Entries never expose request bodies, credentials, cookies, tokens, SQL bindings, command output, or stack traces. The log rotates automatically and retains 30 days by default.
 
 ---
 

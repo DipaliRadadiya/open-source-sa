@@ -64,7 +64,14 @@ it('shows failed server operations and filters them by reference', function () {
     File::put($this->logDir.'/server-ops.log', implode(PHP_EOL, [
         json_encode([
             'message' => 'server operation',
-            'context' => ['reference' => $firstReference, 'feature' => 'firewall', 'actor_id' => 7],
+            'context' => [
+                'reference' => $firstReference,
+                'feature' => 'firewall',
+                'op' => 'apply',
+                'exit_code' => 1,
+                'stderr' => 'ufw: password=secret-value denied',
+                'actor_id' => 7,
+            ],
             'level_name' => 'ERROR',
             'datetime' => '2026-08-14T12:00:00+00:00',
         ]),
@@ -86,6 +93,10 @@ it('shows failed server operations and filters them by reference', function () {
         ->assertJsonCount(1, 'error_logs')
         ->assertJsonPath('error_logs.0.reference', $firstReference)
         ->assertJsonPath('error_logs.0.message', 'Server operation failed.')
+        ->assertJsonPath('error_logs.0.feature', 'firewall')
+        ->assertJsonPath('error_logs.0.operation', 'apply')
+        ->assertJsonPath('error_logs.0.exit_code', 1)
+        ->assertJsonPath('error_logs.0.error', 'ufw: password=*** denied')
         ->assertJsonPath('error_logs.0.user_id', 7);
 });
 
