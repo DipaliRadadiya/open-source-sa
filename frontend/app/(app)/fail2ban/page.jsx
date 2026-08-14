@@ -6,9 +6,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getFail2ban } from "@/lib/fail2ban/get-fail2ban";
 import { InstallPrompt } from "@/components/fail2ban/install-prompt";
-import { JailsCard } from "@/components/fail2ban/jails-card";
-import { RecommendedSetup } from "@/components/fail2ban/recommended-setup";
-import { BannedCard } from "@/components/fail2ban/banned-card";
+import { ProtectionSection } from "@/components/fail2ban/protection-section";
 import { BanRulesCard } from "@/components/fail2ban/ban-rules-card";
 import { IgnoreListCard } from "@/components/fail2ban/ignore-list-card";
 import { Fail2banTabs } from "@/components/fail2ban/fail2ban-tabs";
@@ -78,37 +76,18 @@ export default async function Fail2banPage() {
               data.your_ip && !(data.settings?.ignore_ips ?? []).includes(data.your_ip),
             )}
             live={
-              <>
-                {/* Above the jail list: on a fresh install this is the whole
-                    task, and the list below is just the detail behind it. */}
-                <RecommendedSetup
-                  jails={data.jails}
-                  settings={data.settings}
-                  yourIp={data.your_ip}
-                  ignoreIps={data.settings?.ignore_ips ?? []}
-                  canManage={canManage}
-                />
-
-                <JailsCard
-                  jails={data.jails}
-                  settings={data.settings}
-                  yourIp={data.your_ip}
-                  ignoreIps={data.settings?.ignore_ips ?? []}
-                  canManage={canManage}
-                />
-                {/* Nothing can be banned by a jail that is off, so on a fresh
-                    install this card is a box explaining that a thing which
-                    cannot have happened has not happened. It appears once the
-                    server is actually watching — or if bans already exist. */}
-                {data.jails.some((jail) => jail.enabled) || data.banned.length > 0 ? (
-                  <BannedCard
-                    banned={data.banned}
-                    jails={data.jails}
-                    canManage={canManage}
-                    logHref={logHref}
-                  />
-                ) : null}
-              </>
+              // One client component for the setup card, the switches and the
+              // ban list: the ban list's visibility follows the switches, so
+              // they have to share the state that says what you just asked for.
+              <ProtectionSection
+                jails={data.jails}
+                settings={data.settings}
+                banned={data.banned}
+                yourIp={data.your_ip}
+                ignoreIps={data.settings?.ignore_ips ?? []}
+                canManage={canManage}
+                logHref={logHref}
+              />
             }
             settings={
               data.settings ? (

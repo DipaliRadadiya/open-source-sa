@@ -11,6 +11,8 @@ import { settingsPayload } from "@/lib/fail2ban/settings-payload";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Card,
@@ -40,10 +42,17 @@ import { apiMessage } from "@/lib/api/error-message";
  * Enabling the SSH jail when your own address isn't on the ignore list can end
  * with fail2ban banning you from your own server. The API refuses that unless
  * you're ignored or you explicitly acknowledge — and rather than forwarding the
- * refusal as an error, this asks first and makes **adding your IP the primary
+ * refusal as an error, this asks first and makes **adding an address the primary
  * action**. The safe path should be the easy one.
+ *
+ * The guard fires on every attempt to switch a risky jail on, and again if the
+ * server refuses anyway. It used to be skipped whenever `your_ip` appeared in
+ * the ignore list — but `your_ip` is the address the API saw, and this page is
+ * rendered on the server, so that address is the panel's own host. The result
+ * was a jail you could switch off and never switch back on: no dialog, no way
+ * to add an address, no way to acknowledge, just a red toast.
  */
-export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }) {
+export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, asked, onAskedChange }) {
   const t = useTranslations("fail2ban");
   const router = useRouter();
   const [pending, setPending] = useState(null);
@@ -52,20 +61,33 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
   // has landed and the override retires itself. Without this the switch did not
   // move on click and still read "on" after a successful off, because `checked`
   // was the server value and the refresh had not come back yet.
-  const [asked, setAsked] = useState({});
+  // Owned by ProtectionSection, because the ban list has to read it too.
+  const setAsked = onAskedChange;
   const [guarding, setGuarding] = useState(null);
   const [explaining, setExplaining] = useState(false);
 
-  const ipIgnored = Boolean(yourIp) && ignoreIps.includes(yourIp);
+  // Pre-filled, never trusted. `your_ip` is whatever address the API saw make
+  // the request — and this page is server-rendered, so on a real install that
+  // is the panel's own server, not the browser. Checking it against the ignore
+  // list used to "prove" you were safe and skip the warning entirely, which is
+  // how the SSH jail became a switch you could turn off and never back on.
+  const [ignoreIp, setIgnoreIp] = useState(yourIp ?? "");
 
   const shown = (jail) => {
     const override = asked[jail.name];
     return override && override.from === jail.enabled ? override.value : jail.enabled;
   };
 
-  async function apply(jail, enabled, { addMyIp = false, acknowledged = false } = {}) {
+  async function apply(jail, enabled, { addIp = null, acknowledged = false } = {}) {
     setPending(jail.name);
-    setAsked((current) => ({ ...current, [jail.name]: { value: enabled, from: jail.enabled } }));
+    // Read the server value NOW, not off the `jail` the caller is holding: the
+    // guard dialog hands back the jail as it was when it opened, which can be
+    // two refreshes old. The override retires when the server moves off the
+    // value it was based on, so a stale base retires it instantly and the
+    // switch snaps back to a state the user just changed — it did exactly that
+    // after a successful "turn it on", while the toast said it had worked.
+    const server = (jails.find((entry) => entry.name === jail.name) ?? jail).enabled;
+    setAsked((current) => ({ ...current, [jail.name]: { value: enabled, from: server } }));
     try {
       await updateFail2ban({
         // The settings numbers ride along on every call — this endpoint rewrites
@@ -75,7 +97,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
         // Only this jail is sent: the API keeps omitted jails as they are, so a
         // single toggle can't disturb the others.
         jails: { [jail.name]: enabled },
-        ...(addMyIp && yourIp ? { ignore_ips: [...ignoreIps, yourIp] } : null),
+        ...(addIp && !ignoreIps.includes(addIp) ? { ignore_ips: [...ignoreIps, addIp] } : null),
         ...(acknowledged ? { acknowledged: true } : null),
       });
       toast.success(
@@ -92,9 +114,16 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
         delete next[jail.name];
         return next;
       });
-      // The server's own lockout refusal, in case our pre-check missed a case.
-      if (data?.errors?.["fail2ban.lockout_risk"]) {
-        setGuarding({ jail, enabled });
+      // The server's own lockout refusal. It arrives as a bare 422 with a
+      // `message` and no `errors` bag, so keying off `errors["fail2ban.lockout_risk"]`
+      // alone silently missed every real refusal and left a dead-end toast:
+      // switching a risky jail ON is the only thing here that earns a 422, so
+      // that combination IS the refusal.
+      const refusedForLockout =
+        Boolean(data?.errors?.["fail2ban.lockout_risk"]) ||
+        (error.response?.status === 422 && enabled && jail.lockout_risk);
+      if (refusedForLockout) {
+        setGuarding({ jail, enabled, serverReason: data?.message ?? null });
       } else {
         toast.error(
           [apiMessage(error, t("jails.failed")), data?.reference].filter(Boolean).join(" · "),
@@ -106,9 +135,12 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
   }
 
   function toggle(jail, enabled) {
-    // Ask before the API has to refuse: turning ON a risky jail without your own
-    // address ignored is the move that locks people out.
-    if (enabled && jail.lockout_risk && !ipIgnored) {
+    // Ask before the API has to refuse: turning ON a risky jail is the move
+    // that locks people out. Asked every time rather than only when we think
+    // your address isn't ignored — we cannot tell from here (see `ignoreIp`),
+    // and a warning shown once too often costs a click, while one skipped
+    // costs the server.
+    if (enabled && jail.lockout_risk) {
       setGuarding({ jail, enabled });
       return;
     }
@@ -216,11 +248,27 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
               <DialogTitle>{t("lockout.title")}</DialogTitle>
             </div>
             <DialogDescription className="pt-1">
-              {yourIp
-                ? t("lockout.description", { ip: yourIp })
-                : t("lockout.descriptionNoIp")}
+              {guarding?.serverReason ?? t("lockout.description")}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Editable, and the primary way out. The address is pre-filled from
+              the API when it looks like a real client address, but it is the
+              person at the keyboard who knows what they are connecting from —
+              the panel only ever sees its own server. */}
+          <div className="space-y-2 py-2">
+            <Label htmlFor="lockout-ip">{t("lockout.ipLabel")}</Label>
+            <Input
+              id="lockout-ip"
+              value={ignoreIp}
+              onChange={(event) => setIgnoreIp(event.target.value)}
+              placeholder={t("lockout.ipPlaceholder")}
+              autoComplete="off"
+              spellCheck={false}
+              className="font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground">{t("lockout.ipHint")}</p>
+          </div>
 
           <DialogFooter>
             {/* Deliberate order: the risky choice is the quiet one. In the
@@ -235,17 +283,18 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage }
             >
               {t("lockout.anyway")}
             </Button>
-            {yourIp ? (
-              <Button
-                disabled={pending !== null}
-                onClick={() =>
-                  guarding &&
-                  apply(guarding.jail, guarding.enabled, { addMyIp: true, acknowledged: true })
-                }
-              >
-                {t("lockout.addMyIp", { ip: yourIp })}
-              </Button>
-            ) : null}
+            <Button
+              disabled={pending !== null || !ignoreIp.trim()}
+              onClick={() =>
+                guarding &&
+                apply(guarding.jail, guarding.enabled, {
+                  addIp: ignoreIp.trim(),
+                  acknowledged: true,
+                })
+              }
+            >
+              {t("lockout.addIp")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

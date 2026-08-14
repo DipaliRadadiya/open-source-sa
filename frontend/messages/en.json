@@ -1109,10 +1109,12 @@
     },
     "lockout": {
       "title": "This could lock you out",
-      "description": "You are here from {ip}, and that address is not on the never-ban list. If this bans it, you lose access to this server.",
-      "descriptionNoIp": "Your own address is not on the never-ban list. If this bans it, you lose access to this server.",
-      "addMyIp": "Add {ip} and turn on",
-      "anyway": "Turn on anyway"
+      "description": "Turning this jail on can lock you out of your own server: if fail2ban decides your address is guessing passwords, it bans it — including the address you administer from.",
+      "anyway": "Turn it on anyway",
+      "ipLabel": "Address to keep unbanned",
+      "ipPlaceholder": "203.0.113.10",
+      "ipHint": "The address YOU connect from, which is not necessarily the one shown. Check what your connection reports if you are unsure.",
+      "addIp": "Add this address and turn it on"
     },
     "banned": {
       "title": "Banned addresses",

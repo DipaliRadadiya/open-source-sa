@@ -1109,10 +1109,12 @@
     },
     "lockout": {
       "title": "Esto podría dejarte fuera",
-      "description": "Estás aquí desde {ip}, y esa dirección no está en la lista de nunca bloquear. Si esto la bloquea, pierdes el acceso a este servidor.",
-      "descriptionNoIp": "Tu propia dirección no está en la lista de nunca bloquear. Si esto la bloquea, pierdes el acceso a este servidor.",
-      "addMyIp": "Añadir {ip} y activar",
-      "anyway": "Activar de todas formas"
+      "description": "Activar esta cárcel puede dejarte fuera de tu propio servidor: si fail2ban cree que tu dirección está probando contraseñas, la bloquea, incluida la dirección desde la que administras.",
+      "anyway": "Activarla de todos modos",
+      "ipLabel": "Dirección que no se bloqueará",
+      "ipPlaceholder": "203.0.113.10",
+      "ipHint": "La dirección desde la que TÚ te conectas, que no es necesariamente la que se muestra. Compruébala si no estás seguro.",
+      "addIp": "Añadir esta dirección y activarla"
     },
     "banned": {
       "title": "Direcciones bloqueadas",
