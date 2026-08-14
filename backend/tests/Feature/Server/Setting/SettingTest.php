@@ -38,6 +38,11 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
     $swapFile = test()->swapFile;
     Process::fake(function ($process) use ($redis, $swapActive, $swapoffOk, $swapFile) {
         $cmd = $process->command;
+        // ServerOps prefixes privileged operations with sudo in this test
+        // environment; fakes assert the underlying command semantics.
+        if (($cmd[0] ?? null) === 'sudo' && ($cmd[1] ?? null) === '-n') {
+            $cmd = array_slice($cmd, 2);
+        }
         $bin = $cmd[0] ?? '';
 
         // Checked before the `swapon` case below, which is the activation
@@ -257,10 +262,11 @@ it('writes the ssh drop-in, tests then reloads', function () {
         ->assertJsonPath('security.port', 22); // read is re-run via fake (still 22)
 
     $dropIn = File::get($this->dir.'/00-panel.conf');
-    expect($dropIn)->toContain('Port 2222')->toContain('PermitRootLogin no')->toContain('PasswordAuthentication yes');
-    Process::assertRan(fn ($p) => $p->command === ['sshd', '-t']);
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', $this->dir.'/99-panel.conf']);
-    Process::assertRan(fn ($p) => $p->command === ['systemctl', 'reload', 'ssh']);
+    expect($dropIn)->toContain('Port 2222')->toContain('PermitRootLogin no')->toContain('PasswordAuthentication yes')
+        ->toContain('AllowGroups ssh-users sudo');
+    Process::assertRan(fn ($p) => in_array('sshd', $p->command, true) && in_array('-t', $p->command, true));
+    Process::assertRan(fn ($p) => in_array('rm', $p->command, true) && in_array($this->dir.'/99-panel.conf', $p->command, true));
+    Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('reload', $p->command, true) && in_array('ssh', $p->command, true));
 });
 
 it('blocks disabling password auth with no ssh key (lockout guard)', function () {

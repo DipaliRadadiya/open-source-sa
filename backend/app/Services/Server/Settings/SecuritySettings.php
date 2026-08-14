@@ -90,7 +90,10 @@ class SecuritySettings implements SettingGroup
         $config = "# Managed by the panel — edit via Settings, not by hand.\n"
             ."Port {$data['port']}\n"
             ."PermitRootLogin {$rootLogin}\n"
-            .'PasswordAuthentication '.($data['password_authentication'] ? 'yes' : 'no')."\n";
+            .'PasswordAuthentication '.($data['password_authentication'] ? 'yes' : 'no')."\n"
+            // Keep confirmed server administrators reachable while making the
+            // System User SSH toggle an actual access boundary.
+            ."AllowGroups ssh-users sudo\n";
 
         $dir = rtrim((string) config('server.sshd_config_dir'), '/');
 
