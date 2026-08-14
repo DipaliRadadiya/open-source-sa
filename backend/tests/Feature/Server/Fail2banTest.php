@@ -37,6 +37,9 @@ function fakeFail2ban(bool $installed = true, array $bans = ['sshd' => []], bool
     Process::fake(function ($process) use ($runs, $installed, $bans, $running) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
         $command = $process->command;
+        if (($command[0] ?? null) === 'sudo' && ($command[1] ?? null) === '-n') {
+            $command = array_slice($command, 2);
+        }
 
         if ($command[0] === 'which') {
             return Process::result(output: $installed ? "/usr/bin/fail2ban-client\n" : '', exitCode: $installed ? 0 : 1);

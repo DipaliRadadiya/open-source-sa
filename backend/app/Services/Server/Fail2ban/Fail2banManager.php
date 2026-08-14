@@ -259,8 +259,11 @@ class Fail2banManager
             }
         }
 
+        $path = $this->dropInPath();
+        $previous = is_file($path) ? file_get_contents($path) : null;
+
         $result = $this->serverOps->run(
-            ['tee', $this->dropInPath()],
+            ['tee', $path],
             ['feature' => 'fail2ban', 'op' => 'write_config'],
             input: $body,
         );
@@ -269,7 +272,33 @@ class Fail2banManager
             throw Fail2banException::operationFailed($result->reference);
         }
 
-        $this->reload();
+        // Validate the exact file we just wrote before it can be loaded.
+        $test = $this->client(['-t']);
+        if ($test->failed()) {
+            $this->restoreDropIn($path, $previous);
+            throw Fail2banException::operationFailed($test->reference);
+        }
+
+        try {
+            $this->reload();
+        } catch (Fail2banException $exception) {
+            $this->restoreDropIn($path, $previous);
+            // Reload the known-good configuration; its failure is logged by
+            // ServerOps, while the original reference remains user-visible.
+            $this->client(['reload']);
+            throw $exception;
+        }
+    }
+
+    private function restoreDropIn(string $path, string|false|null $previous): void
+    {
+        if ($previous === null || $previous === false) {
+            $this->serverOps->run(['rm', '-f', $path], ['feature' => 'fail2ban', 'op' => 'restore_config']);
+
+            return;
+        }
+
+        $this->serverOps->run(['tee', $path], ['feature' => 'fail2ban', 'op' => 'restore_config'], input: $previous);
     }
 
     /**

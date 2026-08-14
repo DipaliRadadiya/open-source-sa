@@ -3620,6 +3620,8 @@ Update ban settings and which jails are on. The thresholds are **server-wide, no
 
 **Response `200`:** `{"fail2ban": {"settings": {...}, "jails": [...]}}`
 
+Updates are rollback-safe: the panel validates the new `panel.local` with `fail2ban-client -t` before reload. If validation or reload fails, it restores the prior configuration and reloads that known-good version. The API returns the original operation failure with its support reference; the frontend should refetch `GET /fail2ban` after a failed save rather than keeping optimistic form values.
+
 ---
 
 ### POST `/fail2ban/bans`
