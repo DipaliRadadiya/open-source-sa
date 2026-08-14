@@ -4,6 +4,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* iOS Safari — and every iOS browser, since they are all WebKit — zooms the
+   whole page when you focus a field whose font-size is under 16px, and does not
+   zoom back out. No other engine does this: Android Chrome and Firefox do not,
+   desktop does not. `-webkit-touch-callout` exists only on iOS, so this is the
+   narrowest way to pay the 16px tax exactly where it is owed instead of on
+   every phone. */
+@custom-variant ios (@supports (-webkit-touch-callout: none));
+
 @theme inline {
     --font-heading: var(--font-geist-sans);
     --font-sans: var(--font-geist-sans);
