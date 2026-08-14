@@ -205,6 +205,46 @@ it('can retry a failed provision explicitly', function () {
     expect($app->fresh()->failed_step)->toBeNull();
 });
 
+it('does not queue a second provision while one is already running', function () {
+    Queue::fake();
+    $app = makeApp(['status' => 'provisioning', 'steps' => ['create_directory']]);
+
+    $this->withHeaders(provisionHeaders())
+        ->postJson("/api/applications/{$app->id}/provision")
+        ->assertStatus(202)
+        ->assertJsonPath('application.status', 'provisioning');
+
+    Queue::assertNothingPushed();
+    expect($app->fresh()->steps)->toBe(['create_directory']);
+});
+
+it('uses one unique provisioning job per application', function () {
+    expect((new ProvisionApplication(42))->uniqueId())->toBe('application-provision-42');
+});
+
+it('keeps a support reference when the provisioning worker dies', function () {
+    $app = makeApp(['status' => 'provisioning']);
+
+    (new ProvisionApplication($app->id))->failed(new RuntimeException('worker lost'));
+
+    $app->refresh();
+    expect($app->status->value)->toBe('failed')
+        ->and($app->failed_step)->toBe('worker')
+        ->and($app->reference)->not->toBeEmpty();
+});
+
+it('refuses to delete an application while provisioning is running', function () {
+    Process::fake();
+    $app = makeApp(['status' => 'provisioning']);
+
+    $this->withHeaders(provisionHeaders())
+        ->deleteJson("/api/applications/{$app->id}")
+        ->assertStatus(503);
+
+    expect(Application::find($app->id))->not->toBeNull();
+    Process::assertNothingRan();
+});
+
 it('removes the site config on delete but keeps the files by default', function () {
     Process::fake();
     $app = makeApp(['status' => 'active']);

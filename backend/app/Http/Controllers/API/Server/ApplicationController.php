@@ -71,9 +71,19 @@ class ApplicationController extends Controller
      */
     public function provision(Application $application): JsonResponse
     {
-        ProvisionApplication::dispatch($application->id, Auth::id());
+        // A second click while this job is queued/running must not reset its
+        // progress or enqueue concurrent writes to the same site.
+        if ($application->status === ApplicationStatus::Provisioning) {
+            return response()->json([
+                'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
+            ], 202);
+        }
 
+        // Persist before dispatch. A fast worker can otherwise finish and mark
+        // the site active before this request overwrites it as provisioning.
         $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'reference' => null]);
+
+        ProvisionApplication::dispatch($application->id, Auth::id());
 
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
@@ -212,6 +222,10 @@ class ApplicationController extends Controller
         DeprovisionApplication $deprovision,
         DeleteApplication $action,
     ): JsonResponse {
+        // A queued worker can still be writing this site's files and config.
+        // Deleting its record now would leave those mutations untracked.
+        abort_if($application->status === ApplicationStatus::Provisioning, 503, __('errors/server.busy'));
+
         $deprovision->execute($application, $request->boolean('remove_files'));
         $action->execute($application);
 

@@ -11,9 +11,11 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisioningBudget;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -26,7 +28,7 @@ use Throwable;
  * automatic one would just repeat a failure the user needs to see and fix —
  * they get an explicit retry action instead.
  */
-class ProvisionApplication implements ShouldQueue
+class ProvisionApplication implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
     use TracksActor;
@@ -43,6 +45,11 @@ class ProvisionApplication implements ShouldQueue
     public function __construct(public int $applicationId, public ?int $actorId = null)
     {
         $this->timeout = app(ProvisioningBudget::class)->forApplication($applicationId);
+    }
+
+    public function uniqueId(): string
+    {
+        return 'application-provision-'.$this->applicationId;
     }
 
     public function handle(ApplicationProvisioner $provisioner, ActivityLogger $activityLogger): void
@@ -142,13 +149,28 @@ class ProvisionApplication implements ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
+        $reference = (string) Str::uuid();
+
         Log::error('provisioning job died at the worker level', [
+            'reference' => $reference,
             'application_id' => $this->applicationId,
             'exception' => $e ? $e::class.': '.$e->getMessage() : null,
         ]);
 
-        Application::whereKey($this->applicationId)
+        $updated = Application::whereKey($this->applicationId)
             ->where('status', ApplicationStatus::Provisioning->value)
-            ->update(['status' => ApplicationStatus::Failed->value, 'failed_step' => 'worker']);
+            ->update([
+                'status' => ApplicationStatus::Failed->value,
+                'failed_step' => 'worker',
+                'reference' => $reference,
+            ]);
+
+        if ($updated === 1) {
+            $application = Application::find($this->applicationId);
+            app(ActivityLogger::class)->log('application.provision_failed', $application, [
+                'name' => $application?->name,
+                'step' => 'worker',
+            ], actor: $this->actor());
+        }
     }
 }
