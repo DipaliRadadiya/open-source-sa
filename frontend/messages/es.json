@@ -4104,6 +4104,30 @@
     "copied": "Informe copiado al portapapeles",
     "copyFailed": "No se pudo copiar el informe"
   },
+  "errorLogs": {
+    "title": "Registro de errores de la API",
+    "subtitle": "Fallos inesperados en la propia API del panel, del más reciente al más antiguo.",
+    "summary": {
+      "healthy": "Sin errores inesperados de la API.",
+      "healthyHint": "El panel no ha sufrido ningún fallo interno en el periodo registrado.",
+      "excluded": "Los datos rechazados, los problemas de inicio de sesión y las páginas no encontradas son normales y no se registran aquí.",
+      "counts": "{kinds, plural, one {# tipo de error} other {# tipos de error}} · {total, plural, one {# aparición} other {# apariciones}}",
+      "lastSeen": "El más reciente {when}."
+    },
+    "occurrences": "{count, plural, one {# vez} other {# veces}}",
+    "firstAndLast": "Primero {first} · último {last}",
+    "everyOccurrence": "Todas las apariciones",
+    "searchPlaceholder": "Buscar por error o ruta…",
+    "linesLabel": "Mostrar",
+    "truncated": "Se muestran las {lines} entradas más recientes. Hay otras más antiguas que no aparecen en esta página.",
+    "noMatchesTitle": "Ningún error coincide",
+    "noMatchesDescription": "Nada de aquí coincide con tu búsqueda. Prueba con un término más corto o bórralo para verlo todo.",
+    "unknownException": "Error desconocido",
+    "unknownRoute": "Ruta desconocida",
+    "unknownTime": "hora desconocida",
+    "signedOut": "Sin iniciar sesión",
+    "userId": "Usuario n.º {id}"
+  },
   "setup": {
     "title": "Configura tu servidor",
     "subtitle": "Instala los componentes que tus sitios necesitarán. Nada es obligatorio: puedes omitirlo y terminarlo más tarde.",

@@ -4104,6 +4104,30 @@
     "copied": "Report copied to clipboard",
     "copyFailed": "Couldn't copy the report"
   },
+  "errorLogs": {
+    "title": "API Error Log",
+    "subtitle": "Unexpected failures inside the panel's own API, newest first.",
+    "summary": {
+      "healthy": "No unexpected API errors.",
+      "healthyHint": "The panel has not hit an internal failure in the recorded period.",
+      "excluded": "Rejected input, sign-in problems and pages that were not found are normal, and are not recorded here.",
+      "counts": "{kinds, plural, one {# kind of error} other {# kinds of error}} · {total, plural, one {# occurrence} other {# occurrences}}",
+      "lastSeen": "Most recent {when}."
+    },
+    "occurrences": "{count, plural, one {# time} other {# times}}",
+    "firstAndLast": "First {first} · last {last}",
+    "everyOccurrence": "Every occurrence",
+    "searchPlaceholder": "Search by error or route…",
+    "linesLabel": "Show",
+    "truncated": "Showing the {lines} most recent entries. There are older ones that are not on this page.",
+    "noMatchesTitle": "No matching errors",
+    "noMatchesDescription": "Nothing here matches your search. Try a shorter term, or clear it to see everything.",
+    "unknownException": "Unknown error",
+    "unknownRoute": "Unknown route",
+    "unknownTime": "time unknown",
+    "signedOut": "Not signed in",
+    "userId": "User #{id}"
+  },
   "setup": {
     "title": "Set up your server",
     "subtitle": "Install the components your sites will need. Nothing is required — you can skip and finish this later.",
