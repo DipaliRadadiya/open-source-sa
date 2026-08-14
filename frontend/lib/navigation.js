@@ -74,6 +74,7 @@ const BUILT_SERVER_URLS = new Set([
   "/activity-log",
   "/integrations/git",
   "/integrations/storage",
+  "/sync",
 ]);
 
 export function isServerNavBuilt(url) {

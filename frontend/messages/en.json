@@ -4698,5 +4698,101 @@
         "description": "Try a different site or status."
       }
     }
+  },
+  "sync": {
+    "title": "Server sync",
+    "subtitle": "Find websites, users and settings that already exist on this server but aren't in the panel yet, then add them.",
+    "common": {
+      "cancel": "Cancel"
+    },
+    "actions": {
+      "scan": "Scan the server",
+      "rescan": "Scan again",
+      "adopt": "Add to the panel",
+      "refresh": "Refresh"
+    },
+    "empty": {
+      "title": "This server hasn't been scanned yet",
+      "description": "A scan looks through this server for websites, users, certificates and settings that the panel doesn't know about. It only reads — nothing is changed until you choose to add it.",
+      "nothingFound": "Nothing new was found",
+      "nothingFoundHint": "Everything on this server is already in the panel, or has been dismissed."
+    },
+    "summary": {
+      "scanning": "Scanning the server…",
+      "adopting": "Adding to the panel…",
+      "foundSoFar": "{count, plural, =0 {Nothing found yet} one {# thing found so far} other {# things found so far}}",
+      "previewTitle": "{count, plural, =0 {Nothing found} one {Found # thing} other {Found # things}}",
+      "previewNothingChanged": "Nothing has been changed on your server.",
+      "adopted": "{count, plural, =0 {Nothing was added} one {Added # thing to the panel} other {Added # things to the panel}}",
+      "skipped": "{count, plural, one {# was skipped} other {# were skipped}}",
+      "failed": "{count, plural, one {# thing couldn't be added} other {# things couldn't be added}}",
+      "counts": "{adopted} added · {skipped} skipped · {failed} failed"
+    },
+    "results": {
+      "searchPlaceholder": "Search by name",
+      "showing": "Showing {shown} of {total}",
+      "noMatches": "Nothing matches",
+      "noMatchesHint": "Try a different search, or clear the type filters.",
+      "ignoredNote": "Dismissed — this won't be added",
+      "toggleDetails": "Show details for {name}",
+      "ignore": "Dismiss {name}",
+      "restore": "Undo dismissing {name}",
+      "columns": {
+        "type": "Type",
+        "name": "Name",
+        "outcome": "Status"
+      }
+    },
+    "outcomes": {
+      "found": "Found",
+      "adopted": "Added",
+      "skipped": "Skipped",
+      "failed": "Failed"
+    },
+    "types": {
+      "system_user": "System users",
+      "ssh_key": "SSH keys",
+      "application": "Websites",
+      "php_settings": "PHP settings",
+      "worker": "Queue workers",
+      "database_user": "Database users",
+      "certificate": "Certificates",
+      "cronjob": "Cron jobs",
+      "firewall_rule": "Firewall rules"
+    },
+    "confidence": {
+      "high": "Confident",
+      "medium": "Likely",
+      "low": "Best guess",
+      "unknown": "Not identified",
+      "score": "Match score {score} of 100"
+    },
+    "evidence": {
+      "none": "No extra details were recorded for this one."
+    },
+    "ignored": {
+      "trigger": "Dismissed ({count})",
+      "title": "Dismissed items",
+      "description": "These won't appear in future scans and won't be added to the panel. You can undo any of them here.",
+      "empty": "You haven't dismissed anything yet.",
+      "restore": "Undo dismissing {name}"
+    },
+    "adopt": {
+      "title": "Add these to the panel?",
+      "description": "Everything found is added except what you've dismissed. Untick a type to leave it out entirely.",
+      "typesLegend": "What to add",
+      "includeFirewall": "Also add firewall rules",
+      "firewallWarning": "Once the panel manages your firewall rules, a later change here can close the port you connect on. Leave this off unless you're sure.",
+      "unmetDependency": "{types} need {requires} to be added too. Without it, every one of them will be skipped.",
+      "summary": "{count, plural, =0 {Nothing will be added} one {# thing will be added} other {# things will be added}} across {types, plural, one {# type} other {# types}}.",
+      "summaryIgnored": "{count, plural, one {# dismissed item will be left alone} other {# dismissed items will be left alone}}.",
+      "summaryIrreversible": "There's no undo for this — added items must be removed one by one.",
+      "confirm": "{count, plural, =0 {Add to the panel} one {Add # thing} other {Add # things}}"
+    },
+    "errors": {
+      "startFailed": "Couldn't start the scan.",
+      "ignoreFailed": "Couldn't dismiss that.",
+      "unignoreFailed": "Couldn't undo that."
+    }
   }
 }

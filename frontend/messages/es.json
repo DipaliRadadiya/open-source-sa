@@ -4698,5 +4698,101 @@
         "description": "Cuando se restaure una copia sobre un sitio, quedará registrada aquí: qué se restauró, cuándo y si funcionó."
       }
     }
+  },
+  "sync": {
+    "title": "Sincronizar servidor",
+    "subtitle": "Encuentra sitios web, usuarios y ajustes que ya existen en este servidor pero aún no están en el panel, y añádelos.",
+    "common": {
+      "cancel": "Cancelar"
+    },
+    "actions": {
+      "scan": "Analizar el servidor",
+      "rescan": "Analizar de nuevo",
+      "adopt": "Añadir al panel",
+      "refresh": "Actualizar"
+    },
+    "empty": {
+      "title": "Este servidor aún no se ha analizado",
+      "description": "Un análisis busca en este servidor sitios web, usuarios, certificados y ajustes que el panel no conoce. Solo lee: no se cambia nada hasta que elijas añadirlo.",
+      "nothingFound": "No se encontró nada nuevo",
+      "nothingFoundHint": "Todo lo que hay en este servidor ya está en el panel, o ha sido descartado."
+    },
+    "summary": {
+      "scanning": "Analizando el servidor…",
+      "adopting": "Añadiendo al panel…",
+      "foundSoFar": "{count, plural, =0 {Aún no se ha encontrado nada} one {# elemento encontrado hasta ahora} other {# elementos encontrados hasta ahora}}",
+      "previewTitle": "{count, plural, =0 {No se encontró nada} one {Se encontró # elemento} other {Se encontraron # elementos}}",
+      "previewNothingChanged": "No se ha cambiado nada en tu servidor.",
+      "adopted": "{count, plural, =0 {No se añadió nada} one {Se añadió # elemento al panel} other {Se añadieron # elementos al panel}}",
+      "skipped": "{count, plural, one {Se omitió #} other {Se omitieron #}}",
+      "failed": "{count, plural, one {No se pudo añadir # elemento} other {No se pudieron añadir # elementos}}",
+      "counts": "{adopted} añadidos · {skipped} omitidos · {failed} fallidos"
+    },
+    "results": {
+      "searchPlaceholder": "Buscar por nombre",
+      "showing": "Mostrando {shown} de {total}",
+      "noMatches": "No hay coincidencias",
+      "noMatchesHint": "Prueba otra búsqueda o quita los filtros de tipo.",
+      "ignoredNote": "Descartado: no se añadirá",
+      "toggleDetails": "Mostrar detalles de {name}",
+      "ignore": "Descartar {name}",
+      "restore": "Deshacer el descarte de {name}",
+      "columns": {
+        "type": "Tipo",
+        "name": "Nombre",
+        "outcome": "Estado"
+      }
+    },
+    "outcomes": {
+      "found": "Encontrado",
+      "adopted": "Añadido",
+      "skipped": "Omitido",
+      "failed": "Fallido"
+    },
+    "types": {
+      "system_user": "Usuarios del sistema",
+      "ssh_key": "Claves SSH",
+      "application": "Sitios web",
+      "php_settings": "Ajustes de PHP",
+      "worker": "Workers de cola",
+      "database_user": "Usuarios de base de datos",
+      "certificate": "Certificados",
+      "cronjob": "Tareas cron",
+      "firewall_rule": "Reglas del firewall"
+    },
+    "confidence": {
+      "high": "Seguro",
+      "medium": "Probable",
+      "low": "Suposición",
+      "unknown": "Sin identificar",
+      "score": "Puntuación de coincidencia {score} de 100"
+    },
+    "evidence": {
+      "none": "No se registraron detalles adicionales para este elemento."
+    },
+    "ignored": {
+      "trigger": "Descartados ({count})",
+      "title": "Elementos descartados",
+      "description": "Estos no aparecerán en futuros análisis ni se añadirán al panel. Puedes deshacer cualquiera aquí.",
+      "empty": "Aún no has descartado nada.",
+      "restore": "Deshacer el descarte de {name}"
+    },
+    "adopt": {
+      "title": "¿Añadir estos al panel?",
+      "description": "Se añade todo lo encontrado excepto lo que hayas descartado. Desmarca un tipo para dejarlo fuera por completo.",
+      "typesLegend": "Qué añadir",
+      "includeFirewall": "Añadir también las reglas del firewall",
+      "firewallWarning": "Cuando el panel gestione tus reglas del firewall, un cambio posterior aquí puede cerrar el puerto por el que te conectas. Déjalo desactivado si no estás seguro.",
+      "unmetDependency": "{types} necesitan que también se añada {requires}. Sin eso, se omitirán todos.",
+      "summary": "{count, plural, =0 {No se añadirá nada} one {Se añadirá # elemento} other {Se añadirán # elementos}} en {types, plural, one {# tipo} other {# tipos}}.",
+      "summaryIgnored": "{count, plural, one {Se dejará intacto # elemento descartado} other {Se dejarán intactos # elementos descartados}}.",
+      "summaryIrreversible": "Esto no se puede deshacer: los elementos añadidos hay que eliminarlos uno a uno.",
+      "confirm": "{count, plural, =0 {Añadir al panel} one {Añadir # elemento} other {Añadir # elementos}}"
+    },
+    "errors": {
+      "startFailed": "No se pudo iniciar el análisis.",
+      "ignoreFailed": "No se pudo descartar.",
+      "unignoreFailed": "No se pudo deshacer."
+    }
   }
 }
