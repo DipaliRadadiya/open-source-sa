@@ -387,7 +387,7 @@ resolve_hostnames() {
     done
 
     if [[ -z "$ip" ]]; then
-        ip=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
+        ip=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '!f{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); f=1}}')
         [[ -n "$ip" ]] || die "could not determine this server's IP address.
      Re-run with --domain=your.hostname to skip the lookup."
         warn "could not reach an IP lookup service; using the local address $ip"
@@ -520,7 +520,7 @@ assert_php_available() {
     fi
 
     local candidate
-    candidate=$(apt-cache policy "php${PHP_VERSION}-fpm" 2>/dev/null | awk '/Candidate:/ {print $2; exit}')
+    candidate=$(apt-cache policy "php${PHP_VERSION}-fpm" 2>/dev/null | awk '/Candidate:/ {print $2}')
 
     if [[ -z "$candidate" || "$candidate" == "(none)" ]]; then
         die "PHP ${PHP_VERSION} is not available from apt on ${PRETTY_NAME:-this release}.
@@ -585,7 +585,20 @@ configure_apt_lock_wait() {
 # the problem is permission. LC_ALL=C keeps the message in English on a
 # localised server.
 apt_lock_is_held() {
-    local output
+    local output lock
+
+    # apt-get check only takes the dpkg/frontend lock. `apt-get update` needs the
+    # lists lock, and a first-boot unattended-upgrades holds THAT one while
+    # leaving the frontend lock free — so a check-only probe reports "free" and
+    # the update then dies on "Could not get lock /var/lib/apt/lists/lock". fuser
+    # reports a holder of any of the real lock files, whatever the lock type, so
+    # we wait for the one that actually matters.
+    if command -v fuser >/dev/null 2>&1; then
+        for lock in /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend \
+                    /var/lib/dpkg/lock /var/cache/apt/archives/lock; do
+            fuser "$lock" >/dev/null 2>&1 && return 0
+        done
+    fi
 
     output=$(LC_ALL=C apt-get -o DPkg::Lock::Timeout=0 check 2>&1) && return 1
 
@@ -720,7 +733,7 @@ install_node() {
     # someone later changes the server's default.
     # fnm lays versions out as node-versions/vX.Y.Z/installation/bin/node —
     # four levels below node-versions, which is why maxdepth is 5 and not 3.
-    NODE_BIN=$(find "${FNM_DIR}/node-versions" -maxdepth 5 -type f -name node -path "*v${NODE_VERSION}.*" 2>/dev/null | head -n1)
+    NODE_BIN=$(find "${FNM_DIR}/node-versions" -maxdepth 5 -type f -name node -path "*v${NODE_VERSION}.*" -print -quit 2>/dev/null)
     [[ -x "${NODE_BIN:-}" ]] || die "installed Node ${NODE_VERSION} but cannot find its binary under ${FNM_DIR}"
 
     # The installer runs as root under umask 077, but the frontend build and
@@ -870,7 +883,10 @@ configure_redis() {
         REDIS_PASSWORD="$existing"
         skip "Redis already has a password"
     else
-        REDIS_PASSWORD=$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 32)
+        # No trailing `head -c`: it closes the pipe early and SIGPIPEs tr, which
+        # pipefail turns into a fatal exit 141. Over-read, then slice in bash.
+        REDIS_PASSWORD=$(head -c 48 /dev/urandom | base64 | tr -d '/+=')
+        REDIS_PASSWORD=${REDIS_PASSWORD:0:32}
         printf '\n# Added by the Control panel installer\nrequirepass %s\n' "$REDIS_PASSWORD" >>"$conf"
         ok "generated a Redis password"
     fi
@@ -1638,7 +1654,7 @@ configure_firewall() {
     run ufw allow 80/tcp
     run ufw allow 443/tcp
 
-    if ufw status 2>/dev/null | head -n1 | grep -q inactive; then
+    if [[ "$(ufw status 2>/dev/null)" == *inactive* ]]; then
         ok "rules added for 22, 80, 443 (ufw is inactive — not enabling it)"
     else
         ok "rules added for 22, 80, 443"
