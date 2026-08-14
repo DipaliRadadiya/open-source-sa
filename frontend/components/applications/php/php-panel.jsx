@@ -1163,12 +1163,16 @@ const RESET_FIELDS = {
 /**
  * The directives the API will actually accept a null for.
  *
- * `SavePhpSettingsRequest` marks every rule `sometimes`, but only these carry
- * `nullable` — sending null for `pm_type`, `pm_max_children`, `pm_max_requests`,
- * `open_basedir_enabled` or `allow_url_fopen` fails validation, so an override
- * on those cannot be cleared at all yet. They are left with no button rather
- * than one that 422s: a control that looks available and is not is worse than
- * its absence. Add them here when the backend adds `nullable` (ask #6).
+ * `SavePhpSettingsRequest` marks every rule `sometimes`; these are the ones that
+ * also carry `nullable`, so null clears the override and the site falls back to
+ * the server default. The four pool and fopen directives were added by the
+ * backend on 2026-08-13 (they used to 422, so they had no button rather than a
+ * broken one — a control that looks available and is not is worse than its
+ * absence).
+ *
+ * `open_basedir_enabled` stays off this list on purpose, and it is not an
+ * oversight: it is a plain boolean with a column default of `false`, so it has
+ * no override to clear. "Reset" for that one is just switching it off.
  */
 const RESETTABLE = new Set([
   "memory_limit",
@@ -1182,6 +1186,10 @@ const RESETTABLE = new Set([
   "php_timezone",
   "auto_prepend_file",
   "additional_directives",
+  "pm_type",
+  "pm_max_children",
+  "pm_max_requests",
+  "allow_url_fopen",
 ]);
 
 /**
