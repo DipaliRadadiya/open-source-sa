@@ -6,6 +6,7 @@ use App\Exceptions\Server\Cronjob\CronjobOperationException;
 use App\Models\Cronjob;
 use App\Services\ActivityLogger;
 use App\Services\Server\CrontabManager;
+use Illuminate\Support\Facades\Log;
 
 class UpdateCronjob
 {
@@ -53,7 +54,19 @@ class UpdateCronjob
         }
 
         if ($this->crontab->path($cronjob) !== $oldPath) {
-            $this->crontab->removePath($oldPath);
+            $removed = $this->crontab->removePath($oldPath);
+
+            if ($removed->failed()) {
+                // The old file still runs. Remove the newly-written file and
+                // restore the row so one rename can never schedule two jobs.
+                $cleanup = $cronjob->active ? $this->crontab->remove($cronjob) : null;
+                if ($cleanup?->failed()) {
+                    Log::warning('cronjob rename cleanup failed', ['reference' => $cleanup->reference]);
+                }
+                $cronjob->forceFill($before)->save();
+                throw new CronjobOperationException($removed->reference);
+            }
+
             // Carry the output history over to the new name rather than
             // stranding it under the old one.
             $this->crontab->moveLog($oldSlug, $cronjob);

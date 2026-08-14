@@ -247,6 +247,25 @@ it('relocates the cron.d file when the job is renamed', function () {
     Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/new-name']);
 });
 
+it('removes the new file and restores the row when old-file removal fails during rename', function () {
+    $job = Cronjob::create([
+        'name' => 'Old name', 'slug' => 'old-name', 'username' => 'deploy', 'command' => 'echo hi',
+        'expression' => '* * * * *', 'active' => true,
+    ]);
+    Process::fake(fn ($process) => in_array('rm', $process->command, true)
+        && in_array('/etc/cron.d/old-name', $process->command, true)
+        ? Process::result(exitCode: 1, errorOutput: 'remove failed')
+        : Process::result(exitCode: 0));
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$job->id}", ['name' => 'New name'])
+        ->assertStatus(500);
+
+    expect($job->fresh()->slug)->toBe('old-name');
+    Process::assertRan(fn ($p) => in_array('rm', $p->command, true)
+        && in_array('/etc/cron.d/new-name', $p->command, true));
+});
+
 it('returns a translated error with reference and rolls back when the write fails', function () {
     Process::fake(fn ($process) => $process->command[0] === 'tee'
         ? Process::result(output: '', errorOutput: 'denied', exitCode: 1)
