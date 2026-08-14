@@ -2,7 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { PendingSwitch } from "@/components/ui/pending-switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 import {
@@ -28,6 +28,7 @@ export function RulesCards({
   pending,
   onDelete,
   onToggle,
+  shownEnabled,
   onRename,
   labels,
 }) {
@@ -49,10 +50,11 @@ export function RulesCards({
                 on each keeps the look and makes them reliably tappable. */}
             <div className="flex shrink-0 items-center gap-1 max-sm:[&_button:not([role=switch])]:min-h-11 max-sm:[&_button:not([role=switch])]:min-w-11">
               <ReasonTooltip reason={canManage ? null : labels.noPermission}>
-                <Switch
-                  checked={rule.enabled !== false}
+                <PendingSwitch
+                  checked={shownEnabled(rule)}
+                  pending={pending === rule.id}
                   onCheckedChange={() => onToggle(rule)}
-                  disabled={!canManage || pending === rule.id}
+                  disabled={!canManage}
                   aria-label={labels.toggle}
                 />
               </ReasonTooltip>

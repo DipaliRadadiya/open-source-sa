@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ShieldX, Trash2, Pencil } from "lucide-react";
 import { deleteFirewallRule, updateFirewallRule } from "@/lib/api/firewall";
 import { unreachablePorts } from "@/lib/firewall/listening";
-import { Switch } from "@/components/ui/switch";
+import { PendingSwitch } from "@/components/ui/pending-switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,7 +72,7 @@ function AddedCell({ row }) {
 }
 
 function ActionsCell({ row, table }) {
-  const { enabled, canManage, pending, onDelete, onToggle, onRename, labels } =
+  const { enabled, canManage, pending, onDelete, onToggle, onRename, shownEnabled, labels } =
     table.options.meta;
   const rule = row.original;
   const busy = pending === rule.id;
@@ -83,10 +83,11 @@ function ActionsCell({ row, table }) {
           matters used to mean deleting it — and for a deny rule, that lets the
           blocked thing through while you work out how to retype it. */}
       <ReasonTooltip reason={canManage ? null : labels.noPermission}>
-        <Switch
-          checked={rule.enabled !== false}
+        <PendingSwitch
+          checked={shownEnabled(rule)}
+          pending={busy}
           onCheckedChange={() => onToggle(rule)}
-          disabled={!canManage || busy}
+          disabled={!canManage}
           aria-label={labels.toggle}
         />
       </ReasonTooltip>
@@ -131,6 +132,13 @@ export function RulesCard({
   const [pending, setPending] = useState(null);
   const [confirming, setConfirming] = useState(null);
   const [editing, setEditing] = useState(null);
+  // The state the user asked for, held until the server catches up — stored
+  // WITH the value it was based on, so the override retires itself the moment
+  // the refreshed rule moves off that value. Without it this switch sat still
+  // for the ~1.3s the write takes and the click read as ignored; the fail2ban
+  // jail switch has worked this way since 7e1c6cc and these two should not
+  // behave differently.
+  const [asked, setAsked] = useState({});
 
   const term = query.trim().toLowerCase();
   const filtered = term
@@ -175,11 +183,18 @@ export function RulesCard({
   async function onToggle(rule) {
     const next = rule.enabled === false;
     setPending(rule.id);
+    setAsked((current) => ({ ...current, [rule.id]: { value: next, from: rule.enabled !== false } }));
     try {
       await updateFirewallRule(rule.id, { enabled: next });
       toast.success(next ? t("rules.enabled") : t("rules.disabled"));
       router.refresh();
     } catch (error) {
+      // Put it back: a switch must not sit showing a state the server refused.
+      setAsked((current) => {
+        const reverted = { ...current };
+        delete reverted[rule.id];
+        return reverted;
+      });
       const data = error.response?.data;
       toast.error(
         [apiMessage(error, t("rules.toggleFailed")), data?.reference].filter(Boolean).join(" · "),
@@ -187,6 +202,12 @@ export function RulesCard({
     } finally {
       setPending(null);
     }
+  }
+
+  function shownEnabled(rule) {
+    const override = asked[rule.id];
+    const server = rule.enabled !== false;
+    return override && override.from === server ? override.value : server;
   }
 
   const blocked = unreachablePorts({ listening, rules, enabled });
@@ -315,6 +336,7 @@ export function RulesCard({
                 pending={pending}
                 onDelete={onDelete}
                 onToggle={onToggle}
+                shownEnabled={shownEnabled}
                 onRename={setEditing}
                 labels={labels}
               />
@@ -336,6 +358,7 @@ export function RulesCard({
                   pending,
                   onDelete,
                   onToggle,
+                  shownEnabled,
                   onRename: setEditing,
                   labels,
                 }}
