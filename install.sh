@@ -1084,11 +1084,19 @@ client_max_body_size 64M;
 # This is the difference between one disk write per uploaded byte and two, and
 # on a box that also serves the hosted sites the second write is not the cost
 # that matters -- streaming the bytes through the page cache evicts the sites'
-# hot files, and they start hitting disk. Must stay >= the client's chunk size
-# (8M) for chunked uploads to avoid the spill entirely. Worst case is
-# pm.max_children (10) x this, which is trivial next to any box that runs a
-# panel and sites together.
-client_body_buffer_size 12M;
+# hot files, and they start hitting disk.
+#
+# Must stay above the largest chunk the client will send. That is now sized by
+# file: 8M up to 512M, 16M up to 5G, 32M beyond -- chunks go up one at a time,
+# so each one costs a round trip, and a 5 GB file at 8M spends over two minutes
+# on latency alone before any bandwidth is used. Raising the ladder in
+# lib/api/files.js means raising this in the same change, or nginx starts
+# spilling exactly the files the larger chunks were meant to speed up.
+#
+# nginx allocates this per request and only as much as the body needs, so the
+# cost is not 36M standing: it is 36M x however many large uploads are in
+# flight at once, bounded by pm.max_children (10).
+client_body_buffer_size 36M;
 
 location ${api_prefix} {
     try_files \$uri \$uri/ /index.php?\$query_string;

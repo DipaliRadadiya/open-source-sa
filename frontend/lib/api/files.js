@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { CHUNK_THRESHOLD_BYTES, MAX_CHUNK_BYTES, chunkSizeFor } from "@/lib/files/chunk-size";
 
 export function listFiles(appId, path = "", { signal } = {}) {
   return api.get(`/applications/${appId}/files`, { params: { path }, signal });
@@ -55,16 +56,9 @@ export function uploadFile(appId, path, file, { onProgress, signal } = {}) {
   });
 }
 
-// Files at or under this go in one request; larger ones are chunked. The
-// threshold sits below the panel pool's post_max_size (64M) with room to
-// spare, so a single-shot upload can never be the thing that fails.
-export const CHUNK_THRESHOLD_BYTES = 32 * 1024 * 1024;
-
-// Must stay <= nginx's client_body_buffer_size (12M) on the panel vhost, so a
-// chunk is buffered in RAM and never spilled to client_body_temp. That spill
-// is a second disk write of every uploaded byte, and on a server that also
-// hosts the customer sites it is their page cache that pays for it.
-export const CHUNK_SIZE_BYTES = 8 * 1024 * 1024;
+// Imported rather than re-exported straight through: `export ... from` does
+// not bind the names locally, and this module uses both below.
+export { CHUNK_THRESHOLD_BYTES, MAX_CHUNK_BYTES, chunkSizeFor };
 
 const CHUNK_RETRIES = 3;
 
@@ -105,11 +99,15 @@ export async function uploadFileChunked(appId, path, file, { onProgress, signal 
   const uploadId = data.upload_id;
   const base = `/applications/${appId}/files/uploads/${uploadId}`;
 
+  // Chosen once, from the size declared to the server above — not per chunk,
+  // so a resumed upload keeps the boundaries the first attempt used.
+  const chunkSize = chunkSizeFor(file.size);
+
   try {
     let offset = 0;
 
     while (offset < file.size) {
-      const end = Math.min(offset + CHUNK_SIZE_BYTES, file.size);
+      const end = Math.min(offset + chunkSize, file.size);
       let attempt = 0;
 
       for (;;) {
