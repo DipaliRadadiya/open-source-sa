@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Exceptions\Server\ServerOperationException;
+use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallProgress;
@@ -52,7 +52,7 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
                     $progress->persist();
                 }
             });
-        } catch (ServerOperationException $e) {
+        } catch (SettingOperationException $e) {
             // Flushed first: apt's last words are the only thing that explains
             // a purge that would not complete. Keep its reference too: the
             // API never exposes apt output, so this is the support trail.
