@@ -26,7 +26,7 @@ function grantAdmin(User $user): void
 
 describe('POST /api/central/enable', function () {
 
-    it('creates a token and returns it masked', function () {
+    it('creates a token and returns the raw value once', function () {
         grantAdmin($this->user);
 
         $response = $this->postJson('/api/central/enable');
@@ -34,7 +34,7 @@ describe('POST /api/central/enable', function () {
         $response->assertCreated()
             ->assertJsonStructure(['central_token', 'message']);
         $this->assertStringStartsWith('sv_central_', $response->json('central_token'));
-        $this->assertStringContainsString('***', $response->json('central_token'));
+        $this->assertStringNotContainsString('***', $response->json('central_token'));
     });
 
     it('stores the raw token in the settings table', function () {
@@ -59,11 +59,18 @@ describe('POST /api/central/enable', function () {
         $this->assertNotEquals($token1, $token2);
 
         $row = DB::table('settings')->where('id', 1)->first();
-        $this->assertEquals($row->central_token, $row->central_token); // same stored value
+        $this->assertEquals($token2, $row->central_token);
+        $this->assertNotEquals($token1, $token2);
     });
 
     it('returns 401 when unauthenticated', function () {
         $this->postJson('/api/central/enable')->assertUnauthorized();
+    });
+
+    it('denies a non-administrator from creating a central token', function () {
+        $this->actingAs($this->user)
+            ->postJson('/api/central/enable')
+            ->assertForbidden();
     });
 });
 

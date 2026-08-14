@@ -29,7 +29,7 @@ class CentralController extends Controller
         $result = $this->tokens->enable();
 
         return response()->json([
-            'central_token' => $result['masked'],
+            'central_token' => $result['central_token'],
             'message' => __('errors/central.enabled'),
         ], 201);
     }

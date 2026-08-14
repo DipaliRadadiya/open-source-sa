@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'can:access-admin'])->group(function (): void {
     Route::post('/central/enable', [CentralController::class, 'enable']);
     Route::get('/central/status', [CentralController::class, 'status']);
     Route::delete('/central', [CentralController::class, 'disable']);

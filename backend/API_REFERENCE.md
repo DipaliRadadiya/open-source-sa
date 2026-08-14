@@ -4343,23 +4343,23 @@ Unauthenticated. Health check for load balancers / uptime monitors.
 Lets a central panel drive this OSS install over `Authorization: Bearer <token>`. These three endpoints are the OSS admin's own settings screen and need a normal Sanctum session — they are not the central-facing API.
 
 ### POST `/central/enable`
-**Auth:** session
+**Auth:** administrator session
 
 Generates a token, replacing any existing one. Enabling again rotates it and invalidates the old one.
 
-**Response `201`:** `{"central_token": "sv_central_a***************", "message": "…"}`
+**Response `201`:** `{"central_token": "sv_central_…", "message": "…"}`
 
-⚠️ `central_token` is **masked** (first 12 characters, the rest starred) and no endpoint ever returns the raw value. So there is currently nothing in the API carrying the token a user would paste into central. Don't build a "copy token" button against this field — it copies asterisks. Flagged as an API gap, not a frontend one.
+`central_token` is returned in full **only in this creation response**, so the frontend can copy it into Central or pass it to an installer. It is never returned again: `GET /central/status` stays masked.
 
 ### GET `/central/status`
-**Auth:** session
+**Auth:** administrator session
 
 **Response `200`:** `{"central": {"enabled": true, "token": "sv_central_a***************"}}`
 
 `token` is `null` when `enabled` is `false`. Never the raw value.
 
 ### DELETE `/central`
-**Auth:** session
+**Auth:** administrator session
 
 Revokes the current token. **Response `200`:** `{"message": "…"}`
 
