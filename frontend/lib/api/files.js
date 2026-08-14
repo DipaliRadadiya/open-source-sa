@@ -101,7 +101,12 @@ export async function uploadFileChunked(appId, path, file, { onProgress, signal 
 
   // Chosen once, from the size declared to the server above — not per chunk,
   // so a resumed upload keeps the boundaries the first attempt used.
-  const chunkSize = chunkSizeFor(file.size);
+  //
+  // Clamped to what the server said it will take. Only it knows its own
+  // post_max_size, and a chunk over that is refused by middleware with "The
+  // POST data is too large" before any upload code runs — a 6 GB file picking
+  // 32 MB chunks against a stock 8M limit failed on the very first one.
+  const chunkSize = Math.min(chunkSizeFor(file.size), data.max_chunk || Infinity);
 
   try {
     let offset = 0;

@@ -167,6 +167,30 @@ it('opens an upload and hands back an id that is not client-chosen', function ()
     expect($response->json('upload_id'))->toMatch(ChunkedUpload::ID_PATTERN);
 });
 
+it('tells the client the largest chunk this server will take', function () {
+    // The client sizes chunks by file size, but post_max_size is the server's
+    // to know. A chunk over it is refused by Laravel's ValidatePostSize with
+    // "The POST data is too large" before any upload code runs — which is
+    // what a 6 GB file picking 32 MB chunks hit on a stock 8M limit.
+    $response = $this->actingAs($this->admin)
+        ->postJson(uploadsUrl(), ['path' => 'big.zip'])
+        ->assertOk();
+
+    expect($response->json('max_chunk'))->toBe(ChunkedUpload::maxChunkBytes());
+});
+
+it('never advertises a chunk that post_max_size would refuse', function () {
+    $limit = ChunkedUpload::maxChunkBytes();
+    $post = (int) ini_get('post_max_size') * 1024 * 1024;
+
+    // Strictly under, not equal: the request line and headers count toward
+    // the length the limit is applied to, and are not part of the chunk.
+    expect($limit)->toBeLessThan($post)
+        // Still worth sending. A limit this low means the panel pool was never
+        // configured, but an upload of many small chunks beats none at all.
+        ->and($limit)->toBeGreaterThanOrEqual(1024 * 1024);
+});
+
 it('assembles the part file inside the site tree so finalising is a rename', function () {
     $id = $this->actingAs($this->admin)
         ->postJson(uploadsUrl(), ['path' => 'big.zip'])

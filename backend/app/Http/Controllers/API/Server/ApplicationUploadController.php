@@ -56,6 +56,11 @@ class ApplicationUploadController extends Controller
                 $request->targetPath(),
                 $request->expectedBytes(),
             ),
+            // What this server will actually take per chunk. The client sizes
+            // chunks by file size, but only the server knows its own
+            // post_max_size — and exceeding it is a 413 from middleware, long
+            // before any of this code runs.
+            'max_chunk' => ChunkedUpload::maxChunkBytes(),
         ]);
     }
 

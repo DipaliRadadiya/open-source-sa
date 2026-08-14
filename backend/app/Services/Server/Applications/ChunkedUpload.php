@@ -91,6 +91,55 @@ class ChunkedUpload
      * spent an hour uploading: that the destination directory exists, and that
      * the disk has room.
      */
+    /**
+     * The largest chunk this server can actually accept.
+     *
+     * Told to the client rather than assumed by it. Laravel's ValidatePostSize
+     * compares Content-Length against `post_max_size` on every request, PUT
+     * included, and answers 413 "The POST data is too large" when it does not
+     * fit — so a client that picks its own chunk size is guessing at a number
+     * only the server knows.
+     *
+     * It surfaced when chunk size started scaling with the file: an 8 MB chunk
+     * sat right on the stock 8M limit and mostly squeaked through, and a 32 MB
+     * one for a multi-gigabyte upload did not. The size did not cause that, it
+     * revealed it.
+     *
+     * The margin covers the request line and headers, which count toward
+     * Content-Length's limit but are not part of the chunk.
+     */
+    public static function maxChunkBytes(): int
+    {
+        $post = self::iniBytes((string) ini_get('post_max_size'));
+
+        // 0 means unlimited in PHP. Anything the client asks for is fine, so
+        // report the ladder's own ceiling rather than a fictional number.
+        if ($post <= 0) {
+            return 64 * 1024 * 1024;
+        }
+
+        return max(1024 * 1024, $post - (512 * 1024));
+    }
+
+    /** PHP's shorthand ini notation — "8M", "512K", "1G" — in bytes. */
+    private static function iniBytes(string $value): int
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return 0;
+        }
+
+        $number = (int) $value;
+
+        return match (strtolower(substr($value, -1))) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => $number,
+        };
+    }
+
     public function begin(Application $application, string $path, int $expectedBytes = 0): string
     {
         $this->assertDirectoryExists($application, dirname($this->resolve($application, $path)));
