@@ -263,7 +263,10 @@ it('writes the ssh drop-in, tests then reloads', function () {
 
     $dropIn = File::get($this->dir.'/00-panel.conf');
     expect($dropIn)->toContain('Port 2222')->toContain('PermitRootLogin no')->toContain('PasswordAuthentication yes')
-        ->toContain('AllowGroups ssh-users sudo');
+        // `root` explicitly: AllowGroups is a whitelist over every account and
+        // is consulted before PermitRootLogin, so a list without it locks root
+        // out of a box most providers hand you as root.
+        ->toContain('AllowGroups ssh-users sudo root');
     Process::assertRan(fn ($p) => in_array('sshd', $p->command, true) && in_array('-t', $p->command, true));
     Process::assertRan(fn ($p) => in_array('rm', $p->command, true) && in_array($this->dir.'/99-panel.conf', $p->command, true));
     Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('reload', $p->command, true) && in_array('ssh', $p->command, true));
@@ -344,4 +347,83 @@ it('denies a viewer without manage from changing settings', function () {
     $this->withHeader('Authorization', "Bearer {$token}")
         ->putJson('/api/settings/general', ['timezone' => 'Etc/UTC', 'hostname' => 'x', 'ntp' => true])
         ->assertForbidden();
+});
+
+describe('the ssh whitelist cannot lock the administrator out', function () {
+    /** `sshd -T` reporting whatever policy the box already has. */
+    function fakeSshdPolicy(string $extra): void
+    {
+        Process::fake(function ($process) use ($extra) {
+            $cmd = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($cmd[0] ?? '') === 'sshd' && ($cmd[1] ?? '') === '-T') {
+                return Process::result(output: "port 22\npermitrootlogin prohibit-password\npasswordauthentication yes\n".$extra);
+            }
+
+            if (($cmd[0] ?? '') === 'ufw') {
+                return Process::result(output: "Status: inactive\n");
+            }
+
+            // `tee` and `rm` are how ManagedFile works, so the fake has to do
+            // them or the assertions below inspect a file that never appeared.
+            if (($cmd[0] ?? '') === 'tee') {
+                File::put($cmd[1], (string) $process->input);
+            }
+
+            if (($cmd[0] ?? '') === 'rm') {
+                File::delete(end($cmd));
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    it('always leaves root a way in', function () {
+        fakeSshdPolicy('');
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'prohibit-password', 'password_authentication' => true])
+            ->assertOk();
+
+        // PermitRootLogin still governs root; this only stops AllowGroups
+        // refusing it before that setting is ever read.
+        expect(File::get($this->dir.'/00-panel.conf'))->toContain('root');
+    });
+
+    it('widens a policy the server already had rather than narrowing it', function () {
+        fakeSshdPolicy("allowgroups devops\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        // Someone chose `devops` deliberately. Dropping it would cut off
+        // whoever that group exists for.
+        expect(File::get($this->dir.'/00-panel.conf'))->toContain('devops');
+    });
+
+    it('writes no group whitelist at all when the server restricts by user', function () {
+        fakeSshdPolicy("allowusers deployer\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        // AllowUsers and AllowGroups are ANDed: a user must match both. Adding
+        // ours could only take access away from a list somebody else chose.
+        expect(File::get($this->dir.'/00-panel.conf'))->not->toContain('AllowGroups');
+    });
+
+    it('creates the group before naming it in the config', function () {
+        fakeSshdPolicy('');
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        // A whitelist entry matching no group matches no user — it does not
+        // fail, it just quietly stops being one of the ways in.
+        Process::assertRan(fn ($p) => in_array('groupadd', $p->command, true)
+            && in_array('ssh-users', $p->command, true));
+    });
 });

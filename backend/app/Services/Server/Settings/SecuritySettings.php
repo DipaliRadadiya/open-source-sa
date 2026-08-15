@@ -91,11 +91,18 @@ class SecuritySettings implements SettingGroup
             ."Port {$data['port']}\n"
             ."PermitRootLogin {$rootLogin}\n"
             .'PasswordAuthentication '.($data['password_authentication'] ? 'yes' : 'no')."\n"
-            // Keep confirmed server administrators reachable while making the
-            // System User SSH toggle an actual access boundary.
-            ."AllowGroups ssh-users sudo\n";
+            .$this->allowGroupsLine();
 
         $dir = rtrim((string) config('server.sshd_config_dir'), '/');
+
+        // The group has to exist before a config names it. `AllowGroups` is a
+        // whitelist, and a name that matches no group matches no user — so a
+        // missing `ssh-users` does not fail loudly, it just quietly stops being
+        // one of the ways in.
+        $this->serverOps->run(
+            ['groupadd', '-f', 'ssh-users'],
+            ['feature' => 'setting', 'group' => 'security', 'op' => 'ssh_group_ensure'],
+        );
 
         $write = $this->files->put(
             $dir.'/'.self::DROP_IN,
@@ -138,6 +145,50 @@ class SecuritySettings implements SettingGroup
         if ($reload->failed()) {
             throw new SettingOperationException($reload->reference);
         }
+    }
+
+    /**
+     * The `AllowGroups` line, or nothing at all.
+     *
+     * `AllowGroups` is a whitelist over *every* account, root included, and it
+     * is consulted before `PermitRootLogin` is. Writing a fixed
+     * `ssh-users sudo` therefore locked root out of a server the moment anyone
+     * pressed Save on this screen: root's primary group is `root`, it is not a
+     * member of `sudo`, and most providers hand you a box you log into as root.
+     * `sshd -t` cannot catch it — the syntax is valid — and `reload` leaves the
+     * open session alive, so the lockout is discovered at the next login with
+     * nothing to connect it to.
+     *
+     * So the list is derived rather than assumed:
+     *
+     *  - `ssh-users`, because that is the boundary the System User toggle moves
+     *    accounts across, and without a line here that toggle enforces nothing.
+     *  - `sudo` and `root`, the two ways an administrator reaches this server.
+     *    Allowing root here does not permit root login — `PermitRootLogin`
+     *    still decides that, and still means no when it says no.
+     *  - whatever the machine already allows, so a policy the distro or the
+     *    operator set is widened by us and never narrowed.
+     *
+     * And if the box restricts by `AllowUsers` instead, no line is written at
+     * all. The two directives are ANDed, so adding ours could only take access
+     * away from a list somebody else chose deliberately.
+     */
+    private function allowGroupsLine(): string
+    {
+        $effective = $this->effectiveConfig();
+
+        if (($effective['allowusers'] ?? '') !== '') {
+            return '';
+        }
+
+        $existing = preg_split('/\s+/', trim((string) ($effective['allowgroups'] ?? ''))) ?: [];
+
+        $groups = array_values(array_unique(array_filter(array_merge(
+            ['ssh-users', 'sudo', 'root'],
+            $existing,
+        ))));
+
+        return 'AllowGroups '.implode(' ', $groups)."\n";
     }
 
     /**
