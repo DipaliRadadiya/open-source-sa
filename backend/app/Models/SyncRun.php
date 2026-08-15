@@ -4,10 +4,12 @@ namespace App\Models;
 
 use App\Enums\SyncMode;
 use App\Enums\SyncStatus;
+use App\Jobs\RunServerSync;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Log;
 
 #[Fillable(['user_id', 'mode', 'status', 'options', 'totals', 'reference', 'started_at', 'finished_at'])]
 class SyncRun extends Model
@@ -27,9 +29,81 @@ class SyncRun extends Model
         ];
     }
 
+    /**
+     * How long after it should have finished a run is treated as dead. The
+     * job's own timeout plus a minute, so a run that is merely slow is never
+     * declared stale while it is still working.
+     */
+    public const STALE_AFTER = RunServerSync::TIMEOUT + 60;
+
     public function items(): HasMany
     {
         return $this->hasMany(SyncItem::class);
+    }
+
+    /**
+     * Unfinished, and old enough that nothing is going to finish it.
+     *
+     * `RunServerSync::failed()` handles the ordinary death — a timeout, an
+     * exception — but it only runs if a worker picked the job up and lived long
+     * enough to report. It never fires when the queue worker is not running at
+     * all (the run stays `pending` forever) or when the worker is killed
+     * outright by the OOM killer or a reboot (`running` forever).
+     *
+     * That matters because the guard on starting a run reads this state: a run
+     * stuck here refused every later sync, permanently, with no way to clear it
+     * from any screen. A guard that cannot be cleared is worse than no guard.
+     */
+    public function isStale(): bool
+    {
+        if ($this->status->finished()) {
+            return false;
+        }
+
+        $since = $this->started_at ?? $this->created_at;
+
+        return $since === null || $since->lt(now()->subSeconds(self::STALE_AFTER));
+    }
+
+    /**
+     * Mark this run failed if it is stale. Returns whether it did.
+     */
+    public function failIfStale(): bool
+    {
+        if (! $this->isStale()) {
+            return false;
+        }
+
+        Log::channel('server-ops')->warning('server sync run abandoned', [
+            'feature' => 'sync',
+            'op' => 'reap_stale',
+            'sync_run' => $this->id,
+            'status' => $this->status->value,
+            // `pending` here means the job was never picked up at all, which is
+            // a queue worker that is not running — and that breaks far more
+            // than this feature.
+            'detail' => 'unfinished for longer than the job could run',
+        ]);
+
+        $this->forceFill([
+            'status' => SyncStatus::Failed,
+            'finished_at' => now(),
+        ])->save();
+
+        return true;
+    }
+
+    /**
+     * Fail every run that is stale, and report whether any genuinely live run
+     * is left.
+     */
+    public static function hasLiveRun(): bool
+    {
+        return static::query()
+            ->whereIn('status', [SyncStatus::Pending, SyncStatus::Running])
+            ->get()
+            ->reject(fn (self $run) => $run->failIfStale())
+            ->isNotEmpty();
     }
 
     public function user(): BelongsTo

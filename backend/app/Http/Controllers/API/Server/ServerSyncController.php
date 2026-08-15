@@ -36,7 +36,13 @@ class ServerSyncController extends Controller
         // One at a time. The job is unique, so a second dispatch would be
         // silently dropped — better to say so than to hand back a run id that
         // never starts.
-        if (SyncRun::query()->whereIn('status', [SyncStatus::Pending, SyncStatus::Running])->exists()) {
+        //
+        // `hasLiveRun` retires abandoned runs before answering. This used to be
+        // a plain existence check, which meant a run left `pending` by a queue
+        // worker that was not running, or `running` by a worker that was
+        // killed, refused every later sync forever — the button was dead and no
+        // screen could revive it.
+        if (SyncRun::hasLiveRun()) {
             throw ValidationException::withMessages([
                 'sync' => [__('sync.errors.already_running')],
             ]);
@@ -70,6 +76,11 @@ class ServerSyncController extends Controller
     public function show(Request $request, SyncRun $run): JsonResponse
     {
         $since = (int) $request->query('since', 0);
+
+        // A run whose worker died stops producing items but never changes
+        // status, so the screen polling it spins for as long as someone leaves
+        // it open. Retiring it here is what ends that.
+        $run->failIfStale();
 
         $run->setRelation(
             'items',
@@ -140,6 +151,10 @@ class ServerSyncController extends Controller
     public function latest(): JsonResponse
     {
         $run = SyncRun::query()->latest('id')->first();
+
+        // Reopening the screen is the usual way an abandoned run is found, so
+        // it reports what happened rather than a progress bar that never moves.
+        $run?->failIfStale();
 
         return response()->json([
             'sync' => $run === null ? null : SyncRunResource::make($run)->resolve(),

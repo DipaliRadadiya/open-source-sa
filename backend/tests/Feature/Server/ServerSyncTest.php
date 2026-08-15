@@ -1622,3 +1622,68 @@ describe('discovering firewall rules', function () {
         expect(FirewallRule::count())->toBe(1);
     });
 });
+
+describe('a run nothing is going to finish', function () {
+    beforeEach(function () {
+        Queue::fake();
+    });
+
+    it('refuses a new scan while a run really is going', function () {
+        SyncRun::create(['mode' => SyncMode::Preview, 'status' => SyncStatus::Running, 'started_at' => now()]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/server/sync', ['mode' => 'preview'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('sync');
+    });
+
+    it('starts anyway when the previous run was abandoned', function () {
+        // `pending` and old: the job was never picked up, which is a queue
+        // worker that is not running. `failed()` never fires for this, so the
+        // row used to sit here and refuse every later scan forever.
+        $abandoned = SyncRun::create(['mode' => SyncMode::Preview, 'status' => SyncStatus::Pending]);
+        $abandoned->forceFill(['created_at' => now()->subSeconds(SyncRun::STALE_AFTER + 1)])->save();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/server/sync', ['mode' => 'preview'])
+            ->assertStatus(202);
+
+        expect($abandoned->fresh()->status)->toBe(SyncStatus::Failed)
+            ->and($abandoned->fresh()->finished_at)->not->toBeNull();
+        Queue::assertPushed(RunServerSync::class);
+    });
+
+    it('does not retire a run that is merely slow', function () {
+        $slow = SyncRun::create([
+            'mode' => SyncMode::Preview,
+            'status' => SyncStatus::Running,
+            'started_at' => now()->subSeconds(SyncRun::STALE_AFTER - 60),
+        ]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/server/sync', ['mode' => 'preview'])
+            ->assertUnprocessable();
+
+        expect($slow->fresh()->status)->toBe(SyncStatus::Running);
+    });
+
+    it('stops the watching screen spinning on an abandoned run', function () {
+        $abandoned = SyncRun::create(['mode' => SyncMode::Preview, 'status' => SyncStatus::Running]);
+        $abandoned->forceFill(['started_at' => now()->subSeconds(SyncRun::STALE_AFTER + 1)])->save();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson("/api/server/sync/{$abandoned->id}")
+            ->assertOk()
+            ->assertJsonPath('sync.status', 'failed');
+    });
+
+    it('reports an abandoned run on the reopened screen', function () {
+        $abandoned = SyncRun::create(['mode' => SyncMode::Preview, 'status' => SyncStatus::Pending]);
+        $abandoned->forceFill(['created_at' => now()->subSeconds(SyncRun::STALE_AFTER + 1)])->save();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/server/sync/latest')
+            ->assertOk()
+            ->assertJsonPath('sync.status', 'failed');
+    });
+});

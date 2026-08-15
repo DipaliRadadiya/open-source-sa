@@ -35,11 +35,17 @@ class RunServerSync implements ShouldBeUnique, ShouldQueue
      * Reading /etc/passwd and a few files is fast; the ceiling is here for the
      * later phases that walk every vhost on a large server. Comfortably under
      * the queue's own reservation window — see QueueTimeoutTest.
+     *
+     * A constant because `SyncRun` measures staleness against it: a run still
+     * unfinished long after the job could possibly have been running is a run
+     * nothing is going to finish.
      */
-    public int $timeout = 900;
+    public const TIMEOUT = 900;
+
+    public int $timeout = self::TIMEOUT;
 
     /** One sync at a time, server-wide. */
-    public int $uniqueFor = 900;
+    public int $uniqueFor = self::TIMEOUT;
 
     public function __construct(public int $syncRunId) {}
 
