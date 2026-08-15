@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\Server;
 
+use App\Jobs\MeasureApplicationSize;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Applications\FileBrowser;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
@@ -117,5 +120,59 @@ describe('measuring on demand', function () {
         $this->getJson("/api/applications/{$this->application->id}/files/size?path=wp-content/uploads");
 
         expect($this->application->fresh()->directory_size_bytes)->toBe(5000000);
+    });
+});
+
+describe('keeping the size current by itself', function () {
+    it('re-measures after files change, without making the request wait', function () {
+        Queue::fake();
+
+        // The write path stats its target as a file; fakeDu answers 'd' for the
+        // directory probes the other tests need.
+        Process::fake(function ($process) {
+            if (in_array('-printf', $process->command, true)) {
+                return Process::result(output: "f\t5");
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $this->putJson("/api/applications/{$this->application->id}/files/content", [
+            'path' => 'notes.txt',
+            'content' => 'hello',
+        ])->assertOk();
+
+        // Queued, not measured inline: `du` walks every inode, and paying that
+        // in the request would make saving one file as slow as counting the
+        // whole site.
+        Queue::assertPushed(MeasureApplicationSize::class);
+    });
+
+    it('walks the site once for a burst of changes, not once per change', function () {
+        fakeDu(1234);
+
+        // Unique per application, so fifty deletions leave one job. Without
+        // that, a bulk delete is a bulk `du`.
+        $first = new MeasureApplicationSize($this->application->id);
+        $second = new MeasureApplicationSize($this->application->id);
+
+        expect($first->uniqueId())->toBe($second->uniqueId())
+            // And the lock expires, so a worker killed mid-measure does not
+            // stop this site ever being measured again.
+            ->and($first->uniqueFor())->toBeGreaterThan($first->timeout);
+    });
+
+    it('leaves the last known size alone when a measure fails', function () {
+        $this->application->update([
+            'directory_size_bytes' => 777,
+            'directory_size_updated_at' => now()->subDay(),
+        ]);
+
+        Process::fake(fn ($process) => Process::result(exitCode: 1, errorOutput: 'du: cannot read'));
+
+        (new MeasureApplicationSize($this->application->id))->handle(app(FileBrowser::class));
+
+        // Better a number with an honest date than no number at all.
+        expect($this->application->fresh()->directory_size_bytes)->toBe(777);
     });
 });

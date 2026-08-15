@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\FileOperationException;
+use App\Jobs\MeasureApplicationSize;
 use App\Models\Application;
 use App\Rules\SafeRelativePath;
 use App\Services\Server\ServerOps;
@@ -234,6 +235,24 @@ class FileBrowser
     }
 
     /**
+     * Note that this site's contents changed, so the stored size is stale.
+     *
+     * Called by the operations that add or remove bytes — not by a rename or a
+     * chmod, which move and relabel what is already counted.
+     *
+     * Queued and debounced rather than measured here: `du` walks every inode,
+     * and paying for that inside the request would make deleting one file as
+     * slow as counting the whole site. The job is unique per application and
+     * delayed, so a burst of fifty deletions walks the site once, shortly after
+     * the person stops, instead of fifty times while they work.
+     */
+    private function sizeChanged(Application $application): void
+    {
+        MeasureApplicationSize::dispatch($application->id)
+            ->delay(now()->addSeconds(MeasureApplicationSize::DEBOUNCE_SECONDS));
+    }
+
+    /**
      * `du -sb` walks every inode, so this costs file *count*, not bytes — a
      * site with node_modules is a hundred thousand of them. It is why no
      * listing calls it and why nothing runs it on a schedule.
@@ -410,6 +429,8 @@ class FileBrowser
         $this->backup($application, $target);
 
         $this->run($application, ['tee', $target], 'write', input: $content);
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -459,6 +480,8 @@ class FileBrowser
         $content = $this->run($application, ['cat', $source], 'read_backup')->output();
 
         $this->write($application, $path, $content);
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -605,6 +628,8 @@ class FileBrowser
         $this->assertType($application, $directory, 'd');
 
         $this->run($application, ['tee', $target], 'upload', input: $contents);
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -671,6 +696,8 @@ class FileBrowser
         $this->assertType($application, dirname($target), 'd');
 
         $this->run($application, ['cp', '-r', $source, $target], 'copy');
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -707,6 +734,8 @@ class FileBrowser
             'compress',
             cwd: dirname($source),
         );
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -746,6 +775,8 @@ class FileBrowser
         $command = $stat['type'] === 'd' ? ['rm', '-rf', $target] : ['rm', '-f', $target];
 
         $this->run($application, $command, 'delete');
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -924,6 +955,8 @@ class FileBrowser
 
         $this->run($application, ['mkdir', '-p', dirname($target)], 'trash_restore_dir');
         $this->run($application, ['mv', $source, $target], 'trash_restore');
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -973,6 +1006,8 @@ class FileBrowser
             }
         }
 
+        $this->sizeChanged($application);
+
         return ['succeeded' => $succeeded, 'failed' => $failed];
     }
 
@@ -993,6 +1028,8 @@ class FileBrowser
         }
 
         $this->run($application, ['rm', '-rf', $this->trashDirectory($application)], 'trash_empty');
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -1014,6 +1051,8 @@ class FileBrowser
             ['feature' => 'application', 'op' => 'trash_prune', 'application' => $application->id],
             timeout: 60,
         );
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -1077,6 +1116,8 @@ class FileBrowser
             : ['tar', '-xzf', $archive, '-C', $target];
 
         $this->run($application, $command, 'extract');
+
+        $this->sizeChanged($application);
     }
 
     /**
@@ -1428,6 +1469,8 @@ class FileBrowser
             $succeeded[] = $relative;
         }
 
+        $this->sizeChanged($application);
+
         return ['succeeded' => $succeeded, 'failed' => $failed];
     }
 
@@ -1494,6 +1537,8 @@ class FileBrowser
 
             $failed[] = ['path' => $relative, 'reason' => 'failed'];
         }
+
+        $this->sizeChanged($application);
 
         return ['succeeded' => $succeeded, 'failed' => $failed];
     }
