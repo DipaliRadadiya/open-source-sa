@@ -5,6 +5,7 @@ use App\Models\User;
 use App\Services\Server\LogManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -176,8 +177,13 @@ it('ships a registry whose keys are unique and paths absolute', function () {
         ->and($keys)->toContain('auth', 'kernel', 'mail', 'syslog');
 
     foreach ($sources as $source) {
-        expect($source['path'])->toStartWith('/')
-            ->and($source)->toHaveKeys(['key', 'label', 'group', 'path']);
+        expect($source)->toHaveKeys(['key', 'label', 'group', 'path']);
+
+        // The journal is not a file and carries no path; everything else must
+        // name one absolutely, since nothing resolves these relative to a cwd.
+        if (($source['kind'] ?? 'file') !== 'journal') {
+            expect($source['path'])->toStartWith('/');
+        }
     }
 });
 
@@ -192,4 +198,122 @@ it('hides a log source whose file is not on this server', function () {
 
     expect($keys)->toContain('nginx_error')
         ->and($keys)->not->toContain('syslog');
+});
+
+describe('sources the panel cannot open itself', function () {
+    beforeEach(function () {
+        config(['server.logs' => [
+            ['key' => 'nginx_error', 'label' => 'Nginx — Error', 'group' => 'web', 'path' => $this->logDir.'/nginx-error.log'],
+            ['key' => 'letsencrypt', 'label' => "Let's Encrypt", 'group' => 'security', 'kind' => 'privileged', 'path' => '/var/log/letsencrypt/letsencrypt.log'],
+            ['key' => 'journal', 'label' => 'System — Journal', 'group' => 'system', 'kind' => 'journal', 'path' => ''],
+        ]]);
+    });
+
+    /** Answer the privileged probes the way a real server would. */
+    function fakePrivilegedLogs(string $tail = "line one\nline two\n"): void
+    {
+        Process::fake(function ($process) use ($tail) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'stat') {
+                return Process::result(output: "4096 1755264000\n");
+            }
+
+            if (($args[0] ?? '') === 'tail' || ($args[0] ?? '') === 'journalctl') {
+                return Process::result(output: $tail);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    it('offers them without the panel account being able to read the file', function () {
+        fakePrivilegedLogs();
+
+        $logs = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs'))->keyBy('key');
+
+        // /var/log/letsencrypt is 0700 root — `readable` would be false if the
+        // panel had to open it, and the source would never have appeared.
+        expect($logs['letsencrypt']['readable'])->toBeTrue()
+            ->and($logs['letsencrypt']['kind'])->toBe('privileged')
+            ->and($logs['letsencrypt']['size'])->toBe(4096)
+            // Neither can be followed by byte offset or streamed as a file.
+            ->and($logs['letsencrypt']['follow'])->toBeFalse()
+            ->and($logs['letsencrypt']['downloadable'])->toBeFalse();
+
+        // The journal has no single size or mtime — null, not a plausible zero
+        // that reads as an empty log last written in 1970.
+        expect($logs['journal']['size'])->toBeNull()
+            ->and($logs['journal']['modified'])->toBeNull();
+    });
+
+    it('reads them through the system', function () {
+        fakePrivilegedLogs("certbot: renewing\ncertbot: done\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/letsencrypt')
+            ->assertOk()
+            ->assertJsonPath('log.kind', 'privileged')
+            ->assertJsonPath('log.lines', ['certbot: renewing', 'certbot: done'])
+            // No bytes to come back with.
+            ->assertJsonPath('log.cursor', null);
+
+        Process::assertRan(fn ($p) => in_array('journalctl', $p->command, true) === false
+            && in_array('/var/log/letsencrypt/letsencrypt.log', $p->command, true));
+    });
+
+    it('reads the journal without waiting on a pager', function () {
+        fakePrivilegedLogs("kernel: started\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/journal')
+            ->assertOk()
+            ->assertJsonPath('log.lines', ['kernel: started']);
+
+        // Without --no-pager journalctl blocks on a pager that is not there.
+        Process::assertRan(fn ($p) => in_array('journalctl', $p->command, true)
+            && in_array('--no-pager', $p->command, true));
+    });
+
+    it('filters them too', function () {
+        fakePrivilegedLogs("certbot: renewing\ncertbot: FAILED\ncertbot: done\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/letsencrypt?grep=failed')
+            ->assertOk()
+            ->assertJsonPath('log.lines', ['certbot: FAILED']);
+    });
+
+    it('refuses to download one rather than failing oddly', function () {
+        fakePrivilegedLogs();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/journal/download')
+            ->assertStatus(422);
+    });
+
+    it('reports a failed privileged read as a failure, not an empty log', function () {
+        Process::fake(fn ($process) => in_array('tail', $process->command, true)
+            ? Process::result(exitCode: 1, errorOutput: 'sudo: a password is required')
+            : Process::result(output: "4096 1755264000\n"));
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/letsencrypt')
+            ->assertStatus(500)
+            ->assertJsonStructure(['message', 'reference']);
+    });
+
+    it('hides one the server does not have', function () {
+        // certbot never installed: `test -f` says no, so the source is not
+        // offered rather than offered and broken.
+        Process::fake(fn ($process) => in_array('test', $process->command, true)
+            ? Process::result(exitCode: 1)
+            : Process::result(exitCode: 0));
+
+        $keys = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs'))->pluck('key');
+
+        expect($keys)->not->toContain('letsencrypt');
+    });
 });

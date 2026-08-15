@@ -1237,6 +1237,18 @@ return [
         // Also what the `recidive` jail reads to find repeat offenders.
         ['key' => 'fail2ban', 'label' => 'Fail2ban', 'group' => 'security', 'path' => '/var/log/fail2ban.log'],
         ['key' => 'supervisor', 'label' => 'Supervisor', 'group' => 'daemon', 'path' => '/var/log/supervisor/supervisord.log'],
+
+        // `kind` is `file` unless it says otherwise — read natively, followed
+        // by byte offset, downloadable. The two below cannot be any of that.
+
+        // certbot's directory is 0700 root, so the panel account cannot even
+        // stat inside it. Read through ServerOps, the same way the unattended
+        // upgrades log already is.
+        ['key' => 'letsencrypt', 'label' => "Let's Encrypt", 'group' => 'security', 'kind' => 'privileged', 'path' => '/var/log/letsencrypt/letsencrypt.log'],
+
+        // Not a file at all — a binary store read through journalctl. `path` is
+        // empty because there is nothing to open.
+        ['key' => 'journal', 'label' => 'System — Journal', 'group' => 'system', 'kind' => 'journal', 'path' => ''],
     ],
 
     /*

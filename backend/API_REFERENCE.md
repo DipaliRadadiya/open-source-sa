@@ -3701,13 +3701,34 @@ All available log sources on the server.
 ```json
 {"logs": [{
   "key": "nginx_error", "label": "Nginx Error Log", "group": "web",
-  "size": 4096, "modified": "29-07-2026 11:00:00", "readable": true
+  "kind": "file", "size": 4096, "modified": "29-07-2026 11:00:00",
+  "readable": true, "follow": true, "downloadable": true
 }]}
 ```
 
+`kind` — `file` · `privileged` · `journal`. Most sources are files the panel
+reads directly. **`privileged`** is a file it cannot open as its own user and
+reads through the system instead (Let's Encrypt: `/var/log/letsencrypt` is
+`0700 root`). **`journal`** is the systemd journal, which is not a file at all.
+
+Two flags follow from that, and both are worth honouring rather than inferring
+from `kind`:
+
+- **`follow`** — whether `?after=` works. Only `file` sources have byte offsets
+  to come back to; for the others, poll by re-reading instead and expect
+  `cursor: null`.
+- **`downloadable`** — whether `/download` will work. `false` for anything that
+  is not a plain file: there is no handle to stream, and piping it out through
+  the system would hold a worker for the whole transfer. Calling it anyway
+  answers `422`, not a broken file.
+
+For a `journal` source `size` and `modified` are **null** — it has no single
+size or last-write time, and a zero would read as an empty log last touched in
+1970.
+
 `group`: `web | database | cache | php | system | security | daemon | cronjob`. (`cache` is Redis; `cronjob` is one entry per cron job that has captured output, labelled with the job's name.)
 
-**The list is what exists on this server, not a fixed set.** Every source is filtered by whether its file is really there, so a box with no MTA has no `mail` entry and a box running Apache has no `nginx_*` entries — render whatever comes back rather than expecting fixed keys. System sources currently registered: `syslog`, `auth`, `kernel`, `mail`.
+**The list is what exists on this server, not a fixed set.** Every source is filtered by whether it is really there — a file check, a privileged file check, or asking `journalctl` for one line — so a box with no MTA has no `mail` entry, a box running Apache has no `nginx_*` entries, and a box without certbot has no `letsencrypt`. Render whatever comes back rather than expecting fixed keys. System sources currently registered: `syslog`, `auth`, `kernel`, `mail`, `journal`.
 
 `readable: false` — file exists but panel can't read it (needs elevated access). Disable the open action.
 

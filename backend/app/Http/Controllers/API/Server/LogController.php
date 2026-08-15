@@ -30,11 +30,14 @@ class LogController extends Controller
     {
         $source = $logs->find($key);
 
-        if (! $source || ! is_file($source['path'])) {
+        // `describe()` answers existence per kind — a privileged source is
+        // never `is_file` to this process, and the journal is not a file at
+        // all, so checking that here would 404 both of them.
+        if (! $source || $logs->describe($source) === null) {
             abort(404, __('errors/log.not_found'));
         }
 
-        if (! is_readable($source['path'])) {
+        if (($source['kind'] ?? 'file') === 'file' && ! is_readable($source['path'])) {
             abort(403, __('errors/log.unreadable'));
         }
 
@@ -49,6 +52,7 @@ class LogController extends Controller
                 'key' => $source['key'],
                 'label' => $source['label'],
                 'group' => $source['group'],
+                'kind' => $source['kind'] ?? 'file',
             ], $content),
         ]);
     }
