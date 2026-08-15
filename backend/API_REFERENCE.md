@@ -666,7 +666,15 @@ provisioned.
 | `waf_exceptions`, `waf_custom_rules` | `GET` and `PUT /applications/{id}/waf` |
 | `has_staging` | never — see the note under Staging Area |
 | `process` | only when `has_process` is true |
-| `directory_size_bytes` | only once computed (after the first deploy) |
+
+**`directory_size_bytes` is always present, and null until measured.** It used to be
+absent in that case, which made an unmeasured site indistinguishable from an endpoint
+that does not report size — render `—` on null rather than hiding the column.
+
+It travels with **`directory_size_measured_at`** (and `_human`). Show them together: nothing
+recomputes this on a timer, so a size on its own reads as current when it may be days old.
+It is set by a deploy, by a file change (about a minute later — see
+`POST /applications/{id}/directory-size`), and by that endpoint.
 
 `has_process` is null-safe to read everywhere and tells you whether to render process controls at all: PHP and static sites have nothing to run, so the answer is "render nothing", not "render a disabled button".
 
@@ -689,6 +697,23 @@ Returns the sidebar nav items for this application, filtered by what this site t
   …
 ]}
 ```
+
+---
+
+### POST `/applications/{application}/directory-size`
+**Permission:** `application` (view) | **Throttle:** 10/min
+
+Measure this site's directory **now**, and store the result.
+
+**Response `200`:** `{"directory_size": {"size": 5242880, "size_human": "5 MB", "measured_at": "15-08-2026 16:40:00"}}`
+
+Its own call rather than something the listing does. `du` walks every inode, so the cost is the site's **file count** — anything with `node_modules` is a hundred thousand of them — and doing that per row would make the Applications screen as slow as the heaviest site on the box.
+
+**The size keeps itself current without this.** Thirteen file operations (write, upload, copy, compress, extract, delete, the bulk pair, and the trash ones) queue a re-measure, **unique per application and delayed ~60 seconds**. A bulk delete of fifty files walks the site once, about a minute after the user stops — not fifty times while they work. Rename and chmod do not trigger it: they move bytes that are already counted.
+
+So after a file operation, **do not expect `directory_size_bytes` to change on the next fetch.** It updates roughly a minute later. Either re-fetch then, or simply render `directory_size_measured_at` and let the number catch up on its own. This endpoint is the "measure it now" button for when the user will not wait.
+
+A failed measure changes nothing — the previous figure and its date stand, because a stale number with an honest date beats a blank.
 
 ---
 
@@ -3731,31 +3756,6 @@ size or last-write time, and a zero would read as an empty log last touched in
 **The list is what exists on this server, not a fixed set.** Every source is filtered by whether it is really there — a file check, a privileged file check, or asking `journalctl` for one line — so a box with no MTA has no `mail` entry, a box running Apache has no `nginx_*` entries, and a box without certbot has no `letsencrypt`. Render whatever comes back rather than expecting fixed keys. System sources currently registered: `syslog`, `auth`, `kernel`, `mail`, `journal`.
 
 `readable: false` — file exists but panel can't read it (needs elevated access). Disable the open action.
-
----
-
-### POST `/applications/{application}/directory-size`
-**Permission:** `application` (view) | **Throttle:** 10/min
-
-Measure this site's directory **now**, and store the result.
-
-**Response `200`:** `{"directory_size": {"size": 5242880, "size_human": "5 MB", "measured_at": "15-08-2026 16:40:00"}}`
-
-Its own call rather than something the list does. `du` walks every inode, so
-the cost is the site's **file count** — anything with `node_modules` is a
-hundred thousand of them — and doing that for every site on every list would
-make the Applications screen as slow as the heaviest site on the box. Nothing
-runs it on a schedule either, on the machine that is also serving those sites.
-
-So `directory_size_bytes` on the application resource is **whatever was last
-measured**, and `directory_size_measured_at` says when — it is set by a deploy
-and by this endpoint, and by nothing else. Render the two together: a size with
-no date reads as current when it may be weeks old. This endpoint is the refresh
-button behind that.
-
-`directory_size_bytes` is **always present and null when never measured** — it
-used to be omitted entirely in that case, so the column vanished from some rows
-and there was no way to tell "not measured" from "not reported here".
 
 ---
 
