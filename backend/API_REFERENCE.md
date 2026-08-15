@@ -3207,7 +3207,7 @@ Framework shortcuts for the command field.
 ---
 
 ### GET `/cronjobs`
-**Permission:** `cronjob` (view) | **Throttle:** API
+**Permission:** `cronjob` (view)
 
 Paginated, filterable. Filters: `filter[system_user_id]`, `filter[application_id]`, `filter[username]`, `filter[active]`.
 
@@ -3218,6 +3218,7 @@ Paginated, filterable. Filters: `filter[system_user_id]`, `filter[application_id
   "slug": "laravel-scheduler",
   "username": "siteowner",
   "system_user": {"id": 1, "username": "siteowner"},
+  "application_id": null,
   "command": "cd /home/siteowner/shop.example.com && php artisan schedule:run",
   "expression": "*/5 * * * *",
   "active": true,
@@ -3252,7 +3253,7 @@ There is **no `human` field** (render the expression client-side or use the sche
 
 `command` must be a single line, max 1000 chars, and may not still contain the `{path}` placeholder from a command preset — an unresolved placeholder is rejected rather than written to cron as literal text. `expression` is validated as a real cron expression.
 
-**`application_id` is not accepted on create or update.** It exists as a column and as a *filter* on the list endpoint, but nothing sets it through the API yet — do not send it, it is silently ignored.
+**`application_id` scopes the job to a site.** Optional; null (or omitted) is a server-level job. Send it when the job is created from a site's own Cronjobs screen — `filter[application_id]` on the list endpoint then returns it, which it could not before, because nothing was able to set the column.
 
 **Response `201`:** `{"cronjob": {...}}`
 
@@ -3272,7 +3273,9 @@ Same shape as one row of the list endpoint — there is no `user_id` on it.
 ### PUT `/cronjobs/{cronjob}`
 **Permission:** `cronjob` (manage)
 
-Every field is `sometimes` — send only what changed. Accepts `name`, `command`, `expression`, `active`. **The account cannot be changed after creation** (`system_user_id`/`username` are not accepted here); delete and recreate to move a job to another account.
+Every field is `sometimes` — send only what changed. Accepts `name`, `command`, `expression`, `active`, and the run-as account.
+
+**The account can be changed here.** Send `system_user_id` or `username`, exactly as on create. An account that does not exist on the server is a **`422` on `username`** — cron accepts a file naming an unknown user and then silently fails to run it every tick, so it is refused up front. (This used to be accepted and ignored: the request answered `200` and the job kept running as its old account.)
 
 **Request:** `{"expression": "*/10 * * * *", "active": false}`
 
@@ -3453,7 +3456,7 @@ Inbound rule presets for the UI.
 ```json
 {
   "enabled": true,
-  "default_policy": "deny",
+  "default_policy": {"incoming": "deny", "outgoing": "allow"},
   "rules": [{
     "id": 1,
     "port_from": 22, "port_to": null,
@@ -3488,6 +3491,8 @@ A rule is `action` (`allow` / `deny`) over a port **range** — `port_from` plus
 
 `risky_ports` — ports detected from installed database engines + config, to warn before opening them.
 
+**This endpoint can fail with `500`** (`{message, code, reference}`) when `ufw status` cannot be read. It used to answer `enabled: false` in that case, which is not "unknown" but a specific wrong answer — the screen reported an active firewall as off. Render the error rather than a disabled firewall.
+
 ---
 
 ### POST `/firewall/rules`
@@ -3499,6 +3504,8 @@ Add a rule.
 
 `action`, `port_from` and `protocol` are required. `port_to` is optional and must be ≥ `port_from`. `source_ip` accepts a bare IP or CIDR; null means anywhere.
 
+**A `/0` mask is refused** (`422` on `source_ip`): `0.0.0.0/0` reads as a rule restricted to a source and is not one. Leave `source_ip` null to mean anywhere — that is what the row then says.
+
 **Response `201`:** `{"rule": {…}}` — note the key is **`rule`**, not `firewall_rule`.
 
 ---
@@ -3506,9 +3513,15 @@ Add a rule.
 ### PUT `/firewall/rules/{firewallRule}`
 **Permission:** `firewall` (manage)
 
-**Request:** `{"address": "203.0.113.10/32"}`
+Every field is `sometimes`. Accepts `port_from`, `port_to`, `protocol`, `action`, `source_ip`, `description`, `enabled`. There is no `address` field — the source is `source_ip`.
 
-**Response `200`:** `{"firewall_rule": {...}}`
+**Request:** `{"source_ip": "203.0.113.10/32"}`
+
+**Response `200`:** `{"rule": {...}}` — the same key as create, **not** `firewall_rule`.
+
+**`422` on `port_to`** when a partial edit would invert the range. Sending `port_from` alone is compared against the *stored* `port_to`, so moving a 9000–9100 rule to start at 9500 is refused rather than saved backwards.
+
+**`422` on `rule`** when the edit would remove the last way in — see the lockout guard below.
 
 ---
 
@@ -3516,6 +3529,10 @@ Add a rule.
 **Permission:** `firewall` (manage)
 
 **Response `204`:**
+
+**`422` on `rule`** — the lockout guard. While the firewall is enabled, a rule may not be deleted, switched off, or moved off the port if it is **the last `allow` rule covering the live SSH port**. The message names the port and says what to do (add another rule for it, or disable the firewall first). Surface it on the row, not only as a toast — it is the difference between an edit being refused and the user losing the server.
+
+This is not the same as `protected`. `protected` marks system-seeded rules; the lockout guard asks whether a way in survives, so it also fires for a rule the user made themselves and for range rules like `20:30` that happen to cover SSH.
 
 ---
 
@@ -3526,7 +3543,9 @@ Enable or disable the firewall entirely.
 
 **Request:** `{"enabled": false}`
 
-**Response `200`:** `{"firewall": {"enabled": false, …}}`
+**Response `200`:** flat, no wrapper — `{"enabled": false, "default_policy": {"incoming": "deny", "outgoing": "allow"}}`
+
+Enabling seeds allow rules for the web ports and for **the port SSH is actually listening on**, read from the live sshd configuration rather than from a stored default. If any of those cannot be applied, enabling is refused with a `500` rather than leaving the box behind a deny-incoming policy with no way in.
 
 ---
 
@@ -3731,6 +3750,10 @@ Stream the full file as a download (`Content-Disposition: attachment`).
 
 `method`: `delete | truncate | command`. `note` (localised) explains what each category does and what it keeps.
 
+**`safe: false` means the category may be cleaned manually but never on a schedule.** Today that is `apt_orphans`: everything else here removes files that come back, while that one removes *packages*, on the strength of apt's auto-installed flags — which are routinely wrong on a migrated or script-built server — and `--purge` takes their configuration too. Show it in the manual list, and hide or disable it in the schedule form; `PUT /disk-cleaner/schedule` refuses it with a `422` on `categories.*`.
+
+`paths` is display-only and may include an exclusion note rather than a pattern — `rotated_logs` lists `"excluding /var/log/mysql"`, because database binary logs live there and are removed with `PURGE BINARY LOGS`, never by deleting files.
+
 ---
 
 ### POST `/disk-cleaner/clean`
@@ -3738,7 +3761,9 @@ Stream the full file as a download (`Content-Disposition: attachment`).
 
 **Request:** `{"categories": ["apt_cache", "journal"]}`
 
-**Response `200`:** `{"disk": {…refreshed…}, "cleaned": [{"key": "apt_cache", "freed": 104857600, "freed_human": "100 MB"}], "freed_total": 524288000, "freed_total_human": "500 MB"}`
+**Response `200`:** `{"run_id": 12, "disk": {…refreshed…}, "cleaned": [{"key": "apt_cache", "freed": 104857600, "freed_human": "100 MB"}], "freed_total": 524288000, "freed_total_human": "500 MB"}`
+
+⚠️ **This runs synchronously and can outlive the request.** A clean may take several minutes — `apt_orphans` alone is allowed 300 seconds — while nginx/PHP-FPM cut the request at around 60, so a large clean returns a gateway error while it is still running and finishes without the caller ever seeing the result. **Known; a queued version returning a run id to poll is planned**, and it will change this response shape. Until then, treat a timeout as "probably still running" and re-read `GET /disk-cleaner/runs` rather than telling the user it failed.
 
 ---
 
@@ -4405,11 +4430,11 @@ Activity entries are written for every mutation. `type` and `action` are separat
 | `application` | created, updated, deleted, provisioned, provision_failed, deployed, deploy_failed, disabled, enabled, domain_added, domain_removed, certificate_issued, certificate_uploaded, certificate_deleted, file_edited, file_deleted, directory_created, permissions_fixed, php_isolated, php_unisolated, php_settings_updated, environment_updated, environment_restored, worker_created, worker_updated, worker_deleted, worker_started, worker_stopped, worker_restarted, deploy_script_updated, deploy_settings_updated, staging_created, staging_pushed |
 | `database` | created, deleted, user_created, user_updated, user_deleted, export_queued, export_completed, export_failed, export_deleted, optimized, repaired, imported |
 | `backup` | configured, run, completed, failed, downloaded |
-| `disk_cleaner` | cleaned, schedule_updated |
-| `cronjob` | created, updated, deleted |
+| `disk_cleaner` | cleaned, auto_cleaned, clean_failed, auto_clean_failed, schedule_updated |
+| `cronjob` | created, updated, deleted, create_failed |
 | `service` | started, stopped, restarted, reloaded, enabled, disabled, config_test |
 | `fail2ban` | installed, updated, ban_added, ban_removed, all_bans_removed |
-| `firewall` | rule_added, rule_updated, rule_deleted, enabled, disabled |
+| `firewall` | rule_added, rule_updated, rule_removed, rule_enabled, rule_disabled, enabled, disabled |
 | `git_account` | connected, updated, test_passed, test_failed, disconnected |
 | `node` | install_started, uninstalled, npm_updated, default_changed |
 | `setting` | updated, reboot_requested, reboot_scheduled, reboot_schedule_removed |
