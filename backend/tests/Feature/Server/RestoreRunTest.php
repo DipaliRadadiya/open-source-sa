@@ -1,15 +1,20 @@
 <?php
 
+use App\Contracts\DatabaseEngine;
 use App\Enums\BackupStatus;
 use App\Enums\RestoreStatus;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Database;
 use App\Models\Restore;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\Restores\RestoreRunner;
+use App\Services\Server\Restores\Steps\RestoreDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
@@ -321,4 +326,104 @@ it('leaves no staging directory beside the site, whatever happened', function ()
     // A half-unpacked copy of a site sitting next to the live one is both
     // confusing and expensive.
     expect($leftovers)->toBe([]);
+});
+
+describe('restoring a database', function () {
+    /** A step wired to an engine that records what it was asked to do. */
+    function restoreDatabaseStep(array &$calls): RestoreDatabase
+    {
+        // Mocked rather than hand-written: the engine contract has twenty-two
+        // methods and a stub of it would be a maintenance burden that proves
+        // nothing about this step.
+        $engine = Mockery::mock(DatabaseEngine::class);
+        $engine->shouldIgnoreMissing();
+
+        foreach (['dropDatabase' => 'drop', 'createDatabase' => 'create', 'restore' => 'restore'] as $method => $label) {
+            $engine->shouldReceive($method)->andReturnUsing(function (string $name) use (&$calls, $label) {
+                $calls[] = $label.':'.$name;
+            });
+        }
+
+        $manager = Mockery::mock(DatabaseManager::class);
+        $manager->shouldReceive('engine')->andReturn($engine);
+
+        return new RestoreDatabase($manager);
+    }
+
+    function databaseRestoreContext(string $staging): RestoreContext
+    {
+        $backup = Backup::create([
+            'backup_target_id' => test()->backupTarget->id,
+            'application_id' => test()->application->id,
+            'type' => 'database', 'status' => 'verified', 'reference' => (string) Str::uuid(),
+        ]);
+
+        $restore = Restore::create([
+            'backup_id' => $backup->id,
+            'application_id' => test()->application->id,
+            'type' => 'database', 'status' => 'running', 'reference' => (string) Str::uuid(),
+        ]);
+
+        $context = new RestoreContext($restore, $backup, test()->application, $staging);
+        $context->stagingDirectory = $staging;
+
+        return $context;
+    }
+
+    it('does not drop a live database to import an empty dump', function () {
+        Database::create([
+            'application_id' => $this->application->id,
+            'name' => 'shop', 'engine' => 'mysql', 'charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci',
+        ]);
+
+        $staging = $this->home.'/staging-empty';
+        File::ensureDirectoryExists($staging);
+        // A truncated archive produces exactly this.
+        File::put($staging.'/db-shop.sql', '');
+
+        $calls = [];
+
+        expect(fn () => restoreDatabaseStep($calls)->run(databaseRestoreContext($staging)))
+            ->toThrow(RuntimeException::class, 'the dump for shop is empty');
+
+        // The point of the guard: the live database is still there.
+        expect($calls)->toBe([]);
+    });
+
+    it('drops nothing when a later dump has no database left to restore into', function () {
+        Database::create([
+            'application_id' => $this->application->id,
+            'name' => 'kept', 'engine' => 'mysql', 'charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci',
+        ]);
+
+        $staging = $this->home.'/staging-partial';
+        File::ensureDirectoryExists($staging);
+        File::put($staging.'/db-kept.sql', 'INSERT INTO t VALUES (1);');
+        // Detached since the backup was taken — and sorted after `kept`, so
+        // the old code reached it only once `kept` had been dropped.
+        File::put($staging.'/db-zzz-gone.sql', 'INSERT INTO t VALUES (2);');
+
+        $calls = [];
+
+        expect(fn () => restoreDatabaseStep($calls)->run(databaseRestoreContext($staging)))
+            ->toThrow(RuntimeException::class, 'zzz-gone is no longer attached');
+
+        expect($calls)->toBe([]);
+    });
+
+    it('restores every database once the whole plan checks out', function () {
+        Database::create([
+            'application_id' => $this->application->id,
+            'name' => 'shop', 'engine' => 'mysql', 'charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci',
+        ]);
+
+        $staging = $this->home.'/staging-ok';
+        File::ensureDirectoryExists($staging);
+        File::put($staging.'/db-shop.sql', 'INSERT INTO t VALUES (1);');
+
+        $calls = [];
+        restoreDatabaseStep($calls)->run(databaseRestoreContext($staging));
+
+        expect($calls)->toBe(['drop:shop', 'create:shop', 'restore:shop']);
+    });
 });

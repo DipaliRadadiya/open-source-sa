@@ -51,8 +51,26 @@ class RestoreDatabase implements RestoreStep
             throw new RuntimeException('this backup contains no database dump');
         }
 
+        // Everything is checked before anything is dropped.
+        //
+        // These checks used to live inside the loop below, which meant the
+        // first database could already have been dropped and replaced before
+        // the second was found to be missing or empty — a restore that half
+        // happened, on data the user cannot get back without going to the
+        // safety backup by hand. Nothing here touches the server.
+        $plan = [];
+
         foreach ($dumps as $dump) {
             $name = substr(basename($dump), strlen('db-'), -strlen('.sql'));
+
+            // An empty dump is the one that costs the most: dropping a live
+            // database to import nothing leaves the site with no data at all.
+            // `DumpDatabase` already refuses to *write* an empty dump for the
+            // same reason; this is that check on the way back in, for an
+            // archive that was truncated in transit.
+            if (! is_file($dump) || filesize($dump) === 0) {
+                throw new RuntimeException("the dump for {$name} is empty");
+            }
 
             $database = Database::query()
                 ->where('application_id', $context->application->id)
@@ -66,6 +84,10 @@ class RestoreDatabase implements RestoreStep
                 throw new RuntimeException("the database {$name} is no longer attached to this application");
             }
 
+            $plan[] = [$database, $dump];
+        }
+
+        foreach ($plan as [$database, $dump]) {
             $engine = $this->databases->engine($database->engine);
 
             $engine->dropDatabase($database->name);
