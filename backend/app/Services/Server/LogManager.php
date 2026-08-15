@@ -3,7 +3,10 @@
 namespace App\Services\Server;
 
 use App\Contracts\PhpStack;
+use App\Exceptions\Server\Log\LogOperationException;
 use App\Models\Cronjob;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Read-only access to server log files. The catalog is the configured source
@@ -189,11 +192,7 @@ class LogManager
      */
     private function tail(string $path, int $lines): array
     {
-        $handle = fopen($path, 'rb');
-
-        if ($handle === false) {
-            return ['lines' => [], 'truncated' => false];
-        }
+        $handle = $this->open($path);
 
         $position = (int) (filesize($path) ?: 0);
         $buffer = '';
@@ -239,11 +238,7 @@ class LogManager
      */
     private function range(string $path, int $offset): array
     {
-        $handle = fopen($path, 'rb');
-
-        if ($handle === false) {
-            return ['lines' => [], 'truncated' => false];
-        }
+        $handle = $this->open($path);
 
         $start = max($offset, (int) filesize($path) - self::MAX_INCREMENTAL_BYTES);
         $byteTruncated = $start > $offset;
@@ -275,11 +270,7 @@ class LogManager
      */
     private function grep(string $path, string $needle, int $lines): array
     {
-        $handle = fopen($path, 'rb');
-
-        if ($handle === false) {
-            return ['lines' => [], 'truncated' => false];
-        }
+        $handle = $this->open($path);
 
         $matches = [];
         $truncated = false;
@@ -298,6 +289,41 @@ class LogManager
         fclose($handle);
 
         return ['lines' => $matches, 'truncated' => $truncated];
+    }
+
+    /**
+     * Open a log for reading, or say that it could not be opened.
+     *
+     * The three readers used to answer an unopenable file with an empty list,
+     * which renders as a log with nothing in it — the opposite of the truth, on
+     * the screen someone opens to find out what went wrong. The controller
+     * checks existence and readability first, but a log is a moving target:
+     * logrotate renames it mid-request, permissions change, the process runs
+     * out of file handles.
+     *
+     * @return resource
+     */
+    private function open(string $path)
+    {
+        $handle = @fopen($path, 'rb');
+
+        if ($handle === false) {
+            $reference = (string) Str::uuid();
+
+            Log::channel('server-ops')->error('log could not be opened', [
+                'feature' => 'log',
+                'op' => 'open',
+                'path' => $path,
+                'reference' => $reference,
+                // Almost always a file rotated away between the check and the
+                // read, or one whose mode changed under us.
+                'detail' => error_get_last()['message'] ?? 'fopen returned false',
+            ]);
+
+            throw new LogOperationException($reference);
+        }
+
+        return $handle;
     }
 
     /**

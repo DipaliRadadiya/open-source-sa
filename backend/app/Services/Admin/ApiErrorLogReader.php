@@ -7,6 +7,7 @@ use SplFileObject;
 class ApiErrorLogReader
 {
     public const DEFAULT_LINES = 100;
+
     public const MAX_LINES = 500;
 
     /** @return array{entries: array<int, array<string, mixed>>, truncated: bool} */

@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Exceptions\Server\Log\LogOperationException;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
 use App\Services\Server\WebServers\WebServerManager;
@@ -177,6 +178,16 @@ class ApplicationLogManager
         return $catalog;
     }
 
+    /**
+     * Null here means "this log has not been written yet", and nothing else.
+     *
+     * It used to mean that *and* every way the read could fail — `tail` denied,
+     * the path unreadable, the command timing out — because the caller turned
+     * any null into `exists: false`. The screen then said the site had no logs
+     * at the moment someone opened it to find out why the site was down, which
+     * sends them to look somewhere else. `fileExists` already knows which of
+     * the two it is; this asks it.
+     */
     private function readFile(Application $application, string $path, int $lines): ?string
     {
         $result = $this->serverOps->run(
@@ -185,9 +196,24 @@ class ApplicationLogManager
             timeout: 30,
         );
 
-        return $result->failed() ? null : $result->output();
+        if (! $result->failed()) {
+            return $result->output();
+        }
+
+        // A site nobody has visited has no access log. That is ordinary.
+        if (! $this->fileExists($application, $path)) {
+            return null;
+        }
+
+        throw new LogOperationException($result->reference);
     }
 
+    /**
+     * The journal has no equivalent of "not written yet" — a unit with no
+     * output answers with an empty result, not a failure. So anything that
+     * fails here really did fail: journalctl missing, the unit name wrong, the
+     * panel not permitted to read it.
+     */
     private function readJournal(Application $application, int $lines): ?string
     {
         $result = $this->serverOps->run(
@@ -196,7 +222,11 @@ class ApplicationLogManager
             timeout: 30,
         );
 
-        return $result->failed() ? null : $result->output();
+        if ($result->failed()) {
+            throw new LogOperationException($result->reference);
+        }
+
+        return $result->output();
     }
 
     private function fileExists(Application $application, string $path): bool

@@ -198,3 +198,55 @@ describe('permissions', function () {
         $this->getJson(logUrl())->assertUnauthorized();
     });
 });
+
+describe('a read that fails is not an empty log', function () {
+    it('reports a denied read as a failure, not as a site with no logs yet', function () {
+        // The file is there — `test -f` says so — but reading it fails. That is
+        // sudo refused, a wrong path, a timeout. It used to render as
+        // `exists: false`, i.e. "this site has no logs", to someone who opened
+        // the error log to find out why the site was down.
+        Process::fake(function ($process) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'test') {
+                return Process::result(exitCode: 0);
+            }
+
+            if (($args[0] ?? '') === 'tail') {
+                return Process::result(errorOutput: 'tail: cannot open: Permission denied', exitCode: 1);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $this->actingAs($this->admin)
+            ->getJson(logUrl('/error'))
+            ->assertStatus(500)
+            ->assertJsonPath('code', 'server_operation_failed')
+            ->assertJsonStructure(['message', 'reference']);
+    });
+
+    it('still reports a log that has genuinely never been written', function () {
+        // `test -f` says no. A site nobody has visited has no access log, and
+        // that is an answer rather than a fault.
+        Process::fake(function ($process) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'test') {
+                return Process::result(exitCode: 1);
+            }
+
+            if (($args[0] ?? '') === 'tail') {
+                return Process::result(errorOutput: 'No such file', exitCode: 1);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $this->actingAs($this->admin)
+            ->getJson(logUrl('/access'))
+            ->assertOk()
+            ->assertJsonPath('log.exists', false)
+            ->assertJsonPath('log.lines', []);
+    });
+});

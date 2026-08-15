@@ -796,7 +796,7 @@ class FileBrowser
         $total = 0;
 
         foreach ($entries as &$entry) {
-            $key = $entry['batch']."/".$entry['path'];
+            $key = $entry['batch'].'/'.$entry['path'];
             $size = $sizes[$key] ?? null;
             $entry['size'] = $size;
             $entry['size_human'] = $size === null ? null : Bytes::human($size);
@@ -830,7 +830,7 @@ class FileBrowser
         $bySource = [];
 
         foreach ($entries as $entry) {
-            $key = $entry['batch']."/".$entry['path'];
+            $key = $entry['batch'].'/'.$entry['path'];
             $source = $this->trashDirectory($application).'/'.$key;
             $sources[] = $source;
             $bySource[$source] = $key;
