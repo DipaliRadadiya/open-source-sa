@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\SyncStatus;
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\SyncRun;
 use App\Services\Server\Sync\ServerSync;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -27,6 +28,7 @@ use Throwable;
  */
 class RunServerSync implements ShouldBeUnique, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
 
     public int $tries = 1;
@@ -43,9 +45,6 @@ class RunServerSync implements ShouldBeUnique, ShouldQueue
     public const TIMEOUT = 900;
 
     public int $timeout = self::TIMEOUT;
-
-    /** One sync at a time, server-wide. */
-    public int $uniqueFor = self::TIMEOUT;
 
     public function __construct(public int $syncRunId) {}
 

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\BackupStatus;
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Services\ActivityLogger;
@@ -31,6 +32,7 @@ use Throwable;
  */
 class RunBackup implements ShouldBeUnique, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
 
     public int $tries = 1;

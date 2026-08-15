@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Exceptions\Server\Database\EngineInstallException;
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
@@ -26,6 +27,7 @@ use Throwable;
  */
 class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
     use TracksActor;
 

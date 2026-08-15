@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Exceptions\Server\Setting\SettingOperationException;
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallProgress;
@@ -27,6 +28,7 @@ use Throwable;
  */
 class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
     use TracksActor;
 

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentStatus;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Jobs\Concerns\TracksActor;
 use App\Models\Application;
 use App\Models\Deployment;
@@ -29,6 +30,7 @@ use Throwable;
  */
 class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
     use TracksActor;
 

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\RestoreStatus;
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\Restore;
 use App\Services\ActivityLogger;
 use App\Services\Server\Restores\RestoreRunner;
@@ -26,6 +27,7 @@ use Throwable;
  */
 class RunRestore implements ShouldBeUnique, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
 
     public int $tries = 1;

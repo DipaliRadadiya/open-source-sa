@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentTrigger;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Jobs\Concerns\TracksActor;
 use App\Models\Application;
 use App\Services\ActivityLogger;
@@ -30,6 +31,7 @@ use Throwable;
  */
 class ProvisionApplication implements ShouldBeUnique, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
     use TracksActor;
 

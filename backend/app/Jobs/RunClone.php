@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\CloneStatus;
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\SiteClone;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\CloneManager;
@@ -25,6 +26,7 @@ use Throwable;
  */
 class RunClone implements ShouldBeUnique, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
 
     public int $tries = 1;

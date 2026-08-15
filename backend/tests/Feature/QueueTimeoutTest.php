@@ -2,6 +2,8 @@
 
 use App\Jobs\RunBackup;
 use App\Services\Server\Applications\ProvisioningBudget;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 
 /**
  * No job may outlive its own reservation.
@@ -82,3 +84,71 @@ it('keeps the jobs that size themselves inside it too', function (string $connec
     expect(app(ProvisioningBudget::class)->longest())->toBeLessThan($retryAfter)
         ->and((int) config('server.databases.install_timeout', 900) + 120)->toBeLessThan($retryAfter);
 })->with(['database', 'redis', 'beanstalkd']);
+
+/**
+ * @return array<int, string> every job class that claims a unique lock
+ */
+function uniqueJobs(): array
+{
+    $unique = [];
+
+    foreach (glob(app_path('Jobs/*.php')) as $file) {
+        $class = 'App\\Jobs\\'.basename($file, '.php');
+
+        if (! class_exists($class)) {
+            continue;
+        }
+
+        $reflection = new ReflectionClass($class);
+
+        if ($reflection->isAbstract()) {
+            continue;
+        }
+
+        if ($reflection->implementsInterface(ShouldBeUnique::class)
+            || $reflection->implementsInterface(ShouldBeUniqueUntilProcessing::class)) {
+            $unique[] = $class;
+        }
+    }
+
+    return $unique;
+}
+
+it('finds the unique jobs it is meant to be checking', function () {
+    expect(uniqueJobs())->not->toBeEmpty()
+        ->and(uniqueJobs())->toContain(RunBackup::class);
+});
+
+it('gives every unique job a lock that expires', function () {
+    // `Illuminate\Bus\UniqueLock` falls back to 0 seconds, and RedisLock reads
+    // that as `setnx` with no TTL. The lock is released on completion or
+    // failure, so a worker killed outright — OOM, systemctl kill, a reboot —
+    // leaves a key that never expires and every later dispatch for that id is
+    // silently dropped. Ten of eleven jobs shipped that way.
+    foreach (uniqueJobs() as $class) {
+        expect(method_exists($class, 'uniqueFor'))->toBeTrue(
+            "{$class} claims a unique lock but never says when it expires, so a worker "
+            .'killed mid-job locks that id out permanently.',
+        );
+    }
+});
+
+it('holds each unique lock for longer than the job may run', function () {
+    // Expiring late costs one delayed run. Expiring early costs two of these
+    // running at once — two archives of the same site, or two restores
+    // extracting over each other.
+    foreach (uniqueJobs() as $class) {
+        $job = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+        $timeout = (new ReflectionClass($class))->getProperty('timeout');
+
+        if (! $timeout->isInitialized($job)) {
+            continue;
+        }
+
+        expect($job->uniqueFor())->toBeGreaterThan(
+            (int) $job->timeout,
+            "{$class} releases its unique lock after {$job->uniqueFor()}s but may run for "
+            ."{$job->timeout}s, so it can be dispatched again alongside itself.",
+        );
+    }
+});
