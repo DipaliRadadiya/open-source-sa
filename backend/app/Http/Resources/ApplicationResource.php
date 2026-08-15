@@ -176,7 +176,19 @@ class ApplicationResource extends JsonResource
 
             // Cached directory size (bytes). Refreshed after every deploy.
             // Null means not yet computed.
-            'directory_size_bytes' => $this->when($this->directory_size_bytes !== null, $this->directory_size_bytes),
+            // Always present, null when nobody has measured it yet. It used to
+            // be omitted entirely in that case, so the column vanished from
+            // some rows and the frontend could not tell "not measured" from
+            // "the field does not exist on this endpoint".
+            //
+            // Nothing measures this on a timer — a `du` walks every inode, so
+            // doing it for every site on a schedule costs real disk on the
+            // machine serving the sites. It is set when a deploy happens and
+            // when somebody asks for it, which is why the time it was taken
+            // travels with it. A size with no date reads as current.
+            'directory_size_bytes' => $this->directory_size_bytes,
+            'directory_size_measured_at' => $this->directory_size_updated_at?->format('d-m-Y H:i:s'),
+            'directory_size_measured_at_human' => $this->directory_size_updated_at?->diffForHumans(),
 
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),

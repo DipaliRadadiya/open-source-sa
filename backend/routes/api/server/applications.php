@@ -120,3 +120,10 @@ Route::post('/applications/{application}/deployments/{deployment}/redeploy', [De
     ->middleware('permission:app_deployment,manage');
 Route::put('/applications/{application}/deployment-settings', [DeploymentController::class, 'updateSettings'])
     ->middleware('permission:app_deployment,manage');
+
+// Measuring is a read, but an expensive one — `du` walks every inode on the
+// site — so it is gated by view permission and throttled harder than the
+// screen around it. Nothing else recomputes this: not the listing, not a
+// schedule. The size the panel shows is the one somebody last asked for.
+Route::post('/applications/{application}/directory-size', [ApplicationController::class, 'measureDirectorySize'])
+    ->middleware(['permission:application', 'throttle:10,1']);

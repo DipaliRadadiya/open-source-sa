@@ -8,13 +8,14 @@ use App\Models\Database;
 use App\Models\DatabaseExport;
 use App\Models\DatabaseUser;
 use App\Models\DbMetric;
+use App\Models\FirewallRule;
 use App\Models\User;
+use App\Services\Server\ServerOpsResult;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
-use App\Services\Server\ServerOpsResult;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -160,20 +161,32 @@ it('adds a user to an existing database', function () {
 
 it('removes an engine user when remote firewall setup fails', function () {
     fakeDb();
-    app()->instance(Firewall::class, new class implements Firewall {
+    app()->instance(Firewall::class, new class implements Firewall
+    {
         public function status(): array
         {
             return ['enabled' => true, 'default_policy' => ['incoming' => 'deny', 'outgoing' => 'allow']];
         }
 
-        public function apply(\App\Models\FirewallRule $rule): ServerOpsResult
+        public function apply(FirewallRule $rule): ServerOpsResult
         {
             return new ServerOpsResult(false, 'firewall-failed', null);
         }
 
-        public function remove(\App\Models\FirewallRule $rule): ServerOpsResult { return new ServerOpsResult(true, 'unused', null); }
-        public function enable(): ServerOpsResult { return new ServerOpsResult(true, 'unused', null); }
-        public function disable(): ServerOpsResult { return new ServerOpsResult(true, 'unused', null); }
+        public function remove(FirewallRule $rule): ServerOpsResult
+        {
+            return new ServerOpsResult(true, 'unused', null);
+        }
+
+        public function enable(): ServerOpsResult
+        {
+            return new ServerOpsResult(true, 'unused', null);
+        }
+
+        public function disable(): ServerOpsResult
+        {
+            return new ServerOpsResult(true, 'unused', null);
+        }
     });
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
 

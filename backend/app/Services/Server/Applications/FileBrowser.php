@@ -176,27 +176,74 @@ class FileBrowser
      *
      * @return array{size: int, size_human: string}
      */
-    public function folderSize(Application $application, string $path): array
+    public function folderSize(Application $application, string $path, bool $refresh = false): array
     {
         $this->assertRootExists($application);
         $target = $this->resolve($application, $path);
         $this->assertType($application, $target, 'd');
 
-        // Return cached value when fresh (under 1 hour).
-        if ($application->directory_size_bytes !== null) {
+        // Trailing slashes on either side, as everywhere else in this class
+        // that compares against the root.
+        $isRoot = rtrim($target, '/') === rtrim($this->provisioner->documentRoot($application), '/');
+
+        // Only the site's own root is cached, and only that is served from the
+        // cache. `directory_size_bytes` is the *application's* size: asking for
+        // one subfolder used to write that subfolder's total into it, so a
+        // glance at `wp-content/uploads` permanently redefined how big the site
+        // was — smaller, and never corrected.
+        if ($isRoot && ! $refresh && $application->directory_size_bytes !== null) {
             $bytes = (int) $application->directory_size_bytes;
 
-            return ['size' => $bytes, 'size_human' => Bytes::human($bytes)];
+            return [
+                'size' => $bytes,
+                'size_human' => Bytes::human($bytes),
+                'measured_at' => $application->directory_size_updated_at?->format('d-m-Y H:i:s'),
+            ];
         }
 
+        $bytes = $this->measure($application, $target);
+
+        if ($isRoot) {
+            // There is no expiry. Nothing walks the disk on a timer — the size
+            // is what it was when somebody last asked, which is why the time it
+            // was taken is stored and returned beside it. The comment here used
+            // to promise a one-hour freshness window that no code implemented,
+            // so a size read once was returned unchanged for as long as the row
+            // lived.
+            $application->updateQuietly([
+                'directory_size_bytes' => $bytes,
+                'directory_size_updated_at' => now(),
+            ]);
+        }
+
+        return [
+            'size' => $bytes,
+            'size_human' => Bytes::human($bytes),
+            'measured_at' => $isRoot ? now()->format('d-m-Y H:i:s') : null,
+        ];
+    }
+
+    /**
+     * Measure the whole application directory now, and remember when.
+     *
+     * @return array{size: int, size_human: string, measured_at: string}
+     */
+    public function applicationSize(Application $application, bool $refresh = false): array
+    {
+        return $this->folderSize($application, '/', $refresh);
+    }
+
+    /**
+     * `du -sb` walks every inode, so this costs file *count*, not bytes — a
+     * site with node_modules is a hundred thousand of them. It is why no
+     * listing calls it and why nothing runs it on a schedule.
+     */
+    private function measure(Application $application, string $target): int
+    {
         $output = trim($this->run($application, ['du', '-sb', $target], 'folder_size')->output());
         [$bytes] = explode("\t", $output, 2);
-        $bytes = (int) $bytes;
 
-        // Persist so the next call avoids the disk hit.
-        $application->updateQuietly(['directory_size_bytes' => $bytes]);
-
-        return ['size' => $bytes, 'size_human' => Bytes::human($bytes)];
+        return (int) $bytes;
     }
 
     /**

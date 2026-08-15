@@ -3734,6 +3734,31 @@ size or last-write time, and a zero would read as an empty log last touched in
 
 ---
 
+### POST `/applications/{application}/directory-size`
+**Permission:** `application` (view) | **Throttle:** 10/min
+
+Measure this site's directory **now**, and store the result.
+
+**Response `200`:** `{"directory_size": {"size": 5242880, "size_human": "5 MB", "measured_at": "15-08-2026 16:40:00"}}`
+
+Its own call rather than something the list does. `du` walks every inode, so
+the cost is the site's **file count** — anything with `node_modules` is a
+hundred thousand of them — and doing that for every site on every list would
+make the Applications screen as slow as the heaviest site on the box. Nothing
+runs it on a schedule either, on the machine that is also serving those sites.
+
+So `directory_size_bytes` on the application resource is **whatever was last
+measured**, and `directory_size_measured_at` says when — it is set by a deploy
+and by this endpoint, and by nothing else. Render the two together: a size with
+no date reads as current when it may be weeks old. This endpoint is the refresh
+button behind that.
+
+`directory_size_bytes` is **always present and null when never measured** — it
+used to be omitted entirely in that case, so the column vanished from some rows
+and there was no way to tell "not measured" from "not reported here".
+
+---
+
 ### GET `/logs/{key}`
 **Permission:** `logs` (view)
 

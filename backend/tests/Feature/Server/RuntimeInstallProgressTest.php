@@ -1,16 +1,18 @@
 <?php
 
 use App\Enums\InstallStatus;
-use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
+use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Jobs\InstallPhpExtension;
 use App\Jobs\InstallPhpVersion;
 use App\Jobs\RemovePhpVersion;
 use App\Models\RuntimeInstall;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\PhpExtensionManager;
+use App\Services\Server\Runtimes\PhpRuntime;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -190,14 +192,14 @@ it('reports a failed removal with its support reference', function () {
 });
 
 it('keeps the server-operation reference when a removal fails', function () {
-    $php = Mockery::mock(\App\Services\Server\Runtimes\PhpRuntime::class);
+    $php = Mockery::mock(PhpRuntime::class);
     $php->shouldReceive('uninstall')->once()->andThrow(new SettingOperationException('ref-remove-actual'));
 
     $installs = Mockery::mock(InstallTracker::class);
     $installs->shouldReceive('current')->once()->andReturnNull();
     $installs->shouldReceive('fail')->once()->with('php', '8.4', null, 'remove_failed', 'ref-remove-actual');
 
-    expect(fn () => (new RemovePhpVersion('8.4'))->handle($php, app(\App\Services\ActivityLogger::class), $installs))
+    expect(fn () => (new RemovePhpVersion('8.4'))->handle($php, app(ActivityLogger::class), $installs))
         ->toThrow(SettingOperationException::class);
 });
 

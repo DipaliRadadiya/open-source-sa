@@ -21,6 +21,7 @@ use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\Permission;
 use App\Services\Server\Applications\DeploymentRecorder;
+use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\VisiblePermissions;
@@ -253,5 +254,25 @@ class ApplicationController extends Controller
         )->resolve();
 
         return response()->json(['items' => $items]);
+    }
+
+    /**
+     * Measure this site's directory now.
+     *
+     * Its own call rather than something the listing does: `du` walks every
+     * inode, so the cost is the file count — a site with node_modules is a
+     * hundred thousand of them — and doing that for every site on every list
+     * would make the Applications screen as slow as the heaviest site on the
+     * box. Nothing measures it on a timer either, for the same reason on the
+     * machine that is also serving those sites.
+     *
+     * So the stored size is whatever was last measured, and the response says
+     * when that was. This is the button that makes it now.
+     */
+    public function measureDirectorySize(Application $application, FileBrowser $files): JsonResponse
+    {
+        return response()->json([
+            'directory_size' => $files->applicationSize($application, refresh: true),
+        ]);
     }
 }

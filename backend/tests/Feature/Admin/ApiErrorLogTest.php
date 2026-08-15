@@ -5,6 +5,7 @@ use App\Services\Admin\ApiErrorLogWriter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 beforeEach(function () {
     $this->logDir = storage_path('logs/server-ops-tests-'.getmypid());
@@ -112,7 +113,7 @@ it('rejects an invalid reference filter', function () {
 
 it('does not record expected API client errors', function () {
     $request = Request::create('/api/test', 'GET');
-    app(ApiErrorLogWriter::class)->record(new \Symfony\Component\HttpKernel\Exception\NotFoundHttpException(), $request);
+    app(ApiErrorLogWriter::class)->record(new NotFoundHttpException, $request);
 
     expect(glob($this->logDir.'/*') ?: [])->toBe([]);
 });
