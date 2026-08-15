@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\JsonLineFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -54,7 +55,10 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            // `daily`, not `single`: the app log is the one file nothing
+            // rotates by default, and on a panel that runs for months it grows
+            // until the disk is full — 224 MB on the dev box before this.
+            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 
@@ -72,8 +76,9 @@ return [
         // panel runs, so on a busy server it is the fastest-growing file on
         // the box — and an unrotated one grows until the disk is full, taking
         // the panel down along with the log you would need to work out why.
-        // 30 days is chosen to outlive a "it broke sometime last month"
-        // report while staying bounded.
+        // 7 days: the admin error-log viewer is how failures get found now, so
+        // the file only has to cover the window in which someone reports a
+        // problem.
         //
         // Driver and path are env-overridable so the test suite can write
         // somewhere else: it shares this config, and left alone it appends
@@ -82,17 +87,17 @@ return [
         'server-ops' => [
             'driver' => env('LOG_SERVER_OPS_DRIVER', 'daily'),
             'path' => env('LOG_SERVER_OPS_PATH', storage_path('logs/server-ops.log')),
-            'days' => (int) env('LOG_SERVER_OPS_DAYS', 30),
+            'days' => (int) env('LOG_SERVER_OPS_DAYS', 7),
             'level' => 'debug',
             'replace_placeholders' => true,
-            'tap' => [App\Logging\JsonLineFormatter::class],
+            'tap' => [JsonLineFormatter::class],
         ],
 
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => env('LOG_DAILY_DAYS', 14),
+            'days' => (int) env('LOG_DAILY_DAYS', 7),
             'replace_placeholders' => true,
         ],
 
