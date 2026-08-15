@@ -14,6 +14,7 @@ return [
     'precheck' => [
         'dns_missing' => ':domain does not resolve at all. Add a DNS A record pointing it at this server, then try again.',
         'dns_not_pointing' => ':domain points at :ip, which is not this server.',
+        'dns_unverifiable' => 'This server is behind NAT, so the panel cannot confirm from here that :domain points at it. If DNS is correct, use Issue anyway — the validation request arrives from outside and will succeed.',
         'behind_proxy' => ':domain points at Cloudflare, not this server, so the validation request never arrives. Pause the proxy (grey cloud) while the certificate is issued.',
         'blocked_ip' => ':domain points at :ip, which is not a public address a certificate can be issued for.',
         'unreachable' => 'Nothing answered on port 80 for :domain. Check that the firewall allows port 80 and that the web server is running.',

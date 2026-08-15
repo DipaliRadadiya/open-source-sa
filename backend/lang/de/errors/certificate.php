@@ -14,6 +14,7 @@ return [
     'precheck' => [
         'dns_missing' => ':domain lässt sich nicht auflösen. Legen Sie einen DNS-A-Eintrag auf diesen Server an und versuchen Sie es erneut.',
         'dns_not_pointing' => ':domain zeigt auf :ip, das ist nicht dieser Server.',
+        'dns_unverifiable' => 'Dieser Server steht hinter NAT, daher kann das Panel von hier aus nicht bestätigen, dass :domain auf ihn zeigt. Wenn das DNS stimmt, verwenden Sie „Trotzdem ausstellen“ — die Validierungsanfrage kommt von außen und wird erfolgreich sein.',
         'behind_proxy' => ':domain zeigt auf Cloudflare statt auf diesen Server, sodass die Validierungsanfrage nie ankommt. Pausieren Sie den Proxy (graue Wolke), während das Zertifikat ausgestellt wird.',
         'blocked_ip' => ':domain zeigt auf :ip — keine öffentliche Adresse, für die ein Zertifikat ausgestellt werden kann.',
         'unreachable' => 'Auf Port 80 hat für :domain nichts geantwortet. Prüfen Sie, ob die Firewall Port 80 erlaubt und der Webserver läuft.',

@@ -14,6 +14,7 @@ return [
     'precheck' => [
         'dns_missing' => ':domain não resolve. Adicione um registo DNS A a apontar para este servidor e tente de novo.',
         'dns_not_pointing' => ':domain aponta para :ip, que não é este servidor.',
+        'dns_unverifiable' => 'Este servidor está atrás de NAT, por isso o painel não consegue confirmar daqui que :domain aponta para ele. Se o DNS estiver correto, use Emitir mesmo assim — o pedido de validação chega de fora e será bem-sucedido.',
         'behind_proxy' => ':domain aponta para a Cloudflare e não para este servidor, por isso o pedido de validação nunca chega. Pause o proxy (nuvem cinzenta) enquanto o certificado é emitido.',
         'blocked_ip' => ':domain aponta para :ip, que não é um endereço público para o qual se possa emitir um certificado.',
         'unreachable' => 'Nada respondeu na porta 80 para :domain. Verifique se a firewall permite a porta 80 e se o servidor web está a correr.',

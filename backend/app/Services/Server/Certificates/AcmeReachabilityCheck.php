@@ -5,6 +5,7 @@ namespace App\Services\Server\Certificates;
 use App\Models\ApplicationDomain;
 use App\Services\Server\Applications\DnsVerifier;
 use App\Services\Server\ManagedFile;
+use App\Support\IpRange;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -90,6 +91,18 @@ class AcmeReachabilityCheck
         // "check your rewrite rules"; and it means this check only ever makes
         // a request to this server's own address, never to a third party the
         // domain happens to name.
+        //
+        // Null when the machine cannot know its own public address — a NAT'd
+        // cloud instance sees only a private one on its own interface. That
+        // used to be compared anyway, so a domain pointing at exactly this
+        // server was answered with "points at 203.0.113.5, which is not this
+        // server" across most of AWS, GCP and Azure. The user then went and
+        // checked DNS that was never wrong.
+        //
+        // Not refused either. The fetch below is the better evidence: if a
+        // random token we just wrote comes back from that address, it is this
+        // server, whatever the interface thinks its address is. So an unknown
+        // public IP falls through and lets the fetch answer.
         $server = $this->dns->serverIp();
 
         if ($server !== null && $ip !== $server) {
@@ -115,6 +128,15 @@ class AcmeReachabilityCheck
             $reason = $this->fetch($domain->domain, $ip, $token);
         } finally {
             $this->files->delete($path, ['feature' => 'certificate', 'op' => 'remove_precheck_token']);
+        }
+
+        // Nothing answered, and we could not confirm our own public address
+        // either — a NAT'd box that does not answer to itself, which is the one
+        // case the real challenge still succeeds in, because that request
+        // arrives from outside. Say so and point at Issue anyway, rather than
+        // reporting a firewall problem the user does not have.
+        if ($reason === 'unreachable' && $server === null) {
+            $reason = 'dns_unverifiable';
         }
 
         return $this->result($domain, $reason === null, $reason);
@@ -166,9 +188,10 @@ class AcmeReachabilityCheck
      */
     private function blocked(string $ip): bool
     {
-        return str_starts_with($ip, '127.')
-            || str_starts_with($ip, '169.254.')
-            || str_starts_with($ip, '0.');
+        // Private ranges included: a name resolving to 10.0.0.5 cannot hold a
+        // public certificate, and fetching it would have the panel make a
+        // request into the internal network on a stranger's instruction.
+        return IpRange::isPrivate($ip);
     }
 
     /**

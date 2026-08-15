@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Models\ApplicationDomain;
 use App\Services\Server\ServerOps;
+use App\Support\IpRange;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -95,9 +96,21 @@ class DnsVerifier
                 return null;
             }
 
-            return preg_match('/\bsrc\s+(\d{1,3}(?:\.\d{1,3}){3})/', $result->output(), $match) === 1
-                ? $match[1]
-                : null;
+            if (preg_match('/\bsrc\s+(\d{1,3}(?:\.\d{1,3}){3})/', $result->output(), $match) !== 1) {
+                return null;
+            }
+
+            // `src` is the address on the outbound interface, which on a NAT'd
+            // cloud instance — most of AWS, GCP, Azure, and anything with a
+            // floating IP — is a private one, while the public address the
+            // world reaches lives on a gateway this machine cannot see. Saying
+            // "the server's IP is 10.0.0.5" there is not a smaller truth, it is
+            // a wrong one, and callers compare it against DNS.
+            //
+            // Null means "cannot be determined from here", which is what a
+            // caller has to handle anyway, rather than an answer that reads as
+            // certain and is not.
+            return IpRange::isPrivate($match[1]) ? null : $match[1];
         });
     }
 

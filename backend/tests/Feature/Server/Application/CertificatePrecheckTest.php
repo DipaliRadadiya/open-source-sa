@@ -247,3 +247,83 @@ it('cleans up the token it wrote', function () {
     Process::assertRan(fn ($process) => in_array('rm', $process->command, true)
         && collect($process->command)->contains(fn ($part) => str_contains((string) $part, 'acme-challenge/')));
 });
+
+describe('a server behind NAT', function () {
+    /** DNS points at the public address; the box only knows a private one. */
+    function fakeNatDns(string $publicIp): void
+    {
+        test()->mock(DnsVerifier::class, function ($mock) use ($publicIp) {
+            $mock->shouldReceive('verify')->andReturnUsing(function ($domain) use ($publicIp) {
+                $domain->update([
+                    'dns_resolved_ip' => $publicIp,
+                    'behind_proxy' => false,
+                    'dns_verified_at' => null,
+                ]);
+
+                return $domain;
+            });
+
+            // `ip route get` reports the interface address, which behind NAT is
+            // private — so the panel cannot know its own public address at all.
+            $mock->shouldReceive('serverIp')->andReturnNull();
+        });
+    }
+
+    it('issues when the token comes back, even though the public IP is unknowable', function () {
+        fakeNatDns('203.0.113.10');
+
+        // The token returning is proof this is the right server, whatever the
+        // interface thinks its address is. This used to be refused before the
+        // fetch was even attempted, on most of AWS, GCP and Azure.
+        Http::fake(fn ($request) => Http::response(
+            basename(parse_url($request->url(), PHP_URL_PATH))."\n",
+            200,
+        ));
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
+            ->assertStatus(202);
+
+        Queue::assertPushed(IssueCertificate::class);
+    });
+
+    it('blames NAT rather than DNS when nothing answers', function () {
+        fakeNatDns('203.0.113.10');
+
+        // No hairpin NAT: the server cannot reach its own public address, but
+        // the real challenge arrives from outside and would succeed.
+        Http::fake(fn () => throw new ConnectionException('Connection timed out'));
+
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
+            ->assertStatus(422);
+
+        // The user must be pointed at Issue anyway — not sent to check a
+        // firewall that is fine or DNS that was never wrong.
+        expect(implode(' ', $response->json('errors.domain')))
+            ->toContain('NAT')
+            ->not->toContain('port 80');
+    });
+
+    it('still refuses a domain that points somewhere else when the IP is known', function () {
+        fakeDns('198.51.100.7');
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('domain');
+    });
+
+    it('refuses a domain resolving into a private network', function () {
+        fakeDns('10.0.0.5');
+
+        // Nothing public can hold a certificate for it, and fetching would
+        // have the panel reach into the internal network on request.
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
+            ->assertStatus(422);
+
+        expect(implode(' ', $response->json('errors.domain')))->toContain('not a public address');
+        Http::assertNothingSent();
+    });
+});
