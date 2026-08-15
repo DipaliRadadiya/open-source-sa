@@ -3705,7 +3705,9 @@ All available log sources on the server.
 }]}
 ```
 
-`group`: `web | database | php | system | security | daemon`.
+`group`: `web | database | cache | php | system | security | daemon | cronjob`. (`cache` is Redis; `cronjob` is one entry per cron job that has captured output, labelled with the job's name.)
+
+**The list is what exists on this server, not a fixed set.** Every source is filtered by whether its file is really there, so a box with no MTA has no `mail` entry and a box running Apache has no `nginx_*` entries — render whatever comes back rather than expecting fixed keys. System sources currently registered: `syslog`, `auth`, `kernel`, `mail`.
 
 `readable: false` — file exists but panel can't read it (needs elevated access). Disable the open action.
 

@@ -1225,6 +1225,13 @@ return [
         // System
         ['key' => 'syslog', 'label' => 'System — Syslog', 'group' => 'system', 'path' => '/var/log/syslog'],
         ['key' => 'auth', 'label' => 'System — Auth', 'group' => 'system', 'path' => '/var/log/auth.log'],
+        // Hardware, drivers, and the OOM killer — the log that answers "the
+        // site did not crash, it was killed".
+        ['key' => 'kernel', 'label' => 'System — Kernel', 'group' => 'system', 'path' => '/var/log/kern.log'],
+        // Only present where an MTA is installed. The panel does not install
+        // one; it reads what is already there, and the source hides itself on
+        // the servers that have none.
+        ['key' => 'mail', 'label' => 'System — Mail', 'group' => 'system', 'path' => '/var/log/mail.log'],
         // Security / daemons
         ['key' => 'ufw', 'label' => 'Firewall — UFW', 'group' => 'security', 'path' => '/var/log/ufw.log'],
         // Also what the `recidive` jail reads to find repeat offenders.

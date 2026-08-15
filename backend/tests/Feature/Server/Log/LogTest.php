@@ -162,3 +162,34 @@ it('does not invent a line by starting mid-way through one', function () {
     // The half of $blob inside the window is not a log entry that ever existed.
     expect($lines)->toBe(['complete line']);
 });
+
+it('ships a registry whose keys are unique and paths absolute', function () {
+    // `find()` returns the first key that matches, so a duplicate would resolve
+    // to the wrong file — silently, and only for the source listed second.
+    // Read from the file, not from config(): beforeEach replaces the registry
+    // with a temp one, so config() would assert against the fixture.
+    $sources = (require base_path('config/server.php'))['logs'];
+
+    $keys = array_column($sources, 'key');
+
+    expect($keys)->toBe(array_unique($keys))
+        ->and($keys)->toContain('auth', 'kernel', 'mail', 'syslog');
+
+    foreach ($sources as $source) {
+        expect($source['path'])->toStartWith('/')
+            ->and($source)->toHaveKeys(['key', 'label', 'group', 'path']);
+    }
+});
+
+it('hides a log source whose file is not on this server', function () {
+    // Only nginx-error exists; syslog is registered but absent.
+    File::put($this->logDir.'/nginx-error.log', "up\n");
+
+    $keys = collect(
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs')
+    )->pluck('key');
+
+    expect($keys)->toContain('nginx_error')
+        ->and($keys)->not->toContain('syslog');
+});
