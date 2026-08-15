@@ -6,6 +6,7 @@ use App\Contracts\Firewall;
 use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\ActivityLogger;
+use App\Support\SshPort;
 
 class ToggleFirewall
 {
@@ -46,8 +47,13 @@ class ToggleFirewall
      */
     private function seedDefaults(): void
     {
+        // The port SSH is *actually* on, not the configured default. Seeding 22
+        // on a server whose SSH was moved to 2222 and then turning on
+        // deny-incoming locks the operator out of their own box — the exact
+        // mistake SshPort exists to prevent, and the firewall was the one
+        // caller still reading the raw config value.
         $ports = array_values(array_unique(array_merge(
-            [(int) config('server.ssh_port')],
+            [SshPort::current()],
             config('server.default_firewall_ports', []),
         )));
 

@@ -39,7 +39,11 @@ class IpOrCidr implements ValidationRule
         if (count($parts) === 2) {
             $max = $isV4 ? 32 : 128;
 
-            if (! ctype_digit($parts[1]) || (int) $parts[1] > $max) {
+            // A `/0` mask matches every address there is, so `0.0.0.0/0` is a
+            // rule that reads as restricted to a source and is not — the panel
+            // would show a specific address next to a rule open to the world.
+            // Leaving the source empty is how you say "anywhere", and it says so.
+            if (! ctype_digit($parts[1]) || (int) $parts[1] < 1 || (int) $parts[1] > $max) {
                 $fail('errors/firewall.invalid_source')->translate();
             }
         }

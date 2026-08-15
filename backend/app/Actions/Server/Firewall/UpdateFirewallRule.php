@@ -6,6 +6,7 @@ use App\Contracts\Firewall;
 use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\ActivityLogger;
+use App\Services\Server\Firewall\SshLockoutGuard;
 use App\Services\Server\ServerOpsResult;
 
 /**
@@ -28,6 +29,7 @@ class UpdateFirewallRule
     public function __construct(
         private Firewall $firewall,
         private ActivityLogger $activityLogger,
+        private SshLockoutGuard $sshLockoutGuard,
     ) {}
 
     /**
@@ -41,6 +43,11 @@ class UpdateFirewallRule
         $rule->fill($data);
         $specChanged = (bool) array_intersect(self::SPEC, array_keys($rule->getDirty()));
         $enabled = (bool) $rule->enabled;
+
+        // Switching off, denying, or moving the last SSH rule off the port
+        // closes the way in just as surely as deleting it — checked before the
+        // row is saved, so a refusal changes nothing.
+        $this->sshLockoutGuard->assertSurvives($original, $rule);
 
         // Kept so the row can be put back if ufw refuses. No transaction: ufw
         // reloads take seconds and SQLite allows one writer, so holding one

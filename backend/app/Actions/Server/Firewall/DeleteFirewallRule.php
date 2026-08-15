@@ -6,6 +6,7 @@ use App\Contracts\Firewall;
 use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\ActivityLogger;
+use App\Services\Server\Firewall\SshLockoutGuard;
 use Illuminate\Validation\ValidationException;
 
 class DeleteFirewallRule
@@ -13,6 +14,7 @@ class DeleteFirewallRule
     public function __construct(
         private Firewall $firewall,
         private ActivityLogger $activityLogger,
+        private SshLockoutGuard $sshLockoutGuard,
     ) {}
 
     public function execute(FirewallRule $rule): void
@@ -24,6 +26,11 @@ class DeleteFirewallRule
                 'rule' => [__('errors/firewall.protected_rule')],
             ]);
         }
+
+        // The origin check above asks who made the rule; this asks whether a
+        // way in survives without it. A user-made SSH rule passes the first
+        // and fails this one.
+        $this->sshLockoutGuard->assertSurvives($rule);
 
         $ports = $rule->portSpec().($rule->protocol !== 'all' ? '/'.$rule->protocol : '');
 

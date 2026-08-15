@@ -3,6 +3,7 @@
 namespace App\Services\Server\Firewall;
 
 use App\Contracts\Firewall;
+use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -19,6 +20,21 @@ class UfwFirewall implements Firewall
     public function status(): array
     {
         $result = $this->serverOps->run(['ufw', 'status', 'verbose'], ['feature' => 'firewall', 'op' => 'status']);
+
+        // A failed status command used to fall through to `enabled: false`,
+        // which is not "unknown" — it is a specific, wrong answer. The panel
+        // reported an active firewall as off, and worse, SshLockoutGuard and
+        // DeleteFirewallRule decide whether a rule is safe to remove from this
+        // value: false reads as "nothing is being blocked, deleting is fine".
+        // A firewall whose state cannot be read is a failure, not a disabled one.
+        if ($result->failed()) {
+            throw new FirewallOperationException(
+                $result->reference,
+                busy: $result->busy,
+                staleLock: $result->staleLock,
+            );
+        }
+
         $output = $result->output();
 
         $incoming = 'deny';
