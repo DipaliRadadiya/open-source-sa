@@ -107,3 +107,43 @@ it('does not touch certificates that are not active', function () {
     // asking a question that has no answer.
     Process::assertNothingRan();
 });
+
+it('repairs a missing renewal hook on a server whose certificates were adopted', function () {
+    // Server Sync adopts certificates from a migrated box, and adoption never
+    // installed the deploy hook — only issuing through the panel did. Without
+    // it certbot renews, the files on disk are current, and the web server goes
+    // on serving the old certificate out of memory until something unrelated
+    // reloads it. The site shows an expired certificate weeks later.
+    Process::fake();
+
+    Certificate::updateOrCreate(['application_id' => $this->application->id], [
+        'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Active,
+        'domains' => ['shop.example.com'],
+        'certificate_path' => '/etc/letsencrypt/live/shop.example.com/fullchain.pem',
+    ]);
+
+    $this->artisan('certificates:refresh-expiry')->assertSuccessful();
+
+    // Daily and idempotent, so every server already in this state repairs
+    // itself rather than only the ones adopted from now on.
+    Process::assertRan(fn ($p) => in_array('tee', $p->command, true)
+        && str_contains(implode(' ', $p->command), 'renewal-hooks'));
+});
+
+it('writes no hook when nothing on the server renews', function () {
+    // An uploaded certificate is not certbot's to renew, so a privileged write
+    // here would be a command run for no reason on every tick.
+    Process::fake();
+
+    Certificate::updateOrCreate(['application_id' => $this->application->id], [
+        'type' => CertificateType::Custom,
+        'status' => CertificateStatus::Active,
+        'domains' => ['shop.example.com'],
+        'certificate_path' => '/etc/ssl/shop/fullchain.pem',
+    ]);
+
+    $this->artisan('certificates:refresh-expiry')->assertSuccessful();
+
+    Process::assertNotRan(fn ($p) => str_contains(implode(' ', $p->command), 'renewal-hooks'));
+});
