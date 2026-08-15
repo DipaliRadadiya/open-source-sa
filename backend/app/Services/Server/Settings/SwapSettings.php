@@ -41,16 +41,30 @@ class SwapSettings implements SettingGroup
     {
         [$total, $free] = $this->swapTotals();
         $used = max(0, $total - $free);
+        $managed = $this->isActive();
 
         return [
-            'enabled' => $total > 0,
+            // Whether *the panel's* swap file is on, not whether the machine
+            // has swap. Reporting the system total against the managed path
+            // meant a server with its own swap partition — the normal case on
+            // a migrated box — showed that partition's size as though this
+            // screen had made it, and then "disable" appeared to do nothing,
+            // because only our own file was ever removed.
+            'enabled' => $managed,
             'path' => $this->path(),
-            'size' => $total,
-            'size_human' => Bytes::human($total),
-            'used' => $used,
-            'used_human' => Bytes::human($used),
-            'free' => $free,
-            'free_human' => Bytes::human($free),
+            'size' => $managed ? $total : 0,
+            'size_human' => Bytes::human($managed ? $total : 0),
+            'used' => $managed ? $used : 0,
+            'used_human' => Bytes::human($managed ? $used : 0),
+            'free' => $managed ? $free : 0,
+            'free_human' => Bytes::human($managed ? $free : 0),
+            // What the machine has in total, whoever set it up. Reported
+            // separately rather than folded in, so the screen can say "this
+            // server has 4 GB of swap, none of it managed here" instead of
+            // implying the panel is responsible for it — or hiding it.
+            'system_total' => $total,
+            'system_total_human' => Bytes::human($total),
+            'unmanaged' => $total > 0 && ! $managed,
         ];
     }
 
@@ -92,16 +106,31 @@ class SwapSettings implements SettingGroup
             abort_if($off->failed(), 422, __('errors/setting.swap_in_use'));
         }
 
-        // Removed rather than resized in place. `fallocate` only ever
-        // allocates: given a smaller length than the file already has it
-        // succeeds and changes nothing, so 2 GB asked down to 1.5 GB stayed
-        // 2 GB and the screen showed the old number back. Growing worked,
-        // which is why this only ever looked broken in one direction.
-        $this->run(['rm', '-f', $file]);
+        // Built beside the old one and moved into place, never over it.
+        //
+        // Resizing cannot be done in place — `fallocate` only ever allocates,
+        // so asking 2 GB down to 1.5 GB succeeded and changed nothing, and the
+        // screen showed the old number back. Growing worked, which is why this
+        // only ever looked broken in one direction.
+        //
+        // But removing first meant that when the allocation then failed the
+        // server was left with no swap at all, and an /etc/fstab line pointing
+        // at a file that no longer exists. The likely reason for that failure
+        // is a full disk — which is the state that has someone resizing swap in
+        // the first place. Same ordering rule the firewall and cron writers
+        // follow: the replacement exists before the original stops.
+        $staging = $file.'.new';
 
-        $this->run(['fallocate', '-l', "{$sizeMb}M", $file]);
-        $this->run(['chmod', '600', $file]);
-        $this->run(['mkswap', $file]);
+        $this->run(['rm', '-f', $staging]);
+        $this->run(['fallocate', '-l', "{$sizeMb}M", $staging]);
+        $this->run(['chmod', '600', $staging]);
+        $this->run(['mkswap', $staging]);
+
+        // Only now is the old file expendable. `mv` within a directory is a
+        // rename, so there is no moment where neither file is there.
+        $this->run(['rm', '-f', $file]);
+        $this->run(['mv', $staging, $file]);
+
         $this->run(['swapon', $file]);
 
         $this->ensureFstab($file);

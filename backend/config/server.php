@@ -1313,6 +1313,13 @@ return [
     |
     */
 
+    /*
+    | Rewritten when the hostname changes: `hostnamectl` sets the name and
+    | nothing else, and a name that does not resolve makes every `sudo` call
+    | wait out a DNS timeout first.
+    */
+    'hosts_file' => env('SERVER_HOSTS_FILE', '/etc/hosts'),
+
     'sshd_config_dir' => env('SERVER_SSHD_CONFIG_DIR', '/etc/ssh/sshd_config.d'),
 
     'unattended_upgrades_file' => env('SERVER_UNATTENDED_UPGRADES', '/etc/apt/apt.conf.d/99-panel-upgrades'),

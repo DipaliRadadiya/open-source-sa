@@ -27,6 +27,7 @@ beforeEach(function () {
         'server.proc_dir' => $this->dir,
         'server.swap_file' => $this->swapFile,
         'server.fstab' => $this->fstab,
+        'server.hosts_file' => $this->dir.'/hosts',
     ]);
 });
 
@@ -66,6 +67,11 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
             File::put($cmd[1], (string) $process->input);
 
             return Process::result(exitCode: 0);
+        }
+        // `cat` reads for real too — a fake that answers empty would have the
+        // code believe a system file is blank.
+        if ($bin === 'cat' && is_file($cmd[1] ?? '')) {
+            return Process::result(output: File::get($cmd[1]));
         }
         if ($bin === 'rm') {
             File::delete(end($cmd));
@@ -115,8 +121,14 @@ it('reads all available setting groups', function () {
         ->assertJsonPath('settings.security.password_authentication', true)
         ->assertJsonPath('settings.updates.reboot_required', false)
         ->assertJsonPath('settings.redis.has_password', false)
-        ->assertJsonPath('settings.swap.enabled', true)   // 2000000 kB in the meminfo fixture
-        ->assertJsonPath('settings.swap.size', 2048000000)
+        // `enabled` is now whether the *panel's* swap file is on, not whether
+        // the machine has swap at all. The fixture's 2 GB belongs to the
+        // system, so it is reported separately and flagged unmanaged rather
+        // than shown as something this screen created.
+        ->assertJsonPath('settings.swap.enabled', false)
+        ->assertJsonPath('settings.swap.size', 0)
+        ->assertJsonPath('settings.swap.system_total', 2048000000)
+        ->assertJsonPath('settings.swap.unmanaged', true)
         ->assertJsonPath('settings.swap.path', $this->swapFile);
 });
 
@@ -127,8 +139,11 @@ it('creates a swap file, activates it and adds an fstab entry', function () {
         ->putJson('/api/settings/swap', ['size_mb' => 2048])->assertOk()
         ->assertJsonPath('swap.path', $this->swapFile);
 
-    Process::assertRan(fn ($p) => $p->command === ['fallocate', '-l', '2048M', $this->swapFile]);
-    Process::assertRan(fn ($p) => $p->command === ['mkswap', $this->swapFile]);
+    // Allocated beside the live file and moved in, so a failed allocation
+    // cannot leave the server with no swap at all.
+    Process::assertRan(fn ($p) => $p->command === ['fallocate', '-l', '2048M', $this->swapFile.'.new']);
+    Process::assertRan(fn ($p) => $p->command === ['mkswap', $this->swapFile.'.new']);
+    Process::assertRan(fn ($p) => $p->command === ['mv', $this->swapFile.'.new', $this->swapFile]);
     Process::assertRan(fn ($p) => $p->command === ['swapon', $this->swapFile]);
     expect(File::get($this->fstab))->toContain($this->swapFile.' none swap sw 0 0');
     $this->assertDatabaseHas('activity_logs', ['type' => 'setting', 'action' => 'updated']);
@@ -148,7 +163,7 @@ it('disables swap and strips only its fstab line', function () {
         ->not->toContain($this->swapFile);
 });
 
-it('deletes the swap file before allocating, so a smaller size really shrinks', function () {
+it('allocates a fresh file so a smaller size really shrinks', function () {
     // fallocate only ever allocates: given a length smaller than the file
     // already has it succeeds and changes nothing. Resizing 2 GB down to
     // 1.5 GB left a 2 GB file, mkswap made 2 GB of swap, and the screen came
@@ -160,8 +175,12 @@ it('deletes the swap file before allocating, so a smaller size really shrinks', 
     test()->withHeader('Authorization', 'Bearer '.test()->token)
         ->putJson('/api/settings/swap', ['size_mb' => 1536])->assertOk();
 
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', test()->swapFile]);
-    Process::assertRan(fn ($p) => $p->command === ['fallocate', '-l', '1536M', test()->swapFile]);
+    // A fresh file at the requested size, then moved over the old one — the
+    // old file is never removed before its replacement exists, because the
+    // usual reason an allocation fails is the full disk that prompted the
+    // resize, and that used to leave the server with no swap at all.
+    Process::assertRan(fn ($p) => $p->command === ['fallocate', '-l', '1536M', test()->swapFile.'.new']);
+    Process::assertRan(fn ($p) => $p->command === ['mv', test()->swapFile.'.new', test()->swapFile]);
 });
 
 it('refuses to resize swap the server cannot give up, and says why', function () {
@@ -426,4 +445,105 @@ describe('the ssh whitelist cannot lock the administrator out', function () {
         Process::assertRan(fn ($p) => in_array('groupadd', $p->command, true)
             && in_array('ssh-users', $p->command, true));
     });
+});
+
+it('keeps the existing swap when the new one cannot be allocated', function () {
+    // A full disk is the usual reason `fallocate` fails, and a full disk is
+    // what has somebody resizing swap in the first place. Removing the old
+    // file first meant that failure left the server with no swap at all and an
+    // fstab line pointing at nothing.
+    fakeSettings(swapActive: true);
+    File::put(test()->swapFile, 'the swap in use right now');
+
+    Process::fake(function ($process) {
+        $cmd = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($cmd[0] ?? '') === 'swapon' && ($cmd[1] ?? '') === '--show=NAME') {
+            return Process::result(output: test()->swapFile."\n");
+        }
+
+        if (($cmd[0] ?? '') === 'fallocate') {
+            return Process::result(exitCode: 1, errorOutput: 'fallocate: no space left on device');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->putJson('/api/settings/swap', ['size_mb' => 4096])
+        ->assertStatus(500);
+
+    // Still there, still the swap the server is running on.
+    expect(File::exists(test()->swapFile))->toBeTrue()
+        ->and(File::get(test()->swapFile))->toBe('the swap in use right now');
+    Process::assertNotRan(fn ($p) => $p->command === ['rm', '-f', test()->swapFile]);
+});
+
+it('makes the new hostname resolve, so sudo does not hang on it', function () {
+    fakeSettings();
+    File::put($this->dir.'/hosts', "127.0.0.1\tlocalhost\n127.0.1.1\tserver.example\n10.0.0.5\tinternal\n");
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/general', [
+            'timezone' => 'Etc/UTC', 'ntp' => true, 'hostname' => 'renamed.example',
+        ])->assertOk();
+
+    $hosts = File::get($this->dir.'/hosts');
+
+    // `hostnamectl` changes the name and nothing else; a name that does not
+    // resolve makes every `sudo` wait out a DNS timeout, which reads as a
+    // network fault rather than a settings change.
+    expect($hosts)->toContain("127.0.1.1\trenamed.example")
+        // One 127.0.1.1 line, not one per rename — otherwise the first one
+        // wins and after two renames that is nobody's current hostname.
+        ->and(substr_count($hosts, '127.0.1.1'))->toBe(1)
+        // Somebody else's entries are not ours to tidy away.
+        ->and($hosts)->toContain('10.0.0.5')
+        ->and($hosts)->toContain('localhost');
+});
+
+it('leaves the hosts file alone when the hostname did not change', function () {
+    fakeSettings();
+    File::put($this->dir.'/hosts', "127.0.1.1\tserver.example\n");
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/general', [
+            'timezone' => 'Europe/Berlin', 'ntp' => true, 'hostname' => 'server.example',
+        ])->assertOk();
+
+    Process::assertNotRan(fn ($p) => in_array('hostnamectl', $p->command, true)
+        && in_array('set-hostname', $p->command, true));
+});
+
+it('never rewrites the hosts file from a read that came back empty', function () {
+    fakeSettings();
+    File::put($this->dir.'/hosts', "127.0.0.1\tlocalhost\n127.0.1.1\told.example\n");
+
+    // Read succeeds but returns nothing. An empty hosts file does not exist in
+    // reality — every machine has a localhost line — so believing this one
+    // would replace localhost with our single entry.
+    Process::fake(function ($process) {
+        $cmd = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($cmd[0] ?? '') === 'hostnamectl' && ($cmd[1] ?? '') === '--static') {
+            return Process::result(output: 'server.example');
+        }
+
+        if (($cmd[0] ?? '') === 'cat') {
+            return Process::result(output: '');
+        }
+
+        if (($cmd[0] ?? '') === 'tee') {
+            File::put($cmd[1], (string) $process->input);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/general', [
+            'timezone' => 'Etc/UTC', 'ntp' => true, 'hostname' => 'renamed.example',
+        ])->assertOk();
+
+    expect(File::get($this->dir.'/hosts'))->toContain('localhost');
 });

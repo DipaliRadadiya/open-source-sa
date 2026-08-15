@@ -4,12 +4,17 @@ namespace App\Services\Server\Settings;
 
 use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
+use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Facades\Log;
 
 /** Timezone, NTP time sync, and hostname — via timedatectl / hostnamectl. */
 class GeneralSettings implements SettingGroup
 {
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private ManagedFile $files,
+    ) {}
 
     public function key(): string
     {
@@ -67,10 +72,90 @@ class GeneralSettings implements SettingGroup
 
         if ($data['hostname'] !== $current['hostname']) {
             $this->run(['hostnamectl', 'set-hostname', $data['hostname']]);
+            $this->ensureHostsEntry($data['hostname'], $current['hostname']);
         }
 
         if ((bool) $data['ntp'] !== (bool) $current['ntp']) {
             $this->run(['timedatectl', 'set-ntp', $data['ntp'] ? 'true' : 'false']);
+        }
+    }
+
+    /**
+     * Point 127.0.1.1 at the new hostname in /etc/hosts.
+     *
+     * `hostnamectl` changes the name and nothing else. If the name does not
+     * resolve, every `sudo` call waits out a DNS timeout first — the familiar
+     * "sudo: unable to resolve host" pause — and since it looks like a network
+     * fault, that is where people go looking. Debian's convention is a
+     * 127.0.1.1 line, separate from localhost, for exactly this.
+     *
+     * The old name's line is replaced rather than another appended: two
+     * 127.0.1.1 entries is how a box ends up resolving to whichever one came
+     * first, which after a couple of renames is nobody's current hostname.
+     * Lines for other addresses are left alone — an operator's own entries are
+     * not ours to tidy.
+     */
+    private function ensureHostsEntry(string $hostname, string $previous): void
+    {
+        $path = (string) config('server.hosts_file', '/etc/hosts');
+
+        $read = $this->serverOps->run(
+            ['cat', $path],
+            ['feature' => 'setting', 'group' => 'general', 'op' => 'hosts_read'],
+        );
+
+        if ($read->failed()) {
+            // Not fatal: the hostname itself did change. Better a slow `sudo`
+            // than a settings screen that reports failure for a change that
+            // actually happened.
+            Log::channel('server-ops')->warning('could not read hosts file after a hostname change', [
+                'feature' => 'setting',
+                'group' => 'general',
+                'reference' => $read->reference,
+            ]);
+
+            return;
+        }
+
+        // An empty read is not an empty hosts file. Every machine has at least
+        // a localhost line, so nothing here should ever be believed to be the
+        // whole of one — and rewriting from an empty read would replace
+        // localhost, and every entry the operator put there, with our single
+        // line. Refuse rather than repair.
+        if (trim($read->output()) === '') {
+            Log::channel('server-ops')->warning('hosts file read came back empty; leaving it untouched', [
+                'feature' => 'setting',
+                'group' => 'general',
+                'path' => $path,
+                'reference' => $read->reference,
+            ]);
+
+            return;
+        }
+
+        $lines = preg_split('/\r?\n/', rtrim($read->output(), "\n")) ?: [];
+
+        $kept = array_values(array_filter(
+            $lines,
+            fn (string $line): bool => ! preg_match('/^\s*127\.0\.1\.1\s/', $line),
+        ));
+
+        $kept[] = "127.0.1.1\t{$hostname}";
+
+        $write = $this->files->put(
+            $path,
+            implode("\n", $kept)."\n",
+            ['feature' => 'setting', 'group' => 'general', 'op' => 'hosts_write'],
+        );
+
+        if ($write->failed()) {
+            Log::channel('server-ops')->warning('could not write hosts file after a hostname change', [
+                'feature' => 'setting',
+                'group' => 'general',
+                'hostname' => $hostname,
+                'previous' => $previous,
+                'reference' => $write->reference,
+            ]);
         }
     }
 
