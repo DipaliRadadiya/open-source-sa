@@ -120,7 +120,8 @@ it('runs occ as the site user, not as the panel', function () {
 it('keeps user files out of the web root', function () {
     $runs = installNextcloud();
 
-    $dataDir = "{$this->home}/nextcloud-data";
+    // `{home}/{slug}/nextcloud-data`: outside the web root, inside the site.
+    $dataDir = "{$this->home}/files/nextcloud-data";
     $commands = collect($runs)->pluck('command');
 
     // The data directory holds every file every user uploads. Under the

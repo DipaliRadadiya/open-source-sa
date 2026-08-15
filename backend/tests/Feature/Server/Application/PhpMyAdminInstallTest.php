@@ -137,8 +137,9 @@ it('keeps the temp directory out of the web root', function () {
 
     // phpMyAdmin writes uploads and exports there, and anything under the
     // document root is a URL somebody can fetch.
-    expect($commands)->toContain(['mkdir', '-p', "{$this->home}/tmp"])
-        ->and($commands)->toContain(['chmod', '0750', "{$this->home}/tmp"]);
+    // `{home}/{slug}/tmp`: outside the web root, inside the site.
+    expect($commands)->toContain(['mkdir', '-p', "{$this->home}/database-admin/tmp"])
+        ->and($commands)->toContain(['chmod', '0750', "{$this->home}/database-admin/tmp"]);
 });
 
 it('downloads over https only', function () {

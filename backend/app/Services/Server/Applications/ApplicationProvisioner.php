@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Actions\Server\Application\AutoIssueCertificate;
 use App\Exceptions\Server\Application\ApplicationAvailabilityException;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Exceptions\Server\Application\ReleaseOperationException;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Services\Server\Php\PoolManager;
@@ -100,15 +101,26 @@ class ApplicationProvisioner
             // initial release path doubles as the documentRoot for this
             // first run, since `current` does not exist yet (provisioning
             // creates it).
-            $releasePath = $this->releases->createAppStructure($application);
+            // Not routed through step(), which expects a result to inspect —
+            // these return a path and a void. They report failure by throwing
+            // instead, translated here into the same step name the flat branch
+            // below uses, so a git site that could not have its directory made
+            // fails at `create_directory` like any other.
+            //
+            // Recording it unconditionally is what this replaces: the result of
+            // every command inside was dropped, so a failed `mkdir` was noted as
+            // a completed step, the vhost was written against a directory that
+            // did not exist, and the site came out active. The first deploy then
+            // failed at `git clone` and blamed git.
+            try {
+                $releasePath = $this->releases->createAppStructure($application);
 
-            // The initial `current` symlink, pointing at the first release.
-            $this->releases->initialSymlink($application, $releasePath);
+                // The initial `current` symlink, pointing at the first release.
+                $this->releases->initialSymlink($application, $releasePath);
+            } catch (ReleaseOperationException $e) {
+                throw new ProvisioningFailedException('create_directory', $e->reference);
+            }
 
-            // Directory creation happened above via mkdir -p, not
-            // step() -- record it directly rather than routing a fake
-            // result through step(), which unconditionally calls
-            // ->failed() on whatever it's given.
             $this->progress->record('create_directory');
         } else {
             // No release, no symlink -- just the one directory this site

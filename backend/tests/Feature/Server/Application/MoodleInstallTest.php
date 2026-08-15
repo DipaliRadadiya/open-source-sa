@@ -124,7 +124,10 @@ it('installs with a throwaway password that is replaced immediately after', func
 it('gives Moodle a data directory outside the web root', function () {
     $runs = installMoodle();
 
-    $dataDir = "{$this->home}/moodledata";
+    // Beside public_html inside the site, not next to the site in the user's
+    // home — `{home}/{slug}/moodledata`. Outside the web root, still the
+    // site's own, which is what document roots becoming slug-based settled.
+    $dataDir = "{$this->home}/courses/moodledata";
     $config = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'config.php'))['input'];
 
     // It holds every file every student uploads; inside the document root

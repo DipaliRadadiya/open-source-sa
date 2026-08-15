@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Exceptions\Server\Application\ReleaseOperationException;
 use App\Models\Application;
 use App\Models\Release;
 use App\Services\Server\ServerOps;
@@ -292,11 +293,31 @@ class ReleaseManager
      *
      * @param  array<int, string>  $args
      */
+    /**
+     * Every command here must succeed.
+     *
+     * The result used to be returned and every caller dropped it. That mattered
+     * most in `createAppStructure()`, which provisioning calls for a git site:
+     * a failed `mkdir` — a full disk, a permission problem — went unnoticed, the
+     * provisioner recorded `create_directory` as done, the vhost was written
+     * pointing at a directory that was never made, and the site came out
+     * **active**. The first deploy then failed at `git clone` and blamed git for
+     * a problem that had a clear cause two steps earlier.
+     *
+     * Throwing rather than returning, because there is no caller here for which
+     * carrying on after a failed filesystem command is correct.
+     */
     private function run(array $args): ServerOpsResult
     {
-        return $this->serverOps->run($args, [
+        $result = $this->serverOps->run($args, [
             'feature' => 'release',
             'op' => $args[0],
         ]);
+
+        if ($result->failed()) {
+            throw new ReleaseOperationException($result->reference);
+        }
+
+        return $result;
     }
 }
