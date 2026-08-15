@@ -15,12 +15,18 @@ use App\Models\Certificate;
  * perfectly healthy. A panel that lies about a working site is worse than one
  * that says nothing.
  *
- * The file is the authority throughout. The database records what we were told;
- * the certificate on disk is what the web server actually presents.
+ * The file is the authority for what *should* be served. It is not the
+ * authority for what *is*: the web server holds its own copy in memory from
+ * when it last started, so a renewal that never reached it leaves the file
+ * current and the site presenting something older. Both are read here, and the
+ * disagreement between them is recorded rather than averaged away.
  */
 class CertificateExpiry
 {
-    public function __construct(private CertificateFiles $files) {}
+    public function __construct(
+        private CertificateFiles $files,
+        private ServedCertificate $served,
+    ) {}
 
     /**
      * Re-read every active certificate.
@@ -50,6 +56,7 @@ class CertificateExpiry
     public function refresh(Certificate $certificate): bool
     {
         $expiry = $this->files->expiresAt((string) $certificate->certificate_path);
+        $servedChanged = $this->refreshServed($certificate);
 
         if ($expiry === null) {
             // The file is unreadable or gone, and the vhost is still pointing
@@ -72,11 +79,50 @@ class CertificateExpiry
         // Compared to the second, because the interesting change is a renewal
         // that moved the date sixty days out — not a clock drifting.
         if ($certificate->expires_at?->equalTo($expiry)) {
-            return false;
+            return $servedChanged;
         }
 
         $certificate->update(['expires_at' => $expiry]);
 
         return true;
+    }
+
+    /**
+     * Read what the web server is presenting for this certificate's primary
+     * name, and record it beside what is on disk.
+     *
+     * Only for a certificate the panel believes is live. Asking about one that
+     * is pending or failed would open a TLS connection to learn nothing.
+     *
+     * `served_checked_at` is stamped whether or not an answer came back, so the
+     * screen can tell "checked, and it agrees" from "never managed to look" —
+     * a tick for a check that did not run is the failure this is here to stop.
+     *
+     * @return bool whether anything changed
+     */
+    private function refreshServed(Certificate $certificate): bool
+    {
+        if ($certificate->status !== CertificateStatus::Active) {
+            return false;
+        }
+
+        $domain = $certificate->domains[0] ?? null;
+
+        if (! is_string($domain) || $domain === '') {
+            return false;
+        }
+
+        $before = $certificate->served_expires_at;
+        $servedAt = $this->served->expiresAt($domain);
+
+        $certificate->update([
+            'served_expires_at' => $servedAt,
+            'served_checked_at' => now(),
+        ]);
+
+        return ! (
+            ($before === null && $servedAt === null)
+            || ($before !== null && $servedAt !== null && $before->equalTo($servedAt))
+        );
     }
 }

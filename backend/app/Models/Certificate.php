@@ -15,7 +15,7 @@ class Certificate extends Model
     protected $fillable = [
         'application_id', 'type', 'status', 'domains',
         'certificate_path', 'private_key_path', 'chain_path', 'uploaded_private_key',
-        'force_https', 'auto_renew', 'issued_at', 'expires_at', 'reason', 'reference',
+        'force_https', 'auto_renew', 'issued_at', 'expires_at', 'served_expires_at', 'served_checked_at', 'reason', 'reference',
     ];
 
     protected $hidden = ['uploaded_private_key'];
@@ -33,6 +33,8 @@ class Certificate extends Model
             'force_https' => 'boolean',
             'auto_renew' => 'boolean',
             'issued_at' => 'datetime',
+            'served_expires_at' => 'datetime',
+            'served_checked_at' => 'datetime',
             'expires_at' => 'datetime',
         ];
     }
@@ -98,6 +100,32 @@ class Certificate extends Model
      *
      * @return array<int, string>
      */
+    /**
+     * The web server is presenting an older certificate than the one on disk.
+     *
+     * Which means a renewal landed and never reached the running process: the
+     * files are current, the panel's countdown is healthy, and every visitor is
+     * being handed something that expires sooner — eventually something expired.
+     * It is the one certificate failure with no symptom anywhere else in the
+     * panel, because everything else reads the file.
+     *
+     * Null when the served certificate has not been read, or could not be:
+     * nothing listening, TLS refused. Not knowing is not the same as agreeing,
+     * and a screen showing a reassuring tick for a check that never ran is the
+     * habit this whole field exists to break.
+     */
+    public function servingStale(): ?bool
+    {
+        if ($this->served_expires_at === null || $this->expires_at === null) {
+            return null;
+        }
+
+        // A minute of slack: the two dates come from the same certificate when
+        // things are healthy, and a strict comparison would flag clock skew
+        // between reading the file and completing a handshake.
+        return $this->served_expires_at->lt($this->expires_at->subMinute());
+    }
+
     public function missingDomains(): array
     {
         $covered = $this->domains ?? [];

@@ -147,3 +147,86 @@ it('writes no hook when nothing on the server renews', function () {
 
     Process::assertNotRan(fn ($p) => str_contains(implode(' ', $p->command), 'renewal-hooks'));
 });
+
+describe('what the site actually serves', function () {
+    /** `openssl x509` reads the file; `s_client` reads the handshake. */
+    function fakeCertDates(string $onDisk, ?string $served): void
+    {
+        Process::fake(function ($process) use ($onDisk, $served) {
+            $cmd = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($cmd[1] ?? '') === 's_client') {
+                return $served === null
+                    ? Process::result(exitCode: 1, errorOutput: 'connect: Connection refused')
+                    : Process::result(output: "Certificate chain\n   NotAfter: {$served}\n");
+            }
+
+            if (($cmd[1] ?? '') === 'x509') {
+                return Process::result(output: "notAfter={$onDisk}\n");
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    function activeServedCertificate(): Certificate
+    {
+        return Certificate::updateOrCreate(['application_id' => test()->application->id], [
+            'type' => CertificateType::LetsEncrypt,
+            'status' => CertificateStatus::Active,
+            'domains' => ['shop.example.com'],
+            'certificate_path' => '/etc/letsencrypt/live/shop.example.com/fullchain.pem',
+        ]);
+    }
+
+    it('notices when the server is still serving the certificate it renewed away from', function () {
+        // The file renewed sixty days forward; the running web server was never
+        // reloaded and is still presenting the old one. Nothing else in the
+        // panel can see this — every other check reads the file.
+        fakeCertDates('Nov 20 12:00:00 2026 GMT', 'Aug 22 12:00:00 2026 GMT');
+
+        $certificate = activeServedCertificate();
+        $this->artisan('certificates:refresh-expiry')->assertSuccessful();
+
+        expect($certificate->fresh()->servingStale())->toBeTrue();
+    });
+
+    it('is content when the server serves what is on disk', function () {
+        fakeCertDates('Nov 20 12:00:00 2026 GMT', 'Nov 20 12:00:00 2026 GMT');
+
+        $certificate = activeServedCertificate();
+        $this->artisan('certificates:refresh-expiry')->assertSuccessful();
+
+        expect($certificate->fresh()->servingStale())->toBeFalse();
+    });
+
+    it('says it does not know rather than showing a tick when nothing answers', function () {
+        // Nothing listening on 443. That tells us nothing about the
+        // certificate, and "unknown" must not render as agreement.
+        fakeCertDates('Nov 20 12:00:00 2026 GMT', null);
+
+        $certificate = activeServedCertificate();
+        $this->artisan('certificates:refresh-expiry')->assertSuccessful();
+
+        $fresh = $certificate->fresh();
+
+        expect($fresh->servingStale())->toBeNull()
+            ->and($fresh->served_expires_at)->toBeNull()
+            // Stamped even on failure, so the screen can tell "looked and could
+            // not see" from "never looked".
+            ->and($fresh->served_checked_at)->not->toBeNull();
+    });
+
+    it('asks for the right site by name', function () {
+        fakeCertDates('Nov 20 12:00:00 2026 GMT', 'Nov 20 12:00:00 2026 GMT');
+
+        activeServedCertificate();
+        $this->artisan('certificates:refresh-expiry')->assertSuccessful();
+
+        // Without SNI a server hosting several sites answers with whichever
+        // certificate is default — reading another site's expiry as this one's.
+        Process::assertRan(fn ($p) => in_array('-servername', $p->command, true)
+            && in_array('shop.example.com', $p->command, true)
+            && in_array('127.0.0.1:443', $p->command, true));
+    });
+});

@@ -898,6 +898,8 @@ Promote this domain to primary (renames vhost + log files).
   "auto_renew": true, "renewable": true,
   "issued_at": "25-07-2026 14:31:00", "issued_at_human": "2 weeks ago",
   "expires_at": "01-09-2026 00:00:00", "expires_at_human": "in 3 weeks",
+  "served_expires_at": "01-09-2026 00:00:00", "served_checked_at": "15-08-2026 03:00:00",
+  "serving_stale": false,
   "days_remaining": 21,
   "expired": false, "expiring_soon": false,
   "message": "Active until 1 September 2026."
@@ -907,6 +909,12 @@ Promote this domain to primary (renames vhost + log files).
 There is **no `issuer` field** — use `type` / `type_title`.
 
 **`domains` is what the certificate covers; `missing_domains` is what the site answers to but the certificate does not.** They diverge the moment someone adds a domain, and that divergence is exactly the failure this panel exists to catch: the browser reports it, the server logs nothing. A non-empty `missing_domains` should prompt a re-issue, not a warning buried in a tooltip.
+
+**`expires_at` is the certificate on disk. `served_expires_at` is the one the web server is actually handing to visitors.** They agree on a healthy site. When they do not, a renewal landed on disk and never reached the running process — so the countdown above looks healthy while every visitor gets a browser warning. It is the one certificate failure with no other symptom in the panel, because everything else reads the file.
+
+**`serving_stale`** is the answer in one field: `true` means the site is serving something older than the file, `false` means they match, and **`null` means nobody has managed to look** — nothing listening on 443, or TLS refused. Null must not render as a tick; "we did not check" and "it is fine" are different statements. `served_checked_at` is stamped even when the read fails, so the two are distinguishable.
+
+Read over loopback with SNI, once a day, so it costs nothing and works on a server behind NAT. A site behind Cloudflare reports *this server's* certificate rather than Cloudflare's, which is the one being asked about.
 
 `renewable` is a property of the type — nothing can renew an uploaded or self-signed certificate — while `auto_renew` is the user's setting. Show a renewal date only when `renewable` is true.
 

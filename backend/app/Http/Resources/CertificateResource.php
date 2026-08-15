@@ -37,6 +37,16 @@ class CertificateResource extends JsonResource
             'issued_at_human' => $this->issued_at?->diffForHumans(),
             'expires_at' => $this->expires_at?->format('d-m-Y H:i:s'),
             'expires_at_human' => $this->expires_at?->diffForHumans(),
+            // What the web server is actually presenting, as opposed to what
+            // is on disk. They agree on a healthy site; when they do not, the
+            // file renewed and the running server never picked it up, so the
+            // countdown above is reassuring and every visitor gets a warning.
+            'served_expires_at' => $this->served_expires_at?->format('d-m-Y H:i:s'),
+            'served_checked_at' => $this->served_checked_at?->format('d-m-Y H:i:s'),
+            // True = serving something older than the file. Null = nobody has
+            // managed to look, which is not the same as agreement and must not
+            // render as a tick.
+            'serving_stale' => $this->servingStale(),
             'days_remaining' => $this->daysRemaining(),
             'expired' => $this->expired(),
 
