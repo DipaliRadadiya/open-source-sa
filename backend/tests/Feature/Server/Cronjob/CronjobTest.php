@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ActivityLog;
+use App\Models\Application;
 use App\Models\Cronjob;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -489,4 +490,137 @@ it('returns no next run for an inactive job', function () {
 
     expect($row['next_run_at'])->toBeNull();
     expect($row['next_run_at_human'])->toBeNull();
+});
+
+it('removes the file an adopted job was imported from when it is edited', function () {
+    Process::fake();
+
+    // What Server Sync leaves behind: the slug names the file the panel would
+    // write, while the job is really described by the file it was read from.
+    $cronjob = Cronjob::create([
+        'name' => 'Imported backup', 'slug' => 'imported-backup',
+        'source_path' => '/etc/cron.d/legacy-backup',
+        'username' => 'deploy', 'command' => '/srv/backup.sh', 'expression' => '0 3 * * *',
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$cronjob->id}", ['expression' => '0 4 * * *'])
+        ->assertOk();
+
+    // Without this the command runs twice: ours at 04:00, the original at 03:00.
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/legacy-backup']);
+    Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/imported-backup']);
+    expect($cronjob->fresh()->source_path)->toBeNull();
+});
+
+it('removes the imported file when an adopted job is switched off', function () {
+    Process::fake();
+
+    $cronjob = Cronjob::create([
+        'name' => 'Imported hourly', 'slug' => 'imported-hourly',
+        'source_path' => '/etc/cron.d/legacy-hourly',
+        'username' => 'deploy', 'command' => '/srv/hourly.sh', 'expression' => '@hourly',
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$cronjob->id}", ['active' => false])
+        ->assertOk();
+
+    // Switching a job off has to stop it, not just stop our copy of it.
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/legacy-hourly']);
+});
+
+it('removes the imported file when an adopted job is deleted', function () {
+    Process::fake();
+
+    $cronjob = Cronjob::create([
+        'name' => 'Imported nightly', 'slug' => 'imported-nightly',
+        'source_path' => '/etc/cron.d/legacy-nightly',
+        'username' => 'deploy', 'command' => '/srv/nightly.sh', 'expression' => '0 0 * * *',
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson("/api/cronjobs/{$cronjob->id}")
+        ->assertNoContent();
+
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/legacy-nightly']);
+});
+
+it('keeps the job when the imported file cannot be removed', function () {
+    Process::fake(fn ($process) => $process->command === ['rm', '-f', '/etc/cron.d/legacy-stuck']
+        ? Process::result(exitCode: 1, errorOutput: 'permission denied')
+        : Process::result(exitCode: 0));
+
+    $cronjob = Cronjob::create([
+        'name' => 'Imported stuck', 'slug' => 'imported-stuck',
+        'source_path' => '/etc/cron.d/legacy-stuck',
+        'username' => 'deploy', 'command' => '/srv/stuck.sh', 'expression' => '0 0 * * *',
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson("/api/cronjobs/{$cronjob->id}")
+        ->assertStatus(500);
+
+    // Reporting it deleted while the original still runs is the failure this
+    // whole change is about.
+    expect(Cronjob::find($cronjob->id))->not->toBeNull();
+});
+
+it('changes the account a job runs as', function () {
+    Process::fake();
+    $other = SystemUser::create(['username' => 'runner', 'home_path' => '/home/runner', 'shell' => '/bin/bash', 'sudo' => false]);
+
+    $cronjob = Cronjob::create([
+        'name' => 'Move me', 'slug' => 'move-me', 'username' => 'deploy',
+        'system_user_id' => $this->su->id,
+        'command' => 'echo hi', 'expression' => '* * * * *',
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$cronjob->id}", ['system_user_id' => $other->id])
+        ->assertOk()
+        ->assertJsonPath('cronjob.username', 'runner');
+
+    expect($cronjob->fresh()->username)->toBe('runner');
+    // The cron.d file carries the run-as user in its own column, so it has to
+    // be rewritten — the row alone changing would be a lie.
+    Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/move-me']);
+});
+
+it('refuses to move a job to an account that does not exist', function () {
+    Process::fake(fn ($process) => $process->command[0] === 'getent'
+        ? Process::result(exitCode: 2)
+        : Process::result(exitCode: 0));
+
+    $cronjob = Cronjob::create([
+        'name' => 'Stay put', 'slug' => 'stay-put', 'username' => 'deploy',
+        'command' => 'echo hi', 'expression' => '* * * * *',
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$cronjob->id}", ['username' => 'ghost'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('username');
+
+    expect($cronjob->fresh()->username)->toBe('deploy');
+});
+
+it('creates a job scoped to an application', function () {
+    Process::fake();
+    $application = Application::factory()->create(['system_user_id' => $this->su->id]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/cronjobs', [
+            'name' => 'Site queue', 'system_user_id' => $this->su->id,
+            'application_id' => $application->id,
+            'command' => 'php artisan queue:work', 'expression' => '* * * * *',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('cronjob.application_id', $application->id);
+
+    // The filter existed before anything could set the column.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson("/api/cronjobs?filter[application_id]={$application->id}")
+        ->assertOk()
+        ->assertJsonCount(1, 'cronjobs');
 });

@@ -5,6 +5,7 @@ namespace App\Actions\Server\Cronjob;
 use App\Exceptions\Server\Cronjob\CronjobOperationException;
 use App\Models\Cronjob;
 use App\Services\ActivityLogger;
+use App\Services\Server\CronRunAsUser;
 use App\Services\Server\CrontabManager;
 use Illuminate\Support\Facades\Log;
 
@@ -13,10 +14,11 @@ class UpdateCronjob
     public function __construct(
         private CrontabManager $crontab,
         private ActivityLogger $activityLogger,
+        private CronRunAsUser $runAsUser,
     ) {}
 
     /**
-     * @param  array{name?: string, command?: string, expression?: string, active?: bool}  $data
+     * @param  array{name?: string, command?: string, expression?: string, system_user_id?: int|null, username?: string|null, active?: bool}  $data
      */
     public function execute(Cronjob $cronjob, array $data): Cronjob
     {
@@ -27,6 +29,16 @@ class UpdateCronjob
 
         if (isset($data['name']) && $data['name'] !== $cronjob->name) {
             $data['slug'] = Cronjob::uniqueSlug($data['name'], $cronjob->id);
+        }
+
+        // Resolved through the same check create uses, so a job can never be
+        // pointed at an account that does not exist — cron accepts such a file
+        // and then fails to run it, silently, on every tick.
+        if (array_key_exists('system_user_id', $data) || array_key_exists('username', $data)) {
+            $data = array_merge($data, $this->runAsUser->resolve(
+                $data['system_user_id'] ?? null,
+                $data['username'] ?? $cronjob->username,
+            ));
         }
 
         // Kept so the row can be put back if the file operation refuses. No
@@ -70,6 +82,27 @@ class UpdateCronjob
             // Carry the output history over to the new name rather than
             // stranding it under the old one.
             $this->crontab->moveLog($oldSlug, $cronjob);
+        }
+
+        // An adopted job is still described by the file Server Sync found it
+        // in. Now that the panel has written its own — or removed it, for a job
+        // just switched off — that one has to go, or the command runs twice and
+        // switching a job off leaves it running.
+        if ($cronjob->source_path) {
+            $detached = $this->crontab->detachSource($cronjob);
+
+            if ($detached?->failed()) {
+                // Same rule as the rename above: one edit must never leave two
+                // schedules behind, so ours goes rather than the original's.
+                $cleanup = $cronjob->active ? $this->crontab->remove($cronjob) : null;
+                if ($cleanup?->failed()) {
+                    Log::warning('cronjob source detach cleanup failed', ['reference' => $cleanup->reference]);
+                }
+                $cronjob->forceFill($before)->save();
+                throw new CronjobOperationException($detached->reference);
+            }
+
+            $cronjob->forceFill(['source_path' => null])->save();
         }
 
         $this->activityLogger->log('cronjob.updated', $cronjob, ['name' => $cronjob->name]);

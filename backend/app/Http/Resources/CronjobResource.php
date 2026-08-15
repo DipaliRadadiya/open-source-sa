@@ -24,6 +24,9 @@ class CronjobResource extends JsonResource
                 'id' => $this->systemUser->id,
                 'username' => $this->systemUser->username,
             ] : null),
+            // The site this job belongs to, or null for a server-level job —
+            // the frontend needs it to know which screen a job came from.
+            'application_id' => $this->application_id,
             'command' => $this->command,
             'expression' => $this->expression,
             'active' => (bool) $this->active,

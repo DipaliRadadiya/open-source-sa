@@ -26,6 +26,12 @@ class StoreCronjobRequest extends FormRequest
             // unmanaged account). At least one must be present.
             'system_user_id' => ['nullable', 'exists:system_users,id'],
             'username' => ['required_without:system_user_id', 'nullable', 'string', 'regex:/^[a-z_][a-z0-9_-]{0,31}$/'],
+            // The site this job belongs to, when it was created from an
+            // application's own Cronjobs screen. Null is a server-level job.
+            // The column, the relation and `filter[application_id]` all existed
+            // before this rule did, so that filter could only ever answer with
+            // an empty list.
+            'application_id' => ['sometimes', 'nullable', 'exists:applications,id'],
             'command' => ['required', 'string', 'max:1000', new SingleLine, 'not_regex:/\{path\}/'],
             'expression' => ['required', 'string', new ValidCronExpression],
             'active' => ['sometimes', 'boolean'],

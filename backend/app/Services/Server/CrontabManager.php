@@ -47,6 +47,34 @@ class CrontabManager
     }
 
     /**
+     * Remove the file an adopted job was imported from, once the panel has
+     * written its own.
+     *
+     * Server Sync names an adopted job by the slug of its command, not by the
+     * file it was read from, so `path()` points somewhere the original never
+     * was. Editing such a job used to write a second cron.d file and leave the
+     * first one running — the command then ran twice — and deleting it removed
+     * only ours. Neither is recoverable from the slug, which is why the source
+     * path is stored.
+     *
+     * Returns null when there is nothing to detach, or when the source is the
+     * file we manage anyway (removing that would delete the job we just wrote).
+     */
+    public function detachSource(Cronjob $cronjob): ?ServerOpsResult
+    {
+        $source = (string) $cronjob->source_path;
+
+        if ($source === '' || $source === $this->path($cronjob)) {
+            return null;
+        }
+
+        return $this->serverOps->run(
+            ['rm', '-f', $source],
+            ['feature' => 'cronjob', 'op' => 'detach_source', 'cronjob' => $cronjob->id, 'path' => $source],
+        );
+    }
+
+    /**
      * True when the given OS account exists on this server (getent passwd).
      */
     public function userExists(string $username): bool

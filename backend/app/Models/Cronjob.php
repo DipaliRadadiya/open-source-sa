@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'slug', 'username', 'system_user_id', 'application_id', 'command', 'expression', 'active'])]
+#[Fillable(['name', 'slug', 'source_path', 'username', 'system_user_id', 'application_id', 'command', 'expression', 'active'])]
 class Cronjob extends Model
 {
     use HasFactory;

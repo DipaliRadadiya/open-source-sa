@@ -4,37 +4,33 @@ namespace App\Actions\Server\Cronjob;
 
 use App\Exceptions\Server\Cronjob\CronjobOperationException;
 use App\Models\Cronjob;
-use App\Models\SystemUser;
 use App\Services\ActivityLogger;
+use App\Services\Server\CronRunAsUser;
 use App\Services\Server\CrontabManager;
-use Illuminate\Validation\ValidationException;
 
 class CreateCronjob
 {
     public function __construct(
         private CrontabManager $crontab,
         private ActivityLogger $activityLogger,
+        private CronRunAsUser $runAsUser,
     ) {}
 
     /**
-     * @param  array{name: string, command: string, expression: string, system_user_id?: int|null, username?: string|null, active?: bool}  $data
+     * @param  array{name: string, command: string, expression: string, system_user_id?: int|null, username?: string|null, application_id?: int|null, active?: bool}  $data
      */
     public function execute(array $data): Cronjob
     {
-        $systemUser = isset($data['system_user_id']) ? SystemUser::find($data['system_user_id']) : null;
-        $username = $systemUser?->username ?? ($data['username'] ?? null);
-
-        if ($username === null || ! $this->crontab->userExists($username)) {
-            throw ValidationException::withMessages([
-                'username' => [__('errors/cronjob.invalid_user')],
-            ]);
-        }
+        $runAs = $this->runAsUser->resolve($data['system_user_id'] ?? null, $data['username'] ?? null);
 
         $cronjob = Cronjob::create([
             'name' => $data['name'],
             'slug' => Cronjob::uniqueSlug($data['name']),
-            'username' => $username,
-            'system_user_id' => $systemUser?->id,
+            'username' => $runAs['username'],
+            'system_user_id' => $runAs['system_user_id'],
+            // Set when the job was created from a site's own Cronjobs screen;
+            // null for a server-level job.
+            'application_id' => $data['application_id'] ?? null,
             'command' => $data['command'],
             'expression' => $data['expression'],
             'active' => $data['active'] ?? true,

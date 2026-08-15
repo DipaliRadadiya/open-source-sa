@@ -8,6 +8,7 @@ use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -70,6 +71,10 @@ class CronjobDiscoverer implements Discoverable
         return Cronjob::create(
             [
                 'slug' => $attributes['slug'],
+                // Where it was read from, so the first edit or delete can
+                // remove it. The slug names the file the panel *would* write,
+                // never the one it found, so nothing else can recover this.
+                'source_path' => $attributes['source_path'] ?? null,
                 // `name` is unique in this table. Two jobs legitimately run
                 // the same command on different schedules — a nightly backup
                 // and a midday one — and taking the command as the name made
@@ -183,7 +188,20 @@ class CronjobDiscoverer implements Discoverable
             );
 
             // "no crontab for x" exits non-zero. The common case, not an error.
+            //
+            // A denied sudo exits non-zero too, and treating that as "this user
+            // has no jobs" is how this reports an empty result on a server full
+            // of them. `crontab` is not in the panel's sudoers list, so today
+            // that is the *only* outcome here — said out loud rather than left
+            // to look like a clean scan that found nothing.
             if ($result->failed()) {
+                if (str_contains($result->errorOutput(), 'password is required')) {
+                    Log::warning('crontab discovery skipped: the panel may not run crontab', [
+                        'reference' => $result->reference,
+                        'system_user' => $username,
+                    ]);
+                }
+
                 continue;
             }
 
@@ -233,6 +251,11 @@ class CronjobDiscoverer implements Discoverable
             ],
             'attributes' => [
                 'slug' => $slug,
+                // Only a cron.d job has a file of its own to reconcile against;
+                // a crontab line lives inside someone else's file and is left
+                // alone. (Reading those needs `crontab` in the panel's sudoers,
+                // which it does not have — see fromUserCrontabs.)
+                'source_path' => $evidence['source'] === 'cron.d' ? $evidence['path'] : null,
                 'name' => Str::limit($command, 60),
                 'username' => $username,
                 'system_user_id' => $users->get($username),
