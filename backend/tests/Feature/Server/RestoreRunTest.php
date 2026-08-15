@@ -346,6 +346,7 @@ describe('restoring a database', function () {
 
         $manager = Mockery::mock(DatabaseManager::class);
         $manager->shouldReceive('engine')->andReturn($engine);
+        $manager->shouldReceive('driver')->andReturn('sql');
 
         return new RestoreDatabase($manager);
     }
@@ -398,15 +399,35 @@ describe('restoring a database', function () {
 
         $staging = $this->home.'/staging-partial';
         File::ensureDirectoryExists($staging);
-        File::put($staging.'/db-kept.sql', 'INSERT INTO t VALUES (1);');
+        File::put($staging.'/db-kept.sql', "INSERT INTO t VALUES (1);\n-- Dump completed on 2026-08-15  3:00:00\n");
         // Detached since the backup was taken — and sorted after `kept`, so
         // the old code reached it only once `kept` had been dropped.
-        File::put($staging.'/db-zzz-gone.sql', 'INSERT INTO t VALUES (2);');
+        File::put($staging.'/db-zzz-gone.sql', "INSERT INTO t VALUES (2);\n-- Dump completed on 2026-08-15  3:00:00\n");
 
         $calls = [];
 
         expect(fn () => restoreDatabaseStep($calls)->run(databaseRestoreContext($staging)))
             ->toThrow(RuntimeException::class, 'zzz-gone is no longer attached');
+
+        expect($calls)->toBe([]);
+    });
+
+    it('does not drop a live database for a dump that was cut off', function () {
+        Database::create([
+            'application_id' => $this->application->id,
+            'name' => 'shop', 'engine' => 'mysql', 'charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci',
+        ]);
+
+        $staging = $this->home.'/staging-truncated';
+        File::ensureDirectoryExists($staging);
+        // Plausible size, real SQL, no end: a download cut off part way, or an
+        // archive that unpacked incompletely. Size checks cannot see this.
+        File::put($staging.'/db-shop.sql', str_repeat("INSERT INTO t VALUES (1);\n", 400));
+
+        $calls = [];
+
+        expect(fn () => restoreDatabaseStep($calls)->run(databaseRestoreContext($staging)))
+            ->toThrow(RuntimeException::class, 'the dump for shop is incomplete');
 
         expect($calls)->toBe([]);
     });
@@ -419,7 +440,7 @@ describe('restoring a database', function () {
 
         $staging = $this->home.'/staging-ok';
         File::ensureDirectoryExists($staging);
-        File::put($staging.'/db-shop.sql', 'INSERT INTO t VALUES (1);');
+        File::put($staging.'/db-shop.sql', "INSERT INTO t VALUES (1);\n-- Dump completed on 2026-08-15  3:00:00\n");
 
         $calls = [];
         restoreDatabaseStep($calls)->run(databaseRestoreContext($staging));

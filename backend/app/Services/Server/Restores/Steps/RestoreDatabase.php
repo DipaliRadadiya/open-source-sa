@@ -77,6 +77,12 @@ class RestoreDatabase implements RestoreStep
                 ->where('name', $name)
                 ->first();
 
+            if ($database !== null
+                && $this->databases->driver($database->engine) === 'sql'
+                && ! $this->looksComplete($dump)) {
+                throw new RuntimeException("the dump for {$name} is incomplete");
+            }
+
             if ($database === null) {
                 // Recreating a database the panel no longer tracks would leave
                 // an orphan with no user and no owner. Naming it is more use
@@ -94,6 +100,38 @@ class RestoreDatabase implements RestoreStep
             $engine->createDatabase($database->name, $database->charset, $database->collation);
             $engine->restore($database->name, $dump);
         }
+    }
+
+    /**
+     * Whether a dump this panel wrote reached its end.
+     *
+     * `mysqldump` closes every dump with `-- Dump completed on …`, and we run it
+     * without `--compact` or `--skip-comments`, so ours always carry it. A dump
+     * that stops short does not — which is exactly what a download cut off part
+     * way, or an archive that unpacked incompletely, leaves behind. Size alone
+     * cannot tell those apart: a truncated dump is a perfectly plausible size.
+     *
+     * Only the last few hundred bytes are read; these files are gigabytes.
+     *
+     * This is not a validity check. A dump can be complete and still fail to
+     * import, and the safety backup remains the answer to that. It rules out
+     * the failure that actually happens — the file did not all arrive — before
+     * anything is dropped for it.
+     */
+    private function looksComplete(string $dump): bool
+    {
+        $size = (int) filesize($dump);
+        $handle = fopen($dump, 'rb');
+
+        if ($handle === false) {
+            return false;
+        }
+
+        fseek($handle, max(0, $size - 512));
+        $tail = (string) fread($handle, 512);
+        fclose($handle);
+
+        return str_contains($tail, 'Dump completed');
     }
 
     public function cleanup(RestoreContext $context, bool $failed): void
