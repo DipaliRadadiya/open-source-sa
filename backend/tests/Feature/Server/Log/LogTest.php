@@ -131,3 +131,34 @@ it('allows a viewer with the logs permission', function () {
         ->assertOk()
         ->assertJsonPath('log.lines', ['visible']);
 });
+
+it('bounds what it reads from a log with almost no line breaks', function () {
+    // One line far larger than the read window: the newline count alone can
+    // never satisfy the loop, so an unbounded tail loads the whole file.
+    $blob = str_repeat('x', LogManager::MAX_INCREMENTAL_BYTES * 3);
+    File::put($this->logDir.'/nginx-error.log', "first line\n".$blob."\nlast line\n");
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/logs/nginx_error')
+        ->assertOk();
+
+    $returned = strlen(implode("\n", $response->json('log.lines')));
+
+    expect($returned)->toBeLessThanOrEqual(LogManager::MAX_INCREMENTAL_BYTES)
+        ->and($response->json('log.truncated'))->toBeTrue()
+        // The newest content is what a log viewer is for.
+        ->and($response->json('log.lines'))->toContain('last line');
+});
+
+it('does not invent a line by starting mid-way through one', function () {
+    $blob = str_repeat('y', LogManager::MAX_INCREMENTAL_BYTES + 1000);
+    File::put($this->logDir.'/nginx-error.log', $blob."\ncomplete line\n");
+
+    $lines = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/logs/nginx_error')
+        ->assertOk()
+        ->json('log.lines');
+
+    // The half of $blob inside the window is not a log entry that ever existed.
+    expect($lines)->toBe(['complete line']);
+});

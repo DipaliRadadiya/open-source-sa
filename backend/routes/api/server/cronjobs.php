@@ -10,11 +10,13 @@ use Illuminate\Support\Facades\Route;
 Route::get('/cronjobs/schedule-presets', [CronjobController::class, 'schedulePresets'])->middleware('permission:cronjob');
 Route::get('/cronjobs/command-presets', [CronjobController::class, 'commandPresets'])->middleware('permission:cronjob');
 
-Route::get('/cronjobs', [CronjobController::class, 'index'])->middleware('permission:cronjob')->middleware('throttle:api');
-// Throttled like the read: every write runs a handful of privileged commands
-// (mkdir, touch, chown, chmod, two tees) and the read was the only route here
-// carrying a limit.
-Route::post('/cronjobs', [CronjobController::class, 'store'])->middleware(['permission:cronjob,manage', 'throttle:api']);
+// No `throttle:api` here: bootstrap/app.php prepends it to every API route
+// already, and naming it again does not re-limit anything — it is the same
+// limiter and therefore the same bucket, so the request is counted twice and
+// the route silently gets half the allowance. Every other file in this
+// directory only ever *removes* it (`withoutMiddleware`), which is the tell.
+Route::get('/cronjobs', [CronjobController::class, 'index'])->middleware('permission:cronjob');
+Route::post('/cronjobs', [CronjobController::class, 'store'])->middleware('permission:cronjob,manage');
 Route::get('/cronjobs/{cronjob}', [CronjobController::class, 'show'])->middleware('permission:cronjob');
-Route::put('/cronjobs/{cronjob}', [CronjobController::class, 'update'])->middleware(['permission:cronjob,manage', 'throttle:api']);
-Route::delete('/cronjobs/{cronjob}', [CronjobController::class, 'destroy'])->middleware(['permission:cronjob,manage', 'throttle:api']);
+Route::put('/cronjobs/{cronjob}', [CronjobController::class, 'update'])->middleware('permission:cronjob,manage');
+Route::delete('/cronjobs/{cronjob}', [CronjobController::class, 'destroy'])->middleware('permission:cronjob,manage');

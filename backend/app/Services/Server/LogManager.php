@@ -198,8 +198,16 @@ class LogManager
         $position = (int) (filesize($path) ?: 0);
         $buffer = '';
 
-        while ($position > 0 && substr_count($buffer, "\n") <= $lines) {
-            $read = (int) min(4096, $position);
+        // Stop at the same byte ceiling the incremental path uses. The newline
+        // count alone is not a bound: a log with few line breaks — a cron job
+        // that printed one large blob, a stack trace on a single line — never
+        // satisfies it, and the buffer grows until it holds the whole file and
+        // the worker dies. `range()` was given this cap already; this is the
+        // path every first page load takes.
+        $floor = max(0, $position - self::MAX_INCREMENTAL_BYTES);
+
+        while ($position > $floor && substr_count($buffer, "\n") <= $lines) {
+            $read = (int) min(4096, $position - $floor);
             $position -= $read;
             fseek($handle, $position);
             $buffer = ((string) fread($handle, $read)).$buffer;
@@ -209,6 +217,12 @@ class LogManager
 
         $all = $this->split($buffer);
         $truncated = $position > 0;
+
+        // The window may begin halfway through a line, and half a line read as
+        // a whole one is a log entry the panel invented.
+        if ($position > 0 && $position === $floor && count($all) > 1) {
+            array_shift($all);
+        }
 
         if (count($all) > $lines) {
             $all = array_slice($all, -$lines);
