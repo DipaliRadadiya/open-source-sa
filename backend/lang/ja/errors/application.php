@@ -54,4 +54,5 @@ return [
 
     'bulk_count_mismatch' => '確認した件数が、選択されている項目の数と一致しません。',
     'sources_not_in_one_directory' => '圧縮する項目はすべて同じフォルダー内にある必要があります。',
+    'release_failed' => 'サーバー上にサイトのディレクトリを作成できませんでした。',
 ];

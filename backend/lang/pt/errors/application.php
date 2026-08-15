@@ -54,4 +54,5 @@ return [
 
     'bulk_count_mismatch' => 'O número que confirmou não corresponde à quantidade de itens selecionados.',
     'sources_not_in_one_directory' => 'Todos os itens a comprimir têm de estar na mesma pasta.',
+    'release_failed' => 'Não foi possível criar o diretório do site no servidor.',
 ];
