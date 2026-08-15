@@ -137,3 +137,81 @@ it('denies a user without the permission from previewing', function () {
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/disk-cleaner')->assertForbidden();
 });
+
+it('never deletes a database binary log when clearing rotated logs', function () {
+    // The predicate is the risky part, so it is run for real against a tree
+    // shaped like /var/log rather than asserted on the argv. Only the root is
+    // substituted; the patterns are exactly the ones that ship.
+    $root = sys_get_temp_dir().'/sv-oss-varlog-'.uniqid();
+    File::ensureDirectoryExists($root.'/nginx');
+    File::ensureDirectoryExists($root.'/mysql');
+
+    $files = [
+        // Rotated: should go.
+        $root.'/nginx/access.log.1' => true,
+        $root.'/nginx/access.log.2.gz' => true,
+        $root.'/syslog.1' => true,
+        $root.'/dpkg.log.old' => true,
+        // Not rotated, or not ours to touch: must stay.
+        $root.'/nginx/access.log' => false,
+        $root.'/mysql/mysql-bin.000001' => false,
+        $root.'/mysql/error.log' => false,
+        // Six digits outside mysql: still not a logrotate suffix.
+        $root.'/somedaemon.000042' => false,
+    ];
+
+    foreach (array_keys($files) as $path) {
+        File::put($path, 'x');
+    }
+
+    $argv = null;
+    Process::fake(function ($process) use (&$argv) {
+        if (is_array($process->command) && $process->command[0] === 'find' && in_array('-delete', $process->command, true)) {
+            $argv = $process->command;
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/disk-cleaner/clean', ['categories' => ['rotated_logs']]);
+
+    expect($argv)->not->toBeNull();
+
+    $argv = array_map(fn (string $arg) => match ($arg) {
+        '/var/log' => $root,
+        '/var/log/mysql/*' => $root.'/mysql/*',
+        default => $arg,
+    }, $argv);
+
+    exec(implode(' ', array_map('escapeshellarg', $argv)));
+
+    foreach ($files as $path => $shouldBeDeleted) {
+        expect(file_exists($path))->toBe(! $shouldBeDeleted, $path);
+    }
+
+    File::deleteDirectory($root);
+});
+
+it('refuses to schedule the package removal', function () {
+    // Every other category removes files that come back; this one removes
+    // packages, and does it on apt's flags rather than anyone's intent.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/disk-cleaner/schedule', [
+            'enabled' => true,
+            'frequency' => 'daily',
+            'categories' => ['apt_orphans'],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('categories.0');
+});
+
+it('still offers the package removal for a manual clean', function () {
+    Process::fake();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/disk-cleaner/clean', ['categories' => ['apt_orphans']])
+        ->assertOk();
+
+    Process::assertRan(fn ($p) => $p->command === ['apt-get', '-y', 'autoremove', '--purge']);
+});

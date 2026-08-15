@@ -63,7 +63,9 @@ class TmpTarget extends AbstractCleanupTarget
     private function findArgs(bool $delete): array
     {
         $days = (int) config('server.disk_cleaner.tmp_days', 7);
-        $base = ['find', ...$this->dirs(), '-type', 'f', '-mtime', "+{$days}"];
+        // `-xdev` for the same reason as the rotated logs: /tmp is a common
+        // mount point, and anything mounted under it belongs to something else.
+        $base = ['find', ...$this->dirs(), '-xdev', '-type', 'f', '-mtime', "+{$days}"];
 
         return [...$base, ...($delete ? ['-delete'] : ['-printf', "%s\n"])];
     }

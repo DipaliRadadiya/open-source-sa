@@ -28,6 +28,23 @@ class AptOrphansTarget extends AbstractCleanupTarget
         return is_file('/usr/bin/apt-get');
     }
 
+    /**
+     * Not automatable. Everything else here removes files that can be
+     * regenerated; this removes *packages*, on the strength of apt's
+     * auto-installed flags — which are routinely wrong on a server that was
+     * migrated, built by a provisioning script, or repaired with `apt -f`. And
+     * `--purge` takes the configuration with them.
+     *
+     * That is a judgement worth making with somebody watching. The schedule
+     * request and the scheduled command both already filter on this flag; no
+     * target had ever set it, so the guard they were written around had never
+     * had anything to guard.
+     */
+    public function safe(): bool
+    {
+        return false;
+    }
+
     public function paths(): array
     {
         return ['apt: unused packages & old kernels'];
