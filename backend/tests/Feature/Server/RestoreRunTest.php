@@ -32,7 +32,11 @@ beforeEach(function () {
 
     $this->home = storage_path('framework/testing/home-'.uniqid());
     $this->domain = 'restore-me.test';
-    $this->siteRoot = $this->home.'/'.$this->domain;
+    // `{home}/{slug}/public_html`, which is where the panel resolves a document
+    // root — not `{home}/{domain}`. Building it by domain is the same mistake
+    // the PHP-version screen shipped, and it left every restore here failing at
+    // the first step for want of a directory.
+    $this->siteRoot = $this->home.'/restore-me/public_html';
 
     File::ensureDirectoryExists($this->siteRoot);
     File::put($this->siteRoot.'/index.php', '<?php echo "live";');

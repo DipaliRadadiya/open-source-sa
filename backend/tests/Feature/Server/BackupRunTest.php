@@ -30,20 +30,25 @@ beforeEach(function () {
         fn (array $config) => $this->fakeDisk,
     ));
 
-    $this->siteRoot = storage_path('framework/testing/site-'.uniqid());
-    File::ensureDirectoryExists($this->siteRoot.'/public');
-    File::put($this->siteRoot.'/public/index.php', '<?php echo "site";');
+    // Built where the panel actually looks: `{home}/{slug}/public_html`. The
+    // fixture used to invent its own directory, which meant the archive step
+    // was correctly reporting a missing site root and this whole file has been
+    // red since document roots were made slug-based.
+    $this->home = storage_path('framework/testing/home-'.uniqid());
+    $this->siteRoot = $this->home.'/backed-up/public_html';
+    File::ensureDirectoryExists($this->siteRoot);
+    File::put($this->siteRoot.'/index.php', '<?php echo "site";');
 
     $systemUser = SystemUser::create([
         'username' => 'backupuser',
-        'home_path' => dirname($this->siteRoot),
+        'home_path' => $this->home,
     ]);
 
     $this->application = Application::forceCreate([
         'system_user_id' => $systemUser->id,
         'name' => 'Backed Up',
         'slug' => 'backed-up',
-        'domain' => basename($this->siteRoot),
+        'domain' => 'backed-up.example.com',
         'site_type' => 'php',
         'serving_profile' => 'php',
         'status' => 'active',
@@ -61,7 +66,7 @@ beforeEach(function () {
 });
 
 afterEach(function () {
-    File::deleteDirectory($this->siteRoot);
+    File::deleteDirectory($this->home);
 });
 
 function backupTarget(array $overrides = []): BackupTarget
