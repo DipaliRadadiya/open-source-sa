@@ -61,7 +61,14 @@ export const syncItemSchema = z
     // Keys vary per type — application {path, document_root, owner},
     // php_settings {pool, values}, system_user {uid, home_path, shell},
     // firewall_rule {to, from}, ssh_key {system_user, path}.
-    evidence: z.record(z.unknown()).nullish(),
+    //
+    // Same empty-array serialization as `totals`: a discoverer that recorded no
+    // evidence writes an empty json array, and rejecting it would drop the whole
+    // item — the row, not just its evidence.
+    evidence: z
+      .union([z.record(z.string(), z.unknown()), z.array(z.never())])
+      .nullish()
+      .transform((evidence) => (Array.isArray(evidence) ? {} : evidence)),
     // Already localized by the backend from lang/*/sync.php. Rendered verbatim;
     // the frontend deliberately keeps no reason list of its own, or the two
     // would drift and ours would be the wrong one.
@@ -85,18 +92,31 @@ export const syncRunSchema = z
       .passthrough()
       .default({}),
     // Per type: { application: { found, adopted, skipped, failed }, ... }
+    //
+    // A run that has not written a total yet sends `[]`, not `{}` — PHP has one
+    // array type and an empty one serializes as a list. Every brand-new run
+    // arrives that way, so a bare `z.record` rejected the 201 for every scan at
+    // the instant it started: the toast claimed the scan had failed while it was
+    // already running, and the poll could not read the run either.
     totals: z
-      .record(
-        z
-          .object({
-            found: z.number().int().default(0),
-            adopted: z.number().int().default(0),
-            skipped: z.number().int().default(0),
-            failed: z.number().int().default(0),
-          })
-          .passthrough(),
-      )
-      .default({}),
+      .union([
+        z.record(
+          z.string(),
+          z
+            .object({
+              found: z.number().int().default(0),
+              adopted: z.number().int().default(0),
+              skipped: z.number().int().default(0),
+              failed: z.number().int().default(0),
+            })
+            .passthrough(),
+        ),
+        z.array(z.never()),
+      ])
+      .default({})
+      // Normalized so consumers only ever see an object; an empty array would
+      // survive `Object.entries` but not a `totals[type]` lookup.
+      .transform((totals) => (Array.isArray(totals) ? {} : totals)),
     started_at: z.string().nullish(),
     finished_at: z.string().nullish(),
     // Absent unless the items relation was loaded: GET /server/sync/latest does
