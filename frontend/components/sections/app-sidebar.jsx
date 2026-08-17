@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { TriangleAlert } from "lucide-react";
+import { ArrowLeft, Globe2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   groupBySubLevel,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/navigation";
 import { useApplicationNav } from "@/components/sections/application-nav";
 import { Logo } from "@/components/logo";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { NavIcon } from "@/components/nav-icon";
@@ -41,7 +42,13 @@ import {
  * about: flipping a switch on 8G Firewall and clicking "Files" threw the edit
  * away with no warning at all.
  */
-function MobileNavLink({ item, built, active, children }) {
+function applicationStatusVariant(application) {
+  if (application.is_disabled || application.status === "failed") return "destructive";
+  if (application.status === "active") return "success";
+  return "warning";
+}
+
+function MobileNavLink({ item, built, active, children, className }) {
   const { isMobile, setOpenMobile } = useSidebar()
   const t = useTranslations("common")
   const router = useRouter()
@@ -80,7 +87,7 @@ function MobileNavLink({ item, built, active, children }) {
         asChild
         isActive={active}
         tooltip={item.title}
-        className={NAV_ITEM_CLASS}
+        className={cn(NAV_ITEM_CLASS, className)}
         onClick={handleClick}
       >
         {children}
@@ -118,7 +125,7 @@ export function AppSidebar({ items }) {
   // Inside an application, prefer the catalog its layout fetched: only that one
   // is filtered by what this site type supports. Until it arrives, the shared
   // catalog renders the same items minus that filter.
-  const { items: applicationItems, resolved } = useApplicationNav();
+  const { items: applicationItems, resolved, application } = useApplicationNav();
   // Once the layout has answered and the answer is "no menu", this site does not
   // exist. Fall back to the SERVER panel rather than rendering the shared
   // catalog against a dead id — that produced a full site menu whose every link
@@ -152,6 +159,54 @@ export function AppSidebar({ items }) {
           )}
         </Link>
       </SidebarHeader>
+      {application ? (
+        <SidebarGroup className="border-b px-2 pt-2 pb-4">
+          <SidebarMenu className="gap-1">
+            <SidebarMenuItem>
+              <MobileNavLink
+                item={{ href: "/applications", title: t("applicationContext.back") }}
+                built
+                active={false}
+              >
+                <Link href="/applications" prefetch={false}>
+                  <ArrowLeft />
+                  <span>{t("applicationContext.back")}</span>
+                </Link>
+              </MobileNavLink>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <MobileNavLink
+                item={{ href: `/applications/${application.id}`, title: application.name }}
+                built
+                active={false}
+                className="h-auto min-h-20 items-start rounded-lg border border-sidebar-border/60 bg-sidebar-accent/40 px-3 py-3 shadow-xs hover:bg-sidebar-accent group-data-[collapsible=icon]:min-h-8!"
+              >
+                <Link
+                  href={`/applications/${application.id}`}
+                  prefetch={false}
+                  className="min-w-0"
+                >
+                  <Globe2 className="mt-0.5" />
+                  <span className="min-w-0 leading-tight">
+                    <span className="block truncate font-semibold">{application.name}</span>
+                    <span className="mt-1 block truncate text-xs text-muted-foreground">
+                      {application.domain}
+                    </span>
+                    <span className="mt-2 flex min-w-0 items-center gap-1.5">
+                      <Badge variant={applicationStatusVariant(application)}>
+                        {application.status_title ?? application.status}
+                      </Badge>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {application.site_type_title ?? application.site_type}
+                      </span>
+                    </span>
+                  </span>
+                </Link>
+              </MobileNavLink>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      ) : null}
       <SidebarContent className="gap-0 py-2">
         {groups.map((group) => (
           <SidebarGroup key={group.key} className="py-1">

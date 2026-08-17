@@ -21,7 +21,7 @@ export default async function ApplicationLayout({ children, params }) {
     <>
       {/* Always reported, even as null — "this site has no menu" is exactly the
           fact the sidebar needs when the site is gone. */}
-      <ApplicationNav items={items} />
+      <ApplicationNav items={items} application={result?.application ?? null} />
       {name ? <PageCrumb href={`/applications/${application}`}>{name}</PageCrumb> : null}
       {children}
     </>

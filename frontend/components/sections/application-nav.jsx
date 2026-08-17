@@ -17,7 +17,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 const ApplicationNavContext = createContext(null);
 
 export function ApplicationNavProvider({ children }) {
-  const [state, setState] = useState({ items: null, resolved: false });
+  const [state, setState] = useState({ items: null, resolved: false, application: null });
   return (
     <ApplicationNavContext.Provider value={{ ...state, setState }}>
       {children}
@@ -35,16 +35,16 @@ export function useApplicationNav() {
  * Rendered by the application layout. Clears on the way out so a server page
  * never inherits the last application's menu.
  */
-export function ApplicationNav({ items }) {
+export function ApplicationNav({ items, application = null }) {
   const { setState } = useApplicationNav();
 
   useEffect(() => {
     // Rendered even when `items` is null — that IS the answer for a site that no
     // longer exists, and the sidebar needs to hear it. Saying nothing left the
     // sidebar to guess, and it guessed a full menu of links that all 404.
-    setState({ items, resolved: true });
-    return () => setState({ items: null, resolved: false });
-  }, [items, setState]);
+    setState({ items, resolved: true, application });
+    return () => setState({ items: null, resolved: false, application: null });
+  }, [items, application, setState]);
 
   return null;
 }
