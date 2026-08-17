@@ -5,8 +5,11 @@ use App\Models\BackupTarget;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
 use Database\Seeders\PermissionSeeder;
+use GuzzleHttp\Promise\Create;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -667,4 +670,42 @@ it('uses path-style addressing only when a custom endpoint is configured', funct
     expect($captured[0]['use_path_style_endpoint'])->toBeTrue()
         ->and($captured[1]['use_path_style_endpoint'])->toBeFalse()
         ->and($captured[1]['endpoint'])->toBeNull();
+});
+
+/*
+ * Unlike the two above, this one drives the *real* adapter rather than a
+ * captured config array. Asserting `stream_reads` is present would pass
+ * while proving nothing: what matters is that the key survives Laravel's
+ * `?? false` read (FilesystemManager::createS3Driver) and reaches the wire
+ * as @http.stream. An injected http_handler is the only place that's
+ * observable without a bucket.
+ */
+it('sends GetObject as a streamed request so a large artefact never lands in memory', function () {
+    $destination = new StorageDestination([
+        'access_key' => 'k',
+        'secret_key' => 's',
+        'region' => 'us-east-1',
+        'bucket' => 'backups-prod',
+        'endpoint' => null,
+        'prefix' => '',
+    ]);
+
+    $requestOptions = [];
+
+    $config = app(DestinationDisk::class)->config($destination);
+
+    // Passed straight through to the S3Client constructor, so the SDK
+    // resolves @http options against it instead of opening a socket.
+    $config['http_handler'] = function ($request, array $options) use (&$requestOptions) {
+        $requestOptions[] = $options;
+
+        return Create::promiseFor(new Response(200, [], 'artefact-bytes'));
+    };
+
+    Storage::build($config)->readStream('app1/restore.tar.gz');
+
+    // False here means Guzzle buffers the whole GetObject body into memory
+    // before readStream() returns — DownloadArtifact's stream_copy_to_stream
+    // then copies an already-loaded 5+ GB string and OOMs the worker.
+    expect($requestOptions[0]['stream'] ?? false)->toBeTrue();
 });

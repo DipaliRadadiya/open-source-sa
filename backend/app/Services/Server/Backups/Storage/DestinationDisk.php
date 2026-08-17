@@ -68,6 +68,15 @@ class DestinationDisk
             // happened looks identical to one that did — a backup reporting
             // success over an empty bucket.
             'throw' => true,
+
+            // MUST stay true. Laravel defaults this to *false* and so
+            // overrides Flysystem's own `true`, which leaves `@http.stream`
+            // unset on GetObject: Guzzle then buffers the whole object into
+            // memory and hands readStream() a stream over an already-loaded
+            // body. DownloadArtifact's stream_copy_to_stream looks streamed
+            // and isn't — a 5.8 GB archive OOMs the worker on exactly the
+            // large sites that most need restoring.
+            'stream_reads' => true,
         ];
     }
 }
