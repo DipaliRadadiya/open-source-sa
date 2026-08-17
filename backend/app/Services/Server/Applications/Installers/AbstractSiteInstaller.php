@@ -62,13 +62,28 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      * How this application's archive is packed.
      *
      * Applications ship in whatever they ship in: tarballs mostly, but Mautic
-     * publishes zip only. `unzip` has no equivalent of tar's
-     * `--strip-components`, so a zip that needs stripping would need more than
-     * a flag — none of ours do.
+     * and Nextcloud publish zip. `unzip` has no equivalent of tar's
+     * `--strip-components`, so a zip that wraps its contents in a directory
+     * names it in {@see archiveRoot()} instead.
      */
     protected function archiveFormat(): string
     {
         return 'tar';
+    }
+
+    /**
+     * The directory inside the archive holding the application, for zips that
+     * wrap their contents — null when the entries are already at the top.
+     *
+     * This is `stripComponents()`'s job for tarballs, done by tar itself. A
+     * zip has no such flag, so the wrapper is stepped over when copying out
+     * instead. Named explicitly rather than detected: "the single top-level
+     * directory" is a guess that silently copies the wrong tree the first time
+     * an archive ships a stray `__MACOSX` or a readme beside the folder.
+     */
+    protected function archiveRoot(): ?string
+    {
+        return null;
     }
 
     /**
@@ -129,9 +144,12 @@ abstract class AbstractSiteInstaller implements SiteInstaller
 
         $this->run('extract', ['mkdir', '-p', "{$work}/src"], $application);
         // `-xf` rather than `-xzf`: applications ship in whatever they ship
-        // in, and Nextcloud's only tarball is bzip2. tar detects the
-        // compression from the file itself, so the installer does not have to
-        // know or care.
+        // in, so tar detects the compression from the file itself and the
+        // installer does not have to know or care. Note this makes tar shell
+        // out to a decompressor the panel never declared — Nextcloud's bzip2
+        // tarball failed here on a server with no `bzip2`, reporting a
+        // missing `lbzip2` that appears nowhere in this codebase. That is why
+        // Nextcloud takes the zip: `unzip` is already a required binary.
         $this->run('extract', $this->archiveFormat() === 'zip'
             // -q so a 90 MB listing doesn't end up in the ops log.
             ? ['unzip', '-q', $archive, '-d', "{$work}/src"]
@@ -157,7 +175,12 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // to a directory exactly like a real one, and it runs elevated via
         // ServerOps regardless, so permissions were never actually the
         // blocker for the copy itself.
-        $this->run('extract', ['cp', '-r', "{$work}/src/.", $documentRoot], $application);
+        // Past the wrapping directory for a zip that has one — tar already
+        // dropped it via --strip-components, so this is null everywhere else.
+        $root = $this->archiveRoot();
+        $source = $root === null ? "{$work}/src" : "{$work}/src/".trim($root, '/');
+
+        $this->run('extract', ['cp', '-r', "{$source}/.", $documentRoot], $application);
 
         // The copy above runs elevated, so everything it just wrote is owned
         // by root. Provisioning's `set_ownership` step cannot help: it runs

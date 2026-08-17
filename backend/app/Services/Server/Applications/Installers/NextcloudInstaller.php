@@ -32,6 +32,28 @@ class NextcloudInstaller extends AbstractPhpInstaller
     }
 
     /**
+     * Upstream publishes bzip2 and zip only — there is no gzip build.
+     *
+     * The bzip2 tarball was the original choice and it cost a server: `tar`
+     * only *suggests* bzip2 in Debian packaging, so a lean image has tar but
+     * nothing to decompress with, and the install died at `extract` reporting
+     * a missing `lbzip2` — tar's preferred helper, named nowhere in this
+     * codebase and installed on nobody's server. `unzip` is already on
+     * BinariesCheck's REQUIRED list, so the zip needs nothing the panel does
+     * not already demand.
+     */
+    protected function archiveFormat(): string
+    {
+        return 'zip';
+    }
+
+    /** The zip wraps everything in `nextcloud/`; the tarball did not. */
+    protected function archiveRoot(): ?string
+    {
+        return 'nextcloud';
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function install(Application $application, string $documentRoot, array $context): void

@@ -827,9 +827,11 @@ return [
 
         'nextcloud' => [
             'driver' => NextcloudInstaller::class,
-            // Upstream publishes bzip2 and zip only — no gzip — which is why
-            // the shared extract step lets tar detect the compression.
-            'download_url' => env('SERVER_NEXTCLOUD_URL', 'https://download.nextcloud.com/server/releases/latest.tar.bz2'),
+            // Upstream publishes bzip2 and zip only — no gzip. The zip, because
+            // extracting the bzip2 tarball needs a decompressor `tar` merely
+            // Suggests: on a lean image the install died at `extract` naming a
+            // missing `lbzip2`. `unzip` is already a required binary.
+            'download_url' => env('SERVER_NEXTCLOUD_URL', 'https://download.nextcloud.com/server/releases/latest.zip'),
             'database' => env('SERVER_NEXTCLOUD_DATABASE', 'mysql'),
             // 280 MB to fetch and a schema to build afterwards. The shared
             // default would time this out on any ordinary connection.

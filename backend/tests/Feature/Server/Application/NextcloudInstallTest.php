@@ -145,15 +145,32 @@ it('trusts the site\'s own domain, or the site refuses every visitor', function 
     expect($cliUrl['command'])->toContain('--value=https://cloud.example.com');
 });
 
-it('lets tar work out the compression, since this one ships bzip2', function () {
+it('takes the zip, not the bzip2 tarball', function () {
     $runs = installNextcloud();
 
-    $tar = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'tar')['command'];
+    $extract = collect($runs)
+        ->first(fn ($run) => in_array($run['command'][0] ?? '', ['unzip', 'tar'], true))['command'];
 
-    // Upstream publishes bzip2 and zip only. `-xzf` would fail on every
-    // Nextcloud release ever made.
-    expect($tar)->toContain('-xf')
-        ->and($tar)->not->toContain('-xzf');
+    // Upstream publishes bzip2 and zip only — no gzip. The tarball was the
+    // original choice and it cost a server: Debian's `tar` merely *Suggests*
+    // bzip2, so a lean image extracts nothing and reports a missing `lbzip2`,
+    // a program named nowhere in this codebase. `unzip` is already required.
+    expect($extract[0])->toBe('unzip');
+
+    $curl = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'curl')['command'];
+    expect(end($curl))->toEndWith('.zip');
+});
+
+it('copies out of the wrapping directory the zip ships', function () {
+    $runs = installNextcloud();
+
+    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'cp')['command'];
+
+    // The zip's entries start at `nextcloud/`, unlike Mautic's flat one, and
+    // `unzip` has no `--strip-components` to drop it. Copying from the
+    // extract root instead would put the whole application one directory
+    // below the web root: every URL a 404, and index.php nowhere.
+    expect($copy[2])->toEndWith('/src/nextcloud/.');
 });
 
 it('allows longer than the shared default for a 280 MB download', function () {
