@@ -14,6 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const STATE_VARIANT = { active: "success", failed: "destructive", activating: "warning" };
 
 /**
+ * Spelled out rather than built as `${action}ed`, which produced `stoped` for
+ * stop and printed the raw key path in the toast. Only stop was affected, so it
+ * survived every reading of the code; a key assembled from a template literal is
+ * also invisible to grep, so nothing flagged it as missing.
+ */
+const DONE_KEY = { start: "started", stop: "stopped", restart: "restarted" };
+
+/**
  * Only for sites that run their own process (`has_process` — true exactly when
  * a start command is set). PHP and static sites have nothing to supervise.
  *
@@ -34,7 +42,7 @@ export function ProcessCard({ application, canManage = false }) {
     setPending(action);
     try {
       await controlApplicationProcess(application.id, action);
-      toast.success(t(`${action}ed`));
+      toast.success(t(DONE_KEY[action]));
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
