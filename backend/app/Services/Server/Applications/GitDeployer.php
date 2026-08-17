@@ -59,10 +59,11 @@ class GitDeployer
         $this->progress->open($application);
 
         try {
-            // Deploy directly into the document root. All apps use a flat
-            // /home/<user>/<slug>/<web_root> structure. web_root defaults to
-            // public_html. The directory is created and owned by ApplicationProvisioner
-            // before this method is called.
+            // Deploy directly into the document root. Every site type uses the
+            // same flat `/home/<user>/<slug>/public_html/<web_root>` structure,
+            // and `ApplicationProvisioner` creates and chowns that directory
+            // before this method is called — which for a git site it did not
+            // do at all until provisioning stopped branching on the site type.
             $this->trustDocumentRoot($documentRoot);
 
             $credentialFile = $this->writeCredential($application);

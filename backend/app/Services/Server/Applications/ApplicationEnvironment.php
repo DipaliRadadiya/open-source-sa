@@ -35,10 +35,10 @@ class ApplicationEnvironment
 
     public function path(Application $application): string
     {
-        // .env lives at the app root, not inside any release. Releases are
-        // immutable after deploy — a .env change must be visible to all of them.
-        // documentRoot() returns the current/ symlink path which changes per-release,
-        // so use appRoot() instead.
+        // .env lives at the app root, deliberately *outside* the document root:
+        // it holds the application's own secrets, and anything under the served
+        // directory is a URL somebody can fetch. `documentRoot()` resolves
+        // inside `public_html`, so it is the wrong anchor for this.
         return $application->rootPath().'/.env';
     }
 

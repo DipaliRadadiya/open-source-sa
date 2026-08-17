@@ -5,7 +5,6 @@ namespace App\Services\Server\Applications;
 use App\Actions\Server\Application\AutoIssueCertificate;
 use App\Exceptions\Server\Application\ApplicationAvailabilityException;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
-use App\Exceptions\Server\Application\ReleaseOperationException;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Services\Server\Php\PoolManager;
@@ -35,7 +34,6 @@ class ApplicationProvisioner
         private ProvisionProgress $progress,
         private AutoIssueCertificate $autoCertificate,
         private PoolManager $pools,
-        private ReleaseManager $releases,
     ) {}
 
     /**
@@ -96,41 +94,55 @@ class ApplicationProvisioner
 
         $this->progress->open($application);
 
-        if ($application->site_type === 'git') {
-            // The releases directory structure and initial release. The
-            // initial release path doubles as the documentRoot for this
-            // first run, since `current` does not exist yet (provisioning
-            // creates it).
-            // Not routed through step(), which expects a result to inspect —
-            // these return a path and a void. They report failure by throwing
-            // instead, translated here into the same step name the flat branch
-            // below uses, so a git site that could not have its directory made
-            // fails at `create_directory` like any other.
-            //
-            // Recording it unconditionally is what this replaces: the result of
-            // every command inside was dropped, so a failed `mkdir` was noted as
-            // a completed step, the vhost was written against a directory that
-            // did not exist, and the site came out active. The first deploy then
-            // failed at `git clone` and blamed git.
-            try {
-                $releasePath = $this->releases->createAppStructure($application);
-
-                // The initial `current` symlink, pointing at the first release.
-                $this->releases->initialSymlink($application, $releasePath);
-            } catch (ReleaseOperationException $e) {
-                throw new ProvisioningFailedException('create_directory', $e->reference);
-            }
-
-            $this->progress->record('create_directory');
-        } else {
-            // No release, no symlink -- just the one directory this site
-            // will ever have. documentRoot() already resolved to the flat
-            // path (no /current/) for anything that isn't a git site.
-            $this->step('create_directory', fn () => $this->serverOps->run(
+        // One directory, for every site type there is. `documentRoot()` resolves
+        // to the same flat `{root}/public_html/{web_root}` shape for all of
+        // them.
+        //
+        // A git site used to be sent down a branch of its own here, which built
+        // `releases/<timestamp>/public` and a `current` symlink instead. That
+        // was the layout before `4059aa0` ("flat path for all apps, remove
+        // current symlink") — and the refactor left this behind, so a git site
+        // got a release structure nothing serves and never got the directory
+        // everything actually uses. The next step chowned a path that did not
+        // exist, `chown` exited 1, and **provisioning failed at
+        // `set_ownership` for every git application** before a single git
+        // command ran. The suite could not see it: `Process` is faked, so the
+        // chown against a missing directory returned success.
+        $this->step('create_directory', function () use ($application, $documentRoot, $user) {
+            $result = $this->serverOps->run(
                 ['mkdir', '-p', $documentRoot],
                 ['feature' => 'application', 'op' => 'mkdir', 'application' => $application->id],
-            ));
-        }
+            );
+
+            if ($result->failed() || $application->site_type !== 'git') {
+                return $result;
+            }
+
+            // The shared `.env`, at the app root rather than inside the served
+            // directory — it holds the application's own secrets, and anything
+            // under the document root is a URL. `ApplicationEnvironment::path()`
+            // reads the same location.
+            //
+            // Owned here rather than by `set_ownership` below, which only
+            // descends the document root: `touch` runs elevated, and a
+            // root-owned `.env` is one the site's own process cannot write and
+            // the File Manager cannot edit.
+            $env = $application->rootPath().'/.env';
+
+            $result = $this->serverOps->run(
+                ['touch', $env],
+                ['feature' => 'application', 'op' => 'touch_env', 'application' => $application->id],
+            );
+
+            if ($result->failed()) {
+                return $result;
+            }
+
+            return $this->serverOps->run(
+                ['chown', "{$user->username}:{$user->username}", $env],
+                ['feature' => 'application', 'op' => 'chown_env', 'application' => $application->id],
+            );
+        });
 
         // Written *before* ownership is set, not after. `tee` runs elevated,
         // so a placeholder written after the `chown` is a root-owned file

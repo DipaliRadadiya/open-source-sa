@@ -111,6 +111,50 @@ function firstDeployRan(ArrayObject $ran, callable $matches): bool
     return false;
 }
 
+it('creates the directory it is about to chown, serve and deploy into', function () {
+    $app = firstDeployApp();
+    $ran = fakeFirstDeploy();
+
+    app(ApplicationProvisioner::class)->provision($app->load('systemUser'));
+
+    $documentRoot = app(ApplicationProvisioner::class)->documentRoot($app->fresh()->load('systemUser'));
+
+    // A git site used to get `releases/<timestamp>/public` and a `current`
+    // symlink here instead — the layout `4059aa0` removed — so the directory
+    // everything downstream uses was never made. `chown -R` on a path that
+    // does not exist exits 1, and provisioning died at `set_ownership` for
+    // every git application. Faked processes report success, which is why the
+    // command list, not the exit code, is what this asserts.
+    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'mkdir'
+        && in_array($documentRoot, $args, true)))->toBeTrue();
+
+    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'chown'
+        && in_array($documentRoot, $args, true)))->toBeTrue();
+});
+
+it('gives a git site an .env above the document root, owned by the site user', function () {
+    $app = firstDeployApp();
+    $ran = fakeFirstDeploy();
+
+    app(ApplicationProvisioner::class)->provision($app->load('systemUser'));
+
+    $fresh = $app->fresh()->load('systemUser');
+    $env = $fresh->rootPath().'/.env';
+
+    // Above the served directory, because it holds the application's secrets
+    // and anything under the document root is a URL.
+    expect($env)->not->toStartWith(app(ApplicationProvisioner::class)->documentRoot($fresh));
+
+    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'touch'
+        && in_array($env, $args, true)))->toBeTrue();
+
+    // `touch` runs elevated; left root-owned, the site's own process could not
+    // write it and the File Manager could not edit it.
+    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'chown'
+        && in_array('deploy:deploy', $args, true)
+        && in_array($env, $args, true)))->toBeTrue();
+});
+
 it('does not write a placeholder into a git site', function () {
     $app = firstDeployApp();
     $ran = fakeFirstDeploy();
