@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,7 @@ import {
   ChevronDown,
   CircleAlert,
   Loader2,
+  RefreshCw,
   Sparkles,
   TriangleAlert,
   UserPlus,
@@ -601,13 +602,21 @@ export function CreateApplicationForm({
   timezones = [],
 }) {
   const t = useTranslations("applications");
+  // Both refresh actions show the same one-word label; only their accessible
+  // names differ, so the shared string comes from `common`.
+  const tCommon = useTranslations("common");
   const { name: brand } = useBranding();
   const router = useRouter();
+  const [accountsRefreshing, startAccountsRefresh] = useTransition();
   const [gitSource, setGitSource] = useState("account");
   const [repositories, setRepositories] = useState([]);
   const [branches, setBranches] = useState([]);
   const [repositoriesState, setRepositoriesState] = useState("idle");
   const [branchesState, setBranchesState] = useState("idle");
+  // Bumped to re-ask the provider for the same account's repositories. A token
+  // added in the other tab does not change `git_account_id`, so without this the
+  // fetch effect has no reason to run again and the picker stays stale.
+  const [repositoriesNonce, setRepositoriesNonce] = useState(0);
   const [systemUserDialogOpen, setSystemUserDialogOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   // Bumped to ask for a scroll; the effect runs after the reveal has committed.
@@ -818,6 +827,31 @@ export function CreateApplicationForm({
     setBranchesState("idle");
   }
 
+  /**
+   * Pick up an account connected since this form was opened.
+   *
+   * "Connect Git" opens the integrations page in a new tab, so this form is
+   * still mounted when the user comes back — and the accounts list arrived as a
+   * server prop, which nothing client-side can re-read. `router.refresh()`
+   * re-runs the server component; it is a soft refresh, so everything already
+   * typed into the form survives.
+   */
+  function refreshGitAccounts() {
+    startAccountsRefresh(() => router.refresh());
+  }
+
+  /**
+   * Re-ask the provider for the selected account's repositories.
+   *
+   * Separate from the accounts refresh on purpose: these are two different
+   * lists, fetched from two different places, and a label that says "Refresh"
+   * beside a field should refresh that field.
+   */
+  function refreshRepositories() {
+    if (gitAccountId) setRepositoriesState("loading");
+    setRepositoriesNonce((nonce) => nonce + 1);
+  }
+
   function handleRepositoryChange(value) {
     form.setValue("repository", value);
     form.setValue("branch", "");
@@ -941,7 +975,7 @@ export function CreateApplicationForm({
     return () => {
       cancelled = true;
     };
-  }, [form, gitAccountId, gitSource, isGit]);
+  }, [form, gitAccountId, gitSource, isGit, repositoriesNonce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1334,7 +1368,31 @@ export function CreateApplicationForm({
                             name="git_account_id"
                             render={({ field }) => (
                               <FormItem className="min-w-0">
-                                <FormLabel>{t("gitAccount")}</FormLabel>
+                                {/* Same min-h-7 label row as Repository beside
+                                    it, so both comboboxes share one baseline. */}
+                                <div className="flex min-h-7 items-center justify-between gap-2">
+                                  <FormLabel className="min-w-0">
+                                    {t("gitAccount")}
+                                  </FormLabel>
+                                  {/* "Connect Git" below opens another tab; this
+                                      is how the account added there gets here
+                                      without reloading the form. */}
+                                  <button
+                                    type="button"
+                                    onClick={refreshGitAccounts}
+                                    disabled={accountsRefreshing}
+                                    aria-label={t("form.gitAccountsRefresh")}
+                                    className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline disabled:pointer-events-none disabled:opacity-50"
+                                  >
+                                    <RefreshCw
+                                      className={cn(
+                                        "size-3",
+                                        accountsRefreshing && "animate-spin",
+                                      )}
+                                    />
+                                    {tCommon("refresh")}
+                                  </button>
+                                </div>
                                 <FormControl>
                                   <Combobox
                                     options={gitAccounts.map((account) => ({
@@ -1377,7 +1435,36 @@ export function CreateApplicationForm({
                             name="repository"
                             render={({ field }) => (
                               <FormItem className="min-w-0">
-                                <FormLabel>{t("repository")}</FormLabel>
+                                {/* Action on the label row, matching the System
+                                    user field — keeping it out of the control row
+                                    leaves every input's right edge aligned with
+                                    the Branch field below. */}
+                                <div className="flex min-h-7 items-center justify-between gap-2">
+                                  <FormLabel className="min-w-0">
+                                    {t("repository")}
+                                  </FormLabel>
+                                  {/* Both actions read "Refresh"; the accessible
+                                      name is what tells them apart. */}
+                                  <button
+                                    type="button"
+                                    onClick={refreshRepositories}
+                                    disabled={
+                                      !gitAccountId ||
+                                      repositoriesState === "loading"
+                                    }
+                                    aria-label={t("form.repositoriesRefresh")}
+                                    className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline disabled:pointer-events-none disabled:opacity-50"
+                                  >
+                                    <RefreshCw
+                                      className={cn(
+                                        "size-3",
+                                        repositoriesState === "loading" &&
+                                          "animate-spin",
+                                      )}
+                                    />
+                                    {tCommon("refresh")}
+                                  </button>
+                                </div>
                                 <ReasonTooltip
                                   reason={
                                     !gitAccountId
