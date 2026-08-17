@@ -24,8 +24,12 @@
     "noResults": "कोई मिलान नहीं।",
     "soon": "जल्द",
     "required": "आवश्यक",
+    "disabledControl": "यह नियंत्रण अभी उपलब्ध नहीं है।",
     "breadcrumbServer": "सर्वर",
     "breadcrumbApplications": "ऐप्लिकेशन",
+    "applicationContext": {
+      "back": "ऐप्लिकेशन पर वापस जाएँ"
+    },
     "unsavedTitle": "बिना सहेजे बाहर जाएँ?",
     "unsavedDescription": "इस पेज पर किए बदलाव सहेजे नहीं गए हैं। वे चले जाएँगे।",
     "unsavedStay": "इसी पेज पर रहें",

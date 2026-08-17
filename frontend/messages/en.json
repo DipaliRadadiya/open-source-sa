@@ -24,8 +24,12 @@
     "noResults": "No matches.",
     "soon": "Soon",
     "required": "Required",
+    "disabledControl": "This control is unavailable right now.",
     "breadcrumbServer": "Server",
     "breadcrumbApplications": "Applications",
+    "applicationContext": {
+      "back": "Back to applications"
+    },
     "unsavedTitle": "Leave without saving?",
     "unsavedDescription": "Your changes on this page have not been saved. They will be lost.",
     "unsavedStay": "Stay on this page",

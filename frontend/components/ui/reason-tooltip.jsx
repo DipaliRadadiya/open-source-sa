@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+const DisabledReasonContext = createContext(null);
+
+export function useDisabledReason() {
+  return useContext(DisabledReasonContext);
+}
 
 /**
  * Wraps a control that may be disabled, and says why when it is.
@@ -25,22 +31,18 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
 
   if (!reason) return children;
 
-  if (coarse) {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <span tabIndex={0} className={className}>
-            {children}
-          </span>
-        </PopoverTrigger>
-        <PopoverContent side="top" className="w-auto max-w-60 px-3 py-2 text-sm">
-          {reason}
-        </PopoverContent>
-      </Popover>
-    );
-  }
-
-  return (
+  const content = coarse ? (
+    <Popover>
+      <PopoverTrigger asChild>
+        <span tabIndex={0} className={className}>
+          {children}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="w-auto max-w-60 px-3 py-2 text-sm">
+        {reason}
+      </PopoverContent>
+    </Popover>
+  ) : (
     <Tooltip>
       <TooltipTrigger asChild>
         <span tabIndex={0} className={className}>
@@ -49,6 +51,14 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
       </TooltipTrigger>
       <TooltipContent className="max-w-60">{reason}</TooltipContent>
     </Tooltip>
+  );
+
+  // A parent may already provide a precise reason. Let nested primitives detect
+  // that context and avoid rendering a second tooltip with the generic fallback.
+  return (
+    <DisabledReasonContext.Provider value={reason}>
+      {content}
+    </DisabledReasonContext.Provider>
   );
 }
 

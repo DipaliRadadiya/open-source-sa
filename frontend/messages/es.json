@@ -24,8 +24,12 @@
     "noResults": "Sin coincidencias.",
     "soon": "Pronto",
     "required": "Obligatorio",
+    "disabledControl": "Este control no está disponible en este momento.",
     "breadcrumbServer": "Servidor",
     "breadcrumbApplications": "Aplicaciones",
+    "applicationContext": {
+      "back": "Volver a aplicaciones"
+    },
     "unsavedTitle": "¿Salir sin guardar?",
     "unsavedDescription": "Los cambios de esta página no se han guardado. Se perderán.",
     "unsavedStay": "Quedarme en esta página",

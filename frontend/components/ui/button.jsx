@@ -1,9 +1,11 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl";
 import { cva } from "class-variance-authority";
 import { Slot } from "radix-ui"
 
+import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
@@ -49,17 +51,33 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  disabled = false,
+  disabledReason,
   ...props
 }) {
-  const Comp = asChild ? Slot.Root : "button"
-
-  return (
+  const t = useTranslations("common");
+  const inheritedReason = useDisabledReason();
+  const Comp = asChild ? Slot.Root : "button";
+  const control = (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props} />
+      disabled={disabled}
+      {...props}
+    />
+  );
+
+  // Native disabled controls do not emit hover or focus events. The wrapper
+  // gives every disabled Button a reachable explanation by default, while a
+  // call site can pass `disabledReason` for its specific prerequisite.
+  if (disabled && inheritedReason && !disabledReason) return control;
+
+  return (
+    <ReasonTooltip reason={disabled ? (disabledReason ?? t("disabledControl")) : null}>
+      {control}
+    </ReasonTooltip>
   );
 }
 
