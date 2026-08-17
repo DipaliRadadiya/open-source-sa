@@ -33,7 +33,15 @@ import { LoadFailed } from "@/components/data-table/load-failed";
  * requests against a 30/min throttle. Emptying one batch IS a single call, so
  * that one is offered. See memory/backend-asks.md.
  */
-export function TrashPanel({ appId, trash, failed, canManage, backHref }) {
+export function TrashPanel({
+  appId,
+  trash,
+  totalSize,
+  retentionDays,
+  failed,
+  canManage,
+  backHref,
+}) {
   const t = useTranslations("applications.files.trash");
   const router = useRouter();
   const [pending, setPending] = useState(null);
@@ -89,6 +97,24 @@ export function TrashPanel({ appId, trash, failed, canManage, backHref }) {
           <div className="min-w-48 space-y-1">
             <CardTitle className="text-base font-semibold">{t("title")}</CardTitle>
             <CardDescription>{t("subtitle")}</CardDescription>
+            {/* The two things this screen alone can answer, and neither was on
+                it. Deleting a file frees no disk until the trash is emptied —
+                someone clearing space watches the free figure not move and
+                concludes the panel is broken. And every batch is swept after
+                the retention window, so things vanish on their own with
+                nothing here having warned them. Both come from the response;
+                the window is per-install and must never be hardcoded. */}
+            {trash.length > 0 && (totalSize || retentionDays) ? (
+              <p className="text-sm text-muted-foreground">
+                {totalSize ? (
+                  <span className="font-medium text-foreground">
+                    {t("holding", { size: totalSize })}
+                  </span>
+                ) : null}
+                {totalSize && retentionDays ? " · " : null}
+                {retentionDays ? t("retention", { days: retentionDays }) : null}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" asChild>
@@ -173,7 +199,16 @@ export function TrashPanel({ appId, trash, failed, canManage, backHref }) {
                       <div className="flex min-w-48 items-start gap-2.5">
                         <FileIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
-                          <p className="font-medium break-all">{basename(entry.path)}</p>
+                          <p className="flex flex-wrap items-baseline gap-x-2">
+                            <span className="font-medium break-all">{basename(entry.path)}</span>
+                            {/* Which batch is worth emptying is a size question,
+                                and it was the one thing the row could not say. */}
+                            {entry.size_human ? (
+                              <span className="text-xs tabular-nums text-muted-foreground">
+                                {entry.size_human}
+                              </span>
+                            ) : null}
+                          </p>
                           <p className="font-mono text-xs break-all text-muted-foreground">
                             {dirname(entry.path) || t("siteRoot")}
                           </p>

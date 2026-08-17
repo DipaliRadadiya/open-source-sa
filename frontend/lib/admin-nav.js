@@ -7,6 +7,7 @@ export const ADMIN_NAV = [
   { key: "users", url: "/admin/users", icon: "users" },
   { key: "roles", url: "/admin/roles", icon: "shield-check" },
   { key: "activityLog", url: "/admin/activity-log", icon: "scroll-text" },
+  { key: "central", url: "/admin/central", icon: "plug-zap" },
   { key: "panelUpdate", url: "/admin/panel-update", icon: "arrow-up-circle" },
   { key: "doctor", url: "/admin/doctor", icon: "stethoscope" },
   { key: "errorLogs", url: "/admin/error-logs", icon: "bug" },

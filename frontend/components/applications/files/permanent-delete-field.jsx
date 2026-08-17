@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -20,7 +21,18 @@ export function PermanentDeleteField({ id = "delete-permanent", checked, onChang
   const t = useTranslations("applications.files.delete");
 
   return (
-    <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+    /* The tint follows the checkbox rather than sitting on permanently.
+       Unticked is the safe, default path — dressing it in destructive red says
+       "danger" about the state where nothing is lost, and then has nowhere left
+       to go when the reader ticks the box and something is. Red here means the
+       delete is now irreversible, and it appears at the moment that becomes
+       true. */
+    <div
+      className={cn(
+        "flex items-start gap-2.5 rounded-lg border p-3 transition-colors",
+        checked ? "border-destructive/40 bg-destructive/10" : "bg-muted/40",
+      )}
+    >
       <Checkbox
         id={id}
         checked={checked}
@@ -32,7 +44,14 @@ export function PermanentDeleteField({ id = "delete-permanent", checked, onChang
         <Label htmlFor={id} className="text-sm font-medium">
           {t("permanent.label")}
         </Label>
-        <p className="text-xs leading-relaxed text-muted-foreground">{t("permanent.hint")}</p>
+        <p
+          className={cn(
+            "text-xs leading-relaxed",
+            checked ? "text-destructive" : "text-muted-foreground",
+          )}
+        >
+          {t("permanent.hint")}
+        </p>
       </div>
     </div>
   );

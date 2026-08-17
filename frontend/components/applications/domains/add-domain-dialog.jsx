@@ -109,7 +109,10 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null }) 
               <FormLabel>{t("add.type")}</FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl>
-                  <SelectTrigger>
+                  {/* w-full for the same reason as the certificate dialog:
+                      SelectTrigger defaults to w-fit, and this one sits
+                      directly under a full-width domain input. */}
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                 </FormControl>

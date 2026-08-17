@@ -128,7 +128,11 @@ export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange
       <div className="space-y-1.5">
         <Label>{t("ssl.method")}</Label>
         <Select value={type} onValueChange={(v) => { setType(v); setRefusals([]); }}>
-          <SelectTrigger>
+          {/* shadcn's SelectTrigger is `w-fit` by default, so a form field
+              without this shrinks to its current option — and the control
+              visibly changes width when the selection does. Every other form
+              select in the panel is w-full; these two were the misses. */}
+          <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

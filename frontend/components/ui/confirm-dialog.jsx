@@ -70,7 +70,12 @@ export function ConfirmDialog({
             paths) grows the whole dialog past its own max-width instead of
             truncating inside it. `min-w-0` is what makes `truncate` work at
             all in here. */}
-        {children ? <div className="min-w-0">{children}</div> : null}
+        {/* `space-y` because the body regularly holds more than one block — a
+            list of what is about to be deleted AND the checkbox that changes
+            what deleting means. Without it those two sit flush against each
+            other and read as one control. A dialog passing a single child is
+            unaffected: space-y only ever applies between siblings. */}
+        {children ? <div className="min-w-0 space-y-3">{children}</div> : null}
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>

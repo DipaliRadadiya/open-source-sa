@@ -29,16 +29,29 @@ export const filesResponseSchema = z.object({
 // One entry per deleted path, newest first. `batch` is the timestamped folder
 // one delete produced (`YYYYMMDD-HHMMSS`), shared by everything removed in that
 // action; `path` is where it came from, which is also where it goes back to.
-// There is no size and no expiry date — the API does not report either, so the
-// screen cannot claim them (see memory/backend-asks.md).
+// Size and retention ARE reported — the backend added both after this shape was
+// first written, and the stale note here saying otherwise meant Zod silently
+// stripped them for as long as it stood. `size` is a real `du` footprint (so a
+// directory's figure is meaningful, not its inode size), and it is nullish
+// because one unmeasurable entry must not blank the rest.
 export const trashEntrySchema = z.object({
   batch: z.string(),
   path: z.string(),
   deleted_at: z.string().nullish(),
+  size: z.number().nullish(),
+  size_human: z.string().nullish(),
 });
 
 export const trashResponseSchema = z.object({
   trash: z.array(trashEntrySchema).default([]),
+  // Null when any single entry could not be measured: a total that quietly
+  // omits one directory is worse than no total, because it reads as complete.
+  total_size: z.number().nullish(),
+  total_size_human: z.string().nullish(),
+  // Configurable per install (SERVER_TRASH_RETENTION_DAYS), so it is read from
+  // the response and never hardcoded — a screen promising "7 days" on a server
+  // set to 30 is worse than one that says nothing.
+  retention_days: z.number().nullish(),
 });
 
 // Sitewide search results span multiple folders, so each entry carries its

@@ -218,7 +218,8 @@
       "activityLog": "Registro de actividad",
       "panelUpdate": "Actualización del panel",
       "doctor": "Estado del sistema",
-      "errorLogs": "Registro de errores"
+      "errorLogs": "Registro de errores",
+      "central": "Central"
     },
     "dashboardTitle": "Panel de administración",
     "dashboardSubtitle": "Resumen de usuarios, roles y actividad.",
@@ -3355,7 +3356,9 @@
           "description": "Se destruyen en el servidor. Esto no se puede deshacer."
         },
         "deletedAt": "Borrado",
-        "siteRoot": "Raíz del sitio"
+        "siteRoot": "Raíz del sitio",
+        "holding": "Ocupa {size} de disco",
+        "retention": "{days, plural, one {Se elimina automáticamente después de # día} other {Se elimina automáticamente después de # días}}"
       }
     },
     "workers": {
@@ -4806,5 +4809,50 @@
       "ignoreFailed": "No se pudo descartar.",
       "unignoreFailed": "No se pudo deshacer."
     }
+  },
+  "central": {
+    "title": "Gestión central",
+    "pageSubtitle": "Permite que un panel central gestione este servidor en tu nombre.",
+    "subtitle": "Genera una clave aquí y pégala en tu panel central para conectar este servidor.",
+    "connected": "Conectado",
+    "disconnected": "Este servidor ya no está conectado a Central.",
+    "cancel": "Cancelar",
+    "power": {
+      "title": "Esta clave tiene acceso completo de administrador",
+      "body": "Quien la tenga puede crear y eliminar sitios, bases de datos, usuarios del sistema y reglas del firewall en este servidor. La clave no se puede limitar ni hacer de solo lectura.",
+      "attribution": "Todo lo que se haga con ella queda registrado en el registro de actividad bajo una cuenta aparte, así puedes distinguirlo de tus propios cambios."
+    },
+    "actions": {
+      "generate": "Generar clave de conexión",
+      "generateHint": "La clave se muestra una sola vez, justo después de crearla. No podrás volver a verla.",
+      "regenerate": "Generar una clave nueva",
+      "disconnect": "Desconectar"
+    },
+    "reveal": {
+      "title": "Tu clave de conexión",
+      "warning": "Copia esta clave ahora. Por seguridad no se volverá a mostrar: si la pierdes, tendrás que generar una nueva.",
+      "copy": "Copiar la clave de conexión",
+      "next": "Pégala en tu panel central para terminar de conectar.",
+      "done": "Ya la he guardado"
+    },
+    "current": {
+      "label": "Clave de conexión",
+      "lost": "Solo se muestra una parte de la clave. Si la has perdido, genera una nueva: Central dejará de funcionar hasta que pegues la nueva clave."
+    },
+    "confirmRegenerate": {
+      "title": "¿Generar una clave nueva?",
+      "description": "La clave actual deja de funcionar de inmediato. Central perderá el acceso a este servidor hasta que pegues en él la clave nueva.",
+      "submit": "Generar una clave nueva"
+    },
+    "confirmDisconnect": {
+      "title": "¿Desconectar Central?",
+      "description": "Central pierde el acceso a este servidor de inmediato y todo lo que esté haciendo ahora fallará. Puedes volver a conectarlo más tarde, pero necesitará una clave nueva.",
+      "submit": "Desconectar"
+    },
+    "errors": {
+      "generateFailed": "No se pudo generar la clave.",
+      "disconnectFailed": "No se pudo desconectar."
+    },
+    "cardTitle": "Conexión"
   }
 }

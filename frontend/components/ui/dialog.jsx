@@ -97,8 +97,22 @@ function DialogFooter({
   return (
     <div
       data-slot="dialog-footer"
+      /* `min-w-0` and `flex-wrap` together stop a long pair of buttons from
+         widening the whole dialog.
+
+         DialogContent is a grid, and a grid item defaults to `min-width: auto`
+         — it refuses to shrink below its min-content width. A footer with two
+         verbose labels ("Turn it on anyway" / "Add this address and turn it
+         on") measures wider than the `sm:max-w-sm` track, so the track grew to
+         fit it, every stretched sibling grew with it, and the input and footer
+         painted outside the dialog's own background while the description —
+         being text, which can wrap — stayed inside.
+
+         `min-w-0` lets the item shrink to the track; `flex-wrap` gives the
+         buttons somewhere to go when it does. Neither has any effect on a
+         footer that already fits. */
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 flex min-w-0 flex-col-reverse flex-wrap gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
         className
       )}
       {...props}>

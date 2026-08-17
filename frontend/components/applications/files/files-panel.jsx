@@ -218,7 +218,17 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
       {/* Every panel that has a trash reaches it from this toolbar — cPanel and
           Plesk both use a button here that swaps the list. Nobody gives it its
           own page, and a tab would compete with the breadcrumb. */}
-      <Button variant="ghost" size="sm" asChild>
+      {/* `outline`, matching New folder / New file / Fix permissions, because
+          it belongs to the same row of secondary actions. As a ghost it was the
+          only borderless control in the group and read as less real than its
+          neighbours.
+
+          Deliberately NOT destructive-coloured: this opens the trash, it does
+          not delete anything. Red is spent on the controls that actually
+          destroy — Delete in the selection bar, and the permanent-delete
+          confirm — and spending it on a safe navigation button is how people
+          learn to click past red. The icon already says which view it is. */}
+      <Button variant="outline" size="sm" asChild>
         <Link href={`/applications/${appId}/files?trash=1`} prefetch={false}>
           <Trash2 className="size-3.5" />
           {t("trash.action")}

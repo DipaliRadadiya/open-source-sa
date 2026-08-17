@@ -239,7 +239,11 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
       </Card>
 
       <Dialog open={guarding !== null} onOpenChange={(open) => !open && setGuarding(null)}>
-        <DialogContent>
+        {/* Matches FormModal's width, because this is a form dialog in all but
+            name — a labelled input, a hint, and two long buttons. On the bare
+            `sm:max-w-sm` default it was the narrowest dialog in the panel while
+            carrying the most content. */}
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">

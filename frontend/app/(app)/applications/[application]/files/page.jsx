@@ -86,6 +86,8 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
         <TrashPanel
           appId={id}
           trash={trashResult.trash}
+          totalSize={trashResult.totalSize}
+          retentionDays={trashResult.retentionDays}
           failed={trashResult.failed}
           canManage={canManage}
           backHref={`/applications/${id}/files`}
