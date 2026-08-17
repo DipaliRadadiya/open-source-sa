@@ -674,7 +674,7 @@
     "usedOf": "{total} में से {used}",
     "free": "{free} खाली",
     "cores": "{count} कोर",
-    "loadHint": "1म · 5म · 15म",
+    "loadHint": "5म",
     "info": {
       "kernel": "कर्नेल",
       "ip": "IP पता",

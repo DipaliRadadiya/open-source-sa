@@ -674,7 +674,7 @@
     "usedOf": "{used} of {total}",
     "free": "{free} free",
     "cores": "{count} cores",
-    "loadHint": "1m · 5m · 15m",
+    "loadHint": "5 min",
     "info": {
       "kernel": "Kernel",
       "ip": "IP address",

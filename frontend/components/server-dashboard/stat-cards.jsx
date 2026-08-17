@@ -115,19 +115,17 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
       <StatCard
         icon={Activity}
         label={t("load")}
-        value={decimal(load?.[1])}
+        // The headline deliberately favours the stable 15-minute average over
+        // the noisier 1-minute figure.
+        value={decimal(load?.[15])}
         // Load is only meaningful against core count: >= cores means saturated.
         percent={
-          cores > 0 && Number.isFinite(Number(load?.[1]))
-            ? (Number(load[1]) / cores) * 100
+          cores > 0 && Number.isFinite(Number(load?.[15]))
+            ? (Number(load[15]) / cores) * 100
             : null
         }
         hint={cores ? t("ofCores", { count: cores }) : ""}
-        sub={
-          load
-            ? `${t("loadHint")}: ${[load[5], load[15]].map(decimal).join(" · ")}`
-            : ""
-        }
+        sub={load ? `${t("loadHint")}: ${decimal(load[5])}` : ""}
         hasSub
         loading={loading}
       />
