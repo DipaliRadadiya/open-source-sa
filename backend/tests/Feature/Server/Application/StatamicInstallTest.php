@@ -69,11 +69,38 @@ it('serves from public/, not the project root', function () {
     // Serving the root would publish the application source and its .env.
     expect($this->application->web_root)->toBe('/public');
 
+    $runs = installStatamic();
+
+    $composer = collect($runs)->first(fn ($run) => in_array('create-project', $run['command'], true))['command'];
+
+    expect($composer)->toContain('statamic/statamic');
+
+    // Built one level above what is served — but not *into* the project root,
+    // which already holds public/ and would make Composer refuse. It is copied
+    // there instead.
+    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'cp'
+        && in_array($this->projectRoot, $run['command'], true));
+
+    expect($copy)->not->toBeNull();
+});
+
+it('builds into an empty directory, not the project root Composer would refuse', function () {
     $composer = collect(installStatamic())
         ->first(fn ($run) => in_array('create-project', $run['command'], true))['command'];
 
-    // Built into the project root, one level above what is served.
-    expect($composer)->toContain('statamic/statamic', $this->projectRoot);
+    $target = $composer[array_search('create-project', $composer, true) + 2];
+
+    expect($target)->not->toBe($this->projectRoot)
+        ->and($target)->not->toBe("{$this->projectRoot}/public");
+});
+
+it('runs Composer as the site user, never as the panel', function () {
+    $composer = collect(installStatamic())
+        ->first(fn ($run) => in_array('create-project', $run['command'], true))['command'];
+
+    // Statamic's create-project runs post-install scripts; as the panel they
+    // would run as root.
+    expect(array_slice($composer, 0, 4))->toBe(['runuser', '-u', 'statuser', '--']);
 });
 
 it('defaults a new Statamic app to the public directory', function () {

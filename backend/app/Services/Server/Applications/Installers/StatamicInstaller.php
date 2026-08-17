@@ -51,15 +51,9 @@ class StatamicInstaller extends AbstractPhpInstaller
         // `public/` is served; Statamic itself lives above it.
         $projectRoot = dirname($documentRoot);
 
-        $this->run('download', [
-            (string) config('server.composer_binary', 'composer'),
-            'create-project', 'statamic/statamic', $projectRoot,
+        $this->composerCreateProject($application, 'statamic/statamic', $projectRoot, $documentRoot, [
             '--no-interaction', '--no-progress',
-        ], $application);
-
-        $this->run('extract', [
-            'chown', '-R', "{$application->systemUser->username}:{$application->systemUser->username}", $projectRoot,
-        ], $application);
+        ]);
 
         // The email argument selects the non-interactive path. `--password` is
         // on the command line because Statamic offers no other way in — see

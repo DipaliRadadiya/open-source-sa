@@ -184,6 +184,80 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     }
 
     /**
+     * Build an application into its project root with Composer.
+     *
+     * The counterpart to {@see downloadAndExtract()} for the projects that
+     * publish no archive. Two things it has to get right, and both were wrong
+     * when Craft and Statamic each did this inline:
+     *
+     *  - **`composer create-project` refuses a directory that is not empty**,
+     *    and the project root never is by the time an installer runs. Both of
+     *    these applications serve from a subdirectory (`web/`, `public/`), so
+     *    the provisioner has already created that subdirectory *inside* the
+     *    project root and written a placeholder into it. Composer stopped with
+     *    "Project directory ... is not empty" before it fetched a single
+     *    package, which made one-click Craft and Statamic fail every time.
+     *    Building into a temporary directory and copying the contents in
+     *    sidesteps it, and is also what makes a retry after a failure converge
+     *    rather than half-build.
+     *  - **Composer runs as the site user**, like every other application's own
+     *    tooling here. Run as the panel it writes a root-owned tree and runs
+     *    the project's own post-install scripts as root — Statamic's
+     *    `create-project` runs several — which is exactly the privilege the
+     *    rest of this class is careful not to hand third-party code.
+     *
+     * @param  array<int, string>  $flags  passed to create-project verbatim
+     *
+     * @throws ProvisioningFailedException
+     */
+    protected function composerCreateProject(
+        Application $application,
+        string $package,
+        string $projectRoot,
+        string $documentRoot,
+        array $flags = [],
+    ): void {
+        $owner = $application->systemUser->username;
+
+        $work = rtrim((string) config('server.installer_work_dir', sys_get_temp_dir()), '/')
+            .'/composer-'.$application->id;
+
+        // A leftover from an earlier attempt would fail create-project for the
+        // very reason this method exists.
+        $this->run('download', ['rm', '-rf', $work], $application);
+        $this->run('download', ['mkdir', '-p', $work], $application);
+        // `mkdir` ran elevated, so the directory belongs to root; Composer runs
+        // as the site user and has to be able to write into it.
+        $this->run('download', ['chown', "{$owner}:{$owner}", $work], $application);
+
+        // Run *in* the work directory rather than wherever the queue worker
+        // happens to be: that is the panel's own application root, and Composer
+        // reads configuration from its working directory. An empty directory is
+        // fine as a create-project target — only a non-empty one is refused.
+        $this->runAsSiteUser('download', $application, array_merge([
+            (string) config('server.composer_binary', 'composer'),
+            'create-project', $package, $work,
+        ], $flags), null, $work);
+
+        // The placeholder lives in the document root, which is a directory
+        // inside what is about to be copied over. Both of these projects ship
+        // their own front controller there and would overwrite it anyway, but
+        // relying on that would make the next Composer application's behaviour
+        // depend on whether it happens to ship an `index.php`.
+        $this->run('extract', ['rm', '-f', "{$documentRoot}/index.php", "{$documentRoot}/index.html"], $application);
+
+        // Contents, not the directory — `{$work}/.` for the same reason
+        // downloadAndExtract() uses it.
+        $this->run('extract', ['cp', '-r', "{$work}/.", $projectRoot], $application);
+        $this->run('extract', ['rm', '-rf', $work], $application);
+
+        // The copy ran elevated even though the build did not, so the tree
+        // arrives root-owned; whatever the installer runs next runs as the site
+        // user and would be stopped by it.
+        $this->run('extract', ['chown', '-R', "{$owner}:{$owner}", "{$projectRoot}/."], $application);
+    }
+
+    /**
      * Write a file whose contents are sensitive (database credentials, keys).
      * Contents travel over stdin and the file is locked down immediately.
      *
@@ -197,14 +271,27 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     }
 
     /**
-     * Whoever actually executes PHP for this site — not always the site's own
-     * system user. Isolation gives a site its own PHP-FPM pool running as its
-     * own user; until that's turned on (the default for a freshly provisioned
-     * site — see PoolManager::socketFor()), PHP runs under the shared,
-     * server-wide pool as the web server's own account. A 0640 file chowned
-     * to the site user is unreadable by that pool: confirmed in production as
-     * phpMyAdmin's "Existing configuration file ... is not readable" on a
-     * non-isolated site.
+     * Owner and group for a secret file: the site user, and whoever actually
+     * executes PHP for this site.
+     *
+     * Two accounts need this file and they are not always the same one.
+     * Isolation gives a site its own PHP-FPM pool running as its own user;
+     * without it PHP runs under the shared, server-wide pool as the web
+     * server's own account. A 0640 file owned by the site user is unreadable
+     * by that pool — confirmed in production as phpMyAdmin's "Existing
+     * configuration file ... is not readable" on a non-isolated site.
+     *
+     * Handing the whole file to `www-data` fixed that and broke the other
+     * side: the application's own CLI runs **as the site user** immediately
+     * afterwards, and `wp core install`, `craft install`, `mautic:install` and
+     * Moodle's installer all read the file this method just made unreadable to
+     * them. Nobody saw it on nginx, because `ApplicationProvisioner` creates a
+     * pool before installing and PHP-FPM is the only stack `PoolManager` calls
+     * supported() for — so on OpenLiteSpeed, where no pool is ever made, every
+     * one of those installs failed and only there.
+     *
+     * So: **owner is always the site user, group is whoever runs PHP.** At
+     * 0640 that satisfies both, and it stops being a choice between them.
      */
     private function runtimePhpOwner(Application $application): string
     {
@@ -222,11 +309,13 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         $runsAsSiteUser = $application->serving_profile !== 'php'
             || $application->isolated_at !== null;
 
-        $user = $runsAsSiteUser
-            ? $application->systemUser->username
+        $user = $application->systemUser->username;
+
+        $group = $runsAsSiteUser
+            ? $user
             : (string) config('server.web_server_user', 'www-data');
 
-        return "{$user}:{$user}";
+        return "{$user}:{$group}";
     }
 
     /**

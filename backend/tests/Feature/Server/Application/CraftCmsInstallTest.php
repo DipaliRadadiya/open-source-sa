@@ -62,10 +62,36 @@ it('builds the project with Composer, since Craft ships no tarball', function ()
 
     $composer = collect($runs)->first(fn ($run) => in_array('create-project', $run['command'], true))['command'];
 
-    expect($composer)->toContain('craftcms/craft', '--no-interaction')
-        // Built into the project root, not the document root — Craft's source
-        // lives above the directory the web server serves.
-        ->and($composer)->toContain($this->projectRoot);
+    expect($composer)->toContain('craftcms/craft', '--no-interaction');
+});
+
+it('builds into an empty directory, not the project root Composer would refuse', function () {
+    $runs = installCraft();
+
+    $composer = collect($runs)->first(fn ($run) => in_array('create-project', $run['command'], true))['command'];
+    $target = $composer[array_search('create-project', $composer, true) + 2];
+
+    // The provisioner has already made {$projectRoot}/web and written a
+    // placeholder into it, so create-project pointed at the project root dies
+    // with "Project directory ... is not empty" — which is what made one-click
+    // Craft fail every single time.
+    expect($target)->not->toBe($this->projectRoot)
+        ->and($target)->not->toBe("{$this->projectRoot}/web");
+
+    // ...and the build is then copied into the project root.
+    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'cp'
+        && in_array($this->projectRoot, $run['command'], true));
+
+    expect($copy['command'])->toContain("{$target}/.");
+});
+
+it('runs Composer as the site user, never as the panel', function () {
+    $composer = collect(installCraft())
+        ->first(fn ($run) => in_array('create-project', $run['command'], true))['command'];
+
+    // Composer executes the project's own post-install scripts; run as the
+    // panel they would run as root.
+    expect(array_slice($composer, 0, 4))->toBe(['runuser', '-u', 'crftuser', '--']);
 });
 
 it('serves from web/, so the application source is not published', function () {

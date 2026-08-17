@@ -39,15 +39,9 @@ class CraftCmsInstaller extends AbstractPhpInstaller
         // above it, and that is where its commands must run.
         $projectRoot = dirname($documentRoot);
 
-        $this->run('download', [
-            (string) config('server.composer_binary', 'composer'),
-            'create-project', 'craftcms/craft', $projectRoot,
+        $this->composerCreateProject($application, 'craftcms/craft', $projectRoot, $documentRoot, [
             '--no-interaction', '--no-scripts', '--no-progress',
-        ], $application);
-
-        $this->run('extract', [
-            'chown', '-R', "{$application->systemUser->username}:{$application->systemUser->username}", $projectRoot,
-        ], $application);
+        ]);
 
         // Craft reads these; they are never passed to a command.
         $this->writeSecretFile($application, "{$projectRoot}/.env", View::make('server.apps.craftcms.env', [
