@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Server\Application;
 
 use App\Models\ApplicationPhpSettings;
+use App\Services\Server\Php\PhpVersionManager;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,7 +32,20 @@ class SavePhpSettingsRequest extends FormRequest
         $size = ['sometimes', 'nullable', 'string', 'regex:/^(-1|\d+[KMG]?)$/i', 'max:12'];
 
         return [
-            'php_version' => ['sometimes', 'string', 'max:8'],
+            // Checked against what is actually on the server, not just the
+            // shape of the string. Unvalidated, `8.9` was accepted, saved, and
+            // only surfaced as a pool write into an /etc/php directory that
+            // does not exist — a failure the user could not read as "that
+            // version is not installed". Resolved lazily so a save that does
+            // not touch the version costs nothing.
+            'php_version' => [
+                'sometimes', 'string', 'max:8',
+                function (string $attribute, mixed $value, Closure $fail) {
+                    if (! app(PhpVersionManager::class)->exists((string) $value)) {
+                        $fail(__('php_settings.errors.version_not_installed', ['version' => $value]));
+                    }
+                },
+            ],
 
             'memory_limit' => $size,
             'upload_max_filesize' => $size,

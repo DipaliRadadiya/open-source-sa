@@ -16,6 +16,7 @@ return [
         'driver_contention' => 'Contenção de controladores',
     ],
     'fixes' => [
+        'php_pool_orphaned' => 'Um pool do PHP-FPM indica uma conta Linux que já não existe — normalmente um site eliminado antes do seu pool, cujo utilizador foi depois removido. O PHP-FPM não arranca com ele, por isso todos os novos sites PHP falham o aprovisionamento e levam a culpa. Elimine os ficheiros de pool listados, execute `php-fpm -t` e reinicie o php-fpm.',
         'php_isolation_missing' => 'Um site que o painel julga isolado não tem ficheiro de pool. Continua a ser servido pelo pool partilhado, como www-data e sem nenhuma das suas definições. Abra o ecrã de PHP do site e isole-o de novo.',
         'php_isolation_memory' => 'Todos os sites isolados juntos podem usar mais memória do que o servidor tem. Reduza o número de processos ou o limite de memória nos sites mais ocupados.',
         'php_isolation_shared' => 'Estes sites ainda correm como www-data ao lado de todos os outros. Abra o ecrã de PHP de um site e isole-o para lhe dar o seu próprio utilizador.',

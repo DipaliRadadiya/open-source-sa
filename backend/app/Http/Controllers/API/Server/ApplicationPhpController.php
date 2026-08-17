@@ -104,25 +104,45 @@ class ApplicationPhpController extends Controller
         // The version is on the application rather than the settings row: the
         // vhost and the pool path both depend on it, and it existed before
         // this feature did.
-        if ($version !== null && $version !== $application->php_version) {
-            $previousVersion = $application->php_version;
-            $application->forceFill(['php_version' => $version])->save();
+        //
+        // Nothing here is persisted until the pool that the new version names
+        // is actually live. It used to save the version first and delete the
+        // old pool second, so a failing `apply()` returned 422 having already
+        // written the new version to the database and removed the only pool
+        // the site had: the panel then showed a version that was not running,
+        // on a site answering 502, with its settings unsaved and its vhost
+        // still pointed at the old socket. A failure must leave the site on
+        // the version it was already serving.
+        $previousVersion = $application->php_version;
+        $versionChanged = $version !== null && $version !== $previousVersion;
 
-            // A version change moves the pool between directories, so the old
-            // one has to go or the site keeps a pool it no longer uses,
-            // holding memory and a socket nobody talks to.
-            if ($application->isolated_at !== null && $previousVersion !== null) {
-                $pools->remove($application, $previousVersion);
-            }
+        if ($versionChanged) {
+            // In memory only — `apply()` derives the pool path from it.
+            $application->php_version = $version;
         }
 
         if ($application->isolated_at !== null) {
             $result = $pools->apply($application, $settings);
 
             if (! $result['ok']) {
+                $application->php_version = $previousVersion;
+
                 throw ValidationException::withMessages([
                     'settings' => [__('php_settings.errors.'.$result['reason'])],
                 ]);
+            }
+        }
+
+        if ($versionChanged) {
+            $application->forceFill(['php_version' => $version])->save();
+
+            // Only now. A version change moves the pool between directories,
+            // so the old one has to go or the site keeps a pool it no longer
+            // uses, holding memory and a socket nobody talks to — but removing
+            // it before the replacement exists is what left the site with
+            // none at all.
+            if ($application->isolated_at !== null && $previousVersion !== null) {
+                $pools->remove($application, $previousVersion);
             }
         }
 

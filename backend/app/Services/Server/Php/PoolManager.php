@@ -108,6 +108,18 @@ class PoolManager
             return ['ok' => false, 'reason' => 'unsupported_stack', 'reference' => null];
         }
 
+        // FPM resolves `user =` to a uid at startup and refuses to initialise
+        // if it cannot — and that refusal is server-wide, not per-pool. A pool
+        // naming an account that does not exist therefore does not merely fail
+        // to work: it stops php-fpm coming back after a restart, taking every
+        // PHP site on the box with it. Checked before writing, so the file is
+        // never created in the first place.
+        $account = $application->systemUser?->username;
+
+        if ($account === null || ! $this->accountExists($account)) {
+            return ['ok' => false, 'reason' => 'missing_account', 'reference' => null];
+        }
+
         $version = $application->php_version ?: config('server.default_php_version');
         $previous = $this->read($path);
 
@@ -140,6 +152,86 @@ class PoolManager
         }
 
         return ['ok' => true, 'reason' => null, 'reference' => null];
+    }
+
+    /**
+     * Whether this OS account actually exists on the server.
+     *
+     * The panel's `system_users` table records what it created; it is not
+     * proof. A server rebuilt under a surviving database, an adopted box, or a
+     * `useradd` that failed somewhere the row outlived all produce a username
+     * with no passwd entry — {@see CrontabManager} learned the same thing and
+     * asks `getent` for the same reason.
+     */
+    private function accountExists(string $username): bool
+    {
+        return $this->serverOps->run(
+            ['getent', 'passwd', $username],
+            ['feature' => 'php', 'op' => 'pool_account_check'],
+            timeout: 15,
+        )->ok;
+    }
+
+    /**
+     * Pool files on disk whose `user` no longer resolves to an account.
+     *
+     * Read from the filesystem rather than from the applications table on
+     * purpose: the pools that matter here are exactly the ones no application
+     * row claims any more. One of these stops php-fpm initialising — not the
+     * pool, the daemon — so it takes every PHP site on the server down at the
+     * next restart, and until then it fails the `php-fpm -t` inside every
+     * other site's {@see apply()}, which reports the error against whichever
+     * innocent site was being created at the time.
+     *
+     * @return array<int, array{path: string, user: string}>
+     */
+    public function unresolvableAccounts(): array
+    {
+        $root = rtrim((string) config('server.php_dir', '/etc/php'), '/');
+
+        $found = $this->serverOps->run(
+            ['find', $root, '-type', 'f', '-name', '*.conf', '-path', '*/fpm/pool.d/*'],
+            ['feature' => 'php', 'op' => 'pool_scan'],
+            timeout: 30,
+        );
+
+        if ($found->failed()) {
+            return [];
+        }
+
+        $files = array_values(array_filter(array_map('trim', explode("\n", (string) $found->output()))));
+
+        if ($files === []) {
+            return [];
+        }
+
+        // One grep for every pool rather than one read each: a box with a
+        // dozen sites would otherwise be a dozen elevated commands to answer
+        // a question that is usually "no".
+        $users = $this->serverOps->run(
+            ['grep', '-H', '-m', '1', '-E', '^[[:space:]]*user[[:space:]]*=', ...$files],
+            ['feature' => 'php', 'op' => 'pool_scan_users'],
+            timeout: 30,
+        );
+
+        $orphans = [];
+        $resolved = [];
+
+        foreach (explode("\n", (string) $users->output()) as $line) {
+            if (preg_match('/^(.+?):\s*user\s*=\s*(\S+)/', trim($line), $m) !== 1) {
+                continue;
+            }
+
+            [, $path, $user] = $m;
+
+            $resolved[$user] ??= $this->accountExists($user);
+
+            if (! $resolved[$user]) {
+                $orphans[] = ['path' => $path, 'user' => $user];
+            }
+        }
+
+        return $orphans;
     }
 
     /** Remove the pool and reload. Used when un-isolating or deleting a site. */

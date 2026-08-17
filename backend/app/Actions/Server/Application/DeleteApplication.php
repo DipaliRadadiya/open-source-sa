@@ -6,9 +6,12 @@ use App\Models\Application;
 use App\Services\ActivityLogger;
 
 /**
- * Removes the record only. Nothing exists on disk in P1; once provisioning
- * lands this grows a "remove the site's files and vhost too" step, which is
- * destructive and will need its own confirmation.
+ * Removes the record only.
+ *
+ * Everything on the server — vhost, systemd unit, PHP-FPM pool, and the files
+ * when the caller asked for them — is `DeprovisionApplication`'s job, and the
+ * controller runs it first. Splitting them is deliberate: taking a site off
+ * the panel and destroying someone's code are different decisions.
  */
 class DeleteApplication
 {

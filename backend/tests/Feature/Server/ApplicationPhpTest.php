@@ -6,6 +6,7 @@ use App\Models\ApplicationPhpSettings;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
@@ -30,12 +31,16 @@ class PoolFake
     /** Whether `systemctl reload` succeeds. */
     public static bool $reloadOk = true;
 
+    /** Whether the site's Linux account resolves in `getent passwd`. */
+    public static bool $accountExists = true;
+
     public static function reset(): void
     {
         self::$files = [];
         self::$ran = [];
         self::$configValid = true;
         self::$reloadOk = true;
+        self::$accountExists = true;
     }
 }
 
@@ -69,6 +74,14 @@ beforeEach(function () {
 
 function fakePhpServer(): void
 {
+    // Which versions this "server" has. The real manager globs /etc/php, so
+    // without this the tests would assert against whatever happens to be
+    // installed on the machine running them.
+    $versions = Mockery::mock(PhpVersionManager::class);
+    $versions->shouldReceive('exists')
+        ->andReturnUsing(fn (string $version): bool => in_array($version, ['8.3', '8.4'], true));
+    app()->instance(PhpVersionManager::class, $versions);
+
     Process::fake(function ($process) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
         [$binary] = $args;
@@ -97,6 +110,10 @@ function fakePhpServer(): void
             unset(PoolFake::$files[$args[2] ?? $args[1] ?? '']);
 
             return Process::result(exitCode: 0);
+        }
+
+        if ($binary === 'getent') {
+            return Process::result(exitCode: PoolFake::$accountExists ? 0 : 2);
         }
 
         if (str_starts_with($binary, 'php-fpm')) {
@@ -359,6 +376,114 @@ it('refuses to store pool limits for a site that has no pool', function () {
 
     expect(ApplicationPhpSettings::where('application_id', $this->application->id)->first()?->memory_limit)
         ->toBeNull();
+});
+
+describe('a version change that fails', function () {
+    it('leaves the site on the version it was actually serving', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        PoolFake::$configValid = false;
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['php_version' => '8.3'])
+            ->assertStatus(422);
+
+        // The version used to be written to the database *before* the pool
+        // was applied, so a rejected pool left the panel showing 8.3 on a
+        // site still running 8.4 — and, because the old pool had already been
+        // deleted, running nothing at all.
+        expect($this->application->fresh()->php_version)->toBe('8.4');
+    });
+
+    it('does not remove the pool the site is still being served by', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        PoolFake::$configValid = false;
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['php_version' => '8.3']);
+
+        // Its socket is what the vhost points at. Delete this and the site
+        // answers 502 until somebody notices.
+        expect(poolFile())->toContain('user = siteowner');
+    });
+
+    it('refuses a version the server does not have, before touching anything', function () {
+        fakePhpServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['php_version' => '8.9'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('php_version');
+
+        expect($this->application->fresh()->php_version)->toBe('8.4');
+    });
+});
+
+it('removes the old pool only once the new one is live', function () {
+    fakePhpServer();
+    $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+    PoolFake::$ran = [];
+
+    $this->actingAs($this->admin)
+        ->putJson(phpUrl(), ['php_version' => '8.3'])
+        ->assertOk();
+
+    $written = null;
+    $removed = null;
+
+    foreach (PoolFake::$ran as $index => $command) {
+        if ($written === null && str_starts_with($command, 'tee ') && str_contains($command, '8.3/fpm/pool.d')) {
+            $written = $index;
+        }
+
+        if ($removed === null && str_starts_with($command, 'rm ') && str_contains($command, '8.4/fpm/pool.d')) {
+            $removed = $index;
+        }
+    }
+
+    expect($written)->not->toBeNull()
+        ->and($removed)->not->toBeNull()
+        ->and($written)->toBeLessThan($removed);
+
+    expect($this->application->fresh()->php_version)->toBe('8.3');
+});
+
+it('refuses to write a pool for an account the server does not have', function () {
+    fakePhpServer();
+
+    // FPM resolves `user =` at startup and, failing, refuses to initialise at
+    // all — so a pool naming a missing account does not break one site, it
+    // stops php-fpm coming back and takes every PHP site with it.
+    PoolFake::$accountExists = false;
+
+    $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertStatus(422);
+
+    expect(poolFile())->toBeNull();
+});
+
+it('takes the pool with the site when the site is deprovisioned', function () {
+    fakePhpServer();
+    $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+    expect(poolFile())->not->toBeNull();
+
+    $driver = Mockery::mock(WebServerDriver::class);
+    $driver->shouldReceive('remove')->andReturn(new ServerOpsResult(true, 'ref', null));
+    $driver->shouldReceive('test')->andReturn(new ServerOpsResult(true, 'ref', null));
+    $driver->shouldReceive('reload')->andReturn(new ServerOpsResult(true, 'ref', null));
+
+    $manager = Mockery::mock(WebServerManager::class);
+    $manager->shouldReceive('driver')->andReturn($driver);
+    app()->instance(WebServerManager::class, $manager);
+
+    app(ApplicationProvisioner::class)->deprovision($this->application->fresh()->load('systemUser'));
+
+    // A pool left behind outlives the Linux account it names — and one of
+    // those is enough to stop php-fpm initialising for the whole server.
+    expect(poolFile())->toBeNull();
 });
 
 it('still allows a version change on a site that has no pool', function () {

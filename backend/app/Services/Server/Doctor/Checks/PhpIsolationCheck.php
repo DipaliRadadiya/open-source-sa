@@ -38,6 +38,24 @@ class PhpIsolationCheck implements DoctorCheck
             return ['status' => 'pass', 'detail' => 'OpenLiteSpeed — no FPM pools', 'fix' => null];
         }
 
+        // First, because it is the only one here that is already breaking
+        // things elsewhere. A pool naming an account that no longer exists
+        // fails `php-fpm -t` server-wide, so every new PHP site fails to
+        // provision and is blamed for it — and php-fpm will not start at all
+        // after the next restart.
+        $orphans = $this->pools->unresolvableAccounts();
+
+        if ($orphans !== []) {
+            return [
+                'status' => 'fail',
+                'detail' => 'pool(s) naming a missing account: '.implode(', ', array_map(
+                    fn (array $orphan): string => basename($orphan['path']).' (user '.$orphan['user'].')',
+                    $orphans,
+                )),
+                'fix' => 'doctor.fixes.php_pool_orphaned',
+            ];
+        }
+
         $applications = Application::query()
             ->with('systemUser')
             ->where('serving_profile', 'php')
