@@ -23,6 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { BackupsCards } from "@/components/backups/backups-cards";
 import { BackupsHistoryTable } from "@/components/backups/backups-history-table";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ActiveRestore } from "@/components/backups/active-restore";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
@@ -333,12 +334,15 @@ function RecentBackups({
         <h3 className="min-w-0 flex-1 text-base font-semibold tracking-tight">
           {t("recentTitle")}
         </h3>
-        <Button asChild variant="ghost" size="sm">
-          <Link href={`/backups/history?application=${applicationId}`}>
-            <History className="size-4" />
-            {t("viewAll")}
-          </Link>
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <RefreshButton />
+          <Button asChild variant="ghost" size="sm">
+            <Link href={`/backups/history?application=${applicationId}`}>
+              <History className="size-4" />
+              {t("viewAll")}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <CardContent className="p-0">

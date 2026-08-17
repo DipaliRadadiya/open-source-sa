@@ -38,7 +38,7 @@ export function CronjobRowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="w-40"
+          className="w-64"
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           {/* What the job actually did, first. There's deliberately no
