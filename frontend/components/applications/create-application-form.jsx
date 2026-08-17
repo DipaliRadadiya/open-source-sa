@@ -695,12 +695,23 @@ export function CreateApplicationForm({
     (config) =>
       !COMMON_FIELD_NAMES.has(config.name),
   );
-  const visibleFields = typeFields.filter(
-    (config) =>
-      (config.depends_on !== "rendering_type" || renderingType === "ssr") &&
-      (config.depends_on !== "node_rendering" ||
-        ["ssr", "csr"].includes(renderingType)),
-  );
+  const visibleFields = typeFields
+    .filter(
+      (config) =>
+        (config.depends_on !== "rendering_type" || renderingType === "ssr") &&
+        (config.depends_on !== "node_rendering" ||
+          ["ssr", "csr"].includes(renderingType)),
+    )
+    // GitSiteType::rules() requires `start_command` exactly when rendering_type
+    // is "ssr", and the filter above means that is the only time the field is on
+    // screen — so whenever it renders it is required, unconditionally. The field
+    // schema does not say so, which left the one field an SSR site cannot start
+    // without unmarked and, worse, un-gated: an empty value passed the form and
+    // came back as a 422. Keyed on the name rather than `depends_on`, because
+    // `app_port` shares that dependency and is genuinely optional.
+    .map((config) =>
+      config.name === "start_command" ? { ...config, required: true } : config,
+    );
   const standardFields = visibleFields.filter((config) => !config.advanced);
   const advancedFields = visibleFields.filter((config) => config.advanced);
   const advancedFieldNames = new Set(advancedFields.map((config) => config.name));
