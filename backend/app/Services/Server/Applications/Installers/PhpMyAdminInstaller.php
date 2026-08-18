@@ -2,8 +2,9 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
-use Illuminate\Support\Facades\View;
+use App\Services\Server\Applications\PhpMyAdminSso;
 
 /**
  * phpMyAdmin — a web client for the server's databases.
@@ -77,11 +78,25 @@ class PhpMyAdminInstaller extends AbstractPhpInstaller
         ], $application);
         $this->run('configure', ['chmod', '0750', $tempDir], $application);
 
-        $this->writeSecretFile($application, "{$documentRoot}/config.inc.php", View::make('server.apps.phpmyadmin.config', [
-            'blowfishSecret' => bin2hex(random_bytes(32)),
-            'host' => (string) config('server.installers.phpmyadmin.db_host', '127.0.0.1'),
-            'tempDir' => $tempDir,
-        ])->render());
+        $sso = app(PhpMyAdminSso::class);
+
+        $this->writeSecretFile($application, "{$documentRoot}/config.inc.php", $sso->renderConfig(
+            bin2hex(random_bytes(32)),
+            (string) config('server.installers.phpmyadmin.db_host', '127.0.0.1'),
+            $tempDir,
+        ));
+
+        // The panel's one-click sign-in needs a script on this site to write
+        // the session phpMyAdmin reads. Without it the button redirects to a
+        // file that does not exist, which is what it did for as long as the
+        // feature has shipped.
+        $result = $sso->installShim($application);
+
+        if ($result->failed()) {
+            throw new ProvisioningFailedException('configure', $result->reference);
+        }
+
+        $this->progress->record('configure');
 
         // The distribution's own advice is to secure the setup script. There
         // is nothing to secure it with here, so it goes.

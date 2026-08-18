@@ -8,5 +8,7 @@ return [
     'phpmyadmin_not_deployed' => 'इस सर्वर पर कोई phpMyAdmin साइट इंस्टॉल नहीं है।',
     'phpmyadmin_no_users' => 'phpMyAdmin एक्सेस करने से पहले एक डेटाबेस उपयोगकर्ता बनाएं।',
     'phpmyadmin_user_not_found' => 'निर्दिष्ट डेटाबेस उपयोगकर्ता इस डेटाबेस से संबंधित नहीं है।',
+    'phpmyadmin_not_isolated' => 'यह phpMyAdmin साइट सर्वर-व्यापी PHP पूल साझा करती है, इसलिए साइन-इन लिंक हर दूसरी साइट पढ़ सकेगी। इसे अपना PHP पूल दें, या phpMyAdmin खोलकर डेटाबेस क्रेडेंशियल से साइन इन करें।',
+    'phpmyadmin_sso_unavailable' => 'phpMyAdmin साइट पर साइन-इन लिंक तैयार नहीं किया जा सका।',
 
 ];

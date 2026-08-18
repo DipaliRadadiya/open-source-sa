@@ -19,6 +19,11 @@ class ApplicationResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'domain' => $this->domain,
+            // Built here, not by the client. Three frontend components each
+            // assembled `https://${domain}` themselves, which is a broken link
+            // on every site that has no certificate yet — and every site has
+            // no certificate for the first few minutes of its life.
+            'url' => $this->resource->url(),
             'site_type' => $this->site_type,
             'site_type_title' => __("application.types.{$this->site_type}.title"),
             'serving_profile' => $this->serving_profile,

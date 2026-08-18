@@ -8,5 +8,7 @@ return [
     'phpmyadmin_not_deployed' => 'No hay ningún sitio phpMyAdmin instalado en este servidor.',
     'phpmyadmin_no_users' => 'Cree un usuario de base de datos antes de acceder a phpMyAdmin.',
     'phpmyadmin_user_not_found' => 'El usuario de base de datos especificado no pertenece a esta base de datos.',
+    'phpmyadmin_not_isolated' => 'Este sitio phpMyAdmin comparte el grupo de PHP de todo el servidor, por lo que un enlace de inicio de sesión sería legible por todos los demás sitios. Asígnele su propio grupo de PHP, o abra phpMyAdmin e inicie sesión con las credenciales de la base de datos.',
+    'phpmyadmin_sso_unavailable' => 'No se pudo preparar el enlace de inicio de sesión en el sitio phpMyAdmin.',
 
 ];

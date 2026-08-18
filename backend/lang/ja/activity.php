@@ -40,6 +40,7 @@ return [
     'database.imported' => ':name データベースをインポートしました',
     'database.connection_updated' => ':engine の接続設定を更新しました',
     'database.user_updated' => ':database の データベースユーザー :username を更新しました',
+    'database.phpmyadmin_signed_in' => ':name を :username として phpMyAdmin で開きました',
     'database.process_killed' => ':engine のプロセス :process を終了しました',
     'fail2ban.install_started' => 'fail2ban のインストールを開始しました',
     'fail2ban.installed' => 'fail2ban :version をインストールしました',

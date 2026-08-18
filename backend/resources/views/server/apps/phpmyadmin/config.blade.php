@@ -20,6 +20,40 @@ $cfg['Servers'][$i]['AllowNoPassword'] = false;
 // warns against and which would give every visitor of this URL that account.
 $cfg['Servers'][$i]['auth_type'] = 'cookie';
 
+// A second entry against the same database server, differing only in how a
+// user proves who they are. phpMyAdmin allows exactly one auth_type per server
+// entry, so the panel's one-click login cannot share the entry above without
+// taking the ordinary "type your own credentials" login away from everyone who
+// wants it. Two entries keeps both: server 1 is the login form, server 2 is
+// reached only through the panel.
+$i++;
+$cfg['Servers'][$i]['host'] = '{{ $host }}';
+$cfg['Servers'][$i]['compress'] = false;
+$cfg['Servers'][$i]['AllowNoPassword'] = false;
+$cfg['Servers'][$i]['verbose'] = '{{ $signonLabel }}';
+
+// 'signon' reads the credentials out of a PHP session written by the script
+// below, so they never travel in a URL, a form post or this file.
+$cfg['Servers'][$i]['auth_type'] = 'signon';
+
+// Deliberately NOT 'phpMyAdmin': that is the session phpMyAdmin uses for
+// itself, and handing it the signon session would have the two overwrite each
+// other.
+$cfg['Servers'][$i]['SignonSession'] = '{{ $signonSession }}';
+
+// Root-relative on purpose, though upstream suggests an absolute URL. An
+// absolute one has to name a scheme, and this file is written once at install
+// time while the site's scheme changes the moment a certificate is issued — a
+// baked-in 'https://' is a connection refused until then, and a baked-in
+// 'http://' downgrades every login afterwards. The path is only ever used for
+// a redirect on this same host, where the scheme is whatever the visitor
+// already has.
+$cfg['Servers'][$i]['SignonURL'] = '/sso.php';
+
+// Must mirror what sso.php passes to session_set_cookie_params(), or
+// phpMyAdmin looks for the signon session under a cookie that was never set.
+$cfg['Servers'][$i]['SignonCookieParams'] = ['path' => '/', 'httponly' => true];
+
 // Outside the document root: uploads and exports land here, and anything
 // under the web root is a URL somebody can fetch.
 $cfg['TempDir'] = '{{ $tempDir }}';

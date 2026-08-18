@@ -335,6 +335,40 @@ class Application extends Model
     }
 
     /**
+     * The scheme this site can actually be reached on right now.
+     *
+     * Not a preference and not a default: `https` is a claim that a TLS
+     * listener exists, and one only exists when the vhost has a certificate to
+     * point at — `AbstractWebServerDriver` emits the `listen 443 ssl` block
+     * under exactly this condition. Saying `https` without one produces a
+     * connection refused, which reads to the user as a broken site rather than
+     * as a missing certificate.
+     *
+     * `force_https` is deliberately not consulted. That flag decides whether
+     * plain HTTP *redirects*, not whether HTTPS answers; a site with a
+     * certificate and the redirect turned off still serves TLS perfectly well.
+     */
+    public function scheme(): string
+    {
+        return $this->certificate?->servable() ? 'https' : 'http';
+    }
+
+    /**
+     * This site's public URL, optionally with a path appended.
+     *
+     * Exists so that nothing else builds `'https://'.$domain` by hand. Eleven
+     * places did, across the installers, the phpMyAdmin SSO redirect and the
+     * frontend — every one of them wrong on a site with no certificate, and
+     * the installers' copies worse than wrong because they are written into
+     * the application's own configuration, where WordPress and Moodle turn
+     * them into a redirect the panel cannot see or undo.
+     */
+    public function url(string $path = ''): string
+    {
+        return $this->scheme().'://'.$this->domain.$path;
+    }
+
+    /**
      * This site's own directory on disk: `{home}/{slug}`.
      *
      * Everything the site owns hangs off here — `public_html`, `.env`,

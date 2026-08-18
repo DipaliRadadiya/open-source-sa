@@ -643,9 +643,12 @@ Never send the raw field list — `GET /site-types` publishes the fields for eac
 
 Full application record. Poll this while `status` is `provisioning` or `deploying`.
 
+**Link to `url`, never build one from `domain`.** `url` is `http://…` until the site has a servable certificate and `https://…` afterwards. Assembling `https://${domain}` in the client — which three screens used to do — produces a dead link for every site that has not been issued a certificate yet, which is every site for the first few minutes of its life.
+
 ```json
 {"application": {
   "id": 1, "name": "shop", "domain": "shop.example.com",
+  "url": "https://shop.example.com",
   "site_type": "wordpress", "site_type_title": "WordPress",
   "serving_profile": "php", "rendering_type": null,
 
@@ -3091,13 +3094,15 @@ Update username, connection preference, or password.
 
 One-click auto-login to phpMyAdmin for the database's user. Works only for MySQL/MariaDB databases (MongoDB is not supported by phpMyAdmin — see `mongo-express` instead). Requires a running phpMyAdmin site on this server.
 
-The frontend receives a `redirect_url` and should immediately redirect the browser to it. The URL contains a one-time token (TTL 60 s) that the `sso.php` shim on the PMA site consumes atomically.
+The frontend receives a `redirect_url` and should immediately redirect the browser to it. The URL contains a one-time token (TTL 60 s) that the `sso.php` script on the phpMyAdmin site consumes — it deletes the token before using it, so the link works exactly once.
+
+**Never assume the scheme.** `redirect_url` is `http://` until the phpMyAdmin site has a servable certificate and `https://` afterwards; redirect to the URL as given. A site with no certificate has no TLS listener at all, so an assumed `https://` is a connection refused.
 
 **Query (optional):** `?database_user_id=1` — log in as a specific database user. Without this the first available user is used.
 
 **Response `200`:**
 ```json
-{"redirect_url": "https://pma.example.com/sso.php?token=***"}
+{"redirect_url": "http://pma.example.com/sso.php?token=***"}
 ```
 
 **Response `422`** — MongoDB database:
@@ -3114,6 +3119,13 @@ The frontend receives a `redirect_url` and should immediately redirect the brows
 ```json
 {"message": "Create a database user before accessing phpMyAdmin."}
 ```
+
+**Response `422`** — the phpMyAdmin site shares the server-wide PHP pool. The sign-in link is delivered through a file only that site's own account may read, which is only true when the site has its own PHP-FPM pool. On OpenLiteSpeed, where no per-site pool exists, this endpoint is never available and the user should open phpMyAdmin and sign in with the database credentials:
+```json
+{"message": "This phpMyAdmin site shares the server-wide PHP pool, so a sign-in link would be readable by every other site. …"}
+```
+
+Signing in this way writes a `database.phpmyadmin_signed_in` row to the activity log, naming the panel user, the database and the database account used.
 
 ---
 

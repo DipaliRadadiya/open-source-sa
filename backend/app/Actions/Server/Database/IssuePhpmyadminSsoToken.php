@@ -7,8 +7,9 @@ use App\Exceptions\Server\Database\PhpmyadminSsoException;
 use App\Models\Application;
 use App\Models\Database;
 use App\Models\DatabaseUser;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
+use App\Models\User;
+use App\Services\ActivityLogger;
+use App\Services\Server\Applications\PhpMyAdminSso;
 
 /**
  * Mints a one-time SSO token for phpMyAdmin auto-login.
@@ -17,14 +18,23 @@ use Illuminate\Support\Str;
  *  1. Validate the DB is MySQL/MariaDB (phpMyAdmin does not support MongoDB).
  *  2. Find a running phpMyAdmin application on this server.
  *  3. Resolve the DB user (explicit or first available).
- *  4. Store a short-lived token in the cache, then return a redirect URL.
+ *  4. Put the sign-in script in place, then drop a short-lived token beside it.
  *
- * The token is consumed atomically by the sso.php shim on the PMA site.
- * Never returns credentials — only the redirect URL.
+ * The token is consumed by `sso.php` on the phpMyAdmin site, which deletes it
+ * before using it. Never returns credentials — only the redirect URL.
+ *
+ * Step 4 used to write the token into the panel's cache and hand back a URL to
+ * a `sso.php` that nothing had ever written, over `https://` whether or not the
+ * site had a certificate. Neither half could work, which is why the button has
+ * never signed anybody in. {@see PhpMyAdminSso} for how the two applications
+ * actually reach each other.
  */
 class IssuePhpmyadminSsoToken
 {
-    private const TOKEN_TTL_SECONDS = 60;
+    public function __construct(
+        private PhpMyAdminSso $sso,
+        private ActivityLogger $activityLogger,
+    ) {}
 
     public function execute(Database $database, ?int $databaseUserId, int $userId): string
     {
@@ -32,19 +42,54 @@ class IssuePhpmyadminSsoToken
         $pmaApp = $this->resolvePhpmyadminApp();
         $dbUser = $this->resolveDatabaseUser($database, $databaseUserId);
 
-        $token = Str::random(64);
+        if (! $this->sso->canIssue($pmaApp)) {
+            throw new PhpmyadminSsoException(
+                message: __('errors/database.phpmyadmin_not_isolated'),
+                feature: 'database',
+            );
+        }
 
-        Cache::put("pma_sso:{$token}", [
-            'user_id' => $userId,
-            'database_id' => $database->id,
-            'db_user_id' => $dbUser->id,
-            'database_user_username' => $dbUser->username,
-            'database_user_password' => $dbUser->password, // encrypted cast auto-decrypts
-            'database_name' => $database->name,
-            'pma_domain' => $pmaApp->domain,
-        ], self::TOKEN_TTL_SECONDS);
+        // Written on every click, not once at install. Every phpMyAdmin site
+        // the panel has created so far has no sign-in script at all, and a
+        // repair that only runs for new sites would fix nobody's.
+        if ($this->sso->installShim($pmaApp)->failed()) {
+            throw new PhpmyadminSsoException(
+                message: __('errors/database.phpmyadmin_sso_unavailable'),
+                feature: 'database',
+            );
+        }
 
-        return "https://{$pmaApp->domain}/sso.php?token={$token}";
+        // Tokens expire on read, so an unclicked one is already worthless —
+        // but it holds a password until something removes it.
+        $this->sso->sweep($pmaApp);
+
+        $url = $this->sso->issue(
+            $pmaApp,
+            $dbUser->username,
+            $dbUser->password, // encrypted cast auto-decrypts
+            $database->name,
+        );
+
+        if ($url === null) {
+            throw new PhpmyadminSsoException(
+                message: __('errors/database.phpmyadmin_sso_unavailable'),
+                feature: 'database',
+            );
+        }
+
+        // Worth a row of its own: this hands someone a live database session
+        // without them typing a password, so which panel user opened which
+        // database as which account is exactly the question an audit asks. The
+        // actor is passed explicitly rather than read from the session, so the
+        // entry is still right if this is ever called from a job.
+        $this->activityLogger->log(
+            'database.phpmyadmin_signed_in',
+            $database,
+            ['name' => $database->name, 'username' => $dbUser->username],
+            User::find($userId),
+        );
+
+        return $url;
     }
 
     private function assertSqlEngine(Database $database): void

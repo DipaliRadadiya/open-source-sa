@@ -40,6 +40,7 @@ return [
     'database.imported' => 'A importé la base de données :name',
     'database.connection_updated' => 'A mis à jour les paramètres de connexion :engine',
     'database.user_updated' => 'A mis à jour l\'utilisateur de base de données :username sur :database',
+    'database.phpmyadmin_signed_in' => 'A ouvert :name dans phpMyAdmin en tant que :username',
     'database.process_killed' => 'A arrêté le processus :process de :engine',
     'fail2ban.install_started' => 'A lancé l\'installation de fail2ban',
     'fail2ban.installed' => 'A installé fail2ban :version',

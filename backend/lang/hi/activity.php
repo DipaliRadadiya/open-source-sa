@@ -40,6 +40,7 @@ return [
     'database.imported' => ':name डेटाबेस आयात किया',
     'database.connection_updated' => ':engine कनेक्शन सेटिंग्स अपडेट कीं',
     'database.user_updated' => ':database पर डेटाबेस उपयोगकर्ता :username अपडेट किया',
+    'database.phpmyadmin_signed_in' => ':name को :username के रूप में phpMyAdmin में खोला',
     'database.process_killed' => ':engine प्रोसेस :process समाप्त किया',
     'fail2ban.install_started' => 'fail2ban की स्थापना शुरू की',
     'fail2ban.installed' => 'fail2ban :version स्थापित किया',
