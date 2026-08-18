@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
 import { setSystemUserSudo, setSystemUserSsh } from "@/lib/api/system-users";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -19,12 +19,26 @@ export function AccessSwitch({ user, field, canManage = true }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // The value we asked for, until the server agrees with it.
+  const [asked, setAsked] = useState(null);
 
   const checked = field === "sudo" ? user.sudo : user.ssh_access;
   const label = field === "sudo" ? t("access.sudo") : t("access.ssh");
 
+  // The switch used to sit on the server's value alone, and that value only
+  // changes when `router.refresh()` lands — so clicking it left the knob in its
+  // old position for the whole round trip. Disabled and unmoved reads as a
+  // click that failed, which is the opposite of what happened.
+  //
+  // Derived rather than cleared in an effect: once the server catches up,
+  // `asked` equals `checked` and stops mattering by itself — which also means a
+  // change made somewhere else shows through immediately instead of being
+  // masked by a stale override.
+  const shown = asked !== null && asked !== checked ? asked : checked;
+
   async function apply(v) {
     setBusy(true);
+    setAsked(v);
     try {
       if (field === "sudo") {
         await setSystemUserSudo(user.id, v);
@@ -35,6 +49,8 @@ export function AccessSwitch({ user, field, canManage = true }) {
       }
       router.refresh();
     } catch (error) {
+      // Put the knob back where it was: the change did not happen.
+      setAsked(null);
       toast.error(apiMessage(error, t("toast.failed")));
     } finally {
       setBusy(false);
@@ -58,16 +74,24 @@ export function AccessSwitch({ user, field, canManage = true }) {
 
   return (
     <>
-      <ReasonTooltip
-        reason={sshBlocked ? t("sshNeedsLoginShell", { shell: user.shell_title ?? user.shell }) : null}
-      >
-        <Switch
-          checked={checked}
-          disabled={busy || !canManage || sshBlocked}
-          onCheckedChange={canManage && !sshBlocked ? onToggle : undefined}
-          aria-label={label}
-        />
-      </ReasonTooltip>
+      {/* The spinner's slot is always present, so a row does not jump sideways
+          the moment someone flips a switch in it. */}
+      <span className="inline-flex items-center gap-2">
+        <ReasonTooltip
+          reason={sshBlocked ? t("sshNeedsLoginShell", { shell: user.shell_title ?? user.shell }) : null}
+        >
+          <Switch
+            checked={shown}
+            disabled={busy || !canManage || sshBlocked}
+            onCheckedChange={canManage && !sshBlocked ? onToggle : undefined}
+            aria-label={label}
+            aria-busy={busy}
+          />
+        </ReasonTooltip>
+        <span className="inline-flex size-4 shrink-0 items-center justify-center">
+          {busy ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : null}
+        </span>
+      </span>
 
       {field === "sudo" ? (
         <ConfirmDialog
