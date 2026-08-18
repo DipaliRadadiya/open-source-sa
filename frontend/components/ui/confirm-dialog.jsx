@@ -74,8 +74,14 @@ export function ConfirmDialog({
             list of what is about to be deleted AND the checkbox that changes
             what deleting means. Without it those two sit flush against each
             other and read as one control. A dialog passing a single child is
-            unaffected: space-y only ever applies between siblings. */}
-        {children ? <div className="min-w-0 space-y-3">{children}</div> : null}
+            unaffected: space-y only ever applies between siblings.
+
+            `4`, matching the `gap-4` the dialog puts between header, body and
+            footer. At `3` the body packed its own blocks tighter than the
+            dialog packs everything around them, so two bordered cards — the
+            file list and the permanent-delete box — sat 12px apart inside 16px
+            surroundings and read as cramped. */}
+        {children ? <div className="min-w-0 space-y-4">{children}</div> : null}
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>
