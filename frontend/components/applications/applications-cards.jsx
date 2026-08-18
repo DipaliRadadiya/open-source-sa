@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
+import { formatBytes } from "@/lib/format/bytes";
 import { Badge } from "@/components/ui/badge";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
-import { ApplicationStatusBadge, ApplicationStatusNotes } from "@/components/applications/applications-table";
+import { ApplicationStatusBadge, ApplicationStatusNotes } from "@/components/applications/application-status-badge";
 
 /**
  * The sites list on a narrow screen.
@@ -26,6 +27,7 @@ import { ApplicationStatusBadge, ApplicationStatusNotes } from "@/components/app
  */
 export function ApplicationsCards({ applications = [], canManage = false }) {
   const t = useTranslations("applications");
+  const format = useFormatter();
 
   return (
     <CardList>
@@ -68,6 +70,15 @@ export function ApplicationsCards({ applications = [], canManage = false }) {
               {application.site_type_title ?? application.site_type}
             </span>
             <span className="truncate font-mono">{application.system_user?.username ?? "—"}</span>
+            {/* Same fact as the table's Size column — the cards are this list
+                below lg, not a different list. Without the measurement date
+                there is no room to qualify it, so an unmeasured site is left
+                out rather than shown as a dash that reads like zero bytes. */}
+            {formatBytes(application.directory_size_bytes, format) ? (
+              <span className="whitespace-nowrap tabular-nums">
+                {formatBytes(application.directory_size_bytes, format)}
+              </span>
+            ) : null}
             <span className="whitespace-nowrap">{application.created_at_human ?? "—"}</span>
           </p>
 

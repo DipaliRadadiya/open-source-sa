@@ -2637,6 +2637,7 @@
       "domain": "Domain",
       "status": "Status",
       "owner": "Owner",
+      "size": "Size",
       "created": "Created"
     },
     "empty": {
@@ -4043,6 +4044,9 @@
       "title": "This site is no longer here",
       "description": "It may have been deleted, or its setup was rolled back. Nothing else on your server has changed.",
       "action": "Back to sites"
+    },
+    "size": {
+      "notMeasured": "Not measured"
     }
   },
   "panelUpdate": {

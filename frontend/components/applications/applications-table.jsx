@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
-import { provisionStepLabel } from "@/lib/applications/provision-steps";
-import { ChevronRight, CircleAlert, Globe2, Plus, SearchX, TriangleAlert } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
+import { formatBytes } from "@/lib/format/bytes";
+import { ChevronRight, Globe2, Plus, SearchX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -17,8 +16,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { ApplicationsCards } from "@/components/applications/applications-cards";
+import {
+  ApplicationStatusBadge,
+  ApplicationStatusNotes,
+  STATUS_VARIANTS,
+} from "@/components/applications/application-status-badge";
 
-const STATUS_VARIANTS = { active: "success", failed: "destructive", provisioning: "warning", pending: "secondary" };
 
 /* Every cell is defined at module level — flexRender treats a cell function's
  * identity as the component TYPE, so a cell written inline in the columns array
@@ -50,6 +53,32 @@ function CreatedCell({ row }) {
   );
 }
 
+/* Nothing measures a site's size on a timer — `du` walks every inode, so it is
+ * counted after a deploy and when somebody asks, never on a schedule. A number
+ * with no date therefore reads as current when it may be weeks old, which is
+ * why the API sends the measurement time alongside it and this cell shows it.
+ * A site nobody has measured says so rather than showing a zero. */
+function SizeCell({ row }) {
+  const t = useTranslations("applications");
+  const format = useFormatter();
+  const size = formatBytes(row.original.directory_size_bytes, format);
+
+  if (size === null) {
+    return <span className="whitespace-nowrap text-muted-foreground">{t("size.notMeasured")}</span>;
+  }
+
+  return (
+    <span className="whitespace-nowrap">
+      <span className="tabular-nums">{size}</span>
+      {row.original.directory_size_measured_at_human ? (
+        <span className="ml-2 text-xs text-muted-foreground">
+          {row.original.directory_size_measured_at_human}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function ActionsCell({ row, table }) {
   return (
     <ApplicationRowActions
@@ -64,67 +93,6 @@ function NameCell({ row }) {
   return <div className="flex min-w-0 items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Globe2 className="size-4" /></span><div className="min-w-0"><div className="flex min-w-0 items-center gap-2"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate">{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}</div><p className="truncate font-mono text-xs text-muted-foreground">{row.original.domain}</p></div></div>;
 }
 
-// A site can be "active" and still be in trouble: its process may have died, or
-// its last deploy may have failed while the old code keeps serving. `status`
-// alone reads green in both cases, so the list would otherwise hide the two
-// things a user most needs to catch at a glance.
-/**
- * Status is split in two because the card and the table place the parts
- * differently — the card puts the badge inline on its facts line and the notes
- * underneath — but both sides still read from one definition, so the
- * provisioning step, the failure reference and the process/deploy markers
- * cannot drift apart.
- */
-export function ApplicationStatusBadge({ application }) {
-  return (
-    <Badge variant={STATUS_VARIANTS[application.status] ?? "secondary"} className="font-normal">
-      {application.status_title ?? application.status}
-    </Badge>
-  );
-}
-
-export function ApplicationStatusNotes({ application, className }) {
-  const t = useTranslations("applications");
-  const processDown =
-    application.status === "active" &&
-    application.has_process &&
-    application.deployed &&
-    application.process &&
-    application.process.state !== "active" &&
-    application.process.state !== "activating";
-  // Deploy is git-only — a one-click install has nothing to pull — so this
-  // marker is too, even if a non-git app somehow carried a failed_step.
-  const isGit = Boolean(application.repository || application.repository_url);
-  const deployFailed = isGit && application.status === "active" && Boolean(application.failed_step);
-  const provisioning =
-    (application.status === "pending" || application.status === "provisioning") && application.steps?.length;
-  const reference = application.status === "failed" && application.reference;
-  if (!provisioning && !reference && !processDown && !deployFailed) return null;
-  return (
-    <div className={cn("space-y-1", className)}>
-      {/* The API sends raw step identifiers (`create_php_pool`), which were
-          being printed straight into the row. */}
-      {provisioning ? (
-        <p className="max-w-40 truncate text-xs text-muted-foreground">
-          {provisionStepLabel(application.steps.at(-1), t, "details.")}
-        </p>
-      ) : null}
-      {reference ? <p className="font-mono text-xs text-destructive">{application.reference}</p> : null}
-      {processDown ? (
-        <p className="flex items-center gap-1 text-xs text-destructive">
-          <CircleAlert className="size-3 shrink-0" />
-          {application.process.state === "failed" ? t("markers.processFailed") : t("markers.processStopped")}
-        </p>
-      ) : null}
-      {deployFailed ? (
-        <p className="flex items-center gap-1 text-xs text-warning">
-          <TriangleAlert className="size-3 shrink-0" />
-          {t("markers.deployFailed")}
-        </p>
-      ) : null}
-    </div>
-  );
-}
 
 function StatusCell({ row }) {
   return (
@@ -168,6 +136,9 @@ export function ApplicationsTable({ applications = [], canManage = false }) {
       { accessorKey: "site_type_title", header: t("columns.type"), cell: TypeCell },
       { accessorKey: "status", header: t("columns.status"), cell: StatusCell },
       { id: "owner", accessorFn: (row) => row.system_user?.username ?? "", header: t("columns.owner"), cell: OwnerCell },
+      // -1 for never-measured so sorting groups them at one end instead of
+      // mixing them in with genuinely empty sites at 0 bytes.
+      { id: "size", accessorFn: (row) => row.directory_size_bytes ?? -1, header: t("columns.size"), cell: SizeCell, sortingFn: "basic" },
       { id: "created", accessorFn: (row) => createdTimestamp(row.created_at), header: t("columns.created"), cell: CreatedCell, sortingFn: "basic" },
       { id: "actions", header: "", cell: ActionsCell },
     ],
