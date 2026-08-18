@@ -191,7 +191,12 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                       <FormControl>
                         <Input
                           placeholder="2048"
-                          className="w-full font-mono sm:w-28"
+                          // 14rem — the width of the control column every other
+                          // field in Settings sits in. This row is `wide` (the
+                          // presets need the full width), so it has no column to
+                          // inherit from and was left at 112px, half the size of
+                          // every control above and below it.
+                          className="w-full font-mono sm:w-56"
                           inputMode="numeric"
                           autoComplete="off"
                           disabled={!canManage}
