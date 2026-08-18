@@ -82,12 +82,27 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
 
   const [draft, setDraft] = useState(saved);
 
+  // What "unchanged" is measured against: the server's copy at page load, or
+  // whatever we last saved successfully.
+  //
+  // It cannot just be `saved`. Laravel trims every incoming string
+  // (`TrimStrings` is in the default global middleware and this app does not
+  // disable it), and both templates end in a newline — so the server stores a
+  // copy that differs from what was sent by exactly that character. The draft
+  // then never matched the reloaded config again and the row kept its "not
+  // saved yet" dot forever, over a config that had saved perfectly.
+  //
+  // Any server-side normalisation does the same thing, so this is keyed on
+  // "the server accepted this" rather than on guessing what it did to it.
+  const [savedBaseline, setSavedBaseline] = useState(null);
+  const baseline = savedBaseline ?? saved;
+
   // Nothing is saved yet during setup, so there is nothing to have changed
   // FROM. Comparing the draft against the template made an untouched setup
   // form read as "nothing has changed" and disabled the only button on it —
   // accepting the defaults, which is the common case, was impossible.
   const isSetup = !config;
-  const unsavedFiles = FILES.filter(({ key }) => draft[key] !== saved[key]).length;
+  const unsavedFiles = FILES.filter(({ key }) => draft[key] !== baseline[key]).length;
   const changed = unsavedFiles > 0;
   const dirty = isSetup || changed;
   const empty = !draft.jail.trim() || !draft.filter.trim();
@@ -110,6 +125,9 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
     setTestError(null);
     try {
       await saveApplicationFail2ban(appId, draft);
+      // The server took it, so this is the saved state from here on — whatever
+      // it stored after trimming.
+      setSavedBaseline({ ...draft });
       toast.success(t("saved"));
       router.refresh();
     } catch (error) {
@@ -141,6 +159,7 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
       // holding the text they just deleted. Back to the empty state, with the
       // shipped templates ready if they change their mind.
       setEditing(false);
+      setSavedBaseline(null);
       setDraft({ jail: jailTemplate, filter: filterTemplate });
       toast.success(t("removed"));
       router.refresh();
@@ -226,7 +245,7 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
                   <TabsTrigger key={key} value={key} className="gap-2 px-3 py-1.5">
                     <Icon className="size-4" />
                     {t(`files.${key}`)}
-                    {draft[key] !== saved[key] ? (
+                    {draft[key] !== baseline[key] ? (
                       <span
                         className="size-1.5 rounded-full bg-warning"
                         aria-label={t("unsavedHere")}
