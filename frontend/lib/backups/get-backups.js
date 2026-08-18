@@ -3,7 +3,10 @@ import { read } from "@/lib/api/read";
 import { getApplications } from "@/lib/applications/get-applications";
 import {
   BACKUP_PERIODS,
+  BACKUP_STATUSES,
+  BACKUP_TYPES,
   RESTORE_IN_FLIGHT,
+  RESTORE_STATUSES,
   backupTargetResponseSchema,
   backupTargetsResponseSchema,
   backupsResponseSchema,
@@ -27,8 +30,8 @@ export async function getBackups(searchParams = {}) {
         page: searchParams.page,
         per_page: searchParams.per_page,
         "filter[application_id]": searchParams.application,
-        "filter[status]": searchParams.status,
-        "filter[type]": searchParams.type,
+        "filter[status]": oneOf(searchParams.status, BACKUP_STATUSES),
+        "filter[type]": oneOf(searchParams.type, BACKUP_TYPES),
         "filter[from]": since(searchParams.period),
       },
   });
@@ -67,6 +70,18 @@ export function since(period) {
 }
 
 /**
+ * The same treatment for the other enum filters.
+ *
+ * `period` was defended and `status`/`type` were not, so `?period=junk` quietly
+ * dropped the filter while `?status=junk` earned a 422 and a full-page "we
+ * could not load this". Both are the same mistake — a URL nobody typed
+ * deliberately — and neither deserves to lose the reader the whole screen.
+ */
+function oneOf(value, allowed) {
+  return allowed.includes(String(value)) ? String(value) : undefined;
+}
+
+/**
  * How many backups are complete, failed or in flight.
  *
  * Read straight off `meta.counts`, which the API now returns with the same
@@ -98,8 +113,8 @@ export async function getRestores(searchParams = {}) {
       page: searchParams.page,
       per_page: searchParams.per_page,
       "filter[application_id]": searchParams.application,
-      "filter[status]": searchParams.status,
-      "filter[type]": searchParams.type,
+      "filter[status]": oneOf(searchParams.status, RESTORE_STATUSES),
+      "filter[type]": oneOf(searchParams.type, BACKUP_TYPES),
       "filter[from]": since(searchParams.period),
     },
   });

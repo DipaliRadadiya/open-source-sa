@@ -117,14 +117,18 @@ export function sizeNote(backup, t) {
  * One action per state, and never one that cannot work.
  *
  * A failed backup has nothing to restore FROM, so it does not get a Restore
- * button at all — it gets Retry, which re-runs the same configuration. That
- * used to be "Run backup" (a fresh run from the site's current state) purely
- * because no retry endpoint existed.
+ * button at all — it gets Retry.
+ *
+ * Retry is a label, not a different operation: `POST /backups/{id}/retry`
+ * checks the row is failed and then dispatches the same `RunBackup` job that
+ * "Back up now" does, against the same target. It creates a new row rather than
+ * reviving this one, so anything that waits on a started run has to treat the
+ * two identically.
  */
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
-  const { canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight } =
+  const { canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight, retryBlockedFor } =
     table.options.meta;
   const backup = row.original;
 
@@ -132,6 +136,7 @@ function ActionsCell({ row, table }) {
   // failed run: it needs the same trust as restore (`backup,manage`) because
   // the archive is every file plus a database dump.
   const download = <DownloadBackupButton backup={backup} canDownload={canRestore} />;
+  const retryBlocked = retryBlockedFor?.(backup) ?? null;
 
   if (backup.status === "failed") {
     return (
@@ -145,7 +150,8 @@ function ActionsCell({ row, table }) {
             // one vertical line down the column instead of shuffling with
             // whichever label the row's state earned.
             className="min-w-28"
-            disabled={busyId === backup.id}
+            disabled={busyId === backup.id || Boolean(retryBlocked)}
+            disabledReason={retryBlocked}
             onClick={() => onRetry(backup)}
           >
             <RotateCw className="size-4" />
@@ -191,6 +197,10 @@ export function BackupsHistoryTable({
   onRestore,
   onRetry,
   busyId,
+  // `(backup) => reason | null`. Per row rather than one flag, because this
+  // table also renders a list spanning every site: a run under way for one site
+  // must not disable Retry on another's rows.
+  retryBlockedFor = null,
   // On a site's own page every row belongs to that site, so naming it ten
   // times says nothing. The rest of the table is identical, which is the
   // point: a backup should describe itself the same way on both screens.
@@ -235,7 +245,7 @@ export function BackupsHistoryTable({
       data={backups}
       emptyMessage={emptyMessage ?? t("empty.title")}
       bare={bare}
-      meta={{ canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight }}
+      meta={{ canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight, retryBlockedFor }}
     />
   );
 }

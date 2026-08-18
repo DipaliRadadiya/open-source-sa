@@ -33,7 +33,7 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
 
   return (
     <CardList>
-      {rows.map(({ application, target, state }) => {
+      {rows.map(({ application, target, state, lastBackup }) => {
         const meta = COVERAGE_STATE[state];
         const Icon = meta.icon;
         // Same rule as the table: an imminent run outranks tomorrow's slot.
@@ -88,7 +88,12 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
                 className={cn(!target && "text-muted-foreground/70")}
               >
                 <span className="block truncate">
-                  {target ? (target.last_run_at_human ?? t("neverRunShort")) : t("placeholders.lastRun")}
+                  {/* Same fallback as the table: a run that crashed leaves
+                      last_run_at unset, and "Never" over a site that failed
+                      minutes ago is the wrong answer. */}
+                  {target
+                    ? (target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRunShort"))
+                    : t("placeholders.lastRun")}
                 </span>
                 {next ? (
                   <span className="block truncate text-xs text-muted-foreground">{next}</span>

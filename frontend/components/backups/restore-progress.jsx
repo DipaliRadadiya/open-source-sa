@@ -20,6 +20,14 @@ const POLL_MS = 2000;
 const POLL_LIMIT_MS = 20 * 60 * 1000;
 
 /**
+ * A restore that has not even STARTED is a different wait, and a much shorter
+ * one: it is sitting on the queue waiting for a worker, which takes seconds.
+ * Judging it by the 20-minute rule meant a restore whose worker never existed
+ * claimed to be under way for twenty minutes before admitting otherwise.
+ */
+const QUEUED_LIMIT_MS = 2 * 60 * 1000;
+
+/**
  * A restore, while it happens and after it finishes.
  *
  * A toast would be wrong here: this is minutes long, it is the most
@@ -41,6 +49,12 @@ export function RestoreProgress({ restore: initial, applicationDomain, onDismiss
   const timer = useRef(null);
 
   const inFlight = RESTORE_IN_FLIGHT.includes(restore?.status);
+
+  // Queued, not started: the API reports `pending` with no `started_at`, which
+  // means the worker has not touched the site. Worth separating, because
+  // "Restoring the site" over a restore that has not begun tells someone their
+  // live site is being overwritten when nothing has happened to it at all.
+  const queued = restore?.status === "pending" && !restore?.started_at;
 
   const id = restore?.id;
 
@@ -73,13 +87,13 @@ export function RestoreProgress({ restore: initial, applicationDomain, onDismiss
       // spinning towards anything is the worst version of this screen: it
       // still claims work is happening.
       setStalled(true);
-    }, POLL_LIMIT_MS);
+    }, queued ? QUEUED_LIMIT_MS : POLL_LIMIT_MS);
 
     return () => {
       clearInterval(timer.current);
       clearTimeout(stop);
     };
-  }, [inFlight, id, router]);
+  }, [inFlight, id, queued, router]);
 
   if (!restore) return null;
 
@@ -217,6 +231,28 @@ export function RestoreProgress({ restore: initial, applicationDomain, onDismiss
           </Button>
           <Button variant="ghost" onClick={onDismiss}>
             {t("dismiss")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Queued: no step has run, so there is no progress to draw and — the part
+  // that matters — nothing on the site has changed yet. Saying so is the whole
+  // point of this branch.
+  if (queued) {
+    return (
+      <div className="space-y-3 rounded-2xl border bg-muted/20 p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+            <Loader2 className="size-6 animate-spin text-primary" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="font-medium">{t("queued")}</p>
+            <p className="text-sm text-muted-foreground">{t("queuedBody")}</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onDismiss} className="shrink-0">
+            {t("hide")}
           </Button>
         </div>
       </div>

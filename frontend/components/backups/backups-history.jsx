@@ -1,18 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Archive } from "lucide-react";
+import { Archive, CircleAlert, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   BACKUP_IN_FLIGHT,
   BACKUP_PERIODS,
+  BACKUP_STATUSES,
   BACKUP_TYPES,
   RESTORE_IN_FLIGHT,
 } from "@/lib/schemas/backup";
 import { retryBackup } from "@/lib/api/backups";
+import { newestBackupId, queuedApplications } from "@/lib/backups/queued";
 import { apiMessage } from "@/lib/api/error-message";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,18 +45,37 @@ export function BackupsHistory({
 }) {
   const t = useTranslations("backups.history");
   const router = useRouter();
+  const params = useSearchParams();
   const { active, start } = useRestoreWatch();
   const [restoring, setRestoring] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  // Runs started here: application id → that site's newest backup id at the
+  // click. Per site, not one flag — this list spans every application, and one
+  // site's run appearing must not end another site's wait.
+  //
+  // Needed because `POST /backups/{id}/retry` dispatches the same RunBackup job
+  // "Back up now" does and answers 202 with the *target*. No row exists until a
+  // worker starts, so the refresh after the click returned an unchanged list,
+  // nothing looked in flight, and the table never polled. The toast was the
+  // only evidence, and it went away.
+  const [started, setStarted] = useState({});
+  const [stalled, setStalled] = useState(false);
 
-  // Re-runs the failed backup itself, rather than starting a fresh one from
-  // the site's current state — which is what this button used to do, only
-  // because no retry endpoint existed.
+  // Retry is a label, not a separate operation: the endpoint checks the row is
+  // failed and then re-runs the target, creating a NEW row rather than reviving
+  // this one. So what we wait for is "a newer run for this site", not "this row
+  // changed".
   async function retry(backup) {
     setBusyId(backup.id);
+    setStalled(false);
     try {
       await retryBackup(backup.id);
       toast.success(t("retryStarted", { name: backup.application_name ?? "" }));
+      const app = backup.application_id;
+      if (app) {
+        const mine = backups.filter((row) => row.application_id === app);
+        setStarted((s) => ({ ...s, [app]: newestBackupId(mine) }));
+      }
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("retryFailed")));
@@ -62,6 +83,27 @@ export function BackupsHistory({
       setBusyId(null);
     }
   }
+
+  const queuedIds = queuedApplications(backups, started);
+  const queuedNames = queuedIds
+    .map(
+      (id) =>
+        backups.find((row) => String(row.application_id) === id)?.application_name ??
+        applications.find((app) => String(app.id) === id)?.name,
+    )
+    .filter(Boolean);
+
+  // A status filter that excludes in-flight runs means the new row genuinely
+  // cannot show up in *this* list, however long we wait. Saying "it appears
+  // here shortly" would then be a promise the filter forbids.
+  const statusFilter = params.get("status");
+  const filterHidesRun = Boolean(statusFilter) && !BACKUP_IN_FLIGHT.includes(statusFilter);
+
+  useEffect(() => {
+    if (!queuedIds.length || stalled || filterHidesRun) return undefined;
+    const id = setTimeout(() => setStalled(true), 3 * 60 * 1000);
+    return () => clearTimeout(id);
+  }, [queuedIds.length, stalled, filterHidesRun]);
 
   // `restoreBlocker` has always known how to refuse a second restore while one
   // is running, but nothing ever passed the flag — so the guard was dead code
@@ -78,6 +120,18 @@ export function BackupsHistory({
     onRetry: retry,
     busyId,
     restoreInFlight,
+    // Per site: a run under way for THIS site blocks its rows, and leaves every
+    // other site's Retry alone. The endpoint refuses a second run per target
+    // with a 422, so the button should refuse it first and say why.
+    retryBlockedFor: (backup) =>
+      queuedIds.includes(String(backup.application_id)) ||
+      backups.some(
+        (row) =>
+          row.application_id === backup.application_id &&
+          BACKUP_IN_FLIGHT.includes(row.status),
+      )
+        ? t("alreadyRunning")
+        : null,
   };
 
   // A backup writes for minutes. Without this the row says "Backing up" until
@@ -92,7 +146,33 @@ export function BackupsHistory({
 
   return (
     <div className="space-y-4">
-      {busy ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
+      {busy || queuedNames.length ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
+
+      {/* The gap a toast cannot cover: the run has been accepted but has no row
+          yet, so every visible thing on this page is unchanged. Named by site,
+          because on this list "a backup" is not enough to know whose. */}
+      {queuedNames.length ? (
+        <div
+          role="status"
+          className={cn(
+            "flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm",
+            stalled ? "border-warning/30 bg-warning/10 text-foreground" : "bg-muted/40 text-muted-foreground",
+          )}
+        >
+          {stalled ? (
+            <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+          ) : (
+            <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
+          )}
+          <span>
+            {filterHidesRun
+              ? t("queuedHidden", { name: queuedNames.join(", ") })
+              : stalled
+                ? t("queuedStalled", { name: queuedNames.join(", ") })
+                : t("queuedNote", { name: queuedNames.join(", ") })}
+          </span>
+        </div>
+      ) : null}
 
       {/* Counts come from the API, not from this page's rows — "3 failed" has
           to mean three in total, not three on page one of forty. */}
@@ -119,7 +199,7 @@ export function BackupsHistory({
         <FacetSelect
           paramKey="status"
           allLabel={t("allStatuses")}
-          options={["verified", "verifying", "running", "pending", "failed"].map((value) => ({
+          options={BACKUP_STATUSES.map((value) => ({
             value,
             label: t(`statuses.${value}`),
           }))}

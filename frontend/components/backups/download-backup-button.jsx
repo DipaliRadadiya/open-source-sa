@@ -44,9 +44,23 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
       const url = response.data?.download?.url;
       if (!url) throw new Error("missing");
       toast.success(t("started"));
-      // A plain navigation, not fetch(): our interceptor's headers are not part
-      // of what the signature covers, and the bucket is cross-origin.
-      window.location.href = url;
+      // Not fetch(): our interceptor's headers are not part of what the
+      // signature covers, and the bucket is cross-origin.
+      //
+      // An anchor rather than `location.href`, though. A presigned link that
+      // has expired, or whose object has been pruned, answers with an S3 error
+      // page — and assigning `location.href` navigates the panel itself onto
+      // it, so a failed download costs the user the screen they were on. A
+      // detached anchor hands the URL to the browser's download machinery
+      // instead; the panel stays put whatever the bucket says.
+      const link = document.createElement("a");
+      link.href = url;
+      link.rel = "noopener";
+      link.target = "_blank";
+      link.download = "";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
     } finally {

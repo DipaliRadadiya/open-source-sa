@@ -4,6 +4,7 @@ import { getApplications } from "@/lib/applications/get-applications";
 import { RestoresList } from "@/components/backups/restores-list";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
+import { PageOutOfRange } from "@/components/backups/page-out-of-range";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
 export const dynamic = "force-dynamic";
@@ -29,11 +30,16 @@ export default async function RestoresPage({ searchParams }) {
   // matches these filters" are different facts, and only one of them is
   // solved by changing a dropdown.
   const hasFilters = Boolean(sp.application || sp.status || sp.type || sp.period);
+  const pageOutOfRange = meta.total > 0 && meta.current_page > meta.last_page;
 
   return (
     <NavTransitionProvider>
       <div className="space-y-4">
-        <RestoresList restores={restores} applications={applications} hasFilters={hasFilters} />
+        {pageOutOfRange ? (
+          <PageOutOfRange lastPage={meta.last_page} />
+        ) : (
+          <RestoresList restores={restores} applications={applications} hasFilters={hasFilters} />
+        )}
         {restores.length > 0 ? <DataTablePagination meta={meta} /> : null}
       </div>
     </NavTransitionProvider>

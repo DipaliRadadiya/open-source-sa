@@ -89,8 +89,19 @@ export function BackupSettingsFields({
   const retention = useWatch({ control: form.control, name: "retention_count" });
   const type = useWatch({ control: form.control, name: "type" });
 
+  const destinationId = useWatch({ control: form.control, name: "storage_destination_id" });
+
   const hasDestinations = destinations.length > 0;
   const onlyDestination = destinations.length === 1 ? destinations[0] : null;
+
+  // Whichever destination this form is about to write to, if its own
+  // connection test last failed. `onlyDestination` counts too — the single-
+  // destination case renders a plain row with no picker, and that is precisely
+  // the install where the one bucket being broken matters most.
+  const chosenDestination =
+    onlyDestination ?? destinations.find((d) => String(d.id) === String(destinationId)) ?? null;
+  const failingDestination =
+    chosenDestination && chosenDestination.last_test_success === false ? chosenDestination : null;
 
   // Narrowing what gets copied is silent data loss on a delay: every future
   // run drops something, and nobody finds out until a restore comes up short.
@@ -338,6 +349,26 @@ export function BackupSettingsFields({
                     />
                   </FormControl>
                 )}
+                {/* The chosen destination is failing its own connection test.
+                    Nothing here warned about it, so backups could be pointed at
+                    a bucket already known to reject writes and every run would
+                    fail — the server-level screen would say why, days later.
+                    Not a blocker: credentials get fixed, and refusing to save
+                    would strand someone mid-repair. */}
+                {failingDestination ? (
+                  <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs">
+                    <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />
+                    <span>
+                      {t("destinationFailing", { name: failingDestination.name })}{" "}
+                      <Link
+                        href="/integrations/storage"
+                        className="font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {t("manageStorage")}
+                      </Link>
+                    </span>
+                  </p>
+                ) : null}
                 <FormMessage />
               </FormItem>
             )}

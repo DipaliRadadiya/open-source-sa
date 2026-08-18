@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
+  CircleAlert,
   CircleSlash,
   History,
   Loader2,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
+import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
 import { retryBackup, runBackupNow } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,7 @@ import { BackupsCards } from "@/components/backups/backups-cards";
 import { BackupsHistoryTable } from "@/components/backups/backups-history-table";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ActiveRestore } from "@/components/backups/active-restore";
+import { DestinationHealth } from "@/components/backups/destination-health";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 
@@ -36,6 +39,9 @@ import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
  * like a page you came to *change* something. It now lives in the same modal
  * the server-level screen uses — one component, so the two doors cannot drift.
  */
+// How long we will say "queued" before admitting the worker has not taken it.
+const QUEUE_STALLED_MS = 3 * 60 * 1000;
+
 export function BackupsPanel({
   application,
   target,
@@ -54,19 +60,48 @@ export function BackupsPanel({
   // Seeded from the server, then replaced the moment a restore is started here
   // so the progress appears on the click rather than after a round trip.
   const [restore, setRestore] = useState(activeRestore);
+  // Whether this restore was started here, which is the only case that should
+  // move the viewport. Restore is pressed from a table row well below the fold.
+  const [restoreStartedHere, setRestoreStartedHere] = useState(false);
+  // The newest backup id at the moment a run was started here, or null.
+  //
+  // `POST /applications/{id}/backups` answers 202 with the *target* — the
+  // backup row does not exist until a worker picks the job up. So the refresh
+  // that follows the click returns exactly the page that was already on screen:
+  // no new row, nothing in flight, so no polling either. The run was invisible
+  // until someone reloaded by hand, which is the whole complaint.
+  const [queuedAfter, setQueuedAfter] = useState(null);
+  const [stalled, setStalled] = useState(false);
 
   // A run in flight is the one moment this page changes without the user
   // touching it. Polling only then keeps a page nobody is waiting on quiet.
   const busy = backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status));
 
-  // Re-runs the failed backup itself. "Back up now" starts a fresh run from
-  // the site's current state — a different thing, and not what someone looking
-  // at a failed row means.
+  // Derived, so it resolves itself: the wait is over as soon as a backup newer
+  // than the one we started from appears, whatever state that row is in.
+  const newestId = newestBackupId(backups);
+  const queued = isBackupQueued(backups, queuedAfter);
+
+  // Say so rather than quietly reverting to "nothing happened" — that is the
+  // state this whole change exists to remove.
+  useEffect(() => {
+    if (!queued || stalled) return undefined;
+    const id = setTimeout(() => setStalled(true), QUEUE_STALLED_MS);
+    return () => clearTimeout(id);
+  }, [queued, stalled]);
+
+  // Reached from a failed row, so it reads as "try that one again" — but the
+  // endpoint checks the row is failed and then dispatches `RunBackup` for the
+  // target, exactly as "Back up now" does. It is a fresh run either way, it
+  // creates a *new* row rather than reviving this one, and so it lands in the
+  // same invisible queue window. Hence the same bookkeeping.
   async function retry(backup) {
     setRetryingId(backup.id);
+    setStalled(false);
     try {
       await retryBackup(backup.id);
       toast.success(t("retryStarted"));
+      setQueuedAfter(newestId);
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("retryFailed")));
@@ -77,9 +112,13 @@ export function BackupsPanel({
 
   async function backUpNow() {
     setRunning(true);
+    setStalled(false);
     try {
       await runBackupNow(application.id);
       toast.success(t("started"));
+      // Remember where the list stood, so the queued state can end itself the
+      // moment the worker's row shows up.
+      setQueuedAfter(newestId);
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
@@ -90,7 +129,7 @@ export function BackupsPanel({
 
   return (
     <div className="space-y-6">
-      {busy ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
+      {busy || queued ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
       {/* Above everything: a restore is rewriting this site's files and
           database right now, and it carries the undo once it lands. */}
@@ -99,13 +138,33 @@ export function BackupsPanel({
           key={restore.id}
           restore={restore}
           applicationDomain={application.domain}
+          scrollIntoView={restoreStartedHere}
         />
       ) : null}
 
+      {/* The server-level screen has always warned that a destination is
+          rejecting writes; this page never did — so a site could show a green
+          "This site is backed up" shield while every run it made was being
+          refused by the bucket. Scoped to the one destination this site uses. */}
+      <DestinationHealth
+        destinations={destinations}
+        inUse={target?.storage_destination_id ? [target.storage_destination_id] : []}
+      />
+
       <ProtectionCard
         target={target}
+        // The newest run, for the one thing the target cannot answer: what
+        // actually happened. `last_run_at` is unset when a run crashes.
+        lastBackup={backups[0] ?? null}
         canManage={canManage}
-        running={running}
+        // A spinner only for a run this page is actually waiting on — our POST,
+        // or the queue window after it. A run that is merely *listed* as in
+        // flight gets a disabled button and a sentence instead: the backend
+        // refuses a second run either way, but a row can sit at "running"
+        // forever if its worker died, and a spinner that never stops is a
+        // promise of progress nothing here can keep.
+        running={running || queued}
+        blockedReason={!running && !queued && busy ? t("alreadyRunning") : null}
         onBackUpNow={backUpNow}
         onEdit={() => setEditing(true)}
       />
@@ -118,6 +177,13 @@ export function BackupsPanel({
         onRestore={setRestoring}
         onRetry={retry}
         busyId={retryingId}
+        queued={queued}
+        stalled={stalled}
+        // A second run cannot start while one is under way — the endpoint
+        // answers 422. Say so on the button instead of letting the click
+        // discover it. Every row here belongs to this site, so the answer is
+        // the same for all of them.
+        retryBlockedReason={queued || busy ? t("alreadyRunning") : null}
       />
 
       {/* The same modal the Backups screen opens, in edit mode when a target
@@ -146,7 +212,10 @@ export function BackupsPanel({
         onOpenChange={(next) => (next ? null : setRestoring(null))}
         onStarted={(started) => {
           setRestoring(null);
-          if (started) setRestore(started);
+          if (started) {
+            setRestore(started);
+            setRestoreStartedHere(true);
+          }
           router.refresh();
         }}
       />
@@ -178,7 +247,7 @@ function stateOf(target) {
  * facts, and the two actions. No form — the answer to "am I covered?" should
  * not require reading a set of inputs.
  */
-function ProtectionCard({ target, canManage, running, onBackUpNow, onEdit }) {
+function ProtectionCard({ target, lastBackup, canManage, running, blockedReason, onBackUpNow, onEdit }) {
   const t = useTranslations("backups.application");
   const state = stateOf(target);
   const { icon: Icon, tone, ring } = STATE[state];
@@ -197,7 +266,10 @@ function ProtectionCard({ target, canManage, running, onBackUpNow, onEdit }) {
         },
         {
           label: t("summary.lastBackup"),
-          value: target.last_run_at_human ?? t("neverRun"),
+          // Falls back to the run itself: a crashed run never writes
+          // last_run_at, and "No backup has run yet" over a failure from ten
+          // minutes ago is the opposite of the truth.
+          value: target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRun"),
         },
         {
           label: t("summary.nextBackup"),
@@ -250,7 +322,12 @@ function ProtectionCard({ target, canManage, running, onBackUpNow, onEdit }) {
               {target ? t("editSettings") : t("setUp")}
             </Button>
             {target ? (
-              <Button onClick={onBackUpNow} disabled={running} className="w-full sm:w-auto">
+              <Button
+                onClick={onBackUpNow}
+                disabled={running || Boolean(blockedReason)}
+                disabledReason={blockedReason}
+                className="w-full sm:w-auto"
+              >
                 {running ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
@@ -315,6 +392,9 @@ function RecentBackups({
   onRestore,
   onRetry,
   busyId,
+  queued = false,
+  stalled = false,
+  retryBlockedReason = null,
 }) {
   const t = useTranslations("backups.application");
 
@@ -325,6 +405,7 @@ function RecentBackups({
     onRestore,
     onRetry,
     busyId,
+    retryBlockedFor: retryBlockedReason ? () => retryBlockedReason : null,
     showSite: false,
   };
 
@@ -347,6 +428,28 @@ function RecentBackups({
           </Button>
         </div>
       </div>
+
+      {/* The gap the toast could not cover. A queued run has no row yet, so
+          without this the list a person is staring at looks identical to the
+          one they were staring at before they clicked. It sits inside this card
+          because this is where the run will appear, and it goes away by itself
+          the moment it does. */}
+      {queued ? (
+        <div
+          role="status"
+          className={cn(
+            "flex items-start gap-2.5 border-b px-5 py-3 text-sm",
+            stalled ? "bg-warning/10 text-foreground" : "bg-muted/40 text-muted-foreground",
+          )}
+        >
+          {stalled ? (
+            <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+          ) : (
+            <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
+          )}
+          <span>{stalled ? t("queuedStalled") : t("queuedNote")}</span>
+        </div>
+      ) : null}
 
       <CardContent className="p-0">
         <div className="lg:hidden p-4">

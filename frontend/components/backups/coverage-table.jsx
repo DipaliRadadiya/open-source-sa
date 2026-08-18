@@ -141,8 +141,14 @@ function RunsCell({ row }) {
     <div className="min-w-0">
       <div className="flex min-w-0 items-center gap-1.5">
         {lastBackup ? <BackupStatusDot status={lastBackup.status} /> : null}
+        {/* The backup's own timestamp is the fallback, not "Never".
+            `last_run_at` is written by the runner, and its crash path does not
+            write it — so a site whose every run has crashed reported "Never"
+            with a red dot beside it: two contradictory claims in one cell, on
+            a site that had in fact tried eight minutes ago. If a run exists,
+            something has run. */}
         <span className="truncate text-sm tabular-nums">
-          {target.last_run_at_human ?? t("neverRunShort")}
+          {target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRunShort")}
         </span>
       </div>
       {/* `is_due` outranks the timestamp — a brand-new target takes its first

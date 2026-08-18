@@ -31,7 +31,12 @@ export function RestoreWatch({ initial = null, children }) {
 
   return (
     <RestoreWatchContext.Provider value={{ active, start: setStarted }}>
-      {active ? <ActiveRestore key={active.id} restore={active} /> : null}
+      {/* `started` is only set by the button in this tab, so it is exactly the
+          case worth scrolling to. `initial` — a reload, a second tab, someone
+          else's restore — must not move the viewport. */}
+      {active ? (
+        <ActiveRestore key={active.id} restore={active} scrollIntoView={Boolean(started)} />
+      ) : null}
       {children}
     </RestoreWatchContext.Provider>
   );

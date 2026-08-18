@@ -175,12 +175,20 @@ function TypeCell({ row }) {
 }
 
 function WhenCell({ row }) {
+  const t = useTranslations("backups.restores");
   const restore = row.original;
   const duration = apiDuration(restore.started_at, restore.finished_at);
 
   return (
     <div className="min-w-0">
-      <p className="truncate text-sm tabular-nums">{restore.started_at_human ?? restore.started_at}</p>
+      {/* A queued restore has no start time at all, and an empty cell beside
+          five filled ones reads as a rendering fault rather than as "it has
+          not begun". */}
+      <p className="truncate text-sm tabular-nums">
+        {restore.started_at_human ?? restore.started_at ?? (
+          <span className="text-muted-foreground">{t("notStarted")}</span>
+        )}
+      </p>
       {duration ? (
         <p className="truncate text-xs tabular-nums text-muted-foreground">{duration}</p>
       ) : null}
@@ -249,7 +257,9 @@ function RestoreCards({ restores }) {
                 <div className="min-w-0">
                   <dt className="text-xs text-muted-foreground">{t("columns.when")}</dt>
                   <dd className="truncate text-sm tabular-nums">
-                    {restore.started_at_human ?? restore.started_at}
+                    {restore.started_at_human ?? restore.started_at ?? (
+                      <span className="text-muted-foreground">{t("notStarted")}</span>
+                    )}
                   </dd>
                   {duration ? (
                     <dd className="truncate text-xs tabular-nums text-muted-foreground">

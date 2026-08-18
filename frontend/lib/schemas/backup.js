@@ -52,6 +52,15 @@ export const RESTORE_IN_FLIGHT = ["pending", "running"];
 /** `RestoreStatus` on the backend, and what `filter[status]` will accept. */
 export const RESTORE_STATUSES = ["pending", "running", "succeeded", "failed"];
 
+/**
+ * `BackupStatus` on the backend, and what `filter[status]` will accept.
+ *
+ * Ordered as the filter offers them — finished first, because that is what
+ * people look for. Named here rather than written out at the filter, so the
+ * dropdown and the guard that drops a junk `?status=` cannot disagree.
+ */
+export const BACKUP_STATUSES = ["verified", "verifying", "running", "pending", "failed"];
+
 export const backupSchema = z
   .object({
     id: z.number(),

@@ -163,6 +163,7 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
               disabled={pending}
               autoComplete="off"
               spellCheck={false}
+              placeholder={domain}
               className={cn("font-mono", matches && "border-success focus-visible:border-success")}
             />
           </div>

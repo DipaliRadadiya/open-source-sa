@@ -27,6 +27,7 @@ export function BackupsCards({
   onRestore,
   onRetry,
   busyId,
+  retryBlockedFor = null,
   showSite = true,
   restoreInFlight = false,
 }) {
@@ -108,7 +109,8 @@ export function BackupsCards({
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={busyId === backup.id}
+                      disabled={busyId === backup.id || Boolean(retryBlockedFor?.(backup))}
+                      disabledReason={retryBlockedFor?.(backup) ?? null}
                       onClick={() => onRetry(backup)}
                     >
                       <RotateCw className="size-4" />
