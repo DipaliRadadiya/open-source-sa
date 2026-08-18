@@ -140,6 +140,14 @@ export const applicationSchema = z.object({
   steps: z.array(z.string()).default([]),
   failed_step: z.string().nullish(),
   reference: z.string().nullish(),
+  // The sites list shows these, so they have to be declared — this object does
+  // not passthrough, and an undeclared field the API is sending is dropped
+  // here in silence. The Size column read "Not measured" on every row of a
+  // server whose sizes were all measured and stored, because the number never
+  // survived parsing. Third time in this file: see `disk_io` above.
+  directory_size_bytes: z.number().nullish(),
+  directory_size_measured_at: z.string().nullish(),
+  directory_size_measured_at_human: z.string().nullish(),
   created_at: z.string().nullish(),
   created_at_human: z.string().nullish(),
 });
