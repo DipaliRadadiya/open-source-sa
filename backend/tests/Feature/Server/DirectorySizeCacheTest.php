@@ -366,3 +366,54 @@ it('keeps going when one site cannot be measured, and says so', function () {
 
     $this->artisan('applications:measure-sizes')->assertExitCode(1);
 });
+
+it('measures the least recently measured sites first when sweeping', function () {
+    // The rotation is what makes a per-minute schedule work: each tick takes a
+    // different slice, so every site comes round instead of the first few
+    // being walked forever while the rest stay stale.
+    Process::fake(fn ($process) => match (true) {
+        in_array('du', $process->command, true) => Process::result(output: "512\t/home/site"),
+        in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
+        default => Process::result(exitCode: 0),
+    });
+
+    // Created newest-first on purpose, so id order contradicts measurement
+    // order — otherwise ordering by id would pass this test by coincidence.
+    $newer = Application::factory()->create([
+        'system_user_id' => $this->systemUser->id,
+        'directory_size_bytes' => 2,
+        'directory_size_updated_at' => now()->subHours(2),
+    ]);
+    $oldest = Application::factory()->create([
+        'system_user_id' => $this->systemUser->id,
+        'directory_size_bytes' => 1,
+        'directory_size_updated_at' => now()->subDays(3),
+    ]);
+    $this->application->update(['directory_size_bytes' => 3, 'directory_size_updated_at' => now()]);
+
+    $this->artisan('applications:measure-sizes --stale=60 --limit=1')->assertExitCode(0);
+
+    // Only the oldest moved; the fresh one was not even a candidate.
+    expect($oldest->fresh()->directory_size_bytes)->toBe(512)
+        ->and($newer->fresh()->directory_size_bytes)->toBe(2)
+        ->and($this->application->fresh()->directory_size_bytes)->toBe(3);
+});
+
+it('never measures more than the limit in one sweep', function () {
+    // The bound that keeps one tick from walking every inode on the server.
+    Process::fake(fn ($process) => match (true) {
+        in_array('du', $process->command, true) => Process::result(output: "512\t/home/site"),
+        in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
+        default => Process::result(exitCode: 0),
+    });
+
+    Application::factory()->count(6)->create([
+        'system_user_id' => $this->systemUser->id,
+        'directory_size_bytes' => 1,
+        'directory_size_updated_at' => now()->subDays(2),
+    ]);
+
+    $this->artisan('applications:measure-sizes --stale=60 --limit=2')->assertExitCode(0);
+
+    expect(Application::query()->where('directory_size_bytes', 512)->count())->toBe(2);
+});

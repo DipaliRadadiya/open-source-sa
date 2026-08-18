@@ -1529,6 +1529,23 @@ return [
     // them. That distinction is what stops disk I/O being counted twice.
     'sys_block' => env('SERVER_SYS_BLOCK', '/sys/block'),
 
+    /*
+     * How the per-minute size sweep is bounded.
+     *
+     * `du` walks every inode, so this is the one scheduled job whose cost
+     * scales with how much data the customer has rather than how many rows the
+     * panel holds. These two numbers are what stop a per-minute tick becoming
+     * a permanent disk walk on a busy server: raise `per_run` and every tick
+     * costs more; lower `stale_minutes` and sites come round more often.
+     *
+     * At the defaults a server refreshes 5 sites a minute — 300 an hour, which
+     * is every site on any realistic box, several times over.
+     */
+    'application_size' => [
+        'stale_minutes' => (int) env('SERVER_APPLICATION_SIZE_STALE_MINUTES', 60),
+        'per_run' => (int) env('SERVER_APPLICATION_SIZE_PER_RUN', 5),
+    ],
+
     'metrics' => [
         'sample_interval' => (int) env('SERVER_METRICS_SAMPLE_INTERVAL', 1),
         // Oldest previous poll still worth measuring against on the live

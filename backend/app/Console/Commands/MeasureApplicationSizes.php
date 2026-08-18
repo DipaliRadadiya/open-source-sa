@@ -33,19 +33,40 @@ class MeasureApplicationSizes extends Command
 {
     protected $signature = 'applications:measure-sizes
                             {--id=* : Only these application ids}
-                            {--all : Include sites that already have a size}';
+                            {--all : Include sites that already have a size}
+                            {--stale= : Only sites not measured in this many minutes}
+                            {--limit= : Measure at most this many sites}';
 
     protected $description = 'Re-measure how much disk each site uses.';
 
     public function handle(FileBrowser $files): int
     {
+        $stale = $this->option('stale');
+        $limit = $this->option('limit');
+
         $applications = Application::query()
             ->when($this->option('id'), fn ($query, $ids) => $query->whereIn('id', $ids))
             // The default is the useful one: fill in what is missing. Asking
             // for everything walks every inode on the server, which is a
             // deliberate act rather than a default.
-            ->when(! $this->option('all') && ! $this->option('id'), fn ($query) => $query->whereNull('directory_size_bytes'))
-            ->orderBy('id')
+            ->when(
+                ! $this->option('all') && ! $this->option('id') && $stale === null,
+                fn ($query) => $query->whereNull('directory_size_bytes'),
+            )
+            // The scheduled mode. Sites older than the threshold, oldest
+            // first, so a run measures a different slice each time and every
+            // site comes round rather than the first N being walked forever.
+            ->when($stale !== null, fn ($query) => $query
+                ->where(fn ($q) => $q
+                    ->whereNull('directory_size_updated_at')
+                    ->orWhere('directory_size_updated_at', '<', now()->subMinutes((int) $stale)))
+                ->orderByRaw('directory_size_updated_at IS NOT NULL')
+                ->orderBy('directory_size_updated_at'))
+            ->when($stale === null, fn ($query) => $query->orderBy('id'))
+            // The bound that makes a per-minute schedule survivable. Without
+            // it one tick walks every inode on the server, and on a box with
+            // forty sites that does not finish before the next tick fires.
+            ->when($limit !== null, fn ($query) => $query->limit((int) $limit))
             ->get();
 
         if ($applications->isEmpty()) {

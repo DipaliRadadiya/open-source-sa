@@ -47,6 +47,26 @@ Schedule::command('certificates:refresh-expiry')->daily()->withoutOverlapping();
 // drift with the user-managed Cronjobs feature.
 Schedule::command('backups:run-due')->everyMinute()->withoutOverlapping();
 
+// Site disk usage, kept current for the sites list.
+//
+// Every minute, but never `--all`: `du` walks every inode, and one pass over
+// this project's own eight test sites is already ~6s of solid disk. Unbounded,
+// a server with forty real sites would still be walking when the next tick
+// fired, permanently, and would evict the page cache the sites themselves are
+// served from — paying in site performance for a number nobody is watching
+// second by second.
+//
+// So each tick takes the few least-recently-measured sites past the staleness
+// threshold. Every site still comes round, the work per tick is bounded no
+// matter how many sites exist, and the cost stops scaling with the customer's
+// disk. Deploys, installs and file edits still measure immediately; this only
+// catches drift from what the applications write themselves.
+Schedule::command(sprintf(
+    'applications:measure-sizes --stale=%d --limit=%d',
+    (int) config('server.application_size.stale_minutes', 60),
+    (int) config('server.application_size.per_run', 5),
+))->everyMinute()->withoutOverlapping();
+
 // File manager trash. Every delete keeps a full copy, so without a sweep this
 // is a slow disk-space leak on a machine whose whole job is running out of
 // disk quietly. Daily because the unit is days — and scheduled at all because
