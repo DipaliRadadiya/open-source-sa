@@ -8,7 +8,8 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Support\Bytes;
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Swap file management — create, resize, or disable ONE managed swap file.
@@ -188,6 +189,17 @@ class SwapSettings implements SettingGroup
         return [$total, $free];
     }
 
+    /**
+     * Is *our* swap file the one the kernel is using?
+     *
+     * Compared line by line and exactly. `str_contains` over the whole output
+     * was wrong in the one case this class exists to handle: a server that
+     * arrived with its own swap. `/mnt/data/swapfile` contains `/swapfile`, so
+     * the panel decided its own file was active, attributed somebody else's
+     * swap to itself in `read()`, and then tried to `swapoff` a file that does
+     * not exist — failing, and reporting "swap is in use", which is the
+     * opposite of what happened.
+     */
     private function isActive(): bool
     {
         $output = $this->serverOps->run(
@@ -195,16 +207,28 @@ class SwapSettings implements SettingGroup
             ['feature' => 'setting', 'group' => 'swap', 'op' => 'read'],
         )->output();
 
-        return str_contains($output, $this->path());
+        foreach (preg_split('/\r?\n/', trim($output)) ?: [] as $line) {
+            if (trim($line) === $this->path()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function ensureFstab(string $file): void
     {
         $path = (string) config('server.fstab', '/etc/fstab');
-        $contents = is_file($path) ? (string) File::get($path) : '';
+        $contents = $this->readFstab($path);
 
-        if (str_contains($contents, $file.' ')) {
-            return; // already mounted at boot — leave it be
+        // Compared against the device field of each line, not searched for in
+        // the whole file. Searching matched a *different* swap file whose path
+        // ended the same way, and then skipped writing our line — so swap
+        // worked until the next reboot and then silently did not.
+        foreach ($this->fstabLines($contents) as [$line, $device]) {
+            if ($device === $file) {
+                return; // already mounted at boot — leave it be
+            }
         }
 
         $this->must($this->files->put($path, rtrim($contents, "\n")."\n{$file} none swap sw 0 0\n", ['feature' => 'setting', 'group' => 'swap']));
@@ -213,16 +237,89 @@ class SwapSettings implements SettingGroup
     private function removeFstab(string $file): void
     {
         $path = (string) config('server.fstab', '/etc/fstab');
+
         if (! is_file($path)) {
             return;
         }
 
-        $kept = array_filter(
-            preg_split('/\r?\n/', (string) File::get($path)) ?: [],
-            fn (string $line) => $line !== '' && ! str_contains($line, $file.' '),
-        );
+        $contents = $this->readFstab($path);
+
+        $kept = [];
+
+        // Blank lines and comments are kept. The previous version dropped
+        // every empty line in the file, reflowing something the user may have
+        // formatted, and would have removed a commented-out entry that merely
+        // mentioned the path.
+        foreach ($this->fstabLines($contents) as [$line, $device]) {
+            if ($device !== $file) {
+                $kept[] = $line;
+            }
+        }
 
         $this->must($this->files->put($path, $kept === [] ? '' : implode("\n", $kept)."\n", ['feature' => 'setting', 'group' => 'swap']));
+    }
+
+    /**
+     * Read /etc/fstab, distinguishing "not there" from "could not read it".
+     *
+     * `is_file()` is true for a file this process cannot read, and the callers
+     * above *rewrite* what they read. Treating an unreadable fstab as an empty
+     * one would replace every mount on the machine with a single swap line —
+     * the same "unreadable is not empty" mistake that would have left a
+     * mongod.conf with no dbPath in it.
+     *
+     * @throws SettingOperationException
+     */
+    private function readFstab(string $path): string
+    {
+        if (! is_file($path)) {
+            return '';
+        }
+
+        $contents = @file_get_contents($path);
+
+        if ($contents === false) {
+            // A reference of its own: nothing shelled out, so there is no
+            // ServerOps result to borrow one from, and the user still needs
+            // something to quote.
+            $reference = (string) Str::uuid();
+
+            Log::channel('server-ops')->error('could not read fstab', [
+                'feature' => 'setting',
+                'group' => 'swap',
+                'op' => 'read_fstab',
+                'path' => $path,
+                'reference' => $reference,
+            ]);
+
+            throw new SettingOperationException($reference);
+        }
+
+        return $contents;
+    }
+
+    /**
+     * Each line paired with its device field — the first whitespace-separated
+     * token, which is what identifies the entry. Comments and blank lines come
+     * back with a null device so callers can keep them without matching them.
+     *
+     * @return array<int, array{0: string, 1: ?string}>
+     */
+    private function fstabLines(string $contents): array
+    {
+        $lines = [];
+
+        foreach (preg_split('/\r?\n/', rtrim($contents, "\n")) ?: [] as $line) {
+            $trimmed = trim($line);
+
+            $device = ($trimmed === '' || str_starts_with($trimmed, '#'))
+                ? null
+                : (preg_split('/\s+/', $trimmed)[0] ?? null);
+
+            $lines[] = [$line, $device];
+        }
+
+        return $lines;
     }
 
     /**
