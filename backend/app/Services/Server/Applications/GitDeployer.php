@@ -228,12 +228,19 @@ class GitDeployer
             return; // Cannot determine — leave the cache as-is.
         }
 
-        // `du -k` output is "{bytes}\t{path}". Divide by 1024 to get bytes.
+        // `du -sk` output is "{kilobytes}\t{path}", so multiply to get bytes.
         $parts = preg_split('/\s+/', trim($result->output()));
         $kilobytes = (int) ($parts[0] ?? 0);
         $bytes = $kilobytes * 1024;
 
-        $application->updateQuietly(['directory_size_bytes' => $bytes]);
+        // The timestamp goes with it, always. Writing the size alone left a
+        // fresh number carrying whenever the file browser last happened to
+        // measure — or no date at all — and a size with no date reads as
+        // current. That is the whole reason the column exists.
+        $application->updateQuietly([
+            'directory_size_bytes' => $bytes,
+            'directory_size_updated_at' => now(),
+        ]);
     }
 
     /**

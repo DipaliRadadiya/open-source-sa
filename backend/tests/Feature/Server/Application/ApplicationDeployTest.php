@@ -64,12 +64,22 @@ function runDeploy(Application $application): void
     );
 }
 
-/** Fake git, reporting a commit for rev-parse and "not a repo" for the detect. */
+/**
+ * Fake git, reporting a commit for rev-parse and "not a repo" for the detect.
+ *
+ * The curl arm is not optional. Deploy ends with a `verify` step that curls
+ * the site and reads the status code off stdout; an exit-0 with no output
+ * parses as HTTP 0, so every deploy through this fixture failed at `verify`
+ * and never reached the steps after it — which is why the commit and the
+ * directory size were never recorded, and why the assertions about them had
+ * been failing.
+ */
 function fakeGit(): void
 {
     Process::fake(fn ($process) => match (true) {
         $process->command[0] === 'test' => Process::result(exitCode: 1),
         in_array('rev-parse', $process->command, true) => Process::result(output: "abc123def456\n"),
+        $process->command[0] === 'curl' => Process::result(output: '200'),
         default => Process::result(exitCode: 0),
     });
 }
@@ -275,4 +285,27 @@ it('denies deploying with view-only access', function () {
         ->assertForbidden();
 
     Queue::assertNothingPushed();
+});
+
+it('stamps the directory size with the moment it was measured', function () {
+    // The size and its date are one fact. Persisting the bytes alone left a
+    // number freshly measured by this deploy carrying whenever the file
+    // browser last happened to walk the site — or no date at all — and the UI
+    // renders an undated size as current.
+    Process::fake(fn ($process) => match (true) {
+        $process->command[0] === 'test' => Process::result(exitCode: 1),
+        in_array('rev-parse', $process->command, true) => Process::result(output: "abc123def456\n"),
+        $process->command[0] === 'curl' => Process::result(output: '200'),
+        $process->command[0] === 'du' => Process::result(output: "4096\t/home/site/public\n"),
+        default => Process::result(exitCode: 0),
+    });
+
+    $app = gitApp(['directory_size_bytes' => null, 'directory_size_updated_at' => null]);
+
+    runDeploy($app);
+
+    $app->refresh();
+
+    expect($app->directory_size_bytes)->toBe(4096 * 1024)
+        ->and($app->directory_size_updated_at)->not->toBeNull();
 });
