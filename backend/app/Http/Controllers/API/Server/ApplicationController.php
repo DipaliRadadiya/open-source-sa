@@ -12,6 +12,7 @@ use App\Actions\Server\Application\UpdateApplication;
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentTrigger;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Application\IndexApplicationsRequest;
 use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
 use App\Http\Resources\ApplicationResource;
@@ -32,18 +33,43 @@ use Illuminate\Support\Facades\Auth;
 
 class ApplicationController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(IndexApplicationsRequest $request): JsonResponse
     {
-        $applications = Application::query()->with('systemUser')->latest('id')->get();
+        $search = trim((string) $request->validated('search', ''));
+
+        $applications = Application::query()
+            ->with('systemUser')
+            ->when($search !== '', function ($query) use ($search) {
+                // Name or domain — the two things somebody has in mind when
+                // they go looking for a site. Grouped so the search does not
+                // escape into an OR across the whole query if a filter is
+                // added here later.
+                $like = '%'.$search.'%';
+
+                $query->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('domain', 'like', $like));
+            })
+            ->latest('id')
+            ->paginate($request->validated('per_page', IndexApplicationsRequest::PER_PAGE));
 
         // Sites that have never been measured get queued for it, capped and
         // deduplicated by the job. Not measured inline: `du` walks every inode
         // under a site, so counting each one here would make this the slowest
         // page in the panel and put that load on the disk serving the sites.
-        MeasureApplicationSize::backfill($applications);
+        //
+        // Over every application, not the page. Backfilling only what is
+        // visible would leave page three unmeasured until somebody happened to
+        // scroll to it — and the job is already capped and deduplicated, which
+        // is what makes asking for all of them cheap.
+        MeasureApplicationSize::backfill(Application::query()->get());
 
         return response()->json([
-            'applications' => ApplicationResource::collection($applications)->resolve(),
+            'applications' => ApplicationResource::collection($applications->items())->resolve(),
+            'meta' => [
+                'current_page' => $applications->currentPage(),
+                'per_page' => $applications->perPage(),
+                'total' => $applications->total(),
+                'last_page' => $applications->lastPage(),
+            ],
         ]);
     }
 

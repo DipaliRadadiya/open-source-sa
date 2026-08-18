@@ -554,6 +554,25 @@ That distinction now matters for the locale and country pickers. They used to la
 ### GET `/applications`
 **Permission:** `application` (view)
 
+**Paginated, ten per page.** Was every application in one response, which is also why it was slow: the resource asks systemd for the state of every application that runs a process, so the page size bounds a number of subprocesses, not just a number of rows.
+
+| Query | |
+|---|---|
+| `page` | 1-based, standard Laravel paging |
+| `per_page` | default **10**, max 100 — `422` above that |
+| `search` | free text over **name and domain**, max 255 chars |
+
+There are no other filters. By system user, by status, by site type were all considered and left out — the list is one screen of sites and a search box is how people find one. Ask if you need one rather than filtering client-side over a page.
+
+```json
+{
+  "applications": [ … ],
+  "meta": {"current_page": 1, "per_page": 10, "total": 14, "last_page": 2}
+}
+```
+
+`meta` describes the **filtered** set, so page 2 of a one-result search is not an empty screen with a next button.
+
 Every application in the list carries the **same full shape** as `GET /applications/{application}` below — this is one resource, used everywhere. The list is not a trimmed variant.
 
 ```json
