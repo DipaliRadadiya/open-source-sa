@@ -29,7 +29,11 @@ export function SystemUsersCards({ users, shells = [], canManage = false }) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="font-medium">{user.username}</span>
+                {/* break-all, not truncate: a username IS the identifier you
+                    came to read, so it wraps onto a second line rather than
+                    losing its tail. Without it a long one pushed the row menu
+                    off the card. */}
+                <span className="min-w-0 font-medium break-all">{user.username}</span>
                 {!user.password ? (
                   <Badge variant="warning" className="font-normal">
                     {t("noPassword")}

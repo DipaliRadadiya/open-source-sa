@@ -23,7 +23,7 @@ export function RolesCards({ roles }) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="font-medium">{role.name}</span>
+                <span className="min-w-0 font-medium break-all">{role.name}</span>
                 {role.is_system ? (
                   <Badge variant="warning" className="font-normal">
                     {t("system")}

@@ -76,7 +76,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
     <AlertDialog open={open} onOpenChange={pending ? undefined : onOpenChange}>
       <AlertDialogContent className="sm:!max-w-2xl">
         <AlertDialogHeader>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
               <ArrowUpFromLine className="size-5" />
             </span>

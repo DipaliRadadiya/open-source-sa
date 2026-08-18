@@ -44,8 +44,13 @@ export function ConfirmDialog({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className={className}>
-        <AlertDialogHeader>
-          <div className="flex items-center gap-3">
+        {/* min-w-0 twice, because the title is two levels deep: the header is a
+            grid item of the dialog and the title is a flex item of this row.
+            Either one defaulting to min-width:auto is enough to widen the
+            dialog's content past the box and push the confirm button off a
+            narrow screen. */}
+        <AlertDialogHeader className="min-w-0">
+          <div className="flex min-w-0 items-center gap-3">
             {Icon ? (
               <span
                 className={cn(

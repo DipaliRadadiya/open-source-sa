@@ -323,7 +323,7 @@ export function BackupSettingsFields({
                 {onlyDestination ? (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm">
                     <HardDrive className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="font-medium">{onlyDestination.name}</span>
+                    <span className="min-w-0 font-medium break-all">{onlyDestination.name}</span>
                     <span className="text-muted-foreground">{onlyDestination.bucket}</span>
                     <Link
                       href="/integrations/storage"

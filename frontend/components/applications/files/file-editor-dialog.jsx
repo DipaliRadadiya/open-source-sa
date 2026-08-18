@@ -149,7 +149,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
         }}
       >
         <DialogHeader>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
               <FileCode2 className="size-5" />
             </span>

@@ -33,7 +33,7 @@ export function UsersCards({ users, roles = [], currentUserId }) {
                 </Avatar>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="font-medium">{user.name}</span>
+                    <span className="min-w-0 font-medium break-all">{user.name}</span>
                     {user.id === currentUserId ? (
                       <Badge variant="secondary" className="font-normal">
                         {t("you")}

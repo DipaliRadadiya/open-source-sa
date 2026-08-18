@@ -81,7 +81,7 @@ export function DestinationRow({
           </span>
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">{destination.name}</span>
+              <span className="min-w-0 font-medium break-all">{destination.name}</span>
               {/* Not "verified" — only that both secret columns are populated.
                   Whether they WORK is what Test answers. */}
               {destination.has_credentials ? (

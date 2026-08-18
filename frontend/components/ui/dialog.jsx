@@ -110,9 +110,17 @@ function DialogFooter({
 
          `min-w-0` lets the item shrink to the track; `flex-wrap` gives the
          buttons somewhere to go when it does. Neither has any effect on a
-         footer that already fits. */
+         footer that already fits.
+
+         A right-aligned wrapping row at EVERY width, matching AlertDialogFooter
+         and FormModal. It used to be flex-col-reverse below sm, and stacking is
+         what exposed a second bug: a button wrapped in ReasonTooltip is a span
+         in the flex flow, so the span stretched to full width while the button
+         inside stayed content-sized — "Save and reload" came out 139px sitting
+         above a 326px Cancel. Sizing every button to its own label removes the
+         mismatch rather than chasing it. */
       className={cn(
-        "-mx-4 -mb-4 flex min-w-0 flex-col-reverse flex-wrap gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 flex min-w-0 flex-wrap items-center justify-end gap-2 rounded-b-xl border-t bg-muted/50 p-4",
         className
       )}
       {...props}>
@@ -133,7 +141,14 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("font-heading text-base leading-none font-medium", className)}
+      // min-w-0 + wrap-anywhere, because dialog titles carry user-supplied names
+      // ("Delete nextcloud_1395988213_nip_wbixj3"). A flex/grid item defaults to
+      // min-width:auto, so one unbreakable token sets the whole dialog's
+      // min-content width and pushes its buttons off the side of a phone.
+      // wrap-anywhere rather than break-words: only "anywhere" is counted when
+      // the browser computes min-content, and min-content is the number doing
+      // the damage. break-words breaks the line but leaves the box just as wide.
+      className={cn("min-w-0 font-heading text-base leading-none font-medium wrap-anywhere", className)}
       {...props} />
   );
 }
@@ -146,7 +161,7 @@ function DialogDescription({
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
+        "min-w-0 text-sm wrap-anywhere text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
         className
       )}
       {...props} />

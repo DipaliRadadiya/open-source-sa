@@ -57,7 +57,10 @@ export default async function AdminDoctorPage() {
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         {doctor ? (
-          <div className="flex shrink-0 gap-2">
+          // flex-wrap, not shrink-0: both labels are verbs and grow in other
+          // locales ("रिपोर्ट कॉपी करें" / "फिर से जाँचें"), and a group that
+          // can neither shrink nor wrap pushed 20px off a 320px screen.
+          <div className="flex flex-wrap gap-2">
             <CopyReportButton text={report} />
             <RecheckButton />
           </div>

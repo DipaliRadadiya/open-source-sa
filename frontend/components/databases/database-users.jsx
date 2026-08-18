@@ -166,7 +166,7 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
     <div className="flex items-start justify-between gap-3 py-3.5">
       <div className="min-w-0 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-sm font-medium">{user.username}</span>
+          <span className="min-w-0 font-mono text-sm font-medium break-all">{user.username}</span>
           {/* Config files want the username on its own, not carved out of the
               connection string. */}
           <CopyButton value={user.username} label={t("copyUsername")} />

@@ -90,7 +90,7 @@ export function ConfigTestButton({ service, canManage }) {
           <DialogHeader>
             {/* Icon beside the title, not above it — same markup as
                 ConfirmDialog, which is the panel's one header shape. */}
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <span
                 className={cn(
                   "flex size-10 shrink-0 items-center justify-center rounded-full",

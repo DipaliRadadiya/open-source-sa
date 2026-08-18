@@ -83,7 +83,7 @@ export function AccountRow({
   
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="text-sm font-medium">{account.label}</span>
+              <span className="min-w-0 text-sm font-medium break-all">{account.label}</span>
               <Badge variant="secondary" className="font-normal">
                 {account.provider_title}
               </Badge>

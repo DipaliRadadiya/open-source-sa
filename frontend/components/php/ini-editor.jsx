@@ -119,7 +119,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
       <Dialog open={open} onOpenChange={(next) => !saving && setOpen(next)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
                 <TriangleAlert className="size-5" />
               </span>
