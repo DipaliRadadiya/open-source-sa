@@ -17,6 +17,7 @@ use App\Http\Requests\Server\Application\UpdateApplicationRequest;
 use App\Http\Resources\ApplicationResource;
 use App\Http\Resources\AppSidebarResource;
 use App\Jobs\DeployApplication;
+use App\Jobs\MeasureApplicationSize;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\Permission;
@@ -34,6 +35,12 @@ class ApplicationController extends Controller
     public function index(): JsonResponse
     {
         $applications = Application::query()->with('systemUser')->latest('id')->get();
+
+        // Sites that have never been measured get queued for it, capped and
+        // deduplicated by the job. Not measured inline: `du` walks every inode
+        // under a site, so counting each one here would make this the slowest
+        // page in the panel and put that load on the disk serving the sites.
+        MeasureApplicationSize::backfill($applications);
 
         return response()->json([
             'applications' => ApplicationResource::collection($applications)->resolve(),

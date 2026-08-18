@@ -42,11 +42,70 @@ class MeasureApplicationSize implements ShouldBeUnique, ShouldQueue
      */
     public int $timeout = 300;
 
+    /**
+     * How many never-measured sites one page view may queue.
+     *
+     * The cap is the whole point. Opening the sites list on a server with
+     * three hundred sites would otherwise queue three hundred directory walks
+     * off a single request, on the machine those sites are served from. At
+     * this rate a large server fills in over a few visits instead, which is
+     * the correct trade: nobody is waiting on the number.
+     */
+    public const BACKFILL_LIMIT = 25;
+
     public function __construct(public int $applicationId) {}
 
     public function uniqueId(): string
     {
         return 'application-size-'.$this->applicationId;
+    }
+
+    /**
+     * Queue a measurement for sites that have never had one.
+     *
+     * A size is written when a site is provisioned, deployed, or browsed —
+     * which leaves every site created before that was true showing "Not
+     * measured" forever. Rather than a migration nobody can run twice or a
+     * command nobody remembers, the list backfills itself as it is used.
+     *
+     * Safe to call on every request: the job is unique per application, so a
+     * hundred page views raise one walk per site rather than a hundred.
+     *
+     * @param  iterable<Application>  $applications
+     * @return int how many were queued
+     */
+    public static function backfill(iterable $applications): int
+    {
+        $queued = 0;
+        $skipped = 0;
+
+        foreach ($applications as $application) {
+            if ($application->directory_size_updated_at !== null) {
+                continue;
+            }
+
+            if ($queued >= self::BACKFILL_LIMIT) {
+                $skipped++;
+
+                continue;
+            }
+
+            self::dispatch($application->id)->delay(now()->addSeconds(self::DEBOUNCE_SECONDS));
+            $queued++;
+        }
+
+        // Said out loud rather than truncated in silence — a capped sweep that
+        // reports nothing reads as "everything is measured" when it is not.
+        if ($skipped > 0) {
+            Log::channel('server-ops')->info('application size backfill capped', [
+                'feature' => 'application',
+                'op' => 'measure_size_backfill',
+                'queued' => $queued,
+                'skipped' => $skipped,
+            ]);
+        }
+
+        return $queued;
     }
 
     public function handle(FileBrowser $files): void

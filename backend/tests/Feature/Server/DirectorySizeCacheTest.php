@@ -199,3 +199,53 @@ it('measures a site once it has been provisioned', function () {
         fn (MeasureApplicationSize $job): bool => $job->applicationId === $application->id,
     );
 });
+
+it('queues a measurement for sites that have never had one, from the list', function () {
+    // The backfill is why an existing site ever gets a number: it was created
+    // before anything measured on provision, and nobody is going to run a
+    // command. Browsing the list is enough.
+    Queue::fake();
+
+    Application::factory()->create([
+        'system_user_id' => $this->systemUser->id,
+        'directory_size_bytes' => null,
+        'directory_size_updated_at' => null,
+    ]);
+
+    $this->getJson('/api/applications')->assertOk();
+
+    Queue::assertPushed(MeasureApplicationSize::class);
+});
+
+it('leaves an already-measured site alone', function () {
+    // Otherwise every page view re-walks every site on the server, which is
+    // the inline `du` this design exists to avoid, only queued.
+    Queue::fake();
+
+    Application::query()->update([
+        'directory_size_bytes' => 4096,
+        'directory_size_updated_at' => now()->subDay(),
+    ]);
+
+    $this->getJson('/api/applications')->assertOk();
+
+    Queue::assertNotPushed(MeasureApplicationSize::class);
+});
+
+it('caps how many one page view may queue', function () {
+    // A server with hundreds of sites must not turn one page view into
+    // hundreds of directory walks. It fills in over a few visits instead.
+    Queue::fake();
+
+    Application::factory()
+        ->count(MeasureApplicationSize::BACKFILL_LIMIT + 5)
+        ->create([
+            'system_user_id' => $this->systemUser->id,
+            'directory_size_bytes' => null,
+            'directory_size_updated_at' => null,
+        ]);
+
+    $this->getJson('/api/applications')->assertOk();
+
+    Queue::assertPushed(MeasureApplicationSize::class, MeasureApplicationSize::BACKFILL_LIMIT);
+});
