@@ -736,6 +736,25 @@ return [
         // about SSL the user has not set up yet.
         'auto_issue' => env('SV_AUTO_ISSUE_CERTIFICATES', true),
 
+        /*
+        | Whether automatic issuance also covers wildcard-DNS test hostnames
+        | (`*.nip.io`, `*.sslip.io` — see `temporary_domain_suffixes`).
+        |
+        | Off, and it should stay off on anything but a test box. Those suffixes
+        | are one registered domain as far as Let's Encrypt is concerned, so
+        | their weekly issuance limit is shared with every other user of the
+        | service worldwide. Spending it automatically, on every site created on
+        | every install of this panel, is antisocial — and it fails for reasons
+        | nothing on the user's own server caused, which is the least debuggable
+        | kind of failure there is.
+        |
+        | An explicit request is a different matter: `force` on the issue
+        | endpoint always includes test domains, whatever this is set to,
+        | because somebody typed it and Let's Encrypt's own limit is still there
+        | to stop them repeating it.
+        */
+        'auto_issue_test_domains' => env('SV_AUTO_ISSUE_TEST_DOMAIN_CERTIFICATES', false),
+
         // Warn this far out. Let's Encrypt certificates last 90 days and renew
         // at 30; a warning any earlier is noise, any later is not a warning.
         'expiry_warning_days' => 14,

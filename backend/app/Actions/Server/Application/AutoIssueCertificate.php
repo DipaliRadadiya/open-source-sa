@@ -48,11 +48,15 @@ class AutoIssueCertificate
             return null;
         }
 
+        // A test domain shares one weekly issuance limit with everybody else
+        // using nip.io, so spending it automatically — on every site created on
+        // every install of this panel — would be antisocial, and it fails for
+        // reasons nothing on this server caused. Opt-in, off by default, for a
+        // box where testing the SSL path matters more than the shared budget.
+        $includeTest = (bool) config('server.certificates.auto_issue_test_domains', false);
+
         $candidates = $application->domains
-            // A test domain shares one weekly issuance limit with everybody
-            // else using nip.io, so spending it automatically — on every site
-            // created on every install of this panel — would be antisocial.
-            ->filter(fn ($domain) => ! $domain->is_test)
+            ->filter(fn ($domain) => $includeTest || ! $domain->is_test)
             ->values();
 
         if ($candidates->isEmpty()) {

@@ -87,8 +87,18 @@ class RequestCertificate
      */
     private function reachableNames(Application $application, bool $force): array
     {
+        // Test hostnames are excluded from an ordinary request: `*.nip.io` and
+        // friends are one registered domain to Let's Encrypt, so their weekly
+        // limit is shared with everybody else using the service.
+        //
+        // `force` includes them. The filter used to run before the force check,
+        // so on a site whose only domain was a test one the flag could never do
+        // anything — the request came back "no certifiable domains" and the
+        // escape hatch silently was not one. Forcing is a deliberate act by
+        // somebody who typed it, which is the opposite of the automatic
+        // spending the exclusion exists to prevent.
         $candidates = $application->domains
-            ->filter(fn ($domain) => ! $domain->is_test)
+            ->filter(fn ($domain) => $force || ! $domain->is_test)
             ->sortBy(fn ($domain) => $domain->type === DomainType::Primary ? 0 : 1)
             ->values();
 
@@ -96,12 +106,13 @@ class RequestCertificate
             return [];
         }
 
-        // An escape hatch for one real case: a box behind NAT whose public
-        // address does not answer to itself. The dry run fails there while the
-        // real challenge, which arrives from outside, would succeed. Refusing
+        // An escape hatch for two real cases: a box behind NAT whose public
+        // address does not answer to itself — the dry run fails there while the
+        // real challenge, arriving from outside, would succeed — and a test
+        // hostname the user has decided is worth the shared limit. Refusing
         // outright would make the feature unusable on those servers, so the
-        // user is allowed to override — Let's Encrypt's own limit is still
-        // there to stop them doing it repeatedly.
+        // user is allowed to override; Let's Encrypt's own limit is still there
+        // to stop them doing it repeatedly.
         if ($force) {
             return $candidates->pluck('domain')->all();
         }
