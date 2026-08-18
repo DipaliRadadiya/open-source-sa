@@ -72,6 +72,11 @@ class PhpMyAdminSso
         return $this->documentRoot($application).'/sso.php';
     }
 
+    public function configPath(Application $application): string
+    {
+        return $this->documentRoot($application).'/config.inc.php';
+    }
+
     /**
      * Whether this site can be signed into at all.
      *
@@ -148,11 +153,65 @@ class PhpMyAdminSso
             }
         }
 
-        return $this->writeFile(
+        $result = $this->writeFile(
             $application,
             $this->shimPath($application),
             $this->renderShim($application),
             '0644',
+        );
+
+        if ($result->failed()) {
+            return $result;
+        }
+
+        return $this->ensureSignonServer($application);
+    }
+
+    /**
+     * Give an older site the second server entry the sign-in script needs.
+     *
+     * Every phpMyAdmin site created before this feature has a config.inc.php
+     * with one server on cookie auth. Writing `sso.php` alone would leave the
+     * script handing a session to a server that does not exist, so the config
+     * has to be brought forward too.
+     *
+     * Left alone once it has the entry. Rewriting on every click would work,
+     * but the file also holds `blowfish_secret`, and regenerating that logs out
+     * everyone currently signed in — a fresh secret cannot decrypt the cookies
+     * the old one issued.
+     */
+    private function ensureSignonServer(Application $application): ServerOpsResult
+    {
+        $path = $this->configPath($application);
+        $read = $this->run(['cat', $path], $application);
+
+        // A config that cannot be read is not a config that is missing the
+        // entry. Rewriting on a failed read would replace a working file with
+        // one built from guesses — the same shape of bug as treating an
+        // unreadable /etc/fstab as an empty one.
+        if ($read->failed()) {
+            return $read;
+        }
+
+        $existing = $read->output();
+
+        if (str_contains($existing, "'signon'")) {
+            return $read;
+        }
+
+        // Reused when it is there so existing sessions survive; generated only
+        // when the old file had none to find.
+        preg_match("/sodium_hex2bin\('([0-9a-f]{64})'\)/", $existing, $matches);
+
+        return $this->writeFile(
+            $application,
+            $path,
+            $this->renderConfig(
+                $matches[1] ?? bin2hex(random_bytes(32)),
+                (string) config('server.installers.phpmyadmin.db_host', '127.0.0.1'),
+                $application->rootPath().'/tmp',
+            ),
+            '0640',
         );
     }
 

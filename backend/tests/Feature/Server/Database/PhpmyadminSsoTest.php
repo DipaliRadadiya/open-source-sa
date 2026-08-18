@@ -27,13 +27,25 @@ beforeEach(function () {
     // Recorded through the closure form rather than Process::recorded(), which
     // does not exist on this version's fake.
     $this->ranCommands = [];
+    $this->ranInput = [];
+
+    // What `cat config.inc.php` finds on the site. Empty by default, which is
+    // the case that matters least; the interesting states are set per test.
+    $this->configContents = '';
 
     Process::fake(function ($process) {
-        $this->ranCommands[] = is_array($process->command)
+        $command = is_array($process->command)
             ? implode(' ', $process->command)
             : (string) $process->command;
 
-        return Process::result(exitCode: 0);
+        $this->ranCommands[] = $command;
+        // Keyed by command so a test can look at what was piped into a
+        // particular `tee` — the file contents never appear in argv.
+        $this->ranInput[$command] = (string) $process->input;
+
+        return str_starts_with($command, 'cat ') && str_contains($command, 'config.inc.php')
+            ? Process::result(output: $this->configContents)
+            : Process::result(exitCode: 0);
     });
 
     $this->user = User::factory()->create();
@@ -207,6 +219,51 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
             ->assertStatus(422);
 
         expect(ssoCommands())->toBeEmpty();
+    });
+
+    /*
+     * A site created before this feature has one server entry, on cookie auth.
+     * Dropping sso.php next to it would hand a session to a server that does
+     * not exist, so the config has to come forward with it — otherwise the only
+     * repair is deleting the site and making it again.
+     */
+    it('adds the signon server to a configuration written before this feature', function () {
+        grantDatabasePermission($this->user);
+
+        DatabaseUser::factory()->create(['database_id' => $this->database->id]);
+
+        $this->configContents = <<<'PHP'
+        <?php
+        $cfg['blowfish_secret'] = sodium_hex2bin('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+        $i = 0;
+        $i++;
+        $cfg['Servers'][$i]['auth_type'] = 'cookie';
+        PHP;
+
+        $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")->assertOk();
+
+        $write = 'tee '.$this->pmaApp->rootPath().'/public_html/config.inc.php';
+
+        expect(ssoCommands())->toContain($write)
+            // The existing blowfish_secret is carried across. Generating a new
+            // one would silently sign out everyone already using phpMyAdmin.
+            ->and(test()->ranInput[$write])->toContain(str_repeat('a', 64))
+            ->and(test()->ranInput[$write])->toContain("'signon'");
+    });
+
+    it('leaves a configuration that already has the signon server alone', function () {
+        grantDatabasePermission($this->user);
+
+        DatabaseUser::factory()->create(['database_id' => $this->database->id]);
+
+        $this->configContents = "<?php\n\$cfg['Servers'][\$i]['auth_type'] = 'signon';";
+
+        $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")->assertOk();
+
+        // Rewriting would regenerate blowfish_secret, and a new secret cannot
+        // decrypt the cookies the old one issued — every signed-in user would
+        // be thrown out each time somebody else clicked the button.
+        expect(ssoCommands())->not->toContain('tee '.$this->pmaApp->rootPath().'/public_html/config.inc.php');
     });
 
     it('records who signed in to which database as which account', function () {
