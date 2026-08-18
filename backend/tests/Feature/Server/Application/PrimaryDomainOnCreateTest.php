@@ -72,7 +72,7 @@ it('creates exactly one primary domain', function () {
     expect(ApplicationDomain::where('type', DomainType::Primary->value)->count())->toBe(1);
 });
 
-it('flags a temporary domain so it can never reach a certificate', function () {
+it('flags a temporary domain as what it is, without disqualifying it', function () {
     createSite([
         'domain' => 'blog.203-0-113-9.nip.io',
         'domain_type' => 'temp',
@@ -80,10 +80,13 @@ it('flags a temporary domain so it can never reach a certificate', function () {
 
     $domain = ApplicationDomain::first();
 
-    // nip.io is not on the Public Suffix List, so every certificate issued for
-    // it anywhere counts against one shared weekly limit.
+    // The flag is a fact about the hostname — the panel uses it to know a
+    // wildcard-DNS name resolves by construction and needs no lookup. It is
+    // not a verdict: a name that points here can be certified whatever its
+    // suffix, and refusing on the suffix made a second class of domain the
+    // panel would not protect.
     expect($domain->is_test)->toBeTrue()
-        ->and($domain->certifiable())->toBeFalse();
+        ->and($domain->certifiable())->toBe($domain->dns_verified_at !== null);
 });
 
 it('treats a domain the user owns as certifiable once DNS is verified', function () {

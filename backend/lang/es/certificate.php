@@ -29,7 +29,6 @@ return [
     // thing the user would have to change, or says plainly that nothing can
     // be changed and points at the option that does work.
     'unavailable' => [
-        'test_domain' => 'Los únicos dominios de este sitio son dominios de prueba temporales (:domains). Let\'s Encrypt no puede emitir un certificado para ellos, porque comparten un límite semanal con todos los demás que usan ese servicio. Un certificado autofirmado cifrará este sitio ahora mismo.',
         'dns_unverified' => 'Ningún dominio de este sitio apunta todavía a este servidor. Añade un registro DNS A para uno, espera a que se propague e inténtalo de nuevo.',
         'self_signed_warning' => 'Cifra el tráfico de inmediato y funciona en cualquier dominio, incluidos los de prueba e internos. Los navegadores mostrarán una advertencia, porque nada fuera de este servidor lo respalda.',
     ],

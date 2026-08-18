@@ -29,7 +29,6 @@ return [
     // thing the user would have to change, or says plainly that nothing can
     // be changed and points at the option that does work.
     'unavailable' => [
-        'test_domain' => 'Die einzigen Domains dieser Website sind temporäre Test-Domains (:domains). Let\'s Encrypt kann dafür kein Zertifikat ausstellen, da sie sich ein wöchentliches Limit mit allen anderen Nutzern dieses Dienstes teilen. Ein selbstsigniertes Zertifikat verschlüsselt diese Website sofort.',
         'dns_unverified' => 'Noch keine Domain dieser Website zeigt auf diesen Server. Lege einen DNS-A-Eintrag an, warte auf die Verbreitung und versuche es erneut.',
         'self_signed_warning' => 'Verschlüsselt den Datenverkehr sofort und funktioniert mit jeder Domain, auch mit Test- und internen Domains. Browser zeigen eine Warnung, da niemand außerhalb dieses Servers dafür bürgt.',
     ],

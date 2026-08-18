@@ -62,25 +62,42 @@ it('offers Let\'s Encrypt and recommends it once a domain is verified', function
         ->and($options['self_signed']['recommended'])->toBeFalse();
 });
 
-it('recommends a self-signed certificate for a site that only has a test domain', function () {
+it('offers Let\'s Encrypt for a test domain that points here, like any other', function () {
     $this->application->domains()->create([
         'domain' => 'shop.203.0.113.10.nip.io',
         'type' => DomainType::Primary,
         'is_test' => true,
+        // A wildcard-DNS name encodes the address it resolves to, so
+        // DnsVerifier marks it verified by construction.
+        'dns_verified_at' => now(),
     ]);
 
     $options = certificateOptions();
 
-    expect($options['letsencrypt']['available'])->toBeFalse()
-        // The point of the whole change: the site is not un-securable, it
-        // just cannot have *that* certificate.
+    // The suffix used to disqualify the name outright, which made a second
+    // class of domain the panel would not protect. What decides now is the
+    // same thing that decides for everyone: does it point here.
+    expect($options['letsencrypt']['available'])->toBeTrue()
+        ->and($options['letsencrypt']['recommended'])->toBeTrue()
         ->and($options['self_signed']['available'])->toBeTrue()
-        ->and($options['self_signed']['recommended'])->toBeTrue();
+        ->and($options['self_signed']['recommended'])->toBeFalse();
+});
 
-    // And the refusal names the domain and says what to do instead, rather
-    // than leaving the user to guess which of their domains is the problem.
-    expect($options['letsencrypt']['reason'])
-        ->toContain('shop.203.0.113.10.nip.io')
+it('falls back to self-signed for a test domain that does not point here', function () {
+    $this->application->domains()->create([
+        'domain' => 'shop.203.0.113.10.nip.io',
+        'type' => DomainType::Primary,
+        'is_test' => true,
+        'dns_verified_at' => null,
+    ]);
+
+    $options = certificateOptions();
+
+    // Not because of the suffix — because nothing resolves here yet, which is
+    // the same answer a site with an unpointed registered domain gets.
+    expect($options['letsencrypt']['available'])->toBeFalse()
+        ->and($options['self_signed']['available'])->toBeTrue()
+        ->and($options['self_signed']['recommended'])->toBeTrue()
         ->and($options['self_signed']['reason'])->not->toBeEmpty();
 });
 

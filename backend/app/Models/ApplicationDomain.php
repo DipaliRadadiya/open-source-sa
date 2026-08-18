@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DomainType;
+use App\Services\Server\Applications\DnsVerifier;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -31,20 +32,6 @@ class ApplicationDomain extends Model
         return $this->belongsTo(Application::class);
     }
 
-    /**
-     * Whether this name is ready to be put on a certificate.
-     *
-     * A test domain never is: nip.io is not on the Public Suffix List, so every
-     * Let's Encrypt certificate issued for it anywhere in the world counts
-     * against one shared weekly limit. `install.sh` already carries the same
-     * warning for the panel's own hostname.
-     *
-     * A redirect *is* certifiable, which is not obvious. `http://old` →
-     * `https://new` looks like it needs no certificate of its own, but any
-     * browser that has seen HSTS for `old` refuses the plaintext hop and never
-     * reaches the redirect at all. The old name has to answer on HTTPS to be
-     * able to send anyone anywhere.
-     */
     /**
      * Resolve `{domain}` in a route from either the id or the hostname.
      *
@@ -99,9 +86,27 @@ class ApplicationDomain extends Model
         return false;
     }
 
+    /**
+     * Whether a certificate can be requested for this name.
+     *
+     * One condition, and it is the one that decides whether the ACME challenge
+     * can succeed: does this name resolve to this server. A wildcard-DNS
+     * hostname does — that is what it is for — and {@see DnsVerifier}
+     * marks it verified by construction.
+     *
+     * `is_test` used to disqualify a name here as well, which made a second
+     * class of domain the panel would refuse to protect. It is a fact about the
+     * hostname, not a verdict on it.
+     *
+     * A redirect *is* certifiable, which is not obvious. `http://old` →
+     * `https://new` looks like it needs no certificate of its own, but any
+     * browser that has seen HSTS for `old` refuses the plaintext hop and never
+     * reaches the redirect at all. The old name has to answer on HTTPS to be
+     * able to send anyone anywhere.
+     */
     public function certifiable(): bool
     {
-        return ! $this->is_test && $this->dns_verified_at !== null;
+        return $this->dns_verified_at !== null;
     }
 
     /**

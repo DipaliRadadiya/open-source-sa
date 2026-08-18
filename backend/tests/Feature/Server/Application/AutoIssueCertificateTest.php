@@ -111,19 +111,19 @@ it('leaves no trace in the activity log when it declines', function () {
     $this->assertDatabaseMissing('activity_logs', ['type' => 'application', 'action' => 'certificate_requested']);
 });
 
-it('never spends the shared nip.io limit automatically', function () {
+it('treats a wildcard-DNS hostname like any other name that points here', function () {
     $this->application->domains()->update(['is_test' => true]);
 
     pointDnsHere();
     challengeAnswers();
 
-    // Every certificate issued for nip.io anywhere in the world shares one
-    // weekly limit. Spending it automatically, on every site created on every
-    // install of this panel, would be antisocial.
+    // The suffix used to disqualify a name outright, which made a second class
+    // of domain the panel would not protect. What decides is the dry run —
+    // whether Let's Encrypt could really validate this name — and it answers
+    // the same for every hostname.
     app(AutoIssueCertificate::class)->attempt($this->application->fresh(['domains']));
 
-    expect(Certificate::count())->toBe(0);
-    Http::assertNothingSent();
+    expect(Certificate::count())->toBe(1);
 });
 
 it('does not touch an application that already has a certificate', function () {

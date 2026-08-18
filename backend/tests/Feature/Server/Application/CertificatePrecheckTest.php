@@ -229,7 +229,7 @@ describe('test hostnames', function () {
         $this->application->forceFill(['domain' => 'shop.203.0.113.10.nip.io'])->save();
     });
 
-    it('refuses an ordinary request, because the limit is shared with the internet', function () {
+    it('is treated like any other domain, not refused for its suffix', function () {
         fakeDns($this->serverIp);
         Http::fake(function ($request) {
             $token = basename(parse_url($request->url(), PHP_URL_PATH));
@@ -237,30 +237,12 @@ describe('test hostnames', function () {
             return Http::response($token."\n", 200);
         });
 
+        // The panel used to refuse these outright, which made a second class of
+        // domain it would not protect. The dry run is the only thing that
+        // decides — and a wildcard-DNS name passes it, because it resolves here
+        // by construction.
         $this->actingAs($this->admin)
             ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
-            ->assertStatus(422);
-
-        expect(Certificate::count())->toBe(0);
-    });
-
-    it('issues when the user explicitly forces it', function () {
-        fakeDns($this->serverIp);
-        Http::fake(function ($request) {
-            $token = basename(parse_url($request->url(), PHP_URL_PATH));
-
-            return Http::response($token."\n", 200);
-        });
-
-        // The filter used to run *before* the force check, so on a site whose
-        // only domain was a test one the flag could never do anything: the
-        // request came back "no certifiable domains" and the escape hatch
-        // silently was not one.
-        $this->actingAs($this->admin)
-            ->postJson("/api/applications/{$this->application->id}/certificate", [
-                'type' => 'letsencrypt',
-                'force' => true,
-            ])
             ->assertStatus(202);
 
         Queue::assertPushed(IssueCertificate::class);
@@ -268,25 +250,7 @@ describe('test hostnames', function () {
         expect(Certificate::firstOrFail()->domains)->toContain('shop.203.0.113.10.nip.io');
     });
 
-    it('is never issued automatically by default', function () {
-        fakeDns($this->serverIp);
-        Http::fake(function ($request) {
-            $token = basename(parse_url($request->url(), PHP_URL_PATH));
-
-            return Http::response($token."\n", 200);
-        });
-
-        app(AutoIssueCertificate::class)
-            ->attempt($this->application->fresh(['domains', 'certificate']));
-
-        // Every site created on every install of this panel would otherwise
-        // draw on the same weekly budget.
-        expect(Certificate::count())->toBe(0);
-    });
-
-    it('is issued automatically when the operator opts in', function () {
-        config(['server.certificates.auto_issue_test_domains' => true]);
-
+    it('is issued automatically, like any other domain that points here', function () {
         fakeDns($this->serverIp);
         Http::fake(function ($request) {
             $token = basename(parse_url($request->url(), PHP_URL_PATH));
@@ -298,6 +262,19 @@ describe('test hostnames', function () {
             ->attempt($this->application->fresh(['domains', 'certificate']));
 
         expect(Certificate::count())->toBe(1);
+    });
+
+    it('still refuses when the challenge does not actually answer', function () {
+        fakeDns($this->serverIp);
+        Http::fake(fn () => Http::response('<html>Not found</html>', 200));
+
+        // Removing the suffix rule removed a *policy*, not the check. What
+        // decides is whether Let's Encrypt could really validate the name.
+        $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
+            ->assertStatus(422);
+
+        expect(Certificate::count())->toBe(0);
     });
 });
 

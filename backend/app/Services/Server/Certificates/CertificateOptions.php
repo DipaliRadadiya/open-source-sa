@@ -4,7 +4,6 @@ namespace App\Services\Server\Certificates;
 
 use App\Enums\CertificateType;
 use App\Models\Application;
-use App\Models\ApplicationDomain;
 
 /**
  * Which kinds of certificate this particular site can actually get, and — when
@@ -64,21 +63,15 @@ class CertificateOptions
     }
 
     /**
-     * Why Let's Encrypt is off the table, distinguishing the two cases that
-     * need different things from the user: a name that can never be validated
-     * (nothing to wait for — take the self-signed certificate) from one that
-     * simply has not been pointed here yet (fix DNS and come back).
+     * Why Let's Encrypt is off the table.
+     *
+     * One reason now, because there is one condition: the name has to resolve
+     * to this server. There used to be a second — a wildcard-DNS hostname was
+     * refused outright — but such a name resolves here by construction, so it
+     * is certifiable like any other and there is nothing left to explain.
      */
     private function blocker(Application $application): string
     {
-        $temporary = $application->domains
-            ->filter(fn (ApplicationDomain $domain) => $domain->is_test)
-            ->pluck('domain');
-
-        if ($temporary->isNotEmpty() && $temporary->count() === $application->domains->count()) {
-            return __('certificate.unavailable.test_domain', ['domains' => $temporary->join(', ')]);
-        }
-
         return __('certificate.unavailable.dns_unverified');
     }
 }
