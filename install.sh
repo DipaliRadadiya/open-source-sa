@@ -1593,9 +1593,13 @@ configure_sudoers() {
         /usr/bin/systemd-run
         /usr/sbin/useradd /usr/sbin/userdel /usr/sbin/usermod /usr/sbin/groupadd
         /usr/sbin/chpasswd /usr/bin/gpasswd /usr/bin/getent /usr/bin/id
-        /usr/bin/tee /usr/bin/mkdir /usr/bin/chown /usr/bin/chmod /usr/bin/rm
+        /usr/bin/tee /usr/bin/touch /usr/bin/mkdir /usr/bin/chown /usr/bin/chmod /usr/bin/rm
         /usr/bin/cp /usr/bin/mv /usr/bin/ln /usr/bin/install /usr/bin/truncate
-        /usr/bin/find /usr/bin/tail /usr/bin/cat /usr/bin/test /usr/bin/which
+        /usr/bin/find /usr/bin/tail /usr/bin/cat /usr/bin/test /usr/bin/which /usr/bin/stat
+        # openssl writes self-signed keys into /etc/ssl and reads certificate
+        # expiry out of /etc/letsencrypt/live; crontab -l -u reads another
+        # user's crontab during a server sync. Both are root-only.
+        /usr/bin/openssl /usr/bin/crontab
         # Both paths, deliberately: runuser lives in /usr/sbin on Debian/Ubuntu
         # and in /usr/bin on RHEL-family. sudo matches on the resolved absolute
         # path, so a single wrong entry silently denies every asUser() operation

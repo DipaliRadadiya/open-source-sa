@@ -134,9 +134,17 @@ return [
             'systemctl', 'journalctl', 'systemd-run',
             'useradd', 'userdel', 'usermod', 'groupadd',
             'chpasswd', 'gpasswd', 'getent', 'id',
-            'tee', 'mkdir', 'chown', 'chmod', 'rm',
+            'tee', 'touch', 'mkdir', 'chown', 'chmod', 'rm',
             'cp', 'mv', 'ln', 'install', 'truncate',
-            'find', 'tail', 'cat', 'test', 'which',
+            'find', 'tail', 'cat', 'test', 'which', 'stat',
+            // `openssl req` writes the key and certificate into /etc/ssl, and
+            // `openssl x509 -enddate` reads out of /etc/letsencrypt/live —
+            // both root-only. Without this, self-signed certificates cannot be
+            // generated at all and no expiry can be read off disk.
+            'openssl',
+            // `crontab -l -u <user>` reads somebody else's crontab, which is
+            // the whole point of it during a server sync.
+            'crontab',
             'runuser', 'sh', 'env', 'rsync',
             'nginx', 'apachectl', 'lswsctrl',
             'phpenmod', 'phpdismod', 'update-alternatives',
