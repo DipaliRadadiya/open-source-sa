@@ -70,6 +70,19 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
     },
   });
 
+  // A fresh password each time the dialog opens, filled in rather than left
+  // blank. Set here rather than in `defaultValues` for two reasons: the form is
+  // reset back to those defaults on close, so one generated at mount would be
+  // reused for every user created in this session; and generating during render
+  // is a side effect in a place React does not allow one.
+  useEffect(() => {
+    if (!open) return;
+    form.setValue("password", generatePassword());
+    // form is stable; re-running on anything else would replace a password the
+    // user had already typed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   async function onSubmit(values) {
     const payload = { username: values.username };
     if (values.public_key?.trim()) payload.public_key = values.public_key.trim();
@@ -147,6 +160,54 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
             </FormItem>
           )}
         />
+        {/* On the main form, and filled in already.
+            It used to be folded away with the rest, on the reasoning that a
+            new user has no SSH access and a no-login shell, so a password can
+            do nothing. True on day one — but several later operations need
+            one, and people were creating a user, discovering that, and coming
+            back to set it. A generated value costs nothing to leave alone and
+            removes the second trip.
+            Safe to fill in because this password is recoverable: the backend
+            stores it and the user's own Set password dialog shows it again.
+            (Contrast the site basic-auth one, which is genuinely readable only
+            once and so must never be pre-filled.) Clearing it still works —
+            `password` is optional on the API. */}
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            // Generate is positioned by the label but comes after the input in
+            // the markup, so Tab reaches the field first.
+            <FormItem className="relative">
+              <FormLabel>{t("create.password")}</FormLabel>
+              <FormControl>
+                <PasswordInput
+                  autoComplete="new-password"
+                  placeholder={t("create.passwordPlaceholder")}
+                  {...field}
+                />
+              </FormControl>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="absolute top-0 right-0 h-auto p-0 text-xs"
+                onClick={() =>
+                  form.setValue("password", generatePassword(), {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
+              >
+                <Sparkles className="size-3" />
+                {t("create.generate")}
+              </Button>
+              <p className="text-xs text-muted-foreground">{t("create.passwordHint")}</p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="public_key"
@@ -174,9 +235,10 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
           )}
         />
 
-        {/* Shell, sudo, SSH login and a password can all be set at creation
-            now, but the common case is still "just a username" — so they are
-            folded away rather than turning a two-field dialog into six. */}
+
+        {/* Shell, sudo and SSH login stay folded: the common case is still
+            "just a username", and they would turn a three-field dialog into
+            six. */}
         <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
           <CollapsibleTrigger asChild>
             <Button type="button" variant="ghost" size="sm" className="-ml-2">
@@ -260,41 +322,6 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                 />
               ))}
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  // Generate is positioned by the label but comes after the
-                  // input in the markup, so Tab reaches the field first.
-                  <FormItem className="relative">
-                    <FormLabel>{t("create.password")}</FormLabel>
-                    <FormControl>
-                      <PasswordInput
-                        autoComplete="new-password"
-                        placeholder={t("create.passwordPlaceholder")}
-                        {...field}
-                      />
-                    </FormControl>
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="sm"
-                      className="absolute top-0 right-0 h-auto p-0 text-xs"
-                      onClick={() =>
-                        form.setValue("password", generatePassword(), {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        })
-                      }
-                    >
-                      <Sparkles className="size-3" />
-                      {t("create.generate")}
-                    </Button>
-                    <p className="text-xs text-muted-foreground">{t("create.passwordHint")}</p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
           </CollapsibleContent>
         </Collapsible>

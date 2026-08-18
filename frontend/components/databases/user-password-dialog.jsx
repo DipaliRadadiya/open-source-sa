@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -70,6 +70,16 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
     onOpenChange?.(next);
   }
 
+  // Filled in on open rather than left blank. The dialog already offered a
+  // Generate button and people typed their own anyway — which is where a weak
+  // database password comes from. Fresh each open: one generated at mount would
+  // be handed to every user whose password is changed in this session.
+  useEffect(() => {
+    if (!open) return;
+    form.setValue("password", randomPassword());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const isSubmitting = form.formState.isSubmitting;
 
   return (
@@ -123,34 +133,35 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
               control={form.control}
               name="password"
               render={({ field }) => (
-                <FormItem>
+                // Generate is positioned by the label but comes after the input
+                // in the markup, so Tab reaches the field first. Same shape as
+                // the system-user and basic-auth password fields — it used to
+                // be an outline button beside the input, which made this the
+                // one password field in the panel at half width.
+                <FormItem className="relative">
                   <FormLabel required>{t("newPassword")}</FormLabel>
-                  {/* Creating a database generates a strong password for you;
-                      changing one used to leave you to invent it, which is
-                      where "password123" comes from. */}
-                  <div className="flex items-start gap-2">
-                    <FormControl>
-                      <PasswordInput
-                        autoComplete="new-password"
-                        placeholder={t("passwordPlaceholder")}
-                        {...field}
-                      />
-                    </FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="shrink-0"
-                      onClick={() =>
-                        form.setValue("password", randomPassword(), {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        })
-                      }
-                    >
-                      <Sparkles className="size-4" />
-                      {t("generate")}
-                    </Button>
-                  </div>
+                  <FormControl>
+                    <PasswordInput
+                      autoComplete="new-password"
+                      placeholder={t("passwordPlaceholder")}
+                      {...field}
+                    />
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="absolute top-0 right-0 h-auto p-0 text-xs"
+                    onClick={() =>
+                      form.setValue("password", randomPassword(), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  >
+                    <Sparkles className="size-3" />
+                    {t("generate")}
+                  </Button>
                   <FormMessage />
                 </FormItem>
               )}
