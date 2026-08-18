@@ -329,3 +329,40 @@ it('still fails when du produced no total at all', function () {
 
     expect($this->application->fresh()->directory_size_bytes)->toBe(999);
 });
+
+it('measures only the never-measured sites by default', function () {
+    // The useful default: fill in the gaps. Walking every inode on the server
+    // is a deliberate act, not something a bare command does.
+    Process::fake(fn ($process) => match (true) {
+        in_array('du', $process->command, true) => Process::result(output: "2048\t/home/site"),
+        in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
+        default => Process::result(exitCode: 0),
+    });
+
+    $measured = Application::factory()->create([
+        'system_user_id' => $this->systemUser->id,
+        'directory_size_bytes' => 999,
+        'directory_size_updated_at' => now()->subDay(),
+    ]);
+
+    $this->application->update(['directory_size_bytes' => null, 'directory_size_updated_at' => null]);
+
+    $this->artisan('applications:measure-sizes')->assertExitCode(0);
+
+    expect($this->application->fresh()->directory_size_bytes)->toBe(2048)
+        ->and($measured->fresh()->directory_size_bytes)->toBe(999);
+});
+
+it('keeps going when one site cannot be measured, and says so', function () {
+    // One unreadable checkout must not deny every other site its number —
+    // which is what happened on a real server.
+    Process::fake(fn ($process) => match (true) {
+        in_array('du', $process->command, true) => Process::result(output: '', errorOutput: 'denied', exitCode: 1),
+        in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
+        default => Process::result(exitCode: 0),
+    });
+
+    $this->application->update(['directory_size_bytes' => null, 'directory_size_updated_at' => null]);
+
+    $this->artisan('applications:measure-sizes')->assertExitCode(1);
+});
