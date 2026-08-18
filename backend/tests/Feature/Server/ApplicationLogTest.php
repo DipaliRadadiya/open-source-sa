@@ -250,3 +250,87 @@ describe('a read that fails is not an empty log', function () {
             ->assertJsonPath('log.lines', []);
     });
 });
+
+/**
+ * A `tail` that honours `-n`, which the fake above deliberately does not.
+ *
+ * These tests are about the difference between "that is the whole log" and
+ * "that is the end of the log", so a fake that always returns the whole file
+ * would answer the question before it was asked.
+ */
+function fakeBigLog(int $totalLines): void
+{
+    Process::fake(function ($process) use ($totalLines) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'test') {
+            return Process::result(exitCode: 0);
+        }
+
+        if (($args[0] ?? '') === 'tail') {
+            $asked = (int) ($args[2] ?? 0);
+            $from = max(1, $totalLines - $asked + 1);
+
+            $lines = [];
+
+            for ($i = $from; $i <= $totalLines; $i++) {
+                // One line in the middle mentions the needle, far enough back
+                // that a capped search window cannot reach it.
+                $lines[] = $i === 10 ? "line {$i} NEEDLE" : "line {$i}";
+            }
+
+            return Process::result(output: implode("\n", $lines)."\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
+
+describe('how much of the log you are actually seeing', function () {
+    it('says the log is truncated when there is more above', function () {
+        fakeBigLog(1_000);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(logUrl('/access?lines=200'))->assertOk();
+
+        // `tail -n 200` can never return more than 200 lines, so comparing its
+        // count against 200 answered the same question every time: the last
+        // 200 lines of a million-line log were reported as the whole log.
+        expect($response->json('log.lines'))->toHaveCount(200)
+            ->and($response->json('log.truncated'))->toBeTrue();
+    });
+
+    it('says it is not truncated when the whole log fits', function () {
+        fakeBigLog(50);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(logUrl('/access?lines=200'))->assertOk();
+
+        expect($response->json('log.lines'))->toHaveCount(50)
+            ->and($response->json('log.truncated'))->toBeFalse()
+            ->and($response->json('log.search_window_capped'))->toBeFalse();
+    });
+
+    it('admits when a search could not cover the whole log', function () {
+        fakeBigLog(50_000);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(logUrl('/access?grep=NEEDLE'))->assertOk();
+
+        // The needle is at line 10, far outside the 5,000-line search window.
+        // Without this field the answer is an empty list, which reads as "that
+        // is not in your log" when the truth is "I only looked at the end of
+        // it".
+        expect($response->json('log.lines'))->toBe([])
+            ->and($response->json('log.search_window_capped'))->toBeTrue();
+    });
+
+    it('does not claim a capped window when the search saw everything', function () {
+        fakeBigLog(20);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(logUrl('/access?grep=NEEDLE'))->assertOk();
+
+        expect($response->json('log.search_window_capped'))->toBeFalse();
+    });
+});

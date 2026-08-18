@@ -57,6 +57,9 @@ class ApplicationLogController extends Controller
                     'exists' => false,
                     'lines' => [],
                     'truncated' => false,
+                    // Same shape whether or not there was anything to read, so
+                    // the client never has to check for the field's absence.
+                    'search_window_capped' => false,
                 ],
             ]);
         }

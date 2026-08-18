@@ -2208,22 +2208,25 @@ Which log sources this application has and whether each exists yet.
 ### GET `/applications/{application}/logs/{key}`
 **Permission:** `app_log` (view) | **Throttle:** 120/min
 
-Read a log source. Supports cursor-based tailing.
+Read a log source — the **last** N lines of it.
 
 **Query:** `?lines=200&grep=error` (lines: default 200, max 5000; grep: case-insensitive literal filter)
 
 **Response `200`:**
 ```json
 {"log": {
-  "key": "access", "label": "Access Log", "kind": "access", "exists": true,
+  "key": "access", "label": "Access Log", "kind": "file", "exists": true,
   "lines": ["192.168.1.1 - - [29/Jul/2026:11:00:00 +0000] \"GET / HTTP/1.1\" 200 1234"],
-  "cursor": 1048576, "truncated": false
+  "truncated": true,
+  "search_window_capped": false
 }}
 ```
 
-`exists: false` — file not created yet (e.g. a never-visited site has no access log). `truncated: true` — content was capped at the line limit.
+- **`exists: false`** — the file has not been written yet (a never-visited site has no access log). Not an error, and not the same as a failed read.
+- **`truncated: true`** — there is more log than you are being shown, either because it continues above the window or because more lines matched than `lines` asked for.
+- **`search_window_capped: true`** — only meaningful with `grep`. A search only ever covers the last **5,000** lines, so this says the match may exist earlier in the file and was not looked at. **Surface it.** Without it, an empty result reads as *"this is not in your log"* when the truthful answer is *"I only looked at the end of it"*.
 
-For live tail, poll with `?after=<cursor>` — returns only newly-appended lines.
+There is **no cursor and no `?after=`**. This reference described cursor-based tailing that was never implemented — poll the endpoint and diff client-side if you need a live tail.
 
 ---
 

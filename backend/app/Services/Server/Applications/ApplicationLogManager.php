@@ -55,7 +55,7 @@ class ApplicationLogManager
     /**
      * Read one source: the last N lines, optionally filtered.
      *
-     * @return array{lines: array<int, string>, truncated: bool}|null
+     * @return array{lines: array<int, string>, truncated: bool, search_window_capped: bool}|null
      */
     public function read(Application $application, string $key, int $lines, ?string $filter = null): ?array
     {
@@ -66,15 +66,21 @@ class ApplicationLogManager
         }
 
         $lines = max(1, min($lines, self::MAX_LINES));
+        $filtering = $filter !== null && $filter !== '';
 
         // Read more than asked for when filtering, or a filter over the last
         // 200 lines finds nothing on a busy site and the screen looks broken
         // rather than merely empty.
-        $window = $filter !== null && $filter !== '' ? self::MAX_LINES : $lines;
+        $window = $filtering ? self::MAX_LINES : $lines;
 
+        // One line beyond the window, purely to find out whether there is
+        // anything above it. `tail -n 200` can never return more than 200
+        // lines, so comparing its count against 200 answered the same question
+        // every time — `truncated` was structurally false, and the last 200
+        // lines of a million-line access log were reported as the whole log.
         $raw = $source['kind'] === 'journal'
-            ? $this->readJournal($application, $window)
-            : $this->readFile($application, $source['path'], $window);
+            ? $this->readJournal($application, $window + 1)
+            : $this->readFile($application, $source['path'], $window + 1);
 
         if ($raw === null) {
             return null;
@@ -82,18 +88,39 @@ class ApplicationLogManager
 
         $all = $this->split($raw);
 
-        if ($filter !== null && $filter !== '') {
+        // Whether the source holds more than we looked at. Established before
+        // filtering, because it is a fact about the file rather than about the
+        // search.
+        $hasMore = count($all) > $window;
+
+        if ($hasMore) {
+            array_shift($all);
+        }
+
+        if ($filtering) {
             // Literal, case-insensitive. Not a regex: a user-supplied pattern
             // over a large file is a denial of service waiting to happen, and
             // nobody searching a log wants regex semantics by surprise.
             $all = array_values(array_filter($all, fn (string $line): bool => stripos($line, $filter) !== false));
         }
 
-        $truncated = count($all) > $lines;
+        $trimmed = count($all) > $lines;
 
         return [
-            'lines' => $truncated ? array_slice($all, -$lines) : $all,
-            'truncated' => $truncated,
+            'lines' => $trimmed ? array_slice($all, -$lines) : $all,
+
+            // "There is more log than you are seeing" — either because the
+            // source runs on above the window, or because more lines matched
+            // than were asked for.
+            'truncated' => $hasMore || $trimmed,
+
+            // The distinction that matters when a search comes back empty.
+            // Filtering only ever covers the last MAX_LINES, so a match that
+            // happened earlier is not found — and "no results" then reads as
+            // "this is not in your log" when the truthful answer is "I only
+            // looked at the last 5,000 lines". Two facts, two fields: one
+            // boolean cannot say which of them happened.
+            'search_window_capped' => $filtering && $hasMore,
         ];
     }
 
