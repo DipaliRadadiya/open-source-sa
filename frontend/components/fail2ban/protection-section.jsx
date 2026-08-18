@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { RecommendedSetup } from "@/components/fail2ban/recommended-setup";
 import { JailsCard } from "@/components/fail2ban/jails-card";
 import { BannedCard } from "@/components/fail2ban/banned-card";
@@ -55,9 +56,16 @@ export function ProtectionSection({ jails, settings, banned, yourIp, ignoreIps, 
           card is a box explaining that a thing which cannot have happened has
           not happened. It appears once the server is actually watching — or if
           bans already exist. */}
+      {/* Banning and unbanning both change this list on the server, and the row
+          only appears once the page has re-read fail2ban. The provider is what
+          lets the table dim in the meantime — the same signal every other list
+          in the panel uses while it re-fetches — instead of sitting there
+          looking like the ban did nothing. */}
       {shownJails.some((jail) => jail.enabled) ||
       (banned.length > 0 && Object.keys(asked).length === 0) ? (
-        <BannedCard banned={banned} jails={jails} canManage={canManage} logHref={logHref} />
+        <NavTransitionProvider>
+          <BannedCard banned={banned} jails={jails} canManage={canManage} logHref={logHref} />
+        </NavTransitionProvider>
       ) : null}
     </>
   );

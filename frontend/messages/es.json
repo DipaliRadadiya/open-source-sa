@@ -1219,7 +1219,7 @@
       "you": "tú",
       "removeIp": "Quitar {ip}",
       "save": "Guardar los cambios",
-      "reset": "Descartar",
+      "savingNote": "Esto puede tardar unos segundos: se está recargando Fail2ban.",
       "saved": "Reglas guardadas.",
       "failed": "No hemos podido guardarlo.",
       "ignoreSaved": "Lista guardada.",
@@ -1245,7 +1245,6 @@
     "disabled": {
       "noPermission": "Tu rol no incluye Fail2ban con acceso de gestión. Pide a un administrador que te lo conceda.",
       "noChanges": "Todavía no has cambiado nada.",
-      "saving": "Guardando…",
       "enterIp": "Escribe una dirección primero."
     },
     "recommended": {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormModal } from "@/components/ui/form-modal";
+import { useNavTransition } from "@/components/data-table/nav-transition";
 import {
   Select,
   SelectContent,
@@ -34,7 +35,14 @@ import { apiMessage } from "@/lib/api/error-message";
  */
 export function BanIpDialog({ jails = [], canManage }) {
   const t = useTranslations("fail2ban");
+  // Refreshing through the list's own transition rather than the router
+  // directly: the ban lands on the server long before the page has re-read it,
+  // and this is what makes the list say so instead of standing still. The
+  // fallback keeps the dialog usable outside a provider, same as RefreshButton.
+  const nav = useNavTransition();
   const router = useRouter();
+  const [, startLocal] = useTransition();
+  const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
   const [open, setOpen] = useState(false);
   const [ip, setIp] = useState("");
   const [jail, setJail] = useState(jails[0]?.name ?? "");
@@ -60,7 +68,7 @@ export function BanIpDialog({ jails = [], canManage }) {
       toast.success(t("ban.banned", { ip: ip.trim() }));
       setOpen(false);
       setIp("");
-      router.refresh();
+      refresh();
     } catch (err) {
       // 422 is usually "that address is on the ignore list" — the ban would be
       // dropped at the next reload, so the server's reason is the useful text.

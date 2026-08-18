@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -12,11 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -41,7 +41,11 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
   const [ips, setIps] = useState(settings.ignore_ips ?? []);
   const [draft, setDraft] = useState("");
   const [draftError, setDraftError] = useState(null);
-  const [pending, setPending] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Same shape as the ban rules card: the wait is the write plus the re-read,
+  // and one signal has to cover both or the spinner lies about being finished.
+  const [refreshing, startRefresh] = useTransition();
+  const pending = saving || refreshing;
   // Taking your own address OFF this list is the same mistake the lockout
   // dialog exists to prevent, just approached from the other side.
   const [confirmRemoveSelf, setConfirmRemoveSelf] = useState(false);
@@ -77,7 +81,7 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
   }
 
   async function save() {
-    setPending(true);
+    setSaving(true);
     try {
       await updateFail2ban({
         bantime: settings.bantime,
@@ -86,16 +90,22 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
         ignore_ips: ips,
       });
       toast.success(t("settings.ignoreSaved"));
-      router.refresh();
+      startRefresh(() => router.refresh());
     } catch (error) {
       const data = error.response?.data;
       toast.error(
         [apiMessage(error, t("settings.failed")), data?.reference].filter(Boolean).join(" · "),
       );
     } finally {
-      setPending(false);
+      setSaving(false);
     }
   }
+
+  const saveReason = !canManage
+    ? t("disabled.noPermission")
+    : !dirty
+      ? t("disabled.noChanges")
+      : null;
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
@@ -119,7 +129,7 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
                 <Button
                   size="sm"
                   variant="secondary"
-                  disabled={!canManage}
+                  disabled={!canManage || pending}
                   onClick={() => add(yourIp)}
                 >
                   <UserCheck className="size-4" />
@@ -148,8 +158,11 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
                       <button
                         type="button"
                         onClick={() => remove(ip)}
+                        // A removal made mid-save is silently undone by the
+                        // refresh that follows it.
+                        disabled={pending}
                         aria-label={t("settings.removeIp", { ip })}
-                        className="rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        className="rounded p-1 text-muted-foreground hover:text-destructive disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                       >
                         <X className="size-3.5" />
                       </button>
@@ -174,7 +187,7 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
                 }
               }}
               placeholder={t("settings.ipPlaceholder")}
-              disabled={!canManage}
+              disabled={!canManage || pending}
               className="font-mono"
               autoComplete="off"
               spellCheck={false}
@@ -195,7 +208,7 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
                 variant="outline"
                 size="icon"
                 className="size-9 shrink-0"
-                disabled={!canManage || !draft.trim()}
+                disabled={!canManage || !draft.trim() || pending}
                 onClick={() => add(draft)}
                 aria-label={t("settings.addIp")}
               >
@@ -211,28 +224,17 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
           ) : null}
         </CardContent>
   
-        <CardFooter className="mt-auto justify-end gap-2">
-          {dirty ? (
-            <Button variant="ghost" disabled={pending} onClick={() => setIps(saved)}>
-              {t("settings.reset")}
-            </Button>
-          ) : null}
-          <ReasonTooltip
-            reason={
-              !canManage
-                ? t("disabled.noPermission")
-                : pending
-                  ? t("disabled.saving")
-                  : !dirty
-                    ? t("disabled.noChanges")
-                    : null
-            }
-          >
-            <Button disabled={!canManage || !dirty || pending} onClick={save}>
-              {t("settings.save")}
-            </Button>
-          </ReasonTooltip>
-        </CardFooter>
+        <div className="mt-auto">
+          <CardSaveFooter
+            saving={pending}
+            dirty={dirty}
+            saveReason={saveReason}
+            onSave={save}
+            onDiscard={() => setIps(saved)}
+            saveLabel={t("settings.save")}
+            savingNote={t("settings.savingNote")}
+          />
+        </div>
   
         {/* The mirror image of the lockout dialog: that one stops you switching
             on a jail that could ban you, this one stops you removing the reason

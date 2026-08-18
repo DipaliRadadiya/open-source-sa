@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
 import { ShieldOff, Ban, TriangleAlert, ScrollText } from "lucide-react";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/card";
 import { BanIpDialog } from "@/components/fail2ban/ban-ip-dialog";
 import { BannedCards } from "@/components/fail2ban/banned-cards";
+import { useNavTransition } from "@/components/data-table/nav-transition";
 import { apiMessage } from "@/lib/api/error-message";
 
 // 10, not 25: on a phone each ban is a card, and 25 of them is a wall of
@@ -125,7 +127,13 @@ function ActionsCell({ row, table }) {
 
 export function BannedCard({ banned, jails, canManage, logHref }) {
   const t = useTranslations("fail2ban");
+  // Every write on this card ends in a re-read, and the row does not move until
+  // that lands. One shared transition means the table dims for all of them.
+  const nav = useNavTransition();
   const router = useRouter();
+  const [localPending, startLocal] = useTransition();
+  const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
+  const pending = nav ? nav.isPending : localPending;
   const [unbanning, setUnbanning] = useState(null);
   const [unbanConfirm, setUnbanConfirm] = useState(null);
   const [confirmAll, setConfirmAll] = useState(false);
@@ -156,13 +164,13 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
     try {
       await unbanIp(ban.ip, ban.jail);
       toast.success(t("banned.unbanned", { ip: ban.ip }));
-      router.refresh();
+      refresh();
     } catch (error) {
       // 404 = not banned anywhere. Not a success: the list is out of date, so
       // reload it rather than claiming we released something.
       if (error.response?.status === 404) {
         toast.info(t("banned.alreadyGone"));
-        router.refresh();
+        refresh();
         return;
       }
       const data = error.response?.data;
@@ -179,12 +187,12 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
       const { data } = await unbanAll();
       toast.success(t("banned.unbannedAll", { count: data?.unbanned?.ips?.length ?? 0 }));
       setConfirmAll(false);
-      router.refresh();
+      refresh();
     } catch (error) {
       if (error.response?.status === 404) {
         toast.info(t("banned.noneToClear"));
         setConfirmAll(false);
-        router.refresh();
+        refresh();
         return;
       }
       const data = error.response?.data;
@@ -291,7 +299,10 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
             {/* Cards on a phone, table from lg. Five columns and a full
                 timestamp cannot fit 390px, and the horizontal scroll hides
                 Unban off the right edge. */}
-            <div className="lg:hidden">
+            {/* The desktop table dims itself from the same signal; the phone
+                cards are not a DataTable, so they say it here rather than
+                sitting perfectly still while the list is being re-read. */}
+            <div className={cn("lg:hidden", pending && "pointer-events-none opacity-60")}>
               <BannedCards
                 data={visible}
                 canManage={canManage}

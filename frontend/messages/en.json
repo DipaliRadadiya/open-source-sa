@@ -1219,7 +1219,7 @@
       "you": "you",
       "removeIp": "Remove {ip}",
       "save": "Save changes",
-      "reset": "Discard",
+      "savingNote": "This can take a few seconds — Fail2ban is being reloaded.",
       "saved": "Ban rules saved.",
       "failed": "We could not save that.",
       "ignoreSaved": "List saved.",
@@ -1245,7 +1245,6 @@
     "disabled": {
       "noPermission": "Your role does not include Fail2ban with Manage access. Ask an administrator to grant it.",
       "noChanges": "Nothing has changed yet.",
-      "saving": "Saving…",
       "enterIp": "Type an address first."
     },
     "recommended": {

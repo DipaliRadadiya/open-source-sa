@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -8,15 +8,13 @@ import { toast } from "sonner";
 import { updateFail2ban } from "@/lib/api/fail2ban";
 import { PERMANENT_BANTIME } from "@/lib/schemas/fail2ban";
 import { humanDuration } from "@/lib/fail2ban/duration";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -50,7 +48,13 @@ export function BanRulesCard({ settings, presets, canManage }) {
   const [bantime, setBantime] = useState(String(settings.bantime));
   const [findtime, setFindtime] = useState(String(settings.findtime));
   const [maxretry, setMaxretry] = useState(String(settings.maxretry));
-  const [pending, setPending] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // The write is only half the wait: the page still has to re-read fail2ban
+  // before the card shows what was saved. A transition keeps one pending signal
+  // across both, so the spinner stops when the screen is actually right rather
+  // than when the request happens to return.
+  const [refreshing, startRefresh] = useTransition();
+  const pending = saving || refreshing;
 
   const isPermanent = Number(bantime) === PERMANENT_BANTIME;
 
@@ -63,7 +67,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
     String(settings.maxretry) !== maxretry;
 
   async function save() {
-    setPending(true);
+    setSaving(true);
     try {
       await updateFail2ban({
         bantime: Number(bantime),
@@ -72,16 +76,28 @@ export function BanRulesCard({ settings, presets, canManage }) {
         ignore_ips: settings.ignore_ips ?? [],
       });
       toast.success(t("settings.saved"));
-      router.refresh();
+      startRefresh(() => router.refresh());
     } catch (error) {
       const data = error.response?.data;
       toast.error(
         [apiMessage(error, t("settings.failed")), data?.reference].filter(Boolean).join(" · "),
       );
     } finally {
-      setPending(false);
+      setSaving(false);
     }
   }
+
+  function discard() {
+    setBantime(String(settings.bantime));
+    setFindtime(String(settings.findtime));
+    setMaxretry(String(settings.maxretry));
+  }
+
+  const saveReason = !canManage
+    ? t("disabled.noPermission")
+    : !dirty
+      ? t("disabled.noChanges")
+      : null;
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
@@ -119,7 +135,9 @@ export function BanRulesCard({ settings, presets, canManage }) {
               min={2}
               value={maxretry}
               onChange={(e) => setMaxretry(e.target.value)}
-              disabled={!canManage}
+              // Locked mid-save: the refresh that follows would overwrite an
+              // edit made while the request was in the air, without saying so.
+              disabled={!canManage || pending}
             />
             <p className="text-xs text-muted-foreground">{t("settings.maxretryHint")}</p>
           </div>
@@ -133,7 +151,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
               min={30}
               value={findtime}
               onChange={(e) => setFindtime(e.target.value)}
-              disabled={!canManage}
+              disabled={!canManage || pending}
             />
             {/* The field must stay in seconds — that is what the file stores —
                 so the words go beside it rather than replacing it. */}
@@ -145,7 +163,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
   
           <div className="space-y-2">
             <Label htmlFor="f2b-bantime">{t("settings.bantime")}</Label>
-            <Select value={bantime} onValueChange={setBantime} disabled={!canManage}>
+            <Select value={bantime} onValueChange={setBantime} disabled={!canManage || pending}>
               <SelectTrigger id="f2b-bantime" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -166,37 +184,22 @@ export function BanRulesCard({ settings, presets, canManage }) {
           </div>
         </CardContent>
   
-        <CardFooter className="mt-auto justify-end gap-2">
-          {dirty ? (
-            <Button
-              variant="ghost"
-              disabled={pending}
-              onClick={() => {
-                setBantime(String(settings.bantime));
-                setFindtime(String(settings.findtime));
-                setMaxretry(String(settings.maxretry));
-              }}
-            >
-              {t("settings.reset")}
-            </Button>
-          ) : null}
-          {/* Three different reasons this can be off, and the button says which. */}
-          <ReasonTooltip
-            reason={
-              !canManage
-                ? t("disabled.noPermission")
-                : pending
-                  ? t("disabled.saving")
-                  : !dirty
-                    ? t("disabled.noChanges")
-                    : null
-            }
-          >
-            <Button disabled={!canManage || !dirty || pending} onClick={save}>
-              {t("settings.save")}
-            </Button>
-          </ReasonTooltip>
-        </CardFooter>
+        {/* The shared footer, like every other settings card in the panel. This
+            one used to hand-roll its own, which is how it ended up the only
+            save on the page with no spinner and no "Saving…" — a fail2ban
+            reload takes seconds, so a button that only greys out reads as a
+            hang. */}
+        <div className="mt-auto">
+          <CardSaveFooter
+            saving={pending}
+            dirty={dirty}
+            saveReason={saveReason}
+            onSave={save}
+            onDiscard={discard}
+            saveLabel={t("settings.save")}
+            savingNote={t("settings.savingNote")}
+          />
+        </div>
       </Card>
     </DisabledReasonProvider>
   );
