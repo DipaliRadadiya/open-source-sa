@@ -128,7 +128,8 @@
       "confirmLabel": "Type {username} to confirm",
       "cancel": "Cancel",
       "confirm": "Delete user",
-      "deleting": "Deleting…"
+      "deleting": "Deleting…",
+      "copyUsername": "Copy username"
     },
     "access": {
       "title": "Access",
@@ -2111,7 +2112,8 @@
       "forName": "Delete {name}",
       "cardTitle": "Delete this database",
       "cardDescription": "Removes the database, everything in it, and its users.",
-      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it."
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
+      "copyName": "Copy database name"
     },
     "adopt": {
       "title": "{count, plural, one {# database on this server isn't managed here} other {# databases on this server aren't managed here}}",
@@ -4048,7 +4050,8 @@
         "pushing": "Pushing…",
         "done": "Staging pushed to {domain}.",
         "failed": "The push did not finish.",
-        "copyAge": "Copy made {age}"
+        "copyAge": "Copy made {age}",
+        "copyDomain": "Copy domain"
       },
       "isCopy": {
         "title": "This site is a staging copy",

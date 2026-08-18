@@ -615,6 +615,9 @@ export function CreateApplicationForm({
   const [branches, setBranches] = useState([]);
   const [repositoriesState, setRepositoriesState] = useState("idle");
   const [branchesState, setBranchesState] = useState("idle");
+  // Which site type the declared defaults were last applied for, so a change of
+  // type can be told apart from the first render.
+  const lastType = useRef(null);
   // Bumped to re-ask the provider for the same account's repositories. A token
   // added in the other tab does not change `git_account_id`, so without this the
   // fetch effect has no reason to run again and the picker stays stale.
@@ -916,6 +919,21 @@ export function CreateApplicationForm({
     // a required field that has a default isn't shown empty with a "Defaults to
     // …" hint the user then has to retype. Passwords and the runtime selects are
     // handled elsewhere; common fields are separate inputs.
+    //
+    // On a TYPE CHANGE the defaults are re-applied, which they were not before:
+    // the loop only filled empty fields, so picking Craft (web_root "/web") and
+    // then switching to a type that serves from "/public" kept "/web" and
+    // submitted it. The site provisioned pointing at a directory that does not
+    // exist and 404'd while looking correctly configured. Every field the two
+    // types share had the same problem; web_root is only the one that fails
+    // silently rather than loudly.
+    //
+    // A value the user typed is never overwritten — `shouldDirty: false` below
+    // is what makes that distinction possible, so a prefilled value stays clean
+    // and an edited one does not.
+    const typeChanged = lastType.current !== null && lastType.current !== selected.name;
+    lastType.current = selected.name;
+
     for (const field of selected.fields ?? []) {
       if (
         COMMON_FIELD_NAMES.has(field.name) ||
@@ -923,10 +941,14 @@ export function CreateApplicationForm({
         field.source === "php_versions" ||
         field.source === "node_versions" ||
         field.default == null ||
-        field.default === "" ||
-        form.getValues(field.name)
+        field.default === ""
       )
         continue;
+      const filled = Boolean(form.getValues(field.name));
+      const edited = form.getFieldState(field.name).isDirty;
+      // Fill when empty; re-default when the type changed and this value came
+      // from the old type rather than from the person filling the form.
+      if (filled && !(typeChanged && !edited)) continue;
       // Keep the declared type. Stringifying a toggle's default turned `false`
       // into `"false"` — a value the switch reads as ON and the API rejects.
       const value =

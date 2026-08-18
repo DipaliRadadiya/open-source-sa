@@ -613,7 +613,8 @@
       "confirmLabel": "Escribe {username} para confirmar",
       "cancel": "Cancelar",
       "confirm": "Eliminar usuario",
-      "deleting": "Eliminando…"
+      "deleting": "Eliminando…",
+      "copyUsername": "Copiar nombre de usuario"
     },
     "access": {
       "title": "Acceso",
@@ -2111,7 +2112,8 @@
       "forName": "Eliminar {name}",
       "cardTitle": "Eliminar esta base de datos",
       "cardDescription": "Elimina la base de datos, todo su contenido y sus usuarios.",
-      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda."
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "copyName": "Copiar nombre de la base de datos"
     },
     "adopt": {
       "title": "{count, plural, one {# base de datos de este servidor no se gestiona aquí} other {# bases de datos de este servidor no se gestionan aquí}}",
@@ -4048,7 +4050,8 @@
         "pushing": "Publicando…",
         "done": "Pruebas publicadas en {domain}.",
         "failed": "La publicación no terminó.",
-        "copyAge": "Copia hecha {age}"
+        "copyAge": "Copia hecha {age}",
+        "copyDomain": "Copiar dominio"
       },
       "isCopy": {
         "title": "Este sitio es una copia de pruebas",
