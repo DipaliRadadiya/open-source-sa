@@ -531,6 +531,20 @@ One entry per installable site type. Each carries its own field schema — the f
 
 Field `type` values: `text`, `password`, `select`, `domain`, `email`, `textarea`, `toggle`, `repository`.
 
+**`options` comes in two shapes, and both are already handled by rendering `label` and submitting `value`.** A plain array of strings (`["8.4", "8.3"]`) means value and label are the same. Objects (`{"value": …, "label": …}`) mean they differ — always render `label`.
+
+That distinction now matters for the locale and country pickers. They used to label every option with its own code, so choosing a site language meant picking between `he_IL` and `hi_IN`. They now carry real names, **in the viewer's locale**, built at read time:
+
+```json
+"options": [
+  {"value": "af", "label": "Afrikaans"},
+  {"value": "sq", "label": "Albanian"},
+  {"value": "ar", "label": "Arabic"}
+]
+```
+
+`value` is unchanged and still the exact code the installer takes — nothing about the create request changes. Two consequences for the UI: the lists are **sorted by label in the viewer's language** (so `Åland Islands` sorts before `Albania`, which byte order gets wrong), and they are no longer grouped with the common defaults first — rely on the field's `default` for pre-selection rather than on position.
+
 `available: false` → card is greyed. `installable_runtime` names the missing runtime that would fix it.
 
 ---
@@ -591,7 +605,7 @@ Create + queue provisioning. Poll `GET /applications/{id}` until `status` leaves
 
 `deploy_script` wins over `build_command` when both are given, exactly as on any later deploy. Windows line endings are normalised on save.
 
-**`domain_type` is `custom` or `temp`, and it is optional — but send it.** It records whether the user brought their own name or took the panel's offered `<name>.<ip>.nip.io` hostname. Omitted, the domain is treated as the user's own. It matters for one thing: a `temp` domain is never put on a Let's Encrypt certificate, because nip.io is not on the Public Suffix List and every certificate issued for it worldwide draws on one shared weekly quota. If your create form offers a "use a temporary domain for now" option, it must send `"domain_type": "temp"` — otherwise the SSL screen will offer to issue a certificate that would burn a quota the panel does not own. (A wildcard-DNS suffix is caught server-side regardless of the label, so this is a correctness aid, not the only defence.)
+**`domain_type` is `custom` or `temp`, and it is optional — but send it.** It records whether the user brought their own name or took the panel's offered `<name>.<ip>.nip.io` hostname. Omitted, the domain is treated as the user's own. It no longer decides whether the site can have a Let's Encrypt certificate — that is now one rule for every hostname, "does the name resolve to this server" — but it is still worth sending: it is how the panel knows a wildcard-DNS name resolves by construction and needs no lookup, and it is surfaced as `is_test` on the domain. A wildcard-DNS suffix is detected server-side regardless of the label, so an omitted or wrong value is corrected rather than trusted.
 
 Never send the raw field list — `GET /site-types` publishes the fields for each type, including this one, with localized labels and help text.
 
@@ -844,7 +858,9 @@ Check if a port is available before creating an app.
 
 `behind_proxy` is broken out on its own because it is the single most common support question this screen produces. Cloudflare's proxy answers on its own addresses, so `dns_resolved_ip` will not be this server and HTTP validation never arrives — "DNS looks fine but SSL fails". Show the cause; don't let the user hunt for it.
 
-`certifiable` is whether this name can go on a certificate at all. A test domain never can — `nip.io` is not on the Public Suffix List, so every certificate issued for it anywhere shares one weekly limit.
+`certifiable` is whether this name can go on a certificate, and it means exactly one thing: the name resolves to this server (`dns_verified_at` is set). The suffix is not part of the question — a wildcard-DNS name resolves here by construction and is certifiable like any other.
+
+`is_test` still tells you what kind of hostname it is, and the panel uses it to skip a DNS lookup that cannot fail. It is a fact about the name, not a verdict on it.
 
 ---
 
@@ -894,6 +910,7 @@ Promote this domain to primary (renames vhost + log files).
   "status": "active",
   "domains": ["shop.example.com", "www.example.com"],
   "missing_domains": [],
+  "stale_domains": [],
   "force_https": true,
   "auto_renew": true, "renewable": true,
   "issued_at": "25-07-2026 14:31:00", "issued_at_human": "2 weeks ago",
@@ -909,6 +926,10 @@ Promote this domain to primary (renames vhost + log files).
 There is **no `issuer` field** — use `type` / `type_title`.
 
 **`domains` is what the certificate covers; `missing_domains` is what the site answers to but the certificate does not.** They diverge the moment someone adds a domain, and that divergence is exactly the failure this panel exists to catch: the browser reports it, the server logs nothing. A non-empty `missing_domains` should prompt a re-issue, not a warning buried in a tooltip.
+
+**`stale_domains` is the opposite direction, and it is the more urgent of the two.** It lists names on the certificate that the site no longer has — usually because someone removed an alias. It matters because **certbot re-validates every name in a certificate and fails the whole renewal if any one of them cannot be validated**: a single removed hostname silently stops the certificate renewing for the domains that are still fine, and the first symptom is a browser warning up to ninety days later.
+
+So the two read differently in the UI. `missing_domains` is "this name has no HTTPS" — visible immediately, fix when convenient. **`stale_domains` is "this certificate has stopped renewing"** — invisible until it is fatal, and the fix is a re-issue. Non-empty on a `letsencrypt` certificate deserves a warning, not a hint. Always empty for `self_signed` and `custom`, which nothing renews.
 
 **`expires_at` is the certificate on disk. `served_expires_at` is the one the web server is actually handing to visitors.** They agree on a healthy site. When they do not, a renewal landed on disk and never reached the running process — so the countdown above looks healthy while every visitor gets a browser warning. It is the one certificate failure with no other symptom in the panel, because everything else reads the file.
 
@@ -929,7 +950,7 @@ The same response carries `available_types` — what this site can actually be g
 ```json
 {"available_types": [
   {"type": "letsencrypt", "label": "Let's Encrypt", "available": false, "recommended": false, "renewable": true,
-   "reason": "This site's only domains are temporary test domains (shop.203.0.113.10.nip.io). Let's Encrypt cannot issue a certificate for them…"},
+   "reason": "None of this site's domains point at this server yet. Add a DNS A record for one, wait for it to propagate, then try again."},
   {"type": "self_signed", "label": "Self-signed", "available": true, "recommended": true, "renewable": false,
    "reason": "Encrypts traffic immediately and works on any domain, including test and internal ones. Browsers will show a warning…"},
   {"type": "custom", "label": "Uploaded", "available": true, "recommended": false, "renewable": false, "reason": null}
@@ -938,7 +959,8 @@ The same response carries `available_types` — what this site can actually be g
 
 - Drive the SSL screen off this array. Disable a type when `available` is `false` and show its `reason`; pre-select the one with `recommended`.
 - `reason` on an **available** type is informational (the self-signed browser warning), not a blocker — check `available`, not `reason`.
-- A test or internal domain is **not** un-securable: `self_signed` works on any name and is recommended there. Let's Encrypt stays refused for temporary domains on purpose — `.test` cannot be validated at all, and `nip.io` shares one weekly issuance limit with everyone using it.
+- **There is one condition, and it is the same for every hostname: does the name resolve to this server.** A wildcard-DNS name (`*.nip.io`, `*.sslip.io`) does — that is what it is for — so it is offered Let's Encrypt like anything else. The panel used to refuse those outright; it no longer does. Worth knowing: those suffixes are not on the Public Suffix List, so their weekly issuance limit is shared with everyone using the service, and a request there can fail with "too many certificates already issued" for reasons nothing on this server caused.
+- A name that cannot be validated is still refused, with a reason — the check is a real ACME dry run, not a guess from the suffix. `self_signed` remains available on any name, including `.test` and internal hostnames Let's Encrypt could never reach.
 - All `reason` strings are localised.
 
 ---
@@ -2423,7 +2445,30 @@ Configure or update backup settings.
 
 `storage_destination_id`, `type`, `frequency`, `retention_count` and `enabled` are all **required** — this is a full save, not a patch. `retention_count` is 1–365. `schedule_time` must be `H:i`. The two exclude arrays are optional, max 100 entries each.
 
+**Lowering `retention_count` deletes backups immediately**, archives included, down to the new number. It used to take effect only at the end of the next run, so the setting saved and nothing happened. Raising it deletes nothing, so saving this screen can never remove more than the user just asked to keep. Verified backups only, and never a safety copy.
+
 **Response `200`:** `{"backup_target": {...}}`
+
+---
+
+### DELETE `/applications/{application}/backup-target`
+**Permission:** `backup` (manage) | **Throttle:** 12/min
+
+Stop backing this application up.
+
+**Refuses while backups exist**, naming how many, unless the caller confirms they go too:
+
+```json
+{"delete_backups": true}
+```
+
+Without it: `422` — *"This application still has 7 backup(s). Confirm that they should be deleted too, or delete them first."* The schedule is cheap to retype; the archives are somebody's only copy, so they are never removed as a side effect.
+
+With it, every backup is deleted through the same path as the single delete below — archive first, then the row — so an archive that cannot be removed stops the whole operation rather than stranding the rest.
+
+`422` while a backup is running. **Response `204`.**
+
+Note the permission: `backup` (manage), not `app_backup`. Setting a schedule is a per-site decision; this can take every archive with it.
 
 ---
 
@@ -2515,6 +2560,24 @@ Re-run a failed backup with the same configuration.
 **Response `202`:** `{"backup_target": {"id": 1, …}}`
 
 `422` if the backup did not fail or if a backup is already in progress.
+
+---
+
+### DELETE `/backups/{backup}`
+**Permission:** `backup` (manage) | **Throttle:** 12/min
+
+Delete one backup — **the archive on the storage destination as well as the panel's record of it.**
+
+The order is archive first, then the row, and it matters: deleting the row first would leave an object in the bucket that nothing in the panel knows about — unfindable, undeletable, and billed every month until somebody goes looking.
+
+- **`422` while the backup is still running.** The uploader is writing to the very key this would delete.
+- **`422` if the archive cannot be removed**, and the record is kept. This is deliberately stricter than automatic retention, which logs and moves on: somebody pressed a button and is owed a straight answer about whether it happened.
+- **`204` when the archive was already gone.** A bucket emptied by hand must not leave a row that can never be removed.
+- A safety backup (`is_safety: true`) *can* be deleted — it is the user's data and this is explicit — but the activity entry records that it was one. Automatic retention still never touches them.
+
+**Response `204`.**
+
+Same permission tier as restore and download rather than the per-site `app_backup`: whoever can configure a schedule is not automatically trusted to destroy what it produced.
 
 ---
 
@@ -2626,7 +2689,7 @@ Capability list for all three engines.
   "install_status": null, "install_reason": null, "install_message": null
 }, {
   "engine": "mongodb", "driver": "mongodb", "running": false, "version": null,
-  "installed": false, "installable": false,
+  "installed": false, "installable": true,
   "install_status": null, "install_reason": null, "install_message": null
 }]}
 ```
@@ -2638,7 +2701,9 @@ Capability list for all three engines.
 ### POST `/databases/engines/{engine}`
 **Permission:** `database` (manage)
 
-Install MySQL or MariaDB. MongoDB is not installable via the panel.
+Install a database engine. All three are installable now — MongoDB was the last one that was not, because it is not in Ubuntu's archive and needed its own apt repository.
+
+Do not hardcode which engines are installable: read `installable` from `GET /databases/engines`. It is driven by config, so an engine can be *operable* (the panel manages databases on one that already exists) before it is *installable*, and a `false` there means the button must not be offered.
 
 **Response `202`:** `{"queued": true}` — poll `GET /databases/engines`.
 
