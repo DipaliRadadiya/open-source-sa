@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Activity, ChevronDown, ChevronUp, Clock, Loader2, Square, Timer } from "lucide-react";
+import { Activity, ChevronDown, ChevronUp, Clock, Square, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getProcesses, killProcess } from "@/lib/api/databases";
 import { dbProcessesResponseSchema } from "@/lib/schemas/database";
@@ -408,16 +408,7 @@ export function ProcessList({ engine, processes: initial = [], canManage }) {
         title={t("killTitle")}
         description={t("killDescription")}
         cancelLabel={t("cancel")}
-        confirmLabel={
-          pending ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              {t("killing")}
-            </>
-          ) : (
-            t("stopQuery")
-          )
-        }
+        confirmLabel={pending ? t("killing") : t("stopQuery")}
         pending={pending}
         onConfirm={kill}
       />

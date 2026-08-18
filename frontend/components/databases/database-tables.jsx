@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations, useFormatter } from "next-intl";
-import { Loader2, Table2, TriangleAlert, Wrench } from "lucide-react";
+import { Table2, TriangleAlert, Wrench } from "lucide-react";
 import { optimizeDatabase, repairDatabase } from "@/lib/api/databases";
 import { apiMessage } from "@/lib/api/error-message";
 import { formatBytes } from "@/lib/format/bytes";
@@ -171,14 +171,9 @@ export function DatabaseTables({ database, tables = [], canManage }) {
         )}
         cancelLabel={t("cancel")}
         confirmLabel={
-          running ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              {t("working")}
-            </>
-          ) : (
-            t(pending === "repair" ? "repair" : "optimize")
-          )
+          // No spinner here: ConfirmDialog renders one from `pending`, and a
+          // second copy beside it read as two things happening at once.
+          running ? t("working") : t(pending === "repair" ? "repair" : "optimize")
         }
         pending={running}
         onConfirm={run}

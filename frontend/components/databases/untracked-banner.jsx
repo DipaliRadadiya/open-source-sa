@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, PackageSearch } from "lucide-react";
+import { PackageSearch } from "lucide-react";
 import { adoptDatabases } from "@/lib/api/databases";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -105,16 +105,7 @@ export function UntrackedBanner({ untracked = [], canManage }) {
         title={t("adopt.confirmTitle")}
         description={t("adopt.confirmDescription")}
         cancelLabel={t("cancel")}
-        confirmLabel={
-          pending ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              {t("adopt.adopting")}
-            </>
-          ) : (
-            t("adopt.submit")
-          )
-        }
+        confirmLabel={pending ? t("adopt.adopting") : t("adopt.submit")}
         confirmDisabled={chosen.length === 0}
         pending={pending}
         onConfirm={onConfirm}
