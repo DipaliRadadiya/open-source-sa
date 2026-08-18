@@ -6,6 +6,7 @@ use App\Jobs\MeasureApplicationSize;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\FileBrowser;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
@@ -175,4 +176,26 @@ describe('keeping the size current by itself', function () {
         // Better a number with an honest date than no number at all.
         expect($this->application->fresh()->directory_size_bytes)->toBe(777);
     });
+});
+
+it('measures a site once it has been provisioned', function () {
+    // Only a git deploy and the file browser ever wrote a size, so a one-click
+    // site nobody had deployed or browsed was never counted — it read "Not
+    // measured" in the sites list for as long as it existed. Queued rather
+    // than inline: `du` over a fresh WordPress is forty thousand inodes and
+    // does not belong inside provisioning.
+    Queue::fake();
+    Process::fake();
+
+    $application = Application::factory()->create([
+        'system_user_id' => $this->systemUser->id,
+        'status' => 'pending',
+    ]);
+
+    app(ApplicationProvisioner::class)->provision($application, skipInstaller: true);
+
+    Queue::assertPushed(
+        MeasureApplicationSize::class,
+        fn (MeasureApplicationSize $job): bool => $job->applicationId === $application->id,
+    );
 });

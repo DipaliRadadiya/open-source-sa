@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Actions\Server\Application\AutoIssueCertificate;
 use App\Exceptions\Server\Application\ApplicationAvailabilityException;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Jobs\MeasureApplicationSize;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Services\Server\Php\PoolManager;
@@ -231,6 +232,17 @@ class ApplicationProvisioner
         // domain is most of the time — writing a failed certificate there
         // would make every new site look broken on its first screen.
         $this->autoCertificate->attempt($application->fresh(['domains', 'certificate']));
+
+        // Count what was just installed. Nothing else will: a size is written
+        // by a git deploy and by the file browser, so a one-click site nobody
+        // has deployed or browsed had never been measured at all and read as
+        // "Not measured" in the sites list for as long as it existed —
+        // Nextcloud's several hundred MB included. Queued and debounced by the
+        // job itself, so a `du` over a fresh WordPress does not sit inside
+        // provisioning, and it cannot fail the site: {@see MeasureApplicationSize}
+        // logs and gives up rather than throwing.
+        MeasureApplicationSize::dispatch($application->id)
+            ->delay(now()->addSeconds(MeasureApplicationSize::DEBOUNCE_SECONDS));
 
         return $this->progress->steps();
     }
