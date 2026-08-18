@@ -1,7 +1,9 @@
 <?php
 
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Psr\Log\LoggerInterface;
 
 /*
  * php-fpm runs as the unprivileged panel account, so anything touching the
@@ -138,6 +140,25 @@ it('logs the command as it was actually executed', function () {
 
     expect($result->ok)->toBeTrue();
 })->skip(fn () => ! function_exists('posix_geteuid') || posix_geteuid() === 0, 'runs as root — nothing is escalated');
+
+it('redacts secret command options from the server operations log', function () {
+    $logger = Mockery::spy(LoggerInterface::class);
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+    Process::fake(['*' => Process::result(exitCode: 0)]);
+
+    // PrestaShop and Statamic accept these only on argv. The process still
+    // needs them, but retaining them in a durable log would turn a brief ps
+    // exposure into a permanent secret leak.
+    $this->ops->run([
+        'php', 'install.php',
+        '--password=AdminPassw0rd!',
+        '--db_password', 'DatabasePassw0rd!',
+    ]);
+
+    $logger->shouldHaveReceived('info')->once()->with('server operation', Mockery::on(
+        fn (array $context): bool => $context['command'] === 'php install.php --password=[REDACTED] --db_password [REDACTED]',
+    ));
+});
 
 it('keeps the allowlist in step with what install.sh grants', function () {
     // Drift here is silent and only shows up on a real server: a binary in

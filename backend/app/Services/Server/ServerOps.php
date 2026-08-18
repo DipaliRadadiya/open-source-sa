@@ -134,7 +134,7 @@ class ServerOps
             // constantly has a problem of its own.
             Log::channel('server-ops')->warning('server operation busy, retrying', array_merge($context, [
                 'reference' => $reference,
-                'command' => implode(' ', $command),
+                'command' => $this->loggableCommand($command),
                 'attempt' => $attempts,
                 'of' => $maxAttempts,
                 'stderr' => $stderr,
@@ -145,7 +145,7 @@ class ServerOps
 
         Log::channel('server-ops')->{$ok ? 'info' : 'error'}('server operation', array_merge($context, [
             'reference' => $reference,
-            'command' => implode(' ', $command),
+            'command' => $this->loggableCommand($command),
             'exit_code' => $exitCode,
             'stderr' => $stderr,
             'attempts' => $attempts,
@@ -226,13 +226,49 @@ class ServerOps
         // why it records the byte count.
         Log::channel('server-ops')->{$ok ? 'info' : 'error'}('server operation stream', array_merge($context, [
             'reference' => $reference,
-            'command' => implode(' ', $command),
+            'command' => $this->loggableCommand($command),
             'exit_code' => $result->exitCode(),
             'stderr' => $result->errorOutput(),
             'bytes' => $bytes,
             'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             'actor_id' => Auth::id(),
         ]));
+    }
+
+    /**
+     * Render a command for logs without persisting command-line secrets.
+     *
+     * Some third-party installers accept a password only as an argv option.
+     * The process must receive that original option, but retaining it in the
+     * server-ops log after the process exits turns a brief exposure into a
+     * permanent one. Support both --option=value and --option value forms.
+     *
+     * @param  array<int, string>  $command
+     */
+    private function loggableCommand(array $command): string
+    {
+        $arguments = [];
+        $redactNext = false;
+
+        foreach ($command as $argument) {
+            if ($redactNext) {
+                $arguments[] = '[REDACTED]';
+                $redactNext = false;
+
+                continue;
+            }
+
+            if (preg_match('/^(--[a-z0-9_-]*(?:password|secret|token|api[-_]?key|private[-_]?key)[a-z0-9_-]*)(?:=(.*))?$/i', $argument, $matches)) {
+                $arguments[] = isset($matches[2]) ? $matches[1].'=[REDACTED]' : $matches[1];
+                $redactNext = ! isset($matches[2]);
+
+                continue;
+            }
+
+            $arguments[] = $argument;
+        }
+
+        return implode(' ', $arguments);
     }
 
     private function isTransient(string $stderr): bool
