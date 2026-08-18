@@ -33,6 +33,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Caution } from "@/components/ui/caution";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { RefreshButton } from "@/components/data-table/refresh-button";
@@ -62,12 +63,17 @@ export function DomainsSection({
   canManage = false,
   serverIp = null,
   secured = false,
+  siteType = null,
 }) {
   const t = useTranslations("applications.domains");
   const router = useRouter();
 
   const [addOpen, setAddOpen] = useState(false);
   const [promoteTarget, setPromoteTarget] = useState(null);
+  // Read from the list rather than carried on the menu item: promoting is the
+  // one action whose consequence is about the name being replaced, not the one
+  // being clicked.
+  const currentPrimary = domains.find((domain) => domain.type === "primary");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [pending, setPending] = useState(false);
   // Per-row spinner for the inline verify action.
@@ -372,7 +378,47 @@ export function DomainsSection({
         confirmLabel={t("makePrimary")}
         pending={pending}
         onConfirm={confirmPromote}
-      />
+      >
+        {/* The swap is the fact worth seeing first, and the name being replaced
+            is the one thing the title cannot show. Contrast alone separates the
+            two — the outgoing name is muted, the incoming one is not — rather
+            than stacking size, weight and colour on the same line. */}
+        {currentPrimary ? (
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 rounded-lg border p-3">
+            <dt className="text-xs text-muted-foreground">
+              {t("promote.nowLabel")}
+            </dt>
+            <dd className="truncate font-mono text-sm text-muted-foreground">
+              {currentPrimary.domain}
+            </dd>
+            <dt className="text-xs text-muted-foreground">
+              {t("promote.afterLabel")}
+            </dt>
+            <dd className="truncate font-mono text-sm">
+              {promoteTarget?.domain}
+            </dd>
+          </dl>
+        ) : null}
+
+        {/* One line per consequence. These were a single sentence joined by
+            semicolons, which is exactly the shape nobody reads before clicking
+            a confirm button. */}
+        <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+          {currentPrimary ? (
+            <li>
+              {t("promote.keepsServing", { domain: currentPrimary.domain })}
+            </li>
+          ) : null}
+          <li>{t("promote.renamesFiles")}</li>
+        </ul>
+
+        {/* Only WordPress stores its own address, so only WordPress is warned.
+            Shown to every site type, this line trained people to skip the
+            dialog. */}
+        {siteType === "wordpress" ? (
+          <Caution>{t("promote.cmsWarning")}</Caution>
+        ) : null}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

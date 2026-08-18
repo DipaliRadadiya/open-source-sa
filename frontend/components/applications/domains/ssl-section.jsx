@@ -118,12 +118,12 @@ export function SslSection({
               {certifiable ? t("ssl.noneBody") : t("ssl.notCertifiable")}
             </p>
           </div>
+          {/* Default height, like "Add domain" on the Domains tab and "Set up
+              backups" on its card: this is the section's primary action, and
+              `sm` is for the inline reissue/remove chips further down. It read
+              as a minor link next to a full-size button one tab away. */}
           {canManage && certifiable ? (
-            <Button
-              size="sm"
-              className="shrink-0"
-              onClick={() => setIssueOpen(true)}
-            >
+            <Button className="shrink-0" onClick={() => setIssueOpen(true)}>
               <Lock className="size-4" />
               {t("ssl.enable")}
             </Button>
@@ -173,23 +173,31 @@ export function SslSection({
               ) : null}
             </div>
           </div>
+          {/* Shaped like the failed-provisioning card, which is the same
+              situation: an operation did not work and one action fixes it.
+              Full-height buttons, the recovery one primary and last, separated
+              from the error text by a rule. As small outline/ghost chips they
+              read as footnotes to the error rather than the way out of it. */}
           {canManage && !noRetry ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-end gap-2 border-t border-destructive/20 pt-3">
+              {/* `destructive` (the tinted variant, as on the reboot banner),
+                  not ghost: a ghost button on this card is bare foreground text
+                  until you hover it, so it read as a sentence rather than a
+                  control — and nothing about it said it deletes. The explicit
+                  border is because the variant's own tint is destructive/10 and
+                  the card underneath is destructive/5; without an edge the two
+                  wash together. */}
               <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIssueOpen(true)}
-              >
-                <RefreshCw className="size-4" />
-                {t("ssl.reissue")}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
+                variant="destructive"
+                className="border-destructive/25"
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 className="size-4" />
                 {t("ssl.remove")}
+              </Button>
+              <Button onClick={() => setIssueOpen(true)}>
+                <RefreshCw className="size-4" />
+                {t("ssl.reissue")}
               </Button>
             </div>
           ) : null}

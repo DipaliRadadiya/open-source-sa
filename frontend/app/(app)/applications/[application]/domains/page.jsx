@@ -96,6 +96,7 @@ export default async function ApplicationDomainsPage({ params }) {
               canManage={canManage}
               serverIp={serverIp}
               secured={sslStatus === "active"}
+              siteType={application.site_type}
             />
           }
           ssl={

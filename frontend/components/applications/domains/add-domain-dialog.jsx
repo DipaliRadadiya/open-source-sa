@@ -131,8 +131,12 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null }) 
           )}
         />
 
+        {/* One field per row, like every other field here. These two used to
+            share a row, which made "Redirect to" the only input in the form
+            narrower than the rest — and it lined up with nothing above it. The
+            modal body is already `space-y-4`, the same gap the grid used. */}
         {type === "redirect" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
+          <>
             <FormField
               control={form.control}
               name="redirect_to"
@@ -154,7 +158,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null }) 
                   <FormLabel>{t("add.redirectStatus")}</FormLabel>
                   <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
                     <FormControl>
-                      <SelectTrigger className="sm:w-28">
+                      <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -170,7 +174,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null }) 
                 </FormItem>
               )}
             />
-          </div>
+          </>
         ) : null}
 
         {/* Set expectations up front: a name does nothing until its DNS points

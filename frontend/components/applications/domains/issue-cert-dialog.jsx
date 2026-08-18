@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
@@ -49,6 +49,11 @@ export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange
     types[0]?.type;
 
   const [type, setType] = useState(defaultType);
+  // This dialog holds its own state rather than react-hook-form, so it gets none
+  // of FormItem's label wiring for free. Without an id every label here was
+  // decorative: clicking it did nothing and a screen reader announced an
+  // unlabelled control.
+  const fieldId = useId();
   const [pem, setPem] = useState({ certificate: "", private_key: "", chain: "" });
   const [submitting, setSubmitting] = useState(false);
   // Per-domain reachability refusals (422 errors.domain). Their presence is what
@@ -125,14 +130,17 @@ export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange
         </>
       }
     >
-      <div className="space-y-1.5">
-        <Label>{t("ssl.method")}</Label>
+      {/* `grid gap-2`, not `space-y-1.5`: that is what FormItem uses, and this
+          dialog sits one click away from Add domain, which is built on it. Two
+          modals in the same flow were spacing their labels 6px and 8px apart. */}
+      <div className="grid gap-2">
+        <Label htmlFor={`${fieldId}-method`}>{t("ssl.method")}</Label>
         <Select value={type} onValueChange={(v) => { setType(v); setRefusals([]); }}>
           {/* shadcn's SelectTrigger is `w-fit` by default, so a form field
               without this shrinks to its current option — and the control
               visibly changes width when the selection does. Every other form
               select in the panel is w-full; these two were the misses. */}
-          <SelectTrigger className="w-full">
+          <SelectTrigger id={`${fieldId}-method`} className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -171,9 +179,10 @@ export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange
 
       {type === "custom" ? (
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>{t("ssl.certificate")}</Label>
+          <div className="grid gap-2">
+            <Label htmlFor={`${fieldId}-certificate`}>{t("ssl.certificate")}</Label>
             <Textarea
+              id={`${fieldId}-certificate`}
               rows={4}
               className="font-mono text-xs"
               placeholder="-----BEGIN CERTIFICATE-----"
@@ -181,9 +190,10 @@ export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange
               onChange={(e) => setPem((p) => ({ ...p, certificate: e.target.value }))}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label>{t("ssl.privateKey")}</Label>
+          <div className="grid gap-2">
+            <Label htmlFor={`${fieldId}-private_key`}>{t("ssl.privateKey")}</Label>
             <Textarea
+              id={`${fieldId}-private_key`}
               rows={4}
               className="font-mono text-xs"
               placeholder="-----BEGIN PRIVATE KEY-----"
@@ -191,11 +201,12 @@ export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange
               onChange={(e) => setPem((p) => ({ ...p, private_key: e.target.value }))}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label>
+          <div className="grid gap-2">
+            <Label htmlFor={`${fieldId}-chain`}>
               {t("ssl.chain")} <span className="text-muted-foreground">({t("ssl.optional")})</span>
             </Label>
             <Textarea
+              id={`${fieldId}-chain`}
               rows={3}
               className="font-mono text-xs"
               placeholder="-----BEGIN CERTIFICATE-----"

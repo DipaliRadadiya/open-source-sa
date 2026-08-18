@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
 import { ChoiceField } from "@/components/ui/choice-field";
+import { Caution } from "@/components/ui/caution";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -46,21 +47,6 @@ const DAYS_PER_RUN = { daily: 1, weekly: 7, monthly: 30 };
  * default.
  */
 const SUGGESTED_FILE_EXCLUDES = ["node_modules", ".git", "vendor", "storage/logs", "*.log"];
-
-/**
- * What this change takes away, said next to the control that takes it.
- *
- * Amber rather than red: nothing is wrong, and the user may well mean it —
- * they just have to know before Save, not after the next run.
- */
-function Caution({ children }) {
-  return (
-    <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-2.5 text-xs">
-      <TriangleAlert className="mt-px size-3.5 shrink-0 text-warning" />
-      <span>{children}</span>
-    </p>
-  );
-}
 
 /**
  * Which half of the archive a type change drops, or null when it drops nothing.
