@@ -109,7 +109,14 @@ export function DatabaseTables({ database, tables = [], canManage }) {
               <p className="text-sm text-muted-foreground">{t("empty")}</p>
             </div>
           ) : (
-            <div className="divide-y">
+            /* Bounded, because the list is every table in the database and
+               that is not a small number for the applications this panel
+               installs — Nextcloud ships ~150, a mature WordPress more.
+               Unbounded, the card grew to whatever the schema happened to be
+               and pushed the charset footer, and everything below the card,
+               off the screen. Roughly ten rows before it scrolls; short
+               lists never show a scrollbar. */
+            <div className="max-h-96 divide-y overflow-y-auto">
               {tables.map((table) => (
                 <div
                   key={table.name}
