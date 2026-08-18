@@ -19,15 +19,9 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_VARIANTS = {
-  active: "success",
-  failed: "destructive",
-  provisioning: "warning",
-  pending: "secondary",
-};
 
 export async function generateMetadata({ params }) {
   const { application } = await params;
@@ -82,12 +76,7 @@ export default async function ApplicationDetailPage({ params }) {
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">{application.name}</h1>
-              <Badge
-                variant={STATUS_VARIANTS[application.status] ?? "secondary"}
-                className="font-normal"
-              >
-                {application.status_title ?? application.status}
-              </Badge>
+              <ApplicationStatusBadge application={application} />
               <Badge variant="secondary" className="font-normal">
                 {application.site_type_title ?? application.site_type}
               </Badge>

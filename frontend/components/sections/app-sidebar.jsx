@@ -15,7 +15,7 @@ import {
 } from "@/lib/navigation";
 import { useApplicationNav } from "@/components/sections/application-nav";
 import { Logo } from "@/components/logo";
-import { Badge } from "@/components/ui/badge";
+import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { NavIcon } from "@/components/nav-icon";
@@ -42,12 +42,6 @@ import {
  * about: flipping a switch on 8G Firewall and clicking "Files" threw the edit
  * away with no warning at all.
  */
-function applicationStatusVariant(application) {
-  if (application.is_disabled || application.status === "failed") return "destructive";
-  if (application.status === "active") return "success";
-  return "warning";
-}
-
 function MobileNavLink({ item, built, active, children, className }) {
   const { isMobile, setOpenMobile } = useSidebar()
   const t = useTranslations("common")
@@ -193,9 +187,7 @@ export function AppSidebar({ items }) {
                       {application.domain}
                     </span>
                     <span className="mt-2 flex min-w-0 items-center gap-1.5">
-                      <Badge variant={applicationStatusVariant(application)}>
-                        {application.status_title ?? application.status}
-                      </Badge>
+                      <ApplicationStatusBadge application={application} />
                       <span className="truncate text-xs text-muted-foreground">
                         {application.site_type_title ?? application.site_type}
                       </span>
