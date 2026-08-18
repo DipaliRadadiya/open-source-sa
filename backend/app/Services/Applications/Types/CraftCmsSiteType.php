@@ -63,7 +63,7 @@ class CraftCmsSiteType extends AbstractSiteType
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             $this->field('language', 'select', advanced: true, extra: [
                 'default' => 'en-US',
-                'options' => FieldOptions::asOptions(FieldOptions::hyphenLocales()),
+                'options' => FieldOptions::localeOptions(FieldOptions::hyphenLocales()),
             ]),
         ], $this->phpFields());
     }

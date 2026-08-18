@@ -62,7 +62,7 @@ class WordPressSiteType extends AbstractSiteType
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             $this->field('site_language', 'select', advanced: true, extra: [
                 'default' => 'en_US',
-                'options' => FieldOptions::asOptions(FieldOptions::wordpressLocales()),
+                'options' => FieldOptions::localeOptions(FieldOptions::wordpressLocales()),
             ]),
             $this->field('timezone', 'text', advanced: true, extra: [
                 'help' => 'Timezone for the WordPress site, e.g. America/New_York or Europe/Berlin. See WordPress Settings → General → Timezone.',

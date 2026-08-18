@@ -73,10 +73,10 @@ class FieldOptions
     /**
      * Shape the field schema uses: a value plus the label to show for it.
      *
-     * Labels are the codes themselves. They are what the installer's own
-     * documentation uses, so a user copying a value from WordPress's docs can
-     * find it — and inventing display names for 80 locales would mean
-     * translating those names into 8 languages to stay honest.
+     * Labels are the codes themselves — right for a list whose values *are*
+     * the names people know, like timezone identifiers. Locales and countries
+     * are not that: `he_IL` and `bq` tell nobody anything, and they go through
+     * the three helpers below instead.
      *
      * @param  list<string>  $values
      * @return list<array{value: string, label: string}>
@@ -87,5 +87,116 @@ class FieldOptions
             static fn (string $value): array => ['value' => $value, 'label' => $value],
             $values,
         );
+    }
+
+    /**
+     * Locale codes labelled with their own name — `en_US` → "English (United
+     * States)", `pt_BR` → "portugais (Brésil)" for a viewer reading French.
+     *
+     * This used to hand back the code as its own label, on the reasoning that
+     * inventing display names for eighty locales would mean translating those
+     * names into eight languages to stay honest. ICU has already done it:
+     * `Locale::getDisplayName()` answers in whatever locale it is asked in, so
+     * the honest version costs nothing to maintain and nothing to translate.
+     *
+     * Both code shapes in the catalog work unchanged — WordPress's `en_US` and
+     * Craft's `en-US` normalise to the same thing.
+     *
+     * @param  list<string>  $codes
+     * @return list<array{value: string, label: string}>
+     */
+    public static function localeOptions(array $codes): array
+    {
+        return self::labelled($codes, static fn (string $code, string $locale): string => \Locale::getDisplayName($code, $locale) ?: $code);
+    }
+
+    /**
+     * ISO 3166-1 alpha-2 labelled with the country's name — `us` → "United
+     * States", `de` → "Allemagne" for a viewer reading French.
+     *
+     * The dash prefix is what tells ICU to read a bare `us` as a region rather
+     * than as a language: `Locale::getDisplayRegion('us')` is empty, while
+     * `'-US'` is a locale with a region and no language.
+     *
+     * @param  list<string>  $codes
+     * @return list<array{value: string, label: string}>
+     */
+    public static function countryOptions(array $codes): array
+    {
+        return self::labelled($codes, static fn (string $code, string $locale): string => \Locale::getDisplayRegion('-'.strtoupper($code), $locale) ?: $code);
+    }
+
+    /**
+     * ISO 639-1 labelled with the language's name — `sw` → "Swahili".
+     *
+     * Separate from {@see localeOptions()} because these carry no region:
+     * asking for a display *name* would give "Swahili" either way today, but
+     * the two lists mean different things and one of them growing a region
+     * should not silently change what the other shows.
+     *
+     * @param  list<string>  $codes
+     * @return list<array{value: string, label: string}>
+     */
+    public static function languageOptions(array $codes): array
+    {
+        return self::labelled($codes, static fn (string $code, string $locale): string => \Locale::getDisplayLanguage($code, $locale) ?: $code);
+    }
+
+    /**
+     * Memoized per locale and per list.
+     *
+     * `GET /site-types` renders every site type's fields in one response, and
+     * the hyphenated locale list alone is asked for by two of them — around
+     * two hundred ICU lookups for bytes that are identical both times.
+     *
+     * @var array<string, list<array{value: string, label: string}>>
+     */
+    private static array $labelCache = [];
+
+    /**
+     * @param  list<string>  $codes
+     * @param  callable(string, string): string  $name
+     * @return list<array{value: string, label: string}>
+     */
+    private static function labelled(array $codes, callable $name): array
+    {
+        // No intl, no names. Falling back to the codes keeps the catalog
+        // usable — the alternative is a dropdown of blank rows, which is worse
+        // than an unfriendly one and much harder to diagnose.
+        if (! extension_loaded('intl')) {
+            return self::asOptions($codes);
+        }
+
+        $locale = app()->getLocale();
+        $key = $locale.'|'.md5(implode(' ', $codes));
+
+        if (isset(self::$labelCache[$key])) {
+            return self::$labelCache[$key];
+        }
+
+        $options = array_map(
+            static fn (string $code): array => ['value' => $code, 'label' => $name($code, $locale)],
+            $codes,
+        );
+
+        // Sorted by what the user actually reads, in their own language: these
+        // lists were hand-ordered by code, and once the label is a name that
+        // order looks arbitrary. `Collator` rather than `usort` with strcmp,
+        // because alphabetical is a per-language question — ä sorts beside a
+        // in German and after z in Swedish, and byte order gets both wrong.
+        $collator = new \Collator($locale);
+        usort($options, static fn (array $a, array $b): int => (int) $collator->compare($a['label'], $b['label']));
+
+        return self::$labelCache[$key] = array_values($options);
+    }
+
+    /**
+     * The memo is keyed by locale, so switching locale is already correct.
+     * This exists for tests that swap the *list* behind a key — and for a
+     * long-lived worker, where "process-wide" is longer than one request.
+     */
+    public static function flushLabelCache(): void
+    {
+        self::$labelCache = [];
     }
 }

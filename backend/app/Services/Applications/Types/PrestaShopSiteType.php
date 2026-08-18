@@ -56,11 +56,11 @@ class PrestaShopSiteType extends AbstractSiteType
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             $this->field('country', 'select', advanced: true, extra: [
                 'default' => 'gb',
-                'options' => FieldOptions::asOptions(FieldOptions::countries()),
+                'options' => FieldOptions::countryOptions(FieldOptions::countries()),
             ]),
             $this->field('language', 'select', advanced: true, extra: [
                 'default' => 'en',
-                'options' => FieldOptions::asOptions(FieldOptions::languages()),
+                'options' => FieldOptions::languageOptions(FieldOptions::languages()),
             ]),
             // Timezones come from the server, not a static list: the value has
             // to be one this machine actually has, and Timezones already reads

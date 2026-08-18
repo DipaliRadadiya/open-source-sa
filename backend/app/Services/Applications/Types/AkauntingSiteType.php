@@ -54,7 +54,7 @@ class AkauntingSiteType extends AbstractSiteType
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             $this->field('locale', 'select', advanced: true, extra: [
                 'default' => 'en-GB',
-                'options' => FieldOptions::asOptions(FieldOptions::hyphenLocales()),
+                'options' => FieldOptions::localeOptions(FieldOptions::hyphenLocales()),
             ]),
             $this->field('table_prefix', 'text', advanced: true),
         ], $this->phpFields());
