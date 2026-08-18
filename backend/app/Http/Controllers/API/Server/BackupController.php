@@ -8,6 +8,7 @@ use App\Actions\Server\Backup\SaveBackupTarget;
 use App\Enums\BackupStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Backup\IndexBackupsRequest;
+use App\Http\Requests\Server\Backup\IndexBackupTargetsRequest;
 use App\Http\Requests\Server\Backup\SaveBackupTargetRequest;
 use App\Http\Resources\ApplicationBackupResource;
 use App\Http\Resources\BackupResource;
@@ -18,6 +19,7 @@ use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Support\ListSort;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
@@ -83,26 +85,56 @@ class BackupController extends Controller
      * this screen exists to answer is which ones are not. `meta` carries the
      * counts so the header does not depend on the caller reducing the list.
      *
-     * Not paginated. One server holds a handful of sites, and a "5 of 7
-     * protected" built from page one would be wrong.
+     * Paged, but the counts are not. This used to say "not paginated, because a
+     * '5 of 7 protected' built from page one would be wrong" — the observation
+     * was right and the conclusion has been narrowed rather than dropped: the
+     * counts are now taken with their own aggregate queries over every
+     * application, so they describe the server whatever page you are on and
+     * whatever you have filtered to. A header that changed when you turned the
+     * page would be answering a question nobody asked.
      */
-    public function indexTargets(): JsonResponse
+    public function indexTargets(IndexBackupTargetsRequest $request): JsonResponse
     {
+        $search = trim((string) $request->validated('search', ''));
+        $filter = (array) $request->validated('filter', []);
+
         $applications = Application::query()
             ->with(['backupTarget.storageDestination', 'latestBackup'])
-            ->orderBy('name')
-            ->get();
+            // The filter this screen exists for: which sites are unprotected.
+            // array_key_exists rather than `??`, so `filter[protected]=0` is
+            // read as a request for the unprotected ones and not as absent.
+            ->when(array_key_exists('protected', $filter) && $filter['protected'] !== null,
+                fn ($query) => $filter['protected']
+                    ? $query->whereHas('backupTarget')
+                    : $query->whereDoesntHave('backupTarget'))
+            ->when($search !== '', function ($query) use ($search) {
+                $like = '%'.$search.'%';
 
-        $protected = $applications
-            ->filter(fn (Application $application): bool => $application->backupTarget !== null)
-            ->count();
+                $query->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('domain', 'like', $like));
+            });
+
+        $applications = ListSort::apply($applications, $request->validated('sort'), IndexBackupTargetsRequest::SORTS, 'asc')
+            ->paginate($request->validated('per_page', IndexBackupTargetsRequest::PER_PAGE));
+
+        // Counted, not fetched. `whereHas` on a fresh query is one aggregate
+        // each; loading every application to call ->filter() on it would undo
+        // the paging this method just did.
+        $total = Application::query()->count();
+        $protected = Application::query()->whereHas('backupTarget')->count();
 
         return response()->json([
-            'backup_targets' => ApplicationBackupResource::collection($applications)->resolve(),
+            'backup_targets' => ApplicationBackupResource::collection($applications->items())->resolve(),
             'meta' => [
-                'total' => $applications->count(),
+                'total' => $total,
                 'protected' => $protected,
-                'unprotected' => $applications->count() - $protected,
+                'unprotected' => $total - $protected,
+                'current_page' => $applications->currentPage(),
+                'per_page' => $applications->perPage(),
+                // How many rows the current search and filter match, which is
+                // not `total` — `total` is how many sites exist. Two different
+                // numbers that both deserve a name.
+                'matched' => $applications->total(),
+                'last_page' => $applications->lastPage(),
             ],
         ]);
     }

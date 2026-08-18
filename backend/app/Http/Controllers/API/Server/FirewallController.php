@@ -8,6 +8,7 @@ use App\Actions\Server\Firewall\ToggleFirewall;
 use App\Actions\Server\Firewall\UpdateFirewallRule;
 use App\Contracts\Firewall;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Firewall\IndexFirewallRulesRequest;
 use App\Http\Requests\Server\Firewall\StoreFirewallRuleRequest;
 use App\Http\Requests\Server\Firewall\ToggleFirewallRequest;
 use App\Http\Requests\Server\Firewall\UpdateFirewallRuleRequest;
@@ -16,6 +17,7 @@ use App\Models\FirewallRule;
 use App\Services\Server\Firewall\ListeningPorts;
 use App\Services\Server\Firewall\RiskyPorts;
 use App\Support\FirewallPresets;
+use App\Support\ListSort;
 use App\Support\SshPort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,6 +63,51 @@ class FirewallController extends Controller
     {
         return response()->json([
             'presets' => FirewallPresets::all(),
+        ]);
+    }
+
+    /**
+     * The rules on their own, paged.
+     *
+     * Separate from {@see index()} because that endpoint answers "what is the
+     * state of this firewall" and this one answers "which rules are there".
+     * Turning a page should not re-run `ss` to rebuild a list of listening
+     * ports that has not changed.
+     */
+    public function rules(IndexFirewallRulesRequest $request): JsonResponse
+    {
+        $search = trim((string) $request->validated('search', ''));
+        $filter = (array) $request->validated('filter', []);
+
+        $rules = FirewallRule::query()
+            // array_key_exists, not `??` — `filter[enabled]=0` is a real
+            // request for the disabled rules, and a falsy check would drop it
+            // and answer with everything.
+            ->when(array_key_exists('enabled', $filter) && $filter['enabled'] !== null,
+                fn ($query) => $query->where('enabled', (bool) $filter['enabled']))
+            ->when($filter['action'] ?? null, fn ($query, $action) => $query->where('action', $action))
+            ->when($filter['origin'] ?? null, fn ($query, $origin) => $query->where('origin', $origin))
+            ->when($search !== '', function ($query) use ($search) {
+                $like = '%'.$search.'%';
+
+                $query->where(fn ($q) => $q
+                    ->where('port_from', 'like', $like)
+                    ->orWhere('port_to', 'like', $like)
+                    ->orWhere('source_ip', 'like', $like)
+                    ->orWhere('description', 'like', $like));
+            });
+
+        $rules = ListSort::apply($rules, $request->validated('sort'), IndexFirewallRulesRequest::SORTS)
+            ->paginate($request->validated('per_page', IndexFirewallRulesRequest::PER_PAGE));
+
+        return response()->json([
+            'rules' => FirewallRuleResource::collection($rules->items())->resolve(),
+            'meta' => [
+                'current_page' => $rules->currentPage(),
+                'per_page' => $rules->perPage(),
+                'total' => $rules->total(),
+                'last_page' => $rules->lastPage(),
+            ],
         ]);
     }
 

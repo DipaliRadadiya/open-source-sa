@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/firewall/presets', [FirewallController::class, 'presets'])->middleware('permission:firewall');
 
 Route::get('/firewall', [FirewallController::class, 'index'])->middleware('permission:firewall');
+Route::get('/firewall/rules', [FirewallController::class, 'rules'])->middleware('permission:firewall');
 Route::post('/firewall/rules', [FirewallController::class, 'store'])->middleware('permission:firewall,manage');
 Route::put('/firewall/rules/{firewallRule}', [FirewallController::class, 'update'])->middleware('permission:firewall,manage');
 Route::delete('/firewall/rules/{firewallRule}', [FirewallController::class, 'destroy'])->middleware('permission:firewall,manage');

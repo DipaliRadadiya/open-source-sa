@@ -108,6 +108,8 @@ Auth-gated. Exit impersonation mode (admin feature).
 ### GET `/admin/roles`
 **Permission:** `access-admin` (view)
 
+Paged. `?search=` matches name **and** description; `?sort=name|created_at` (prefix `-` for descending, default `name` ascending); `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
+
 ```json
 {"roles": [{
   "id": 1, "name": "Administrator", "slug": "administrator", "is_system": true, "description": null,
@@ -2411,7 +2413,11 @@ On failure: `status: "failed", "status_title: "Clone failed", "reason": "…"`.
 
 Every application and its backup configuration — the overview screen.
 
-**Driven from applications, not from backup targets** — a list built from targets could only ever return the sites that are already protected, and the question this screen exists to answer is which ones are not. Not paginated: one server holds a handful of sites, and a "5 of 7 protected" built from page one would be wrong.
+**Driven from applications, not from backup targets** — a list built from targets could only ever return the sites that are already protected, and the question this screen exists to answer is which ones are not.
+
+Paged. `?search=` matches application name and domain; **`?filter[protected]=0`** is the one this screen exists for — the sites with no backup configured at all; `?sort=name|domain|created_at`, default `name` ascending; `?per_page=10|20|30|50|100`, default 10.
+
+**`meta.total` / `meta.protected` / `meta.unprotected` count every application on the server**, not the current page and not the current filter — the header reads "N of M sites protected", and that sentence must not change when you turn the page. **`meta.matched` is the separate number**: how many rows the current search and filter found. Two different questions, two fields.
 
 ```json
 {"backup_targets": [
@@ -2797,6 +2803,8 @@ Test reachability of the admin connection.
 
 ### GET `/databases`
 **Permission:** `database` (view)
+
+Paged. `?search=` matches the database name; `?filter[engine]=mariadb` (validated against the configured engines — an unknown one is a **422**, not an empty list); `?sort=created_at|name|engine|users_count`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
 
 ```json
 {"databases": [{
@@ -3190,6 +3198,8 @@ Kill a process/op (`KILL`).
 
 ### GET `/system-users`
 **Permission:** `system_user` (view)
+
+Paged. `?search=` matches the username; `?sort=created_at|username`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
 
 ```json
 {"system_users": [{
@@ -3645,6 +3655,22 @@ A rule is `action` (`allow` / `deny`) over a port **range** — `port_from` plus
 `risky_ports` — ports detected from installed database engines + config, to warn before opening them.
 
 **This endpoint can fail with `500`** (`{message, code, reference}`) when `ufw status` cannot be read. It used to answer `enabled: false` in that case, which is not "unknown" but a specific wrong answer — the screen reported an active firewall as off. Render the error rather than a disabled firewall.
+
+---
+
+### GET `/firewall/rules`
+**Permission:** `firewall` (view)
+
+The rules on their own, paged — use this for the rules table rather than reading `rules` out of `GET /firewall`.
+
+Separate endpoint on purpose: `GET /firewall` also reports live UFW status and the listening ports, and building `listening[]` shells out to `ss`. Turning a page should not re-run that. `GET /firewall` still returns its full `rules` array unchanged, so nothing breaks before the frontend migrates.
+
+`?search=` matches port, source IP and description (text match, so `80` finds both 80 and 8080); `?filter[enabled]=0|1`, `?filter[action]=allow|deny`, `?filter[origin]=user|default|db_user`; `?sort=created_at|port_from|action|protocol`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10.
+
+```json
+{"rules": [{"id": 1, "port_from": 443, "…": "…"}],
+ "meta": {"current_page": 1, "per_page": 10, "total": 12, "last_page": 2}}
+```
 
 ---
 

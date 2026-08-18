@@ -7,20 +7,41 @@ use App\Actions\Admin\DeleteRole;
 use App\Actions\Admin\UpdateRole;
 use App\Enums\AccessLevel;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ListRolesRequest;
 use App\Http\Requests\Admin\StoreRoleRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
 use App\Models\Role;
+use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
 class RoleController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(ListRolesRequest $request): JsonResponse
     {
-        $roles = Role::query()->with('permissions')->get();
+        $search = trim((string) $request->validated('search', ''));
+
+        $roles = Role::query()
+            ->with('permissions')
+            ->when($search !== '', function ($query) use ($search) {
+                $like = '%'.$search.'%';
+
+                // Grouped so the OR cannot escape across the whole query if a
+                // filter is added beside it later.
+                $query->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('description', 'like', $like));
+            });
+
+        $roles = ListSort::apply($roles, $request->validated('sort'), ListRolesRequest::SORTS, 'asc')
+            ->paginate($request->validated('per_page', ListRolesRequest::PER_PAGE));
 
         return response()->json([
-            'roles' => $roles->map(fn (Role $role) => $this->format($role))->all(),
+            'roles' => array_map(fn (Role $role) => $this->format($role), $roles->items()),
+            'meta' => [
+                'current_page' => $roles->currentPage(),
+                'per_page' => $roles->perPage(),
+                'total' => $roles->total(),
+                'last_page' => $roles->lastPage(),
+            ],
         ]);
     }
 

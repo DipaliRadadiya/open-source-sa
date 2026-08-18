@@ -8,6 +8,7 @@ use App\Actions\Server\Database\DeleteDatabase;
 use App\Enums\ExportStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
+use App\Http\Requests\Server\Database\IndexDatabasesRequest;
 use App\Http\Requests\Server\Database\StoreDatabaseRequest;
 use App\Http\Resources\DatabaseExportResource;
 use App\Http\Resources\DatabaseResource;
@@ -20,6 +21,7 @@ use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabaseSizes;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
+use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,11 +87,33 @@ class DatabaseController extends Controller
         return response()->json(['queued' => true], 202);
     }
 
-    public function index(): JsonResponse
+    public function index(IndexDatabasesRequest $request): JsonResponse
     {
-        $databases = Database::query()->withCount('users')->latest()->get();
+        $search = trim((string) $request->validated('search', ''));
+        $filter = (array) $request->validated('filter', []);
 
-        return response()->json(['databases' => DatabaseResource::collection($databases)->resolve()]);
+        $databases = Database::query()
+            ->withCount('users')
+            ->when($filter['engine'] ?? null, fn ($query, $engine) => $query->where('engine', $engine))
+            ->when($search !== '', function ($query) use ($search) {
+                // Grouped, so that adding a filter alongside this later cannot
+                // let the OR escape across the whole query and match rows the
+                // filter was meant to exclude.
+                $query->where('name', 'like', '%'.$search.'%');
+            });
+
+        $databases = ListSort::apply($databases, $request->validated('sort'), IndexDatabasesRequest::SORTS)
+            ->paginate($request->validated('per_page', IndexDatabasesRequest::PER_PAGE));
+
+        return response()->json([
+            'databases' => DatabaseResource::collection($databases->items())->resolve(),
+            'meta' => [
+                'current_page' => $databases->currentPage(),
+                'per_page' => $databases->perPage(),
+                'total' => $databases->total(),
+                'last_page' => $databases->lastPage(),
+            ],
+        ]);
     }
 
     public function store(StoreDatabaseRequest $request, CreateDatabase $action): JsonResponse
