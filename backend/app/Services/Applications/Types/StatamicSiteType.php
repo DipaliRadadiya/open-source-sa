@@ -54,6 +54,17 @@ class StatamicSiteType extends AbstractSiteType
         return '/public';
     }
 
+    /**
+     * And the only one it can be served from. `StatamicInstaller` builds the
+     * project above the web root, so anything else points the vhost at a
+     * directory Statamic never creates — or, at `/`, at the whole application:
+     * `.env`, `vendor/`, and `storage/` with every page's content in it.
+     */
+    public function fixedWebRoot(): ?string
+    {
+        return $this->defaultWebRoot();
+    }
+
     public function fields(): array
     {
         return array_merge($this->commonFields(), [

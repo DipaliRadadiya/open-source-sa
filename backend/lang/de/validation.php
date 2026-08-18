@@ -176,6 +176,7 @@ return [
     'start_command_wrapper' => 'Starte die App mit ihrer Einstiegsdatei, z. B. „node server.js“, nicht mit :binary. Ein Paketmanager forkt den eigentlichen Prozess, sodass Signale ihn nie erreichen.',
 
     'port_in_use_by_app' => 'Port :port wird bereits von einer anderen Anwendung auf diesem Server verwendet.',
+    'web_root_fixed' => ':type wird aus :web_root ausgeliefert und installiert sich um diesen Pfad herum, daher lässt sich der Web-Root hier nicht ändern. Jeder andere Wert macht die Seite unerreichbar und veröffentlicht ihren Quellcode.',
     'port_in_use' => 'Auf diesem Server lauscht bereits etwas auf Port :port. Wähle einen anderen oder beende, was ihn belegt.',
 
     'port_registered' => 'Port :port wird normalerweise von :service verwendet. Du kannst ihn trotzdem nutzen, wenn nichts auf diesem Server ihn belegt.',

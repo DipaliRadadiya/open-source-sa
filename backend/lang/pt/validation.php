@@ -176,6 +176,7 @@ return [
     'start_command_wrapper' => 'Inicie a app com o ficheiro de entrada, por exemplo \"node server.js\", não com :binary. Um gestor de pacotes bifurca o processo real, por isso os sinais nunca lhe chegam.',
 
     'port_in_use_by_app' => 'A porta :port já é usada por outra aplicação neste servidor.',
+    'web_root_fixed' => 'O :type é servido a partir de :web_root e instala-se em torno desse caminho, pelo que a raiz web não pode ser alterada aqui. Qualquer outro valor deixa o site inacessível e publica o seu código-fonte.',
     'port_in_use' => 'Algo neste servidor já está a escutar na porta :port. Escolha outra ou pare o que a está a usar.',
 
     'port_registered' => 'A porta :port é normalmente usada por :service. Pode usá-la mesmo assim se nada neste servidor a usar.',

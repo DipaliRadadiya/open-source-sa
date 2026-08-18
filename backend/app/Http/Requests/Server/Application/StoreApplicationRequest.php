@@ -68,7 +68,52 @@ class StoreApplicationRequest extends FormRequest
 
         // An unknown site_type fails on the rule above; skip type rules so we
         // don't resolve fields on null.
-        return $type === null ? $rules : array_merge($rules, $type->rules());
+        if ($type === null) {
+            return $rules;
+        }
+
+        $rules = array_merge($rules, $type->rules());
+
+        // Applied after the merge, and centrally rather than in each type's own
+        // `rules()`, so a site type that declares a fixed layout cannot forget
+        // to enforce it.
+        //
+        // Only for the types whose installer *builds* that layout — Craft and
+        // Statamic. For everything else the web root is genuinely the user's
+        // choice: WordPress unpacks into whatever directory the vhost points
+        // at. Here it is not a choice, and accepting one produces a site that
+        // 403s on every request while serving the application's own source.
+        // `nullable` stays: an omitted value still falls back to the default.
+        if (($fixed = $type->fixedWebRoot()) !== null) {
+            $rules['web_root'] = ['nullable', Rule::in([$fixed, ltrim($fixed, '/')])];
+        }
+
+        return $rules;
+    }
+
+    /**
+     * `Rule::in` says "the selected web root is invalid", which tells the user
+     * nothing about what to select instead. This is the one rule here a caller
+     * can hit while doing something entirely reasonable — clearing an advanced
+     * field — so it says which value the type needs and why.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        $type = app(SiteTypeManager::class)->find((string) $this->input('site_type'));
+        $fixed = $type?->fixedWebRoot();
+
+        if ($fixed === null) {
+            return [];
+        }
+
+        return [
+            'web_root.in' => __('validation.web_root_fixed', [
+                'type' => __("application.types.{$type->name()}.title"),
+                'web_root' => $fixed,
+            ]),
+        ];
     }
 
     /**

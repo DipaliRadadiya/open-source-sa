@@ -138,6 +138,25 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
+     * The only web root this type can be served from, or null when any works.
+     *
+     * Distinct from {@see defaultWebRoot()} on purpose: that is what the field
+     * is pre-filled with, this is what the site can actually run on. For most
+     * types they are different questions — WordPress unpacks into whatever
+     * directory the vhost points at, so any web root is as good as another.
+     *
+     * For a type whose installer *builds* a fixed layout the answer is
+     * singular, and getting it wrong is not a preference the user expressed.
+     * Craft ships `index.php` inside `web/`; point the vhost anywhere else and
+     * the site 403s on every request, while the directory it does serve holds
+     * the application's own source and its `.env`.
+     */
+    public function fixedWebRoot(): ?string
+    {
+        return null;
+    }
+
+    /**
      * No recipe by default — a type overrides this only once one has
      * actually been built for it, matching how `app_staging` itself only
      * ever appears in the feature list a type declares.

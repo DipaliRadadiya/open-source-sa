@@ -54,6 +54,18 @@ class CraftCmsSiteType extends AbstractSiteType
         return '/web';
     }
 
+    /**
+     * And it is the only one that works. `CraftCmsInstaller` builds the project
+     * into the directory *above* the web root and Craft puts its front
+     * controller in `web/`, so any other value produces a vhost pointed at a
+     * directory Craft never creates — and, when that value is `/`, one that
+     * holds `.env` with the database password in it.
+     */
+    public function fixedWebRoot(): ?string
+    {
+        return $this->defaultWebRoot();
+    }
+
     public function fields(): array
     {
         return array_merge($this->commonFields(), [

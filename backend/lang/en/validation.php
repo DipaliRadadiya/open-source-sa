@@ -208,6 +208,7 @@ return [
     'start_command_wrapper' => 'Start the app with its entry file, for example \"node server.js\", not with :binary. A package manager forks the real process, so signals never reach it.',
 
     'port_in_use_by_app' => 'Port :port is already used by another application on this server.',
+    'web_root_fixed' => ':type serves from :web_root and installs itself around that path, so the web root cannot be changed here. Any other value leaves the site unreachable and publishes its source.',
     'port_in_use' => 'Something on this server is already listening on port :port. Pick another, or stop what is using it.',
 
     'port_registered' => 'Port :port is normally used by :service. You can still use it if nothing on this server does.',
