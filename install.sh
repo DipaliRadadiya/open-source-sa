@@ -1600,6 +1600,9 @@ configure_sudoers() {
         # expiry out of /etc/letsencrypt/live; crontab -l -u reads another
         # user's crontab during a server sync. Both are root-only.
         /usr/bin/openssl /usr/bin/crontab
+        # certbot is installed above by install_web_server(); it also has to be
+        # runnable, or every Let's Encrypt issuance fails on /etc/letsencrypt.
+        /usr/bin/certbot
         # Both paths, deliberately: runuser lives in /usr/sbin on Debian/Ubuntu
         # and in /usr/bin on RHEL-family. sudo matches on the resolved absolute
         # path, so a single wrong entry silently denies every asUser() operation

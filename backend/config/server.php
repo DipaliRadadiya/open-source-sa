@@ -145,6 +145,10 @@ return [
             // `crontab -l -u <user>` reads somebody else's crontab, which is
             // the whole point of it during a server sync.
             'crontab',
+            // certbot writes /etc/letsencrypt and reads the account key. It was
+            // installed by install.sh and never granted, so every Let's
+            // Encrypt issuance ran unprivileged and could not have worked.
+            'certbot',
             'runuser', 'sh', 'env', 'rsync',
             'nginx', 'apachectl', 'lswsctrl',
             'phpenmod', 'phpdismod', 'update-alternatives',

@@ -89,6 +89,62 @@ it('elevates every binary the code actually runs', function () {
 });
 
 /**
+ * The binaries that reach `command[0]` from config rather than as a literal.
+ *
+ * The scan above cannot see these, and that blind spot is exactly where the
+ * worst one hid: `certbot` is named by `certificates.certbot`, was installed by
+ * install.sh, was never granted, and so **every Let's Encrypt issuance ran
+ * unprivileged against /etc/letsencrypt** — a whole feature that could not work
+ * on any real server, with a green test suite over it.
+ *
+ * This list is the residual manual part, and it is deliberately small: a config
+ * key only belongs here when its value is the *first element* of a command.
+ * `composer_binary` and `node_binary` are not, and must not be added — they are
+ * arguments to `runuser` and `env`, which carry the elevation themselves. Add
+ * one here and you would be granting sudo to something that never asks for it.
+ */
+const BINARY_CONFIG_KEYS = [
+    'server.certificates.certbot',
+    'server.databases.engines.mysql.client',
+    'server.databases.engines.mysql.dump_client',
+    'server.databases.engines.mariadb.client',
+    'server.databases.engines.mariadb.dump_client',
+    'server.databases.engines.mongodb.client',
+    'server.databases.engines.mongodb.dump_client',
+    'server.databases.engines.mongodb.restore_client',
+    'server.installers.wordpress.wp_cli',
+    'server.fail2ban.client',
+];
+
+it('elevates the binaries that come from config too', function () {
+    $allowed = (array) config('server.privilege.binaries', []);
+
+    $missing = [];
+
+    foreach (BINARY_CONFIG_KEYS as $key) {
+        $value = config($key);
+
+        if (blank($value)) {
+            continue;
+        }
+
+        $binary = basename((string) $value);
+
+        if (! in_array($binary, $allowed, true) && ! str_starts_with($binary, 'php-fpm')) {
+            $missing[$key] = $binary;
+        }
+    }
+
+    $detail = implode(', ', array_map(
+        fn (string $key, string $binary) => "{$binary} ({$key})",
+        array_keys($missing),
+        $missing,
+    ));
+
+    expect($missing)->toBe([], "config names a binary the panel will not elevate: {$detail}");
+});
+
+/**
  * The allowlist the panel checks and the sudoers rule the installer writes have
  * to agree, or the panel asks for a privilege the server never granted — and
  * `sudo` answers "a password is required" to a process that cannot supply one.
