@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ShieldAlert, TriangleAlert, Info } from "lucide-react";
+import { ShieldAlert, TriangleAlert, Info, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateFail2ban } from "@/lib/api/fail2ban";
 import { settingsPayload } from "@/lib/fail2ban/settings-payload";
@@ -64,6 +64,11 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
   // Owned by ProtectionSection, because the ban list has to read it too.
   const setAsked = onAskedChange;
   const [guarding, setGuarding] = useState(null);
+  // Which of the guard's two answers is in flight. `pending` only knows a jail
+  // is busy, and both buttons here act on the same jail — without this neither
+  // could show a spinner, so the dialog sat inert through a config rewrite and
+  // a fail2ban reload, which takes seconds.
+  const [guardAction, setGuardAction] = useState(null);
   const [explaining, setExplaining] = useState(false);
 
   // Pre-filled, never trusted. `your_ip` is whatever address the API saw make
@@ -132,6 +137,14 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
     } finally {
       setPending(null);
     }
+  }
+
+  // The guard's two ways out, both of which write the config and reload
+  // fail2ban. Named so the button that was pressed is the one that spins.
+  function answerGuard(action, options) {
+    if (!guarding) return;
+    setGuardAction(action);
+    apply(guarding.jail, guarding.enabled, options).finally(() => setGuardAction(null));
   }
 
   function toggle(jail, enabled) {
@@ -238,7 +251,13 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
         </CardContent>
       </Card>
 
-      <Dialog open={guarding !== null} onOpenChange={(open) => !open && setGuarding(null)}>
+      {/* Not dismissible mid-write: the config rewrite and reload are already
+          under way, and a dialog that vanishes on Escape reads as "cancelled"
+          when nothing was cancelled. */}
+      <Dialog
+        open={guarding !== null}
+        onOpenChange={(open) => !open && pending === null && setGuarding(null)}
+      >
         {/* Matches FormModal's width, because this is a form dialog in all but
             name — a labelled input, a hint, and two long buttons. On the bare
             `sm:max-w-sm` default it was the narrowest dialog in the panel while
@@ -269,6 +288,10 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
               placeholder={t("lockout.ipPlaceholder")}
               autoComplete="off"
               spellCheck={false}
+              // Locked while the write is in flight: the address is part of the
+              // payload already sent, so editing it here would change nothing
+              // and say otherwise.
+              disabled={pending !== null}
               className="font-mono text-xs"
             />
             <p className="text-xs text-muted-foreground">{t("lockout.ipHint")}</p>
@@ -281,22 +304,18 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
             <Button
               variant="ghost"
               disabled={pending !== null}
-              onClick={() =>
-                guarding && apply(guarding.jail, guarding.enabled, { acknowledged: true })
-              }
+              onClick={() => answerGuard("anyway", { acknowledged: true })}
             >
+              {guardAction === "anyway" ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("lockout.anyway")}
             </Button>
             <Button
               disabled={pending !== null || !ignoreIp.trim()}
               onClick={() =>
-                guarding &&
-                apply(guarding.jail, guarding.enabled, {
-                  addIp: ignoreIp.trim(),
-                  acknowledged: true,
-                })
+                answerGuard("add", { addIp: ignoreIp.trim(), acknowledged: true })
               }
             >
+              {guardAction === "add" ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("lockout.addIp")}
             </Button>
           </DialogFooter>
