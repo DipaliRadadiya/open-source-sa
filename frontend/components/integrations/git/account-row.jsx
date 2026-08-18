@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import {
   CheckCircle2,
   CircleHelp,
@@ -73,140 +74,142 @@ export function AccountRow({
   }
 
   return (
-    <div className="flex items-start justify-between gap-3 py-3.5">
-      <div className="flex min-w-0 gap-3">
-        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-          <ProviderLogo provider={account.provider} />
-        </span>
-
-        <div className="min-w-0 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-sm font-medium">{account.label}</span>
-            <Badge variant="secondary" className="font-normal">
-              {account.provider_title}
-            </Badge>
-            {account.identifier ? (
-              <span className="truncate font-mono text-xs text-muted-foreground">
-                {account.identifier}
-              </span>
-            ) : null}
-            {/* Self-hosted only. On gitlab.com the host is noise. */}
-            {account.host ? (
-              <span className="truncate font-mono text-xs text-muted-foreground">
-                {account.host}
-              </span>
-            ) : null}
-            <AccountDetails account={account} />
-          </div>
-
-          <AccountHealth status={status} loading={loading} />
-
-          <div className="flex flex-wrap items-center gap-2 pt-0.5">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!canManage || testing}
-              aria-busy={testing}
-              onClick={onTest}
-            >
-              <RefreshCw className={`size-3.5 ${testing ? "animate-spin" : ""}`} />
-              {testing ? t("actions.checking") : t("actions.check")}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!canManage || testingRepos}
-              aria-busy={testingRepos}
-              onClick={testRepositories}
-            >
-              {testingRepos ? <RefreshCw className="size-3.5 animate-spin" /> : <FolderGit2 className="size-3.5" />}
-              {testingRepos
-                ? t("repositoryAccess.checking")
-                : t("repositoryAccess.action")}
-            </Button>
-
-            {repositoryAccess === "available" ? (
-              <p
-                role="status"
-                aria-live="polite"
-                className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400"
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <div className="flex items-start justify-between gap-3 py-3.5">
+        <div className="flex min-w-0 gap-3">
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+            <ProviderLogo provider={account.provider} />
+          </span>
+  
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-sm font-medium">{account.label}</span>
+              <Badge variant="secondary" className="font-normal">
+                {account.provider_title}
+              </Badge>
+              {account.identifier ? (
+                <span className="truncate font-mono text-xs text-muted-foreground">
+                  {account.identifier}
+                </span>
+              ) : null}
+              {/* Self-hosted only. On gitlab.com the host is noise. */}
+              {account.host ? (
+                <span className="truncate font-mono text-xs text-muted-foreground">
+                  {account.host}
+                </span>
+              ) : null}
+              <AccountDetails account={account} />
+            </div>
+  
+            <AccountHealth status={status} loading={loading} />
+  
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canManage || testing}
+                aria-busy={testing}
+                onClick={onTest}
               >
-                <CheckCircle2 className="size-3.5" />
-                {t("repositoryAccess.available")}
-              </p>
-            ) : null}
-
-            {repositoryAccess === "empty" ? (
-              <div
-                role="status"
-                aria-live="polite"
-                className="flex basis-full items-start gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs"
-              >
-                <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                <div className="space-y-0.5">
-                  <p className="font-medium text-foreground">{t("repositoryAccess.empty")}</p>
-                  <p className="leading-5 text-muted-foreground">
-                    {t("repositoryAccess.emptyHint")}
-                  </p>
-                </div>
-              </div>
-            ) : null}
-
-            {repositoryAccess === "failed" ? (
-              <p
-                role="status"
-                aria-live="polite"
-                className="inline-flex items-center gap-1.5 text-xs text-destructive"
-              >
-                <TriangleAlert className="size-3.5" />
-                {t("repositoryAccess.failed")}
-              </p>
-            ) : null}
-
-            {/* The fix, next to the problem. A broken token is the one state on
-                this page where there is something to do, so it does not hide in
-                the menu. */}
-            {broken && canManage ? (
-              <Button variant="outline" size="sm" onClick={onReplace}>
-                <KeyRound className="size-3.5" />
-                {t("actions.replace")}
+                <RefreshCw className={`size-3.5 ${testing ? "animate-spin" : ""}`} />
+                {testing ? t("actions.checking") : t("actions.check")}
               </Button>
-            ) : null}
+  
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canManage || testingRepos}
+                aria-busy={testingRepos}
+                onClick={testRepositories}
+              >
+                {testingRepos ? <RefreshCw className="size-3.5 animate-spin" /> : <FolderGit2 className="size-3.5" />}
+                {testingRepos
+                  ? t("repositoryAccess.checking")
+                  : t("repositoryAccess.action")}
+              </Button>
+  
+              {repositoryAccess === "available" ? (
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400"
+                >
+                  <CheckCircle2 className="size-3.5" />
+                  {t("repositoryAccess.available")}
+                </p>
+              ) : null}
+  
+              {repositoryAccess === "empty" ? (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex basis-full items-start gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs"
+                >
+                  <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-foreground">{t("repositoryAccess.empty")}</p>
+                    <p className="leading-5 text-muted-foreground">
+                      {t("repositoryAccess.emptyHint")}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+  
+              {repositoryAccess === "failed" ? (
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="inline-flex items-center gap-1.5 text-xs text-destructive"
+                >
+                  <TriangleAlert className="size-3.5" />
+                  {t("repositoryAccess.failed")}
+                </p>
+              ) : null}
+  
+              {/* The fix, next to the problem. A broken token is the one state on
+                  this page where there is something to do, so it does not hide in
+                  the menu. */}
+              {broken && canManage ? (
+                <Button variant="outline" size="sm" onClick={onReplace}>
+                  <KeyRound className="size-3.5" />
+                  {t("actions.replace")}
+                </Button>
+              ) : null}
+            </div>
           </div>
         </div>
+  
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              disabled={!canManage}
+            >
+              <MoreHorizontal className="size-4" />
+              <span className="sr-only">{t("actions.menu")}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="size-4" />
+              {t("actions.edit")}
+            </DropdownMenuItem>
+            {/* Separate from Edit on purpose: renaming is instant and safe,
+                swapping a credential is a verified round-trip that can fail. */}
+            <DropdownMenuItem onClick={onReplace}>
+              <KeyRound className="size-4" />
+              {t("actions.replace")}
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={onDisconnect}>
+              <Trash2 className="size-4" />
+              {t("actions.disconnect")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0"
-            disabled={!canManage}
-          >
-            <MoreHorizontal className="size-4" />
-            <span className="sr-only">{t("actions.menu")}</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44">
-          <DropdownMenuItem onClick={onEdit}>
-            <Pencil className="size-4" />
-            {t("actions.edit")}
-          </DropdownMenuItem>
-          {/* Separate from Edit on purpose: renaming is instant and safe,
-              swapping a credential is a verified round-trip that can fail. */}
-          <DropdownMenuItem onClick={onReplace}>
-            <KeyRound className="size-4" />
-            {t("actions.replace")}
-          </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onClick={onDisconnect}>
-            <Trash2 className="size-4" />
-            {t("actions.disconnect")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+    </DisabledReasonProvider>
   );
 }
 

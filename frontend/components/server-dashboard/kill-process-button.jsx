@@ -89,6 +89,7 @@ export function KillProcessButton({ process, canManage }) {
               // colour, everywhere in the product.
               className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
               disabled={!canManage}
+              disabledReason={canManage ? undefined : t("kill.noPermission")}
               onClick={() => {
                 setOfferForce(false);
                 setConfirming(true);

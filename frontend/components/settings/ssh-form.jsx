@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { KeyRound, ShieldAlert, TriangleAlert } from "lucide-react";
 import { securityFormSchema, ROOT_LOGIN_OPTIONS } from "@/lib/schemas/settings";
 import { updateSecuritySettings } from "@/lib/api/settings";
@@ -139,195 +140,197 @@ export function SshForm({
   const submitting = saving || form.formState.isSubmitting;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
-        <Section
-          icon={KeyRound}
-          title={t("title")}
-          description={t("description")}
-          readOnly={!canManage}
-          changedBy={changedBy}
-          actions={
-            <SectionActions
-              label={t("signIn.save")}
-              isDirty={form.formState.isDirty}
-              pending={submitting}
-              onDiscard={() =>
-                form.reset({ ...defaults, port: String(defaults.port) })
-              }
-              canManage={canManage}
-            />
-          }
-        >
-          {/* Only shown when the SAVED config is actually dangerous, and it names
-              the fix. No summary of the settings themselves — they are the three
-              rows directly below it. */}
-          {security?.permit_root_login === "yes" ? (
-            <div className="mt-3.5 flex max-w-2xl gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
-              <p>{t("rootPasswordWarning")}</p>
-            </div>
-          ) : null}
-
-          {/* Each choice is a sentence with its own consequence under it, so
-              these two take the row rather than an 11rem control column. */}
-          <FormField
-            control={form.control}
-            name="password_authentication"
-            render={({ field }) => (
-              <Row
-                label={t("signIn.label")}
-                hint={t("signIn.hint")}
-                error={validationMessage(
-                  tv,
-                  form.formState.errors.password_authentication?.message,
-                )}
-
-                wide
-              >
-                <ChoiceField
-                  value={field.value ? "password" : "key"}
-                  onChange={(next) => field.onChange(next === "password")}
-                  disabled={!canManage}
-                  options={[
-                    {
-                      value: "password",
-                      label: t("signIn.option.password.label"),
-                      hint: t("signIn.option.password.hint"),
-                    },
-                    {
-                      value: "key",
-                      label: t("signIn.option.key.label"),
-                      hint: t("signIn.option.key.hint"),
-                      // The API refuses this with a 422 when no key is present
-                      // (its lockout guard). Blocking it here turns a rejection
-                      // you discover after confirming into a precondition you
-                      // can read before choosing — and names the fix.
-                      disabledReason:
-                        security?.has_ssh_key === false && field.value
-                          ? t("signIn.option.key.noKey")
-                          : null,
-                    },
-                  ]}
-                />
-              </Row>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="permit_root_login"
-            render={({ field }) => (
-              <Row
-                label={t("rootLogin.label")}
-                hint={t("rootLogin.hint")}
-
-                wide
-              >
-                <ChoiceField
-                  value={field.value}
-                  onChange={field.onChange}
-                  disabled={!canManage}
-                  options={ROOT_LOGIN_OPTIONS.map((option) => ({
-                    value: option,
-                    label: t(`rootLogin.option.${option}.label`),
-                    hint: t(`rootLogin.option.${option}.hint`),
-                    tone: option === "yes" ? "warning" : undefined,
-                  }))}
-                />
-              </Row>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="port"
-            render={({ field }) => (
-              <Row
-                label={t("port.label")}
-                required
-                hint={t("port.hint")}
-                error={validationMessage(
-                  tv,
-                  form.formState.errors.port?.message,
-                )}
-              >
-                <FormControl>
-                  <Input
-                    placeholder="22"
-                    className="font-mono"
-                    inputMode="numeric"
-                    autoComplete="off"
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
+          <Section
+            icon={KeyRound}
+            title={t("title")}
+            description={t("description")}
+            readOnly={!canManage}
+            changedBy={changedBy}
+            actions={
+              <SectionActions
+                label={t("signIn.save")}
+                isDirty={form.formState.isDirty}
+                pending={submitting}
+                onDiscard={() =>
+                  form.reset({ ...defaults, port: String(defaults.port) })
+                }
+                canManage={canManage}
+              />
+            }
+          >
+            {/* Only shown when the SAVED config is actually dangerous, and it names
+                the fix. No summary of the settings themselves — they are the three
+                rows directly below it. */}
+            {security?.permit_root_login === "yes" ? (
+              <div className="mt-3.5 flex max-w-2xl gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+                <p>{t("rootPasswordWarning")}</p>
+              </div>
+            ) : null}
+  
+            {/* Each choice is a sentence with its own consequence under it, so
+                these two take the row rather than an 11rem control column. */}
+            <FormField
+              control={form.control}
+              name="password_authentication"
+              render={({ field }) => (
+                <Row
+                  label={t("signIn.label")}
+                  hint={t("signIn.hint")}
+                  error={validationMessage(
+                    tv,
+                    form.formState.errors.password_authentication?.message,
+                  )}
+  
+                  wide
+                >
+                  <ChoiceField
+                    value={field.value ? "password" : "key"}
+                    onChange={(next) => field.onChange(next === "password")}
                     disabled={!canManage}
-                    {...field}
+                    options={[
+                      {
+                        value: "password",
+                        label: t("signIn.option.password.label"),
+                        hint: t("signIn.option.password.hint"),
+                      },
+                      {
+                        value: "key",
+                        label: t("signIn.option.key.label"),
+                        hint: t("signIn.option.key.hint"),
+                        // The API refuses this with a 422 when no key is present
+                        // (its lockout guard). Blocking it here turns a rejection
+                        // you discover after confirming into a precondition you
+                        // can read before choosing — and names the fix.
+                        disabledReason:
+                          security?.has_ssh_key === false && field.value
+                            ? t("signIn.option.key.noKey")
+                            : null,
+                      },
+                    ]}
                   />
-                </FormControl>
-              </Row>
-            )}
-          />
-        </Section>
-      </form>
-
-      <ConfirmDialog
-        open={pendingValues !== null}
-        onOpenChange={(open) => !open && setPendingValues(null)}
-        icon={ShieldAlert}
-        tone="warning"
-        title={t("confirm.title")}
-        cancelLabel={t("confirm.cancel")}
-        confirmLabel={t("confirm.submit")}
-        pending={submitting}
-        onConfirm={() => save(pendingValues)}
-      >
-        <ul className="space-y-2 text-sm">
-          {risks.map((risk) => (
-            <li key={risk} className="flex gap-2">
-              <span aria-hidden className="text-muted-foreground">
-                •
-              </span>
-              <span>
-                {risk === "port"
-                  ? t("confirm.port", {
-                      from: defaults.port,
-                      to: pendingValues.port,
-                    })
-                  : t(`confirm.${risk}`)}
-              </span>
-            </li>
-          ))}
-          {risks.includes("port") && oldPortRule && !canManageFirewall ? (
-            <li className="flex gap-2">
-              <span aria-hidden className="text-muted-foreground">
-                •
-              </span>
-              <span>
-                {t("confirm.oldPortStaysOpen", { port: oldPortRule.port })}
-              </span>
-            </li>
-          ) : null}
-        </ul>
-
-        {risks.includes("port") && canCloseOldPort ? (
-          <div className="flex items-start gap-3 rounded-lg border p-3">
-            <Checkbox
-              id="close-old-port"
-              checked={closeOldPort}
-              onCheckedChange={(next) => setCloseOldPort(next === true)}
-              className="mt-0.5"
+                </Row>
+              )}
             />
-            <div className="space-y-1">
-              <Label htmlFor="close-old-port" className="text-sm font-medium">
-                {t("confirm.closeOldPort", { port: oldPortRule.port })}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("confirm.closeOldPortHint")}
-              </p>
+            <FormField
+              control={form.control}
+              name="permit_root_login"
+              render={({ field }) => (
+                <Row
+                  label={t("rootLogin.label")}
+                  hint={t("rootLogin.hint")}
+  
+                  wide
+                >
+                  <ChoiceField
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={!canManage}
+                    options={ROOT_LOGIN_OPTIONS.map((option) => ({
+                      value: option,
+                      label: t(`rootLogin.option.${option}.label`),
+                      hint: t(`rootLogin.option.${option}.hint`),
+                      tone: option === "yes" ? "warning" : undefined,
+                    }))}
+                  />
+                </Row>
+              )}
+            />
+  
+            <FormField
+              control={form.control}
+              name="port"
+              render={({ field }) => (
+                <Row
+                  label={t("port.label")}
+                  required
+                  hint={t("port.hint")}
+                  error={validationMessage(
+                    tv,
+                    form.formState.errors.port?.message,
+                  )}
+                >
+                  <FormControl>
+                    <Input
+                      placeholder="22"
+                      className="font-mono"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      disabled={!canManage}
+                      {...field}
+                    />
+                  </FormControl>
+                </Row>
+              )}
+            />
+          </Section>
+        </form>
+  
+        <ConfirmDialog
+          open={pendingValues !== null}
+          onOpenChange={(open) => !open && setPendingValues(null)}
+          icon={ShieldAlert}
+          tone="warning"
+          title={t("confirm.title")}
+          cancelLabel={t("confirm.cancel")}
+          confirmLabel={t("confirm.submit")}
+          pending={submitting}
+          onConfirm={() => save(pendingValues)}
+        >
+          <ul className="space-y-2 text-sm">
+            {risks.map((risk) => (
+              <li key={risk} className="flex gap-2">
+                <span aria-hidden className="text-muted-foreground">
+                  •
+                </span>
+                <span>
+                  {risk === "port"
+                    ? t("confirm.port", {
+                        from: defaults.port,
+                        to: pendingValues.port,
+                      })
+                    : t(`confirm.${risk}`)}
+                </span>
+              </li>
+            ))}
+            {risks.includes("port") && oldPortRule && !canManageFirewall ? (
+              <li className="flex gap-2">
+                <span aria-hidden className="text-muted-foreground">
+                  •
+                </span>
+                <span>
+                  {t("confirm.oldPortStaysOpen", { port: oldPortRule.port })}
+                </span>
+              </li>
+            ) : null}
+          </ul>
+  
+          {risks.includes("port") && canCloseOldPort ? (
+            <div className="flex items-start gap-3 rounded-lg border p-3">
+              <Checkbox
+                id="close-old-port"
+                checked={closeOldPort}
+                onCheckedChange={(next) => setCloseOldPort(next === true)}
+                className="mt-0.5"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="close-old-port" className="text-sm font-medium">
+                  {t("confirm.closeOldPort", { port: oldPortRule.port })}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t("confirm.closeOldPortHint")}
+                </p>
+              </div>
             </div>
-          </div>
-        ) : null}
-        <p className="text-sm text-muted-foreground">
-          {t("confirm.testFirst")}
-        </p>
-      </ConfirmDialog>
-    </Form>
+          ) : null}
+          <p className="text-sm text-muted-foreground">
+            {t("confirm.testFirst")}
+          </p>
+        </ConfirmDialog>
+      </Form>
+    </DisabledReasonProvider>
   );
 }

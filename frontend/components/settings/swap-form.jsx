@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { HardDriveDownload } from "lucide-react";
 import { swapFormSchema } from "@/lib/schemas/settings";
 import { updateSwapSettings } from "@/lib/api/settings";
@@ -100,127 +101,129 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   const submitting = saving || form.formState.isSubmitting;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
-        <Section
-          icon={HardDriveDownload}
-          title={t("swap.title")}
-          description={t("swap.description")}
-          readOnly={!canManage}
-          changedBy={changedBy}
-          actions={
-            <SectionActions
-              label={t("swap.save")}
-              isDirty={form.formState.isDirty}
-              pending={submitting}
-              onDiscard={() => {
-                form.reset(defaults);
-                setCustom(!PRESETS.includes(currentMb));
-              }}
-              canManage={canManage}
-            />
-          }
-        >
-          <InfoRow
-            label={t("swap.current")}
-            hint={
-              memoryTotal?.human
-                ? t("swap.memoryTotal", { size: memoryTotal.human })
-                : undefined
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
+          <Section
+            icon={HardDriveDownload}
+            title={t("swap.title")}
+            description={t("swap.description")}
+            readOnly={!canManage}
+            changedBy={changedBy}
+            actions={
+              <SectionActions
+                label={t("swap.save")}
+                isDirty={form.formState.isDirty}
+                pending={submitting}
+                onDiscard={() => {
+                  form.reset(defaults);
+                  setCustom(!PRESETS.includes(currentMb));
+                }}
+                canManage={canManage}
+              />
             }
           >
-            <p className="text-sm whitespace-nowrap">
-              {swap?.enabled
-                ? t("swap.currentValue", {
-                    size: swap.size_human,
-                    used: swap.used_human,
-                  })
-                : t("swap.none")}
-            </p>
-          </InfoRow>
-
-          <FormField
-            control={form.control}
-            name="size_mb"
-            render={({ field }) => (
-              <Row
-                label={t("swap.size")}
-                hint={t("swap.sizeHint")}
-                error={validationMessage(
-                  tv,
-                  form.formState.errors.size_mb?.message,
-                )}
-                wide
-              >
-                <ToggleGroup
-                  type="single"
-                  value={custom ? CUSTOM : String(sizeMb)}
-                  onValueChange={pick}
-                  variant="outline"
-                  disabled={!canManage}
-                  className="flex-wrap justify-start gap-2"
+            <InfoRow
+              label={t("swap.current")}
+              hint={
+                memoryTotal?.human
+                  ? t("swap.memoryTotal", { size: memoryTotal.human })
+                  : undefined
+              }
+            >
+              <p className="text-sm whitespace-nowrap">
+                {swap?.enabled
+                  ? t("swap.currentValue", {
+                      size: swap.size_human,
+                      used: swap.used_human,
+                    })
+                  : t("swap.none")}
+              </p>
+            </InfoRow>
+  
+            <FormField
+              control={form.control}
+              name="size_mb"
+              render={({ field }) => (
+                <Row
+                  label={t("swap.size")}
+                  hint={t("swap.sizeHint")}
+                  error={validationMessage(
+                    tv,
+                    form.formState.errors.size_mb?.message,
+                  )}
+                  wide
                 >
-                  {PRESETS.map((mb) => (
-                    <ToggleGroupItem
-                      key={mb}
-                      value={String(mb)}
-                      className="px-4"
-                    >
-                      {mb === 0
-                        ? t("swap.off")
-                        : t("swap.gb", { gb: mb / 1024 })}
-                      {mb !== 0 && mb === recommendedMb ? (
-                        <span className="text-xs text-muted-foreground">
-                          {t("swap.recommended")}
-                        </span>
-                      ) : null}
+                  <ToggleGroup
+                    type="single"
+                    value={custom ? CUSTOM : String(sizeMb)}
+                    onValueChange={pick}
+                    variant="outline"
+                    disabled={!canManage}
+                    className="flex-wrap justify-start gap-2"
+                  >
+                    {PRESETS.map((mb) => (
+                      <ToggleGroupItem
+                        key={mb}
+                        value={String(mb)}
+                        className="px-4"
+                      >
+                        {mb === 0
+                          ? t("swap.off")
+                          : t("swap.gb", { gb: mb / 1024 })}
+                        {mb !== 0 && mb === recommendedMb ? (
+                          <span className="text-xs text-muted-foreground">
+                            {t("swap.recommended")}
+                          </span>
+                        ) : null}
+                      </ToggleGroupItem>
+                    ))}
+                    <ToggleGroupItem value={CUSTOM} className="px-4">
+                      {t("swap.custom")}
                     </ToggleGroupItem>
-                  ))}
-                  <ToggleGroupItem value={CUSTOM} className="px-4">
-                    {t("swap.custom")}
-                  </ToggleGroupItem>
-                </ToggleGroup>
-
-                {/* The number field only exists once "Custom" is chosen. Showing
-                    it beside the presets made two controls for one value, and
-                    left people wondering which one counted. */}
-                {custom ? (
-                  <div className="flex items-center gap-2 pt-1 sm:w-fit">
-                    <FormControl>
-                      <Input
-                        placeholder="2048"
-                        className="w-full font-mono sm:w-28"
-                        inputMode="numeric"
-                        autoComplete="off"
-                        disabled={!canManage}
-                        {...field}
-                      />
-                    </FormControl>
-                    <span className="text-sm text-muted-foreground">
-                      {t("swap.megabytes")}
-                    </span>
-                  </div>
-                ) : null}
-              </Row>
-            )}
-          />
-        </Section>
-      </form>
-
-      <ConfirmDialog
-        open={pendingValues !== null}
-        onOpenChange={(open) => !open && setPendingValues(null)}
-        icon={HardDriveDownload}
-        tone="warning"
-        title={t("swap.confirmTitle")}
-        description={t("swap.confirmDescription", {
-          used: swap?.used_human ?? "0 B",
-        })}
-        cancelLabel={t("swap.confirmCancel")}
-        confirmLabel={t("swap.confirmSubmit")}
-        pending={submitting}
-        onConfirm={() => save(pendingValues)}
-      />
-    </Form>
+                  </ToggleGroup>
+  
+                  {/* The number field only exists once "Custom" is chosen. Showing
+                      it beside the presets made two controls for one value, and
+                      left people wondering which one counted. */}
+                  {custom ? (
+                    <div className="flex items-center gap-2 pt-1 sm:w-fit">
+                      <FormControl>
+                        <Input
+                          placeholder="2048"
+                          className="w-full font-mono sm:w-28"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          disabled={!canManage}
+                          {...field}
+                        />
+                      </FormControl>
+                      <span className="text-sm text-muted-foreground">
+                        {t("swap.megabytes")}
+                      </span>
+                    </div>
+                  ) : null}
+                </Row>
+              )}
+            />
+          </Section>
+        </form>
+  
+        <ConfirmDialog
+          open={pendingValues !== null}
+          onOpenChange={(open) => !open && setPendingValues(null)}
+          icon={HardDriveDownload}
+          tone="warning"
+          title={t("swap.confirmTitle")}
+          description={t("swap.confirmDescription", {
+            used: swap?.used_human ?? "0 B",
+          })}
+          cancelLabel={t("swap.confirmCancel")}
+          confirmLabel={t("swap.confirmSubmit")}
+          pending={submitting}
+          onConfirm={() => save(pendingValues)}
+        />
+      </Form>
+    </DisabledReasonProvider>
   );
 }

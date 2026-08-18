@@ -479,6 +479,7 @@ function ConfigField({
                     field: label,
                   })}
                   disabled={!options.length}
+                  disabledReason={t("form.noOptions")}
                 />
               </FormControl>
             ) : (
@@ -486,6 +487,7 @@ function ConfigField({
                 onValueChange={field.onChange}
                 value={field.value ? String(field.value) : ""}
                 disabled={!options.length}
+                disabledReason={t("form.noOptions")}
               >
                 <FormControl>
                   <SelectTrigger className="w-full">
@@ -1317,6 +1319,7 @@ export function CreateApplicationForm({
                           onChange={field.onChange}
                           placeholder={t("systemUserPlaceholder")}
                           disabled={availableSystemUsers.length === 0}
+                          disabledReason={t("form.needsSystemUser")}
                         />
                       </FormControl>
                       {availableSystemUsers.length === 0 ? (
@@ -1419,6 +1422,7 @@ export function CreateApplicationForm({
                                     onChange={handleGitAccountChange}
                                     placeholder={t("gitAccountPlaceholder")}
                                     disabled={!gitAccounts.length}
+                                    disabledReason={t("form.needsGitAccount")}
                                   />
                                 </FormControl>
                                 {gitAccountsFailed ? (

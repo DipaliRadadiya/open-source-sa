@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import { Loader2, TableProperties } from "lucide-react";
 import { phpmyadminSso } from "@/lib/api/databases";
@@ -87,9 +88,11 @@ export function PhpmyadminButton({ database, canManage, compact = false }) {
   }
 
   return (
-    <Button type="button" variant="outline" size="sm" onClick={open} disabled={!canManage || opening}>
-      {icon}
-      {t("open")}
-    </Button>
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <Button type="button" variant="outline" size="sm" onClick={open} disabled={!canManage || opening}>
+        {icon}
+        {t("open")}
+      </Button>
+    </DisabledReasonProvider>
   );
 }

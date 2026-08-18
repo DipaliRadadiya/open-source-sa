@@ -178,7 +178,7 @@
       "fingerprint": "Fingerprint",
       "addedOn": "Added {when}"
     },
-    "noPermission": "You do not have permission to change this.",
+    "noPermission": "Your role does not include System User with Manage access. Ask an administrator to grant it.",
     "shellNeedsLogin": "This shell refuses login, so it cannot be set while SSH access is on. Turn SSH off first.",
     "sshNeedsLoginShell": "The shell is set to “{shell}”, which refuses login. Choose a shell that allows login first."
   },
@@ -757,7 +757,7 @@
     "staleHint": "Showing the last values received.",
     "kill": {
       "action": "Stop this process",
-      "noPermission": "Your role does not allow stopping processes.",
+      "noPermission": "Your role does not include Dashboard with Manage access. Ask an administrator to grant it.",
       "title": "Stop {command}?",
       "description": "PID {pid}, running as {user}. Anything depending on it stops too, and there is no undo.",
       "forceDescription": "It did not stop. Force stop kills it immediately, with no chance to save or close files.",
@@ -865,7 +865,7 @@
     "subtitleWithZone": "Scheduled commands that run automatically on this server, in server time ({timezone}).",
     "duplicateName": "{name} (copy)",
     "loadFailed": "Your cron jobs could not be loaded. They have not been changed or removed.",
-    "noPermission": "You do not have permission to change this."
+    "noPermission": "Your role does not include Cronjob with Manage access. Ask an administrator to grant it."
   },
   "errors": {
     "title": "Something went wrong",
@@ -990,7 +990,8 @@
       "title": "This log could not be read",
       "body": "The server did not answer. The file may still be fine — try again."
     },
-    "clearSearch": "Clear filter"
+    "clearSearch": "Clear filter",
+    "sourceNotReadable": "The panel cannot read this file. Check that it exists and that its permissions allow the panel's user to read it."
   },
   "services": {
     "title": "Services",
@@ -998,7 +999,7 @@
     "loadFailed": "The services on this server could not be read. Nothing has been started or stopped.",
     "failedSummary": "{count, plural, one {# service has failed} other {# services have failed}}",
     "protectedHint": "This service runs the panel itself, so it cannot be stopped or disabled from here.",
-    "noPermission": "Your role does not allow changing services.",
+    "noPermission": "Your role does not include Service with Manage access. Ask an administrator to grant it.",
     "columns": {
       "service": "Service",
       "status": "Status",
@@ -1110,7 +1111,7 @@
       "title": "Fail2ban is not installed",
       "body": "It watches for people guessing passwords and bans them for a while. Installing takes about a minute and switches nothing on — you pick what to watch afterwards.",
       "action": "Install fail2ban",
-      "noPermission": "You do not have permission to install",
+      "noPermission": "Your role does not include Fail2ban with Manage access. Ask an administrator to grant it.",
       "started": "Installing — this takes about a minute.",
       "installing": "This page updates itself when it is done.",
       "failed": "Fail2ban could not be installed.",
@@ -1241,7 +1242,7 @@
       "needsAttention": "Needs your attention"
     },
     "disabled": {
-      "noPermission": "You do not have permission to change this.",
+      "noPermission": "Your role does not include Fail2ban with Manage access. Ask an administrator to grant it.",
       "noChanges": "Nothing has changed yet.",
       "saving": "Saving…",
       "enterIp": "Type an address first."
@@ -1253,7 +1254,8 @@
       "action": "Set up protection",
       "done": "Protection is on.",
       "failed": "That could not be set up."
-    }
+    },
+    "noPermission": "Your role does not include Fail2ban with Manage access. Ask an administrator to grant it."
   },
   "firewall": {
     "title": "Firewall",
@@ -1264,7 +1266,7 @@
       "close": "Close"
     },
     "disabled": {
-      "noPermission": "You do not have permission to change this."
+      "noPermission": "Your role does not include Firewall with Manage access. Ask an administrator to grant it."
     },
     "status": {
       "onTitle": "Your server is protected",
@@ -1364,7 +1366,8 @@
       "riskyExposure": "{name} would be reachable from any address on the internet. Databases are normally limited to a single IP — fill in the IP address field below.",
       "duplicate": "You already have a rule exactly like this one.",
       "onlyMyIp": "Only my IP",
-      "onlyMyIpSet": "Your IP"
+      "onlyMyIpSet": "Your IP",
+      "wouldLockYouOut": "That is the address you are connected from. Blocking it would lock you out of this server."
     },
     "quick": {
       "title": "Quick add",
@@ -1396,7 +1399,8 @@
       "description": "Changing the ports replaces the rule — the new one is added before the old is removed.",
       "submit": "Save rule",
       "saved": "Rule updated."
-    }
+    },
+    "noPermission": "Your role does not include Firewall with Manage access. Ask an administrator to grant it."
   },
   "settings": {
     "title": "Settings",
@@ -1419,7 +1423,8 @@
       "on": "On",
       "off": "Off",
       "nothingToSave": "Nothing to save — change a setting first.",
-      "changedBy": "Changed by {user} {when}"
+      "changedBy": "Changed by {user} {when}",
+      "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it."
     },
     "validation": {
       "required": "This can't be empty.",
@@ -1445,7 +1450,8 @@
       "save": "Save server details",
       "description": "This server’s name and clock.",
       "clockDrift": "Not in sync",
-      "clockDriftHint": "NTP is on but the clock has not synced — scheduled jobs may run late and log times will be wrong."
+      "clockDriftHint": "NTP is on but the clock has not synced — scheduled jobs may run late and log times will be wrong.",
+      "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it."
     },
     "security": {
       "title": "Signing in over SSH",
@@ -1504,7 +1510,8 @@
         },
         "save": "Save SSH settings"
       },
-      "description": "Who can reach the command line, and how."
+      "description": "Who can reach the command line, and how.",
+      "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it."
     },
     "performance": {
       "swap": {
@@ -1551,7 +1558,9 @@
         "notRunning": "Redis is not running.",
         "usage": "{used} in use",
         "usageOfLimit": "{used} of {limit}"
-      }
+      },
+      "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
+      "passwordNotManageable": "This install cannot rewrite its own configuration file, so the Redis password cannot be changed from here. Change it on the server and update REDIS_PASSWORD."
     },
     "maintenance": {
       "rebootRequired": {
@@ -1629,7 +1638,7 @@
     "title": "PHP",
     "subtitle": "PHP on this server, and the extensions your sites can use.",
     "loadFailed": "We couldn't read this server's PHP setup.",
-    "noPermission": "You don't have permission to change this.",
+    "noPermission": "Your role does not include PHP with Manage access. Ask an administrator to grant it.",
     "empty": {
       "title": "No PHP installed",
       "description": "Install a version to run PHP sites on this server."
@@ -1776,7 +1785,7 @@
     "title": "Node.js",
     "subtitle": "The Node.js versions on this server.",
     "loadFailed": "We couldn't read this server's Node.js setup.",
-    "noPermission": "You don't have permission to change this.",
+    "noPermission": "Your role does not include Node.js with Manage access. Ask an administrator to grant it.",
     "empty": {
       "title": "No Node.js installed",
       "description": "Install a version to run Node.js apps on this server.",
@@ -1859,7 +1868,7 @@
     "title": "Disk Cleaner",
     "subtitle": "Free up space by clearing caches, old logs and temporary files.",
     "loadFailed": "We couldn't read this server's disk usage.",
-    "noPermission": "You don't have permission to change this.",
+    "noPermission": "Your role does not include Disk Cleaner with Manage access. Ask an administrator to grant it.",
     "summary": {
       "label": "Disk space",
       "percentUsed": "{percent}% full",
@@ -1938,7 +1947,8 @@
       "dialogDescription": "Let the panel clean up on its own, so a full disk never surprises you.",
       "cleansNothing": "Nothing selected",
       "overThreshold": "when over {percent}%",
-      "everyTime": "every time"
+      "everyTime": "every time",
+      "turnOnFirst": "Turn the schedule on to choose when it runs."
     },
     "runs": {
       "title": "Recent cleanups",
@@ -1967,7 +1977,7 @@
     "title": "Databases",
     "subtitle": "Create databases, manage who can connect to them, and download backups.",
     "loadFailed": "We couldn't load your databases.",
-    "noPermission": "You don't have permission to change this.",
+    "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
     "cancel": "Cancel",
     "actions": "Actions",
     "searchPlaceholder": "Search databases…",
@@ -2058,7 +2068,8 @@
       "defaultOption": "Server default",
       "chooseCharsetFirst": "Choose a character set first",
       "noEngine": "Install a database engine first.",
-      "usernamePlaceholder": "my_app_user"
+      "usernamePlaceholder": "my_app_user",
+      "needsCharset": "Choose a character set first — its collations load with it."
     },
     "access": {
       "localhost": {
@@ -2100,7 +2111,7 @@
       "forName": "Delete {name}",
       "cardTitle": "Delete this database",
       "cardDescription": "Removes the database, everything in it, and its users.",
-      "noPermission": "You do not have permission to change this."
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it."
     },
     "adopt": {
       "title": "{count, plural, one {# database on this server isn't managed here} other {# databases on this server aren't managed here}}",
@@ -2198,7 +2209,7 @@
       "save": "Save",
       "saving": "Saving…",
       "done": "Done",
-      "noPermission": "You do not have permission to change this.",
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "editTitle": "Edit {username}",
       "editSubtitle": "Rename the user, or change where it may connect from.",
       "editHint": "The password is not changed here — use Change password.",
@@ -2220,7 +2231,8 @@
       "passwordPlaceholder": "At least 8 characters",
       "generate": "Generate",
       "copyUsername": "Copy username",
-      "newPasswordRequired": "New password (required to rename on MongoDB)"
+      "newPasswordRequired": "New password (required to rename on MongoDB)",
+      "nameIsFixed": "A database user's name cannot be changed after it is created. Create another user instead."
     },
     "detail": {
       "size": "Size",
@@ -2237,7 +2249,7 @@
       "startFailed": "The export could not be started.",
       "empty": "No exports yet.",
       "alreadyRunning": "An export is already running.",
-      "noPermission": "You do not have permission to change this.",
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "download": "Download",
       "delete": "Delete",
       "deleted": "Export deleted.",
@@ -2297,7 +2309,7 @@
       "killTitle": "Stop this query?",
       "killDescription": "The query is cancelled and its client gets an error. The database itself keeps running.",
       "cancel": "Cancel",
-      "noPermission": "You do not have permission to change this.",
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "noEngine": {
         "title": "No database engine is running",
         "description": "Health information comes from a running engine. Start or connect one first."
@@ -2369,7 +2381,7 @@
       "repair": "Repair",
       "working": "Working…",
       "cancel": "Cancel",
-      "noPermission": "You do not have permission to change this.",
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "optimizeTitle": "Optimize this database?",
       "optimizeDescription": "Reclaims space left behind by deleted rows. Safe, but tables are briefly locked while it runs.",
       "repairTitle": "Repair this database?",
@@ -2387,14 +2399,15 @@
     },
     "phpmyadmin": {
       "open": "Open in phpMyAdmin",
-      "failed": "phpMyAdmin could not be opened."
+      "failed": "phpMyAdmin could not be opened.",
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it."
     }
   },
   "git": {
     "title": "Git",
     "subtitle": "Connect a Git account once, then choose it when you create an application.",
     "loadFailed": "We could not load your connected accounts.",
-    "noPermission": "You do not have permission to manage integrations.",
+    "noPermission": "Your role does not include Git with Manage access. Ask an administrator to grant it.",
     "accounts": {
       "title": "Connected accounts",
       "description": "Accounts applications can deploy from.",
@@ -2582,7 +2595,7 @@
     "title": "Applications",
     "subtitle": "Sites and services running on this server.",
     "loadFailed": "We could not load applications.",
-    "noPermission": "You do not have permission to manage applications.",
+    "noPermission": "Your role does not include Application with Manage access. Ask an administrator to grant it.",
     "create": "Create application",
     "createTitle": "Create application",
     "createSubtitle": "Choose what to run, then provide only the configuration it needs.",
@@ -2779,7 +2792,7 @@
       "repositoryNeedsAccount": "Choose a Git account first.",
       "branchNeedsRepository": "Choose a repository first.",
       "changeType": "Change",
-      "noOptions": "No options available yet.",
+      "noOptions": "This site type offered no choices for this field, so there is nothing to pick.",
       "typePlaceholder": "Search and select an application type…",
       "domainMode": {
         "own": "My domain",
@@ -2789,7 +2802,9 @@
       "temporaryDomainHint": "Works right away. Use a real domain before launch.",
       "nameHint": "Only used in the panel — visitors never see it.",
       "buildCommandSuperseded": "This will not run — the deploy script replaces it.",
-      "moreLines": "{count, plural, one {+# more line} other {+# more lines}}"
+      "moreLines": "{count, plural, one {+# more line} other {+# more lines}}",
+      "needsSystemUser": "No system user exists yet. Use “Create system user” above to make one.",
+      "needsGitAccount": "No Git account is connected. Use “Connect Git” below, then Refresh."
     },
     "actions": {
       "label": "Actions",
@@ -2895,7 +2910,12 @@
       },
       "promote": {
         "title": "Make {domain} the primary domain?",
-        "body": "This renames the site's config and log files; the current primary stays attached as an alias. Note: a WordPress site keeps its old address in the database and may redirect back until you update it."
+        "body": "This becomes the site's canonical address.",
+        "nowLabel": "Now",
+        "afterLabel": "After",
+        "keepsServing": "{domain} stays attached as an alias and keeps serving this site.",
+        "renamesFiles": "The site's config and log files are renamed.",
+        "cmsWarning": "WordPress still has the old address saved, so visitors may be redirected back until you change it in the site."
       },
       "removeConfirm": {
         "title": "Remove {domain}?",
@@ -3039,7 +3059,7 @@
         "saveNote": "Applies to the next deploy, not the one running now.",
         "saved": "Deploy settings saved.",
         "saveFailed": "Those settings could not be saved.",
-        "noPermission": "You do not have permission to change this.",
+        "noPermission": "Your role does not include Deployment for this site with Manage access. Ask an administrator to grant it.",
         "nothingToSave": "Nothing to save"
       },
       "history": {
@@ -3057,7 +3077,7 @@
         "loadingLog": "Loading the build log…",
         "noOutput": "This deploy produced no output.",
         "logFailed": "The build log could not be loaded.",
-        "noPermission": "You do not have permission to deploy.",
+        "noPermission": "Your role does not include Deployment for this site with Manage access. Ask an administrator to grant it.",
         "title": "Deploy history",
         "subtitle": "Every deploy, newest first. Open one to read its build log."
       }
@@ -3067,7 +3087,7 @@
       "pageSubtitle": "Browse, view and edit this site's files.",
       "loadFailed": "Files could not be loaded.",
       "provisioning": "This site is still being set up. Files will be available once it's running.",
-      "noPermission": "You don't have permission to manage files.",
+      "noPermission": "Your role does not include Files for this site with Manage access. Ask an administrator to grant it.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "breadcrumbLabel": "Folder path",
@@ -3346,7 +3366,7 @@
         "batchEmptied": "Deleted for good.",
         "emptyFailed": "Couldn't empty the trash.",
         "itemCount": "{count, plural, one {# item} other {# items}}",
-        "noPermission": "You don't have permission to change files on this site.",
+        "noPermission": "Your role does not include Files for this site with Manage access. Ask an administrator to grant it.",
         "loadFailed": "Couldn't load the trash.",
         "cancel": "Cancel",
         "confirmSubmit": "Delete forever",
@@ -3374,7 +3394,7 @@
       "loadFailed": "Workers could not be loaded.",
       "provisioning": "This site is still being set up. Workers will be available once it's running.",
       "addWorker": "Add worker",
-      "noPermission": "You don't have permission to manage workers.",
+      "noPermission": "Your role does not include Workers for this site with Manage access. Ask an administrator to grant it.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "empty": {
@@ -3501,7 +3521,7 @@
       "saving": "Saving…",
       "savingNote": "This can take a few seconds — the web server is being reloaded.",
       "discard": "Discard",
-      "noPermission": "You don't have permission to manage this.",
+      "noPermission": "Your role does not include Password Protection for this site with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing to save",
       "enabledToast": "Password protection is on.",
       "disabledToast": "Password protection is off — the site is public again.",
@@ -3573,7 +3593,8 @@
           "searchEngine": "That's a search engine, not an AI crawler — blocking it would take the site out of search results.",
           "duplicate": "That bot is already on this list.",
           "limit": "That's the most bots this list can hold."
-        }
+        },
+        "noPermission": "Your role does not include AI Bot Blocker for this site with Manage access. Ask an administrator to grant it."
       },
       "howItWorks": "Your robots.txt isn't changed, and Google and real visitors aren't affected.",
       "save": "Save",
@@ -3582,7 +3603,7 @@
       "discard": "Discard",
       "saved": "AI bot settings saved.",
       "saveFailed": "That couldn't be saved.",
-      "noPermission": "You don't have permission to manage this.",
+      "noPermission": "Your role does not include AI Bot Blocker for this site with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing to save"
     },
     "firewall": {
@@ -3637,7 +3658,7 @@
       "discard": "Discard",
       "saved": "Firewall settings saved.",
       "saveFailed": "That couldn't be saved.",
-      "noPermission": "You don't have permission to manage this.",
+      "noPermission": "Your role does not include 8G Firewall for this site with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing to save",
       "detectCaught": "{count, plural, one {# request would have been blocked so far} other {# requests would have been blocked so far}}.",
       "detectNothingYet": "Nothing has been caught yet.",
@@ -3679,7 +3700,7 @@
         "domain": "Domain for the copy",
         "domainPlaceholder": "copy.example.com",
         "submit": "Create site copy",
-        "noPermission": "You cannot clone this site.",
+        "noPermission": "Your role does not include Site Clone for this site with Manage access. Ask an administrator to grant it.",
         "defaultName": "{name} (Clone)",
         "name": "Copy name",
         "domainTaken": "A site on this server already uses that domain."
@@ -3776,7 +3797,8 @@
         "domain": "New domain",
         "name": "Name",
         "cancel": "Cancel"
-      }
+      },
+      "noPermission": "Your role does not include Site Clone for this site with Manage access. Ask an administrator to grant it."
     },
     "php": {
       "pageTitle": "PHP Settings",
@@ -3786,7 +3808,7 @@
       "saved": "PHP settings saved.",
       "saveFailed": "The settings could not be saved.",
       "savingNote": "Applying and reloading PHP…",
-      "noPermission": "You cannot change PHP settings for this site.",
+      "noPermission": "Your role does not include PHP Settings for this site with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing has changed",
       "versionLabel": "PHP {version}",
       "presetsLabel": "Worker presets",
@@ -3953,7 +3975,7 @@
       "savingNote": "Testing and reloading fail2ban…",
       "nothingToSave": "Nothing has changed",
       "bothRequired": "Both files need contents",
-      "noPermission": "You cannot change attack protection for this site.",
+      "noPermission": "Your role does not include Fail2ban for this site with Manage access. Ask an administrator to grant it.",
       "saved": "Attack protection saved and reloaded.",
       "saveFailed": "That could not be saved.",
       "testFailed": "fail2ban rejected this configuration.",
@@ -4030,6 +4052,7 @@
       "copyAge": "Copy made {age}"
     },
     "stagingBadge": "Staging",
+    "paused": "Paused",
     "webRoot": {
       "title": "Change web root",
       "description": "The directory the web server serves for this site.",
@@ -4151,7 +4174,8 @@
     "referenceClear": "Clear the reference",
     "referenceInvalid": "That doesn't look like a reference. Copy the whole thing from the error message.",
     "referenceNotFoundTitle": "No failure with that reference",
-    "referenceNotFoundDescription": "Nothing in the log matches it. Check the reference was copied in full, or that it came from this server."
+    "referenceNotFoundDescription": "Nothing in the log matches it. Check the reference was copied in full, or that it came from this server.",
+    "referenceEmpty": "Paste a reference from the error message first."
   },
   "setup": {
     "title": "Set up your server",
@@ -4196,7 +4220,7 @@
     "title": "Storage",
     "subtitle": "Where backups are sent. Connect a bucket here, then choose it on an application.",
     "loadFailed": "This couldn't be loaded.",
-    "noPermission": "You don't have permission to manage this.",
+    "noPermission": "Your role does not include Storage with Manage access. Ask an administrator to grant it.",
     "card": {
       "title": "Storage destinations",
       "subtitle": "S3-compatible buckets this server can write backups to.",
@@ -4380,7 +4404,8 @@
         "lastRun": "Never"
       },
       "runsShortly": "Runs shortly",
-      "notSetUpLine": "Not set up — nothing on this site is being backed up."
+      "notSetUpLine": "Not set up — nothing on this site is being backed up.",
+      "needsDestination": "No storage destination is set up yet. Add one under Integrations → Storage first."
     },
     "setup": {
       "title": "Set up backups",
@@ -4492,7 +4517,7 @@
         "description": "Try a different site or status."
       },
       "restore": "Restore this backup…",
-      "noPermission": "You do not have permission to restore backups.",
+      "noPermission": "Your role does not include Backups with Manage access. Ask an administrator to grant it.",
       "safetyBadge": "Safety copy",
       "sizeUnknown": "Unknown",
       "unknownApplication": "Deleted site",
@@ -4675,7 +4700,7 @@
       "started": "Your download is starting.",
       "failed": "That archive could not be downloaded.",
       "blocked": {
-        "noPermission": "You cannot download backups.",
+        "noPermission": "Your role does not include Backups with Manage access. Ask an administrator to grant it.",
         "inFlight": "This backup is still being written."
       }
     },

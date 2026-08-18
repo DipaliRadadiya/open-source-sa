@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { Server, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { generalFormSchema } from "@/lib/schemas/settings";
@@ -51,100 +52,102 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
-        <Section
-          icon={Server}
-          title={t("title")}
-          description={t("description")}
-          readOnly={!canManage}
-          changedBy={changedBy}
-          actions={
-            <SectionActions
-              label={t("save")}
-              isDirty={form.formState.isDirty}
-              pending={form.formState.isSubmitting}
-              onDiscard={() => form.reset(defaults)}
-              canManage={canManage}
-            />
-          }
-        >
-          <FormField
-            control={form.control}
-            name="hostname"
-            render={({ field }) => (
-              <Row
-                label={t("hostname")}
-                hint={t("hostnameHint")}
-                required
-                error={validationMessage(
-                  tv,
-                  form.formState.errors.hostname?.message,
-                )}
-              >
-                <FormControl>
-                  <Input
-                    placeholder="server.example.com"
-                    className="font-mono"
-                    autoComplete="off"
-                    spellCheck={false}
-                    disabled={!canManage}
-                    {...field}
-                  />
-                </FormControl>
-              </Row>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="timezone"
-            render={({ field }) => (
-              <Row label={t("timezone")} hint={t("timezoneHint")}>
-                <FormControl>
-                  <TimezoneField
-                    value={field.value}
-                    onChange={field.onChange}
-                    disabled={!canManage}
-                    groups={timezones}
-                  />
-                </FormControl>
-              </Row>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="ntp"
-            render={({ field }) => (
-              <Row
-                label={t("ntp")}
-                hint={
-                  general?.clock_synchronized === false && general?.ntp
-                    ? t("clockDriftHint")
-                    : t("ntpHint")
-                }
-              >
-                <div className="flex items-center gap-2">
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
+          <Section
+            icon={Server}
+            title={t("title")}
+            description={t("description")}
+            readOnly={!canManage}
+            changedBy={changedBy}
+            actions={
+              <SectionActions
+                label={t("save")}
+                isDirty={form.formState.isDirty}
+                pending={form.formState.isSubmitting}
+                onDiscard={() => form.reset(defaults)}
+                canManage={canManage}
+              />
+            }
+          >
+            <FormField
+              control={form.control}
+              name="hostname"
+              render={({ field }) => (
+                <Row
+                  label={t("hostname")}
+                  hint={t("hostnameHint")}
+                  required
+                  error={validationMessage(
+                    tv,
+                    form.formState.errors.hostname?.message,
+                  )}
+                >
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
+                    <Input
+                      placeholder="server.example.com"
+                      className="font-mono"
+                      autoComplete="off"
+                      spellCheck={false}
                       disabled={!canManage}
+                      {...field}
                     />
                   </FormControl>
-                  {general?.clock_synchronized === false && general?.ntp ? (
-                    <Badge variant="warning" className="gap-1 font-normal">
-                      <TriangleAlert className="size-3" />
-                      {t("clockDrift")}
-                    </Badge>
-                  ) : null}
-                </div>
-              </Row>
-            )}
-          />
-        </Section>
-      </form>
-    </Form>
+                </Row>
+              )}
+            />
+  
+            <FormField
+              control={form.control}
+              name="timezone"
+              render={({ field }) => (
+                <Row label={t("timezone")} hint={t("timezoneHint")}>
+                  <FormControl>
+                    <TimezoneField
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={!canManage}
+                      groups={timezones}
+                    />
+                  </FormControl>
+                </Row>
+              )}
+            />
+  
+            <FormField
+              control={form.control}
+              name="ntp"
+              render={({ field }) => (
+                <Row
+                  label={t("ntp")}
+                  hint={
+                    general?.clock_synchronized === false && general?.ntp
+                      ? t("clockDriftHint")
+                      : t("ntpHint")
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={!canManage}
+                      />
+                    </FormControl>
+                    {general?.clock_synchronized === false && general?.ntp ? (
+                      <Badge variant="warning" className="gap-1 font-normal">
+                        <TriangleAlert className="size-3" />
+                        {t("clockDrift")}
+                      </Badge>
+                    ) : null}
+                  </div>
+                </Row>
+              )}
+            />
+          </Section>
+        </form>
+      </Form>
+    </DisabledReasonProvider>
   );
 }

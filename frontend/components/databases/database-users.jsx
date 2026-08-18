@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import {
   KeyRound,
   MoreHorizontal,
@@ -65,87 +66,89 @@ export function DatabaseUsers({ database, canManage }) {
   );
 
   return (
-    <>
-      <Card className="gap-0 overflow-hidden py-0">
-        {/* flex-wrap + a real minimum on the text: without them the
-            heading block shrank to make room for the button and the sentence
-            squeezed to three words a line. The button drops to its own row
-            instead. */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-          <div className="flex min-w-40 flex-1 items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <Users className="size-3.5" />
-            </span>
-            <div>
-              <h2 className="text-base font-semibold tracking-tight">
-                {t("title")}
-              </h2>
-              <p className="text-sm text-muted-foreground">{t("description")}</p>
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <>
+        <Card className="gap-0 overflow-hidden py-0">
+          {/* flex-wrap + a real minimum on the text: without them the
+              heading block shrank to make room for the button and the sentence
+              squeezed to three words a line. The button drops to its own row
+              instead. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
+            <div className="flex min-w-40 flex-1 items-center gap-2.5">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Users className="size-3.5" />
+              </span>
+              <div>
+                <h2 className="text-base font-semibold tracking-tight">
+                  {t("title")}
+                </h2>
+                <p className="text-sm text-muted-foreground">{t("description")}</p>
+              </div>
             </div>
+            {users.length > 0 ? addButton : null}
           </div>
-          {users.length > 0 ? addButton : null}
-        </div>
-
-        <CardContent className="px-5 py-0">
-          {users.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-10 text-center">
-              <p className="text-sm font-medium">{t("empty.title")}</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                {t("empty.description")}
-              </p>
-              {addButton}
-            </div>
-          ) : (
-            <div className="divide-y">
-              {users.map((user) => (
-                <UserRow
-                  key={user.id}
-                  user={user}
-                  canManage={canManage}
-                  onEdit={() => setEditing(user)}
-                  onPassword={() => setChanging(user)}
-                  onDelete={() => setDeleting(user)}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {canManage ? (
-        <>
-          <AddUserDialog
-            database={database}
-            open={adding}
-            onOpenChange={setAdding}
-          />
-          {editing ? (
-            <EditUserDialog
+  
+          <CardContent className="px-5 py-0">
+            {users.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <p className="text-sm font-medium">{t("empty.title")}</p>
+                <p className="max-w-sm text-sm text-muted-foreground">
+                  {t("empty.description")}
+                </p>
+                {addButton}
+              </div>
+            ) : (
+              <div className="divide-y">
+                {users.map((user) => (
+                  <UserRow
+                    key={user.id}
+                    user={user}
+                    canManage={canManage}
+                    onEdit={() => setEditing(user)}
+                    onPassword={() => setChanging(user)}
+                    onDelete={() => setDeleting(user)}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+  
+        {canManage ? (
+          <>
+            <AddUserDialog
               database={database}
-              user={editing}
-              open
-              onOpenChange={(next) => !next && setEditing(null)}
+              open={adding}
+              onOpenChange={setAdding}
             />
-          ) : null}
-          {changing ? (
-            <UserPasswordDialog
-              database={database}
-              user={changing}
-              open
-              onOpenChange={(next) => !next && setChanging(null)}
-            />
-          ) : null}
-          {deleting ? (
-            <DeleteUserDialog
-              database={database}
-              user={deleting}
-              open
-              onOpenChange={(next) => !next && setDeleting(null)}
-            />
-          ) : null}
-        </>
-      ) : null}
-    </>
+            {editing ? (
+              <EditUserDialog
+                database={database}
+                user={editing}
+                open
+                onOpenChange={(next) => !next && setEditing(null)}
+              />
+            ) : null}
+            {changing ? (
+              <UserPasswordDialog
+                database={database}
+                user={changing}
+                open
+                onOpenChange={(next) => !next && setChanging(null)}
+              />
+            ) : null}
+            {deleting ? (
+              <DeleteUserDialog
+                database={database}
+                user={deleting}
+                open
+                onOpenChange={(next) => !next && setDeleting(null)}
+              />
+            ) : null}
+          </>
+        ) : null}
+      </>
+    </DisabledReasonProvider>
   );
 }
 

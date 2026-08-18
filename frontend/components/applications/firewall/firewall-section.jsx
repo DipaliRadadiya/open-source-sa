@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { ChevronDown, ShieldCheck, Sliders } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateApplicationWaf } from "@/lib/api/applications";
@@ -143,197 +144,199 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   const locked = !canManage || saving;
 
   return (
-    <div className="max-w-4xl space-y-4">
-      <div className="flex items-center gap-2.5 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-        <ShieldCheck className="size-4 shrink-0" />
-        <p>{t("explainer")}</p>
-      </div>
-
-      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-        <CardContent className="space-y-5 p-5">
-          {/* A real <label> so the whole row toggles, not just the switch. */}
-          <label
-            className={cn(
-              "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
-              blocking && "border-success/30 bg-success/5",
-              enabled && !blocking && "border-warning/30 bg-warning/5",
-              !enabled && "bg-muted/40",
-              locked ? "cursor-not-allowed" : "cursor-pointer",
-            )}
-          >
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <span
-                className={cn(
-                  "mt-0.5 hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
-                  blocking && "bg-success/15 text-success",
-                  enabled && !blocking && "bg-warning/15 text-warning",
-                  !enabled && "bg-muted-foreground/10 text-muted-foreground",
-                )}
-              >
-                <ShieldCheck className="size-4" />
-              </span>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{t("enable")}</span>
-                  <Badge variant={statusVariant}>{statusLabel}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {blocking ? t("blockingHint") : enabled ? t("watchingHint") : t("offHint")}
-                </p>
-              </div>
-            </div>
-            <div className="flex h-5 shrink-0 items-center">
-              <Switch
-                checked={enabled}
-                onCheckedChange={setEnabled}
-                disabled={locked}
-                aria-label={t("enable")}
-              />
-            </div>
-          </label>
-
-          <Collapsible open={!enabled}>
-            <CollapsibleContent className={COLLAPSIBLE_ANIMATION}>
-              <div className="rounded-lg bg-muted/40 p-3.5 text-sm">
-                <p className="mb-1 font-medium">{t("whenToUseTitle")}</p>
-                <p className="text-muted-foreground">{t("whenToUseBody")}</p>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-
-          <Collapsible open={enabled}>
-            <CollapsibleContent className={cn("-mx-1 px-1", COLLAPSIBLE_ANIMATION)}>
-              <div className="space-y-5 border-t pt-5">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">{t("modeLabel")}</p>
-                  <ChoiceField
-                    value={mode}
-                    onChange={setMode}
-                    disabled={locked}
-                    name="waf-mode"
-                    options={modes.map((option) => ({
-                      value: option.value,
-                      // Straight from the API — never a local copy.
-                      label: option.title,
-                      hint: option.value === "enforce" ? t("modeEnforceHint") : t("modeDetectHint"),
-                      tone: option.value === "enforce" ? "warning" : undefined,
-                    }))}
-                  />
-                  {showDetectLog ? (
-                    // Points down the page at the real evidence rather than
-                    // out to the file browser. The number is here, next to the
-                    // switch, so turning blocking on is a decision with a
-                    // figure in front of it instead of a guess.
-                    <p className="pt-1 text-xs text-muted-foreground">
-                      {detectCount > 0
-                        ? t("detectCaught", { count: detectCount })
-                        : t("detectNothingYet")}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2 border-t pt-5">
-                  <p className="text-sm font-medium">{t("categoriesLabel")}</p>
-                  <p className="text-xs text-muted-foreground">{t("categoriesHint")}</p>
-                  <div className="divide-y rounded-xl border">
-                    {catalog.map((category) => {
-                      const checked = active.includes(category.value);
-                      // Unticking the last one would send `categories: []`,
-                      // which the API reads as ALL SIX — the opposite of what
-                      // the click means. Blocked at the source, with the way
-                      // out named.
-                      const lastOne = checked && active.length === 1;
-                      return (
-                        <label
-                          key={category.value}
-                          className={cn(
-                            "flex flex-col gap-1 p-3.5 transition-colors",
-                            locked || lastOne ? "cursor-not-allowed" : "cursor-pointer hover:bg-muted/40",
-                          )}
-                        >
-                          {/* The switch pairs with the TITLE, and the
-                              explanation runs the full width beneath. Sharing a
-                              row with the switch left the sentence 148px wide
-                              over four lines on a narrow screen — the switch is
-                              44px of a 208px row and never gives any of it up. */}
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="min-w-0 text-sm font-medium">{category.title}</span>
-                            <ReasonTooltip reason={lastOne ? t("lastCategory") : null}>
-                              <div className="flex h-5 shrink-0 items-center">
-                                <Switch
-                                  checked={checked}
-                                  onCheckedChange={(value) => toggleCategory(category.value, value)}
-                                  disabled={locked || lastOne}
-                                  aria-label={category.title}
-                                />
-                              </div>
-                            </ReasonTooltip>
-                          </div>
-                          {DESCRIBED_CATEGORIES.has(category.value) ? (
-                            <span className="block text-xs leading-relaxed text-muted-foreground">
-                              {t(`categoryHints.${category.value}`)}
-                            </span>
-                          ) : null}
-                        </label>
-                      );
-                    })}
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <div className="max-w-4xl space-y-4">
+        <div className="flex items-center gap-2.5 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          <ShieldCheck className="size-4 shrink-0" />
+          <p>{t("explainer")}</p>
+        </div>
+  
+        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+          <CardContent className="space-y-5 p-5">
+            {/* A real <label> so the whole row toggles, not just the switch. */}
+            <label
+              className={cn(
+                "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
+                blocking && "border-success/30 bg-success/5",
+                enabled && !blocking && "border-warning/30 bg-warning/5",
+                !enabled && "bg-muted/40",
+                locked ? "cursor-not-allowed" : "cursor-pointer",
+              )}
+            >
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <span
+                  className={cn(
+                    "mt-0.5 hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
+                    blocking && "bg-success/15 text-success",
+                    enabled && !blocking && "bg-warning/15 text-warning",
+                    !enabled && "bg-muted-foreground/10 text-muted-foreground",
+                  )}
+                >
+                  <ShieldCheck className="size-4" />
+                </span>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{t("enable")}</span>
+                    <Badge variant={statusVariant}>{statusLabel}</Badge>
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    {blocking ? t("blockingHint") : enabled ? t("watchingHint") : t("offHint")}
+                  </p>
                 </div>
-
-                {/* Progressive disclosure: two rule lists are the answer to a
-                    problem most sites never have, so they stay folded away
-                    until someone goes looking for them. */}
-                <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="border-t pt-5">
-                  <CollapsibleTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" className="-ml-2">
-                      <Sliders className="size-3.5" />
-                      {t("advanced")}
-                      <ChevronDown className={cn("size-3.5 transition-transform", advancedOpen && "rotate-180")} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className={cn("-mx-1 px-1", COLLAPSIBLE_ANIMATION)}>
-                    <div className="mt-3 space-y-5">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">{t("exceptionsTitle")}</p>
-                        <p className="text-xs leading-relaxed text-muted-foreground">{t("exceptionsHint")}</p>
-                        <RuleList
-                          items={exceptions}
-                          onChange={setExceptions}
-                          disabled={locked}
-                          placeholder={t("exceptionsPlaceholder")}
-                          emptyText={t("exceptionsEmpty")}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">{t("blocksTitle")}</p>
-                        <p className="text-xs leading-relaxed text-muted-foreground">{t("blocksHint")}</p>
-                        <RuleList
-                          items={blocks}
-                          onChange={setBlocks}
-                          disabled={locked}
-                          placeholder={t("blocksPlaceholder")}
-                          emptyText={t("blocksEmpty")}
-                          warnShort
-                        />
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardContent>
-
-        <CardSaveFooter
-          saving={saving}
-          dirty={isDirty}
-          saveReason={saveReason}
-          onSave={save}
-          onDiscard={discard}
-          savingNote={t("savingNote")}
-        />
-      </Card>
-    </div>
+              <div className="flex h-5 shrink-0 items-center">
+                <Switch
+                  checked={enabled}
+                  onCheckedChange={setEnabled}
+                  disabled={locked}
+                  aria-label={t("enable")}
+                />
+              </div>
+            </label>
+  
+            <Collapsible open={!enabled}>
+              <CollapsibleContent className={COLLAPSIBLE_ANIMATION}>
+                <div className="rounded-lg bg-muted/40 p-3.5 text-sm">
+                  <p className="mb-1 font-medium">{t("whenToUseTitle")}</p>
+                  <p className="text-muted-foreground">{t("whenToUseBody")}</p>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+  
+            <Collapsible open={enabled}>
+              <CollapsibleContent className={cn("-mx-1 px-1", COLLAPSIBLE_ANIMATION)}>
+                <div className="space-y-5 border-t pt-5">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">{t("modeLabel")}</p>
+                    <ChoiceField
+                      value={mode}
+                      onChange={setMode}
+                      disabled={locked}
+                      name="waf-mode"
+                      options={modes.map((option) => ({
+                        value: option.value,
+                        // Straight from the API — never a local copy.
+                        label: option.title,
+                        hint: option.value === "enforce" ? t("modeEnforceHint") : t("modeDetectHint"),
+                        tone: option.value === "enforce" ? "warning" : undefined,
+                      }))}
+                    />
+                    {showDetectLog ? (
+                      // Points down the page at the real evidence rather than
+                      // out to the file browser. The number is here, next to the
+                      // switch, so turning blocking on is a decision with a
+                      // figure in front of it instead of a guess.
+                      <p className="pt-1 text-xs text-muted-foreground">
+                        {detectCount > 0
+                          ? t("detectCaught", { count: detectCount })
+                          : t("detectNothingYet")}
+                      </p>
+                    ) : null}
+                  </div>
+  
+                  <div className="space-y-2 border-t pt-5">
+                    <p className="text-sm font-medium">{t("categoriesLabel")}</p>
+                    <p className="text-xs text-muted-foreground">{t("categoriesHint")}</p>
+                    <div className="divide-y rounded-xl border">
+                      {catalog.map((category) => {
+                        const checked = active.includes(category.value);
+                        // Unticking the last one would send `categories: []`,
+                        // which the API reads as ALL SIX — the opposite of what
+                        // the click means. Blocked at the source, with the way
+                        // out named.
+                        const lastOne = checked && active.length === 1;
+                        return (
+                          <label
+                            key={category.value}
+                            className={cn(
+                              "flex flex-col gap-1 p-3.5 transition-colors",
+                              locked || lastOne ? "cursor-not-allowed" : "cursor-pointer hover:bg-muted/40",
+                            )}
+                          >
+                            {/* The switch pairs with the TITLE, and the
+                                explanation runs the full width beneath. Sharing a
+                                row with the switch left the sentence 148px wide
+                                over four lines on a narrow screen — the switch is
+                                44px of a 208px row and never gives any of it up. */}
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="min-w-0 text-sm font-medium">{category.title}</span>
+                              <ReasonTooltip reason={lastOne ? t("lastCategory") : null}>
+                                <div className="flex h-5 shrink-0 items-center">
+                                  <Switch
+                                    checked={checked}
+                                    onCheckedChange={(value) => toggleCategory(category.value, value)}
+                                    disabled={locked || lastOne}
+                                    aria-label={category.title}
+                                  />
+                                </div>
+                              </ReasonTooltip>
+                            </div>
+                            {DESCRIBED_CATEGORIES.has(category.value) ? (
+                              <span className="block text-xs leading-relaxed text-muted-foreground">
+                                {t(`categoryHints.${category.value}`)}
+                              </span>
+                            ) : null}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+  
+                  {/* Progressive disclosure: two rule lists are the answer to a
+                      problem most sites never have, so they stay folded away
+                      until someone goes looking for them. */}
+                  <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="border-t pt-5">
+                    <CollapsibleTrigger asChild>
+                      <Button type="button" variant="ghost" size="sm" className="-ml-2">
+                        <Sliders className="size-3.5" />
+                        {t("advanced")}
+                        <ChevronDown className={cn("size-3.5 transition-transform", advancedOpen && "rotate-180")} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className={cn("-mx-1 px-1", COLLAPSIBLE_ANIMATION)}>
+                      <div className="mt-3 space-y-5">
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">{t("exceptionsTitle")}</p>
+                          <p className="text-xs leading-relaxed text-muted-foreground">{t("exceptionsHint")}</p>
+                          <RuleList
+                            items={exceptions}
+                            onChange={setExceptions}
+                            disabled={locked}
+                            placeholder={t("exceptionsPlaceholder")}
+                            emptyText={t("exceptionsEmpty")}
+                          />
+                        </div>
+  
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">{t("blocksTitle")}</p>
+                          <p className="text-xs leading-relaxed text-muted-foreground">{t("blocksHint")}</p>
+                          <RuleList
+                            items={blocks}
+                            onChange={setBlocks}
+                            disabled={locked}
+                            placeholder={t("blocksPlaceholder")}
+                            emptyText={t("blocksEmpty")}
+                            warnShort
+                          />
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </CardContent>
+  
+          <CardSaveFooter
+            saving={saving}
+            dirty={isDirty}
+            saveReason={saveReason}
+            onSave={save}
+            onDiscard={discard}
+            savingNote={t("savingNote")}
+          />
+        </Card>
+      </div>
+    </DisabledReasonProvider>
   );
 }

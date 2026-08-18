@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import { ShieldPlus, Loader2, TriangleAlert } from "lucide-react";
 import { installFail2ban } from "@/lib/api/fail2ban";
@@ -95,46 +96,48 @@ export function InstallPrompt({ canManage, install = null }) {
       : t("install.body");
 
   return (
-    <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-16 text-center">
-      <span
-        className={
-          failed
-            ? "flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive"
-            : "flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary"
-        }
-      >
-        {installing ? (
-          <Loader2 className="size-5 animate-spin" />
-        ) : failed ? (
-          <TriangleAlert className="size-5" />
-        ) : (
-          <ShieldPlus className="size-5" />
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-16 text-center">
+        <span
+          className={
+            failed
+              ? "flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive"
+              : "flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary"
+          }
+        >
+          {installing ? (
+            <Loader2 className="size-5 animate-spin" />
+          ) : failed ? (
+            <TriangleAlert className="size-5" />
+          ) : (
+            <ShieldPlus className="size-5" />
+          )}
+        </span>
+  
+        <div className="space-y-1">
+          <p className="font-medium">{title}</p>
+          <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">{body}</p>
+          {slow ? (
+            <p role="status" className="mx-auto max-w-md pt-1 text-sm text-warning">
+              {t("install.stalled")}
+            </p>
+          ) : null}
+          {/* Small and last, like the error box: meaningless to most people, and
+              the first thing support asks for. */}
+          {failed && install?.reference ? (
+            <p className="pt-1 font-mono text-xs text-muted-foreground">{install.reference}</p>
+          ) : null}
+        </div>
+  
+        {installing ? null : (
+          <Button disabled={!canManage} onClick={start}>
+            {failed ? t("install.retry") : t("install.action")}
+          </Button>
         )}
-      </span>
-
-      <div className="space-y-1">
-        <p className="font-medium">{title}</p>
-        <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">{body}</p>
-        {slow ? (
-          <p role="status" className="mx-auto max-w-md pt-1 text-sm text-warning">
-            {t("install.stalled")}
-          </p>
-        ) : null}
-        {/* Small and last, like the error box: meaningless to most people, and
-            the first thing support asks for. */}
-        {failed && install?.reference ? (
-          <p className="pt-1 font-mono text-xs text-muted-foreground">{install.reference}</p>
+        {!canManage && !installing ? (
+          <p className="text-xs text-muted-foreground">{t("install.noPermission")}</p>
         ) : null}
       </div>
-
-      {installing ? null : (
-        <Button disabled={!canManage} onClick={start}>
-          {failed ? t("install.retry") : t("install.action")}
-        </Button>
-      )}
-      {!canManage && !installing ? (
-        <p className="text-xs text-muted-foreground">{t("install.noPermission")}</p>
-      ) : null}
-    </div>
+    </DisabledReasonProvider>
   );
 }

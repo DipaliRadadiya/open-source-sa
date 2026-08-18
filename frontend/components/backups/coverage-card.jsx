@@ -132,6 +132,7 @@ export function CoverageCard({ coverage, applications, destinations, canManage }
             <Button
               onClick={() => openSetup(null)}
               disabled={destinations.length === 0}
+              disabledReason={t("needsDestination")}
               className="w-full sm:w-auto"
             >
               <ShieldCheck className="size-4" />

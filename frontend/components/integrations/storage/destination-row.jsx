@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import {
   CheckCircle2,
   CircleHelp,
@@ -72,159 +73,161 @@ export function DestinationRow({
   );
 
   return (
-    <div className="flex flex-wrap items-start gap-3 py-3.5">
-      <div className="flex w-full min-w-0 gap-3 sm:w-auto sm:flex-1">
-        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-          <HardDrive className="size-4" />
-        </span>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{destination.name}</span>
-            {/* Not "verified" — only that both secret columns are populated.
-                Whether they WORK is what Test answers. */}
-            {destination.has_credentials ? (
-              <Badge variant="secondary">{t("row.credentialsSet")}</Badge>
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <div className="flex flex-wrap items-start gap-3 py-3.5">
+        <div className="flex w-full min-w-0 gap-3 sm:w-auto sm:flex-1">
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+            <HardDrive className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{destination.name}</span>
+              {/* Not "verified" — only that both secret columns are populated.
+                  Whether they WORK is what Test answers. */}
+              {destination.has_credentials ? (
+                <Badge variant="secondary">{t("row.credentialsSet")}</Badge>
+              ) : (
+                <>
+                  <Badge variant="warning">{t("row.credentialsMissing")}</Badge>
+                  {/* Without keys this destination cannot work at all, so the fix
+                      is offered next to the problem rather than hidden behind the
+                      overflow menu. */}
+                  {canManage ? (
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs"
+                      onClick={onReplace}
+                    >
+                      {t("row.addCredentials")}
+                    </Button>
+                  ) : null}
+                </>
+              )}
+            </div>
+  
+            <p className="truncate font-mono text-xs text-muted-foreground">{location}</p>
+            {destination.endpoint ? (
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {destination.endpoint}
+              </p>
             ) : (
-              <>
-                <Badge variant="warning">{t("row.credentialsMissing")}</Badge>
-                {/* Without keys this destination cannot work at all, so the fix
-                    is offered next to the problem rather than hidden behind the
-                    overflow menu. */}
-                {canManage ? (
+              <p className="text-xs text-muted-foreground">{t("row.awsDefault")}</p>
+            )}
+  
+            {/* Phone: region and age join the same indent as everything else
+                rather than starting a new left edge at the card border. */}
+            <div className="space-y-0.5 text-xs text-muted-foreground sm:hidden">{facts}</div>
+  
+            {testing ? (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 className="size-3 animate-spin" />
+                {t("row.testing")}
+              </p>
+            ) : result ? (
+              <div className="space-y-1.5 pt-0.5">
+                <p
+                  className={
+                    result.ok
+                      ? "flex items-start gap-1.5 text-xs text-success"
+                      : "flex items-start gap-1.5 text-xs text-destructive"
+                  }
+                >
+                  {result.ok ? (
+                    <CheckCircle2 className="mt-0.5 size-3 shrink-0" />
+                  ) : (
+                    <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+                  )}
+                  {/* The round-trip time comes back from the probe and was being
+                      thrown away. It is also the plainest evidence the check
+                      really went out to the provider rather than short-circuiting. */}
+                  <span>
+                    {result.ok
+                      ? result.latency
+                        ? t("row.testPassedIn", { ms: result.latency })
+                        : t("row.testPassed")
+                      : result.message}
+                  </span>
+                </p>
+                {/* A failure with no next step leaves people re-clicking Test.
+                    Wrong keys are the common cause, so the fix is offered here
+                    instead of only in the overflow menu. */}
+                {!result.ok && canManage ? (
                   <Button
                     type="button"
-                    variant="link"
+                    variant="outline"
                     size="sm"
-                    className="h-auto p-0 text-xs"
+                    className="h-7"
                     onClick={onReplace}
                   >
-                    {t("row.addCredentials")}
+                    <KeyRound className="size-3" />
+                    {t("row.replace")}
                   </Button>
                 ) : null}
-              </>
+              </div>
+            ) : (
+              <StoredVerdict destination={destination} canManage={canManage} onReplace={onReplace} />
             )}
           </div>
-
-          <p className="truncate font-mono text-xs text-muted-foreground">{location}</p>
-          {destination.endpoint ? (
-            <p className="truncate font-mono text-xs text-muted-foreground">
-              {destination.endpoint}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">{t("row.awsDefault")}</p>
-          )}
-
-          {/* Phone: region and age join the same indent as everything else
-              rather than starting a new left edge at the card border. */}
-          <div className="space-y-0.5 text-xs text-muted-foreground sm:hidden">{facts}</div>
-
-          {testing ? (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="size-3 animate-spin" />
-              {t("row.testing")}
-            </p>
-          ) : result ? (
-            <div className="space-y-1.5 pt-0.5">
-              <p
-                className={
-                  result.ok
-                    ? "flex items-start gap-1.5 text-xs text-success"
-                    : "flex items-start gap-1.5 text-xs text-destructive"
-                }
-              >
-                {result.ok ? (
-                  <CheckCircle2 className="mt-0.5 size-3 shrink-0" />
-                ) : (
-                  <TriangleAlert className="mt-0.5 size-3 shrink-0" />
-                )}
-                {/* The round-trip time comes back from the probe and was being
-                    thrown away. It is also the plainest evidence the check
-                    really went out to the provider rather than short-circuiting. */}
-                <span>
-                  {result.ok
-                    ? result.latency
-                      ? t("row.testPassedIn", { ms: result.latency })
-                      : t("row.testPassed")
-                    : result.message}
-                </span>
-              </p>
-              {/* A failure with no next step leaves people re-clicking Test.
-                  Wrong keys are the common cause, so the fix is offered here
-                  instead of only in the overflow menu. */}
-              {!result.ok && canManage ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7"
-                  onClick={onReplace}
-                >
-                  <KeyRound className="size-3" />
-                  {t("row.replace")}
-                </Button>
-              ) : null}
-            </div>
-          ) : (
-            <StoredVerdict destination={destination} canManage={canManage} onReplace={onReplace} />
-          )}
+        </div>
+  
+        {/* Wide screen only: its own column, right-aligned so the numbers line up
+            down the list instead of floating wherever the name ends. */}
+        <div className="hidden space-y-0.5 text-xs text-muted-foreground sm:block sm:min-w-40 sm:text-right">
+          {facts}
+        </div>
+  
+        {/* `ml-auto` is what drops these to their own line, right-aligned, once
+            the identity block takes the full width on a phone. */}
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {/* Nothing to test without keys — the probe would fail on every
+              click and teach the user nothing. Disabled with the reason said
+              out loud, rather than letting them discover it. */}
+          <ReasonTooltip
+            reason={
+              !canManage
+                ? t("noPermission")
+                : !destination.has_credentials
+                  ? t("row.testNeedsCredentials")
+                  : null
+            }
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onTest}
+              disabled={!canManage || testing || !destination.has_credentials}
+            >
+              <PlugZap className="size-3.5" />
+              {t("row.test")}
+            </Button>
+          </ReasonTooltip>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" aria-label={t("row.actions")}>
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onEdit} disabled={!canManage}>
+                <Pencil className="size-3.5" />
+                {t("row.edit")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={onReplace} disabled={!canManage}>
+                <KeyRound className="size-3.5" />
+                {t("row.replace")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={onDelete} disabled={!canManage} variant="destructive">
+                <Trash2 className="size-3.5" />
+                {t("row.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-
-      {/* Wide screen only: its own column, right-aligned so the numbers line up
-          down the list instead of floating wherever the name ends. */}
-      <div className="hidden space-y-0.5 text-xs text-muted-foreground sm:block sm:min-w-40 sm:text-right">
-        {facts}
-      </div>
-
-      {/* `ml-auto` is what drops these to their own line, right-aligned, once
-          the identity block takes the full width on a phone. */}
-      <div className="ml-auto flex shrink-0 items-center gap-1">
-        {/* Nothing to test without keys — the probe would fail on every
-            click and teach the user nothing. Disabled with the reason said
-            out loud, rather than letting them discover it. */}
-        <ReasonTooltip
-          reason={
-            !canManage
-              ? t("noPermission")
-              : !destination.has_credentials
-                ? t("row.testNeedsCredentials")
-                : null
-          }
-        >
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onTest}
-            disabled={!canManage || testing || !destination.has_credentials}
-          >
-            <PlugZap className="size-3.5" />
-            {t("row.test")}
-          </Button>
-        </ReasonTooltip>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label={t("row.actions")}>
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={onEdit} disabled={!canManage}>
-              <Pencil className="size-3.5" />
-              {t("row.edit")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={onReplace} disabled={!canManage}>
-              <KeyRound className="size-3.5" />
-              {t("row.replace")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={onDelete} disabled={!canManage} variant="destructive">
-              <Trash2 className="size-3.5" />
-              {t("row.delete")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+    </DisabledReasonProvider>
   );
 }
 

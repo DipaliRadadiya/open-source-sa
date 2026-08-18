@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +10,6 @@ function Input({
   disabledReason,
   ...props
 }) {
-  const t = useTranslations("common");
   const inheritedReason = useDisabledReason();
   // 14px everywhere, 16px on iOS only (`ios:` — see globals.css). This used to
   // be 16px on every phone, which left an input visibly larger than the label
@@ -34,12 +32,19 @@ function Input({
     />
   );
 
-  if (disabled && inheritedReason && !disabledReason) return control;
+  // A parent already showing a tooltip over this area wins — two bubbles for
+  // one control is worse than none. A parent that only SUPPLIES a reason does
+  // not, so the control renders it as its own.
+  if (disabled && inheritedReason?.handled && !disabledReason) return control;
 
   return (
     <ReasonTooltip
       className="inline-flex w-full"
-      reason={disabled ? (disabledReason ?? t("disabledControl")) : null}
+      reason={
+        disabled
+          ? (disabledReason ?? inheritedReason?.reason)
+          : null
+      }
     >
       {control}
     </ReasonTooltip>

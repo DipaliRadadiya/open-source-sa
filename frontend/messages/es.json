@@ -663,7 +663,7 @@
       "fingerprint": "Huella digital",
       "addedOn": "Añadido {when}"
     },
-    "noPermission": "No tienes permiso para cambiar esto.",
+    "noPermission": "Tu rol no incluye Usuario del sistema con acceso de gestión. Pide a un administrador que te lo conceda.",
     "shellNeedsLogin": "Este shell rechaza el inicio de sesión, así que no puede usarse con el acceso SSH activado. Desactiva SSH primero.",
     "sshNeedsLoginShell": "El shell es «{shell}», que rechaza el inicio de sesión. Elige antes un shell que lo permita."
   },
@@ -757,7 +757,7 @@
     "staleHint": "Mostrando los últimos valores recibidos.",
     "kill": {
       "action": "Detener este proceso",
-      "noPermission": "Tu rol no permite detener procesos.",
+      "noPermission": "Tu rol no incluye Panel con acceso de gestión. Pide a un administrador que te lo conceda.",
       "title": "¿Detener {command}?",
       "description": "PID {pid}, ejecutándose como {user}. Todo lo que dependa de él también se detendrá y no se puede deshacer.",
       "forceDescription": "No se detuvo. El cierre forzado lo mata de inmediato, sin oportunidad de guardar ni cerrar archivos.",
@@ -865,7 +865,7 @@
     "subtitleWithZone": "Comandos programados que se ejecutan automáticamente en este servidor, en hora del servidor ({timezone}).",
     "duplicateName": "{name} (copia)",
     "loadFailed": "No se pudieron cargar tus tareas cron. No se han modificado ni eliminado.",
-    "noPermission": "No tienes permiso para cambiar esto."
+    "noPermission": "Tu rol no incluye Cron con acceso de gestión. Pide a un administrador que te lo conceda."
   },
   "errors": {
     "title": "Algo salió mal",
@@ -990,7 +990,8 @@
       "title": "No se pudo leer este registro",
       "body": "El servidor no respondió. Puede que el archivo esté bien: inténtalo de nuevo."
     },
-    "clearSearch": "Borrar filtro"
+    "clearSearch": "Borrar filtro",
+    "sourceNotReadable": "El panel no puede leer este archivo. Comprueba que existe y que sus permisos permiten leerlo al usuario del panel."
   },
   "services": {
     "title": "Servicios",
@@ -998,7 +999,7 @@
     "loadFailed": "No se pudieron leer los servicios de este servidor. No se ha iniciado ni detenido nada.",
     "failedSummary": "{count, plural, one {# servicio ha fallado} other {# servicios han fallado}}",
     "protectedHint": "Este servicio ejecuta el propio panel, así que no se puede detener ni desactivar desde aquí.",
-    "noPermission": "Tu rol no permite modificar los servicios.",
+    "noPermission": "Tu rol no incluye Servicio con acceso de gestión. Pide a un administrador que te lo conceda.",
     "columns": {
       "service": "Servicio",
       "status": "Estado",
@@ -1110,7 +1111,7 @@
       "title": "Fail2ban no está instalado",
       "body": "Vigila a quien intenta adivinar contraseñas y lo bloquea un rato. Instalarlo tarda un minuto y no activa nada — tú eliges después qué vigilar.",
       "action": "Instalar fail2ban",
-      "noPermission": "No tienes permiso para instalar",
+      "noPermission": "Tu rol no incluye Fail2ban con acceso de gestión. Pide a un administrador que te lo conceda.",
       "started": "Instalando — tarda un minuto.",
       "installing": "Esta página se actualiza sola cuando termine.",
       "failed": "No se pudo instalar fail2ban.",
@@ -1241,7 +1242,7 @@
       "needsAttention": "Necesita tu atención"
     },
     "disabled": {
-      "noPermission": "No tienes permiso para cambiar esto.",
+      "noPermission": "Tu rol no incluye Fail2ban con acceso de gestión. Pide a un administrador que te lo conceda.",
       "noChanges": "Todavía no has cambiado nada.",
       "saving": "Guardando…",
       "enterIp": "Escribe una dirección primero."
@@ -1253,7 +1254,8 @@
       "action": "Configurar protección",
       "done": "La protección está activa.",
       "failed": "No se pudo configurar."
-    }
+    },
+    "noPermission": "Tu rol no incluye Fail2ban con acceso de gestión. Pide a un administrador que te lo conceda."
   },
   "firewall": {
     "title": "Cortafuegos",
@@ -1264,7 +1266,7 @@
       "close": "Cerrar"
     },
     "disabled": {
-      "noPermission": "No tienes permiso para cambiar esto."
+      "noPermission": "Tu rol no incluye Cortafuegos con acceso de gestión. Pide a un administrador que te lo conceda."
     },
     "status": {
       "onTitle": "Tu servidor está protegido",
@@ -1364,7 +1366,8 @@
       "riskyExposure": "{name} sería accesible desde cualquier dirección de internet. Las bases de datos normalmente se limitan a una sola IP — rellena el campo de dirección IP.",
       "duplicate": "Ya tienes una regla exactamente igual.",
       "onlyMyIp": "Solo mi IP",
-      "onlyMyIpSet": "Tu IP"
+      "onlyMyIpSet": "Tu IP",
+      "wouldLockYouOut": "Esa es la dirección desde la que estás conectado. Bloquearla te dejaría fuera de este servidor."
     },
     "quick": {
       "title": "Añadir rápido",
@@ -1396,7 +1399,8 @@
       "description": "Cambiar los puertos sustituye la regla: la nueva se añade antes de quitar la antigua.",
       "submit": "Guardar regla",
       "saved": "Regla actualizada."
-    }
+    },
+    "noPermission": "Tu rol no incluye Cortafuegos con acceso de gestión. Pide a un administrador que te lo conceda."
   },
   "settings": {
     "title": "Ajustes",
@@ -1419,7 +1423,8 @@
       "on": "Activado",
       "off": "Desactivado",
       "nothingToSave": "No hay nada que guardar: cambia algún ajuste primero.",
-      "changedBy": "Modificado por {user} {when}"
+      "changedBy": "Modificado por {user} {when}",
+      "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda."
     },
     "validation": {
       "required": "Esto no puede estar vacío.",
@@ -1445,7 +1450,8 @@
       "save": "Guardar datos del servidor",
       "description": "El nombre y el reloj de este servidor.",
       "clockDrift": "Sin sincronizar",
-      "clockDriftHint": "NTP está activo pero el reloj no se ha sincronizado: las tareas programadas pueden ejecutarse tarde y las horas de los registros serán incorrectas."
+      "clockDriftHint": "NTP está activo pero el reloj no se ha sincronizado: las tareas programadas pueden ejecutarse tarde y las horas de los registros serán incorrectas.",
+      "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda."
     },
     "security": {
       "title": "Acceso por SSH",
@@ -1504,7 +1510,8 @@
         },
         "save": "Guardar ajustes SSH"
       },
-      "description": "Quién puede acceder a la línea de comandos, y cómo."
+      "description": "Quién puede acceder a la línea de comandos, y cómo.",
+      "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda."
     },
     "performance": {
       "swap": {
@@ -1551,7 +1558,9 @@
         "notRunning": "Redis no está en ejecución.",
         "usage": "{used} en uso",
         "usageOfLimit": "{used} de {limit}"
-      }
+      },
+      "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "passwordNotManageable": "Esta instalación no puede reescribir su propio archivo de configuración, así que la contraseña de Redis no se puede cambiar desde aquí. Cámbiala en el servidor y actualiza REDIS_PASSWORD."
     },
     "maintenance": {
       "rebootRequired": {
@@ -1629,7 +1638,7 @@
     "title": "PHP",
     "subtitle": "El PHP de este servidor y las extensiones que pueden usar tus sitios.",
     "loadFailed": "No pudimos leer la configuración de PHP de este servidor.",
-    "noPermission": "No tienes permiso para cambiar esto.",
+    "noPermission": "Tu rol no incluye PHP con acceso de gestión. Pide a un administrador que te lo conceda.",
     "empty": {
       "title": "No hay PHP instalado",
       "description": "Instala una versión para ejecutar sitios PHP en este servidor."
@@ -1776,7 +1785,7 @@
     "title": "Node.js",
     "subtitle": "Las versiones de Node.js en este servidor.",
     "loadFailed": "No pudimos leer la configuración de Node.js de este servidor.",
-    "noPermission": "No tienes permiso para cambiar esto.",
+    "noPermission": "Tu rol no incluye Node.js con acceso de gestión. Pide a un administrador que te lo conceda.",
     "empty": {
       "title": "Node.js no está instalado",
       "description": "Instala una versión para ejecutar aplicaciones Node.js en este servidor.",
@@ -1859,7 +1868,7 @@
     "title": "Limpiador de disco",
     "subtitle": "Libera espacio borrando cachés, registros antiguos y archivos temporales.",
     "loadFailed": "No pudimos leer el uso de disco de este servidor.",
-    "noPermission": "No tienes permiso para cambiar esto.",
+    "noPermission": "Tu rol no incluye Limpiador de disco con acceso de gestión. Pide a un administrador que te lo conceda.",
     "summary": {
       "label": "Espacio en disco",
       "percentUsed": "{percent}% ocupado",
@@ -1938,7 +1947,8 @@
       "dialogDescription": "Deja que el panel limpie solo, para que un disco lleno no te sorprenda.",
       "cleansNothing": "Nada seleccionado",
       "overThreshold": "cuando supere el {percent}%",
-      "everyTime": "siempre"
+      "everyTime": "siempre",
+      "turnOnFirst": "Activa la programación para elegir cuándo se ejecuta."
     },
     "runs": {
       "title": "Limpiezas recientes",
@@ -1967,7 +1977,7 @@
     "title": "Bases de datos",
     "subtitle": "Crea bases de datos, gestiona quién puede conectarse a ellas y descarga copias de seguridad.",
     "loadFailed": "No pudimos cargar tus bases de datos.",
-    "noPermission": "No tienes permiso para cambiar esto.",
+    "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
     "cancel": "Cancelar",
     "actions": "Acciones",
     "searchPlaceholder": "Buscar bases de datos…",
@@ -2058,7 +2068,8 @@
       "defaultOption": "Predeterminado del servidor",
       "chooseCharsetFirst": "Elige primero un juego de caracteres",
       "noEngine": "Instala primero un motor de base de datos.",
-      "usernamePlaceholder": "usuario_mi_app"
+      "usernamePlaceholder": "usuario_mi_app",
+      "needsCharset": "Elige primero un conjunto de caracteres: sus colaciones se cargan con él."
     },
     "access": {
       "localhost": {
@@ -2100,7 +2111,7 @@
       "forName": "Eliminar {name}",
       "cardTitle": "Eliminar esta base de datos",
       "cardDescription": "Elimina la base de datos, todo su contenido y sus usuarios.",
-      "noPermission": "No tienes permiso para cambiar esto."
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda."
     },
     "adopt": {
       "title": "{count, plural, one {# base de datos de este servidor no se gestiona aquí} other {# bases de datos de este servidor no se gestionan aquí}}",
@@ -2198,7 +2209,7 @@
       "save": "Guardar",
       "saving": "Guardando…",
       "done": "Listo",
-      "noPermission": "No tienes permiso para cambiar esto.",
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
       "editTitle": "Editar {username}",
       "editSubtitle": "Renombra el usuario o cambia desde dónde puede conectarse.",
       "editHint": "La contraseña no se cambia aquí: usa Cambiar contraseña.",
@@ -2220,7 +2231,8 @@
       "passwordPlaceholder": "Al menos 8 caracteres",
       "generate": "Generar",
       "copyUsername": "Copiar nombre de usuario",
-      "newPasswordRequired": "Nueva contraseña (obligatoria para renombrar en MongoDB)"
+      "newPasswordRequired": "Nueva contraseña (obligatoria para renombrar en MongoDB)",
+      "nameIsFixed": "El nombre de un usuario de base de datos no se puede cambiar después de crearlo. Crea otro usuario en su lugar."
     },
     "detail": {
       "size": "Tamaño",
@@ -2237,7 +2249,7 @@
       "startFailed": "No se pudo iniciar la exportación.",
       "empty": "Todavía no hay exportaciones.",
       "alreadyRunning": "Ya hay una exportación en curso.",
-      "noPermission": "No tienes permiso para cambiar esto.",
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
       "download": "Descargar",
       "delete": "Eliminar",
       "deleted": "Exportación eliminada.",
@@ -2297,7 +2309,7 @@
       "killTitle": "¿Detener esta consulta?",
       "killDescription": "La consulta se cancela y su cliente recibe un error. La base de datos sigue funcionando.",
       "cancel": "Cancelar",
-      "noPermission": "No tienes permiso para cambiar esto.",
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
       "noEngine": {
         "title": "No hay ningún motor de base de datos en ejecución",
         "description": "La información de estado viene de un motor en ejecución. Inicia o conecta uno primero."
@@ -2369,7 +2381,7 @@
       "repair": "Reparar",
       "working": "Trabajando…",
       "cancel": "Cancelar",
-      "noPermission": "No tienes permiso para cambiar esto.",
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
       "optimizeTitle": "¿Optimizar esta base de datos?",
       "optimizeDescription": "Recupera el espacio que dejaron las filas eliminadas. Es seguro, pero las tablas se bloquean brevemente mientras se ejecuta.",
       "repairTitle": "¿Reparar esta base de datos?",
@@ -2387,14 +2399,15 @@
     },
     "phpmyadmin": {
       "open": "Abrir en phpMyAdmin",
-      "failed": "No se pudo abrir phpMyAdmin."
+      "failed": "No se pudo abrir phpMyAdmin.",
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda."
     }
   },
   "git": {
     "title": "Git",
     "subtitle": "Conecta una cuenta de Git una vez y elígela al crear una aplicación.",
     "loadFailed": "No pudimos cargar tus cuentas conectadas.",
-    "noPermission": "No tienes permiso para gestionar integraciones.",
+    "noPermission": "Tu rol no incluye Git con acceso de gestión. Pide a un administrador que te lo conceda.",
     "accounts": {
       "title": "Cuentas conectadas",
       "description": "Cuentas desde las que las aplicaciones pueden desplegar.",
@@ -2582,7 +2595,7 @@
     "title": "Aplicaciones",
     "subtitle": "Sitios y servicios que se ejecutan en este servidor.",
     "loadFailed": "No pudimos cargar las aplicaciones.",
-    "noPermission": "No tienes permiso para gestionar aplicaciones.",
+    "noPermission": "Tu rol no incluye Aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
     "create": "Crear aplicación",
     "createTitle": "Crear aplicación",
     "createSubtitle": "Elige qué ejecutar y proporciona solo la configuración necesaria.",
@@ -2779,7 +2792,7 @@
       "repositoryNeedsAccount": "Elige primero una cuenta de Git.",
       "branchNeedsRepository": "Elige primero un repositorio.",
       "changeType": "Cambiar",
-      "noOptions": "Aún no hay opciones disponibles.",
+      "noOptions": "Este tipo de sitio no ofreció opciones para este campo, así que no hay nada que elegir.",
       "typePlaceholder": "Busca y selecciona un tipo de aplicación…",
       "domainMode": {
         "own": "Mi dominio",
@@ -2789,7 +2802,9 @@
       "temporaryDomainHint": "Funciona al instante. Usa un dominio real antes de publicar.",
       "nameHint": "Solo se usa en el panel; los visitantes no lo ven.",
       "buildCommandSuperseded": "Esto no se ejecutará: el script de despliegue lo sustituye.",
-      "moreLines": "{count, plural, one {+# línea más} other {+# líneas más}}"
+      "moreLines": "{count, plural, one {+# línea más} other {+# líneas más}}",
+      "needsSystemUser": "Todavía no existe ningún usuario del sistema. Usa «Crear usuario del sistema» arriba para crear uno.",
+      "needsGitAccount": "No hay ninguna cuenta de Git conectada. Usa «Conectar Git» abajo y luego Actualizar."
     },
     "actions": {
       "label": "Acciones",
@@ -2895,7 +2910,12 @@
       },
       "promote": {
         "title": "¿Hacer que {domain} sea el dominio principal?",
-        "body": "Esto renombra los archivos de configuración y de registro del sitio; el principal actual queda como alias. Nota: un sitio WordPress conserva su dirección anterior en la base de datos y puede volver a redirigir hasta que la actualices."
+        "body": "Esta pasa a ser la dirección canónica del sitio.",
+        "nowLabel": "Ahora",
+        "afterLabel": "Después",
+        "keepsServing": "{domain} queda como alias y sigue sirviendo este sitio.",
+        "renamesFiles": "Se renombran los archivos de configuración y de registro del sitio.",
+        "cmsWarning": "WordPress conserva guardada la dirección anterior, así que puede redirigir a los visitantes de vuelta hasta que la cambies en el sitio."
       },
       "removeConfirm": {
         "title": "¿Eliminar {domain}?",
@@ -3039,7 +3059,7 @@
         "saveNote": "Se aplica al próximo despliegue, no al que está en curso.",
         "saved": "Ajustes de despliegue guardados.",
         "saveFailed": "No se pudieron guardar esos ajustes.",
-        "noPermission": "No tienes permiso para cambiar esto.",
+        "noPermission": "Tu rol no incluye Despliegue de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
         "nothingToSave": "Nada que guardar"
       },
       "history": {
@@ -3057,7 +3077,7 @@
         "loadingLog": "Cargando el registro de compilación…",
         "noOutput": "Este despliegue no produjo salida.",
         "logFailed": "No se pudo cargar el registro de compilación.",
-        "noPermission": "No tienes permiso para desplegar.",
+        "noPermission": "Tu rol no incluye Despliegue de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
         "title": "Historial de despliegues",
         "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro."
       }
@@ -3067,7 +3087,7 @@
       "pageSubtitle": "Explora, visualiza y edita los archivos de este sitio.",
       "loadFailed": "No se pudieron cargar los archivos.",
       "provisioning": "Este sitio todavía se está configurando. Los archivos estarán disponibles cuando esté en funcionamiento.",
-      "noPermission": "No tienes permiso para gestionar archivos.",
+      "noPermission": "Tu rol no incluye Archivos de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
       "cancel": "Cancelar",
       "saving": "Guardando…",
       "breadcrumbLabel": "Ruta de la carpeta",
@@ -3346,7 +3366,7 @@
         "batchEmptied": "Borrado definitivamente.",
         "emptyFailed": "No se pudo vaciar la papelera.",
         "itemCount": "{count, plural, one {# elemento} other {# elementos}}",
-        "noPermission": "No tienes permiso para modificar los archivos de este sitio.",
+        "noPermission": "Tu rol no incluye Archivos de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
         "loadFailed": "No se pudo cargar la papelera.",
         "cancel": "Cancelar",
         "confirmSubmit": "Borrar definitivamente",
@@ -3374,7 +3394,7 @@
       "loadFailed": "No se pudieron cargar los workers.",
       "provisioning": "Este sitio todavía se está configurando. Los workers estarán disponibles cuando esté en funcionamiento.",
       "addWorker": "Añadir worker",
-      "noPermission": "No tienes permiso para gestionar workers.",
+      "noPermission": "Tu rol no incluye Procesos de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
       "cancel": "Cancelar",
       "saving": "Guardando…",
       "empty": {
@@ -3501,7 +3521,7 @@
       "saving": "Guardando…",
       "savingNote": "Esto puede tardar unos segundos: se está recargando el servidor web.",
       "discard": "Descartar",
-      "noPermission": "No tienes permiso para gestionar esto.",
+      "noPermission": "Tu rol no incluye Protección con contraseña de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
       "nothingToSave": "Nada que guardar",
       "enabledToast": "La protección con contraseña está activada.",
       "disabledToast": "La protección con contraseña está desactivada: el sitio vuelve a ser público.",
@@ -3573,7 +3593,8 @@
           "searchEngine": "Eso es un buscador, no un rastreador de IA: bloquearlo sacaría el sitio de los resultados de búsqueda.",
           "duplicate": "Ese bot ya está en esta lista.",
           "limit": "Esta lista no admite más bots."
-        }
+        },
+        "noPermission": "Tu rol no incluye Bloqueador de bots de IA de este sitio con acceso de gestión. Pide a un administrador que te lo conceda."
       },
       "howItWorks": "Tu robots.txt no se modifica, y Google y los visitantes reales no se ven afectados.",
       "save": "Guardar",
@@ -3582,7 +3603,7 @@
       "discard": "Descartar",
       "saved": "Ajustes de bots de IA guardados.",
       "saveFailed": "No se pudo guardar.",
-      "noPermission": "No tienes permiso para gestionar esto.",
+      "noPermission": "Tu rol no incluye Bloqueador de bots de IA de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
       "nothingToSave": "Nada que guardar"
     },
     "firewall": {
@@ -3637,7 +3658,7 @@
       "discard": "Descartar",
       "saved": "Ajustes del cortafuegos guardados.",
       "saveFailed": "No se pudo guardar.",
-      "noPermission": "No tienes permiso para gestionar esto.",
+      "noPermission": "Tu rol no incluye Firewall 8G de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
       "nothingToSave": "Nada que guardar",
       "detectCaught": "{count, plural, one {Se habría bloqueado # solicitud hasta ahora} other {Se habrían bloqueado # solicitudes hasta ahora}}.",
       "detectNothingYet": "Todavía no se ha detectado nada.",
@@ -3679,7 +3700,7 @@
         "domain": "Dominio para la copia",
         "domainPlaceholder": "copia.ejemplo.com",
         "submit": "Crear copia del sitio",
-        "noPermission": "No puedes clonar este sitio.",
+        "noPermission": "Tu rol no incluye Clonar sitio de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
         "defaultName": "{name} (Copia)",
         "name": "Nombre de la copia",
         "domainTaken": "Ya hay un sitio en este servidor con ese dominio."
@@ -3776,7 +3797,8 @@
         "domain": "Dominio nuevo",
         "name": "Nombre",
         "cancel": "Cancelar"
-      }
+      },
+      "noPermission": "Tu rol no incluye Clonar sitio de este sitio con acceso de gestión. Pide a un administrador que te lo conceda."
     },
     "php": {
       "pageTitle": "Ajustes de PHP",
@@ -3786,7 +3808,7 @@
       "saved": "Ajustes de PHP guardados.",
       "saveFailed": "No se pudieron guardar los ajustes.",
       "savingNote": "Aplicando y recargando PHP…",
-      "noPermission": "No puedes cambiar los ajustes de PHP de este sitio.",
+      "noPermission": "Tu rol no incluye Ajustes de PHP de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
       "nothingToSave": "No ha cambiado nada",
       "versionLabel": "PHP {version}",
       "presetsLabel": "Ajustes rápidos",
@@ -3953,7 +3975,7 @@
       "savingNote": "Probando y recargando fail2ban…",
       "nothingToSave": "No ha cambiado nada",
       "bothRequired": "Ambos archivos necesitan contenido",
-      "noPermission": "No puedes cambiar la protección contra ataques de este sitio.",
+      "noPermission": "Tu rol no incluye Fail2ban de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
       "saved": "Protección guardada y recargada.",
       "saveFailed": "No se pudo guardar.",
       "testFailed": "fail2ban rechazó esta configuración.",
@@ -4030,6 +4052,7 @@
       "copyAge": "Copia hecha {age}"
     },
     "stagingBadge": "Pruebas",
+    "paused": "En pausa",
     "webRoot": {
       "title": "Cambiar la raíz web",
       "description": "El directorio que el servidor web sirve para este sitio.",
@@ -4151,7 +4174,8 @@
     "referenceClear": "Borrar la referencia",
     "referenceInvalid": "Eso no parece una referencia. Copia el texto completo del mensaje de error.",
     "referenceNotFoundTitle": "No hay ningún fallo con esa referencia",
-    "referenceNotFoundDescription": "Nada en el registro coincide. Comprueba que copiaste la referencia entera y que viene de este servidor."
+    "referenceNotFoundDescription": "Nada en el registro coincide. Comprueba que copiaste la referencia entera y que viene de este servidor.",
+    "referenceEmpty": "Pega primero una referencia del mensaje de error."
   },
   "setup": {
     "title": "Configura tu servidor",
@@ -4196,7 +4220,7 @@
     "title": "Almacenamiento",
     "subtitle": "Adónde se envían las copias de seguridad. Conecta un bucket aquí y luego elígelo en una aplicación.",
     "loadFailed": "No se pudo cargar esto.",
-    "noPermission": "No tienes permiso para gestionar esto.",
+    "noPermission": "Tu rol no incluye Almacenamiento con acceso de gestión. Pide a un administrador que te lo conceda.",
     "card": {
       "title": "Destinos de almacenamiento",
       "subtitle": "Buckets compatibles con S3 donde este servidor puede escribir copias de seguridad.",
@@ -4380,7 +4404,8 @@
         "lastRun": "Nunca"
       },
       "runsShortly": "Se ejecuta en breve",
-      "notSetUpLine": "Sin configurar: no se respalda nada de este sitio."
+      "notSetUpLine": "Sin configurar: no se respalda nada de este sitio.",
+      "needsDestination": "Aún no hay ningún destino de almacenamiento. Añade uno en Integraciones → Almacenamiento primero."
     },
     "setup": {
       "title": "Configurar copias de seguridad",
@@ -4492,7 +4517,7 @@
         "description": "Prueba con otro sitio u otro estado."
       },
       "restore": "Restaurar esta copia…",
-      "noPermission": "No tienes permiso para restaurar copias de seguridad.",
+      "noPermission": "Tu rol no incluye Copias de seguridad con acceso de gestión. Pide a un administrador que te lo conceda.",
       "safetyBadge": "Copia de seguridad previa",
       "sizeUnknown": "Desconocido",
       "unknownApplication": "Sitio eliminado",
@@ -4675,7 +4700,7 @@
       "started": "La descarga está comenzando.",
       "failed": "No se pudo descargar ese archivo.",
       "blocked": {
-        "noPermission": "No puedes descargar copias de seguridad.",
+        "noPermission": "Tu rol no incluye Copias de seguridad con acceso de gestión. Pide a un administrador que te lo conceda.",
         "inFlight": "Esta copia aún se está escribiendo."
       }
     },

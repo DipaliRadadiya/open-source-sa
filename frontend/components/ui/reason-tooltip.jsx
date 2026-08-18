@@ -4,10 +4,39 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
+/**
+ * Two different things a parent can say about why its children are disabled:
+ *
+ * - `handled: true`  — "I am already showing a tooltip over this area", so a
+ *   nested control must stay silent or the reader gets two overlapping bubbles.
+ * - `handled: false` — "here is the reason; use it as your own if you have
+ *   nothing more specific". This is what a whole permission-gated form sets, so
+ *   its controls explain themselves without every one of them repeating the
+ *   prop.
+ */
 const DisabledReasonContext = createContext(null);
 
 export function useDisabledReason() {
   return useContext(DisabledReasonContext);
+}
+
+/**
+ * Supplies one reason to every disabled control beneath it.
+ *
+ * For the common case where a whole card or form is switched off by a single
+ * condition — usually a missing permission. Without it each control falls back
+ * to a generic line that says nothing, and with it they all say the same true
+ * thing. A control that knows better still wins: `disabledReason` takes
+ * precedence over whatever is inherited.
+ */
+export function DisabledReasonProvider({ reason, children }) {
+  return (
+    <DisabledReasonContext.Provider
+      value={reason ? { reason, handled: false } : null}
+    >
+      {children}
+    </DisabledReasonContext.Provider>
+  );
 }
 
 /**
@@ -56,7 +85,7 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
   // A parent may already provide a precise reason. Let nested primitives detect
   // that context and avoid rendering a second tooltip with the generic fallback.
   return (
-    <DisabledReasonContext.Provider value={reason}>
+    <DisabledReasonContext.Provider value={{ reason, handled: true }}>
       {content}
     </DisabledReasonContext.Provider>
   );

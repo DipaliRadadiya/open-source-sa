@@ -33,6 +33,7 @@ export function UserFields({ form, access, lockUsername = false }) {
                 spellCheck={false}
                 placeholder={t("create.usernamePlaceholder")}
                 disabled={lockUsername}
+              disabledReason={t("users.nameIsFixed")}
                 {...field}
               />
             </FormControl>

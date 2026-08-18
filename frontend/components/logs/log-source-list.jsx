@@ -8,6 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Select,
   SelectContent,
@@ -62,12 +63,17 @@ export function LogSourceList({ sources, selected, onSelect }) {
                   {t.has(`groups.${group}`) ? t(`groups.${group}`) : group}
                 </SelectLabel>
                 {items.map((source) => (
-                  <SelectItem key={source.key} value={source.key} disabled={!source.readable}>
+                  <ReasonTooltip
+                    key={source.key}
+                    reason={source.readable ? null : t("sourceNotReadable")}
+                  >
+                  <SelectItem value={source.key} disabled={!source.readable}>
                     <span className="flex items-center gap-2">
                       {source.label}
                       {!source.readable ? <Lock className="size-3.5" /> : null}
                     </span>
                   </SelectItem>
+                  </ReasonTooltip>
                 ))}
               </SelectGroup>
             ))}

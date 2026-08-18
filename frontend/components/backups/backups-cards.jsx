@@ -120,6 +120,7 @@ export function BackupsCards({
                     size="sm"
                     variant={blocker ? "outline" : "destructive"}
                     disabled={Boolean(blocker)}
+                    disabledReason={blocker}
                     onClick={() => onRestore(backup)}
                   >
                     <History className="size-4" />

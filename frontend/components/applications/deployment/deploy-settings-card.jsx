@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import { RotateCcw } from "lucide-react";
 import { deploySettingsFormSchema } from "@/lib/schemas/deploy-history";
@@ -75,103 +76,105 @@ export function DeploySettingsCard({ applicationId, settings, canManage }) {
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(save)}>
-        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-          <CardContent className="space-y-5 px-5 py-5">
-            <div className="grid gap-4 sm:grid-cols-2">
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(save)}>
+          <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+            <CardContent className="space-y-5 px-5 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="branch"
+                  render={({ field }) => (
+                    <FormItem className="min-w-0">
+                      <FormLabel>{t("branch")}</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={!canManage || saving} className="font-mono text-sm" />
+                      </FormControl>
+                      <FormDescription>{t("branchHint")}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+  
+              </div>
+  
               <FormField
                 control={form.control}
-                name="branch"
+                name="deploy_script"
                 render={({ field }) => (
                   <FormItem className="min-w-0">
-                    <FormLabel>{t("branch")}</FormLabel>
+                    <div className="flex min-h-6 flex-wrap items-center justify-between gap-2">
+                      <FormLabel>{t("script")}</FormLabel>
+                      {/* Only worth offering once it differs from the default —
+                          otherwise it is a button that does nothing. */}
+                      {canManage && settings.default_deploy_script && !isDefault ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 gap-1.5 px-2 text-xs"
+                          onClick={() =>
+                            form.setValue("deploy_script", settings.default_deploy_script, {
+                              shouldDirty: true,
+                            })
+                          }
+                        >
+                          <RotateCcw className="size-3" />
+                          {t("resetScript")}
+                        </Button>
+                      ) : null}
+                    </div>
                     <FormControl>
-                      <Input {...field} disabled={!canManage || saving} className="font-mono text-sm" />
+                      <Textarea
+                        {...field}
+                        rows={10}
+                        spellCheck={false}
+                        disabled={!canManage || saving}
+                        className="font-mono text-xs"
+                      />
                     </FormControl>
-                    <FormDescription>{t("branchHint")}</FormDescription>
+                    <FormDescription>
+                      {settings.deploy_script_customised ? t("scriptHint") : t("scriptFallbackHint")}
+                      {settings.placeholders?.length ? (
+                        <span className="mt-1 block">
+                          {t("placeholders")}{" "}
+                          {settings.placeholders.map((token) => (
+                            <code
+                              key={token}
+                              className="mr-1 rounded bg-muted px-1 py-0.5 font-mono text-[11px]"
+                            >
+                              {token}
+                            </code>
+                          ))}
+                        </span>
+                      ) : null}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-            </div>
-
-            <FormField
-              control={form.control}
-              name="deploy_script"
-              render={({ field }) => (
-                <FormItem className="min-w-0">
-                  <div className="flex min-h-6 flex-wrap items-center justify-between gap-2">
-                    <FormLabel>{t("script")}</FormLabel>
-                    {/* Only worth offering once it differs from the default —
-                        otherwise it is a button that does nothing. */}
-                    {canManage && settings.default_deploy_script && !isDefault ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 gap-1.5 px-2 text-xs"
-                        onClick={() =>
-                          form.setValue("deploy_script", settings.default_deploy_script, {
-                            shouldDirty: true,
-                          })
-                        }
-                      >
-                        <RotateCcw className="size-3" />
-                        {t("resetScript")}
-                      </Button>
-                    ) : null}
-                  </div>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      rows={10}
-                      spellCheck={false}
-                      disabled={!canManage || saving}
-                      className="font-mono text-xs"
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {settings.deploy_script_customised ? t("scriptHint") : t("scriptFallbackHint")}
-                    {settings.placeholders?.length ? (
-                      <span className="mt-1 block">
-                        {t("placeholders")}{" "}
-                        {settings.placeholders.map((token) => (
-                          <code
-                            key={token}
-                            className="mr-1 rounded bg-muted px-1 py-0.5 font-mono text-[11px]"
-                          >
-                            {token}
-                          </code>
-                        ))}
-                      </span>
-                    ) : null}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
+            </CardContent>
+  
+            <CardSaveFooter
+              submit
+              saving={saving}
+              dirty={form.formState.isDirty}
+              saveReason={
+                !canManage ? t("noPermission") : !form.formState.isDirty ? t("nothingToSave") : null
+              }
+              onDiscard={() =>
+                form.reset({
+                  branch: settings.branch ?? "main",
+                  deploy_script: settings.deploy_script ?? "",
+                })
+              }
+              saveLabel={t("save")}
+              note={t("saveNote")}
             />
-          </CardContent>
-
-          <CardSaveFooter
-            submit
-            saving={saving}
-            dirty={form.formState.isDirty}
-            saveReason={
-              !canManage ? t("noPermission") : !form.formState.isDirty ? t("nothingToSave") : null
-            }
-            onDiscard={() =>
-              form.reset({
-                branch: settings.branch ?? "main",
-                deploy_script: settings.deploy_script ?? "",
-              })
-            }
-            saveLabel={t("save")}
-            note={t("saveNote")}
-          />
-        </Card>
-      </form>
-    </Form>
+          </Card>
+        </form>
+      </Form>
+    </DisabledReasonProvider>
   );
 }

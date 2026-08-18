@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import {
   ArrowRight,
@@ -198,158 +199,160 @@ export function CloneApplicationPanel({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Two cards of near-equal weight, left to stretch to each other rather
-          than sit at their natural heights — the rail used to run 270px past
-          the form and read as a column someone forgot to finish. The
-          pre-flight list moved out to its own full-width band below for the
-          same reason. */}
-      <div className="grid gap-6 lg:grid-cols-12">
-        <Card className="gap-0 overflow-hidden py-0 shadow-sm lg:col-span-7">
-          <div className="flex items-start gap-3 border-b px-5 py-4">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Copy className="size-5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="font-semibold tracking-tight">{t("create.title")}</h2>
-              <p className="text-sm text-muted-foreground">
-                {t("create.subtitle", { name: application.name })}
-              </p>
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <div className="space-y-6">
+        {/* Two cards of near-equal weight, left to stretch to each other rather
+            than sit at their natural heights — the rail used to run 270px past
+            the form and read as a column someone forgot to finish. The
+            pre-flight list moved out to its own full-width band below for the
+            same reason. */}
+        <div className="grid gap-6 lg:grid-cols-12">
+          <Card className="gap-0 overflow-hidden py-0 shadow-sm lg:col-span-7">
+            <div className="flex items-start gap-3 border-b px-5 py-4">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Copy className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="font-semibold tracking-tight">{t("create.title")}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {t("create.subtitle", { name: application.name })}
+                </p>
+              </div>
             </div>
-          </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(() => setConfirming(true))}>
-              <div className="space-y-5 px-5 py-6">
-                <FormField
-                  control={form.control}
-                  name="domain"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>{t("form.domain")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          autoComplete="off"
-                          spellCheck={false}
-                          placeholder={suggestion || t("form.domainPlaceholder")}
-                          className="font-mono"
-                          disabled={!canManage || starting}
-                        />
-                      </FormControl>
-
-                      {/* A chip, not a sentence: it is a value to take, and one
-                          tap is the whole interaction. Skips domains already in
-                          use, so it never offers a rejection. */}
-                      {suggestion && !field.value ? (
-                        <button
-                          type="button"
-                          onClick={() => form.setValue("domain", suggestion, { shouldDirty: true })}
-                          className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted/60 px-2.5 py-1 font-mono text-xs transition-colors hover:bg-muted"
-                        >
-                          <Copy className="size-3 shrink-0 text-muted-foreground" />
-                          {suggestion}
-                        </button>
-                      ) : null}
-
-                      {domainTaken ? (
-                        <p className="text-sm text-destructive">{t("form.domainTaken")}</p>
-                      ) : null}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("form.name")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          autoComplete="off"
-                          placeholder={defaultName}
-                          disabled={!canManage || starting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* What is about to happen, in the same band as the control that
-                  does it: source on the left, the copy's domain filling in as
-                  it is typed. */}
-              <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                {canManage ? (
-                  <p className="flex min-w-0 items-center gap-2 text-sm">
-                    <span className="truncate font-medium">{application.name}</span>
-                    <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                    {target ? (
-                      <span className="truncate font-mono font-medium">{target}</span>
-                    ) : (
-                      <span className="rounded-md border border-dashed px-2 py-0.5 font-mono text-xs text-muted-foreground">
-                        {t("create.placeholder")}
-                      </span>
+  
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(() => setConfirming(true))}>
+                <div className="space-y-5 px-5 py-6">
+                  <FormField
+                    control={form.control}
+                    name="domain"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>{t("form.domain")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            autoComplete="off"
+                            spellCheck={false}
+                            placeholder={suggestion || t("form.domainPlaceholder")}
+                            className="font-mono"
+                            disabled={!canManage || starting}
+                          />
+                        </FormControl>
+  
+                        {/* A chip, not a sentence: it is a value to take, and one
+                            tap is the whole interaction. Skips domains already in
+                            use, so it never offers a rejection. */}
+                        {suggestion && !field.value ? (
+                          <button
+                            type="button"
+                            onClick={() => form.setValue("domain", suggestion, { shouldDirty: true })}
+                            className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted/60 px-2.5 py-1 font-mono text-xs transition-colors hover:bg-muted"
+                          >
+                            <Copy className="size-3 shrink-0 text-muted-foreground" />
+                            {suggestion}
+                          </button>
+                        ) : null}
+  
+                        {domainTaken ? (
+                          <p className="text-sm text-destructive">{t("form.domainTaken")}</p>
+                        ) : null}
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{t("form.noPermission")}</p>
-                )}
-
-                <Button
-                  type="submit"
-                  disabled={!canManage || starting || !ready}
-                  className="w-full sm:w-auto sm:min-w-40"
-                >
-                  {starting ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />}
-                  {t("form.submit")}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </Card>
-
-        <ImpactCard siteType={siteType} className="lg:col-span-5" />
+                  />
+  
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("form.name")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            autoComplete="off"
+                            placeholder={defaultName}
+                            disabled={!canManage || starting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+  
+                {/* What is about to happen, in the same band as the control that
+                    does it: source on the left, the copy's domain filling in as
+                    it is typed. */}
+                <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                  {canManage ? (
+                    <p className="flex min-w-0 items-center gap-2 text-sm">
+                      <span className="truncate font-medium">{application.name}</span>
+                      <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                      {target ? (
+                        <span className="truncate font-mono font-medium">{target}</span>
+                      ) : (
+                        <span className="rounded-md border border-dashed px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                          {t("create.placeholder")}
+                        </span>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t("form.noPermission")}</p>
+                  )}
+  
+                  <Button
+                    type="submit"
+                    disabled={!canManage || starting || !ready}
+                    className="w-full sm:w-auto sm:min-w-40"
+                  >
+                    {starting ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />}
+                    {t("form.submit")}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </Card>
+  
+          <ImpactCard siteType={siteType} className="lg:col-span-5" />
+        </div>
+  
+        <BeforeCard sourceProtected={application.basic_auth_enabled} />
+  
+        {copies.length ? <ExistingCopies copies={copies} /> : null}
+  
+        {/* Asked once, at the moment of commitment, carrying the three facts that
+            decide it: which site is being copied, what the copy will answer to,
+            and that the original is untouched. */}
+        <ConfirmDialog
+          open={confirming}
+          onOpenChange={setConfirming}
+          icon={Copy}
+          title={t("confirm.title", { name: application.name })}
+          description={t("confirm.body")}
+          cancelLabel={t("confirm.cancel")}
+          confirmLabel={t("form.submit")}
+          pending={starting}
+          onConfirm={start}
+        >
+          <dl className="space-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted-foreground">{t("confirm.source")}</dt>
+              <dd className="min-w-0 truncate font-medium">{application.name}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted-foreground">{t("confirm.domain")}</dt>
+              <dd className="min-w-0 truncate font-mono font-medium">{target}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted-foreground">{t("confirm.name")}</dt>
+              <dd className="min-w-0 truncate font-medium">{name?.trim() || defaultName}</dd>
+            </div>
+          </dl>
+        </ConfirmDialog>
       </div>
-
-      <BeforeCard sourceProtected={application.basic_auth_enabled} />
-
-      {copies.length ? <ExistingCopies copies={copies} /> : null}
-
-      {/* Asked once, at the moment of commitment, carrying the three facts that
-          decide it: which site is being copied, what the copy will answer to,
-          and that the original is untouched. */}
-      <ConfirmDialog
-        open={confirming}
-        onOpenChange={setConfirming}
-        icon={Copy}
-        title={t("confirm.title", { name: application.name })}
-        description={t("confirm.body")}
-        cancelLabel={t("confirm.cancel")}
-        confirmLabel={t("form.submit")}
-        pending={starting}
-        onConfirm={start}
-      >
-        <dl className="space-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted-foreground">{t("confirm.source")}</dt>
-            <dd className="min-w-0 truncate font-medium">{application.name}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted-foreground">{t("confirm.domain")}</dt>
-            <dd className="min-w-0 truncate font-mono font-medium">{target}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted-foreground">{t("confirm.name")}</dt>
-            <dd className="min-w-0 truncate font-medium">{name?.trim() || defaultName}</dd>
-          </div>
-        </dl>
-      </ConfirmDialog>
-    </div>
+    </DisabledReasonProvider>
   );
 }
 

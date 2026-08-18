@@ -399,6 +399,7 @@ export function AddRuleDialog({
                   className="gap-1.5"
                   onClick={() => form.setValue("source_ip", yourIp, { shouldDirty: true })}
                   disabled={values.source_ip === yourIp}
+                  disabledReason={t("add.wouldLockYouOut")}
                 >
                   <Crosshair className="size-4" />
                   {values.source_ip === yourIp ? t("add.onlyMyIpSet") : t("add.onlyMyIp")}

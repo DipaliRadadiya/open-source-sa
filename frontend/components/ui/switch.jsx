@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useTranslations } from "next-intl";
 import { Switch as SwitchPrimitive } from "radix-ui"
 
 import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
@@ -14,7 +13,6 @@ function Switch({
   disabledReason,
   ...props
 }) {
-  const t = useTranslations("common");
   const inheritedReason = useDisabledReason();
   const control = (
     <SwitchPrimitive.Root
@@ -32,10 +30,17 @@ function Switch({
     </SwitchPrimitive.Root>
   );
 
-  if (disabled && inheritedReason && !disabledReason) return control;
+  // A parent already showing a tooltip over this area wins — two bubbles for
+  // one control is worse than none. A parent that only SUPPLIES a reason does
+  // not, so the control renders it as its own.
+  if (disabled && inheritedReason?.handled && !disabledReason) return control;
 
   return (
-    <ReasonTooltip reason={disabled ? (disabledReason ?? t("disabledControl")) : null}>
+    <ReasonTooltip reason={
+        disabled
+          ? (disabledReason ?? inheritedReason?.reason)
+          : null
+      }>
       {control}
     </ReasonTooltip>
   );

@@ -212,6 +212,10 @@ export function ScheduleCard({ schedule, categories, canManage }) {
           <div className={cn("grid gap-4 sm:grid-cols-2", !enabled && "opacity-50")}>
             <div className="space-y-2">
               <Label htmlFor="cleaner-frequency">{t("schedule.howOften")}</Label>
+              <ReasonTooltip
+                reason={enabled ? null : t("schedule.turnOnFirst")}
+                className="block w-full"
+              >
               <Select value={frequency} onValueChange={setFrequency} disabled={!enabled}>
                 <SelectTrigger id="cleaner-frequency" className="w-full">
                   <SelectValue />
@@ -224,6 +228,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
                   ))}
                 </SelectContent>
               </Select>
+              </ReasonTooltip>
             </div>
 
             <div className="space-y-2">
@@ -235,6 +240,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
                   className="pr-8"
                   value={threshold}
                   disabled={!enabled}
+                  disabledReason={t("schedule.turnOnFirst")}
                   placeholder={t("schedule.always")}
                   onChange={(e) => setThreshold(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))}
                 />
@@ -256,6 +262,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
                   <Checkbox
                     checked={picked.has(category.key)}
                     disabled={!enabled}
+                    disabledReason={t("schedule.turnOnFirst")}
                     onCheckedChange={() =>
                       setPicked((prev) => {
                         const next = new Set(prev);

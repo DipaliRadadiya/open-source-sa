@@ -400,6 +400,7 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
                       value={field.value}
                       onValueChange={field.onChange}
                       disabled={collations.length === 0}
+                        disabledReason={t("create.needsCharset")}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full font-mono data-placeholder:font-sans">

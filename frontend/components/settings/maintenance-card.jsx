@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 import {
   CalendarClock,
@@ -74,6 +75,10 @@ export function MaintenanceCard({
   const tc = useTranslations("settings.common");
 
   return (
+    // The banner below says it once, visibly. This says the same thing to each
+    // disabled control, so hovering one does not contradict the banner with a
+    // generic line — and names the permission to ask for.
+    <DisabledReasonProvider reason={canManage ? null : tc("noPermission")}>
     <div className="space-y-4">
       {/* Said once above the three cards rather than repeated in each, or left
           as three disabled buttons with the reason hidden behind a hover. */}
@@ -95,6 +100,7 @@ export function MaintenanceCard({
 
       <ManualSection canManage={canManage} rebootRequired={rebootRequired} />
     </div>
+    </DisabledReasonProvider>
   );
 }
 

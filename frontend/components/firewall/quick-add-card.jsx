@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import { Check, Database, Globe, Layers, Loader2, Trash2, TriangleAlert, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -139,104 +140,106 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
   if (quick.length === 0) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <Zap className="size-4 text-primary" />
-          {t("quick.title")}
-        </CardTitle>
-        <CardDescription>{t("quick.description")}</CardDescription>
-      </CardHeader>
-
-      <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {quick.map((preset) => {
-          const rule = match(preset);
-          const done = Boolean(rule);
-          // A database open to the whole internet is not a one-click decision.
-          const risky = riskyExposure({ port: preset.port, riskyPorts });
-          // The same lockout guard the rules list applies: SSH and the panel's
-          // own ports stay put while the firewall is on. The tile says why
-          // rather than offering a click the API would refuse.
-          const locked = done && Boolean(rule.protected) && enabled;
-          const reason = !canManage
-            ? t("disabled.noPermission")
-            : locked
-              ? t("rules.protectedReason")
-              : null;
-          return (
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <Zap className="size-4 text-primary" />
+            {t("quick.title")}
+          </CardTitle>
+          <CardDescription>{t("quick.description")}</CardDescription>
+        </CardHeader>
+  
+        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {quick.map((preset) => {
+            const rule = match(preset);
+            const done = Boolean(rule);
+            // A database open to the whole internet is not a one-click decision.
+            const risky = riskyExposure({ port: preset.port, riskyPorts });
+            // The same lockout guard the rules list applies: SSH and the panel's
+            // own ports stay put while the firewall is on. The tile says why
+            // rather than offering a click the API would refuse.
+            const locked = done && Boolean(rule.protected) && enabled;
+            const reason = !canManage
+              ? t("disabled.noPermission")
+              : locked
+                ? t("rules.protectedReason")
+                : null;
+            return (
+              <Tile
+                key={preset.key}
+                icon={risky ? Database : Globe}
+                risky={Boolean(risky) && !done}
+                title={t("quick.tileTitle", { name: preset.label, port: preset.port })}
+                // The subtitle always says what the rule DOES. Replacing it with
+                // "Already allowed" threw away the only explanation on the tile,
+                // exactly when someone new is trying to work out what it means.
+                subtitle={
+                  risky && !done
+                    ? t("quick.tileRisky", { name: risky })
+                    : t("quick.tileBody", {
+                        protocol: (preset.protocol || "tcp").toUpperCase(),
+                        port: preset.port,
+                      })
+                }
+                done={done}
+                doneLabel={t("quick.tileDone")}
+                removable={done && !locked && canManage}
+                removeHint={t("quick.tileRemoveHint")}
+                addHint={!done && canManage && !risky ? t("quick.tileAddHint") : null}
+                reason={reason}
+                disabled={!canManage || locked || pending !== null}
+                pending={pending === preset.key}
+                onClick={() =>
+                  done
+                    ? setConfirming({ rule, key: preset.key })
+                    : add([preset], preset.key)
+                }
+              />
+            );
+          })}
+  
+          {stack.length > 1 ? (
             <Tile
-              key={preset.key}
-              icon={risky ? Database : Globe}
-              risky={Boolean(risky) && !done}
-              title={t("quick.tileTitle", { name: preset.label, port: preset.port })}
-              // The subtitle always says what the rule DOES. Replacing it with
-              // "Already allowed" threw away the only explanation on the tile,
-              // exactly when someone new is trying to work out what it means.
-              subtitle={
-                risky && !done
-                  ? t("quick.tileRisky", { name: risky })
-                  : t("quick.tileBody", {
-                      protocol: (preset.protocol || "tcp").toUpperCase(),
-                      port: preset.port,
-                    })
-              }
-              done={done}
+              icon={Layers}
+              title={t("quick.stackTitle")}
+              subtitle={t("quick.stackBody", { names: stack.map((p) => p.label).join(" + ") })}
               doneLabel={t("quick.tileDone")}
-              removable={done && !locked && canManage}
-              removeHint={t("quick.tileRemoveHint")}
-              addHint={!done && canManage && !risky ? t("quick.tileAddHint") : null}
-              reason={reason}
-              disabled={!canManage || locked || pending !== null}
-              pending={pending === preset.key}
-              onClick={() =>
-                done
-                  ? setConfirming({ rule, key: preset.key })
-                  : add([preset], preset.key)
-              }
+              done={stack.every(exists)}
+              addHint={!stack.every(exists) && canManage ? t("quick.stackAddHint") : null}
+              disabled={!canManage || stack.every(exists) || pending !== null}
+              pending={pending === "stack"}
+              onClick={() => add(stack, "stack")}
             />
-          );
-        })}
-
-        {stack.length > 1 ? (
-          <Tile
-            icon={Layers}
-            title={t("quick.stackTitle")}
-            subtitle={t("quick.stackBody", { names: stack.map((p) => p.label).join(" + ") })}
-            doneLabel={t("quick.tileDone")}
-            done={stack.every(exists)}
-            addHint={!stack.every(exists) && canManage ? t("quick.stackAddHint") : null}
-            disabled={!canManage || stack.every(exists) || pending !== null}
-            pending={pending === "stack"}
-            onClick={() => add(stack, "stack")}
-          />
-        ) : null}
-      </CardContent>
-
-      {/* The same confirmation the rules list uses, for the same reason: this
-          closes a port that is open right now, and a tile is very easy to click
-          by accident. */}
-      <ConfirmDialog
-        open={confirming !== null}
-        onOpenChange={(open) => !pending && setConfirming(open ? confirming : null)}
-        icon={Trash2}
-        tone="destructive"
-        title={t("rules.confirmTitle")}
-        description={
-          confirming
-            ? t(enabled ? "rules.confirmBodyOn" : "rules.confirmBodyOff", {
-                rule:
-                  confirming.rule.description ||
-                  confirming.rule.summary ||
-                  confirming.rule.port_from,
-              })
-            : ""
-        }
-        cancelLabel={t("common.cancel")}
-        confirmLabel={t("rules.delete")}
-        pending={pending !== null}
-        onConfirm={remove}
-      />
-    </Card>
+          ) : null}
+        </CardContent>
+  
+        {/* The same confirmation the rules list uses, for the same reason: this
+            closes a port that is open right now, and a tile is very easy to click
+            by accident. */}
+        <ConfirmDialog
+          open={confirming !== null}
+          onOpenChange={(open) => !pending && setConfirming(open ? confirming : null)}
+          icon={Trash2}
+          tone="destructive"
+          title={t("rules.confirmTitle")}
+          description={
+            confirming
+              ? t(enabled ? "rules.confirmBodyOn" : "rules.confirmBodyOff", {
+                  rule:
+                    confirming.rule.description ||
+                    confirming.rule.summary ||
+                    confirming.rule.port_from,
+                })
+              : ""
+          }
+          cancelLabel={t("common.cancel")}
+          confirmLabel={t("rules.delete")}
+          pending={pending !== null}
+          onConfirm={remove}
+        />
+      </Card>
+    </DisabledReasonProvider>
   );
 }
 

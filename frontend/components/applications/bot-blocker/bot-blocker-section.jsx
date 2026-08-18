@@ -6,6 +6,7 @@ import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { Bot, ChevronDown, Globe, Plus, ShieldBan, ShieldCheck, ShieldHalf, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateApplicationBotBlocker } from "@/lib/api/applications";
@@ -320,218 +321,220 @@ export function BotBlockerSection({
   }
 
   return (
-    <div className="max-w-4xl space-y-4">
-      {/* One line, not a paragraph: "AI bot" still needs a definition before
-          the three options mean anything, but the options themselves carry the
-          detail — repeating it up here turned the screen into a document. */}
-      <div className="flex items-center gap-2.5 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-        <Bot className="size-4 shrink-0" />
-        <p>{t("explainer")}</p>
-      </div>
-
-      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-        <CardContent className="space-y-5 p-5">
-          {/* Selectable cards rather than a bare radio list: three options
-              each carrying a sentence of consequence and a count read as a
-              wall of text when they are only rows. A card each gives the icon,
-              the claim and the number their own place, and makes the chosen
-              one obvious from across the screen — while still being a real
-              RadioGroup underneath, so keyboard and screen readers get the
-              standard one-of-three semantics. */}
-          <div className="space-y-3">
-            <p className="text-sm font-medium">{t("chooseLabel")}</p>
-            <RadioGroup
-              value={policy}
-              onValueChange={setPolicy}
-              disabled={!canManage || saving}
-              name="ai-bot-policy"
-              className="gap-3"
-            >
-              {keys.map((key) => {
-                const option = policies[key];
-                const Icon = ICONS[key] ?? Bot;
-                const checked = key === policy;
-                const warn = TONES[key] === "warning";
-                return (
-                  <label
-                    key={key}
-                    htmlFor={`ai-bot-${key}`}
-                    className={cn(
-                      "flex items-start gap-3 rounded-xl border p-4 transition-colors",
-                      !canManage || saving ? "cursor-not-allowed opacity-70" : "cursor-pointer",
-                      checked && warn && "border-warning/50 bg-warning/5",
-                      checked && !warn && "border-primary/50 bg-primary/5",
-                      !checked && "hover:bg-muted/40",
-                    )}
-                  >
-                    {/* Radio and icon share one `items-center` row so they
-                        stay centred on each other whatever their sizes are —
-                        a 16px control next to a 36px circle, each with its own
-                        margin, left the radio 8px high. */}
-                    <span className="flex shrink-0 items-center gap-3">
-                      <RadioGroupItem value={key} id={`ai-bot-${key}`} />
-                      <span
-                        className={cn(
-                          "hidden size-9 items-center justify-center rounded-full sm:flex",
-                          checked && warn && "bg-warning/15 text-warning",
-                          checked && !warn && "bg-primary/10 text-primary",
-                          !checked && "bg-muted-foreground/10 text-muted-foreground",
-                        )}
-                      >
-                        <Icon className="size-4" />
-                      </span>
-                    </span>
-                    <span className="min-w-0 flex-1 space-y-1">
-                      <span className="flex flex-wrap items-center gap-2">
-                        {/* Straight from the API — never a local copy. */}
-                        <span className={cn("text-sm", checked ? "font-semibold" : "font-medium")}>
-                          {option.title}
-                        </span>
-                        {/* The count sits on every option, not just the
-                            selected one, so the three can be compared without
-                            clicking through them. */}
-                        <Badge variant={option.blocked_count ? (warn ? "warning" : "secondary") : "outline"}>
-                          {t("blockedCount", { count: option.blocked_count })}
-                        </Badge>
-                        {/* Which option is really in force, and which one you
-                            have merely clicked, said on the options themselves —
-                            a separate "currently active" row above repeated the
-                            selected card's own title and count word for word. */}
-                        {key === currentPolicy ? (
-                          <Badge variant={isProtected ? "success" : "secondary"}>
-                            {t("activeNow")}
-                          </Badge>
-                        ) : null}
-                        {checked && isDirty ? (
-                          <Badge variant="warning">{t("unsaved")}</Badge>
-                        ) : null}
-                      </span>
-                      <span className="block text-xs leading-relaxed text-muted-foreground">
-                        {option.description}
-                      </span>
-                      {/* "Also blocks the crawlers that send you visitors" is
-                          abstract until they have names. These are exactly the
-                          bots this option adds over the one above it. */}
-                      {additions[key]?.length > 0 ? (
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <div className="max-w-4xl space-y-4">
+        {/* One line, not a paragraph: "AI bot" still needs a definition before
+            the three options mean anything, but the options themselves carry the
+            detail — repeating it up here turned the screen into a document. */}
+        <div className="flex items-center gap-2.5 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          <Bot className="size-4 shrink-0" />
+          <p>{t("explainer")}</p>
+        </div>
+  
+        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+          <CardContent className="space-y-5 p-5">
+            {/* Selectable cards rather than a bare radio list: three options
+                each carrying a sentence of consequence and a count read as a
+                wall of text when they are only rows. A card each gives the icon,
+                the claim and the number their own place, and makes the chosen
+                one obvious from across the screen — while still being a real
+                RadioGroup underneath, so keyboard and screen readers get the
+                standard one-of-three semantics. */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium">{t("chooseLabel")}</p>
+              <RadioGroup
+                value={policy}
+                onValueChange={setPolicy}
+                disabled={!canManage || saving}
+                name="ai-bot-policy"
+                className="gap-3"
+              >
+                {keys.map((key) => {
+                  const option = policies[key];
+                  const Icon = ICONS[key] ?? Bot;
+                  const checked = key === policy;
+                  const warn = TONES[key] === "warning";
+                  return (
+                    <label
+                      key={key}
+                      htmlFor={`ai-bot-${key}`}
+                      className={cn(
+                        "flex items-start gap-3 rounded-xl border p-4 transition-colors",
+                        !canManage || saving ? "cursor-not-allowed opacity-70" : "cursor-pointer",
+                        checked && warn && "border-warning/50 bg-warning/5",
+                        checked && !warn && "border-primary/50 bg-primary/5",
+                        !checked && "hover:bg-muted/40",
+                      )}
+                    >
+                      {/* Radio and icon share one `items-center` row so they
+                          stay centred on each other whatever their sizes are —
+                          a 16px control next to a 36px circle, each with its own
+                          margin, left the radio 8px high. */}
+                      <span className="flex shrink-0 items-center gap-3">
+                        <RadioGroupItem value={key} id={`ai-bot-${key}`} />
                         <span
                           className={cn(
-                            "block text-xs leading-relaxed",
-                            warn ? "text-warning" : "text-muted-foreground",
+                            "hidden size-9 items-center justify-center rounded-full sm:flex",
+                            checked && warn && "bg-warning/15 text-warning",
+                            checked && !warn && "bg-primary/10 text-primary",
+                            !checked && "bg-muted-foreground/10 text-muted-foreground",
                           )}
                         >
-                          {t("alsoBlocks", { bots: additions[key].join(", ") })}
+                          <Icon className="size-4" />
                         </span>
-                      ) : null}
-                    </span>
-                  </label>
-                );
-              })}
-            </RadioGroup>
-          </div>
-
-          {/* The preset is a starting point, not the whole answer: a site can
-              name a crawler the preset has never heard of, or let one through
-              that it blocks. Same card and same Save as the policy, because
-              the backend resolves the three against each other in one
-              request. */}
-          <div className="space-y-3 border-t pt-5">
-            <div>
-              <p className="text-sm font-medium">{t("exceptions.title")}</p>
-              <p className="text-xs text-muted-foreground">{t("exceptions.hint")}</p>
+                      </span>
+                      <span className="min-w-0 flex-1 space-y-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          {/* Straight from the API — never a local copy. */}
+                          <span className={cn("text-sm", checked ? "font-semibold" : "font-medium")}>
+                            {option.title}
+                          </span>
+                          {/* The count sits on every option, not just the
+                              selected one, so the three can be compared without
+                              clicking through them. */}
+                          <Badge variant={option.blocked_count ? (warn ? "warning" : "secondary") : "outline"}>
+                            {t("blockedCount", { count: option.blocked_count })}
+                          </Badge>
+                          {/* Which option is really in force, and which one you
+                              have merely clicked, said on the options themselves —
+                              a separate "currently active" row above repeated the
+                              selected card's own title and count word for word. */}
+                          {key === currentPolicy ? (
+                            <Badge variant={isProtected ? "success" : "secondary"}>
+                              {t("activeNow")}
+                            </Badge>
+                          ) : null}
+                          {checked && isDirty ? (
+                            <Badge variant="warning">{t("unsaved")}</Badge>
+                          ) : null}
+                        </span>
+                        <span className="block text-xs leading-relaxed text-muted-foreground">
+                          {option.description}
+                        </span>
+                        {/* "Also blocks the crawlers that send you visitors" is
+                            abstract until they have names. These are exactly the
+                            bots this option adds over the one above it. */}
+                        {additions[key]?.length > 0 ? (
+                          <span
+                            className={cn(
+                              "block text-xs leading-relaxed",
+                              warn ? "text-warning" : "text-muted-foreground",
+                            )}
+                          >
+                            {t("alsoBlocks", { bots: additions[key].join(", ") })}
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                  );
+                })}
+              </RadioGroup>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <RuleEditor
-                kind="blocked"
-                icon={ShieldBan}
-                bots={blocked}
-                disabled={!canManage || saving}
-                onAdd={(value) => addRule("blocked", value)}
-                onRemove={(value) => removeRule("blocked", value)}
-              />
-              <RuleEditor
-                kind="allowed"
-                icon={ShieldCheck}
-                bots={allowed}
-                disabled={!canManage || saving}
-                onAdd={(value) => addRule("allowed", value)}
-                onRemove={(value) => removeRule("allowed", value)}
-              />
+  
+            {/* The preset is a starting point, not the whole answer: a site can
+                name a crawler the preset has never heard of, or let one through
+                that it blocks. Same card and same Save as the policy, because
+                the backend resolves the three against each other in one
+                request. */}
+            <div className="space-y-3 border-t pt-5">
+              <div>
+                <p className="text-sm font-medium">{t("exceptions.title")}</p>
+                <p className="text-xs text-muted-foreground">{t("exceptions.hint")}</p>
+              </div>
+  
+              <div className="grid gap-4 sm:grid-cols-2">
+                <RuleEditor
+                  kind="blocked"
+                  icon={ShieldBan}
+                  bots={blocked}
+                  disabled={!canManage || saving}
+                  onAdd={(value) => addRule("blocked", value)}
+                  onRemove={(value) => removeRule("blocked", value)}
+                />
+                <RuleEditor
+                  kind="allowed"
+                  icon={ShieldCheck}
+                  bots={allowed}
+                  disabled={!canManage || saving}
+                  onAdd={(value) => addRule("allowed", value)}
+                  onRemove={(value) => removeRule("allowed", value)}
+                />
+              </div>
+  
+              {/* Allowing something nothing blocks is not protection, and a chip
+                  sitting there implying otherwise is the kind of quiet lie this
+                  screen exists to avoid. */}
+              {idleAllows.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("exceptions.noEffect", { bots: idleAllows.join(", ") })}
+                </p>
+              ) : null}
             </div>
-
-            {/* Allowing something nothing blocks is not protection, and a chip
-                sitting there implying otherwise is the kind of quiet lie this
-                screen exists to avoid. */}
-            {idleAllows.length > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {t("exceptions.noEffect", { bots: idleAllows.join(", ") })}
-              </p>
+  
+            {/* The choice stops being a black box: how many bots it blocks, and
+                which ones, on demand. 30 names unprompted is noise, so the list
+                is collapsed by default. */}
+            {effective.length > 0 ? (
+              <Collapsible open={showBots} onOpenChange={setShowBots}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-auto max-w-full py-1.5 text-left whitespace-normal"
+                  >
+                    <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showBots && "rotate-180")} />
+                    {showBots ? t("hideBots") : t("showBots", { count: effective.length })}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                  <div className="mt-3 space-y-3 rounded-lg border bg-muted/30 p-3">
+                    {shownGroups.length > 1 ? (
+                      shownGroups.map((group) => (
+                        <BotGroup
+                          key={group.key}
+                          // Named per policy, falling back to that policy's own
+                          // title if the backend introduces one we have no word
+                          // for yet.
+                          label={
+                            group.key === "custom" || GROUP_LABELS.has(group.key)
+                              ? t(`groupLabels.${group.key}`)
+                              : (policies[group.key]?.title ?? group.key)
+                          }
+                          bots={group.bots}
+                        />
+                      ))
+                    ) : (
+                      <BotList bots={shownGroups[0]?.bots ?? []} />
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             ) : null}
-          </div>
-
-          {/* The choice stops being a black box: how many bots it blocks, and
-              which ones, on demand. 30 names unprompted is noise, so the list
-              is collapsed by default. */}
-          {effective.length > 0 ? (
-            <Collapsible open={showBots} onOpenChange={setShowBots}>
-              <CollapsibleTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-auto max-w-full py-1.5 text-left whitespace-normal"
-                >
-                  <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showBots && "rotate-180")} />
-                  {showBots ? t("hideBots") : t("showBots", { count: effective.length })}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-                <div className="mt-3 space-y-3 rounded-lg border bg-muted/30 p-3">
-                  {shownGroups.length > 1 ? (
-                    shownGroups.map((group) => (
-                      <BotGroup
-                        key={group.key}
-                        // Named per policy, falling back to that policy's own
-                        // title if the backend introduces one we have no word
-                        // for yet.
-                        label={
-                          group.key === "custom" || GROUP_LABELS.has(group.key)
-                            ? t(`groupLabels.${group.key}`)
-                            : (policies[group.key]?.title ?? group.key)
-                        }
-                        bots={group.bots}
-                      />
-                    ))
-                  ) : (
-                    <BotList bots={shownGroups[0]?.bots ?? []} />
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          ) : null}
-
-          {/* People assume this writes robots.txt. It does not, and the
-              difference matters: robots.txt is a request, this is enforced. */}
-          <p className="text-xs text-muted-foreground">{t("howItWorks")}</p>
-        </CardContent>
-
-        {/* The unsaved marker lives on the chosen card here, not in the
-            footer — the footer's own is suppressed by passing `dirty` only
-            for the buttons it gates. */}
-        <CardSaveFooter
-          saving={saving}
-          dirty={isDirty}
-          saveReason={saveReason}
-          onSave={save}
-          onDiscard={() => {
-            setPolicy(currentPolicy);
-            setBlocked(currentBlocked);
-            setAllowed(currentAllowed);
-          }}
-          savingNote={t("savingNote")}
-          showUnsaved={false}
-        />
-      </Card>
-    </div>
+  
+            {/* People assume this writes robots.txt. It does not, and the
+                difference matters: robots.txt is a request, this is enforced. */}
+            <p className="text-xs text-muted-foreground">{t("howItWorks")}</p>
+          </CardContent>
+  
+          {/* The unsaved marker lives on the chosen card here, not in the
+              footer — the footer's own is suppressed by passing `dirty` only
+              for the buttons it gates. */}
+          <CardSaveFooter
+            saving={saving}
+            dirty={isDirty}
+            saveReason={saveReason}
+            onSave={save}
+            onDiscard={() => {
+              setPolicy(currentPolicy);
+              setBlocked(currentBlocked);
+              setAllowed(currentAllowed);
+            }}
+            savingNote={t("savingNote")}
+            showUnsaved={false}
+          />
+        </Card>
+      </div>
+    </DisabledReasonProvider>
   );
 }

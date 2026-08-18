@@ -26,6 +26,10 @@ export function Combobox({
   searchPlaceholder,
   empty,
   disabled = false,
+  // Forwarded to the trigger, which is a Button and knows how to show it.
+  // Without this a disabled Combobox was the one control that could never
+  // explain itself, and it is the panel default for every long list.
+  disabledReason,
   className,
   id,
 }) {
@@ -60,6 +64,7 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
+          disabledReason={disabledReason}
           className={cn(
             "w-full justify-between font-normal",
             !selected && "text-muted-foreground",

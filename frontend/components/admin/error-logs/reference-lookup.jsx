@@ -74,7 +74,14 @@ export function ReferenceLookup({ value, onSubmit, onClear }) {
         ) : null}
       </div>
 
-      <Button type="submit" variant="secondary" disabled={!valid}>
+      <Button
+        type="submit"
+        variant="secondary"
+        disabled={!valid}
+        // The inline message below covers a wrong reference; this covers the
+        // empty box, which shows nothing at all.
+        disabledReason={dirty ? t("referenceInvalid") : t("referenceEmpty")}
+      >
         {t("referenceSubmit")}
       </Button>
     </form>

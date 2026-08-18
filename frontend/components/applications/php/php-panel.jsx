@@ -6,6 +6,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import {
   Cpu,
@@ -150,33 +151,35 @@ export function PhpPanel({ appId, php, timezones = [], canManage }) {
   }
 
   return (
-    <div className="max-w-4xl space-y-4">
-      <IsolationCard php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
-
-      {/* Said before they press save, not after their work has gone. */}
-      {php.isolated && !php.managed ? (
-        <p className="flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
-          <span>{t("unmanaged")}</span>
-        </p>
-      ) : null}
-
-      {php.isolated ? (
-        /** Dedicated mode — full editable form */
-        <DedicatedPhpPanel
-          appId={appId}
-          php={php}
-          timezones={timezones}
-          canManage={canManage}
-          saving={saving}
-          setSaving={setSaving}
-          onIsolate={isolate}
-        />
-      ) : (
-        /** Shared mode — clean locked state */
-        <SharedPhpState php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
-      )}
-    </div>
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <div className="max-w-4xl space-y-4">
+        <IsolationCard php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
+  
+        {/* Said before they press save, not after their work has gone. */}
+        {php.isolated && !php.managed ? (
+          <p className="flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+            <span>{t("unmanaged")}</span>
+          </p>
+        ) : null}
+  
+        {php.isolated ? (
+          /** Dedicated mode — full editable form */
+          <DedicatedPhpPanel
+            appId={appId}
+            php={php}
+            timezones={timezones}
+            canManage={canManage}
+            saving={saving}
+            setSaving={setSaving}
+            onIsolate={isolate}
+          />
+        ) : (
+          /** Shared mode — clean locked state */
+          <SharedPhpState php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
+        )}
+      </div>
+    </DisabledReasonProvider>
   );
 }
 

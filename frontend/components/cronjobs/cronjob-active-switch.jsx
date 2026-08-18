@@ -32,6 +32,9 @@ export function CronjobActiveSwitch({ job, canManage = true }) {
     <Switch
       checked={job.active}
       disabled={busy || !canManage}
+      // Only when the permission is what stops them. While `busy` the switch is
+      // mid-request, and "your role does not include…" would be a lie.
+      disabledReason={canManage ? undefined : t("noPermission")}
       onCheckedChange={canManage ? onToggle : undefined}
       aria-label={t("columns.active")}
     />
