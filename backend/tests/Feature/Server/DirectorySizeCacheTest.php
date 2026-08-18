@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Server;
 
+use App\Exceptions\Server\Application\FileOperationException;
 use App\Jobs\MeasureApplicationSize;
 use App\Models\Application;
 use App\Models\SystemUser;
@@ -9,6 +10,7 @@ use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\FileBrowser;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
@@ -248,4 +250,39 @@ it('caps how many one page view may queue', function () {
     $this->getJson('/api/applications')->assertOk();
 
     Queue::assertPushed(MeasureApplicationSize::class, MeasureApplicationSize::BACKFILL_LIMIT);
+});
+
+it('backfills a site that has a measurement date but no figure', function () {
+    // The deploy path used to write the bytes without the date; a row in the
+    // mirror image of that — date, no bytes — displays as "Not measured" and
+    // was skipped by a guard that only looked at the date, so it could never
+    // recover.
+    Queue::fake();
+
+    Application::query()->update([
+        'directory_size_bytes' => null,
+        'directory_size_updated_at' => now()->subDay(),
+    ]);
+
+    $this->getJson('/api/applications')->assertOk();
+
+    Queue::assertPushed(MeasureApplicationSize::class);
+});
+
+it('records the reference when a measurement fails, not an empty string', function () {
+    // ServerOperationException is built with no message at all — it carries a
+    // reference and leaves the stderr in the server-ops log. Logging only
+    // getMessage() wrote `"detail":""` against a real failure: proof that
+    // something broke, and no way to find out what.
+    Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
+    Log::shouldReceive('warning')->once()->withArgs(
+        fn (string $message, array $context): bool => $context['reference'] === 'ref-123'
+            && $context['exception'] === FileOperationException::class,
+    );
+
+    $this->mock(FileBrowser::class)
+        ->shouldReceive('applicationSize')
+        ->andThrow(new FileOperationException('ref-123'));
+
+    (new MeasureApplicationSize($this->application->id))->handle(app(FileBrowser::class));
 });

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\Server\ServerOperationException;
 use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\Application;
 use App\Services\Server\Applications\FileBrowser;
@@ -80,7 +81,12 @@ class MeasureApplicationSize implements ShouldBeUnique, ShouldQueue
         $skipped = 0;
 
         foreach ($applications as $application) {
-            if ($application->directory_size_updated_at !== null) {
+            // Both, not either. The list prints "Not measured" from the bytes
+            // being null, so a row carrying a date but no figure — which the
+            // deploy path used to produce before it wrote the two together —
+            // would be skipped here forever while displaying as unmeasured.
+            if ($application->directory_size_bytes !== null
+                && $application->directory_size_updated_at !== null) {
                 continue;
             }
 
@@ -123,10 +129,22 @@ class MeasureApplicationSize implements ShouldBeUnique, ShouldQueue
             // over, and never worth interrupting whatever the user is doing.
             // The previous figure and its date stay as they were, which is
             // honest: it says when it was last actually true.
+            //
+            // The class and the reference, not just the message. Every failure
+            // that reaches here is a ServerOperationException, and those are
+            // built with no message at all — they carry a reference and let
+            // the server-ops log hold the stderr. Logging `getMessage()` alone
+            // therefore recorded `"detail":""` on a real, reproducible
+            // failure: it said something broke and gave no way to find out
+            // what, which is worse than not logging it.
             Log::channel('server-ops')->warning('could not measure application size', [
                 'feature' => 'application',
                 'op' => 'measure_size',
                 'application' => $this->applicationId,
+                'exception' => $e::class,
+                // The id to grep the server-ops log for; the failing command,
+                // its exit code and its stderr are already there under it.
+                'reference' => $e instanceof ServerOperationException ? $e->reference : null,
                 'detail' => $e->getMessage(),
             ]);
         }
