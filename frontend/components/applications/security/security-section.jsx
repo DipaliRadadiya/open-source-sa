@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
-import { Lock, Sparkles, TriangleAlert, ExternalLink } from "lucide-react";
+import { Eye, EyeOff, Lock, Sparkles, TriangleAlert, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { securityFormSchema } from "@/lib/schemas/application";
 import { updateApplicationSecurity } from "@/lib/api/applications";
@@ -275,20 +275,14 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                             together are ambiguous — a generated password looks
                             random, but so can a username, so "which one is
                             which" was left to guesswork at exactly the moment
-                            the password is shown for the only time. */}
-                        <div className="grid gap-1.5 text-xs">
-                          {[
-                            { label: t("username"), value: justSaved.username },
-                            { label: t("password"), value: justSaved.password },
-                          ].map((item) => (
-                            <div key={item.label} className="flex items-center gap-2">
-                              <span className="w-20 shrink-0 text-muted-foreground">{item.label}</span>
-                              <code className="min-w-0 flex-1 truncate rounded border bg-background px-2 py-1 font-mono">
-                                {item.value}
-                              </code>
-                              <CopyButton value={item.value} label={item.label} />
-                            </div>
-                          ))}
+                            the password is shown for the only time.
+                            Side by side because they are one credential read
+                            together, and neither is long enough to want a full
+                            row; stacked below `sm`, where two columns would
+                            leave each value narrower than the value itself. */}
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <SavedValue label={t("username")} value={justSaved.username} />
+                          <SavedValue label={t("password")} value={justSaved.password} secret />
                         </div>
                         <Button asChild variant="outline" size="sm">
                           <a href={`https://${domain}`} target="_blank" rel="noreferrer">
@@ -319,5 +313,56 @@ export function SecuritySection({ appId, application, domain, canManage }) {
         </form>
       </Form>
     </DisabledReasonProvider>
+  );
+}
+
+/**
+ * One saved credential value: named, copyable, and hidden if it is the password.
+ *
+ * Hidden by default because this panel appears on a page someone may well be
+ * sharing a screen on, and the password is the only thing here worth hiding —
+ * the username is on the site's login prompt anyway.
+ *
+ * Copy works while it is still masked, which is the point: the common case is
+ * "put this in my password manager", and that never needs the value on screen.
+ */
+function SavedValue({ label, value, secret = false }) {
+  const t = useTranslations("applications.security");
+  const [revealed, setRevealed] = useState(false);
+  const hidden = secret && !revealed;
+
+  return (
+    <div className="min-w-0 space-y-1">
+      <span className="block text-xs text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1">
+        <code
+          className={cn(
+            "min-w-0 flex-1 truncate font-mono text-xs",
+            // `select-none` on the mask so a drag-select cannot lift the dots
+            // and paste them somewhere as if they were the password.
+            hidden && "select-none tracking-[0.2em] text-muted-foreground",
+          )}
+        >
+          {hidden ? "••••••••••••" : value}
+        </code>
+        {secret ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            // 28px, matching CopyButton beside it. `icon-sm` is 32, which made
+            // the password box 4px taller than the username box and knocked the
+            // two values out of line with each other.
+            className="size-7"
+            onClick={() => setRevealed((shown) => !shown)}
+            aria-pressed={revealed}
+            aria-label={revealed ? t("hidePassword") : t("showPassword")}
+          >
+            {revealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+          </Button>
+        ) : null}
+        <CopyButton value={value} label={label} />
+      </div>
+    </div>
   );
 }

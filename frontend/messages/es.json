@@ -3526,7 +3526,9 @@
       "enabledToast": "La protección con contraseña está activada.",
       "disabledToast": "La protección con contraseña está desactivada: el sitio vuelve a ser público.",
       "savedCredentials": "Guarda esto ahora: no se volverá a mostrar:",
-      "openSite": "Abrir sitio"
+      "openSite": "Abrir sitio",
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña"
     },
     "botBlocker": {
       "pageTitle": "Bloqueador de bots de IA",
@@ -4214,7 +4216,10 @@
     "allSetTitle": "¡Todo listo! 🎉",
     "allSetBody": "Todo lo recomendado está instalado. Puedes añadir los opcionales ahora o más adelante.",
     "componentFailed": "La instalación no se completó. Puedes volver a intentarlo.",
-    "alreadyInstalled": "Ya instalado"
+    "alreadyInstalled": "Ya instalado",
+    "installingNamed": "Instalando {name}",
+    "lockedByOtherInstall": "Se está instalando otro componente. Solo puede ejecutarse una instalación a la vez: esto se desbloqueará en cuanto termine.",
+    "chooseVersionFirst": "Elige primero una versión para instalar."
   },
   "storage": {
     "title": "Almacenamiento",
@@ -4496,7 +4501,8 @@
         "narrower": "Las bases de datos dejarán de respaldarse desde la próxima ejecución. Las copias ya realizadas siguen incluyéndolas.",
         "narrowerFiles": "Los archivos dejarán de respaldarse desde la próxima ejecución. Las copias ya realizadas siguen incluyéndolos.",
         "retentionDown": "{count, plural, one {Se eliminará la copia más antigua} other {Se eliminarán las # copias más antiguas}} en la próxima ejecución."
-      }
+      },
+      "destinationFailing": "La última prueba de conexión con {name} falló, así que las copias enviadas allí no se escribirán hasta que se corrija."
     },
     "history": {
       "allApplications": "Todos los sitios",
@@ -4552,7 +4558,11 @@
       "lastDays": "Últimos {count} días",
       "retry": "Reintentar",
       "retryStarted": "Reintentando esa copia de {name}.",
-      "retryFailed": "No se pudo reintentar esa copia."
+      "retryFailed": "No se pudo reintentar esa copia.",
+      "queuedNote": "Copia de seguridad en cola para {name}. Aparecerá en esta lista en cuanto el servidor empiece a escribirla.",
+      "queuedHidden": "Copia de seguridad en cola para {name}. El filtro de estado que has aplicado la ocultará: quita el filtro para verla ejecutarse.",
+      "queuedStalled": "La copia de seguridad en cola para {name} aún no ha comenzado. Si continúa así, es posible que el proceso en segundo plano no esté funcionando.",
+      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de este sitio. Podrás iniciar otra cuando termine."
     },
     "restore": {
       "title": "Restaurar {name}",
@@ -4616,7 +4626,9 @@
       "stalled": "Esta restauración lleva un rato sin avanzar",
       "stalledBody": "No ha informado de ningún progreso durante 20 minutos. Puede que siga ejecutándose en el servidor o que el trabajo se haya detenido. Vuelve a comprobarlo o pide a quien gestione este servidor que lo revise.",
       "checkAgain": "Comprobar de nuevo",
-      "hide": "Ocultar"
+      "hide": "Ocultar",
+      "queued": "Restauración en cola",
+      "queuedBody": "Esperando a que el servidor la tome. Todavía no se ha cambiado nada en el sitio."
     },
     "application": {
       "pageTitle": "Copias de seguridad",
@@ -4674,7 +4686,10 @@
       "sizeNone": "Sin archivo",
       "sizeUnknown": "Desconocido",
       "retryStarted": "Reintentando esa copia.",
-      "retryFailed": "No se pudo reintentar esa copia."
+      "retryFailed": "No se pudo reintentar esa copia.",
+      "queuedNote": "Copia de seguridad en cola. Aparecerá aquí en cuanto el servidor empiece a escribirla.",
+      "queuedStalled": "Esta copia de seguridad aún no ha comenzado. Sigue en cola: si continúa así, es posible que el proceso en segundo plano no esté funcionando.",
+      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de este sitio. Podrás iniciar otra cuando termine."
     },
     "empty": {
       "title": "Todavía no hay copias de seguridad en este servidor",
@@ -4746,7 +4761,13 @@
       "empty": {
         "title": "Aún no hay restauraciones",
         "description": "Cuando se restaure una copia sobre un sitio, quedará registrada aquí: qué se restauró, cuándo y si funcionó."
-      }
+      },
+      "notStarted": "Sin empezar"
+    },
+    "pageOutOfRange": {
+      "title": "Esa página no existe",
+      "description": "{lastPage, plural, one {Solo hay una página de resultados.} other {Solo hay # páginas de resultados.}}",
+      "action": "Volver a la primera página"
     }
   },
   "sync": {

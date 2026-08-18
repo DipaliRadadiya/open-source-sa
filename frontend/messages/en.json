@@ -3526,7 +3526,9 @@
       "enabledToast": "Password protection is on.",
       "disabledToast": "Password protection is off — the site is public again.",
       "savedCredentials": "Save these now — they won't be shown again:",
-      "openSite": "Open site"
+      "openSite": "Open site",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
     },
     "botBlocker": {
       "pageTitle": "AI Bot Blocker",
@@ -4214,7 +4216,10 @@
     "allSetTitle": "You're all set 🎉",
     "allSetBody": "Everything recommended is installed. You can add the optional ones now or any time later.",
     "componentFailed": "The install didn't finish. You can try again.",
-    "alreadyInstalled": "Already installed"
+    "alreadyInstalled": "Already installed",
+    "installingNamed": "Installing {name}",
+    "lockedByOtherInstall": "Another component is installing. Only one install can run at a time — this unlocks as soon as it finishes.",
+    "chooseVersionFirst": "Choose a version to install first."
   },
   "storage": {
     "title": "Storage",
@@ -4496,7 +4501,8 @@
         "narrower": "Databases will stop being backed up from the next run. Backups already taken still contain them.",
         "narrowerFiles": "Files will stop being backed up from the next run. Backups already taken still contain them.",
         "retentionDown": "{count, plural, one {The oldest backup will be deleted} other {The # oldest backups will be deleted}} on the next run."
-      }
+      },
+      "destinationFailing": "The last connection test to {name} failed, so backups sent there will not be written until it is fixed."
     },
     "history": {
       "allApplications": "All sites",
@@ -4552,7 +4558,11 @@
       "lastDays": "Last {count} days",
       "retry": "Retry",
       "retryStarted": "Retrying that backup for {name}.",
-      "retryFailed": "That backup could not be retried."
+      "retryFailed": "That backup could not be retried.",
+      "queuedNote": "Backup queued for {name}. It appears in this list as soon as the server starts writing it.",
+      "queuedHidden": "Backup queued for {name}. The status filter you have set will hide it — clear the filter to watch it run.",
+      "queuedStalled": "The backup queued for {name} has not started yet. If it stays this way, the background worker may not be running.",
+      "alreadyRunning": "A backup of this site is already running. You can start another once it finishes."
     },
     "restore": {
       "title": "Restore {name}",
@@ -4616,7 +4626,9 @@
       "stalled": "This restore has not moved in a while",
       "stalledBody": "It has not reported any progress for 20 minutes. It may still be running on the server, or the job may have stopped. Check again, or ask whoever manages this server to look.",
       "checkAgain": "Check again",
-      "hide": "Hide"
+      "hide": "Hide",
+      "queued": "Restore queued",
+      "queuedBody": "Waiting for the server to pick it up. Nothing on the site has been changed yet."
     },
     "application": {
       "pageTitle": "Backups",
@@ -4674,7 +4686,10 @@
       "sizeNone": "No archive",
       "sizeUnknown": "Unknown",
       "retryStarted": "Retrying that backup.",
-      "retryFailed": "That backup could not be retried."
+      "retryFailed": "That backup could not be retried.",
+      "queuedNote": "Backup queued. It appears here as soon as the server starts writing it.",
+      "queuedStalled": "This backup has not started yet. It is still queued — if it stays this way, the background worker may not be running.",
+      "alreadyRunning": "A backup of this site is already running. You can start another once it finishes."
     },
     "empty": {
       "title": "Nothing on this server is backed up yet",
@@ -4746,7 +4761,13 @@
       "emptyFiltered": {
         "title": "No restores match those filters",
         "description": "Try a different site or status."
-      }
+      },
+      "notStarted": "Not started"
+    },
+    "pageOutOfRange": {
+      "title": "That page does not exist",
+      "description": "{lastPage, plural, one {There is only one page of results.} other {There are only # pages of results.}}",
+      "action": "Back to the first page"
     }
   },
   "sync": {
