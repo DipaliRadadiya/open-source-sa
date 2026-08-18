@@ -51,6 +51,7 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
                   <Link
                     href={`/applications/${appId}/files?path=${encodeURIComponent(file.path)}`}
                     className="block truncate font-medium hover:underline"
+                    title={file.name}
                   >
                     {file.name}
                   </Link>

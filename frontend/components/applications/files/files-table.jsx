@@ -97,7 +97,9 @@ function NameCell({ row, table }) {
         className="flex min-w-0 items-center gap-2 rounded font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Folder className="size-4 shrink-0 text-primary" />
-        <span className="truncate">{file.name}</span>
+        <span className="truncate" title={file.name}>
+          {file.name}
+        </span>
       </Link>
     );
   }
@@ -118,7 +120,9 @@ function NameCell({ row, table }) {
             ) : (
               <Link2 className="size-4 shrink-0" />
             )}
-            <span className="truncate">{file.name}</span>
+            <span className="truncate" title={file.name}>
+              {file.name}
+            </span>
             {/* Where it points, inline rather than only on hover: a link is
                 the one row whose name tells you nothing about what it is, and
                 a dangling one is otherwise indistinguishable from a working
@@ -141,10 +145,18 @@ function NameCell({ row, table }) {
     <button
       type="button"
       onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
-      className="flex min-w-0 items-center gap-2 rounded text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      // `w-full` for the same reason as the card view: a <button> is a form
+      // control and sizes to its own content even as a flex box, so the inner
+      // `truncate` measured against the name's full width rather than the
+      // cell's. A long name ran past the column and into Size instead of
+      // ellipsing. Folders never showed it — they render as an <a>, which does
+      // fill the cell.
+      className="flex w-full min-w-0 items-center gap-2 rounded text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <FileThumb file={file} appId={appId} className="size-5" />
-      <span className="truncate">{file.name}</span>
+      <span className="truncate" title={file.name}>
+        {file.name}
+      </span>
     </button>
   );
 }

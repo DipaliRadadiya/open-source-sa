@@ -26,6 +26,7 @@ import { ExtractDialog } from "@/components/applications/files/extract-dialog";
 import { PermissionsDialog } from "@/components/applications/files/permissions-dialog";
 import { DeleteFileDialog } from "@/components/applications/files/delete-file-dialog";
 import { FixPermissionsButton } from "@/components/applications/files/fix-permissions-button";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { SelectionBar } from "@/components/applications/files/selection-bar";
 import { BulkDialogs } from "@/components/applications/files/bulk-dialogs";
 import { BulkResultPanel } from "@/components/applications/files/bulk-result-panel";
@@ -196,6 +197,12 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
   // letting the row become two, not by hiding what anything is.
   const addButtons = (
     <div className="flex flex-wrap items-center gap-2">
+      {/* Files change from outside the panel — a deploy, a cron job, someone on
+          SSH — so the list can be stale without anything here having happened.
+          `size-8` to sit level with this row's `sm` buttons rather than standing
+          a notch taller. It re-runs the server component, so it refreshes the
+          trash view and a search result too, not just a directory listing. */}
+      <RefreshButton className="size-8" />
       <ReasonTooltip reason={writeReason}>
         <Button variant="outline" size="sm" disabled={!canWrite} onClick={() => setNewFolderOpen(true)}>
           <FolderPlus className="size-3.5" />

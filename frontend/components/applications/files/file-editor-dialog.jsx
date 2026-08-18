@@ -130,7 +130,24 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
           scrolling a peephole. The three rows are header / editor / footer, and
           `minmax(0,1fr)` is what lets the middle one actually shrink so the
           editor scrolls internally instead of pushing the footer off-screen. */}
-      <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-6xl">
+      {/* Cmd+S on macOS, Ctrl+S elsewhere. One handler on the dialog rather
+          than a CodeMirror keybinding: keydown bubbles out of the editor (it
+          binds nothing to Mod-S, so it neither handles nor stops the event),
+          which means the same shortcut works with the caret in the file and
+          with focus on the footer. Same shape as the .env editor's.
+
+          preventDefault regardless of permission — otherwise a read-only viewer
+          pressing Ctrl+S gets the browser's "save page" dialog over the panel,
+          which is the thing this is displacing. */}
+      <DialogContent
+        className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-6xl"
+        onKeyDown={(event) => {
+          if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+            event.preventDefault();
+            if (canEdit) save();
+          }
+        }}
+      >
         <DialogHeader>
           <div className="flex items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

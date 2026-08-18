@@ -14,7 +14,7 @@ import { useNavTransition } from "@/components/data-table/nav-transition";
  * server component. Under a <NavTransitionProvider> it shares the list's
  * pending signal (so the table dims); otherwise it uses a local transition.
  */
-export function RefreshButton() {
+export function RefreshButton({ className }) {
   const t = useTranslations("common");
   const nav = useNavTransition();
   const router = useRouter();
@@ -34,7 +34,10 @@ export function RefreshButton() {
             type="button"
             variant="outline"
             size="icon"
-            className="size-9 shrink-0"
+            // 36px by default, matching the card-header clusters it usually
+            // sits in. A toolbar of `sm` buttons passes size-8 so the row keeps
+            // one height — the same mismatch that made these read as bolted on.
+            className={cn("size-9 shrink-0", className)}
             onClick={refresh}
             disabled={pending}
             aria-label={t("refresh")}
