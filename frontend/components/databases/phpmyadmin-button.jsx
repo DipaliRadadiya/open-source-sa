@@ -29,6 +29,12 @@ import { Button } from "@/components/ui/button";
  * opener is severed on the handle instead, which does the same job and still
  * returns the window.
  *
+ * And when the popup genuinely is blocked, the current tab is left alone. The
+ * old fallback navigated it, which produced exactly the thing this button
+ * exists to avoid: an empty tab beside a panel that had been replaced by
+ * phpMyAdmin. A blocked popup can only be reopened by a real click, so the
+ * toast carries one — the token is still good for the rest of its minute.
+ *
  * Hidden entirely for MongoDB, which phpMyAdmin does not support. The API says
  * so with a 422, but a button whose only outcome is an error is not a feature.
  */
@@ -44,14 +50,30 @@ export function PhpmyadminButton({ database, canManage, compact = false }) {
     // token arrives. Opening it after the await is a popup the browser did
     // not see the user ask for.
     const tab = window.open("", "_blank");
-    // Same protection `noopener` would have given, applied where it does not
-    // cost the handle: the new tab cannot reach back through `window.opener`.
-    if (tab) tab.opener = null;
     try {
+      // Same protection `noopener` would have given, applied where it does not
+      // cost the handle: the new tab cannot reach back through `window.opener`.
+      // Inside the try because it is a setter on a window the browser may have
+      // already disowned — a throw here used to take the whole click with it.
+      if (tab) tab.opener = null;
+
       const { data } = await phpmyadminSso(database.id);
-      if (!data?.redirect_url) throw new Error("no url");
-      if (tab) tab.location.href = data.redirect_url;
-      else window.location.href = data.redirect_url;
+      const url = data?.redirect_url;
+      if (!url) throw new Error("no url");
+
+      if (tab) {
+        // `replace`, so the blank placeholder is not left in the new tab's
+        // history for Back to return to.
+        tab.location.replace(url);
+        return;
+      }
+
+      // Popup blocked. The panel stays exactly where it is; a click the
+      // browser can see is the only way to open the tab now.
+      toast.error(t("blocked"), {
+        duration: 20000,
+        action: { label: t("openAnyway"), onClick: () => window.open(url, "_blank", "noopener") },
+      });
     } catch (error) {
       tab?.close();
       // The API's own sentence: it names which of the two reasons applies —
