@@ -1610,7 +1610,16 @@ configure_sudoers() {
         # Node/PHP-version feature -- a fixed list here would need editing
         # every time that happens.
         /usr/sbin/php-fpm*
-        /usr/bin/mysql /usr/bin/mariadb /usr/bin/mariadb-dump /usr/bin/redis-cli /usr/bin/mongosh
+        # The dump/restore clients matter as much as the shells. Backups run
+        # `dump_client` from config/server.php -- mysqldump for MySQL,
+        # mongodump/mongorestore for MongoDB -- and a client missing here does
+        # not degrade: sudo answers "a password is required" and the backup
+        # fails with a reference, on a feature that looks configured. Only
+        # mariadb-dump was listed, so MariaDB backups worked and MySQL's did
+        # not, which is the kind of gap nobody finds until they need a restore.
+        /usr/bin/mysql /usr/bin/mysqldump /usr/bin/mariadb /usr/bin/mariadb-dump
+        /usr/bin/redis-cli
+        /usr/bin/mongosh /usr/bin/mongodump /usr/bin/mongorestore
         /usr/sbin/ufw /usr/bin/fail2ban-client /usr/sbin/sshd
         /usr/bin/fallocate /usr/sbin/mkswap /usr/sbin/swapon /usr/sbin/swapoff
         /usr/bin/hostnamectl /usr/bin/timedatectl /usr/sbin/shutdown /usr/bin/df /usr/bin/du
