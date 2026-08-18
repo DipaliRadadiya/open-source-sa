@@ -3,8 +3,10 @@
 namespace App\Services\Server\Applications;
 
 use App\Actions\Server\Application\RemoveCertificate;
+use App\Actions\Server\Backup\DeleteBackup;
 use App\Enums\CertificateType;
 use App\Models\Application;
+use App\Models\Backup;
 use App\Models\Worker;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Php\PoolManager;
@@ -34,6 +36,14 @@ use Throwable;
  * which has always known about the problem — it was simply never called from
  * the path where sites actually go away.
  *
+ * Backups are the exception, and are handled on `$removeData` rather than
+ * unconditionally. They are not leftovers to tidy: they are the copy that
+ * exists so a mistaken deletion is survivable, and deleting the site is the
+ * mistake somebody would most want to undo. Left alone they are still an
+ * orphan — the rows cascade away while multi-gigabyte archives stay in
+ * somebody's bucket — so the choice is which cost to take, and the panel takes
+ * the one that can be reversed.
+ *
  * **Every removal is independent.** They run in sequence but a failure in one
  * must not skip the rest: a fail2ban reload that fails is a nuisance, and
  * letting it prevent the certificate revoke would trade a small problem for a
@@ -58,8 +68,36 @@ class ApplicationArtifacts
         private CertbotClient $certbot,
     ) {}
 
-    public function remove(Application $application): void
+    /**
+     * @param  bool  $removeData  the caller asked for the site's data to go too
+     */
+    public function remove(Application $application, bool $removeData = false): void
     {
+        // Backups are the one artefact whose removal is a decision rather than
+        // tidying up. `backups.application_id` cascades, so deleting a site
+        // drops every row while the archives stay in the bucket — unfindable,
+        // undeletable through the panel, and billed every month. The same
+        // orphan `DeleteBackup` exists to prevent, arriving by a different
+        // door.
+        //
+        // But they exist precisely so that a mistaken deletion is survivable,
+        // and deleting the site is the mistake somebody would most want to
+        // undo. So they follow `remove_files`: a plain delete takes the site
+        // off the panel and leaves the archives recoverable, and only a caller
+        // who already said "destroy this site's data" destroys them.
+        //
+        // First, while the rows still exist — the controller deprovisions
+        // before it deletes the record.
+        if ($removeData) {
+            $this->attempt($application, 'backups', function () use ($application) {
+                $deleteBackup = app(DeleteBackup::class);
+
+                foreach (Backup::where('application_id', $application->id)->get() as $backup) {
+                    $deleteBackup->execute($backup);
+                }
+            });
+        }
+
         $this->attempt($application, 'php_pool', function () use ($application) {
             if ($application->serving_profile === 'php' && $this->pools->supported()) {
                 $this->pools->remove($application);

@@ -830,9 +830,24 @@ Change the served directory (creates it if missing, rewrites vhost, tests + relo
 ### DELETE `/applications/{application}`
 **Permission:** `application` (manage)
 
-Delete the application record. Optionally delete files.
+Delete the application record. Optionally delete its data.
 
 **Request body (all optional):** `{"remove_files": false}`
+
+**Always removed**, whatever `remove_files` says — these are the panel's own artefacts, and every one of them breaks something if it outlives the site:
+
+- the vhost and the systemd unit
+- the PHP-FPM pool *(an orphan naming a deleted Linux user stops php-fpm starting **for the whole server**)*
+- worker units *(otherwise left enabled and restarting on boot)*
+- the fail2ban jail
+- the Let's Encrypt renewal *(otherwise it renews forever, spends rate limit, and mails the user about a site they removed)*
+
+**Removed only with `remove_files: true`:**
+
+- the site's files
+- **its backups, archives included** — they cascade out of the database either way, so leaving them would strand multi-gigabyte objects in the storage destination that the panel can no longer see or delete. They follow this flag rather than going unconditionally because a backup is the copy that makes a mistaken deletion survivable, and deleting the site is the mistake most worth undoing.
+
+So `remove_files: true` means **"destroy this site's data"**, not "tidy up the directory". Confirm it in the UI accordingly.
 
 **Response `200`:** `{"deleted": true}`
 

@@ -1,19 +1,25 @@
 <?php
 
 use App\Contracts\WebServerDriver;
+use App\Enums\BackupStatus;
 use App\Enums\CertificateStatus;
 use App\Enums\CertificateType;
 use App\Enums\DomainType;
 use App\Models\Application;
+use App\Models\Backup;
+use App\Models\BackupTarget;
 use App\Models\Certificate;
+use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Models\Worker;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * What the panel wrote for a site, and whether it goes when the site does.
@@ -228,4 +234,95 @@ it('keeps going when one artefact refuses to be removed', function () {
     app(ApplicationProvisioner::class)->deprovision($this->application->fresh(['systemUser', 'certificate']));
 
     expect(ranCommand($ran, fn (array $c) => in_array('--cert-name', $c, true)))->toBeTrue();
+});
+
+describe('the site\'s backups', function () {
+    beforeEach(function () {
+        $this->destination = StorageDestination::create([
+            'name' => 'Offsite', 'endpoint' => '', 'region' => 'us-east-1',
+            'bucket' => 'backups', 'access_key' => 'k', 'secret_key' => 's',
+        ]);
+
+        $this->target = BackupTarget::create([
+            'application_id' => $this->application->id,
+            'storage_destination_id' => $this->destination->id,
+            'type' => 'full', 'retention_count' => 7, 'frequency' => 'daily', 'enabled' => true,
+        ]);
+
+        $this->disk = Storage::fake('destination');
+
+        $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+            builder: fn (array $config) => $this->disk,
+        ));
+
+        $this->disk->put('shop/one.tar.gz', 'archive');
+
+        $this->backup = Backup::create([
+            'backup_target_id' => $this->target->id,
+            'application_id' => $this->application->id,
+            'type' => 'full',
+            'status' => BackupStatus::Verified->value,
+            'is_safety' => false,
+            'manifest' => ['key' => 'shop/one.tar.gz'],
+        ]);
+    });
+
+    it('keeps the archives when the files were not asked for', function () {
+        teardownCommands();
+
+        app(ApplicationProvisioner::class)->deprovision($this->application->fresh(['systemUser', 'certificate']));
+
+        // A backup exists so that a mistaken deletion is survivable, and
+        // deleting the site is the mistake somebody would most want to undo.
+        // Taking the panel's record of a site off the panel must not destroy
+        // the copy that could put it back.
+        $this->disk->assertExists('shop/one.tar.gz');
+    });
+
+    it('deletes the archives when the caller asked for the data to go', function () {
+        teardownCommands();
+
+        app(ApplicationProvisioner::class)
+            ->deprovision($this->application->fresh(['systemUser', 'certificate']), removeFiles: true);
+
+        // Otherwise the rows cascade away and multi-gigabyte objects stay in
+        // somebody's bucket: unfindable through the panel, undeletable through
+        // it, and billed every month.
+        $this->disk->assertMissing('shop/one.tar.gz');
+        expect(Backup::find($this->backup->id))->toBeNull();
+    });
+
+    it('still removes the other artefacts when an archive will not delete', function () {
+        Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::LetsEncrypt,
+            'status' => CertificateStatus::Active,
+            'domains' => ['shop.example.com'],
+            'auto_renew' => true,
+        ]);
+
+        $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+            builder: fn (array $config) => new class
+            {
+                public function exists(string $key): bool
+                {
+                    return true;
+                }
+
+                public function delete(string $key): bool
+                {
+                    throw new RuntimeException('bucket unreachable');
+                }
+            },
+        ));
+
+        $ran = teardownCommands();
+
+        app(ApplicationProvisioner::class)
+            ->deprovision($this->application->fresh(['systemUser', 'certificate']), removeFiles: true);
+
+        // A bucket that will not answer is a cost problem. Letting it stop the
+        // certificate revoke would trade that for a renewal running forever.
+        expect(ranCommand($ran, fn (array $c) => in_array('--cert-name', $c, true)))->toBeTrue();
+    });
 });

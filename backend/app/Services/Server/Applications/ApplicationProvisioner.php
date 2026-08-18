@@ -300,7 +300,13 @@ class ApplicationProvisioner
         // certificate's renewal. Each of them outlives the application
         // otherwise, and each then points at something that is not there.
         // {@see ApplicationArtifacts} for what each one does when it does.
-        $this->artifacts->remove($application);
+        //
+        // `$removeFiles` is passed through because one of them — the site's
+        // backups — is not a leftover but the copy that survives a mistake.
+        // Those follow the same flag the files do, so a plain delete leaves
+        // them recoverable and only an explicit "destroy this data" removes
+        // them.
+        $this->artifacts->remove($application, $removeFiles);
 
         $driver = $this->webServers->driver();
 
