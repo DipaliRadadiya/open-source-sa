@@ -3,26 +3,22 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { History, Loader2, Check } from "lucide-react";
+import { History, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { restoreEnvironment } from "@/lib/api/environment";
 import { apiMessage } from "@/lib/api/error-message";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
  * Restore the .env from one of the recent backups. Restoring first backs up the
  * current file, so picking the wrong one is itself undoable — said in the copy
  * so it doesn't feel like a one-way door.
+ *
+ * On ConfirmDialog rather than raw Dialog parts: a confirmation with a picker
+ * and an opt-in checkbox is still a confirmation, and the shared dialog's body
+ * slot takes both. Rebuilding the shell here let it drift from every other one.
  */
 export function RestoreBackupDialog({
   appId,
@@ -65,82 +61,67 @@ export function RestoreBackupDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <History className="size-5" />
-            </span>
-            <DialogTitle>{t("restore.title")}</DialogTitle>
-          </div>
-          <DialogDescription className="pt-1">
-            {t("restore.subtitle")}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-2">
-          {backups.map((backup) => {
-            const active = selected === backup.name;
-            return (
-              <button
-                key={backup.name}
-                type="button"
-                onClick={() => setSelected(backup.name)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
-                  active ? "border-primary bg-primary/5" : "hover:bg-muted/50",
-                )}
-              >
-                <span className="min-w-0">
-                  <span className="block truncate font-mono text-xs">
-                    {backup.name}
-                  </span>
-                  {backup.created_at ? (
-                    <span className="block text-xs text-muted-foreground">
-                      {backup.created_at}
-                    </span>
-                  ) : null}
-                </span>
-                {active ? (
-                  <Check className="size-4 shrink-0 text-primary" />
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-
-        {requiresRestart ? (
-          <div className="flex items-start gap-2.5 rounded-lg border p-3">
-            <Checkbox
-              id="restore-restart"
-              checked={restart}
-              onCheckedChange={(v) => setRestart(v === true)}
-              className="mt-0.5"
-            />
-            <Label
-              htmlFor="restore-restart"
-              className="text-sm font-normal leading-relaxed"
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      icon={History}
+      title={t("restore.title")}
+      description={t("restore.subtitle")}
+      cancelLabel={t("cancel")}
+      confirmLabel={t("restore.action")}
+      confirmDisabled={!selected}
+      pending={busy}
+      onConfirm={onRestore}
+      // Wider than a yes/no confirmation: the body lists backup filenames.
+      className="sm:!max-w-lg"
+    >
+      <div className="space-y-2">
+        {backups.map((backup) => {
+          const active = selected === backup.name;
+          return (
+            <button
+              key={backup.name}
+              type="button"
+              onClick={() => setSelected(backup.name)}
+              className={cn(
+                "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
+                active ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+              )}
             >
-              {t("restore.restart")}
-            </Label>
-          </div>
-        ) : null}
+              <span className="min-w-0">
+                <span className="block truncate font-mono text-xs">
+                  {backup.name}
+                </span>
+                {backup.created_at ? (
+                  <span className="block text-xs text-muted-foreground">
+                    {backup.created_at}
+                  </span>
+                ) : null}
+              </span>
+              {active ? (
+                <Check className="size-4 shrink-0 text-primary" />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={busy}
+      {requiresRestart ? (
+        <div className="flex items-start gap-2.5 rounded-lg border p-3">
+          <Checkbox
+            id="restore-restart"
+            checked={restart}
+            onCheckedChange={(v) => setRestart(v === true)}
+            className="mt-0.5"
+          />
+          <Label
+            htmlFor="restore-restart"
+            className="text-sm font-normal leading-relaxed"
           >
-            {t("cancel")}
-          </Button>
-          <Button onClick={onRestore} disabled={!selected || busy}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {t("restore.action")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {t("restore.restart")}
+          </Label>
+        </div>
+      ) : null}
+    </ConfirmDialog>
   );
 }

@@ -590,7 +590,7 @@
       "sshAccessHint": "Permite que esta cuenta inicie sesión por SSH.",
       "password": "Contraseña",
       "passwordPlaceholder": "Déjalo vacío para no poner contraseña",
-      "passwordHint": "Opcional. Al menos 10 caracteres con mayúsculas, minúsculas y un número.",
+      "passwordHint": "Generada automáticamente. Consérvala, cámbiala o bórrala: podrás volver a verla más tarde desde la acción Establecer contraseña del usuario.",
       "generate": "Generar"
     },
     "password": {
@@ -2271,7 +2271,9 @@
       "starting": "Iniciando…",
       "confirmTitle": "¿Exportar {name}?",
       "confirmDescription": "Esta base de datos ocupa {size}. El volcado se escribe en el disco de este servidor y puede tardar varios minutos.",
-      "freeSpace": "{free} libres en este servidor."
+      "freeSpace": "{free} libres en este servidor.",
+      "inProgress": "Exportando…",
+      "diskUsed": "{count, plural, one {# copia} other {# copias}} guardadas aquí — {size}."
     },
     "manage": "Gestionar",
     "monitor": {
@@ -2400,7 +2402,9 @@
     "phpmyadmin": {
       "open": "Abrir en phpMyAdmin",
       "failed": "No se pudo abrir phpMyAdmin.",
-      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda."
+      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "blocked": "Tu navegador bloqueó la nueva pestaña.",
+      "openAnyway": "Abrir phpMyAdmin"
     }
   },
   "git": {

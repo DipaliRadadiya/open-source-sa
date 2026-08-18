@@ -9,14 +9,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/ui/form-modal";
 
 /**
  * The shared shape behind Rename, Copy, Compress and Extract: one "target
@@ -123,55 +116,51 @@ export function TargetPathDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <form onSubmit={onSubmit}>
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Icon className="size-5" />
-              </span>
-              <DialogTitle>{title}</DialogTitle>
-            </div>
-            <DialogDescription className="pt-1">{description}</DialogDescription>
-          </DialogHeader>
+    <FormModal
+      open={open}
+      onOpenChange={handleOpenChange}
+      asForm
+      onSubmit={onSubmit}
+      icon={Icon}
+      title={title}
+      description={description}
+      // Wider than the default: the field holds a filesystem path.
+      className="sm:max-w-lg"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>
+            {t("cancel")}
+          </Button>
+          <Button type="submit" disabled={busy || (!value.trim() && !allowEmpty)}>
+            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+            {busy ? savingLabel : submitLabel}
+          </Button>
+        </>
+      }
+    >
+      {renderExtra ? <div>{renderExtra({ value, setValue, busy })}</div> : null}
 
-          <div className="space-y-2 py-4">
-            {renderExtra ? (
-              <div className="pb-2">{renderExtra({ value, setValue, busy })}</div>
-            ) : null}
-            <Label htmlFor="target-path">{t("targetDialog.pathLabel")}</Label>
-            <Input
-              id="target-path"
-              ref={inputRef}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={emptyPlaceholder}
-              autoComplete="off"
-              spellCheck={false}
-              className="font-mono text-xs"
-              aria-invalid={Boolean(error)}
-            />
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          </div>
+      <div className="space-y-2">
+        <Label htmlFor="target-path">{t("targetDialog.pathLabel")}</Label>
+        <Input
+          id="target-path"
+          ref={inputRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={emptyPlaceholder}
+          autoComplete="off"
+          spellCheck={false}
+          className="font-mono text-xs"
+          aria-invalid={Boolean(error)}
+        />
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      </div>
 
-          {warning ? (
-            <p className="rounded-lg border border-warning/40 bg-warning/5 px-3 py-2 text-xs leading-relaxed text-warning">
-              {warning}
-            </p>
-          ) : null}
-
-          <DialogFooter className="mt-4">
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>
-              {t("cancel")}
-            </Button>
-            <Button type="submit" disabled={busy || (!value.trim() && !allowEmpty)}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-              {busy ? savingLabel : submitLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      {warning ? (
+        <p className="rounded-lg border border-warning/40 bg-warning/5 px-3 py-2 text-xs leading-relaxed text-warning">
+          {warning}
+        </p>
+      ) : null}
+    </FormModal>
   );
 }

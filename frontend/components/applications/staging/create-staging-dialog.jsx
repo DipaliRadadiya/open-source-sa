@@ -13,14 +13,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormModal } from "@/components/ui/form-modal";
 import {
   Form,
   FormControl,
@@ -79,68 +72,62 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={pending ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <FlaskConical className="size-5" />
-            </span>
-            <DialogTitle>{t("title")}</DialogTitle>
-          </div>
-          <DialogDescription className="pt-1">
-            {t("description", { domain: production?.domain ?? "" })}
-          </DialogDescription>
-        </DialogHeader>
+    <Form {...form}>
+      <FormModal
+        open={open}
+        onOpenChange={pending ? undefined : onOpenChange}
+        asForm
+        onSubmit={form.handleSubmit(submit)}
+        icon={FlaskConical}
+        title={t("title")}
+        description={t("description", { domain: production?.domain ?? "" })}
+        className="sm:max-w-lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={pending}
+            >
+              {t("cancel")}
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+              {pending ? t("creating") : t("submit")}
+            </Button>
+          </>
+        }
+      >
+        <FormField
+          control={form.control}
+          name="domain"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("domainLabel")}</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  autoFocus
+                  disabled={pending}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder={t("domainPlaceholder")}
+                  className="font-mono"
+                />
+              </FormControl>
+              <FormDescription>{t("domainHint")}</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(submit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="domain"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("domainLabel")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      autoFocus
-                      disabled={pending}
-                      autoComplete="off"
-                      spellCheck={false}
-                      placeholder={t("domainPlaceholder")}
-                      className="font-mono"
-                    />
-                  </FormControl>
-                  <FormDescription>{t("domainHint")}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* The wait is minutes, not seconds, and nothing reports progress.
-                Better said before the click than discovered after it. */}
-            <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
-              {t("slow")}
-            </p>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={pending}
-              >
-                {t("cancel")}
-              </Button>
-              <Button type="submit" disabled={pending}>
-                {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-                {pending ? t("creating") : t("submit")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        {/* The wait is minutes, not seconds, and nothing reports progress.
+            Better said before the click than discovered after it. */}
+        <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+          {t("slow")}
+        </p>
+      </FormModal>
+    </Form>
   );
 }

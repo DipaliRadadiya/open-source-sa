@@ -105,7 +105,7 @@
       "sshAccessHint": "Lets this account sign in over SSH.",
       "password": "Password",
       "passwordPlaceholder": "Leave empty for no password",
-      "passwordHint": "Optional. At least 10 characters with upper and lower case and a number.",
+      "passwordHint": "Generated for you. Keep it, change it, or clear it — you can see it again later from the user's Set password action.",
       "generate": "Generate"
     },
     "password": {
@@ -2271,7 +2271,9 @@
       "starting": "Starting…",
       "confirmTitle": "Export {name}?",
       "confirmDescription": "This database is {size}. The dump is written to this server's disk and can take several minutes.",
-      "freeSpace": "{free} free on this server."
+      "freeSpace": "{free} free on this server.",
+      "inProgress": "Exporting…",
+      "diskUsed": "{count, plural, one {# export} other {# exports}} kept here — {size}."
     },
     "manage": "Manage",
     "monitor": {
@@ -2400,7 +2402,9 @@
     "phpmyadmin": {
       "open": "Open in phpMyAdmin",
       "failed": "phpMyAdmin could not be opened.",
-      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it."
+      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
+      "blocked": "Your browser blocked the new tab.",
+      "openAnyway": "Open phpMyAdmin"
     }
   },
   "git": {
