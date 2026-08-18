@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Actions\Server\Backup\DeleteBackup;
+use App\Actions\Server\Backup\DeleteBackupTarget;
 use App\Actions\Server\Backup\SaveBackupTarget;
 use App\Enums\BackupStatus;
 use App\Http\Controllers\Controller;
@@ -127,6 +129,33 @@ class BackupController extends Controller
         return response()->json([
             'backup_target' => BackupTargetResource::make($target)->resolve(),
         ]);
+    }
+
+    /**
+     * Delete one backup, archive included.
+     *
+     * 204 rather than the deleted row: there is nothing left to return, and
+     * echoing a record that no longer exists invites a client to act on it.
+     */
+    public function destroy(Backup $backup, DeleteBackup $action): JsonResponse
+    {
+        $action->execute($backup);
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * Stop backing this application up.
+     *
+     * The archives are the destructive part, not the schedule, so this refuses
+     * while any exist unless `delete_backups` says otherwise — and then deletes
+     * them through the same path a single delete uses.
+     */
+    public function destroyTarget(Application $application, DeleteBackupTarget $action): JsonResponse
+    {
+        $action->execute($application, request()->boolean('delete_backups'));
+
+        return response()->json(null, 204);
     }
 
     /**

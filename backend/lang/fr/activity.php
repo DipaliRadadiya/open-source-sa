@@ -131,6 +131,8 @@ return [
     'panel_update.failed' => 'Échec de la mise à jour du panneau (:reason)',
     'backup.configured' => 'A configuré les sauvegardes de :name (:frequency)',
     'backup.updated' => 'A mis à jour les réglages de sauvegarde de :name',
+    'backup.deleted' => 'Suppression d\'une sauvegarde de :name',
+    'backup.target_deleted' => 'Arrêt des sauvegardes de :name (:backups_deleted sauvegarde(s) supprimées)',
     'backup.completed' => 'A sauvegardé :application',
     'backup.failed' => 'Échec de la sauvegarde de :application (:reason)',
     'central.connected' => 'A connecté ce panneau au panneau central',

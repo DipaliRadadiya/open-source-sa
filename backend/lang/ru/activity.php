@@ -131,6 +131,8 @@ return [
     'panel_update.failed' => 'Обновление панели не удалось (:reason)',
     'backup.configured' => 'Настроил резервное копирование для :name (:frequency)',
     'backup.updated' => 'Обновил настройки резервного копирования :name',
+    'backup.deleted' => 'Удалена резервная копия :name',
+    'backup.target_deleted' => 'Резервное копирование :name остановлено (удалено копий: :backups_deleted)',
     'backup.completed' => 'Создана резервная копия :application',
     'backup.failed' => 'Резервное копирование :application не удалось (:reason)',
     'central.connected' => 'Подключил эту панель к центральной панели',

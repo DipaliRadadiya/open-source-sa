@@ -63,6 +63,20 @@ Route::post('/backups/{backup}/restore', [RestoreController::class, 'store'])
 Route::get('/restores', [RestoreController::class, 'index'])
     ->middleware('permission:backup');
 
+/*
+| Delete a backup, archive and all.
+|
+| `manage` on `backup`, the same tier as restore and download rather than the
+| per-site `app_backup`: this destroys the copy that exists specifically to
+| survive somebody's mistake, and whoever can configure a schedule is not
+| automatically trusted to remove what it produced.
+|
+| Throttled for the same reason restore is — there is no honest reason to press
+| this repeatedly, and a double-submit would race the artefact delete.
+*/
+Route::delete('/backups/{backup}', [BackupController::class, 'destroy'])
+    ->middleware(['permission:backup,manage', 'throttle:12,1']);
+
 // Retry a failed backup — re-runs with the same configuration.
 Route::post('/backups/{backup}/retry', [BackupController::class, 'retry'])
     ->middleware(['permission:app_backup,manage', 'throttle:6,1']);
@@ -81,6 +95,16 @@ Route::get('/applications/{application}/backup-target', [BackupController::class
 
 Route::put('/applications/{application}/backup-target', [BackupController::class, 'saveTarget'])
     ->middleware('permission:app_backup,manage');
+
+/*
+| Stop backing this application up.
+|
+| `backup,manage` rather than `app_backup,manage`, matching the single delete
+| above: removing the schedule is a per-site decision, but this can take every
+| archive with it, and that is the same power as deleting them one by one.
+*/
+Route::delete('/applications/{application}/backup-target', [BackupController::class, 'destroyTarget'])
+    ->middleware(['permission:backup,manage', 'throttle:12,1']);
 
 // Throttled hard: each call dumps a database and writes a multi-gigabyte
 // archive. This is not a button to lean on.

@@ -131,6 +131,8 @@ return [
     'panel_update.failed' => 'Panel update failed (:reason)',
     'backup.configured' => 'Set up backups for :name (:frequency)',
     'backup.updated' => 'Updated the backup settings for :name',
+    'backup.deleted' => 'Deleted a backup of :name',
+    'backup.target_deleted' => 'Stopped backing up :name (:backups_deleted backup(s) removed)',
     'backup.completed' => 'Backed up :application',
     'backup.failed' => 'Backup of :application failed (:reason)',
     'central.connected' => 'Connected this panel to the central panel',

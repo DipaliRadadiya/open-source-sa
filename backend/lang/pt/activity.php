@@ -131,6 +131,8 @@ return [
     'panel_update.failed' => 'A atualização do painel falhou (:reason)',
     'backup.configured' => 'Configurou as cópias de segurança de :name (:frequency)',
     'backup.updated' => 'Atualizou as definições de cópia de :name',
+    'backup.deleted' => 'Eliminou uma cópia de segurança de :name',
+    'backup.target_deleted' => 'Deixou de fazer cópias de :name (:backups_deleted cópia(s) removidas)',
     'backup.completed' => 'Fez a cópia de segurança de :application',
     'backup.failed' => 'A cópia de segurança de :application falhou (:reason)',
     'central.connected' => 'Ligou este painel ao painel central',

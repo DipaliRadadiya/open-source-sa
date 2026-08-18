@@ -131,6 +131,8 @@ return [
     'panel_update.failed' => 'パネルの更新に失敗しました (:reason)',
     'backup.configured' => ':name のバックアップを設定しました (:frequency)',
     'backup.updated' => ':name のバックアップ設定を更新しました',
+    'backup.deleted' => ':name のバックアップを削除しました',
+    'backup.target_deleted' => ':name のバックアップを停止しました（:backups_deleted 件を削除）',
     'backup.completed' => ':application をバックアップしました',
     'backup.failed' => ':application のバックアップに失敗しました (:reason)',
     'central.connected' => 'このパネルを中央パネルに接続しました',

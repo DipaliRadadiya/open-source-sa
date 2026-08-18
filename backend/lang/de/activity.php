@@ -131,6 +131,8 @@ return [
     'panel_update.failed' => 'Panel-Update fehlgeschlagen (:reason)',
     'backup.configured' => 'Sicherungen für :name eingerichtet (:frequency)',
     'backup.updated' => 'Sicherungseinstellungen für :name aktualisiert',
+    'backup.deleted' => 'Ein Backup von :name gelöscht',
+    'backup.target_deleted' => 'Backups für :name beendet (:backups_deleted Backup(s) entfernt)',
     'backup.completed' => ':application gesichert',
     'backup.failed' => 'Sicherung von :application fehlgeschlagen (:reason)',
     'central.connected' => 'Dieses Panel mit dem zentralen Panel verbunden',
