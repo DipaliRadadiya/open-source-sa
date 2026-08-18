@@ -37,9 +37,14 @@ class IssueCertificate implements ShouldQueue
     /** Beyond certbot's own ceiling, so the command decides when it has waited long enough. */
     public int $timeout = 600;
 
+    /**
+     * @param  string|null  $previousCertName  the certbot lineage this replaces,
+     *                                         when reissuing changed its name
+     */
     public function __construct(
         public int $certificateId,
         public ?int $actorId = null,
+        public ?string $previousCertName = null,
     ) {}
 
     public function handle(
@@ -97,6 +102,16 @@ class IssueCertificate implements ShouldQueue
 
         if ($certificate->type === CertificateType::LetsEncrypt) {
             $certbot->ensureRenewalHook(implode(' ', $webServers->driver()->reloadCommandForHook()));
+
+            // The lineage this one replaced, when reissuing renamed it —
+            // changing the primary domain does that, because certbot names a
+            // lineage after the first domain. Removed only now: the site is
+            // already serving the replacement, so nothing is left without a
+            // certificate at any point. Left behind, the old lineage renews
+            // itself forever for a name nothing answers to.
+            if ($this->previousCertName !== null && $this->previousCertName !== $domains[0]) {
+                $certbot->revoke($this->previousCertName, $certificate->application_id);
+            }
         }
 
         $activityLogger->log('application.certificate_issued', $certificate->application, [

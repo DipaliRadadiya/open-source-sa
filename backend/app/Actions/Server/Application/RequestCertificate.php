@@ -53,6 +53,18 @@ class RequestCertificate
             ]);
         }
 
+        // Captured before the row is overwritten. certbot names a lineage after
+        // the first domain (`--cert-name`), so reissuing after the primary
+        // domain changed creates a *second* lineage under the new name and
+        // leaves the old one renewing itself forever — spending rate limit and
+        // eventually mailing the user about a name nothing serves. The job
+        // removes it once the replacement is actually working.
+        $existing = Certificate::where('application_id', $application->id)->first();
+
+        $previousCertName = $existing?->type === CertificateType::LetsEncrypt
+            ? ($existing->domains[0] ?? null)
+            : null;
+
         $certificate = Certificate::updateOrCreate(
             ['application_id' => $application->id],
             [
@@ -73,7 +85,7 @@ class RequestCertificate
             'type' => $type->value,
         ]);
 
-        IssueCertificate::dispatch($certificate->id, Auth::id());
+        IssueCertificate::dispatch($certificate->id, Auth::id(), $previousCertName);
 
         return $certificate->refresh();
     }

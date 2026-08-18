@@ -112,8 +112,15 @@ class CertbotClient
 
             // The token was served but came back wrong — usually the site's own
             // rewrite rules swallowing /.well-known.
+            //
+            // The 404 is matched in context, not as a bare substring. `404`
+            // alone appears in ACME order URLs, byte counts and timestamps, so
+            // it matched unrelated failures and sent the user to inspect
+            // rewrite rules that were fine.
             str_contains($text, 'unauthorized'),
-            str_contains($text, '404') => 'challenge_not_served',
+            str_contains($text, 'status 404'),
+            str_contains($text, '"404"'),
+            str_contains($text, '404 not found') => 'challenge_not_served',
 
             str_contains($text, 'command not found'),
             str_contains($text, 'certbot: not found') => 'certbot_missing',

@@ -26,6 +26,12 @@ class CertificateResource extends JsonResource
             'domains' => $this->domains ?? [],
             'missing_domains' => $this->missingDomains(),
 
+            // Names on the certificate the site no longer has. Not cosmetic:
+            // certbot fails a whole renewal if any one name in the lineage
+            // cannot be validated, so this is a certificate that has silently
+            // stopped renewing for domains that are perfectly fine.
+            'stale_domains' => $this->staleDomains(),
+
             'force_https' => $this->force_https,
 
             // Nothing can renew an uploaded or self-signed certificate. Say so

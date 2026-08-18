@@ -135,4 +135,38 @@ class Certificate extends Model
             $covered,
         ));
     }
+
+    /**
+     * Names on the certificate that the application no longer has.
+     *
+     * The opposite of {@see missingDomains()}, and the dangerous direction.
+     * A missing domain is a name without HTTPS — visible the moment somebody
+     * visits it. A *stale* one is invisible and then fatal: `certbot renew`
+     * re-validates every name in a lineage and fails the whole renewal if any
+     * one of them cannot be validated. So removing an alias from a site quietly
+     * stops the certificate covering its *remaining, perfectly good* domains
+     * from ever renewing, and the first anyone hears of it is a browser warning
+     * up to ninety days later.
+     *
+     * Reported rather than corrected. Fixing it means reissuing, which spends
+     * from a rate limit and replaces a certificate that is working today — not
+     * something to do behind someone's back.
+     *
+     * Only Let's Encrypt renews, so only Let's Encrypt can be broken this way.
+     *
+     * @return array<int, string>
+     */
+    public function staleDomains(): array
+    {
+        if ($this->type !== CertificateType::LetsEncrypt) {
+            return [];
+        }
+
+        // Every name the application answers to, not just the certifiable
+        // ones: a domain that has stopped resolving is still attached, and the
+        // user has not asked us to drop it from anything.
+        $current = $this->application?->domains->pluck('domain')->all() ?? [];
+
+        return array_values(array_diff($this->domains ?? [], $current));
+    }
 }

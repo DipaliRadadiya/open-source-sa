@@ -35,6 +35,7 @@ class ApplicationProvisioner
         private ProvisionProgress $progress,
         private AutoIssueCertificate $autoCertificate,
         private PoolManager $pools,
+        private ApplicationArtifacts $artifacts,
     ) {}
 
     /**
@@ -294,19 +295,12 @@ class ApplicationProvisioner
         // serving traffic for a site the panel has stopped listing.
         $this->supervisor->remove($application);
 
-        // The pool, for the same reason but with a worse ending. A pool file
-        // that outlives its application keeps a `user =` line naming the
-        // site's Linux account — and deleting that account is a separate
-        // action the panel allows the moment no application references it.
-        // FPM then cannot resolve the uid, and it refuses to initialise
-        // *entirely*: `cannot get uid for user ... FPM initialization failed`.
-        // Every later site creation fails its `php-fpm -t` and gets blamed for
-        // a file it has nothing to do with, and php-fpm does not come back
-        // after a restart. `DeleteSystemUser` already removes orphaned
-        // `/etc/cron.d` files for exactly this reason; pools were missed.
-        if ($application->serving_profile === 'php' && $this->pools->supported()) {
-            $this->pools->remove($application);
-        }
+        // Then everything else the panel wrote outside the site's own
+        // directory — the PHP-FPM pool, worker units, the fail2ban jail, the
+        // certificate's renewal. Each of them outlives the application
+        // otherwise, and each then points at something that is not there.
+        // {@see ApplicationArtifacts} for what each one does when it does.
+        $this->artifacts->remove($application);
 
         $driver = $this->webServers->driver();
 
