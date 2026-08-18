@@ -117,7 +117,14 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
       </ReasonTooltip>
 
       <Dialog open={open} onOpenChange={(next) => !saving && setOpen(next)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
+        {/* Three rows — header, body, footer — with only the middle one
+            scrolling, matching the file editor, which is the same kind of
+            dialog. It used to scroll as a whole on `max-h-[90vh]
+            overflow-y-auto`, so on a short screen Save and Cancel scrolled off
+            the bottom of a dialog whose whole point is deciding whether to
+            save. A fixed height is what pins the footer; max-height cannot,
+            because the footer's position then depends on how long the file is. */}
+        <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-5xl">
           <DialogHeader>
             <div className="flex min-w-0 items-center gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
@@ -128,13 +135,18 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
             <DialogDescription className="pt-1">{t("phpIni.description")}</DialogDescription>
           </DialogHeader>
 
+        {/* The only part that scrolls. It scrolls rather than merely clipping
+            because the acknowledgement below the editor is not optional — on a
+            short screen it has to stay reachable, and the editor keeps a floor
+            so it can never be squeezed away to nothing. */}
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
           {/* Console surface, like the log viewer and the config-test output.
               It's the same category of thing — a machine's own file — and the
               panel already has one visual language for that. A light form field
               would also frame it as "an input", when it's really a file you're
               being trusted with. */}
-          <div className="overflow-hidden rounded-lg border border-console-border bg-console">
-            <div className="flex items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
+          <div className="flex min-h-48 flex-1 flex-col overflow-hidden rounded-lg border border-console-border bg-console">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
               <span className="truncate font-mono text-[11px] text-console-muted">
                 {file?.path ?? t("phpIni.pathUnknown")}
               </span>
@@ -144,8 +156,10 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
                 className="text-console-muted hover:bg-console-foreground/10 hover:text-console-foreground"
               />
             </div>
+            {/* h-full, not a vh fraction: the editor fills whatever the dialog
+                gives it, so the footer's position never depends on the file. */}
             {loading ? (
-              <div className="flex h-[55vh] items-center justify-center">
+              <div className="flex min-h-0 flex-1 items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-console-muted" />
               </div>
             ) : (
@@ -156,7 +170,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
                 spellCheck={false}
                 // The whole file, edited as a file. A code-editor dependency for
                 // one textarea would be a lot of bundle for syntax colouring.
-                className="console-scroll h-[55vh] resize-none rounded-none border-0 bg-console font-mono text-xs leading-6 text-console-foreground caret-console-foreground shadow-none selection:bg-console-foreground/20 focus-visible:ring-0 dark:bg-console"
+                className="console-scroll h-full min-h-0 flex-1 resize-none rounded-none border-0 bg-console font-mono text-xs leading-6 text-console-foreground caret-console-foreground shadow-none selection:bg-console-foreground/20 focus-visible:ring-0 dark:bg-console"
                 aria-label={t("phpIni.title", { version })}
               />
             )}
@@ -165,7 +179,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
           {/* PHP refused it. Say so in PHP's words, and say what that means:
               nothing was applied and the old file is already back. */}
           {phpError ? (
-            <div className="overflow-hidden rounded-lg border border-console-border bg-console">
+            <div className="shrink-0 overflow-hidden rounded-lg border border-console-border bg-console">
               <div className="border-b border-console-border px-3 py-1.5 text-[11px] uppercase tracking-wide text-console-muted">
                 {t("phpIni.rejectedTitle")}
               </div>
@@ -179,19 +193,20 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
             </div>
           ) : null}
 
-          <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3">
-            <Checkbox
-              id={`ack-${version}`}
-              checked={acknowledged}
-              onCheckedChange={(v) => setAcknowledged(v === true)}
-              className="mt-0.5"
-            />
-            <Label
-              htmlFor={`ack-${version}`}
-              className="text-sm font-normal leading-relaxed text-foreground"
-            >
-              {t("phpIni.acknowledge", { version })}
-            </Label>
+            <div className="flex shrink-0 items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3">
+              <Checkbox
+                id={`ack-${version}`}
+                checked={acknowledged}
+                onCheckedChange={(v) => setAcknowledged(v === true)}
+                className="mt-0.5"
+              />
+              <Label
+                htmlFor={`ack-${version}`}
+                className="text-sm font-normal leading-relaxed text-foreground"
+              >
+                {t("phpIni.acknowledge", { version })}
+              </Label>
+            </div>
           </div>
 
           <DialogFooter>
