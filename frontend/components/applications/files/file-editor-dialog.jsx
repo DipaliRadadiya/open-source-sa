@@ -10,6 +10,7 @@ import { getFileContent, saveFileContent, fileDownloadUrl } from "@/lib/api/file
 import { fileContentSchema } from "@/lib/schemas/file";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { ShortcutHint } from "@/components/ui/shortcut-hint";
 import { CopyButton } from "@/components/ui/copy-button";
 import {
   Dialog,
@@ -217,6 +218,13 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             <Button onClick={save} disabled={!dirty || saving || loading}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("editor.save")}
+              {/* Inside the button, not beside it: this is the shortcut FOR
+                  this action, and a chip floating in the footer would read as
+                  belonging to the footer. Dropped while saving so it does not
+                  invite a second press mid-write. */}
+              {saving ? null : (
+                <ShortcutHint letter="S" className="ms-1 border-primary-foreground/25 bg-primary-foreground/15 text-primary-foreground/80" />
+              )}
             </Button>
           ) : null}
         </DialogFooter>

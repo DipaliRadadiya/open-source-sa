@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { saveEnvironment } from "@/lib/api/environment";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { ShortcutHint } from "@/components/ui/shortcut-hint";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -257,6 +258,9 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
             <Button onClick={onSave} disabled={!dirty || saving}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {saveLabel}
+              {saving ? null : (
+                <ShortcutHint letter="S" className="ms-1 border-primary-foreground/25 bg-primary-foreground/15 text-primary-foreground/80" />
+              )}
             </Button>
           </div>
         </CardFooter>
