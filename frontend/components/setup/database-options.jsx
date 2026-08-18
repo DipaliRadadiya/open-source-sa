@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -11,8 +11,14 @@ import { Button } from "@/components/ui/button";
  * the panel can't install (MongoDB — needs its own apt repo) is shown disabled;
  * one already installed is marked so. The chosen option's own `action` endpoint
  * is what gets installed.
+ *
+ * No spinner in here, deliberately. This block only renders while its component
+ * still needs installing — the moment its own install starts, the card replaces
+ * it with the Installing pill. So a spinner on this button could never mean
+ * "installing this"; it only ever meant "another component is installing", and
+ * that is what it was wrongly saying. `disabled` + a reason says it truthfully.
  */
-export function DatabaseOptions({ options, busy = false, onInstall }) {
+export function DatabaseOptions({ options, disabled = false, disabledReason, onInstall }) {
   const t = useTranslations("setup");
   const installable = useMemo(() => options.filter((o) => o.installable && !o.installed), [options]);
   const defaultValue = useMemo(
@@ -26,7 +32,11 @@ export function DatabaseOptions({ options, busy = false, onInstall }) {
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {options.map((option) => {
-          const disabled = option.installed || !option.installable;
+          // Not the `disabled` prop: an engine is off because of what it is, and
+          // it says so in its own subtitle below — no tooltip needed. Picking an
+          // engine while another component installs is harmless, so the lock
+          // applies to the install button, not to choosing.
+          const unavailable = option.installed || !option.installable;
           const active = option.value === selected;
           return (
             <button
@@ -34,13 +44,13 @@ export function DatabaseOptions({ options, busy = false, onInstall }) {
               type="button"
               role="radio"
               aria-checked={active}
-              disabled={disabled}
+              disabled={unavailable}
               onClick={() => setSelected(option.value)}
               className={cn(
                 "flex flex-col gap-1 rounded-lg border p-3 text-left text-sm transition-colors",
-                active && !disabled && "border-primary bg-primary/[0.05] ring-1 ring-primary",
-                !active && !disabled && "hover:border-primary/40",
-                disabled && "cursor-not-allowed opacity-60",
+                active && !unavailable && "border-primary bg-primary/[0.05] ring-1 ring-primary",
+                !active && !unavailable && "hover:border-primary/40",
+                unavailable && "cursor-not-allowed opacity-60",
               )}
             >
               <span className="flex items-center justify-between gap-2 font-medium">
@@ -62,8 +72,11 @@ export function DatabaseOptions({ options, busy = false, onInstall }) {
       </div>
 
       {chosen?.action ? (
-        <Button onClick={() => onInstall(chosen.action)} disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+        <Button
+          onClick={() => onInstall(chosen.action)}
+          disabled={disabled}
+          disabledReason={disabledReason}
+        >
           {t("installNamed", { name: chosen.label })}
         </Button>
       ) : null}

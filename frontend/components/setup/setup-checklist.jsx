@@ -15,20 +15,48 @@ const POLL_MS = 3000;
 // apt on a small box is slow, but past this we stop implying steady progress —
 // an unbounded spinner is a promise we have no evidence for.
 const SLOW_AFTER_MS = 3 * 60 * 1000;
+// Ceiling on how long we will claim something is installing without the server
+// agreeing. Past this the queue worker is the likelier explanation than apt, and
+// showing the server's own answer — even "not installed" — beats a spinner that
+// will never stop.
+const GIVE_UP_MS = 10 * 60 * 1000;
 
 export function SetupChecklist({ initialSetup, versions = {} }) {
   const t = useTranslations("setup");
   const router = useRouter();
   const [setup, setSetup] = useState(initialSetup);
   // Keys with a POST in flight (before the 202 lands) — a spinner on that
-  // control until the optimistic "installing" state or the poll takes over.
+  // control until the "installing" state or the poll takes over.
   const [busy, setBusy] = useState({});
+  // Installs we started here, key → when. The backend only tracks progress for
+  // database, php and node (SetupCatalog::progressFor maps exactly those three),
+  // so a queued fail2ban install reports `pending` for its entire run. Without
+  // this the very next poll overwrote the row back to an Install button while
+  // apt was still going, polling then stopped because nothing looked in flight,
+  // and the page never noticed the install finishing.
+  const [started, setStarted] = useState({});
   const [slow, setSlow] = useState(false);
 
+  // Server truth, with our own known-started installs laid over it. Derived
+  // rather than merged into `setup`: an override simply stops applying once the
+  // server resolves that component, so there is no bookkeeping to prune and
+  // nothing to keep in sync.
+  const components = setup.components.map((c) =>
+    started[c.key] && c.state !== "installed" && c.state !== "failed"
+      ? { ...c, state: "installing" }
+      : c,
+  );
+
   const anyInstalling =
-    setup.status === "installing" ||
-    setup.components.some((c) => c.state === "installing") ||
-    Object.keys(busy).length > 0;
+    components.some((c) => c.state === "installing") || Object.keys(busy).length > 0;
+
+  // The ceiling. One timer for the whole set, restarted whenever another install
+  // is started, because that is a fresh reason to keep waiting.
+  useEffect(() => {
+    if (!Object.keys(started).length) return undefined;
+    const id = setTimeout(() => setStarted({}), GIVE_UP_MS);
+    return () => clearTimeout(id);
+  }, [started]);
 
   // Poll only while something is in flight; pause when the tab is hidden.
   useEffect(() => {
@@ -58,14 +86,9 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
     setBusy((b) => ({ ...b, [component.key]: true }));
     try {
       await runSetupAction(action, body);
-      // Flip locally so the row shows progress immediately; the poll confirms.
-      setSetup((s) => ({
-        ...s,
-        status: "installing",
-        components: s.components.map((c) =>
-          c.key === component.key ? { ...c, state: "installing" } : c,
-        ),
-      }));
+      // Remembered rather than written into `setup`: the poll replaces that
+      // wholesale, so anything merged into it survives exactly one tick.
+      setStarted((s) => ({ ...s, [component.key]: true }));
     } catch (error) {
       toast.error(apiMessage(error, t("installFailed")));
     } finally {
@@ -82,7 +105,7 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
     router.refresh();
   }
 
-  const recommended = setup.components.filter((c) => c.recommended);
+  const recommended = components.filter((c) => c.recommended);
   const recommendedDone = recommended.filter((c) => c.state === "installed").length;
   // Drive the bar off the recommended set so the number and the "X of Y
   // recommended installed" sentence always tell the same story (the backend
@@ -93,12 +116,18 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
   // bottom, so the next step is always the first thing the eye lands on.
   const rank = (c) =>
     c.state === "failed" ? 0 : c.state === "installing" ? 1 : c.state === "installed" ? 4 : c.recommended ? 2 : 3;
-  const ordered = setup.components
+  const ordered = components
     .map((c, i) => ({ c, i }))
     .sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i)
     .map((x) => x.c);
   const pending = ordered.filter((c) => c.state !== "installed");
   const done = ordered.filter((c) => c.state === "installed");
+
+  // The backend names what's running, but only for the three components it
+  // tracks — for the others its label is null and the line went anonymous
+  // ("One install runs at a time" with no subject). Name it ourselves then.
+  const running = components.find((c) => c.state === "installing");
+  const runningLabel = setup.label ?? (running ? t("installingNamed", { name: running.title }) : null);
 
   const renderComponent = (component) => (
     <SetupComponent
@@ -150,7 +179,7 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
             <Loader2 className="mt-0.5 size-3 shrink-0 animate-spin" />
             <span>
-              {setup.label ? `${setup.label} — ` : ""}
+              {runningLabel ? `${runningLabel} — ` : ""}
               {slow ? t("installSlow") : t("installOneAtATime")}
             </span>
           </p>

@@ -13,7 +13,7 @@ import { componentMeta } from "@/components/setup/component-meta";
 // PHP and Node install per-version, right here on the setup checklist.
 const RUNTIME_KEYS = new Set(["php", "node"]);
 
-function VersionInstall({ versions, action, busy, onInstall }) {
+function VersionInstall({ versions, action, disabled, disabledReason, onInstall }) {
   const t = useTranslations("setup");
   const options = useMemo(
     () => versions.map((v) => ({ value: v.version, label: v.version, hint: v.lifecycle?.status })),
@@ -38,8 +38,16 @@ function VersionInstall({ versions, action, busy, onInstall }) {
           searchPlaceholder={t("chooseVersion")}
         />
       </div>
-      <Button className="shrink-0" disabled={!version || busy} onClick={() => onInstall(action, { version })}>
-        {busy ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+      {/* Like the database chooser: this picker is gone the moment its own
+          install starts, so a spinner here can only ever have meant "something
+          else is installing". Off with a reason instead. */}
+      <Button
+        className="shrink-0"
+        disabled={!version || disabled}
+        disabledReason={disabled ? disabledReason : !version ? t("chooseVersionFirst") : null}
+        onClick={() => onInstall(action, { version })}
+      >
+        <Download className="size-4" />
         {t("install")}
       </Button>
     </div>
@@ -103,7 +111,13 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   const installed = state === "installed";
   const failed = state === "failed";
   const installing = state === "installing" || busy;
-  const disabled = busy || locked;
+  // Two different things, kept apart on purpose. `installing` is this
+  // component's own progress and owns the spinner; `blocked` is apt's
+  // one-at-a-time lock held by a *different* component and owns nothing but a
+  // disabled state and a sentence. Folding them into one flag is what put a
+  // spinner on "Install MariaDB" while fail2ban was the thing installing.
+  const blocked = busy || locked;
+  const blockedReason = locked ? t("lockedByOtherInstall") : null;
   const meta = componentMeta(component.key);
 
   return (
@@ -156,7 +170,12 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
           {/* Database pick-one, shown while it still needs installing. */}
           {hasOptions && !installed && !installing ? (
             <div className="mt-3">
-              <DatabaseOptions options={options} busy={disabled} onInstall={(a) => onInstall(component, a)} />
+              <DatabaseOptions
+                options={options}
+                disabled={blocked}
+                disabledReason={blockedReason}
+                onInstall={(a) => onInstall(component, a)}
+              />
             </div>
           ) : null}
 
@@ -165,7 +184,8 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
             <VersionInstall
               versions={runtimeVersions}
               action={action}
-              busy={disabled}
+              disabled={blocked}
+              disabledReason={blockedReason}
               onInstall={(a, body) => onInstall(component, a, body)}
             />
           ) : null}
@@ -176,13 +196,24 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
         <div className="shrink-0">
           {installed || installing || isRuntime || hasOptions ? null : failed ? (
             action && component.retryable ? (
-              <Button size="sm" variant="outline" disabled={disabled} onClick={() => onInstall(component, action)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={blocked}
+                disabledReason={blockedReason}
+                onClick={() => onInstall(component, action)}
+              >
                 <RotateCw className="size-3.5" />
                 {t("retry")}
               </Button>
             ) : null
           ) : action ? (
-            <Button size="sm" disabled={disabled} onClick={() => onInstall(component, action)}>
+            <Button
+              size="sm"
+              disabled={blocked}
+              disabledReason={blockedReason}
+              onClick={() => onInstall(component, action)}
+            >
               <Download className="size-3.5" />
               {t("install")}
             </Button>
