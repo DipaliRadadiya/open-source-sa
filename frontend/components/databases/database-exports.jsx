@@ -14,7 +14,7 @@ import {
 import { createExport, getExports, deleteExport } from "@/lib/api/databases";
 import { getLiveMetrics } from "@/lib/api/server-metrics";
 import { formatBytes } from "@/lib/format/bytes";
-import { exportsResponseSchema } from "@/lib/schemas/database";
+import { exportSchema, exportsResponseSchema } from "@/lib/schemas/database";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,16 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
   const rows = all.filter((row) => row.database_id === database.id);
   const inFlight = rows.some((row) => IN_FLIGHT.includes(row.status));
 
+  // Only files that are still on disk: a failed run wrote nothing, and a row
+  // whose file was deleted by hand is `available: false` and costs no space.
+  const kept = rows.reduce(
+    (total, row) =>
+      row.status === "completed" && row.available
+        ? { count: total.count + 1, bytes: total.bytes + (row.size_bytes ?? 0) }
+        : total,
+    { count: 0, bytes: 0 },
+  );
+
   useEffect(() => {
     if (!inFlight) return;
 
@@ -120,7 +130,15 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
     setConfirming(false);
     setStarting(true);
     try {
-      await createExport(database.id);
+      // The 202 carries the queued row itself — it is created before the job is
+      // dispatched. Showing it straight away is the difference between "a dump
+      // is running" and a screen that looks like the click did nothing: the
+      // POST returns in milliseconds, `starting` goes false with it, and the
+      // refresh that would have brought the row takes a server round trip to
+      // land. In that gap the button was idle again and the list unchanged.
+      const { data } = await createExport(database.id);
+      const created = exportSchema.safeParse(data?.export);
+      if (created.success) setPolled((current) => [created.data, ...(current ?? initial)]);
       toast.success(t("started"));
       router.refresh();
     } catch (error) {
@@ -169,16 +187,20 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
               !canManage ? t("noPermission") : inFlight ? t("alreadyRunning") : null
             }
           >
+            {/* The button says what is happening rather than just going grey.
+                A dump runs for minutes and the only other sign of it was a
+                small badge at the bottom of the card, which is not where
+                anyone is looking after pressing this. */}
             <Button
               disabled={!canManage || inFlight || starting}
               onClick={big ? ask : start}
             >
-              {starting ? (
+              {starting || inFlight ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <HardDriveDownload className="size-4" />
               )}
-              {t("action")}
+              {inFlight ? t("inProgress") : t("action")}
             </Button>
           </ReasonTooltip>
         </div>
@@ -206,6 +228,18 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
             promises safety this feature cannot give on its own: the dump sits
             on the same disk as the database it came from. */}
         <div className="border-t bg-muted/30 px-5 py-3">
+          {/* How much of that disk these files are actually using. Nothing
+              prunes exports — they stay until someone deletes them by hand — so
+              the warning above was asking people to worry about a number the
+              page never showed them. */}
+          {kept.count > 0 ? (
+            <p className="mb-1 text-xs font-medium">
+              {t("diskUsed", {
+                count: kept.count,
+                size: formatBytes(kept.bytes, format),
+              })}
+            </p>
+          ) : null}
           <p className="text-xs leading-relaxed text-muted-foreground">
             {t("sameDiskWarning")}
           </p>
