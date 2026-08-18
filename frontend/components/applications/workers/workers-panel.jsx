@@ -48,6 +48,17 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
 
   const setRowBusy = (id, action) => setBusy((prev) => ({ ...prev, [id]: action }));
 
+  // start/stop/restart answer with the worker as systemd reports it *after* the
+  // action, so the row can be corrected from the response itself. Previously
+  // the answer was thrown away and the badge fell back to its old value until
+  // the next poll — which is what made a start look like nothing had happened.
+  // Replaced, not merged. The response is the whole resource, and merging keeps
+  // whatever it omits — which showed up as a row carrying a fresh `state` of
+  // "running" beside the previous `state_title` of "Stopped", so the badge
+  // contradicted its own buttons.
+  const applyWorker = (next) =>
+    setWorkers((prev) => prev.map((w) => (w.id === next.id ? next : w)));
+
   function openCreate(presetKey) {
     setSeed(presetKey);
     setCreateOpen(true);
@@ -165,6 +176,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
               canManage={canManage}
               busy={busy}
               setRowBusy={setRowBusy}
+              onWorkerUpdated={applyWorker}
             />
           </div>
           <div className="hidden lg:block">
@@ -175,6 +187,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
               canManage={canManage}
               busy={busy}
               setRowBusy={setRowBusy}
+              onWorkerUpdated={applyWorker}
             />
           </div>
         </>

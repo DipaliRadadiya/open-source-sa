@@ -98,13 +98,14 @@ function StatusCell({ row, table }) {
 }
 
 function ActionsCell({ row, table }) {
-  const { appId, canManage, setRowBusy } = table.options.meta;
+  const { appId, canManage, setRowBusy, onWorkerUpdated } = table.options.meta;
   return (
     <WorkerActions
       worker={row.original}
       appId={appId}
       canManage={canManage}
       onBusyChange={(action) => setRowBusy(row.original.id, action)}
+      onUpdated={onWorkerUpdated}
     />
   );
 }
@@ -122,7 +123,7 @@ function RowMenuCell({ row, table }) {
   );
 }
 
-export function WorkersTable({ data, appId, presets = [], canManage = false, busy, setRowBusy }) {
+export function WorkersTable({ data, appId, presets = [], canManage = false, busy, setRowBusy, onWorkerUpdated }) {
   const t = useTranslations("applications.workers");
 
   const columns = [
@@ -146,7 +147,7 @@ export function WorkersTable({ data, appId, presets = [], canManage = false, bus
     <DataTable
       columns={columns}
       data={data}
-      meta={{ appId, presets, canManage, busy, setRowBusy, workers: data }}
+      meta={{ appId, presets, canManage, busy, setRowBusy, onWorkerUpdated, workers: data }}
       emptyMessage={t("empty.title")}
       rowClassName={(worker) =>
         cn(

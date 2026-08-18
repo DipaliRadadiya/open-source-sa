@@ -34,7 +34,7 @@ function WorkerMeta({ worker, t }) {
   );
 }
 
-export function WorkersCards({ data, appId, presets = [], canManage, busy, setRowBusy }) {
+export function WorkersCards({ data, appId, presets = [], canManage, busy, setRowBusy, onWorkerUpdated }) {
   const t = useTranslations("applications.workers");
 
   return (
@@ -72,6 +72,7 @@ export function WorkersCards({ data, appId, presets = [], canManage, busy, setRo
               canManage={canManage}
               reserveSlots={false}
               onBusyChange={(action) => setRowBusy(worker.id, action)}
+              onUpdated={onWorkerUpdated}
             />
             <WorkerRowActions worker={worker} appId={appId} presets={presets} workers={data} canManage={canManage} />
           </div>
