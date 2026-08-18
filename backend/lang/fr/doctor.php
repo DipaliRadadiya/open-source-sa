@@ -21,6 +21,7 @@ return [
         'php_isolation_memory' => 'L\'ensemble des sites isolés pourrait utiliser plus de mémoire que le serveur n\'en a. Réduisez le nombre de processus ou la limite mémoire des sites les plus chargés.',
         'php_isolation_shared' => 'Ces sites tournent encore en www-data aux côtés de tous les autres. Ouvrez l\'écran PHP d\'un site et isolez-le pour lui donner son propre utilisateur.',
         'privilege' => 'Le panneau ne peut pas exécuter de commandes en root. Vérifiez que /etc/sudoers.d/ contient l’autorisation et que le fichier passe visudo -c.',
+        'privilege_outdated' => 'L\'autorisation sudo de ce serveur est antérieure au panneau en cours d\'exécution : les commandes ci-dessus sont celles que cette version tentera d\'exécuter et que sudo refusera. Elles échouent avec « a password is required » sur des fonctionnalités qui semblent configurées. Relancez install.sh pour réécrire /etc/sudoers.d/, ou ajoutez les binaires manquants à la main.',
         'privilege_disabled' => 'L’élévation de privilèges est désactivée alors que le panneau n’est pas root. Retirez SERVER_OPS_SUDO=false de .env.',
         'services_missing' => 'Une unité attendue n’existe pas. Définissez PANEL_FRONTEND_SERVICE et PANEL_QUEUE_SERVICE dans .env avec les noms réels.',
         'services_down' => 'Démarrez-les avec systemctl start, puis consultez journalctl -u <unité>.',

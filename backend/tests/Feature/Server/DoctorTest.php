@@ -33,8 +33,40 @@ beforeEach(function () {
     $this->token = $this->admin->createToken('t')->plainTextToken;
 });
 
+/**
+ * What `sudo -n -l` prints on a server whose grant is up to date.
+ *
+ * Built from the allowlist rather than hardcoded, because the point of the
+ * check is that the two agree — a fixture listing its own idea of the grant
+ * would pass while the real server's diverged, which is the failure being
+ * tested for.
+ */
+function sudoListing(?array $only = null): string
+{
+    $binaries = $only ?? (array) config('server.privilege.binaries', []);
+
+    $paths = implode(', ', array_map(fn (string $b) => '/usr/bin/'.$b, $binaries));
+
+    return "Matching Defaults entries for panel on host:\n    !requiretty\n\n"
+        ."User panel may run the following commands on host:\n    (root) NOPASSWD: {$paths}, /usr/sbin/php-fpm*\n";
+}
+
+/** A server where sudo works and the grant covers everything this build runs. */
+function fakeHealthySudo(): void
+{
+    Process::fake(function ($process) {
+        $command = implode(' ', (array) $process->command);
+
+        if (str_contains($command, 'sudo -n -l') && ! preg_match('/-l \S/', $command)) {
+            return Process::result(output: sudoListing());
+        }
+
+        return Process::result(output: 'active', exitCode: 0);
+    });
+}
+
 it('reports healthy only when nothing failed', function () {
-    Process::fake(['*' => Process::result(output: 'active', exitCode: 0)]);
+    fakeHealthySudo();
     Http::fake(['*' => Http::response(['health' => ['status' => 'ok', 'version' => null]])]);
 
     config()->set('server.doctor.checks', [PrivilegeCheck::class, DatabaseCheck::class]);
@@ -45,6 +77,52 @@ it('reports healthy only when nothing failed', function () {
         ->and($report['failed'])->toBe(0)
         ->and($report['checks'])->toHaveCount(2);
 });
+
+it('catches a sudo grant that predates the panel it is running', function () {
+    // sudo works — the representative commands are all permitted — but the
+    // rule on disk is an older install.sh's. This is the state every server
+    // reaches the moment the panel is updated and install.sh is not re-run,
+    // and it is how certbot, openssl, touch, stat and crontab were denied for
+    // months while this check reported healthy: it sampled five binaries that
+    // were granted on day one and never changed.
+    $stale = array_values(array_diff(
+        (array) config('server.privilege.binaries', []),
+        ['certbot', 'openssl', 'touch'],
+    ));
+
+    Process::fake(function ($process) use ($stale) {
+        $command = implode(' ', (array) $process->command);
+
+        if (str_contains($command, 'sudo -n -l') && ! preg_match('/-l \S/', $command)) {
+            return Process::result(output: sudoListing($stale));
+        }
+
+        return Process::result(output: 'active', exitCode: 0);
+    });
+
+    config()->set('server.doctor.checks', [PrivilegeCheck::class]);
+
+    $report = app(Doctor::class)->run();
+
+    expect($report['healthy'])->toBeFalse();
+
+    $detail = $report['checks'][0]['detail'];
+
+    expect($detail)->toContain('certbot')
+        ->and($detail)->toContain('openssl')
+        ->and($detail)->toContain('touch');
+})->skip(fn () => posix_geteuid() === 0, 'runs as root — nothing needs sudo');
+
+it('accepts php-fpm granted as a wildcard', function () {
+    // One binary per installed PHP version, granted as /usr/sbin/php-fpm* for
+    // the same reason elevate() matches it by prefix — an exact list would
+    // need editing every time a version is added through the panel.
+    fakeHealthySudo();
+
+    config()->set('server.doctor.checks', [PrivilegeCheck::class]);
+
+    expect(app(Doctor::class)->run()['healthy'])->toBeTrue();
+})->skip(fn () => posix_geteuid() === 0, 'runs as root — nothing needs sudo');
 
 it('is unhealthy when a privileged command is denied', function () {
     // sudo -n -l <binary> exits non-zero when there is no grant. This is the

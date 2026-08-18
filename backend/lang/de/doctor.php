@@ -21,6 +21,7 @@ return [
         'php_isolation_memory' => 'Alle isolierten Seiten zusammen könnten mehr Speicher belegen, als der Server hat. Senken Sie die Worker-Anzahl oder das Speicherlimit der stärksten Seiten.',
         'php_isolation_shared' => 'Diese Seiten laufen weiterhin als www-data neben allen anderen. Öffnen Sie die PHP-Seite einer Site und isolieren Sie sie.',
         'privilege' => 'Das Panel kann keine Befehle als root ausführen. Prüfen Sie, ob /etc/sudoers.d/ die Panel-Berechtigung enthält und die Datei visudo -c besteht.',
+        'privilege_outdated' => 'Die sudo-Berechtigung dieses Servers ist älter als das laufende Panel: Die oben genannten Befehle wird dieser Build ausführen wollen, und sudo wird sie ablehnen. Sie scheitern mit „a password is required“ bei Funktionen, die konfiguriert aussehen. Führen Sie install.sh erneut aus, um /etc/sudoers.d/ neu zu schreiben, oder ergänzen Sie die fehlenden Programme von Hand.',
         'privilege_disabled' => 'Die Rechteerweiterung ist deaktiviert, das Panel läuft aber nicht als root. Entfernen Sie SERVER_OPS_SUDO=false aus .env.',
         'services_missing' => 'Eine erwartete Unit existiert nicht. Setzen Sie PANEL_FRONTEND_SERVICE und PANEL_QUEUE_SERVICE in .env auf die tatsächlichen Namen.',
         'services_down' => 'Starten Sie sie mit systemctl start und prüfen Sie journalctl -u <Unit>.',

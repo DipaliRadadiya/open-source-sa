@@ -21,6 +21,7 @@ return [
         'php_isolation_memory' => 'Every isolated site could use more memory than the server has. Lower the worker count or the memory limit on the busiest sites, or the kernel will eventually kill one of them.',
         'php_isolation_shared' => 'These sites still run as www-data alongside every other site. Open a site’s PHP screen and isolate it to give it its own user.',
         'privilege' => 'The panel cannot run commands as root. Check /etc/sudoers.d/ contains the panel grant and that the file passes visudo -c.',
+        'privilege_outdated' => 'This server\'s sudo grant predates the panel it is running: the commands listed above are ones this build will try to run and sudo will refuse. They fail with "a password is required" on features that look configured. Re-run install.sh to rewrite /etc/sudoers.d/, or add the missing binaries to it by hand.',
         'privilege_disabled' => 'Privilege escalation is switched off but the panel is not root. Remove SERVER_OPS_SUDO=false from .env.',
         'services_missing' => 'A unit the panel expects does not exist. Set PANEL_FRONTEND_SERVICE and PANEL_QUEUE_SERVICE in .env to the names this server actually uses.',
         'services_down' => 'Start them with systemctl start, then check journalctl -u <unit> for why they stopped.',
