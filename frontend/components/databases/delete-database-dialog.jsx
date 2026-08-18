@@ -9,6 +9,7 @@ import { deleteDatabase } from "@/lib/api/databases";
 import { apiMessage } from "@/lib/api/error-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CopyButton } from "@/components/ui/copy-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
@@ -75,9 +76,13 @@ export function DeleteDatabaseDialog({ database, open, onOpenChange, redirectTo 
       onConfirm={onConfirm}
     >
       <div className="space-y-2">
-        <Label htmlFor="delete-db-confirm" className="text-sm">
-          {t("delete.confirmLabel", { name })}
-        </Label>
+        {/* Same guard, same help: the database name must be typed exactly. */}
+        <div className="flex items-start justify-between gap-2">
+          <Label htmlFor="delete-db-confirm" className="text-sm">
+            {t("delete.confirmLabel", { name })}
+          </Label>
+          <CopyButton value={name} label={t("delete.copyName")} className="size-6 shrink-0" />
+        </div>
         <Input
             placeholder={name}
           id="delete-db-confirm"

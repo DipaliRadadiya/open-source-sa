@@ -8,6 +8,7 @@ import { TriangleAlert } from "lucide-react";
 import { deleteSystemUser } from "@/lib/api/system-users";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CopyButton } from "@/components/ui/copy-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiMessage } from "@/lib/api/error-message";
 
@@ -57,9 +58,16 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange }) {
       onConfirm={onConfirm}
     >
       <div className="space-y-2">
-        <Label htmlFor="delete-su-confirm" className="text-sm">
-          {t("delete.confirmLabel", { username })}
-        </Label>
+        {/* Copy, because the name has to be typed exactly and a Linux username
+            is the kind of string that gets mistyped — and it is sitting right
+            there on screen. Matches the delete-application dialog, which is
+            the same guard over the same shape of value. */}
+        <div className="flex items-start justify-between gap-2">
+          <Label htmlFor="delete-su-confirm" className="text-sm">
+            {t("delete.confirmLabel", { username })}
+          </Label>
+          <CopyButton value={username} label={t("delete.copyUsername")} className="size-6 shrink-0" />
+        </div>
         <Input
           placeholder={username}
           id="delete-su-confirm"

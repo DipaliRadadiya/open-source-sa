@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CopyButton } from "@/components/ui/copy-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   AlertDialog,
@@ -136,7 +137,13 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
           </p>
 
           <div className="space-y-1.5">
-            <Label htmlFor="staging-push-confirm">{t("confirmLabel", { domain })}</Label>
+            {/* The most dangerous action in the panel, and the domain is the
+                only thing standing in front of it — no reason to make it a
+                transcription test as well as a decision. */}
+            <div className="flex items-start justify-between gap-2">
+              <Label htmlFor="staging-push-confirm">{t("confirmLabel", { domain })}</Label>
+              <CopyButton value={domain} label={t("copyDomain")} className="size-6 shrink-0" />
+            </div>
             <Input
               id="staging-push-confirm"
               value={confirm}
