@@ -47,24 +47,27 @@ Schedule::command('certificates:refresh-expiry')->daily()->withoutOverlapping();
 // drift with the user-managed Cronjobs feature.
 Schedule::command('backups:run-due')->everyMinute()->withoutOverlapping();
 
-// Site disk usage, kept current for the sites list.
+// Site disk usage on the applications list, never more than a minute old.
 //
-// Every minute, but never `--all`: `du` walks every inode, and one pass over
-// this project's own eight test sites is already ~6s of solid disk. Unbounded,
-// a server with forty real sites would still be walking when the next tick
-// fired, permanently, and would evict the page cache the sites themselves are
-// served from — paying in site performance for a number nobody is watching
-// second by second.
+// Every site, every minute, by default. This is the one scheduled job whose
+// cost scales with the customer's data rather than the panel's row count —
+// `du` walks every inode, one pass over eight small test sites is already ~6s
+// of solid disk, and it evicts the page cache the sites are served from. On a
+// server with dozens of large sites a pass will not finish inside the minute,
+// and `withoutOverlapping()` then means this runs continuously.
 //
-// So each tick takes the few least-recently-measured sites past the staleness
-// threshold. Every site still comes round, the work per tick is bounded no
-// matter how many sites exist, and the cost stops scaling with the customer's
-// disk. Deploys, installs and file edits still measure immediately; this only
+// That is a deliberate trade for freshness, and it is tunable rather than
+// fixed: `server.application_size.per_run` caps the sites per tick and
+// `stale_minutes` skips recently-measured ones. Sites are taken
+// least-recently-measured first, so a bounded sweep still brings every site
+// round, just across several ticks. See the config for the full note.
+//
+// Deploys, installs and file edits measure immediately regardless; this only
 // catches drift from what the applications write themselves.
 Schedule::command(sprintf(
     'applications:measure-sizes --stale=%d --limit=%d',
-    (int) config('server.application_size.stale_minutes', 60),
-    (int) config('server.application_size.per_run', 5),
+    (int) config('server.application_size.stale_minutes', 0),
+    (int) config('server.application_size.per_run', 0),
 ))->everyMinute()->withoutOverlapping();
 
 // File manager trash. Every delete keeps a full copy, so without a sweep this

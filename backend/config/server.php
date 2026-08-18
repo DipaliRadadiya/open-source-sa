@@ -1530,20 +1530,28 @@ return [
     'sys_block' => env('SERVER_SYS_BLOCK', '/sys/block'),
 
     /*
-     * How the per-minute size sweep is bounded.
+     * The per-minute size sweep.
      *
-     * `du` walks every inode, so this is the one scheduled job whose cost
-     * scales with how much data the customer has rather than how many rows the
-     * panel holds. These two numbers are what stop a per-minute tick becoming
-     * a permanent disk walk on a busy server: raise `per_run` and every tick
-     * costs more; lower `stale_minutes` and sites come round more often.
+     * Both default to 0, which means "every site, every minute" — the sizes on
+     * the applications list are never more than a minute old.
      *
-     * At the defaults a server refreshes 5 sites a minute — 300 an hour, which
-     * is every site on any realistic box, several times over.
+     * Know what that costs before raising the site count. `du` walks every
+     * inode, so this is the one scheduled job whose cost scales with how much
+     * data the customer has rather than how many rows the panel holds: one
+     * pass over eight small test sites is already ~6s of solid disk, and it
+     * repeatedly evicts the page cache the sites themselves are served from.
+     * On a server with dozens of large sites a pass will not finish inside the
+     * minute, and `withoutOverlapping()` then means it simply runs forever.
+     *
+     * An operator seeing that should bound it rather than turn it off:
+     * `per_run` caps how many sites one tick may walk, and `stale_minutes`
+     * skips any measured more recently than that. Sites are taken
+     * least-recently-measured first, so a bounded sweep still brings every
+     * site round — just over several ticks instead of one.
      */
     'application_size' => [
-        'stale_minutes' => (int) env('SERVER_APPLICATION_SIZE_STALE_MINUTES', 60),
-        'per_run' => (int) env('SERVER_APPLICATION_SIZE_PER_RUN', 5),
+        'stale_minutes' => (int) env('SERVER_APPLICATION_SIZE_STALE_MINUTES', 0),
+        'per_run' => (int) env('SERVER_APPLICATION_SIZE_PER_RUN', 0),
     ],
 
     'metrics' => [

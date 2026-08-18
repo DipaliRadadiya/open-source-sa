@@ -53,20 +53,26 @@ class MeasureApplicationSizes extends Command
                 ! $this->option('all') && ! $this->option('id') && $stale === null,
                 fn ($query) => $query->whereNull('directory_size_bytes'),
             )
-            // The scheduled mode. Sites older than the threshold, oldest
-            // first, so a run measures a different slice each time and every
-            // site comes round rather than the first N being walked forever.
-            ->when($stale !== null, fn ($query) => $query
+            // Zero means no staleness filter — every site, however recently it
+            // was measured. Not "measured before this instant", which is what
+            // subMinutes(0) computes and which quietly skips anything measured
+            // inside the current second.
+            ->when((int) $stale > 0, fn ($query) => $query
                 ->where(fn ($q) => $q
                     ->whereNull('directory_size_updated_at')
-                    ->orWhere('directory_size_updated_at', '<', now()->subMinutes((int) $stale)))
+                    ->orWhere('directory_size_updated_at', '<', now()->subMinutes((int) $stale))))
+            // Least-recently-measured first whenever this is a sweep, so a
+            // capped run takes a different slice each time and every site
+            // comes round rather than the first N being walked forever.
+            ->when($stale !== null, fn ($query) => $query
                 ->orderByRaw('directory_size_updated_at IS NOT NULL')
                 ->orderBy('directory_size_updated_at'))
             ->when($stale === null, fn ($query) => $query->orderBy('id'))
-            // The bound that makes a per-minute schedule survivable. Without
-            // it one tick walks every inode on the server, and on a box with
-            // forty sites that does not finish before the next tick fires.
-            ->when($limit !== null, fn ($query) => $query->limit((int) $limit))
+            // Zero means no ceiling — every candidate, which is what the
+            // scheduled sweep asks for by default. A positive value is the
+            // bound for an operator who does not want one tick walking every
+            // inode on a server with hundreds of sites.
+            ->when((int) $limit > 0, fn ($query) => $query->limit((int) $limit))
             ->get();
 
         if ($applications->isEmpty()) {

@@ -417,3 +417,27 @@ it('never measures more than the limit in one sweep', function () {
 
     expect(Application::query()->where('directory_size_bytes', 512)->count())->toBe(2);
 });
+
+it('measures every site when the sweep is unbounded', function () {
+    // The scheduled default: --stale=0 --limit=0 means every site, every
+    // minute, however recently it was measured. `--limit=0` must read as "no
+    // ceiling" rather than as a limit of zero rows, which would measure
+    // nothing at all and look exactly like the schedule not running.
+    Process::fake(fn ($process) => match (true) {
+        in_array('du', $process->command, true) => Process::result(output: "777\t/home/site"),
+        in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
+        default => Process::result(exitCode: 0),
+    });
+
+    Application::factory()->count(3)->create([
+        'system_user_id' => $this->systemUser->id,
+        'directory_size_bytes' => 1,
+        // Measured seconds ago: a staleness threshold of 0 must still take it.
+        'directory_size_updated_at' => now(),
+    ]);
+
+    $this->artisan('applications:measure-sizes --stale=0 --limit=0')->assertExitCode(0);
+
+    expect(Application::query()->where('directory_size_bytes', 777)->count())
+        ->toBe(Application::query()->count());
+});
