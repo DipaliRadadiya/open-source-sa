@@ -561,8 +561,14 @@ That distinction now matters for the locale and country pickers. They used to la
 | `page` | 1-based, standard Laravel paging |
 | `per_page` | default **10**, max 100 — `422` above that |
 | `search` | free text over **name and domain**, max 255 chars |
+| `filter[status]` | `pending` · `provisioning` · `active` · `failed` |
+| `filter[site_type]` | any name from `GET /site-types` |
 
-There are no other filters. By system user, by status, by site type were all considered and left out — the list is one screen of sites and a search box is how people find one. Ask if you need one rather than filtering client-side over a page.
+Filters combine with each other and with `search` — all are AND.
+
+**Both filters are validated against the real sets, so a wrong value is a `422`, not an empty list.** That matters more than it sounds: answering a typo with `{"applications": []}` reads to the user as *"you have no applications"*. Send `null` or omit the key to clear a filter.
+
+Filtering by system user or by server is deliberately not offered — ask rather than filtering client-side over a single page.
 
 ```json
 {

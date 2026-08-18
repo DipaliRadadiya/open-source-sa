@@ -27,9 +27,9 @@ beforeEach(function () {
     Process::fake(fn () => Process::result(exitCode: 0));
 });
 
-function listedApp(string $name, string $domain): Application
+function listedApp(string $name, string $domain, array $overrides = []): Application
 {
-    return Application::forceCreate([
+    return Application::forceCreate(array_merge([
         'system_user_id' => test()->systemUser->id,
         'name' => $name,
         'slug' => Str::slug($name),
@@ -39,7 +39,7 @@ function listedApp(string $name, string $domain): Application
         'status' => 'active',
         'web_root' => '/',
         'php_version' => '8.4',
-    ]);
+    ], $overrides));
 }
 
 it('returns ten per page by default', function () {
@@ -124,6 +124,62 @@ it('returns an empty page rather than an error when nothing matches', function (
 
     expect($response->json('applications'))->toBe([])
         ->and($response->json('meta.total'))->toBe(0);
+});
+
+it('filters by status', function () {
+    listedApp('Live', 'live.example.com');
+    listedApp('Broken', 'broken.example.com', ['status' => 'failed']);
+
+    $response = $this->actingAs($this->admin)
+        ->getJson('/api/applications?filter[status]=failed')->assertOk();
+
+    expect($response->json('applications'))->toHaveCount(1)
+        ->and($response->json('applications.0.name'))->toBe('Broken')
+        ->and($response->json('meta.total'))->toBe(1);
+});
+
+it('filters by site type', function () {
+    listedApp('Blog', 'blog.example.com', ['site_type' => 'wordpress']);
+    listedApp('Custom', 'custom.example.com');
+
+    $response = $this->actingAs($this->admin)
+        ->getJson('/api/applications?filter[site_type]=wordpress')->assertOk();
+
+    expect($response->json('applications'))->toHaveCount(1)
+        ->and($response->json('applications.0.name'))->toBe('Blog');
+});
+
+it('combines a filter with the search', function () {
+    listedApp('Shop', 'shop.example.com', ['site_type' => 'wordpress']);
+    listedApp('Shop archive', 'archive.example.com', ['site_type' => 'wordpress', 'status' => 'failed']);
+    listedApp('Shop static', 'static.example.com');
+
+    $response = $this->actingAs($this->admin)
+        ->getJson('/api/applications?search=Shop&filter[site_type]=wordpress&filter[status]=failed')
+        ->assertOk();
+
+    expect($response->json('applications'))->toHaveCount(1)
+        ->and($response->json('applications.0.name'))->toBe('Shop archive');
+});
+
+it('refuses a status that is not a real one', function () {
+    listedApp('Live', 'live.example.com');
+
+    // Accepting any string would answer a typo with an empty list, which
+    // reads as "you have no applications" rather than "that is not a status".
+    $this->actingAs($this->admin)
+        ->getJson('/api/applications?filter[status]=activo')
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('filter.status');
+});
+
+it('refuses a site type this panel does not have', function () {
+    listedApp('Live', 'live.example.com');
+
+    $this->actingAs($this->admin)
+        ->getJson('/api/applications?filter[site_type]=drupal')
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('filter.site_type');
 });
 
 it('keeps the newest first', function () {

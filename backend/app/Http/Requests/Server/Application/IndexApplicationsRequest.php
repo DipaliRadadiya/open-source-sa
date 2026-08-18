@@ -2,17 +2,24 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Enums\ApplicationStatus;
 use App\Http\Resources\ApplicationResource;
+use App\Services\Applications\SiteTypeManager;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
- * Search and paging for the applications list.
+ * Search, filters and paging for the applications list.
  *
- * Deliberately just those two. The obvious extra filters — by system user, by
- * status, by site type — were considered and left out: the list is one screen
- * of sites, and a search box that matches the name or the domain is how people
- * actually look for one. Filters that nothing uses are still surface to
- * validate, document and keep working.
+ * Two filters, both driven by what the screen already groups by: status and
+ * site type. Filtering by system user or by server was offered and declined —
+ * a filter nothing uses is still surface to validate, document and keep
+ * working.
+ *
+ * Both are validated against the real sets rather than accepted as strings. A
+ * typo in `filter[status]` would otherwise return an empty list, which reads
+ * to the user as "you have no applications" — the same failure the backup
+ * list had before its filters were validated.
  */
 class IndexApplicationsRequest extends FormRequest
 {
@@ -39,6 +46,13 @@ class IndexApplicationsRequest extends FormRequest
             // LIKE, and an unbounded pattern is a slow query somebody can ask
             // for repeatedly.
             'search' => ['sometimes', 'nullable', 'string', 'max:255'],
+
+            'filter.status' => ['sometimes', 'nullable', Rule::enum(ApplicationStatus::class)],
+
+            // Against the registered site types, not a free string — the same
+            // list the catalog is built from, so the filter cannot offer or
+            // accept a type the panel does not have.
+            'filter.site_type' => ['sometimes', 'nullable', Rule::in(app(SiteTypeManager::class)->names())],
 
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ];

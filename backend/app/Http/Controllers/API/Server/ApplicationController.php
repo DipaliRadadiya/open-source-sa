@@ -36,9 +36,14 @@ class ApplicationController extends Controller
     public function index(IndexApplicationsRequest $request): JsonResponse
     {
         $search = trim((string) $request->validated('search', ''));
+        $filter = (array) $request->validated('filter', []);
 
         $applications = Application::query()
             ->with('systemUser')
+            // Exact matches on indexed columns; the enum and the site-type list
+            // are validated in the request, so anything reaching here is real.
+            ->when($filter['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filter['site_type'] ?? null, fn ($query, $type) => $query->where('site_type', $type))
             ->when($search !== '', function ($query) use ($search) {
                 // Name or domain — the two things somebody has in mind when
                 // they go looking for a site. Grouped so the search does not
