@@ -89,10 +89,13 @@ it('offers one engine choice per database, with MariaDB recommended', function (
     expect($options['mariadb']['recommended'])->toBeTrue();
     expect($options['mariadb']['action']['endpoint'])->toBe('/api/databases/engines/mariadb');
 
-    // Operable but not installable — it needs its own apt repository, and a
-    // button that cannot work is worse than an honest "not from here".
-    expect($options['mongodb']['installable'])->toBeFalse();
-    expect($options['mongodb']['action'])->toBeNull();
+    // MongoDB was the last engine that was operable but not installable — it
+    // needed its own apt repository, which MongoDbInstaller now adds. It is a
+    // real button, and not the recommended one: MariaDB stays the default
+    // because Ubuntu packages it directly.
+    expect($options['mongodb']['installable'])->toBeTrue();
+    expect($options['mongodb']['action']['endpoint'])->toBe('/api/databases/engines/mongodb');
+    expect($options['mongodb']['recommended'])->toBeFalse();
 });
 
 it('says Redis cannot be installed from here rather than offering a dead button', function () {

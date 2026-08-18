@@ -43,6 +43,7 @@ use App\Services\Server\Backups\Steps\PruneOldBackups;
 use App\Services\Server\Backups\Steps\UploadArtifact;
 use App\Services\Server\Backups\Steps\VerifyArtifact;
 use App\Services\Server\Databases\Installers\MariaDbInstaller;
+use App\Services\Server\Databases\Installers\MongoDbInstaller;
 use App\Services\Server\Databases\Installers\MySqlInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
@@ -139,7 +140,12 @@ return [
             'runuser', 'sh', 'env', 'rsync',
             'nginx', 'apachectl', 'lswsctrl',
             'phpenmod', 'phpdismod', 'update-alternatives',
-            'mysql', 'mariadb', 'mariadb-dump', 'redis-cli', 'mongosh',
+            // The dump/restore clients belong here as much as the shells do:
+            // backups run `dump_client` from the engines list below, and a
+            // client the panel will not elevate fails with "a password is
+            // required" on a feature that looks configured.
+            'mysql', 'mysqldump', 'mariadb', 'mariadb-dump', 'redis-cli',
+            'mongosh', 'mongodump', 'mongorestore',
             'ufw', 'fail2ban-client', 'sshd',
             'fallocate', 'mkswap', 'swapon', 'swapoff',
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',
@@ -1548,7 +1554,44 @@ return [
             // showing a button that cannot work.
             'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MySqlInstaller::class],
             'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MariaDbInstaller::class],
-            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'installer' => null],
+            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'installer' => MongoDbInstaller::class],
+        ],
+
+        /*
+        | MongoDB's apt repository.
+        |
+        | Not in Ubuntu's archive, which is why this engine had no installer for
+        | so long. Every value here is overridable because the series is a
+        | moving target: MongoDB publishes per-series lists and drops old ones,
+        | and a panel pinned to a series that stopped being published installs
+        | nothing on a new OS release.
+        |
+        | `codename` is deliberately empty — it is read from the server's own
+        | /etc/os-release, because a codename MongoDB does not publish for adds
+        | as a valid list that then carries no packages at all. Set it only to
+        | override that detection, e.g. to point a newer Ubuntu at the last
+        | codename MongoDB published for.
+        |
+        | Licensing, worth stating rather than discovering: MongoDB Community is
+        | SSPL, which is not OSI-approved. The panel installs it on request; it
+        | does not ship it.
+        */
+        'mongodb' => [
+            'series' => env('SERVER_MONGO_SERIES', '8.0'),
+            'repository_url' => env('SERVER_MONGO_REPO_URL', 'https://repo.mongodb.org/apt/ubuntu'),
+            'key_url' => env('SERVER_MONGO_KEY_URL', 'https://pgp.mongodb.com/server-8.0.asc'),
+            'component' => env('SERVER_MONGO_REPO_COMPONENT', 'multiverse'),
+            'architecture' => env('SERVER_MONGO_ARCH', 'amd64'),
+            'codename' => env('SERVER_MONGO_CODENAME', ''),
+            'codename_fallback' => env('SERVER_MONGO_CODENAME_FALLBACK', 'noble'),
+            'packages' => ['mongodb-org'],
+            // Detection targets the *server*, not the meta-package and not the
+            // shell: `mongosh` alone is a box that talks to someone else's
+            // MongoDB, and treating that as installed would offer databases the
+            // panel cannot make.
+            'server_package' => env('SERVER_MONGO_SERVER_PACKAGE', 'mongodb-org-server'),
+            'service' => env('SERVER_MONGO_SERVICE', 'mongod'),
+            'config_file' => env('SERVER_MONGO_CONFIG', '/etc/mongod.conf'),
         ],
 
         // Engine installs pull a few hundred MB and run their own post-install

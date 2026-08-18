@@ -20,6 +20,11 @@ return [
         'port_in_use_by_mariadb' => 'MariaDB ist bereits installiert und belegt diesen Port. Entfernen Sie es zuerst, oder nutzen Sie es weiter.',
         'root_unreachable' => 'Es ist installiert, aber das Panel konnte sich nicht anmelden. Der Administrator-Zugang wurde gegenüber dem Standard geändert; das Panel benötigt diese Daten, um fortzufahren.',
         'grant_failed' => 'Es ist installiert, aber das Panel konnte kein eigenes Konto darin anlegen.',
+        'repository_failed' => 'Das MongoDB-Paketrepository konnte nicht hinzugefügt werden. Prüfen Sie, ob der Server repo.mongodb.org erreicht.',
+        'unreachable' => 'Es wurde installiert, antwortet aber nicht. Geben Sie die untenstehende Referenz beim Support an.',
+        'auth_required' => 'MongoDB ist hier bereits installiert und verlangt eine Anmeldung, die dem Panel fehlt. Hinterlegen Sie die Zugangsdaten in den Verbindungseinstellungen und versuchen Sie es erneut.',
+        'auth_config_present' => 'MongoDB ist installiert und seine Konfiguration enthält bereits einen security-Abschnitt. Das Panel hat ihn unangetastet gelassen — aktivieren Sie authorization dort selbst und versuchen Sie es erneut.',
+        'auth_failed' => 'Es wurde installiert, aber die Authentifizierung ließ sich nicht aktivieren. Geben Sie die untenstehende Referenz beim Support an.',
     ],
 
     'uninstall_failed' => [

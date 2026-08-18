@@ -20,6 +20,11 @@ return [
         'port_in_use_by_mariadb' => 'MariaDB is already installed and owns this port. Remove it first, or keep using it.',
         'root_unreachable' => 'It is installed but the panel could not sign in to it. Its administrator login has been changed from the default, so the panel needs those details to continue.',
         'grant_failed' => 'It is installed but the panel could not create its own account on it.',
+        'repository_failed' => 'The MongoDB package repository could not be added. Check the server has network access to repo.mongodb.org.',
+        'unreachable' => 'It installed but did not start answering. Quote the reference below to support.',
+        'auth_required' => 'MongoDB is already installed here and requires a sign-in the panel does not have. Add its credentials in the connection settings and try again.',
+        'auth_config_present' => 'MongoDB is installed and its configuration already sets a security section. The panel has left it untouched — enable authorization there yourself, then try again.',
+        'auth_failed' => 'It installed but authentication could not be switched on. Quote the reference below to support.',
     ],
 
     'uninstall_failed' => [

@@ -240,8 +240,14 @@ describe('the endpoint', function () {
     });
 
     it('refuses an engine it has no installer for', function () {
-        // MongoDB is operable but not installable yet — it needs its own apt
-        // repository. Saying so beats a button that cannot work.
+        // Every engine the panel ships now has one — MongoDB was the last
+        // without, until it got its own apt repository. So the case is faked
+        // rather than borrowed from the catalog: the endpoint has to keep
+        // refusing, because `installer` staying nullable is what lets a new
+        // engine be *operable* before it is *installable*, and a button that
+        // cannot work is worse than a greyed one.
+        config(['server.databases.engines.mongodb.installer' => null]);
+
         Queue::fake();
         Process::fake();
 
@@ -255,6 +261,24 @@ describe('the endpoint', function () {
             ->getJson('/api/databases/engines')->json('engines');
 
         expect(collect($body)->firstWhere('engine', 'mongodb')['installable'])->toBeFalse();
+    });
+
+    it('offers MongoDB now that it has an installer', function () {
+        Queue::fake();
+        Process::fake();
+
+        $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+            ->postJson('/api/databases/engines/mongodb')
+            ->assertStatus(202);
+
+        Queue::assertPushed(InstallDatabaseEngine::class);
+
+        $body = $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+            ->getJson('/api/databases/engines')->json('engines');
+
+        // The setup page reads this flag to decide whether the card is a button
+        // or a greyed row.
+        expect(collect($body)->firstWhere('engine', 'mongodb')['installable'])->toBeTrue();
     });
 
     it('does not queue anything when the engine is already installed', function () {
