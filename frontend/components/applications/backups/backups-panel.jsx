@@ -334,9 +334,12 @@ function RecentBackups({
         <h3 className="min-w-0 flex-1 text-base font-semibold tracking-tight">
           {t("recentTitle")}
         </h3>
-        <div className="flex shrink-0 items-center gap-1">
+        {/* Matched to the RefreshButton it sits beside: that one is a 36px
+            outline icon button, so a 28px ghost link next to it read as loose
+            text rather than the second half of a pair. */}
+        <div className="flex shrink-0 items-center gap-2">
           <RefreshButton />
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="outline">
             <Link href={`/backups/history?application=${applicationId}`}>
               <History className="size-4" />
               {t("viewAll")}
