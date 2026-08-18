@@ -286,3 +286,46 @@ it('records the reference when a measurement fails, not an empty string', functi
 
     (new MeasureApplicationSize($this->application->id))->handle(app(FileBrowser::class));
 });
+
+it('keeps a partial total when du could not read every file', function () {
+    // `du` walks as the site's own user and exits 1 on any entry it cannot
+    // read, while still printing a correct total for everything it could. A
+    // real uptime-kuma checkout had a handful of unreadable files under
+    // test/, which made the entire site permanently unmeasurable — a usable
+    // figure discarded over the files missing from it.
+    Process::fake(fn ($process) => match (true) {
+        in_array('du', $process->command, true) => Process::result(
+            output: "1048576\t/home/site/public_html\n",
+            errorOutput: "du: cannot access '.../test/e2e/specs': Permission denied\n",
+            exitCode: 1,
+        ),
+        // The root-exists and is-a-directory checks that run first.
+        in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
+        default => Process::result(exitCode: 0),
+    });
+
+    app(FileBrowser::class)->applicationSize($this->application, refresh: true);
+
+    expect($this->application->fresh()->directory_size_bytes)->toBe(1048576);
+});
+
+it('still fails when du produced no total at all', function () {
+    // Zero is not a partial answer, it is no answer — the previous figure and
+    // its date must survive rather than being overwritten with nothing.
+    Process::fake(fn ($process) => match (true) {
+        in_array('du', $process->command, true) => Process::result(
+            output: '',
+            errorOutput: 'du: cannot read directory',
+            exitCode: 1,
+        ),
+        in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
+        default => Process::result(exitCode: 0),
+    });
+
+    $this->application->update(['directory_size_bytes' => 999, 'directory_size_updated_at' => now()->subDay()]);
+
+    expect(fn () => app(FileBrowser::class)->applicationSize($this->application, refresh: true))
+        ->toThrow(FileOperationException::class);
+
+    expect($this->application->fresh()->directory_size_bytes)->toBe(999);
+});

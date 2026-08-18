@@ -259,10 +259,31 @@ class FileBrowser
      */
     private function measure(Application $application, string $target): int
     {
-        $output = trim($this->run($application, ['du', '-sb', $target], 'folder_size')->output());
-        [$bytes] = explode("\t", $output, 2);
+        // Not `run()`, which throws on a non-zero exit. `du` exits 1 when it
+        // could not read *some* entries and still prints a correct total for
+        // everything it could — and it walks as the site's own user, so any
+        // file that user cannot read produces exactly that. A real site hit
+        // this: an uptime-kuma checkout with a handful of unreadable files
+        // under test/ made the whole site permanently unmeasurable, because a
+        // usable total was thrown away over the files missing from it.
+        //
+        // A slightly low figure beats none. A total of zero is a different
+        // matter — that is not a partial answer, it is no answer — so it still
+        // fails, and the caller keeps whatever it had before.
+        $result = $this->serverOps->run(
+            $this->asUser($application, ['du', '-sb', $target]),
+            ['feature' => 'application', 'op' => 'file_folder_size', 'application' => $application->id],
+            timeout: 60,
+        );
 
-        return (int) $bytes;
+        [$bytes] = explode("\t", trim($result->output()), 2);
+        $bytes = (int) $bytes;
+
+        if ($result->failed() && $bytes <= 0) {
+            throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock);
+        }
+
+        return $bytes;
     }
 
     /**
