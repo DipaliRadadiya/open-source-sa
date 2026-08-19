@@ -3015,13 +3015,17 @@ Run `REPAIR TABLE` across all tables.
 ---
 
 ### POST `/databases/{database}/export`
-**Permission:** `database` (manage)
+**Permission:** `database` (manage) | **Throttle:** 6/min
 
 Dump a database to a file. Queued.
+
+`manage`, not the read tier: this copies an entire database off the server, which is more revealing than `optimize` or `repair` — and those have always needed `manage`.
 
 **Response `202`:** `{"export": {"id": 1, "status": "queued", "file": null}}`
 
 Poll `GET /databases/exports`.
+
+**One export per database at a time.** A second request while one is queued or running is a **`422`** naming that, rather than a second `mysqldump` writing another full copy to the same disk. A run whose worker was killed is closed out automatically before the check, so a stranded row cannot block a database permanently — it gets `status: failed`, `reason: worker`.
 
 ---
 
@@ -3053,9 +3057,11 @@ The database name is `database`, not `database_name`.
 ---
 
 ### GET `/databases/exports/{file}`
-**Permission:** `database` (view)
+**Permission:** `database` (manage)
 
 Stream a previously-created export for download. Filename is strictly validated (alphanumeric + `.` `-` `_` only).
+
+`manage`, matching the backup download and for the same reason: this hands over an entire database in one request. **Listing** the exports stays on the read tier — knowing a dump exists is not the same as being handed it.
 
 **Response:** Binary file stream.
 

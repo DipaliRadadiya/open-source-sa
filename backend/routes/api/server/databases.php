@@ -35,9 +35,15 @@ Route::get('/databases/metrics/history', [DatabaseMonitorController::class, 'his
 // Exports (static; before the {database} binding).
 Route::get('/databases/exports', [DatabaseController::class, 'exports'])->middleware('permission:database');
 
-// Export download (strict filename, resolved inside the exports dir).
+/*
+| Export download (strict filename, resolved inside the exports dir).
+|
+| `manage`, matching the backup download for the same reason it gives: this
+| hands over an entire database in one request. Listing the exports stays on the
+| read tier — knowing a dump exists is not the same as being handed it.
+*/
 Route::get('/databases/exports/{file}', [DatabaseController::class, 'download'])
-    ->where('file', '[A-Za-z0-9._-]+')->middleware('permission:database');
+    ->where('file', '[A-Za-z0-9._-]+')->middleware('permission:database,manage');
 
 // Deleting a dump destroys the only copy of that data, so it needs `manage`
 // while merely reading the list does not. Keyed by id, not filename: a queued
@@ -56,7 +62,20 @@ Route::delete('/databases/{database}', [DatabaseController::class, 'destroy'])->
 Route::get('/databases/{database}/tables', [DatabaseController::class, 'tables'])->middleware('permission:database');
 Route::post('/databases/{database}/optimize', [DatabaseController::class, 'optimize'])->middleware('permission:database,manage');
 Route::post('/databases/{database}/repair', [DatabaseController::class, 'repair'])->middleware('permission:database,manage');
-Route::post('/databases/{database}/export', [DatabaseController::class, 'export'])->middleware('permission:database');
+/*
+| `manage`, not the `database` read tier, and throttled.
+|
+| An export copies the entire database off the server, so it is the single most
+| data-revealing thing this feature does — more so than `optimize` and `repair`
+| directly above, which merely rearrange data and have always required `manage`.
+| Read access should not be enough to take a full copy of every database.
+|
+| Throttled because a dump is expensive and fills disk: without a limit, a
+| held-down button queues one full copy per click. The job is unique per
+| database as well, but the throttle is what stops the requests arriving.
+*/
+Route::post('/databases/{database}/export', [DatabaseController::class, 'export'])
+    ->middleware(['permission:database,manage', 'throttle:6,1']);
 
 // Database users (nested — a user belongs to one database).
 Route::middleware('permission:database')->group(function () {

@@ -5,7 +5,9 @@ namespace App\Jobs;
 use App\Actions\Server\Database\ExportDatabase;
 use App\Enums\ExportStatus;
 use App\Exceptions\Server\Database\DatabaseOperationException;
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\DatabaseExport;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -24,8 +26,9 @@ use Throwable;
  * partial file, and a second attempt racing the first over the same path is a
  * worse outcome than a failure the user can see and repeat deliberately.
  */
-class RunDatabaseExport implements ShouldQueue
+class RunDatabaseExport implements ShouldBeUnique, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
 
     public int $tries = 1;
@@ -37,7 +40,34 @@ class RunDatabaseExport implements ShouldQueue
      */
     public int $timeout = 900;
 
-    public function __construct(public int $exportId) {}
+    public function __construct(
+        public int $exportId,
+        /**
+         * Carried alongside the export id purely so {@see uniqueId()} can answer
+         * without a query. Deriving it from the row would mean a lookup every
+         * time the lock is taken or released, and would return nothing at all
+         * for a row already deleted — which collapses every export onto one
+         * shared lock rather than one per database.
+         *
+         * Required, with no default. A default would be a value the lock could
+         * silently take when a caller forgot, and every export that forgot
+         * would then queue behind every other one.
+         */
+        public int $databaseId,
+    ) {}
+
+    /**
+     * One dump per database at a time.
+     *
+     * Two `mysqldump` runs against the same database each write a full copy to
+     * the same disk, on a queue with a single worker, for no benefit — the
+     * second produces the same bytes as the first. Before this, a double-submit
+     * or a held-down button started as many as it was clicked.
+     */
+    public function uniqueId(): string
+    {
+        return 'database-export-'.$this->databaseId;
+    }
 
     public function handle(ExportDatabase $action): void
     {

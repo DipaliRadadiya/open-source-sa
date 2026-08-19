@@ -2,6 +2,7 @@
 
 return [
     'operation_failed' => 'A operação de banco de dados falhou no servidor.',
+    'export_already_running' => 'Já existe uma exportação desta base de dados em curso. Aguarde que termine antes de iniciar outra.',
     'collation_mismatch' => 'O agrupamento selecionado não pertence ao conjunto de caracteres escolhido.',
     'engine_not_installable' => 'O painel ainda não consegue instalar este motor de banco de dados. Instale-o você mesmo e o painel o detectará.',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin não suporta bancos de dados MongoDB.',

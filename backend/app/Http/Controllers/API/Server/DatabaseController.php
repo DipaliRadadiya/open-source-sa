@@ -25,6 +25,7 @@ use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DatabaseController extends Controller
@@ -211,6 +212,38 @@ class DatabaseController extends Controller
      */
     public function export(Database $database): JsonResponse
     {
+        // Close out anything stranded first. `RunDatabaseExport::failed()`
+        // handles a job that dies politely; a worker killed outright reaches
+        // neither it nor the runner, and the row sits in flight forever. Now
+        // that an in-flight row blocks the next export, one stranded row would
+        // otherwise mean this database could never be exported again.
+        DatabaseExport::query()
+            ->where('database_id', $database->id)
+            ->inFlight()
+            ->get()
+            ->filter(fn (DatabaseExport $export): bool => $export->isStale())
+            ->each(fn (DatabaseExport $export) => $export->update([
+                'status' => ExportStatus::Failed,
+                // The existing code for "the worker stopped" — an abandoned run
+                // is that, noticed later. A new reason would mean a new string
+                // in eight languages saying the same thing.
+                'reason' => 'worker',
+                'finished_at' => now(),
+            ]));
+
+        // The job is unique per database as well; this is the half that can
+        // tell the user why rather than silently dropping the dispatch.
+        $inFlight = DatabaseExport::query()
+            ->where('database_id', $database->id)
+            ->inFlight()
+            ->exists();
+
+        if ($inFlight) {
+            throw ValidationException::withMessages([
+                'database' => [__('errors/database.export_already_running')],
+            ]);
+        }
+
         $export = DatabaseExport::create([
             'database_id' => $database->id,
             'database_name' => $database->name,
@@ -219,7 +252,7 @@ class DatabaseController extends Controller
             'user_id' => Auth::id(),
         ]);
 
-        RunDatabaseExport::dispatch($export->id);
+        RunDatabaseExport::dispatch($export->id, $database->id);
 
         return response()->json([
             'export' => DatabaseExportResource::make($export)->resolve(),

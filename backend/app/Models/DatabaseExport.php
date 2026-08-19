@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use App\Enums\ExportStatus;
+use App\Jobs\Concerns\ExpiresUniqueLock;
+use App\Jobs\RunDatabaseExport;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -23,9 +26,53 @@ class DatabaseExport extends Model
         ];
     }
 
+    /**
+     * Statuses that mean a dump is supposed to be happening right now.
+     *
+     * @var array<int, string>
+     */
+    public const IN_FLIGHT = [
+        ExportStatus::Queued->value,
+        ExportStatus::Running->value,
+    ];
+
     public function database(): BelongsTo
     {
         return $this->belongsTo(Database::class);
+    }
+
+    /** @param  Builder<DatabaseExport>  $query */
+    public function scopeInFlight(Builder $query): void
+    {
+        $query->whereIn('status', self::IN_FLIGHT);
+    }
+
+    /**
+     * Whether this row is old enough that nothing can still be working on it.
+     *
+     * `RunDatabaseExport::failed()` normally closes a dying job out, but a
+     * worker killed outright — `kill -9`, an OOM, a reboot — never reaches it,
+     * and the row is stranded in flight. That matters now that starting an
+     * export refuses while one is running: without this, one stranded row would
+     * mean that database could never be exported again, which is precisely the
+     * failure the backup feature shipped with.
+     *
+     * The bound is the job's own timeout plus the grace {@see ExpiresUniqueLock}
+     * uses for the queue lock, so the lock and the row cannot disagree about
+     * whether a dump is alive. Measured from `started_at` when there is one and
+     * `created_at` otherwise — a job dispatched while the queue was down never
+     * starts at all, and that is one of the ways a row gets stranded.
+     */
+    public function isStale(): bool
+    {
+        if (! in_array($this->status->value, self::IN_FLIGHT, true)) {
+            return false;
+        }
+
+        $from = $this->started_at ?? $this->created_at;
+
+        return $from !== null
+            && $from->addSeconds((new RunDatabaseExport(0, 0))->uniqueFor())->isPast();
     }
 
     public function user(): BelongsTo

@@ -2,6 +2,7 @@
 
 return [
     'operation_failed' => 'サーバーでデータベース操作に失敗しました。',
+    'export_already_running' => 'このデータベースのエクスポートはすでに実行中です。完了してから次を開始してください。',
     'collation_mismatch' => '選択した照合順序は、選択した文字セットに属していません。',
     'engine_not_installable' => 'このデータベースエンジンはまだパネルからインストールできません。ご自身でインストールすればパネルが検出します。',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdminはMongoDBデータベースをサポートしていません。',

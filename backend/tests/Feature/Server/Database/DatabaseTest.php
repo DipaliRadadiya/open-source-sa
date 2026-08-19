@@ -455,7 +455,7 @@ it('exports a database and streams the download', function () {
         ->and($res->json('export.download_url'))->toBeNull();
 
     // Run the queued work the way a worker would.
-    app(RunDatabaseExport::class, ['exportId' => $res->json('export.id')])
+    app(RunDatabaseExport::class, ['exportId' => $res->json('export.id'), 'databaseId' => $db->id])
         ->handle(app(ExportDatabase::class));
 
     $export = DatabaseExport::find($res->json('export.id'));
@@ -486,7 +486,7 @@ it('records a failed export instead of leaving it queued forever', function () {
     $id = $res->json('export.id');
 
     try {
-        app(RunDatabaseExport::class, ['exportId' => $id])->handle(app(ExportDatabase::class));
+        app(RunDatabaseExport::class, ['exportId' => $id, 'databaseId' => $db->id])->handle(app(ExportDatabase::class));
     } catch (Throwable) {
         // Rethrown so the queue marks the job failed; the row is already written.
     }
@@ -510,7 +510,7 @@ it('does not strand an export at running when the worker dies', function () {
 
     // Without the failed() hook the row sits at `running` forever and the
     // screen spins on something that stopped existing.
-    (new RunDatabaseExport($export->id))->failed(null);
+    (new RunDatabaseExport($export->id, $db->id))->failed(null);
 
     expect($export->refresh()->status)->toBe(ExportStatus::Failed)
         ->and($export->reason)->toBe('worker')

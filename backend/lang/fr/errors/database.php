@@ -2,6 +2,7 @@
 
 return [
     'operation_failed' => "L'opération de base de données a échoué sur le serveur.",
+    'export_already_running' => "Un export de cette base de données est déjà en cours. Attendez qu'il se termine avant d'en lancer un autre.",
     'collation_mismatch' => "Le classement sélectionné n'appartient pas au jeu de caractères choisi.",
     'engine_not_installable' => 'Le panneau ne peut pas encore installer ce moteur de base de données. Installez-le vous-même et le panneau le détectera.',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin ne prend pas en charge les bases de données MongoDB.',

@@ -2,6 +2,7 @@
 
 return [
     'operation_failed' => 'Der Datenbankvorgang ist auf dem Server fehlgeschlagen.',
+    'export_already_running' => 'Ein Export dieser Datenbank läuft bereits. Warten Sie, bis er fertig ist, bevor Sie einen weiteren starten.',
     'collation_mismatch' => 'Die gewählte Kollation gehört nicht zum gewählten Zeichensatz.',
     'engine_not_installable' => 'Das Panel kann diese Datenbank-Engine noch nicht installieren. Installieren Sie sie selbst, das Panel erkennt sie dann.',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin unterstützt keine MongoDB-Datenbanken.',
