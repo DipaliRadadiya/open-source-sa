@@ -387,3 +387,32 @@ describe('the interface build check', function () {
         }
     });
 });
+
+it('checks the panel account rather than the operator running it as root', function () {
+    // An operator reads this from a root shell, and root needs no sudo — so
+    // the check answered "sudo not required" and skipped everything, while
+    // php-fpm and the queue worker went on failing as the unprivileged panel
+    // account. That is how a server whose sudoers predated the `touch` grant
+    // reported healthy while git provisioning could not create a `.env`.
+    if (! function_exists('posix_geteuid') || posix_geteuid() !== 0) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    $probes = [];
+    Process::fake(function ($process) use (&$probes) {
+        $probes[] = $process->command;
+
+        return Process::result(output: 'ok');
+    });
+
+    config()->set('server.doctor.checks', [PrivilegeCheck::class]);
+    config()->set('server.privilege.binaries', ['tee']);
+
+    app(Doctor::class)->run();
+
+    // Whatever it asked about, it must have asked as somebody other than root.
+    expect($probes)->not->toBeEmpty()
+        ->and(collect($probes)->every(fn (array $command): bool => $command[0] === 'runuser'))->toBeTrue();
+});

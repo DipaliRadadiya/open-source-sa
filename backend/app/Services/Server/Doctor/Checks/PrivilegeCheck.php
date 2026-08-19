@@ -31,13 +31,66 @@ class PrivilegeCheck implements DoctorCheck
         return 'privilege';
     }
 
+    /**
+     * The account php-fpm and the queue worker run as.
+     *
+     * Taken from the owner of the panel's own code, which install.sh chowns to
+     * that account — rather than from config, where it is not recorded, or
+     * from a guess at the name. Null when it cannot be determined, which is
+     * reported rather than treated as "fine".
+     */
+    private function serviceUser(): ?string
+    {
+        if (! function_exists('posix_getpwuid')) {
+            return null;
+        }
+
+        $owner = @fileowner(base_path('artisan'));
+
+        if ($owner === false) {
+            return null;
+        }
+
+        $user = posix_getpwuid($owner);
+
+        // root owning the checkout means the panel is not running as its own
+        // account at all, so there is nothing unprivileged to check.
+        return ($user['name'] ?? null) && $user['name'] !== 'root' ? $user['name'] : null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function probe(string $binary, ?string $serviceUser): array
+    {
+        $probe = ['sudo', '-n', '-l', $binary];
+
+        return $serviceUser === null
+            ? $probe
+            : array_merge(['runuser', '-u', $serviceUser, '--'], $probe);
+    }
+
     public function run(): array
     {
-        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+        // Whoever ran `panel:doctor` is not who does the work. An operator
+        // reads this from a root shell, and root needs no sudo — so this used
+        // to answer "sudo not required" and skip every check, while php-fpm
+        // and the queue worker went on failing as the unprivileged panel
+        // account. A green tick beside a broken feature is worse than no
+        // check: it sends the reader somewhere else entirely. That is exactly
+        // what happened when `touch` gained a sudoers grant the running
+        // servers did not have.
+        //
+        // So when this runs as root it drops to the account the panel actually
+        // runs as and asks about that one instead.
+        $asRoot = function_exists('posix_geteuid') && posix_geteuid() === 0;
+        $serviceUser = $asRoot ? $this->serviceUser() : null;
+
+        if ($asRoot && $serviceUser === null) {
             return [
-                'status' => 'pass',
-                'detail' => 'running as root; sudo not required',
-                'fix' => null,
+                'status' => 'warn',
+                'detail' => 'running as root and the panel\'s own account could not be identified, so its sudo access was not checked',
+                'fix' => 'doctor.fixes.privilege_unknown_user',
             ];
         }
 
@@ -52,7 +105,7 @@ class PrivilegeCheck implements DoctorCheck
         $denied = [];
 
         foreach (self::REPRESENTATIVE as $binary) {
-            $result = Process::timeout(10)->run(['sudo', '-n', '-l', $binary]);
+            $result = Process::timeout(10)->run($this->probe($binary, $serviceUser));
 
             if (! $result->successful()) {
                 $denied[] = $binary;
@@ -62,7 +115,7 @@ class PrivilegeCheck implements DoctorCheck
         if ($denied !== []) {
             return [
                 'status' => 'fail',
-                'detail' => 'not permitted: '.implode(', ', $denied),
+                'detail' => 'not permitted'.($serviceUser === null ? '' : ' for '.$serviceUser).': '.implode(', ', $denied),
                 'fix' => 'doctor.fixes.privilege',
             ];
         }
@@ -94,7 +147,7 @@ class PrivilegeCheck implements DoctorCheck
 
         return [
             'status' => 'pass',
-            'detail' => count((array) config('server.privilege.binaries', [])).' commands permitted',
+            'detail' => count((array) config('server.privilege.binaries', [])).' commands permitted'.($serviceUser === null ? '' : ' for '.$serviceUser),
             'fix' => null,
         ];
     }

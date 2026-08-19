@@ -22,6 +22,7 @@ return [
         'php_isolation_shared' => 'ये साइटें अब भी बाकी सबके साथ www-data के रूप में चलती हैं। किसी साइट की PHP स्क्रीन खोलकर उसे पृथक करें।',
         'privilege' => 'पैनल root के रूप में कमांड नहीं चला सकता। जाँचें कि /etc/sudoers.d/ में पैनल की अनुमति है और फ़ाइल visudo -c पास करती है।',
         'privilege_outdated' => 'इस सर्वर की sudo अनुमति चल रहे पैनल से पुरानी है: ऊपर सूचीबद्ध कमांड वही हैं जिन्हें यह बिल्ड चलाना चाहेगा और sudo मना कर देगा। वे उन सुविधाओं पर «a password is required» के साथ विफल होते हैं जो कॉन्फ़िगर दिखती हैं। /etc/sudoers.d/ फिर से लिखने के लिए install.sh दोबारा चलाएँ, या छूटे बाइनरी हाथ से जोड़ें।',
+        'privilege_unknown_user' => 'पैनल अपने ही अनप्रिविलेज्ड खाते से चलता है, लेकिन वह कौन सा है यह पता नहीं चला, इसलिए उसकी sudo पहुँच जाँची नहीं गई।',
         'privilege_disabled' => 'विशेषाधिकार वृद्धि बंद है पर पैनल root नहीं है। .env से SERVER_OPS_SUDO=false हटाएँ।',
         'services_missing' => 'अपेक्षित यूनिट मौजूद नहीं है। .env में PANEL_FRONTEND_SERVICE और PANEL_QUEUE_SERVICE को इस सर्वर के वास्तविक नामों पर सेट करें।',
         'services_down' => 'उन्हें systemctl start से शुरू करें, फिर journalctl -u <unit> देखें।',

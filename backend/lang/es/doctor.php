@@ -22,6 +22,7 @@ return [
         'php_isolation_shared' => 'Estos sitios aún se ejecutan como www-data junto a los demás. Abre la pantalla PHP de un sitio y aíslalo para darle su propio usuario.',
         'privilege' => 'El panel no puede ejecutar comandos como root. Comprueba que /etc/sudoers.d/ contiene la concesión del panel y que el archivo pasa visudo -c.',
         'privilege_outdated' => 'El permiso sudo de este servidor es anterior al panel que está ejecutando: los comandos indicados arriba son los que esta versión intentará ejecutar y sudo rechazará. Fallan con «a password is required» en funciones que parecen configuradas. Vuelva a ejecutar install.sh para reescribir /etc/sudoers.d/, o añada a mano los binarios que faltan.',
+        'privilege_unknown_user' => 'El panel se ejecuta con su propia cuenta sin privilegios, pero no se pudo determinar cuál, así que no se verificó su acceso sudo.',
         'privilege_disabled' => 'La elevación de privilegios está desactivada pero el panel no es root. Elimina SERVER_OPS_SUDO=false de .env.',
         'services_missing' => 'No existe una unidad que el panel espera. Define PANEL_FRONTEND_SERVICE y PANEL_QUEUE_SERVICE en .env con los nombres reales de este servidor.',
         'services_down' => 'Inícialos con systemctl start y revisa journalctl -u <unidad> para ver por qué se detuvieron.',

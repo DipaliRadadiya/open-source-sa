@@ -22,6 +22,7 @@ return [
         'php_isolation_shared' => 'これらのサイトは他のサイトと同じ www-data で動作しています。サイトの PHP 画面から分離して専用ユーザーを割り当ててください。',
         'privilege' => 'パネルが root としてコマンドを実行できません。/etc/sudoers.d/ にパネルの許可があり、visudo -c を通ることを確認してください。',
         'privilege_outdated' => 'このサーバーの sudo 許可は、動作しているパネルより古いものです。上記のコマンドはこのビルドが実行しようとし、sudo が拒否するものです。設定済みに見える機能で「a password is required」として失敗します。install.sh を再実行して /etc/sudoers.d/ を書き直すか、不足しているバイナリを手動で追加してください。',
+        'privilege_unknown_user' => 'パネルは専用の非特権アカウントで動作していますが、それを特定できなかったため sudo アクセスを確認できませんでした。',
         'privilege_disabled' => '権限昇格が無効ですがパネルは root ではありません。.env から SERVER_OPS_SUDO=false を削除してください。',
         'services_missing' => '想定するユニットが存在しません。.env の PANEL_FRONTEND_SERVICE と PANEL_QUEUE_SERVICE をこのサーバーの実際の名前に設定してください。',
         'services_down' => 'systemctl start で起動し、journalctl -u <ユニット> で停止理由を確認してください。',

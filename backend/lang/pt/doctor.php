@@ -22,6 +22,7 @@ return [
         'php_isolation_shared' => 'Estes sites ainda correm como www-data ao lado de todos os outros. Abra o ecrã de PHP de um site e isole-o para lhe dar o seu próprio utilizador.',
         'privilege' => 'O painel não consegue executar comandos como root. Verifique se /etc/sudoers.d/ contém a permissão e se o ficheiro passa visudo -c.',
         'privilege_outdated' => 'A permissão sudo deste servidor é anterior ao painel em execução: os comandos acima são os que esta versão vai tentar executar e o sudo vai recusar. Falham com «a password is required» em funcionalidades que parecem configuradas. Volte a executar o install.sh para reescrever /etc/sudoers.d/, ou adicione manualmente os binários em falta.',
+        'privilege_unknown_user' => 'O painel é executado com a sua própria conta sem privilégios, mas não foi possível determinar qual, por isso o acesso sudo não foi verificado.',
         'privilege_disabled' => 'A elevação de privilégios está desativada mas o painel não é root. Remova SERVER_OPS_SUDO=false do .env.',
         'services_missing' => 'Uma unidade esperada não existe. Defina PANEL_FRONTEND_SERVICE e PANEL_QUEUE_SERVICE no .env com os nomes reais.',
         'services_down' => 'Inicie-os com systemctl start e verifique journalctl -u <unidade>.',
