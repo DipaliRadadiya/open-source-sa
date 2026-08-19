@@ -161,11 +161,33 @@ export const applicationBackupSchema = z
   })
   .passthrough();
 
+// `total` is how many sites exist; `matched` is how many the current search and
+// filter hit. Two different numbers, and the header needs both.
+//
+// `protected`/`unprotected` are the API's own count, and this screen does NOT
+// use them — see the note in `getBackupCoverage`. Declared anyway so they are
+// visible here rather than silently dropped.
 export const backupTargetsResponseSchema = z.object({
   backup_targets: z.array(applicationBackupSchema).default([]),
   meta: z
-    .object({ total: z.number(), protected: z.number(), unprotected: z.number() })
-    .default({ total: 0, protected: 0, unprotected: 0 }),
+    .object({
+      total: z.number(),
+      protected: z.number(),
+      unprotected: z.number(),
+      matched: z.number().default(0),
+      current_page: z.number().default(1),
+      per_page: z.number().default(10),
+      last_page: z.number().default(1),
+    })
+    .default({
+      total: 0,
+      protected: 0,
+      unprotected: 0,
+      matched: 0,
+      current_page: 1,
+      per_page: 10,
+      last_page: 1,
+    }),
 });
 
 /** `backup_target` is null for a site nobody has configured yet. */

@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { read } from "@/lib/api/read";
-import { getApplications } from "@/lib/applications/get-applications";
+import { getAllApplications } from "@/lib/applications/get-applications";
 import {
   BACKUP_PERIODS,
   BACKUP_STATUSES,
@@ -175,11 +175,20 @@ export const getBackupTarget = cache(async function getBackupTarget(applicationI
  * The applications list is still read — cached, so effectively free — for the
  * two things the overview resource does not carry: `is_staging` and the site
  * type, which the setup dialog's picker also needs.
+ *
+ * Asks for every row rather than a page of them, at the API's maximum of 100.
+ * This endpoint started paging at ten and the call carried no parameters, so
+ * the screen was quietly answering "which of my first ten sites are exposed".
+ *
+ * It has to hold every row, not a page: the header counts protected sites
+ * itself (see below), and a count built from one page would be wrong. On a
+ * server with more than 100 sites the tail is missing, which needs the backend
+ * ask below resolved rather than a bigger number.
  */
 export async function getBackupCoverage() {
   const [result, { applications }] = await Promise.all([
-    read("/backup-targets", backupTargetsResponseSchema),
-    getApplications(),
+    read("/backup-targets", backupTargetsResponseSchema, { searchParams: { per_page: 100 } }),
+    getAllApplications(),
   ]);
 
   const byId = new Map(applications.map((application) => [application.id, application]));
@@ -203,6 +212,10 @@ export async function getBackupCoverage() {
     // Counted here rather than trusted from `meta`: the backend counts a site
     // with any target as protected, but a target that is switched off or set
     // to manual backs nothing up, and this screen must not call that covered.
+    //
+    // Same reason `filter[protected]=0` is not used for the "Not protected"
+    // toggle: it means "has no target row", so it would hide every paused site
+    // — precisely the ones that look configured and are backing nothing up.
     protected: rows.filter((row) => row.state === "protected").length,
     unprotected: rows.filter((row) => row.state === "unprotected").length,
     paused: rows.filter((row) => row.state === "paused").length,
