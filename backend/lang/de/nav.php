@@ -2,15 +2,15 @@
 
 return [
     'dashboard' => 'Dashboard',
-    'application' => 'Anwendung',
-    'database' => 'Datenbank',
+    'application' => 'Anwendungen',
+    'database' => 'Datenbanken',
     'system_user' => 'Systembenutzer',
     'firewall' => 'Firewall',
-    'cronjob' => 'Cronjob',
+    'cronjob' => 'Cronjobs',
     'fail2ban' => 'Fail2ban',
     'logs' => 'Systemprotokolle',
     'backup' => 'Backups',
-    'service' => 'Dienst',
+    'service' => 'Dienste',
     'php' => 'PHP',
     'node' => 'Node.js',
     'setting' => 'Einstellungen',
@@ -25,7 +25,7 @@ return [
     // and the two must never share a label any more than they share a grant.
     'app_dashboard' => 'Übersicht',
     'app_domain' => 'Domains & SSL',
-    'app_deployment' => 'Deployment',
+    'app_deployment' => 'Deployments',
     'app_environment' => 'Umgebung',
     'app_worker' => 'Worker',
     'app_file' => 'Dateien',

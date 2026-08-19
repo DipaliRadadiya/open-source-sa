@@ -29,27 +29,27 @@ class PermissionCatalog
     {
         return [
             ['name' => 'dashboard', 'title' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/dashboard', 'order' => 1],
-            ['name' => 'application', 'title' => 'Application', 'icon' => 'app-window', 'url' => '/applications', 'order' => 2],
-            ['name' => 'database', 'title' => 'Database', 'icon' => 'database', 'url' => '/databases', 'order' => 3],
-            ['name' => 'system_user', 'title' => 'System User', 'icon' => 'users', 'url' => '/system-users', 'order' => 4],
+            ['name' => 'application', 'title' => 'Applications', 'icon' => 'app-window', 'url' => '/applications', 'order' => 2],
+            ['name' => 'database', 'title' => 'Databases', 'icon' => 'database', 'url' => '/databases', 'order' => 3],
+            ['name' => 'system_user', 'title' => 'System Users', 'icon' => 'users', 'url' => '/system-users', 'order' => 4],
             ['name' => 'firewall', 'title' => 'Firewall', 'icon' => 'shield', 'url' => '/firewall', 'order' => 5],
-            ['name' => 'cronjob', 'title' => 'Cronjob', 'icon' => 'clock', 'url' => '/cron-jobs', 'order' => 6],
+            ['name' => 'cronjob', 'title' => 'Cron Jobs', 'icon' => 'clock', 'url' => '/cron-jobs', 'order' => 6],
             ['name' => 'fail2ban', 'title' => 'Fail2ban', 'icon' => 'ban', 'url' => '/fail2ban', 'order' => 7],
-            ['name' => 'logs', 'title' => 'Logs', 'icon' => 'file-text', 'url' => '/logs', 'order' => 8],
-            ['name' => 'service', 'title' => 'Service', 'icon' => 'settings-2', 'url' => '/services', 'order' => 9],
+            ['name' => 'logs', 'title' => 'System Logs', 'icon' => 'file-text', 'url' => '/logs', 'order' => 8],
+            ['name' => 'service', 'title' => 'Services', 'icon' => 'settings-2', 'url' => '/services', 'order' => 9],
             // PHP is its own feature, not a corner of Settings. Sharing the
             // `setting` permission meant "can change the PHP version" also
             // meant "can reboot the server and move the SSH port".
             ['name' => 'php', 'title' => 'PHP', 'icon' => 'file-code', 'url' => '/php', 'order' => 10],
             ['name' => 'node', 'title' => 'Node.js', 'icon' => 'hexagon', 'url' => '/node', 'order' => 11],
-            ['name' => 'setting', 'title' => 'Setting', 'icon' => 'settings', 'url' => '/settings', 'order' => 12],
+            ['name' => 'setting', 'title' => 'Settings', 'icon' => 'settings', 'url' => '/settings', 'order' => 12],
             ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 13],
             // The backups dashboard: history and restore across every app and
             // database. Scheduling a backup happens inside an application
             // (`app_backup`), but the list you restore from is one place —
             // restore overwrites live data, and one screen means one set of
             // guardrails rather than two.
-            ['name' => 'backup', 'title' => 'Backup', 'icon' => 'archive', 'url' => '/backups', 'order' => 14],
+            ['name' => 'backup', 'title' => 'Backups', 'icon' => 'archive', 'url' => '/backups', 'order' => 14],
             ['name' => 'activity_log', 'title' => 'Activity Log', 'icon' => 'history', 'url' => '/activity-log', 'order' => 15],
             // Reading a migrated server into the panel. Its own permission
             // rather than riding on `setting`: a sync writes rows for users,
@@ -105,7 +105,7 @@ class PermissionCatalog
             // SSL lives with domains, not beside it: a certificate covers a
             // *set* of names, so the two are one decision.
             ['name' => 'app_domain', 'title' => 'Domains & SSL', 'icon' => 'globe', 'url' => '/domains'],
-            ['name' => 'app_deployment', 'title' => 'Deployment', 'icon' => 'git-branch', 'url' => '/deployment'],
+            ['name' => 'app_deployment', 'title' => 'Deployments', 'icon' => 'git-branch', 'url' => '/deployment'],
             ['name' => 'app_environment', 'title' => 'Environment', 'icon' => 'file-key', 'url' => '/environment'],
             // Supervisor workers and a Node process are the same question —
             // "what is running in the background?" — so they are one screen

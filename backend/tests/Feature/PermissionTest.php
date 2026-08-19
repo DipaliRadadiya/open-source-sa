@@ -179,13 +179,13 @@ it('localizes the nav title from Accept-Language (nav endpoint)', function () {
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions?level=server')
         ->assertOk()
-        ->assertJsonFragment(['name' => 'database', 'title' => 'Database']);
+        ->assertJsonFragment(['name' => 'database', 'title' => 'Databases']);
 
     // Spanish via Accept-Language
     $this->withHeaders(['Authorization' => "Bearer {$token}", 'Accept-Language' => 'es'])
         ->getJson('/api/permissions?level=server')
         ->assertOk()
-        ->assertJsonFragment(['name' => 'database', 'title' => 'Base de datos'])
+        ->assertJsonFragment(['name' => 'database', 'title' => 'Bases de datos'])
         ->assertJsonFragment(['name' => 'disk_cleaner', 'title' => 'Limpiador de disco']);
 });
 
