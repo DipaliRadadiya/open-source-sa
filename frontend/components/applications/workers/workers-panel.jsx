@@ -16,7 +16,15 @@ import { CreateWorkerDialog } from "@/components/applications/workers/create-wor
 
 // Status is read from systemd on every GET — nothing is cached server-side, so
 // the "refresh" here is just re-fetching, same as the Services page.
-const POLL_MS = 4000;
+//
+// 15s, not 4s. Services polls fast because `cpu_percent` is a delta between two
+// samples and the column is empty until it has two; a worker has no such
+// reading. Since start/stop/restart now apply their own response, the only
+// thing left for the poll to catch is a worker dying on its own — which does
+// not need four-second granularity, and cost a request every four seconds for
+// the whole time the page was open. Refresh and returning to the tab both still
+// re-read immediately.
+const POLL_MS = 15000;
 
 // Same tokens as WorkerStatusBadge's state colours, so the summary dots read
 // as the same language rather than a second, unrelated colour system.
@@ -64,7 +72,13 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
     setCreateOpen(true);
   }
 
+  // Paused outright while an action is running: that request answers with the
+  // worker's own post-action state, and a poll landing on top of it can only
+  // race with a reading that is already newer.
+  const anyBusy = Object.values(busy).some(Boolean);
+
   useEffect(() => {
+    if (anyBusy) return undefined;
     let active = true;
 
     async function tick() {
@@ -88,7 +102,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
       clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [appId]);
+  }, [appId, anyBusy]);
 
   const addButton = (
     <ReasonTooltip reason={canManage ? null : t("noPermission")}>

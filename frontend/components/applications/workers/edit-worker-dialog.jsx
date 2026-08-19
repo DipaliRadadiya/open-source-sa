@@ -53,10 +53,16 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
     defaultValues: valuesFrom(worker),
   });
 
+  // Keyed on the id, like every other edit dialog in the panel — NOT on the
+  // `worker` object. The list this row comes from is polled, so that object is
+  // replaced on every tick, and depending on it re-ran this reset every few
+  // seconds: it silently threw away whatever was being typed, and because
+  // reset() also clears `isSubmitting` it killed the Save spinner mid-request
+  // and re-enabled the button while the write was still in the air.
   useEffect(() => {
     if (open) form.reset(valuesFrom(worker));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, worker]);
+  }, [open, worker.id]);
 
   function onPickPreset(preset) {
     form.setValue("kind", preset.kind, { shouldValidate: true });
