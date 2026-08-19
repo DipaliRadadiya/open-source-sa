@@ -26,6 +26,7 @@ export function CronjobsPanel({
   cronjobs,
   meta,
   systemUsers,
+  applications = [],
   canManage,
   schedulePresets,
   commandPresets,
@@ -136,6 +137,7 @@ export function CronjobsPanel({
           canManage={canManage}
           schedulePresets={schedulePresets}
           commandPresets={commandPresets}
+          applications={applications}
           placeholder={placeholder}
           timezone={timezone}
           onDuplicate={duplicate}
@@ -151,6 +153,7 @@ export function CronjobsPanel({
           systemUsers={systemUsers}
           schedulePresets={schedulePresets}
           commandPresets={commandPresets}
+          applications={applications}
           placeholder={placeholder}
           timezone={timezone}
           initialValues={seed.initialValues}

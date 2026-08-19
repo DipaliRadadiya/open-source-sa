@@ -142,13 +142,14 @@ function ActiveCell({ row, table }) {
 }
 
 function ActionsCell({ row, table }) {
-  const { schedulePresets, commandPresets, placeholder, timezone, onDuplicate } =
+  const { schedulePresets, commandPresets, applications, placeholder, timezone, onDuplicate } =
     table.options.meta;
   return (
     <CronjobRowActions
       job={row.original}
       schedulePresets={schedulePresets}
       commandPresets={commandPresets}
+      applications={applications}
       placeholder={placeholder}
       timezone={timezone}
       onDuplicate={onDuplicate}
@@ -161,6 +162,7 @@ export function CronjobsTable({
   canManage = false,
   schedulePresets = [],
   commandPresets = [],
+  applications = [],
   placeholder,
   timezone,
   onDuplicate,
@@ -195,6 +197,7 @@ export function CronjobsTable({
           canManage={canManage}
           schedulePresets={schedulePresets}
           commandPresets={commandPresets}
+          applications={applications}
           placeholder={placeholder}
           timezone={timezone}
           onDuplicate={onDuplicate}
@@ -208,6 +211,7 @@ export function CronjobsTable({
             canManage,
             schedulePresets,
             commandPresets,
+            applications,
             placeholder,
             timezone,
             onDuplicate,

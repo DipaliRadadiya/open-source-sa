@@ -83,6 +83,12 @@ export const applicationSchema = z.object({
   node_version: z.string().nullish(),
   app_port: z.number().nullish(),
   web_root: z.string().nullish(),
+  // Where the site's code lives — the document root for most types, its parent
+  // for the ones with a fixed web root (Laravel's `public`). That is exactly
+  // what a cron command needs: `{path}/artisan` and `{path}/wp-cron.php` both
+  // resolve correctly from it. Undeclared here it would be stripped, which is
+  // the `disk_io` bug for the fourth time in this file.
+  path: z.string().nullish(),
   build_command: z.string().nullish(),
   start_command: z.string().nullish(),
   git_account_id: z.number().nullish(),

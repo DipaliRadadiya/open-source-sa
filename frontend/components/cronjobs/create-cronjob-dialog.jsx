@@ -48,6 +48,7 @@ export function CreateCronjobDialog({
   systemUsers = [],
   schedulePresets = [],
   commandPresets = [],
+  applications = [],
   placeholder,
   timezone,
   // Prefill from a duplicated job or a quick-start template. Re-seeded on open
@@ -206,6 +207,7 @@ export function CreateCronjobDialog({
           presets={commandPresets}
           placeholder={placeholder}
           starterKey={starterKey}
+          applications={applications}
         />
         <ScheduleField form={form} presets={schedulePresets} timezone={timezone} />
 

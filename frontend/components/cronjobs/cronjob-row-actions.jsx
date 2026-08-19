@@ -19,6 +19,7 @@ export function CronjobRowActions({
   job,
   schedulePresets,
   commandPresets,
+  applications = [],
   placeholder,
   timezone,
   onDuplicate,
@@ -91,6 +92,7 @@ export function CronjobRowActions({
           onOpenChange={setEditOpen}
           schedulePresets={schedulePresets}
           commandPresets={commandPresets}
+          applications={applications}
           placeholder={placeholder}
           timezone={timezone}
         />

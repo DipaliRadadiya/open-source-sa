@@ -8,6 +8,7 @@ import {
   getCommandPresets,
 } from "@/lib/cronjobs/get-cron-presets";
 import { getSystemUsers } from "@/lib/system-users/get-system-users";
+import { getAllApplications } from "@/lib/applications/get-applications";
 import { getServerFacts } from "@/lib/server/get-server-facts";
 import { withTimeout } from "@/lib/api/with-timeout";
 import { CronjobsPanel } from "@/components/cronjobs/cronjobs-panel";
@@ -31,7 +32,7 @@ export default async function CronjobsPage({ searchParams }) {
   if (!can(permissions, "cronjob", "view")) redirect("/dashboard");
 
   const canManage = can(permissions, "cronjob", "manage");
-  const [{ cronjobs, meta, failed }, systemUsers, schedulePresets, commandPresets, facts] =
+  const [{ cronjobs, meta, failed }, systemUsers, schedulePresets, commandPresets, facts, sites] =
     await Promise.all([
       getCronjobs(sp),
       // Only needed for the run-as picker and the user filter.
@@ -43,6 +44,9 @@ export default async function CronjobsPage({ searchParams }) {
       // on the backend, so it's bounded — a nice-to-have subtitle must never
       // hold up the page, and losing it costs nothing.
       withTimeout(getServerFacts(), 2000),
+      // For the command form's path picker. A failure here costs the
+      // convenience, not the form — it falls back to typing a path.
+      canManage ? getAllApplications() : Promise.resolve({ applications: [] }),
     ]);
 
   const timezone = facts?.timezone;
@@ -66,6 +70,7 @@ export default async function CronjobsPage({ searchParams }) {
             cronjobs={cronjobs}
             meta={meta}
             systemUsers={systemUsers}
+            applications={sites.applications}
             canManage={canManage}
             schedulePresets={schedulePresets}
             commandPresets={commandPresets.presets}

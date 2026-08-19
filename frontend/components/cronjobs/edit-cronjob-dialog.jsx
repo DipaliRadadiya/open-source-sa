@@ -32,6 +32,7 @@ export function EditCronjobDialog({
   onOpenChange,
   schedulePresets = [],
   commandPresets = [],
+  applications = [],
   placeholder,
 }) {
   const t = useTranslations("cronJobs");
@@ -135,6 +136,7 @@ export function EditCronjobDialog({
           form={form}
           presets={commandPresets}
           placeholder={placeholder}
+          applications={applications}
         />
         <ScheduleField form={form} presets={schedulePresets} />
 

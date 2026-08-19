@@ -28,6 +28,7 @@ export function CronjobsCards({
   canManage = false,
   schedulePresets = [],
   commandPresets = [],
+  applications = [],
   placeholder,
   timezone,
   onDuplicate,
@@ -49,6 +50,7 @@ export function CronjobsCards({
                   job={job}
                   schedulePresets={schedulePresets}
                   commandPresets={commandPresets}
+                  applications={applications}
                   placeholder={placeholder}
                   timezone={timezone}
                   onDuplicate={onDuplicate}
