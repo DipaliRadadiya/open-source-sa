@@ -34,7 +34,12 @@ export default async function SetupLayout({ children }) {
           </div>
         </header>
         <main className="flex flex-1 justify-center px-4 pb-16 pt-2 sm:pt-6">
-          <div className="w-full max-w-2xl">{children}</div>
+          {/* 840px. 672 made a full-screen first-run page feel like a dialog
+              that had lost its dialog; 768 still ran narrow once the cards grew
+              internal structure. Past ~860 the one-line descriptions start
+              looking stranded, so this is the top of the useful range rather
+              than a step toward full width. */}
+          <div className="w-full max-w-[840px]">{children}</div>
         </main>
       </div>
     </TooltipProvider>

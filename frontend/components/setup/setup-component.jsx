@@ -23,8 +23,11 @@ function VersionInstall({ versions, action, disabled, disabledReason, onInstall 
     versions.find((v) => v.lifecycle?.status === "lts")?.version ?? options[0]?.value ?? "";
   const [version, setVersion] = useState(defaultVersion);
 
+  // A note, not body copy. At `text-sm` this sat at the same weight as the
+  // component's own description and the card read as two paragraphs about
+  // nothing.
   if (!options.length) {
-    return <p className="mt-3 text-sm text-muted-foreground">{t("noVersions")}</p>;
+    return <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{t("noVersions")}</p>;
   }
 
   return (
@@ -55,11 +58,11 @@ function VersionInstall({ versions, action, disabled, disabledReason, onInstall 
 }
 
 // Identity chip: what the component IS. State is carried by the pill, not here.
-function IconChip({ meta }) {
+function IconChip({ meta, small = false }) {
   const { Icon, tint, chip } = meta;
   return (
-    <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", chip)}>
-      <Icon className={cn("size-5", tint)} aria-hidden />
+    <span className={cn("flex shrink-0 items-center justify-center rounded-xl", small ? "size-9" : "size-10", chip)}>
+      <Icon className={cn(small ? "size-4" : "size-5", tint)} aria-hidden />
     </span>
   );
 }
@@ -68,12 +71,21 @@ function IconChip({ meta }) {
 // alone).
 function StatusPill({ state, recommended, detail }) {
   const t = useTranslations("setup");
+  // The detail sits BESIDE the badge, not inside it. A badge is `shrink-0` and
+  // does not wrap, so "Installed · in use for the panel cache" was a fixed-width
+  // block that pushed 41px off a 320px screen in Hindi. It is also a sentence,
+  // and a status token should be one word — kept apart, the token stays short
+  // and the explanation wraps like the prose it is.
   if (state === "installed") {
     return (
-      <Badge variant="success" className="gap-1 font-normal">
-        {t("pillInstalled")}
-        {detail ? <span className="opacity-80">· {detail}</span> : null}
-      </Badge>
+      <>
+        <Badge variant="success" className="font-normal">
+          {t("pillInstalled")}
+        </Badge>
+        {detail ? (
+          <span className="min-w-0 text-xs text-muted-foreground">{detail}</span>
+        ) : null}
+      </>
     );
   }
   if (state === "installing") {
@@ -83,6 +95,9 @@ function StatusPill({ state, recommended, detail }) {
         {t("pillInstalling")}
       </Badge>
     );
+  }
+  if (state === "unavailable") {
+    return <Badge variant="secondary" className="font-normal">{t("pillUnavailable")}</Badge>;
   }
   if (state === "failed") {
     return <Badge variant="destructive" className="font-normal">{t("pillFailed")}</Badge>;
@@ -99,7 +114,7 @@ function StatusPill({ state, recommended, detail }) {
  * is the pill, and the next action is the button — three separate reads so the
  * row is scannable. Failure UI is gated strictly on `state === "failed"`.
  */
-export function SetupComponent({ component, versions = [], busy = false, locked = false, onInstall }) {
+export function SetupComponent({ component, versions = [], busy = false, locked = false, tier = "secondary", onInstall }) {
   const t = useTranslations("setup");
   const { state, action, options } = component;
   const isRuntime = RUNTIME_KEYS.has(component.key) && Boolean(action);
@@ -118,77 +133,134 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   // spinner on "Install MariaDB" while fail2ban was the thing installing.
   const blocked = busy || locked;
   const blockedReason = locked ? t("lockedByOtherInstall") : null;
+  // Nothing to install and nothing to choose: a runtime the server reported no
+  // versions for. That is a neutral fact, not a fault, so the card sits back
+  // like a finished one rather than staying at full weight in the to-do list
+  // with an empty right-hand side where its action should be.
+  const unavailable = isRuntime && runtimeVersions.length === 0 && !installed && !installing;
+  // A card whose whole body is a title and a sentence, with one button: the
+  // button belongs beside them, not pinned to the top of a two-line block.
+  const simple = !hasOptions && !isRuntime;
   const meta = componentMeta(component.key);
+
+  /**
+   * A finished component, as a line rather than a card.
+   *
+   * Everything a full card carries — a 40px chip, a description, room for an
+   * action — exists to help you decide something. There is nothing left to
+   * decide here, and rendering five equal boxes of which two were already done
+   * made the page a wall with no centre of gravity. Same information, a third
+   * of the height, so the things still waiting on you are the heaviest thing
+   * on screen.
+   */
+  const primary = tier === "primary";
+
+  if (tier === "compact") {
+    return (
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
+        <span
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-lg",
+            meta.chip,
+          )}
+        >
+          <meta.Icon className={cn("size-3.5", meta.tint)} aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="text-sm font-medium">{component.title}</p>
+          {/* Still says what the thing is for. "Redis · Installed" answers
+              whether it is there, never why anyone wanted it — and on a setup
+              page the second question is the one a first-time reader has. One
+              line, clamped, so the row stays a row. */}
+          {component.description ? (
+            <p className="line-clamp-1 text-xs text-muted-foreground">{component.description}</p>
+          ) : null}
+        </div>
+        {/* Status and version share one right-hand column across every row, so
+            the eye reads a single edge down the list instead of hunting for the
+            badge somewhere after each name. It wraps rather than shrink-0 —
+            `detail` is a free-text sentence on Redis, not a version number. */}
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1">
+          <StatusPill state="installed" detail={component.detail} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
       aria-busy={installing}
+      // One card, two weights: waiting (plain) and done/unavailable (sunk).
+      //
+      // Failure is NOT a third weight. It is said by the badge and by the red
+      // message box inside the card, and outlining the whole card in red on top
+      // of those made one recoverable install the loudest thing on the page.
+      //
+      // The recommended tint is gone. A primary-tinted border is how this panel
+      // says "selected" everywhere else, and here it meant "recommended" — which
+      // the badge beside the title already says, in words. Two signals for one
+      // fact, one of them borrowed from a different vocabulary.
+      //
+      // Failure keeps the outline but loses the wash. The card carries its own
+      // bordered reason box below the title; tinting the whole card as well made
+      // "you can try again" the loudest thing on the page.
       className={cn(
-        "rounded-2xl border bg-card p-4 shadow-sm transition-colors",
-        failed && "border-destructive/30 bg-destructive/[0.03]",
-        installed && "bg-muted/30 shadow-none",
-        !installed && !failed && component.recommended && "border-primary/25",
+        "rounded-2xl border transition-colors",
+        // Primary carries the page: a real surface, and its identity row banded
+        // off from its controls (below) so the card has an anatomy rather than
+        // being a box with things in it. Secondary is the same anatomy at a
+        // lower voice — flatter, no shadow — so "this needs a decision" and
+        // "this can wait" are told apart before either is read.
+        primary ? "overflow-hidden bg-card shadow-sm" : "bg-card/50 p-4",
+        !primary && installed && "bg-muted/30 shadow-none",
+        !primary && unavailable && "bg-muted/20 shadow-none",
       )}
     >
-      <div className="flex items-start gap-4">
-        <IconChip meta={meta} />
+      <div
+        className={cn(
+          "flex gap-4",
+          simple ? "items-center" : "items-start",
+          // The header band: same row, given its own tinted strip and a rule
+          // against the body beneath it.
+          primary && "border-b bg-muted/30 px-5 py-4",
+        )}
+      >
+        <IconChip meta={meta} small={!primary} />
 
         <div className="min-w-0 flex-1">
           {/* Title + description stay a tight unit; the interactive blocks below
               are deliberately outside this group so `space-y` can't squeeze them. */}
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-medium leading-tight">{component.title}</p>
-              <StatusPill state={installing ? "installing" : state} recommended={component.recommended} detail={component.detail} />
+              <p className={cn("font-medium leading-tight", primary && "text-base")}>
+                {component.title}
+              </p>
+              <StatusPill state={unavailable ? "unavailable" : installing ? "installing" : state} recommended={component.recommended} detail={component.detail} />
             </div>
             {component.description ? (
               <p className="text-sm leading-5 text-muted-foreground">{component.description}</p>
             ) : null}
           </div>
 
-          {/* A failed component shows a reason. The backend message can promise
-              a "reference" it didn't send, so we only trust it when a reference
-              actually came with it; otherwise fall back to self-contained copy. */}
-          {failed ? (
-            <p className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              <CircleAlert className="mt-0.5 size-4 shrink-0" />
-              <span>
-                {component.reference ? (
-                  <>
-                    {component.message || t("componentFailed")}
-                    <span className="mt-0.5 block font-mono text-xs opacity-90">
-                      {t("reference", { reference: component.reference })}
-                    </span>
-                  </>
-                ) : (
-                  t("componentFailed")
-                )}
-              </span>
-            </p>
-          ) : null}
-
-          {/* Database pick-one, shown while it still needs installing. */}
-          {hasOptions && !installed && !installing ? (
-            <div className="mt-3">
-              <DatabaseOptions
-                options={options}
-                disabled={blocked}
-                disabledReason={blockedReason}
-                onInstall={(a) => onInstall(component, a)}
-              />
-            </div>
-          ) : null}
-
-          {/* Inline version picker for PHP/Node. */}
-          {isRuntime && !installed && !installing ? (
-            <VersionInstall
-              versions={runtimeVersions}
+          {/* On a primary card the reason and the controls belong to the body
+              below the band, not to the identity row. Rendered there instead. */}
+          {primary ? null : (
+            <Body
+              t={t}
+              component={component}
+              failed={failed}
+              installed={installed}
+              installing={installing}
+              hasOptions={hasOptions}
+              isRuntime={isRuntime}
+              options={options}
               action={action}
-              disabled={blocked}
-              disabledReason={blockedReason}
-              onInstall={(a, body) => onInstall(component, a, body)}
+              runtimeVersions={runtimeVersions}
+              blocked={blocked}
+              blockedReason={blockedReason}
+              onInstall={onInstall}
             />
-          ) : null}
+          )}
         </div>
 
         {/* Right-side action for the simple states (the others render inline
@@ -222,6 +294,101 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
           )}
         </div>
       </div>
+
+      {primary ? (
+        <div className="p-5">
+          <Body
+            t={t}
+            component={component}
+            failed={failed}
+            installed={installed}
+            installing={installing}
+            hasOptions={hasOptions}
+            isRuntime={isRuntime}
+            options={options}
+            action={action}
+            runtimeVersions={runtimeVersions}
+            blocked={blocked}
+            blockedReason={blockedReason}
+            onInstall={onInstall}
+            flush
+          />
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * The part of a component that asks something of you: why it failed, which
+ * engine to install, which version to pick.
+ *
+ * Split out because a primary card puts it under a header band while a
+ * secondary card keeps it inline beside the icon — same content, two places,
+ * and duplicating it was how the two tiers would drift apart.
+ */
+function Body({
+  t,
+  component,
+  failed,
+  installed,
+  installing,
+  hasOptions,
+  isRuntime,
+  options,
+  action,
+  runtimeVersions,
+  blocked,
+  blockedReason,
+  onInstall,
+  flush = false,
+}) {
+  return (
+    <>
+      {/* A failed component shows a reason. The backend message can promise
+          a "reference" it didn't send, so we only trust it when a reference
+          actually came with it; otherwise fall back to self-contained copy. */}
+      {failed ? (
+        <p className={cn("flex items-start gap-2 text-sm text-destructive", !flush && "mt-2.5")}>
+              <CircleAlert className="mt-0.5 size-4 shrink-0" />
+              <span>
+                {component.reference ? (
+                  <>
+                    {component.message || t("componentFailed")}
+                    <span className="mt-0.5 block font-mono text-xs opacity-90">
+                      {t("reference", { reference: component.reference })}
+                    </span>
+                  </>
+                ) : (
+                  t("componentFailed")
+                )}
+              </span>
+            </p>
+          ) : null}
+
+      {/* Database pick-one, shown while it still needs installing. */}
+      {hasOptions && !installed && !installing ? (
+        <div className={cn(failed ? "mt-4" : flush ? "" : "mt-3")}>
+              <DatabaseOptions
+                options={options}
+                failed={failed}
+                disabled={blocked}
+                disabledReason={blockedReason}
+                onInstall={(a) => onInstall(component, a)}
+              />
+            </div>
+          ) : null}
+
+          {/* Inline version picker for PHP/Node. */}
+          {isRuntime && !installed && !installing ? (
+            <VersionInstall
+              versions={runtimeVersions}
+              action={action}
+              disabled={blocked}
+              disabledReason={blockedReason}
+              onInstall={(a, body) => onInstall(component, a, body)}
+            />
+          ) : null}
+    </>
   );
 }
