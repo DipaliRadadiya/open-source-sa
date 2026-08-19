@@ -154,10 +154,31 @@ class ServiceManager
             // word the same failure differently.
             'install_message' => $install->message(),
             'retryable' => $failed,
-            // A real string, never null: the frontend's schema types `status`
-            // as a string, and a null would fail the parse and take the whole
-            // response down rather than this one row.
-            'status' => $failed ? 'install_failed' : 'installing',
+            /*
+             * Systemd's vocabulary, not a new one — and the division of labour
+             * that makes every row manageable the same way:
+             *
+             *   `status` is how this row is doing, in the three words the
+             *           status badge already renders: active, inactive, failed.
+             *   `state`  is what kind of row it is.
+             *
+             * A failed install is `failed` because that is what it is to the
+             * person looking at it: broken, and red. An install in progress is
+             * `inactive` because nothing is running yet. Returning
+             * `install_failed` here instead put an unrecognised word through
+             * the badge's deliberate fallback — a grey question mark printing
+             * the raw string — which is the one presentation that says nothing.
+             *
+             * Nothing is lost by reusing the words: `state` carries the
+             * distinction for anyone who needs it, so a client can tell a
+             * service that crashed from one that never installed while both
+             * still read as broken.
+             *
+             * Never null, either. The client types `status` as a string, and a
+             * null would fail its parse and drop the whole response rather than
+             * this one row.
+             */
+            'status' => $failed ? 'failed' : 'inactive',
             'enabled' => false,
             'protected' => false,
             'actions' => [],
@@ -249,23 +270,57 @@ class ServiceManager
     }
 
     /**
-     * @return array<int, array{key: string, unit: string, label: string}>
+     * PHP-FPM rows: one per installed version, plus one per version the panel
+     * is installing or failed to install.
+     *
+     * The second half is why this is not just a loop over installed versions.
+     * These entries are generated rather than configured, so the `install` key
+     * that gives every other service its in-progress row cannot be written into
+     * the catalog for them — a version that never finished installing has no
+     * unit and no config entry, and so could not appear at all however well
+     * describe() handled it. It was the one kind of service that stayed
+     * invisible exactly when the user most wanted to see it.
+     *
+     * `versions()` on the tracker filters out extension rows, so installing a
+     * PHP *extension* cannot conjure a service row for the version it belongs
+     * to. That is the tracker's own design doing the work rather than this
+     * method remembering to.
+     *
+     * @return array<int, array{key: string, unit: string, label: string, install: array{0: string, 1: string}}>
      */
     private function phpFpmServices(): array
     {
+        $pending = app(InstallTracker::class)
+            ->versions('php')
+            ->reject(fn ($install) => $install->status === InstallStatus::Ready)
+            ->keys()
+            ->all();
+
+        // Installed first: an installed version whose stale tracker row somehow
+        // survived should be described by its unit, and array_unique keeps the
+        // first occurrence.
+        $versions = array_unique([...$this->stack->versions(), ...$pending]);
+
         $services = [];
 
-        foreach ($this->stack->versions() as $version) {
+        foreach ($versions as $version) {
             $unit = $this->stack->serviceName($version);
 
             // LSPHP has no per-version unit — its processes belong to the web
             // server. A stack with nothing to start or stop contributes no
-            // rows rather than rows that cannot be acted on.
+            // rows rather than rows that cannot be acted on. That holds for a
+            // version being installed too: there would be nothing for the row
+            // to become once it finished.
             if ($unit === null) {
                 continue;
             }
 
-            $services[] = ['key' => $unit, 'unit' => $unit, 'label' => "PHP {$version} FPM"];
+            $services[] = [
+                'key' => $unit,
+                'unit' => $unit,
+                'label' => "PHP {$version} FPM",
+                'install' => ['php', $version],
+            ];
         }
 
         return $services;

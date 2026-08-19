@@ -80,6 +80,10 @@ it('shows an engine that is still installing, with nothing to press', function (
 
     expect($row)->not->toBeNull()
         ->and($row['state'])->toBe('installing')
+        // Systemd's own word for "not running", so the status badge renders it
+        // rather than falling through to its unknown-status question mark.
+        // `state` is where the reason lives.
+        ->and($row['status'])->toBe('inactive')
         ->and($row['retryable'])->toBeFalse()
         // Inert on purpose: there is no unit to start, and a Restart button for
         // something that does not exist is worse than no button.
@@ -99,6 +103,10 @@ it('shows a failed engine install with its reason, and marks it retryable', func
     $row = serviceRow('mongodb');
 
     expect($row['state'])->toBe('install_failed')
+        // `failed`, not `install_failed`: to the person looking at the row it
+        // is broken and should be red, and the badge only knows three words.
+        // The distinction survives in `state`.
+        ->and($row['status'])->toBe('failed')
         ->and($row['retryable'])->toBeTrue()
         ->and($row['install_reason'])->toBe('apt_failed')
         // Prose, not the raw code — and the same sentence the setup card shows,
@@ -187,6 +195,65 @@ it('leaves a service nobody has tried to install absent', function () {
     // "what is on this box", not a catalogue of everything that could be.
     expect(serviceRow('redis'))->toBeNull()
         ->and(serviceRow('mongodb'))->toBeNull();
+});
+
+/*
+ * PHP is the one kind of service whose catalog entries are generated rather
+ * than configured, so the `install` key that covers everything else cannot be
+ * written for it. A version that never finished installing has no unit and no
+ * config entry — it could not appear at all, which is exactly when somebody
+ * wants to see it. `phpFpmServices()` therefore builds rows from the tracker
+ * as well as from what is on disk.
+ */
+describe('PHP versions', function () {
+
+    it('shows a version that is still installing', function () {
+        fakeUnits([]);
+
+        RuntimeInstall::create([
+            'runtime' => 'php', 'version' => '8.3',
+            'status' => InstallStatus::Installing, 'started_at' => now(),
+        ]);
+
+        $row = serviceRow('php8.3-fpm');
+
+        expect($row)->not->toBeNull()
+            ->and($row['label'])->toBe('PHP 8.3 FPM')
+            ->and($row['state'])->toBe('installing')
+            ->and($row['status'])->toBe('inactive')
+            ->and($row['actions'])->toBe([]);
+    });
+
+    it('shows a version whose install failed, as failed and retryable', function () {
+        fakeUnits([]);
+
+        RuntimeInstall::create([
+            'runtime' => 'php', 'version' => '8.3',
+            'status' => InstallStatus::Failed, 'started_at' => now(), 'reason' => 'apt_failed',
+        ]);
+
+        $row = serviceRow('php8.3-fpm');
+
+        expect($row['state'])->toBe('install_failed')
+            ->and($row['status'])->toBe('failed')
+            ->and($row['retryable'])->toBeTrue();
+    });
+
+    /*
+     * `InstallTracker::versions()` filters rows with an extension set, so this
+     * passes because of the tracker's design rather than anything this manager
+     * remembers to do — worth pinning so a future change there is caught here.
+     */
+    it('does not invent a version row for an extension install', function () {
+        fakeUnits([]);
+
+        RuntimeInstall::create([
+            'runtime' => 'php', 'version' => '8.3', 'extension' => 'redis',
+            'status' => InstallStatus::Installing, 'started_at' => now(),
+        ]);
+
+        expect(serviceRow('php8.3-fpm'))->toBeNull();
+    });
 });
 
 /*

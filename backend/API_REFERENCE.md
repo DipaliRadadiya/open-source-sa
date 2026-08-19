@@ -3602,19 +3602,22 @@ Live status of every managed systemd service.
 }]}
 ```
 
-**`state` — switch on this, not on `status`.** Three values:
+**Every row has the same shape, whatever kind of service it is** — a database engine, a PHP-FPM version, nginx. Two fields, two jobs:
 
-| `state` | meaning |
-|---|---|
-| `installed` | the unit exists; `status` is systemd's answer (`active`, `inactive`, `failed`, …) |
-| `installing` | the panel is installing it right now; there is no unit yet |
-| `install_failed` | the install was attempted and failed; `install_reason` and `install_message` say why, and `retryable` is `true` |
+- **`status`** — how it is doing, in systemd's three words: `active`, `inactive`, `failed`. Never null, never anything else. Render it the same way for every row.
+- **`state`** — what kind of row it is: `installed | installing | install_failed`. Switch on this for behaviour.
 
-A service the panel can install now appears **while it is installing and after a failed install**, instead of being absent — the row vanishing entirely reads as "the panel forgot", when the truth is "still going" or "it failed". Applies to the database engines and fail2ban; anything with no installer (nginx, Apache, Redis, Supervisor) is still absent until its unit exists.
+| `state` | `status` | meaning |
+|---|---|---|
+| `installed` | systemd's answer | the unit exists |
+| `installing` | `inactive` | being installed right now; no unit yet, so nothing is running |
+| `install_failed` | `failed` | the install was attempted and failed; `install_reason` and `install_message` say why, `retryable` is `true` |
+
+A failed install reports `status: failed` deliberately — to the person looking at the row it is broken and should read as broken, and the badge only speaks those three words. The distinction between "the service crashed" and "it never installed" lives in `state`, so nothing is lost.
+
+A service the panel can install now appears **while it is installing and after a failed install**, instead of being absent — the row vanishing entirely reads as "the panel forgot", when the truth is "still going" or "it failed". Covers **the database engines, fail2ban, and each PHP-FPM version**. Anything with no installer (nginx, Apache, Redis, Supervisor) is still absent until its unit exists, and OpenLiteSpeed contributes no PHP rows at all because LSPHP has no per-version unit.
 
 **Those rows are inert:** `actions` is `[]`, `usage` and `log_keys` are empty, `testable` is `false`. There is no unit to act on. Retry belongs on the setup page, which is where the install was started — `retryable` is there so the row can link to it, not so it grows its own button.
-
-**`status` is never null**, in any state — `installing` and `install_failed` are returned as the status string too, so a client typing it as a string keeps working.
 
 `protected: true` — cannot be stopped or disabled (nginx, php-fpm, the panel's own services).
 
