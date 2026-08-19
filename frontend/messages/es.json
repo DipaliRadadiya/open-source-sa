@@ -4648,7 +4648,16 @@
         "done": "Se {count, plural, one {eliminó # copia} other {eliminaron # copias}}.",
         "partial": "Se eliminaron {done}; {failed} no se pudieron eliminar.",
         "noneDeleted": "{count, plural, one {La copia} other {Ninguna de las # copias}} se pudo eliminar.",
-        "failed": "No se pudieron eliminar las copias."
+        "failed": "No se pudieron eliminar las copias.",
+        "failures": {
+          "title": "No se pudieron eliminar",
+          "unknownBackup": "Una copia de esta selección",
+          "reason": {
+            "running": "Todavía se está escribiendo. Inténtalo de nuevo cuando termine.",
+            "artifact": "No se pudo eliminar el archivo de tu almacenamiento. Sigue ahí y sigue costándote dinero. El registro se conserva para que puedas encontrarlo.",
+            "failed": "El servidor rechazó esta copia y no indicó por qué."
+          }
+        }
       }
     },
     "restore": {

@@ -325,8 +325,11 @@ export function BackupsHistoryTable({
         open={confirming}
         onOpenChange={setConfirming}
         backups={selected}
-        onDeleted={(ids) => {
-          setSelection({});
+        onDeleted={(ids, failedIds = []) => {
+          // Keep the refusals selected. Clearing everything threw away the one
+          // part of the selection still worth acting on, so a partial failure
+          // meant finding those rows again by hand.
+          setSelection(Object.fromEntries(failedIds.map((id) => [String(id), true])));
           onDeleted?.(ids);
         }}
       />

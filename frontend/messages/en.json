@@ -4648,7 +4648,16 @@
         "done": "Deleted {count, plural, one {# backup} other {# backups}}.",
         "partial": "Deleted {done}; {failed} could not be deleted.",
         "noneDeleted": "{count, plural, one {The backup} other {None of the # backups}} could not be deleted.",
-        "failed": "The backups could not be deleted."
+        "failed": "The backups could not be deleted.",
+        "failures": {
+          "title": "These could not be deleted",
+          "unknownBackup": "A backup in this selection",
+          "reason": {
+            "running": "Still being written. Try again once it finishes.",
+            "artifact": "The archive could not be removed from your storage. It is still there — and still costing you. The record is kept so you can find it.",
+            "failed": "The server refused this one and did not say why."
+          }
+        }
       }
     },
     "restore": {
