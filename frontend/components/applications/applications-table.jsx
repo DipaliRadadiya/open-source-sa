@@ -15,6 +15,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
+import { SortHeader } from "@/components/data-table/sort-header";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
@@ -108,10 +109,6 @@ function StatusCell({ row }) {
   );
 }
 
-function createdTimestamp(value) {
-  const match = /^(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(value ?? "");
-  return match ? Date.UTC(match[3], Number(match[2]) - 1, match[1], match[4], match[5], match[6]) : 0;
-}
 
 function Filters({ statusOptions, typeOptions, t }) {
   const setQuery = useSetQuery();
@@ -206,14 +203,28 @@ function ApplicationsList({ applications = [], meta, siteTypes = [], canManage =
   const createButton = canManage ? <Button asChild><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button> : null;
   const columns = useMemo(
     () => [
-      { accessorKey: "name", header: t("columns.name"), cell: NameCell, sortingFn: "alphanumeric" },
-      { accessorKey: "site_type_title", header: t("columns.type"), cell: TypeCell },
-      { accessorKey: "status", header: t("columns.status"), cell: StatusCell },
-      { id: "owner", accessorFn: (row) => row.system_user?.username ?? "", header: t("columns.owner"), cell: OwnerCell },
-      // -1 for never-measured so sorting groups them at one end instead of
-      // mixing them in with genuinely empty sites at 0 bytes.
-      { id: "size", accessorFn: (row) => row.directory_size_bytes ?? -1, header: t("columns.size"), cell: SizeCell, sortingFn: "basic" },
-      { id: "created", accessorFn: (row) => createdTimestamp(row.created_at), header: t("columns.created"), cell: CreatedCell, sortingFn: "basic" },
+      // `col` is the API's own sort key, from the whitelist on
+      // IndexApplicationsRequest. Anything outside it is a 422 rather than an
+      // ignored parameter — which is the right call on their side: a sort that
+      // silently does nothing looks exactly like one that works.
+      //
+      // The columns used to carry TanStack's `sortingFn` and accessors that
+      // existed only to sort — including one returning -1 for never-measured
+      // sites. All of it was dead once the list began paging: DataTable is only
+      // handed one page, so sorting here reordered ten rows and presented that
+      // as the order of the list. The server has the whole set, and pins
+      // never-measured to the small end itself.
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, cell: NameCell },
+      { accessorKey: "site_type_title", header: () => <SortHeader col="site_type">{t("columns.type")}</SortHeader>, cell: TypeCell },
+      { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, cell: StatusCell },
+      // Not sortable, and deliberately so on the API's side: the owner lives on
+      // a relation, so ordering by it would mean a join, and the list can
+      // already be searched by username.
+      { id: "owner", header: t("columns.owner"), cell: OwnerCell },
+      // descFirst on both: nobody opens a size column to find their smallest
+      // site, or a date column to find the oldest.
+      { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, cell: SizeCell },
+      { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, cell: CreatedCell },
       { id: "actions", header: "", cell: ActionsCell },
     ],
     [t],
