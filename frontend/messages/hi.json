@@ -4121,7 +4121,11 @@
       "action": "साइटों पर वापस जाएँ"
     },
     "size": {
-      "notMeasured": "मापा नहीं गया"
+      "notMeasured": "मापा नहीं गया",
+      "measure": "मापें",
+      "measuring": "मापा जा रहा है…",
+      "measureFailed": "आकार मापा नहीं जा सका।",
+      "measureHint": "इस साइट को डिस्क पर अभी मापें"
     },
     "status": {
       "pending": "लंबित",

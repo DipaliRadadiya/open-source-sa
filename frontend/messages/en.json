@@ -4121,7 +4121,11 @@
       "action": "Back to sites"
     },
     "size": {
-      "notMeasured": "Not measured"
+      "notMeasured": "Not measured",
+      "measure": "Measure",
+      "measuring": "Measuring…",
+      "measureFailed": "The size could not be measured.",
+      "measureHint": "Measure this site on disk now"
     },
     "status": {
       "pending": "Pending",

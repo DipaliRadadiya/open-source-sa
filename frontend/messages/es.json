@@ -4121,7 +4121,11 @@
       "action": "Volver a los sitios"
     },
     "size": {
-      "notMeasured": "Sin medir"
+      "notMeasured": "Sin medir",
+      "measure": "Medir",
+      "measuring": "Midiendo…",
+      "measureFailed": "No se pudo medir el tamaño.",
+      "measureHint": "Medir este sitio en el disco ahora"
     },
     "status": {
       "pending": "Pendiente",

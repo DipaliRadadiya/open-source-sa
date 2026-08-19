@@ -6,15 +6,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { toast } from "sonner";
-import {
-  ExternalLink,
-  LayoutDashboard,
-  Loader2,
-  MoreHorizontal,
-  RotateCw,
-  Trash2,
-} from "lucide-react";
-import { retryProvisioning } from "@/lib/api/applications";
+import { ExternalLink, LayoutDashboard, Loader2, MoreHorizontal, RotateCw, Ruler, Trash2 } from "lucide-react";
+import { measureApplicationSize, retryProvisioning } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +43,7 @@ export function ApplicationRowActions({
   const t = useTranslations("applications");
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
+  const [measuring, setMeasuring] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const href = `/applications/${application.id}`;
@@ -59,6 +53,22 @@ export function ApplicationRowActions({
 
   // Nothing to offer (view-only, on the detail page) → no empty ⋯ trigger.
   if (!showNavigation && !showRetry && !canManage) return null;
+
+  // Walks every inode on the site, so it is the user's decision and never a
+  // side effect of opening a screen. Lives here because it is a per-row action
+  // like every other item in this menu — the Size cell shows the answer, not a
+  // control repeated down the column.
+  async function measure() {
+    setMeasuring(true);
+    try {
+      await measureApplicationSize(application.id);
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("size.measureFailed")));
+    } finally {
+      setMeasuring(false);
+    }
+  }
 
   async function retry() {
     setRetrying(true);
@@ -77,7 +87,11 @@ export function ApplicationRowActions({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-8">
-            {retrying ? <Loader2 className="size-4 animate-spin" /> : <MoreHorizontal className="size-4" />}
+            {retrying || measuring ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <MoreHorizontal className="size-4" />
+            )}
             <span className="sr-only">{t("actions.label")}</span>
           </Button>
         </DropdownMenuTrigger>
@@ -113,6 +127,11 @@ export function ApplicationRowActions({
               </MenuItemHint>
             </>
           ) : null}
+
+          <DropdownMenuItem disabled={measuring} onSelect={measure}>
+            <Ruler className="size-4" />
+            {measuring ? t("size.measuring") : t("size.measure")}
+          </DropdownMenuItem>
 
           {showRetry ? (
             <DropdownMenuItem disabled={retrying} onSelect={retry}>

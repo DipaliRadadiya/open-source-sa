@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
 import { formatBytes } from "@/lib/format/bytes";
 import { ChevronRight, Globe2, Plus, SearchX } from "lucide-react";
@@ -16,6 +17,9 @@ import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { SortHeader } from "@/components/data-table/sort-header";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { measureApplicationSize } from "@/lib/api/applications";
+import { apiMessage } from "@/lib/api/error-message";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
@@ -67,10 +71,47 @@ function CreatedCell({ row }) {
 function SizeCell({ row }) {
   const t = useTranslations("applications");
   const format = useFormatter();
+  const router = useRouter();
+  const [measuring, setMeasuring] = useState(false);
   const size = formatBytes(row.original.directory_size_bytes, format);
 
+  async function measure() {
+    setMeasuring(true);
+    try {
+      await measureApplicationSize(row.original.id);
+      router.refresh();
+    } catch (error) {
+      // Throttled at 10/min, and it refuses outright when the site has no
+      // directory — both are real answers worth passing on verbatim.
+      toast.error(apiMessage(error, t("size.measureFailed")));
+    } finally {
+      setMeasuring(false);
+    }
+  }
+
+  // Never measured: the words themselves are the trigger.
+  //
+  // A button here was a button on every row — ten of them down one column,
+  // shouting over the numbers the column exists to show. And the re-measure
+  // action already has a home: the row's ⋯ menu, where every other per-row
+  // action in this table lives. So the cell adds no chrome at all; the reader
+  // clicks the only thing in it that is already about the missing number.
   if (size === null) {
-    return <span className="whitespace-nowrap text-muted-foreground">{t("size.notMeasured")}</span>;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={measure}
+            disabled={measuring}
+            className="rounded whitespace-nowrap text-muted-foreground underline decoration-dotted decoration-from-font underline-offset-4 transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:no-underline"
+          >
+            {measuring ? t("size.measuring") : t("size.notMeasured")}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{t("size.measureHint")}</TooltipContent>
+      </Tooltip>
+    );
   }
 
   return (

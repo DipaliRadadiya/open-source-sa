@@ -25,6 +25,21 @@ export function controlApplicationProcess(id, action) {
   return api.post(`/applications/${id}/process/${action}`);
 }
 
+/**
+ * Measure this site on disk, now, and store the result.
+ *
+ * Nothing else computes it from scratch: file operations queue a re-measure
+ * about a minute later, and there is no schedule — so a site nobody has touched
+ * through the panel has never been measured at all. This is the only way to ask.
+ *
+ * `du` walks every inode, so the cost is the site's file count rather than its
+ * size. The API throttles it to 10/min for that reason; the caller shows the
+ * wait rather than pretending it is instant.
+ */
+export function measureApplicationSize(id) {
+  return api.post(`/applications/${id}/directory-size`);
+}
+
 export function retryProvisioning(id) {
   return api.post(`/applications/${id}/provision`);
 }
