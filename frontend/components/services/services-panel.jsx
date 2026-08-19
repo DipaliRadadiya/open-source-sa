@@ -146,7 +146,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
           <ul className="divide-y rounded-xl border">
             {installing.map((service) => (
               <li key={service.key} className="flex items-center justify-between gap-3 p-4">
-                <p className="min-w-0 truncate font-medium">{service.label}</p>
+                <p className="min-w-0 truncate text-sm font-medium">{service.label}</p>
                 <ServiceStatusBadge status={service.status} state={service.state} />
               </li>
             ))}

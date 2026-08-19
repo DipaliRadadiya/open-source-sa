@@ -47,7 +47,10 @@ export function ServiceAttentionList({ services, phpVersions = [], canManage, bu
           >
             <div className="min-w-0 space-y-1">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <p className="font-medium">{service.label}</p>
+                {/* text-sm, matching the running table on this same page. Left
+                    at the default it was 16px — the size of the section heading
+                    above it — so a row label competed with a section title. */}
+                <p className="text-sm font-medium">{service.label}</p>
                 <ServiceStatusBadge
                   status={service.status}
                   state={service.state}
