@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { formatBytes } from "@/lib/format/bytes";
 import { ChevronRight, Globe2, Plus, SearchX } from "lucide-react";
@@ -10,7 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
-import { LocalSearchInput } from "@/components/data-table/local-search-input";
+import { SearchInput } from "@/components/data-table/search-input";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
+import { useSetQuery } from "@/hooks/use-set-query";
+import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
@@ -19,6 +23,7 @@ import { ApplicationsCards } from "@/components/applications/applications-cards"
 import {
   ApplicationStatusBadge,
   ApplicationStatusNotes,
+  APPLICATION_STATUSES,
   STATUS_VARIANTS,
 } from "@/components/applications/application-status-badge";
 
@@ -108,27 +113,96 @@ function createdTimestamp(value) {
   return match ? Date.UTC(match[3], Number(match[2]) - 1, match[1], match[4], match[5], match[6]) : 0;
 }
 
-function Filters({ query, setQuery, statusFilter, setStatusFilter, typeFilter, setTypeFilter, statusOptions, typeOptions, t }) {
-  return <div className="flex flex-col gap-2 sm:flex-row"><LocalSearchInput value={query} onChange={setQuery} placeholder={t("searchPlaceholder")} /><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-full sm:w-40"><SelectValue placeholder={t("columns.status")} /></SelectTrigger><SelectContent><SelectItem value="all">{t("columns.status")}</SelectItem>{statusOptions.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select><Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger className="w-full sm:w-44"><SelectValue placeholder={t("columns.type")} /></SelectTrigger><SelectContent><SelectItem value="all">{t("columns.type")}</SelectItem>{typeOptions.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>;
+function Filters({ statusOptions, typeOptions, t }) {
+  const setQuery = useSetQuery();
+  const searchParams = useSearchParams();
+  const status = searchParams.get("status") ?? "all";
+  const siteType = searchParams.get("site_type") ?? "all";
+
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      {/* Server-side and debounced. The list pages at ten, so a browser-side
+          filter answered "which of these ten" while the reader was asking
+          "which of my sites" — and found nothing for anything on page two. */}
+      <SearchInput placeholder={t("searchPlaceholder")} />
+      <Select
+        value={status}
+        onValueChange={(v) => setQuery({ status: v === "all" ? undefined : v }, { resetPage: true })}
+      >
+        <SelectTrigger className="w-full sm:w-40">
+          <SelectValue placeholder={t("columns.status")} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{t("columns.status")}</SelectItem>
+          {statusOptions.map(([value, label]) => (
+            <SelectItem key={value} value={value}>{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={siteType}
+        onValueChange={(v) => setQuery({ site_type: v === "all" ? undefined : v }, { resetPage: true })}
+      >
+        <SelectTrigger className="w-full sm:w-44">
+          <SelectValue placeholder={t("columns.type")} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{t("columns.type")}</SelectItem>
+          {typeOptions.map(([value, label]) => (
+            <SelectItem key={value} value={value}>{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
-export function ApplicationsTable({ applications = [], canManage = false }) {
+/**
+ * The applications list.
+ *
+ * Search, filters, sort and paging all live in the URL and are answered by the
+ * API. They used to be React state over the whole table, which worked only
+ * while the whole table arrived in one response — once the backend began paging
+ * at ten, every one of them silently operated on the first page alone.
+ *
+ * `siteTypes` comes from `GET /site-types` rather than from the rows on screen:
+ * options derived from the current page can only offer the types that happen to
+ * be on it, so filtering to a type would become impossible as soon as its sites
+ * fell off page one.
+ */
+export function ApplicationsTable(props) {
+  // One transition shared by search, both filters and the pager — that shared
+  // signal is what puts a spinner in the search box and dims the table while
+  // the server answers, instead of the page appearing frozen.
+  return (
+    <NavTransitionProvider>
+      <ApplicationsList {...props} />
+    </NavTransitionProvider>
+  );
+}
+
+function ApplicationsList({ applications = [], meta, siteTypes = [], canManage = false }) {
   const t = useTranslations("applications");
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const statusOptions = useMemo(() => [...new Map(applications.map((application) => [application.status, application.status_title ?? application.status])).entries()], [applications]);
-  const typeOptions = useMemo(() => [...new Map(applications.map((application) => [application.site_type, application.site_type_title ?? application.site_type])).entries()], [applications]);
+  const searchParams = useSearchParams();
+  const setQuery = useSetQuery();
+
+  const filtering = Boolean(
+    searchParams.get("search") || searchParams.get("status") || searchParams.get("site_type"),
+  );
+
+  const statusOptions = useMemo(
+    () => APPLICATION_STATUSES.map((value) => [value, t(`status.${value}`)]),
+    [t],
+  );
+  const typeOptions = useMemo(
+    () => siteTypes.map((type) => [type.name, type.title ?? type.name]),
+    [siteTypes],
+  );
+
   const hasWorkingApplication = applications.some((application) => application.status === "pending" || application.status === "provisioning");
   useEffect(() => { if (!hasWorkingApplication) return undefined; const timer = window.setInterval(() => router.refresh(), 4000); return () => window.clearInterval(timer); }, [hasWorkingApplication, router]);
-  const filtered = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    return applications.filter((application) => {
-      const matchesSearch = !term || [application.name, application.domain, application.site_type_title, application.system_user?.username].filter(Boolean).some((value) => value.toLowerCase().includes(term));
-      return matchesSearch && (statusFilter === "all" || application.status === statusFilter) && (typeFilter === "all" || application.site_type === typeFilter);
-    });
-  }, [applications, query, statusFilter, typeFilter]);
+
   const createButton = canManage ? <Button asChild><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button> : null;
   const columns = useMemo(
     () => [
@@ -144,8 +218,61 @@ export function ApplicationsTable({ applications = [], canManage = false }) {
     ],
     [t],
   );
-  const filters = <Filters query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} typeFilter={typeFilter} setTypeFilter={setTypeFilter} statusOptions={statusOptions} typeOptions={typeOptions} t={t} />;
-  if (applications.length === 0) return <ApplicationEmptyState canManage={canManage} />;
-  if (!filtered.length) return <div className="space-y-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">{filters}<div className="flex flex-wrap items-center gap-2"><RefreshButton />{createButton}</div></div><EmptyState icon={SearchX} title={t("empty.filteredTitle")} description={t("empty.filteredDescription")} action={<Button variant="outline" onClick={() => { setQuery(""); setStatusFilter("all"); setTypeFilter("all"); }}>{t("empty.clearSearch")}</Button>} /></div>;
-  return <div className="space-y-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">{filters}<div className="flex flex-wrap items-center gap-2"><RefreshButton />{createButton}</div></div><div className="flex flex-wrap gap-2">{statusOptions.map(([status, label]) => <Badge key={status} variant={STATUS_VARIANTS[status] ?? "secondary"} className="font-normal">{label} {applications.filter((application) => application.status === status).length}</Badge>)}</div>{/* Cards below lg, the table from lg up — same rule as services and workers. Six columns cannot fit a phone, and the table quietly hid five of them. */}<div className="lg:hidden"><ApplicationsCards applications={filtered} canManage={canManage} /></div><div className="hidden lg:block"><DataTable columns={columns} data={filtered} sortable defaultSorting={[{ id: "created", desc: true }]} meta={{ canManage }} /></div></div>;
+
+  const filters = <Filters statusOptions={statusOptions} typeOptions={typeOptions} t={t} />;
+  const toolbar = (
+    <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      {filters}
+      <div className="flex flex-wrap items-center gap-2"><RefreshButton />{createButton}</div>
+    </div>
+  );
+
+  // Past the last page. Distinct from both other empties: the server has sites,
+  // this page just is not one of them — and the pager only renders when there
+  // are rows, so without this the screen that says nothing is here also removes
+  // the control that would take you back.
+  if (!applications.length && (meta?.current_page ?? 1) > 1) {
+    return (
+      <div className="space-y-4">
+        {toolbar}
+        <PageOutOfRange lastPage={meta?.last_page ?? 1} />
+      </div>
+    );
+  }
+
+  // No rows AND nothing asked for: this server genuinely has no sites.
+  if (!applications.length && !filtering) return <ApplicationEmptyState canManage={canManage} />;
+
+  if (!applications.length) {
+    return (
+      <div className="space-y-4">
+        {toolbar}
+        <EmptyState
+          icon={SearchX}
+          title={t("empty.filteredTitle")}
+          description={t("empty.filteredDescription")}
+          action={
+            <Button
+              variant="outline"
+              onClick={() => setQuery({ search: undefined, status: undefined, site_type: undefined }, { resetPage: true })}
+            >
+              {t("empty.clearSearch")}
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {toolbar}
+      {/* Cards below lg, the table from lg up — same rule as services and
+          workers. Six columns cannot fit a phone, and the table quietly hid
+          five of them. */}
+      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} /></div>
+      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage }} /></div>
+      <DataTablePagination meta={meta} />
+    </div>
+  );
 }

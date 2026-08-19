@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/page-header";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getApplication, getApplications, getSiteTypes } from "@/lib/applications/get-applications";
+import { getApplication, getAllApplications, getSiteTypes } from "@/lib/applications/get-applications";
 import { CloneApplicationPanel } from "@/components/applications/clone/clone-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -45,7 +45,7 @@ export default async function CloneApplicationPage({ params }) {
   // Needed only to answer "can this type be cloned at all" — a type that needs
   // a database and has no recipe is refused by the backend, and the screen says
   // so up front rather than after someone types a domain. Cached per request.
-  const [{ siteTypes }, { applications }] = await Promise.all([getSiteTypes(), getApplications()]);
+  const [{ siteTypes }, { applications }] = await Promise.all([getSiteTypes(), getAllApplications()]);
   const siteType = siteTypes.find((type) => type.name === application.site_type) ?? null;
 
   // Copies already made from this site. No endpoint needed — every application

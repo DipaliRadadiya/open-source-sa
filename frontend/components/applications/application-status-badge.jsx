@@ -19,6 +19,13 @@ import { Badge } from "@/components/ui/badge";
  * paused site read green "Running" in the header and red "Running" in the
  * sidebar.
  */
+// The statuses `filter[status]` accepts, in the order the API lists them.
+// Named here rather than derived from the rows on screen: the list pages at
+// ten, so derived options could only ever offer the statuses that happen to be
+// on the current page — and filtering to "failed" would stop being possible
+// the moment the failed site fell off page one.
+export const APPLICATION_STATUSES = ["pending", "provisioning", "active", "failed"];
+
 export const STATUS_VARIANTS = {
   active: "success",
   failed: "destructive",

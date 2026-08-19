@@ -3,7 +3,7 @@ import { Globe2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getApplications } from "@/lib/applications/get-applications";
+import { getApplications, getSiteTypes } from "@/lib/applications/get-applications";
 import { ApplicationsTable } from "@/components/applications/applications-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -16,11 +16,19 @@ export async function generateMetadata() {
 
 export default async function ApplicationsPage({ searchParams }) {
   const sp = await searchParams;
+  // Serialised so React's `cache` sees a stable primitive argument — an object
+  // literal is a fresh identity on every call and would defeat the dedupe.
+  const query = new URLSearchParams(
+    Object.entries(sp ?? {}).filter(([, v]) => typeof v === "string"),
+  ).toString();
+
   const [permissions, t, result] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
-    getApplications(),
+    getApplications(query),
   ]);
+  // The filter's options come from the catalog, not from the ten rows we hold.
+  const { siteTypes } = await getSiteTypes();
 
   if (!can(permissions, "application", "view")) redirect("/dashboard");
   if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
@@ -45,6 +53,8 @@ export default async function ApplicationsPage({ searchParams }) {
       ) : null}
       <ApplicationsTable
         applications={result.applications}
+        meta={result.meta}
+        siteTypes={siteTypes}
         canManage={can(permissions, "application", "manage")}
       />
     </div>

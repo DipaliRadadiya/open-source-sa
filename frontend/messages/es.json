@@ -33,7 +33,12 @@
     "unsavedTitle": "¿Salir sin guardar?",
     "unsavedDescription": "Los cambios de esta página no se han guardado. Se perderán.",
     "unsavedStay": "Quedarme en esta página",
-    "unsavedLeave": "Salir y perder los cambios"
+    "unsavedLeave": "Salir y perder los cambios",
+    "pageOutOfRange": {
+      "title": "Esa página no existe",
+      "description": "{lastPage, plural, one {Solo hay una página de resultados.} other {Solo hay # páginas de resultados.}}",
+      "action": "Volver a la primera página"
+    }
   },
   "auth": {
     "loginTitle": "Iniciar sesión",
@@ -4083,6 +4088,12 @@
     },
     "size": {
       "notMeasured": "Sin medir"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "provisioning": "Aprovisionando",
+      "active": "Activo",
+      "failed": "Con error"
     }
   },
   "panelUpdate": {
@@ -4805,11 +4816,6 @@
         "description": "Cuando se restaure una copia sobre un sitio, quedará registrada aquí: qué se restauró, cuándo y si funcionó."
       },
       "notStarted": "Sin empezar"
-    },
-    "pageOutOfRange": {
-      "title": "Esa página no existe",
-      "description": "{lastPage, plural, one {Solo hay una página de resultados.} other {Solo hay # páginas de resultados.}}",
-      "action": "Volver a la primera página"
     }
   },
   "sync": {

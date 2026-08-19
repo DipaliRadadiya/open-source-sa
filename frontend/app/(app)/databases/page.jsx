@@ -24,7 +24,12 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-export default async function DatabasesPage() {
+export default async function DatabasesPage({ searchParams }) {
+  const sp = await searchParams;
+  // Serialised so React's `cache` sees a stable primitive argument.
+  const query = new URLSearchParams(
+    Object.entries(sp ?? {}).filter(([, v]) => typeof v === "string"),
+  ).toString();
   const [permissions, t, format, live] = await Promise.all([
     getPermissions(),
     getTranslations("databases"),
@@ -43,8 +48,8 @@ export default async function DatabasesPage() {
   // table that then invites you to create a database nothing could store.
   const usable = engines.some((engine) => engine.running);
 
-  const [{ databases }, untracked, connections, exportList] = await Promise.all([
-    usable ? getDatabases() : Promise.resolve({ databases: [] }),
+  const [{ databases, meta: dbMeta }, untracked, connections, exportList] = await Promise.all([
+    usable ? getDatabases(query) : Promise.resolve({ databases: [] }),
     usable && canManage ? getUntracked(engines) : Promise.resolve([]),
     // Needed most when nothing is reachable — that is when someone has to look
     // at these settings.
@@ -102,6 +107,7 @@ export default async function DatabasesPage() {
           <UntrackedBanner untracked={untracked} canManage={canManage} />
           <DatabasesTable
             data={databases}
+            meta={dbMeta}
             engines={engines}
             canManage={canManage}
             lastBackup={lastBackup}

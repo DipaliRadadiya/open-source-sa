@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listMetaSchema } from "./list.js";
 
 /**
  * Databases, their users, and the engines they run on.
@@ -96,6 +97,7 @@ export const databaseSchema = z.object({
 
 export const databasesResponseSchema = z.object({
   databases: z.array(databaseSchema).default([]),
+  meta: listMetaSchema,
 });
 
 export const databaseResponseSchema = z.object({ database: databaseSchema });

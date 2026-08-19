@@ -8,7 +8,12 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
-import { LocalSearchInput } from "@/components/data-table/local-search-input";
+import { SearchInput } from "@/components/data-table/search-input";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
+import { NavTransitionProvider } from "@/components/data-table/nav-transition";
+import { useSetQuery } from "@/hooks/use-set-query";
+import { useSearchParams } from "next/navigation";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { AccessSwitch } from "@/components/system-users/access-switch";
 import { ShellSelect } from "@/components/system-users/shell-select";
@@ -88,16 +93,24 @@ function RowActionsCell({ row }) {
   return <SystemUserRowActions user={row.original} />;
 }
 
-export function SystemUsersTable({ data, shells = [], canManage = false }) {
+export function SystemUsersTable(props) {
+  // Shared transition: search box spinner and table dim while the server answers.
+  return (
+    <NavTransitionProvider>
+      <SystemUsersList {...props} />
+    </NavTransitionProvider>
+  );
+}
+
+function SystemUsersList({ data, meta, shells = [], canManage = false }) {
   const t = useTranslations("systemUsers");
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const setQuery = useSetQuery();
   const [createOpen, setCreateOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return data;
-    return data.filter((u) => u.username.toLowerCase().includes(q));
-  }, [data, query]);
+  // Filtered and paged by the API — filtering here would only ever search the
+  // ten rows this page happens to hold.
+  const filtered = data;
 
   const columns = [
     { accessorKey: "username", header: t("columns.username"), cell: UsernameCell },
@@ -118,16 +131,12 @@ export function SystemUsersTable({ data, shells = [], canManage = false }) {
       : []),
   ];
 
-  const isFiltered = query.trim().length > 0;
+  const isFiltered = Boolean(searchParams.get("search"));
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <LocalSearchInput
-          value={query}
-          onChange={setQuery}
-          placeholder={t("searchPlaceholder")}
-        />
+        <SearchInput placeholder={t("searchPlaceholder")} />
         <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
           <ReasonTooltip reason={canManage ? null : t("noPermission")}>
@@ -139,14 +148,16 @@ export function SystemUsersTable({ data, shells = [], canManage = false }) {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && (meta?.current_page ?? 1) > 1 ? (
+        <PageOutOfRange lastPage={meta?.last_page ?? 1} />
+      ) : filtered.length === 0 ? (
         isFiltered ? (
           <EmptyState
             icon={SearchX}
             title={t("empty.filteredTitle")}
             description={t("empty.filteredDesc")}
             action={
-              <Button variant="outline" onClick={() => setQuery("")}>
+              <Button variant="outline" onClick={() => setQuery({ search: undefined }, { resetPage: true })}>
                 {t("clearSearch")}
               </Button>
             }
@@ -180,6 +191,8 @@ export function SystemUsersTable({ data, shells = [], canManage = false }) {
           </div>
         </>
       )}
+
+      <DataTablePagination meta={meta} />
 
       {canManage ? (
         <CreateSystemUserDialog open={createOpen} onOpenChange={setCreateOpen} />

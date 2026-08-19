@@ -1,12 +1,20 @@
 import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { rolesResponseSchema } from "@/lib/schemas/role";
+import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 
 /**
- * All permission roles (GET /admin/roles — returns everything, not paginated).
+ * Every permission role, for the pickers — the role checkboxes on a user.
+ *
+ * `/admin/roles` pages at ten now, so this asks for the API's maximum. Taking
+ * the default would offer the first ten roles as though they were all of them,
+ * and a user saved without a role they were never shown is a permission bug
+ * that looks like a UI one.
+ *
  * Returns [] on any failure so pages can render an empty state.
  */
 export async function getRoles() {
-  const res = await serverFetch("/admin/roles");
+  const res = await serverFetch("/admin/roles", { searchParams: { per_page: 100 } });
   if (!res.ok) return [];
 
   try {
@@ -16,4 +24,21 @@ export async function getRoles() {
   } catch {
     return [];
   }
+}
+
+/**
+ * One page of the roles list, for the screen that manages them — search and
+ * paging answered by the API rather than applied to the page we hold.
+ */
+export async function getRolesPage(query = "") {
+  const result = await read("/admin/roles", rolesResponseSchema, {
+    searchParams: listQuery(query),
+  });
+  return {
+    roles: result.data?.roles ?? [],
+    meta: result.data?.meta ?? EMPTY_LIST_META,
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure,
+  };
 }

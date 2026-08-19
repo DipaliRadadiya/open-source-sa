@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listMetaSchema } from "./list.js";
 
 /**
  * The three states a grant can hold.
@@ -76,6 +77,7 @@ export const roleSchema = z.object({
 
 export const rolesResponseSchema = z.object({
   roles: z.array(roleSchema),
+  meta: listMetaSchema,
 });
 
 // Client form validation (name + description). The permission matrix is managed

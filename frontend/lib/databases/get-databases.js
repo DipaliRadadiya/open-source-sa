@@ -6,6 +6,7 @@ import {
   untrackedResponseSchema,
   connectionsResponseSchema,
 } from "@/lib/schemas/database";
+import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 
 /**
  * Shapes are imported, never restated here — an inline copy silently rejects
@@ -17,9 +18,16 @@ export const getEngines = cache(async function getEngines() {
   return { engines: data?.engines ?? [], failed };
 });
 
-export const getDatabases = cache(async function getDatabases() {
-  const { data, failed } = await read("/databases", databasesResponseSchema);
-  return { databases: data?.databases ?? [], failed };
+/**
+ * One page of the databases list. Search and the engine filter are the API's:
+ * it pages at ten, so a browser-side filter would only ever search the page we
+ * happen to hold.
+ */
+export const getDatabases = cache(async function getDatabases(query = "") {
+  const { data, failed } = await read("/databases", databasesResponseSchema, {
+    searchParams: listQuery(query, { filters: { engine: "engine" } }),
+  });
+  return { databases: data?.databases ?? [], meta: data?.meta ?? EMPTY_LIST_META, failed };
 });
 
 /**

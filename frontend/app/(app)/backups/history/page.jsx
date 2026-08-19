@@ -2,11 +2,11 @@ import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { backupCounts, getBackups } from "@/lib/backups/get-backups";
-import { getApplications } from "@/lib/applications/get-applications";
+import { getAllApplications } from "@/lib/applications/get-applications";
 import { BackupsHistory } from "@/components/backups/backups-history";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
-import { PageOutOfRange } from "@/components/backups/page-out-of-range";
+import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export default async function BackupsHistoryPage({ searchParams }) {
   const sp = await searchParams;
   const [{ backups, meta, failed }, { applications }, permissions, appPermissions, t] = await Promise.all([
     getBackups(sp),
-    getApplications(),
+    getAllApplications(),
     getPermissions(),
     getPermissions("application").catch(() => []),
     getTranslations("backups"),

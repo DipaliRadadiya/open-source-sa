@@ -9,8 +9,13 @@ import { Button } from "@/components/ui/button";
 import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
+import { useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/data-table/empty-state";
-import { LocalSearchInput } from "@/components/data-table/local-search-input";
+import { SearchInput } from "@/components/data-table/search-input";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
+import { NavTransitionProvider } from "@/components/data-table/nav-transition";
+import { useSetQuery } from "@/hooks/use-set-query";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import {
   Tooltip,
@@ -168,23 +173,33 @@ function RowActions({ database, onDelete, canManage }) {
   );
 }
 
-export function DatabasesTable({
+export function DatabasesTable(props) {
+  // One shared transition for search and paging, so the box spins and the table
+  // dims while the server answers.
+  return (
+    <NavTransitionProvider>
+      <DatabasesList {...props} />
+    </NavTransitionProvider>
+  );
+}
+
+function DatabasesList({
   data,
+  meta,
   engines = [],
   canManage = false,
   lastBackup = {},
   backupsUnknown = false,
 }) {
   const t = useTranslations("databases");
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const setQuery = useSetQuery();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleting, setDeleting] = useState(null);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return data;
-    return data.filter((db) => db.name.toLowerCase().includes(q));
-  }, [data, query]);
+  // The API filters and pages; the browser no longer re-filters the page it
+  // was handed, which could only ever search ten rows of a longer list.
+  const filtered = data;
 
   // With one engine every row says the same word, and a column of one repeated
   // value is noise dressed as information.
@@ -263,30 +278,28 @@ export function DatabasesTable({
     </ReasonTooltip>
   );
 
-  const isFiltered = query.trim().length > 0;
+  const isFiltered = Boolean(searchParams.get("search"));
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <LocalSearchInput
-          value={query}
-          onChange={setQuery}
-          placeholder={t("searchPlaceholder")}
-        />
+        <SearchInput placeholder={t("searchPlaceholder")} />
         <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
           {createButton}
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && (meta?.current_page ?? 1) > 1 ? (
+        <PageOutOfRange lastPage={meta?.last_page ?? 1} />
+      ) : filtered.length === 0 ? (
         isFiltered ? (
           <EmptyState
             icon={SearchX}
             title={t("empty.filteredTitle")}
             description={t("empty.filteredDesc")}
             action={
-              <Button variant="outline" onClick={() => setQuery("")}>
+              <Button variant="outline" onClick={() => setQuery({ search: undefined }, { resetPage: true })}>
                 {t("empty.clearSearch")}
               </Button>
             }
@@ -316,6 +329,8 @@ export function DatabasesTable({
           }}
         />
       )}
+
+      <DataTablePagination meta={meta} />
 
       {canManage ? (
         <>

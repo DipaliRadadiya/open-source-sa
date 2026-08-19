@@ -33,7 +33,12 @@
     "unsavedTitle": "बिना सहेजे बाहर जाएँ?",
     "unsavedDescription": "इस पेज पर किए बदलाव सहेजे नहीं गए हैं। वे चले जाएँगे।",
     "unsavedStay": "इसी पेज पर रहें",
-    "unsavedLeave": "बाहर जाएँ और बदलाव खोएँ"
+    "unsavedLeave": "बाहर जाएँ और बदलाव खोएँ",
+    "pageOutOfRange": {
+      "title": "वह पेज मौजूद नहीं है",
+      "description": "{lastPage, plural, one {परिणामों का केवल एक पेज है।} other {परिणामों के केवल # पेज हैं।}}",
+      "action": "पहले पेज पर वापस जाएँ"
+    }
   },
   "auth": {
     "loginTitle": "साइन इन करें",
@@ -4083,6 +4088,12 @@
     },
     "size": {
       "notMeasured": "मापा नहीं गया"
+    },
+    "status": {
+      "pending": "लंबित",
+      "provisioning": "तैयार हो रहा है",
+      "active": "सक्रिय",
+      "failed": "विफल"
     }
   },
   "panelUpdate": {
@@ -4805,11 +4816,6 @@
         "description": "जब किसी साइट पर बैकअप वापस रखा जाएगा, वह यहाँ दर्ज होगा — क्या रिस्टोर हुआ, कब, और सफल रहा या नहीं।"
       },
       "notStarted": "शुरू नहीं हुआ"
-    },
-    "pageOutOfRange": {
-      "title": "वह पेज मौजूद नहीं है",
-      "description": "{lastPage, plural, one {परिणामों का केवल एक पेज है।} other {परिणामों के केवल # पेज हैं।}}",
-      "action": "पहले पेज पर वापस जाएँ"
     }
   },
   "sync": {

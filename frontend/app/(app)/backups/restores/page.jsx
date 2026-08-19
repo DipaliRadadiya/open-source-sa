@@ -1,10 +1,10 @@
 import { getTranslations } from "next-intl/server";
 import { getRestores } from "@/lib/backups/get-backups";
-import { getApplications } from "@/lib/applications/get-applications";
+import { getAllApplications } from "@/lib/applications/get-applications";
 import { RestoresList } from "@/components/backups/restores-list";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
-import { PageOutOfRange } from "@/components/backups/page-out-of-range";
+import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function RestoresPage({ searchParams }) {
   const sp = await searchParams;
   const [{ restores, meta, failed }, { applications }, t] = await Promise.all([
     getRestores(sp),
-    getApplications(),
+    getAllApplications(),
     getTranslations("backups"),
   ]);
 

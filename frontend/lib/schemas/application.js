@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listMetaSchema } from "./list.js";
 
 const textField = z.object({
   name: z.string(),
@@ -43,6 +44,7 @@ export const systemUserOptionSchema = z.object({
 
 export const systemUsersResponseSchema = z.object({
   system_users: z.array(systemUserOptionSchema).default([]),
+  meta: listMetaSchema,
 });
 
 // Read live from systemd on every request, so it is never stale — and absent
@@ -154,6 +156,7 @@ export const applicationSchema = z.object({
 
 export const applicationsResponseSchema = z.object({
   applications: z.array(applicationSchema).default([]),
+  meta: listMetaSchema,
 });
 
 export const applicationResponseSchema = z.object({

@@ -8,7 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
-import { LocalSearchInput } from "@/components/data-table/local-search-input";
+import { SearchInput } from "@/components/data-table/search-input";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
+import { NavTransitionProvider } from "@/components/data-table/nav-transition";
+import { useSetQuery } from "@/hooks/use-set-query";
+import { useSearchParams } from "next/navigation";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { SyncPermissionsButton } from "@/components/admin/roles/sync-permissions-button";
 import { RoleRowActions } from "@/components/admin/roles/role-row-actions";
@@ -59,20 +64,23 @@ function RowActionsCell({ row }) {
   return <RoleRowActions role={row.original} />;
 }
 
-export function RolesTable({ data }) {
+export function RolesTable(props) {
+  return (
+    <NavTransitionProvider>
+      <RolesList {...props} />
+    </NavTransitionProvider>
+  );
+}
+
+function RolesList({ data, meta }) {
   const t = useTranslations("roles");
   // The list returns everything at once, so filter on the client — no round-trip.
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const setQuery = useSetQuery();
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return data;
-    return data.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        (r.description ?? "").toLowerCase().includes(q),
-    );
-  }, [data, query]);
+  // Filtered and paged by the API — filtering here would only ever search the
+  // ten rows this page happens to hold.
+  const filtered = data;
 
   const columns = [
     { accessorKey: "name", header: t("columns.name"), cell: NameCell },
@@ -86,16 +94,12 @@ export function RolesTable({ data }) {
     },
   ];
 
-  const isFiltered = query.trim().length > 0;
+  const isFiltered = Boolean(searchParams.get("search"));
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <LocalSearchInput
-          value={query}
-          onChange={setQuery}
-          placeholder={t("searchPlaceholder")}
-        />
+        <SearchInput placeholder={t("searchPlaceholder")} />
         <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
           <SyncPermissionsButton />
@@ -108,14 +112,16 @@ export function RolesTable({ data }) {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && (meta?.current_page ?? 1) > 1 ? (
+        <PageOutOfRange lastPage={meta?.last_page ?? 1} />
+      ) : filtered.length === 0 ? (
         isFiltered ? (
           <EmptyState
             icon={SearchX}
             title={t("empty.filteredTitle")}
             description={t("empty.filteredDesc")}
             action={
-              <Button variant="outline" onClick={() => setQuery("")}>
+              <Button variant="outline" onClick={() => setQuery({ search: undefined }, { resetPage: true })}>
                 {t("empty.clear")}
               </Button>
             }
@@ -146,6 +152,8 @@ export function RolesTable({ data }) {
           </div>
         </>
       )}
+
+      <DataTablePagination meta={meta} />
     </div>
   );
 }

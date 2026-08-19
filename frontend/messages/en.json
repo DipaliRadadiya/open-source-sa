@@ -33,7 +33,12 @@
     "unsavedTitle": "Leave without saving?",
     "unsavedDescription": "Your changes on this page have not been saved. They will be lost.",
     "unsavedStay": "Stay on this page",
-    "unsavedLeave": "Leave and lose changes"
+    "unsavedLeave": "Leave and lose changes",
+    "pageOutOfRange": {
+      "title": "That page does not exist",
+      "description": "{lastPage, plural, one {There is only one page of results.} other {There are only # pages of results.}}",
+      "action": "Back to the first page"
+    }
   },
   "systemUsers": {
     "title": "System Users",
@@ -4083,6 +4088,12 @@
     },
     "size": {
       "notMeasured": "Not measured"
+    },
+    "status": {
+      "pending": "Pending",
+      "provisioning": "Provisioning",
+      "active": "Active",
+      "failed": "Failed"
     }
   },
   "panelUpdate": {
@@ -4805,11 +4816,6 @@
         "description": "Try a different site or status."
       },
       "notStarted": "Not started"
-    },
-    "pageOutOfRange": {
-      "title": "That page does not exist",
-      "description": "{lastPage, plural, one {There is only one page of results.} other {There are only # pages of results.}}",
-      "action": "Back to the first page"
     }
   },
   "sync": {

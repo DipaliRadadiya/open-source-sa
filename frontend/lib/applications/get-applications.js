@@ -9,13 +9,54 @@ import {
   siteTypesResponseSchema,
   wafOptionsResponseSchema,
 } from "@/lib/schemas/application";
+import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 import { applicationPhpResponseSchema } from "@/lib/schemas/php-settings";
 import { applicationFail2banResponseSchema } from "@/lib/schemas/application-fail2ban";
 import { applicationStagingResponseSchema } from "@/lib/schemas/application-staging";
 
 
-export const getApplications = cache(async function getApplications() {
-  const result = await read("/applications", applicationsResponseSchema);
+/**
+ * One page of the applications list.
+ *
+ * Search, both filters and the sort are the API's, not the browser's: it pages
+ * at ten, so filtering the page we happen to hold would answer "which of these
+ * ten" while the reader is asking "which of my sites".
+ *
+ * Both filters are validated server-side against the real sets, so a stale
+ * value in the URL is a 422 rather than an empty list — which is the point.
+ * "You have no applications" and "that filter matched nothing" look identical
+ * on screen and mean completely different things.
+ */
+export const getApplications = cache(async function getApplications(query = "") {
+  const result = await read("/applications", applicationsResponseSchema, {
+    searchParams: listQuery(query, { filters: { status: "status", site_type: "site_type" } }),
+  });
+
+  return {
+    applications: result.data?.applications ?? [],
+    meta: result.data?.meta ?? EMPTY_LIST_META,
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure,
+  };
+});
+
+/**
+ * Every application, for the pickers — a backup filter's dropdown, the clone
+ * target list — which need the whole set rather than a page of it.
+ *
+ * Capped at the API's own maximum of 100. A server with more sites than that
+ * would silently lose the tail here, which is worth knowing about; the honest
+ * fix at that point is a searchable combobox that queries the API, not a
+ * bigger number.
+ *
+ * Takes no arguments so React's `cache` actually dedupes it — three of these
+ * callers run on the same request.
+ */
+export const getAllApplications = cache(async function getAllApplications() {
+  const result = await read("/applications", applicationsResponseSchema, {
+    searchParams: { per_page: 100 },
+  });
   return { applications: result.data?.applications ?? [], failed: result.failed, status: result.status, failure: result.failure };
 });
 
