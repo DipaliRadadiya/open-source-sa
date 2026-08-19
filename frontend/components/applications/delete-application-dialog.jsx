@@ -20,6 +20,17 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  * The files are a separate decision and default to being kept, which matches
  * the API. Two things people expect to happen and don't are said out loud: the
  * code on disk stays, and a database created for this site stays too.
+ *
+ * `remove_files` also destroys this site's backups — every row AND the archives
+ * in the storage destination. That is the whole reason the checkbox names them:
+ * "delete the files" reads as recoverable, and it is the one decision here that
+ * is not.
+ *
+ * Leaving it unticked is not "keep your backups" either. The backup rows cascade
+ * with the application, so they leave the panel regardless; only the archives
+ * survive, and nothing in the panel can list or delete them afterwards. Both
+ * halves of that are said, because a half-truth here is what leaves somebody
+ * paying for buckets they cannot find.
  */
 export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo }) {
   const t = useTranslations("applications.delete");

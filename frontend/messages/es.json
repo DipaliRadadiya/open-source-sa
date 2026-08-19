@@ -2829,9 +2829,9 @@
     "delete": {
       "title": "¿Eliminar {name}?",
       "description": "Se elimina la configuración del sitio y {domain} deja de servirse. Esto no se puede deshacer.",
-      "removeFiles": "Eliminar también los archivos del sitio",
-      "removeFilesOn": "Se eliminará del servidor el directorio del sitio y todo su contenido.",
-      "removeFilesOff": "Los archivos permanecen en el servidor. Solo se eliminan el registro del panel y la configuración del sitio.",
+      "removeFiles": "Eliminar también los archivos y las copias de seguridad del sitio",
+      "removeFilesOn": "Se eliminan el directorio del sitio y todas sus copias de seguridad, incluidos los archivos guardados en tu almacenamiento.",
+      "removeFilesOff": "Los archivos permanecen en el servidor. Las copias de seguridad del sitio desaparecen del panel junto con él, pero sus archivos siguen en tu almacenamiento: elimínalos allí si ya no los quieres.",
       "databaseNote": "La base de datos creada para esta aplicación se conserva. Elimínala desde Bases de datos si ya no la necesitas.",
       "confirmLabel": "Escribe <code>{domain}</code> para confirmar",
       "submit": "Eliminar aplicación",

@@ -2829,9 +2829,9 @@
     "delete": {
       "title": "Delete {name}?",
       "description": "The site configuration is removed and {domain} stops being served. This cannot be undone.",
-      "removeFiles": "Also delete the site’s files",
-      "removeFilesOn": "The site’s directory and everything in it will be deleted from the server.",
-      "removeFilesOff": "The files stay on the server. Only the panel record and the site configuration are removed.",
+      "removeFiles": "Also delete the site’s files and backups",
+      "removeFilesOn": "The site’s directory, and every backup it has — including the archives in your storage — are deleted.",
+      "removeFilesOff": "The files stay on the server. The site’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
       "databaseNote": "A database created for this application is kept. Remove it from Databases if you no longer need it.",
       "confirmLabel": "Type <code>{domain}</code> to confirm",
       "submit": "Delete application",
