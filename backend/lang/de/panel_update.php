@@ -8,6 +8,7 @@ return [
         'failed' => 'Update fehlgeschlagen',
     ],
     'steps' => [
+        'preflight_git' => 'Panel-Repository wird geprüft',
         'maintenance_on' => 'Panel wird in den Wartungsmodus versetzt',
         'backup_database' => 'Datenbank wird gesichert',
         'fetch_release' => 'Version wird heruntergeladen',
@@ -26,6 +27,7 @@ return [
     ],
     'reasons' => [
         'launch' => 'Das Update konnte nicht gestartet werden.',
+        'preflight_git' => 'Auf das Panel-Repository konnte nicht zugegriffen werden.',
         'maintenance_on' => 'Das Panel konnte nicht in den Wartungsmodus versetzt werden.',
         'backup_database' => 'Die Datenbanksicherung schlug fehl, daher wurde das Update abgebrochen, bevor etwas geändert wurde.',
         'fetch_release' => 'Die Version konnte nicht heruntergeladen werden. Prüfen Sie die Internetverbindung des Servers.',

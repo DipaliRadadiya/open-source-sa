@@ -8,6 +8,7 @@ return [
         'failed' => 'Échec de la mise à jour',
     ],
     'steps' => [
+        'preflight_git' => 'Vérification du dépôt du panneau',
         'maintenance_on' => 'Passage du panneau en mode maintenance',
         'backup_database' => 'Sauvegarde de la base de données',
         'fetch_release' => 'Téléchargement de la version',
@@ -26,6 +27,7 @@ return [
     ],
     'reasons' => [
         'launch' => 'La mise à jour n’a pas pu être lancée.',
+        'preflight_git' => 'Le dépôt du panneau n’a pas pu être lu.',
         'maintenance_on' => 'Le panneau n’a pas pu être mis en mode maintenance.',
         'backup_database' => 'La sauvegarde de la base de données a échoué ; la mise à jour s’est arrêtée sans rien modifier.',
         'fetch_release' => 'La version n’a pas pu être téléchargée. Vérifiez que le serveur accède à internet.',

@@ -8,6 +8,7 @@ return [
         'failed' => 'La actualización falló',
     ],
     'steps' => [
+        'preflight_git' => 'Comprobando el repositorio del panel',
         'maintenance_on' => 'Poniendo el panel en modo de mantenimiento',
         'backup_database' => 'Copiando la base de datos',
         'fetch_release' => 'Descargando la versión',
@@ -26,6 +27,7 @@ return [
     ],
     'reasons' => [
         'launch' => 'No se pudo iniciar la actualización.',
+        'preflight_git' => 'No se pudo leer el repositorio del panel.',
         'maintenance_on' => 'No se pudo poner el panel en modo de mantenimiento.',
         'backup_database' => 'La copia de la base de datos falló, así que la actualización se detuvo sin cambiar nada.',
         'fetch_release' => 'No se pudo descargar la versión. Comprueba que el servidor tenga acceso a internet.',

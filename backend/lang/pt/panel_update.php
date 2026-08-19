@@ -8,6 +8,7 @@ return [
         'failed' => 'A atualização falhou',
     ],
     'steps' => [
+        'preflight_git' => 'Verificando o repositório do painel',
         'maintenance_on' => 'A colocar o painel em modo de manutenção',
         'backup_database' => 'A copiar a base de dados',
         'fetch_release' => 'A descarregar a versão',
@@ -26,6 +27,7 @@ return [
     ],
     'reasons' => [
         'launch' => 'Não foi possível iniciar a atualização.',
+        'preflight_git' => 'Não foi possível ler o repositório do painel.',
         'maintenance_on' => 'Não foi possível colocar o painel em modo de manutenção.',
         'backup_database' => 'A cópia da base de dados falhou, por isso a atualização parou sem alterar nada.',
         'fetch_release' => 'Não foi possível descarregar a versão. Verifique se o servidor tem acesso à internet.',

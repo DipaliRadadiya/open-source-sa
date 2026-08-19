@@ -26,6 +26,7 @@ class UpdateScript
 {
     /** Ordered steps. The runner echoes each one into the state file. */
     public const STEPS = [
+        'preflight_git',
         'maintenance_on',
         'backup_database',
         'fetch_release',
@@ -63,6 +64,25 @@ class UpdateScript
         $state = $this->statePath($update);
         $rollbackTo = (string) $update->from_commit;
 
+        // Every git call carries the safe.directory exception itself rather
+        // than relying on one being configured somewhere.
+        //
+        // The repository is owned by the panel's own account and this script
+        // runs as root, which git refuses since CVE-2022-24765 — "detected
+        // dubious ownership", exit 128. install.sh knows this and writes the
+        // exception into root's ~/.gitconfig, but the update is launched
+        // through `systemd-run`, which starts the unit with its own
+        // environment: HOME is not root's shell home, git never reads that
+        // file, and the exception may as well not exist.
+        //
+        // It went unnoticed because a dry run echoes every step, so the only
+        // git command that actually ran was the `rev-parse` inside finish() —
+        // whose failure was swallowed by `|| echo unknown` and recorded as
+        // `"commit":"unknown"` beside a cheerful `"status":"succeeded"`. A
+        // real update would have failed at fetch_release and then failed to
+        // roll back, because rollback is a git checkout too.
+        $git = sprintf('git -c %s -C %s', escapeshellarg('safe.directory='.$repo), escapeshellarg($repo));
+
         // Health check goes through the panel's own URL, not 127.0.0.1: the
         // web server routes by hostname and a bare-IP request 404s, which
         // would fail every check and roll back successful updates.
@@ -89,7 +109,7 @@ class UpdateScript
 
         finish() {
             printf '{"step":"%s","status":"%s","reason":"%s","commit":"%s","at":"%s"}\\n' \\
-                "\$STEP" "\$1" "\${2:-}" "\$(git -C {$repo} rev-parse HEAD 2>/dev/null || echo unknown)" \\
+                "\$STEP" "\$1" "\${2:-}" "\$({$git} rev-parse HEAD 2>/dev/null || echo unknown)" \\
                 "\$(date -u +%FT%TZ)" > "\$STATE"
         }
 
@@ -100,7 +120,7 @@ class UpdateScript
         rollback() {
             local failed_step="\$STEP"
             note "rollback"
-            {$run}git -C {$repo} checkout --force {$rollbackTo}
+            {$run}{$git} checkout --force {$rollbackTo}
             {$run}{$php} {$backend}/artisan up
             finish failed "\$failed_step"
             exit 1
@@ -109,6 +129,15 @@ class UpdateScript
         trap rollback ERR
         set -e
 
+        # Real in both modes, and first. A dry run exists to answer "would the
+        # update work", and one that echoes every command cannot answer it —
+        # this one reported success on a box where the very first real command
+        # fails. Reading HEAD changes nothing and proves the thing every later
+        # step depends on: that git can operate on this repository as this
+        # user. Cheap enough to be worth doing before maintenance mode goes on.
+        note preflight_git
+        {$git} rev-parse HEAD > /dev/null
+
         note maintenance_on
         {$run}{$php} {$backend}/artisan down --retry=60
 
@@ -116,10 +145,10 @@ class UpdateScript
         {$run}{$php} {$backend}/artisan panel:backup-database
 
         note fetch_release
-        {$run}git -C {$repo} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
+        {$run}{$git} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
 
         note checkout_release
-        {$run}git -C {$repo} checkout --force {$tag}
+        {$run}{$git} checkout --force {$tag}
 
         note composer_install
         {$run}composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d {$backend}

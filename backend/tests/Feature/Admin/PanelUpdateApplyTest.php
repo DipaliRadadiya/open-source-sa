@@ -105,8 +105,34 @@ describe('the generated update script', function () {
     it('echoes instead of executing in dry-run mode', function () {
         $dry = app(UpdateScript::class)->render($this->update, '99.0.0', dryRun: true);
 
-        expect($dry)->toContain('echo DRY-RUN: git -C')
-            ->and($dry)->not->toContain("\ngit -C");
+        expect($dry)->toContain('echo DRY-RUN: git -c')
+            // The mutating ones. `checkout` and `fetch` must never run for
+            // real here; the preflight read below is the deliberate exception.
+            ->and($dry)->not->toContain("\ngit -c safe.directory=/var/www/panel -C '/var/www/panel' checkout")
+            ->and($dry)->not->toContain("\ngit -c safe.directory=/var/www/panel -C '/var/www/panel' fetch");
+    });
+
+    it('really reads the repository during a dry run, rather than echoing that too', function () {
+        // A dry run exists to answer "would the update work". Echoing every
+        // command cannot answer it: on a box where git refuses the repository
+        // as dubiously owned — the panel runs as its own user, the update runs
+        // as root through systemd-run, which does not carry root's gitconfig —
+        // a dry run reported `succeeded` while the first real command of a real
+        // update would have failed, and the rollback with it.
+        $dry = app(UpdateScript::class)->render($this->update, '99.0.0', dryRun: true);
+
+        expect($dry)->toContain('note preflight_git')
+            ->and($dry)->toMatch('/\nnote preflight_git\n\s*git -c /');
+    });
+
+    it('carries the safe.directory exception on every git call', function () {
+        // Not left to ambient config: install.sh writes the exception into
+        // root's ~/.gitconfig, and `systemd-run` starts the update with its
+        // own environment, so git never reads that file.
+        $script = app(UpdateScript::class)->render($this->update, '99.0.0');
+
+        expect($script)->not->toMatch('/(?<!-c )git -C/')
+            ->and(substr_count($script, "git -c 'safe.directory="))->toBeGreaterThanOrEqual(4);
     });
 
     it('does not let the dry-run health check fail into a rollback', function () {
@@ -299,7 +325,10 @@ describe('the status endpoint', function () {
 
         $response->assertOk()
             ->assertJsonPath('panel_update.current_step', 'migrate')
-            ->assertJsonPath('panel_update.step_number', 6)
+            // Derived, not hardcoded: the ordinal is a property of the step
+            // list, and pinning the number here makes inserting a step fail an
+            // assertion about something else entirely.
+            ->assertJsonPath('panel_update.step_number', array_search('migrate', UpdateScript::STEPS, true) + 1)
             ->assertJsonPath('panel_update.total_steps', count(UpdateScript::STEPS));
 
         expect($response->json('panel_update.current_step_title'))

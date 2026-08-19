@@ -15,6 +15,7 @@ return [
     ],
 
     'steps' => [
+        'preflight_git' => 'Checking the panel repository',
         'maintenance_on' => 'Putting the panel into maintenance mode',
         'backup_database' => 'Backing up the database',
         'fetch_release' => 'Downloading the release',
@@ -39,6 +40,7 @@ return [
      */
     'reasons' => [
         'launch' => 'The update could not be started.',
+        'preflight_git' => 'The panel repository could not be read.',
         'maintenance_on' => 'The panel could not be put into maintenance mode.',
         'backup_database' => 'The database backup failed, so the update stopped before changing anything.',
         'fetch_release' => 'The release could not be downloaded. Check the server can reach the internet.',
