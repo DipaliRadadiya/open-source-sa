@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useWatch } from "react-hook-form";
-import { CalendarClock, ChevronDown, Database, HardDrive, Layers, TriangleAlert } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronDown,
+  Database,
+  ExternalLink,
+  HardDrive,
+  Layers,
+  TriangleAlert,
+} from "lucide-react";
 import { BACKUP_TYPES } from "@/lib/schemas/backup";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -303,9 +311,10 @@ export function BackupSettingsFields({
             <div className="space-y-2">
               <p>{t("noDestinations")}</p>
               <Button asChild size="sm" variant="outline">
-                <Link href="/integrations/storage">
+                <Link href="/integrations/storage" target="_blank" rel="noreferrer" prefetch={false}>
                   <HardDrive className="size-4" />
                   {t("addDestination")}
+                  <ExternalLink className="size-3.5" />
                 </Link>
               </Button>
             </div>
@@ -327,9 +336,11 @@ export function BackupSettingsFields({
                     <span className="text-muted-foreground">{onlyDestination.bucket}</span>
                     <Link
                       href="/integrations/storage"
-                      className="ml-auto text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      target="_blank" rel="noreferrer" prefetch={false}
+                      className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                     >
                       {t("manageStorage")}
+                      <ExternalLink className="size-3" />
                     </Link>
                   </div>
                 ) : (
@@ -362,9 +373,11 @@ export function BackupSettingsFields({
                       {t("destinationFailing", { name: failingDestination.name })}{" "}
                       <Link
                         href="/integrations/storage"
-                        className="font-medium text-primary underline-offset-4 hover:underline"
+                        target="_blank" rel="noreferrer" prefetch={false}
+                        className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
                       >
                         {t("manageStorage")}
+                        <ExternalLink className="size-3" />
                       </Link>
                     </span>
                   </p>
