@@ -34,9 +34,11 @@ class DatabaseController extends Controller
      * Supported engines + their live availability (capability list).
      *
      * `installable` says whether the panel can put this engine on the server
-     * itself. MongoDB is operable but not installable yet — it needs its own apt
-     * repository — and the catalog saying so is what stops the setup page
-     * offering a button that cannot work.
+     * itself — read from whether the engine's config entry names an installer,
+     * so it cannot drift from what is actually wired. Every engine has one as
+     * of MongoDB gaining `MongoDbInstaller`; the field stays because an engine
+     * can be operable without being installable, and the catalog saying so is
+     * what stops the setup page offering a button that cannot work.
      */
     public function engines(DatabaseManager $manager, EngineInstallerManager $installers): JsonResponse
     {

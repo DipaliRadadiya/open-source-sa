@@ -1172,12 +1172,25 @@ return [
         ['key' => 'nginx', 'unit' => 'nginx', 'label' => 'Nginx'],
         ['key' => 'apache', 'unit' => 'apache2', 'label' => 'Apache'],
         ['key' => 'openlitespeed', 'unit' => 'lshttpd', 'label' => 'OpenLiteSpeed'],
-        ['key' => 'mysql', 'unit' => 'mysql', 'label' => 'MySQL'],
-        ['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB'],
-        ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB'],
+        /*
+        | `install` names the runtime_installs row this service's install is
+        | tracked under, as [runtime, version]. Present it and the service list
+        | shows the entry while it is installing and after a failed install,
+        | instead of the row simply not existing — which reads as "I asked for
+        | MySQL, where did it go".
+        |
+        | Config rather than a match() in the manager on purpose. Setup's
+        | progressFor() is a match over database|php|node with a null default,
+        | and that is exactly why a failed fail2ban install is invisible there:
+        | a match is a list somebody forgets to extend. Omit the key and the
+        | service behaves as before — absent until its unit exists.
+        */
+        ['key' => 'mysql', 'unit' => 'mysql', 'label' => 'MySQL', 'install' => ['database', 'mysql']],
+        ['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB', 'install' => ['database', 'mariadb']],
+        ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB', 'install' => ['database', 'mongodb']],
         ['key' => 'redis', 'unit' => 'redis-server', 'label' => 'Redis'],
         ['key' => 'supervisor', 'unit' => 'supervisor', 'label' => 'Supervisor'],
-        ['key' => 'fail2ban', 'unit' => 'fail2ban', 'label' => 'Fail2ban'],
+        ['key' => 'fail2ban', 'unit' => 'fail2ban', 'label' => 'Fail2ban', 'install' => ['fail2ban', 'latest']],
     ],
 
     'protected_services' => array_values(array_filter(explode(

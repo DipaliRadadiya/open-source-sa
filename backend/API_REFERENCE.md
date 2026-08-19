@@ -3593,12 +3593,28 @@ Live status of every managed systemd service.
 ```json
 {"services": [{
   "key": "nginx", "label": "Nginx", "unit": "nginx.service",
+  "state": "installed",
   "status": "active", "enabled": true, "protected": true,
   "actions": ["start", "stop", "restart", "reload"],
   "testable": true,
+  "install_reason": null, "install_message": null, "retryable": false,
   "usage": {"memory_bytes": 5242880, "memory_human": "5 MB", "memory_percent": 0.06, "cpu_percent": null, "tasks": 4}
 }]}
 ```
+
+**`state` — switch on this, not on `status`.** Three values:
+
+| `state` | meaning |
+|---|---|
+| `installed` | the unit exists; `status` is systemd's answer (`active`, `inactive`, `failed`, …) |
+| `installing` | the panel is installing it right now; there is no unit yet |
+| `install_failed` | the install was attempted and failed; `install_reason` and `install_message` say why, and `retryable` is `true` |
+
+A service the panel can install now appears **while it is installing and after a failed install**, instead of being absent — the row vanishing entirely reads as "the panel forgot", when the truth is "still going" or "it failed". Applies to the database engines and fail2ban; anything with no installer (nginx, Apache, Redis, Supervisor) is still absent until its unit exists.
+
+**Those rows are inert:** `actions` is `[]`, `usage` and `log_keys` are empty, `testable` is `false`. There is no unit to act on. Retry belongs on the setup page, which is where the install was started — `retryable` is there so the row can link to it, not so it grows its own button.
+
+**`status` is never null**, in any state — `installing` and `install_failed` are returned as the status string too, so a client typing it as a string keeps working.
 
 `protected: true` — cannot be stopped or disabled (nginx, php-fpm, the panel's own services).
 

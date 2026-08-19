@@ -3,6 +3,8 @@
 namespace App\Services\Server;
 
 use App\Contracts\PhpStack;
+use App\Enums\InstallStatus;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
 
 /**
@@ -68,13 +70,25 @@ class ServiceManager
         $state = $this->inspect($service['unit']);
 
         if (! $state['installed']) {
-            return null;
+            // Not on the box — but it may be on its way, or have tried and
+            // failed. Either is something the user asked for and should be able
+            // to see here; only a service nobody has ever asked for stays
+            // absent.
+            return $this->describePendingInstall($service);
         }
 
         return [
             'key' => $service['key'],
             'label' => $service['label'],
             'unit' => $service['unit'],
+            // Always `installed` here: the unit exists, whatever it is doing.
+            // A single field for the frontend to switch on, rather than
+            // inferring the difference from a status string that means
+            // something else.
+            'state' => 'installed',
+            'install_reason' => null,
+            'install_message' => null,
+            'retryable' => false,
             'status' => $state['status'],
             'enabled' => $state['enabled'],
             'protected' => $this->isProtected($service['unit']),
@@ -88,6 +102,68 @@ class ServiceManager
             // rather than a second way to read a log. Only sources that exist
             // on the box appear, so the button is never a dead end.
             'log_keys' => $this->logKeys($service['key']),
+        ];
+    }
+
+    /**
+     * A row for a service whose unit is absent but whose install is in progress
+     * or has failed — or null when nobody has ever tried to install it.
+     *
+     * Without this the service simply vanishes from the list, which reads as
+     * "the panel forgot" rather than "the install is still going" or "the
+     * install failed". A failed engine is the case that matters: it is silent
+     * everywhere the user is likely to look next.
+     *
+     * **Reads the same `runtime_installs` rows the setup page and
+     * `GET /databases/engines` read.** Three readers of one source, not three
+     * copies of one fact — the copies are what would let two screens disagree.
+     *
+     * The row is deliberately inert: no actions, no usage, not testable, no
+     * logs. There is no unit to act on, and offering a Restart button for
+     * something that does not exist is worse than offering nothing.
+     *
+     * @param  array{key: string, unit: string, label: string, install?: array{0: string, 1: string}}  $service
+     * @return array<string, mixed>|null
+     */
+    private function describePendingInstall(array $service): ?array
+    {
+        if (! isset($service['install'])) {
+            return null;
+        }
+
+        [$runtime, $version] = $service['install'];
+
+        $install = app(InstallTracker::class)->current($runtime, $version);
+
+        // No row at all, or one left at `ready` — a finished install deletes
+        // its row, so `ready` here would be a leftover rather than a state
+        // worth showing.
+        if ($install === null || $install->status === InstallStatus::Ready) {
+            return null;
+        }
+
+        $failed = $install->status === InstallStatus::Failed;
+
+        return [
+            'key' => $service['key'],
+            'label' => $service['label'],
+            'unit' => $service['unit'],
+            'state' => $failed ? 'install_failed' : 'installing',
+            'install_reason' => $install->reason,
+            // The model's own sentence, so this row and the setup card cannot
+            // word the same failure differently.
+            'install_message' => $install->message(),
+            'retryable' => $failed,
+            // A real string, never null: the frontend's schema types `status`
+            // as a string, and a null would fail the parse and take the whole
+            // response down rather than this one row.
+            'status' => $failed ? 'install_failed' : 'installing',
+            'enabled' => false,
+            'protected' => false,
+            'actions' => [],
+            'testable' => false,
+            'usage' => null,
+            'log_keys' => [],
         ];
     }
 
