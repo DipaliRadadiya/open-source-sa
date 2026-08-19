@@ -87,3 +87,28 @@ export function fetchBackup(backupId) {
 export function retryBackup(backupId) {
   return api.post(`/backups/${backupId}/retry`);
 }
+
+/**
+ * Delete one backup — the archive in object storage first, then the record.
+ *
+ * That order is the server's and it matters: a row deleted before its archive
+ * leaves an object in the customer's bucket that nothing in the panel can find
+ * or remove, billed every month until somebody goes looking.
+ */
+export function deleteBackup(backupId) {
+  return api.delete(`/backups/${backupId}`);
+}
+
+/**
+ * Delete several at once. Throttled 6/min, capped at 100 ids per request.
+ *
+ * A single endpoint rather than looping `deleteBackup`: that one is throttled
+ * at 12/minute and would refuse the thirteenth row of a selection, which is
+ * well inside what somebody clearing a month of backups will tick.
+ *
+ * Answers 200 with `{deleted, succeeded, failed}` rather than 204, because a
+ * batch can half-work — the same shape the file manager's bulk operations use.
+ */
+export function deleteBackups(ids) {
+  return api.delete("/backups", { data: { ids } });
+}

@@ -85,9 +85,20 @@ export function DataTable({
   // flexRender treats a new cell function as a new component type, remounting
   // the cell and destroying whatever state it held.
   meta,
+  // Opt-in row selection. The state is owned by the caller, not by this
+  // component: the thing that acts on a selection — a toolbar, a delete
+  // dialog — lives outside the table, and a selection the table kept to
+  // itself would be invisible to it. `rowId` maps a row to a stable key so
+  // the selection survives the data being refetched; without it TanStack
+  // keys by array index and a list that reorders selects different rows than
+  // the ones that were ticked.
+  rowSelection,
+  onRowSelectionChange,
+  rowId,
 }) {
   const pending = useNavPending();
   const [sorting, setSorting] = useState(defaultSorting);
+  const selectable = rowSelection !== undefined && onRowSelectionChange !== undefined;
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table's useReactTable is a known false positive for the React Compiler lint
   const table = useReactTable({
     data,
@@ -104,6 +115,14 @@ export function DataTable({
           state: { sorting },
           onSortingChange: setSorting,
           getSortedRowModel: getSortedRowModel(),
+        }
+      : null),
+    ...(selectable
+      ? {
+          state: { ...(sortable ? { sorting } : null), rowSelection },
+          onRowSelectionChange,
+          enableRowSelection: true,
+          ...(rowId ? { getRowId: rowId } : null),
         }
       : null),
   });

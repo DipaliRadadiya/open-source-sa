@@ -4588,7 +4588,23 @@
       "queuedNote": "Backup queued for {name}. It appears in this list as soon as the server starts writing it.",
       "queuedHidden": "Backup queued for {name}. The status filter you have set will hide it — clear the filter to watch it run.",
       "queuedStalled": "The backup queued for {name} has not started yet. If it stays this way, the background worker may not be running.",
-      "alreadyRunning": "A backup of this site is already running. You can start another once it finishes."
+      "alreadyRunning": "A backup of this site is already running. You can start another once it finishes.",
+      "delete": {
+        "action": "Delete",
+        "selectedCount": "{count} selected",
+        "clearSelection": "Clear",
+        "selectAll": "Select all backups",
+        "selectRow": "Select backup",
+        "title": "Delete {count, plural, one {this backup} other {# backups}}?",
+        "description": "The archive is removed from storage as well as the record. This cannot be undone.",
+        "safetyWarning": "{count, plural, one {One of these is a safety copy} other {# of these are safety copies}} taken automatically before a restore.",
+        "confirm": "Delete",
+        "deleting": "Deleting…",
+        "done": "Deleted {count, plural, one {# backup} other {# backups}}.",
+        "partial": "Deleted {done}; {failed} could not be deleted.",
+        "noneDeleted": "{count, plural, one {The backup} other {None of the # backups}} could not be deleted.",
+        "failed": "The backups could not be deleted."
+      }
     },
     "restore": {
       "title": "Restore {name}",

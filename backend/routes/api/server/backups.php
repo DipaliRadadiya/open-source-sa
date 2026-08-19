@@ -77,6 +77,19 @@ Route::get('/restores', [RestoreController::class, 'index'])
 Route::delete('/backups/{backup}', [BackupController::class, 'destroy'])
     ->middleware(['permission:backup,manage', 'throttle:12,1']);
 
+/*
+| Bulk delete. Declared before the single route would not matter — the paths
+| differ — but it exists because looping the single one from a browser hits
+| that 12/minute throttle on the thirteenth row, which is well inside what
+| somebody clearing a month of backups will select.
+|
+| A lower rate than the single form, not a higher one: each request can carry a
+| hundred backups, so six a minute is six hundred deletions. The ceiling that
+| matters is the one on the request body.
+*/
+Route::delete('/backups', [BackupController::class, 'destroyMany'])
+    ->middleware(['permission:backup,manage', 'throttle:6,1']);
+
 // Retry a failed backup — re-runs with the same configuration.
 Route::post('/backups/{backup}/retry', [BackupController::class, 'retry'])
     ->middleware(['permission:app_backup,manage', 'throttle:6,1']);

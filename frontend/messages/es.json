@@ -4588,7 +4588,23 @@
       "queuedNote": "Copia de seguridad en cola para {name}. Aparecerá en esta lista en cuanto el servidor empiece a escribirla.",
       "queuedHidden": "Copia de seguridad en cola para {name}. El filtro de estado que has aplicado la ocultará: quita el filtro para verla ejecutarse.",
       "queuedStalled": "La copia de seguridad en cola para {name} aún no ha comenzado. Si continúa así, es posible que el proceso en segundo plano no esté funcionando.",
-      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de este sitio. Podrás iniciar otra cuando termine."
+      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de este sitio. Podrás iniciar otra cuando termine.",
+      "delete": {
+        "action": "Eliminar",
+        "selectedCount": "{count} seleccionados",
+        "clearSelection": "Limpiar",
+        "selectAll": "Seleccionar todas las copias",
+        "selectRow": "Seleccionar copia",
+        "title": "¿Eliminar {count, plural, one {esta copia} other {# copias}}?",
+        "description": "Se elimina el archivo del almacenamiento además del registro. Esto no se puede deshacer.",
+        "safetyWarning": "{count, plural, one {Una es una copia de seguridad} other {# son copias de seguridad}} tomadas automáticamente antes de restaurar.",
+        "confirm": "Eliminar",
+        "deleting": "Eliminando…",
+        "done": "Se {count, plural, one {eliminó # copia} other {eliminaron # copias}}.",
+        "partial": "Se eliminaron {done}; {failed} no se pudieron eliminar.",
+        "noneDeleted": "{count, plural, one {La copia} other {Ninguna de las # copias}} se pudo eliminar.",
+        "failed": "No se pudieron eliminar las copias."
+      }
     },
     "restore": {
       "title": "Restaurar {name}",

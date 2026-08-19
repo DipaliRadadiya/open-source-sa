@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Backup\DeleteBackup;
+use App\Actions\Server\Backup\DeleteBackups;
 use App\Actions\Server\Backup\DeleteBackupTarget;
 use App\Actions\Server\Backup\SaveBackupTarget;
 use App\Enums\BackupStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Backup\BulkDeleteBackupsRequest;
 use App\Http\Requests\Server\Backup\IndexBackupsRequest;
 use App\Http\Requests\Server\Backup\IndexBackupTargetsRequest;
 use App\Http\Requests\Server\Backup\SaveBackupTargetRequest;
@@ -175,6 +177,32 @@ class BackupController extends Controller
         $action->execute($backup);
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Delete several backups at once.
+     *
+     * 200 with a per-backup outcome rather than 204, because a batch can
+     * half-work and the caller has to be able to say which half. Same
+     * `succeeded`/`failed` shape the file manager's bulk operations use, so a
+     * client reads one contract for both.
+     */
+    public function destroyMany(BulkDeleteBackupsRequest $request, DeleteBackups $action): JsonResponse
+    {
+        // Ordered oldest first so a batch that is cut short by anything has
+        // removed the backups least likely to be wanted.
+        $backups = Backup::query()
+            ->whereIn('id', $request->validated('ids'))
+            ->with('target.storageDestination', 'application')
+            ->oldest('id')
+            ->get();
+
+        $result = $action->execute($backups);
+
+        return response()->json([
+            'deleted' => $result['failed'] === [],
+            ...$result,
+        ]);
     }
 
     /**

@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { History, RotateCw } from "lucide-react";
+import { History, RotateCw, Trash2 } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
@@ -12,6 +13,8 @@ import { DataTable } from "@/components/ui/data-table";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { BackupStatusBadge, SafetyBadge } from "@/components/backups/backup-status-badge";
 import { DownloadBackupButton } from "@/components/backups/download-backup-button";
+import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { restoreBlocker } from "@/components/backups/restore-dialog";
 
 /* ---------------------------------------------------------------------------
@@ -189,6 +192,31 @@ function ActionsCell({ row, table }) {
   );
 }
 
+function SelectHeaderCell({ table }) {
+  const t = useTranslations("backups.history");
+  const all = table.getIsAllRowsSelected();
+
+  return (
+    <Checkbox
+      checked={all || (table.getIsSomeRowsSelected() ? "indeterminate" : false)}
+      onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
+      aria-label={t("delete.selectAll")}
+    />
+  );
+}
+
+function SelectCell({ row }) {
+  const t = useTranslations("backups.history");
+
+  return (
+    <Checkbox
+      checked={row.getIsSelected()}
+      onCheckedChange={(value) => row.toggleSelected(!!value)}
+      aria-label={t("delete.selectRow")}
+    />
+  );
+}
+
 export function BackupsHistoryTable({
   backups,
   canRestore,
@@ -208,10 +236,30 @@ export function BackupsHistoryTable({
   emptyMessage,
   // Set when the caller already wraps this in a Card.
   bare = false,
+  // Deleting destroys the archive in object storage as well as the record, so
+  // it is gated on the same permission as restore rather than on whoever can
+  // configure a schedule.
+  canDelete = false,
+  onDeleted,
 }) {
   const t = useTranslations("backups.history");
+  const [selection, setSelection] = useState({});
+
+  // Keyed by backup id rather than row index, so a selection survives the list
+  // refetching — by index, a list that reordered would delete different rows
+  // than the ones that were ticked.
+  const selected = backups.filter((backup) => selection[String(backup.id)]);
+  const [confirming, setConfirming] = useState(false);
 
   const columns = [
+    canDelete
+      ? {
+          id: "select",
+          header: SelectHeaderCell,
+          meta: { className: "w-10" },
+          cell: SelectCell,
+        }
+      : null,
     showSite
       ? {
           accessorKey: "application_name",
@@ -240,12 +288,48 @@ export function BackupsHistoryTable({
   ].filter(Boolean);
 
   return (
-    <DataTable
-      columns={columns}
-      data={backups}
-      emptyMessage={emptyMessage ?? t("empty.title")}
-      bare={bare}
-      meta={{ canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight, retryBlockedFor }}
-    />
+    <>
+      {/* Only once something is ticked. A bar that is always there, greyed,
+          spends a row of the screen saying "you have selected nothing". */}
+      {canDelete && selected.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-2.5">
+          <span className="text-sm">{t("delete.selectedCount", { count: selected.length })}</span>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSelection({})}>
+              {t("delete.clearSelection")}
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setConfirming(true)}>
+              <Trash2 className="size-4" />
+              {t("delete.action")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <DataTable
+        columns={columns}
+        data={backups}
+        emptyMessage={emptyMessage ?? t("empty.title")}
+        bare={bare}
+        meta={{ canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight, retryBlockedFor }}
+        {...(canDelete
+          ? {
+              rowSelection: selection,
+              onRowSelectionChange: setSelection,
+              rowId: (backup) => String(backup.id),
+            }
+          : null)}
+      />
+
+      <DeleteBackupsDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        backups={selected}
+        onDeleted={(ids) => {
+          setSelection({});
+          onDeleted?.(ids);
+        }}
+      />
+    </>
   );
 }

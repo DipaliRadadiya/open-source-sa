@@ -115,6 +115,11 @@ export function BackupsHistory({
   const listProps = {
     backups,
     canRestore,
+    // Same permission as restore: both act on the copy that exists to survive
+    // a mistake. Deleting also removes the archive from the customer's bucket,
+    // so it is not a schedule-level action.
+    canDelete: canRestore,
+    onDeleted: () => router.refresh(),
     canRun,
     onRestore: setRestoring,
     onRetry: retry,

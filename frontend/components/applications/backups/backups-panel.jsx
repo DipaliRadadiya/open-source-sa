@@ -397,10 +397,15 @@ function RecentBackups({
   retryBlockedReason = null,
 }) {
   const t = useTranslations("backups.application");
+  const router = useRouter();
 
   const listProps = {
     backups,
     canRestore,
+    // Same permission as restore — deleting removes the archive from the
+    // customer's bucket, not just the row.
+    canDelete: canRestore,
+    onDeleted: () => router.refresh(),
     canRun: canManage,
     onRestore,
     onRetry,

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\BackupStatus;
+use App\Http\Requests\Server\Backup\BulkDeleteBackupsRequest;
 use App\Jobs\RunBackup;
 use App\Models\ActivityLog;
 use App\Models\Application;
@@ -590,4 +591,120 @@ it('has copy for every step, status, type and frequency in every locale', functi
             expect(__('backup.frequency.'.$frequency))->not->toBe('backup.frequency.'.$frequency);
         }
     }
+});
+
+describe('deleting backups in bulk', function () {
+    beforeEach(function () {
+        $this->target = BackupTarget::create(array_merge(
+            ['application_id' => $this->application->id],
+            targetPayload(),
+        ));
+
+        $this->makeBackup = function (BackupStatus $status = BackupStatus::Verified, string $key = 'a.tar.gz') {
+            return Backup::create([
+                'backup_target_id' => $this->target->id,
+                'application_id' => $this->application->id,
+                'type' => 'full',
+                'status' => $status,
+                'size_bytes' => 100,
+                'manifest' => ['key' => $key],
+            ]);
+        };
+
+        $this->fakeDisk = function (bool $deletes = true) {
+            $disk = Mockery::mock(FilesystemAdapter::class);
+            $disk->shouldReceive('exists')->andReturn(true);
+            $deletes
+                ? $disk->shouldReceive('delete')->andReturn(true)
+                : $disk->shouldReceive('delete')->andThrow(new RuntimeException('bucket unreachable'));
+
+            $this->app->bind(
+                DestinationDisk::class,
+                fn () => new DestinationDisk(builder: fn (array $config) => $disk),
+            );
+        };
+    });
+
+    it('deletes every selected backup and its archive', function () {
+        ($this->fakeDisk)();
+        $a = ($this->makeBackup)();
+        $b = ($this->makeBackup)();
+
+        $response = $this->withHeaders(backupHeaders())
+            ->deleteJson('/api/backups', ['ids' => [$a->id, $b->id]]);
+
+        $response->assertOk()
+            ->assertJsonPath('deleted', true)
+            ->assertJsonPath('failed', []);
+
+        expect(Backup::query()->whereIn('id', [$a->id, $b->id])->count())->toBe(0);
+    });
+
+    it('deletes the rest and names the one it could not, rather than failing the batch', function () {
+        // Twenty backups where one is mid-run must delete the nineteen. Failing
+        // the whole request hides deletions the user would then repeat; a quiet
+        // success hides an archive still being paid for.
+        ($this->fakeDisk)();
+        $ok = ($this->makeBackup)();
+        $running = ($this->makeBackup)(BackupStatus::Running);
+
+        $response = $this->withHeaders(backupHeaders())
+            ->deleteJson('/api/backups', ['ids' => [$ok->id, $running->id]]);
+
+        $response->assertOk()
+            ->assertJsonPath('deleted', false)
+            ->assertJsonPath('succeeded', [$ok->id])
+            ->assertJsonPath('failed.0.id', $running->id)
+            ->assertJsonPath('failed.0.reason', 'running');
+
+        expect(Backup::find($ok->id))->toBeNull()
+            ->and(Backup::find($running->id))->not->toBeNull();
+    });
+
+    it('keeps the row when the archive could not be removed', function () {
+        // The order the single delete established: archive first, row second.
+        // A row surviving a failed storage delete is visible and retryable; the
+        // reverse leaves an object nothing in the panel can find.
+        ($this->fakeDisk)(deletes: false);
+        $backup = ($this->makeBackup)();
+
+        $this->withHeaders(backupHeaders())
+            ->deleteJson('/api/backups', ['ids' => [$backup->id]])
+            ->assertOk()
+            ->assertJsonPath('deleted', false)
+            ->assertJsonPath('failed.0.reason', 'artifact');
+
+        expect(Backup::find($backup->id))->not->toBeNull();
+    });
+
+    it('refuses an empty selection rather than reporting nothing deleted', function () {
+        $this->withHeaders(backupHeaders())
+            ->deleteJson('/api/backups', ['ids' => []])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ids');
+    });
+
+    it('refuses more than one page of backups in a single request', function () {
+        $ids = range(1, BulkDeleteBackupsRequest::MAX + 1);
+
+        $this->withHeaders(backupHeaders())
+            ->deleteJson('/api/backups', ['ids' => $ids])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ids');
+    });
+
+    it('denies a user who may view backups but not manage them', function () {
+        // Deleting destroys the copy that exists to survive a mistake, so it
+        // sits at the same tier as restore rather than with the schedule.
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'backup', view: true, manage: false);
+        $token = $viewer->createToken('t')->plainTextToken;
+        $backup = ($this->makeBackup)();
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->deleteJson('/api/backups', ['ids' => [$backup->id]])
+            ->assertForbidden();
+
+        expect(Backup::find($backup->id))->not->toBeNull();
+    });
 });
