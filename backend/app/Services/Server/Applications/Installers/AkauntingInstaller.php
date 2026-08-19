@@ -11,14 +11,25 @@ use Illuminate\Support\Str;
  * Akaunting — accounting and invoicing.
  *
  * Its `install` command takes every value as an option but asks for whatever
- * it wasn't given, so the two passwords are omitted and answered on stdin.
- * It uses Laravel's `$this->secret()`, which on this version routes to
- * Symfony's question helper — the one that reads a pipe. Laravel Prompts,
- * which does not, is what makes checking rather than assuming worthwhile.
+ * it wasn't given.
  *
- * The one trap is `--no-interaction`: with it, a missing option is a hard
- * error rather than a question, so passing it would defeat the whole
- * arrangement.
+ * The passwords go on the command line here, which every other installer in
+ * this directory deliberately avoids — `ps` is readable by every user on the
+ * machine. It is not a preference; it is the only route Akaunting still
+ * supports.
+ *
+ * They used to be answered on stdin, on the reasoning that `$this->secret()`
+ * routed to Symfony's question helper, which reads a pipe. That was true when
+ * it was written and is not true now: this installer fetches Akaunting's
+ * LATEST release, upstream moved to Laravel Prompts, and Prompts sees stdin is
+ * not a TTY and returns the default without reading a byte. The install then
+ * proceeded with an empty database password and failed at "Could not connect
+ * to the database" — a message that blames the credentials it was never given.
+ *
+ * `--no-interaction` is now correct rather than a trap. With every value
+ * supplied there is nothing left to ask, and it turns a version that would
+ * otherwise sit waiting on a prompt into an immediate error instead of a job
+ * that hangs until the timeout.
  */
 class AkauntingInstaller extends AbstractPhpInstaller
 {
@@ -41,8 +52,10 @@ class AkauntingInstaller extends AbstractPhpInstaller
 
         $this->downloadAndExtract($application, null, $documentRoot);
 
-        // Everything except the two passwords. Anything omitted becomes a
-        // question, and a question nobody answers hangs until the timeout.
+        // Every value supplied, including the passwords. Anything omitted
+        // becomes a question, and this version answers its own questions with
+        // the default rather than reading the pipe — so an omitted password is
+        // an empty password, not a prompt.
         $this->runAsSiteUser('install_app', $application, [
             $this->phpBinary($application), 'artisan', 'install',
             '--db-host='.($context['db_host'] ?? '127.0.0.1'),
@@ -54,11 +67,10 @@ class AkauntingInstaller extends AbstractPhpInstaller
             '--company-email='.($settings['company_email'] ?? $settings['admin_email'] ?? ''),
             '--admin-email='.($settings['admin_email'] ?? ''),
             '--locale='.($settings['locale'] ?? 'en-GB'),
-        ],
-            // Asked in the order the command asks them: database, then admin.
-            $context['db_password']."\n".($settings['admin_password'] ?? '')."\n",
-            $documentRoot,
-        );
+            '--db-password='.$context['db_password'],
+            '--admin-password='.($settings['admin_password'] ?? ''),
+            '--no-interaction',
+        ], null, $documentRoot);
     }
 
     /**

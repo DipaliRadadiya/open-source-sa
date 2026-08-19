@@ -67,36 +67,39 @@ function akauntingRun(ArrayObject $runs): array
         && in_array('artisan', $run['command'], true));
 }
 
-it('answers both prompts on stdin, database password first', function () {
-    $runs = installAkaunting();
-    $install = akauntingRun($runs);
-
-    // The command asks for the database password (5th missing value) before
-    // the admin one (9th). Reversed, the install succeeds with the two
-    // swapped and nobody can log in.
-    $lines = explode("\n", $install['input']);
-    expect($lines[1])->toBe('AkauntPass1!')
-        ->and($lines[0])->not->toBe('AkauntPass1!')
-        ->and($lines[0])->not->toBe('');
-});
-
-it('keeps both passwords off the command line', function () {
-    $runs = installAkaunting();
-
-    foreach ($runs as $run) {
-        $line = implode(' ', $run['command']);
-        expect($line)->not->toContain('AkauntPass1!')
-            ->and($line)->not->toContain('--db-password')
-            ->and($line)->not->toContain('--admin-password');
-    }
-});
-
-it('never passes --no-interaction, which would turn a question into an error', function () {
+it('passes both passwords as options, because this version will not read a pipe', function () {
     $install = akauntingRun(installAkaunting());
 
-    // With it, a missing option is a hard failure rather than a prompt — and
-    // the prompts are the only way to get a secret in without argv.
-    expect($install['command'])->not->toContain('--no-interaction');
+    // Every other installer here keeps secrets off argv, and so did this one:
+    // the passwords were answered on stdin, on the reasoning that Akaunting's
+    // `secret()` reached Symfony's question helper, which reads a pipe.
+    //
+    // Upstream has since moved to Laravel Prompts, which sees stdin is not a
+    // TTY and returns the default without reading it. Because this installer
+    // always fetches the LATEST release, that turned a correct assumption into
+    // a silent failure with no code change on our side: the install ran with an
+    // empty database password and died at "Could not connect to the database",
+    // blaming credentials it had never been handed.
+    //
+    // So this is a deliberate exception rather than an oversight, and it is
+    // asserted so nobody restores the stdin form by reading the rule and not
+    // the reason. The exposure is real: `ps` shows these to every user on the
+    // box for the life of the process.
+    expect($install['command'])->toContain('--db-password='.Database::first()->users()->first()->password)
+        ->and($install['command'])->toContain('--admin-password=AkauntPass1!')
+        // Nothing is left on stdin to be read.
+        ->and($install['input'])->toBe('');
+});
+
+it('passes --no-interaction, now that nothing is left to ask', function () {
+    $install = akauntingRun(installAkaunting());
+
+    // This used to be forbidden: with a value missing, `--no-interaction`
+    // turns a question into a hard error, and the questions were how the
+    // secrets got in. With every value supplied there is nothing to ask, and
+    // it is the difference between a version that changes its prompting again
+    // failing immediately and one that hangs until the timeout.
+    expect($install['command'])->toContain('--no-interaction');
 });
 
 it('supplies every other option so nothing else is asked', function () {
