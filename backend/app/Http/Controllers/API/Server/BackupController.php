@@ -18,6 +18,7 @@ use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Services\ActivityLogger;
+use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Support\ListSort;
 use Carbon\Carbon;
@@ -198,7 +199,7 @@ class BackupController extends Controller
      * here would mean inventing one, and the client would poll something the
      * runner has not created.
      */
-    public function run(Application $application): JsonResponse
+    public function run(Application $application, StaleBackupReaper $reaper): JsonResponse
     {
         $target = BackupTarget::where('application_id', $application->id)->first();
 
@@ -208,16 +209,10 @@ class BackupController extends Controller
             ]);
         }
 
-        $inFlight = Backup::query()
-            ->where('backup_target_id', $target->id)
-            ->whereIn('status', [
-                BackupStatus::Pending->value,
-                BackupStatus::Running->value,
-                BackupStatus::Verifying->value,
-            ])
-            ->exists();
-
-        if ($inFlight) {
+        // Reaps abandoned rows before answering. Without this a run stranded by
+        // a killed worker blocks the site forever: it is in flight by status
+        // and gone in fact, and nothing else ever revisits it.
+        if ($reaper->hasLiveRun($target)) {
             // Two archives of the same site at once would compete for the same
             // disk and the same lock. The job is unique per target as well;
             // this is the half that can tell the user why.
@@ -332,7 +327,7 @@ class BackupController extends Controller
      * Uses the same target as the original run; dispatches a fresh job.
      * Throttled at the same limit as a manual run.
      */
-    public function retry(Backup $backup): JsonResponse
+    public function retry(Backup $backup, StaleBackupReaper $reaper): JsonResponse
     {
         if ($backup->status !== BackupStatus::Failed) {
             throw ValidationException::withMessages([
@@ -348,16 +343,7 @@ class BackupController extends Controller
             ]);
         }
 
-        $inFlight = Backup::query()
-            ->where('backup_target_id', $target->id)
-            ->whereIn('status', [
-                BackupStatus::Pending->value,
-                BackupStatus::Running->value,
-                BackupStatus::Verifying->value,
-            ])
-            ->exists();
-
-        if ($inFlight) {
+        if ($reaper->hasLiveRun($target)) {
             throw ValidationException::withMessages([
                 'application' => [__('backup.errors.already_running')],
             ]);
@@ -368,5 +354,47 @@ class BackupController extends Controller
         return response()->json([
             'backup_target' => BackupTargetResource::make($target->fresh(['storageDestination']))->resolve(),
         ], 202);
+    }
+
+    /**
+     * Close out a run that is stuck in flight.
+     *
+     * The automatic reaping only happens when somebody next asks for a backup,
+     * and the wait until a run is provably dead is over an hour. This is the
+     * button for the person looking at a site that says "running" from
+     * yesterday and wants it back now.
+     *
+     * **A run that could still be alive is refused.** There is no way from here
+     * to kill a job already executing on a worker, so marking it failed would
+     * not stop it — it would leave the row saying one thing and the process
+     * doing another, and free the guard for a second backup to start alongside
+     * the first. Both would then write to the same disk and the same archive
+     * key. Refusing and saying when it clears itself is the honest answer.
+     */
+    public function clear(Backup $backup, StaleBackupReaper $reaper, ActivityLogger $activity): JsonResponse
+    {
+        if (! in_array($backup->status->value, StaleBackupReaper::IN_FLIGHT, true)) {
+            throw ValidationException::withMessages([
+                'backup' => [__('backup.errors.clear_not_running')],
+            ]);
+        }
+
+        if (! $reaper->isStale($backup)) {
+            throw ValidationException::withMessages([
+                'backup' => [__('backup.errors.clear_too_soon', [
+                    'minutes' => (int) ceil(StaleBackupReaper::staleAfterSeconds() / 60),
+                ])],
+            ]);
+        }
+
+        $reaper->close($backup);
+
+        $activity->log('backup.cleared', $backup->application, [
+            'name' => $backup->application?->name ?? '',
+        ]);
+
+        return response()->json([
+            'backup' => BackupResource::make($backup->fresh())->resolve(),
+        ]);
     }
 }

@@ -135,6 +135,7 @@ return [
     'backup.deleted' => 'Eliminou uma cópia de segurança de :name',
     'backup.target_deleted' => 'Deixou de fazer cópias de :name (:backups_deleted cópia(s) removidas)',
     'backup.completed' => 'Fez a cópia de segurança de :application',
+    'backup.cleared' => 'Limpou uma cópia de segurança presa de :name',
     'backup.failed' => 'A cópia de segurança de :application falhou (:reason)',
     'central.connected' => 'Ligou este painel ao painel central',
     'central.disconnected' => 'Desligou este painel do painel central',

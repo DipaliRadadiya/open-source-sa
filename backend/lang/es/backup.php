@@ -48,6 +48,10 @@ return [
         'upload_artifact' => 'No se pudo subir el archivo. Comprueba que el destino de almacenamiento sigue aceptando escrituras.',
         'verify_artifact' => 'La subida no coincide con lo enviado, así que no se puede confiar en esta copia. No se eliminó ninguna copia antigua.',
         'unknown' => 'La copia de seguridad falló por un motivo desconocido.',
+        'crashed' => 'La copia de seguridad se detuvo inesperadamente: el proceso terminó antes de completarse. Normalmente el servidor se quedó sin memoria o el worker se reinició a mitad.',
+        'abandoned' => 'Esta copia de seguridad nunca respondió y se ha cerrado. Su worker ya no existe, así que no se subió nada.',
+        'clear_not_running' => 'Esta copia de seguridad no está en curso, así que no hay nada que limpiar.',
+        'clear_too_soon' => 'Esta copia de seguridad puede seguir ejecutándose. Se cierra sola :minutes minutos después de comenzar si el worker no responde.',
         'prune_old_backups' => 'No se pudieron eliminar las copias antiguas. La nueva copia está a salvo; el almacenamiento puede tener más copias de las configuradas.',
     ],
 

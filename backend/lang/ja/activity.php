@@ -135,6 +135,7 @@ return [
     'backup.deleted' => ':name のバックアップを削除しました',
     'backup.target_deleted' => ':name のバックアップを停止しました（:backups_deleted 件を削除）',
     'backup.completed' => ':application をバックアップしました',
+    'backup.cleared' => ':name の停止したバックアップを消去しました',
     'backup.failed' => ':application のバックアップに失敗しました (:reason)',
     'central.connected' => 'このパネルを中央パネルに接続しました',
     'central.disconnected' => 'このパネルと中央パネルの接続を解除しました',

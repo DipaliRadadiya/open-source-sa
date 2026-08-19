@@ -135,6 +135,7 @@ return [
     'backup.deleted' => 'Ein Backup von :name gelöscht',
     'backup.target_deleted' => 'Backups für :name beendet (:backups_deleted Backup(s) entfernt)',
     'backup.completed' => ':application gesichert',
+    'backup.cleared' => 'Hängengebliebene Sicherung für :name bereinigt',
     'backup.failed' => 'Sicherung von :application fehlgeschlagen (:reason)',
     'central.connected' => 'Dieses Panel mit dem zentralen Panel verbunden',
     'central.disconnected' => 'Verbindung dieses Panels zum zentralen Panel getrennt',

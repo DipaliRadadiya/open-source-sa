@@ -99,5 +99,15 @@ class RunBackup implements ShouldBeUnique, ShouldQueue
                 'reason' => 'crashed',
                 'finished_at' => now(),
             ]);
+
+        // A crash is still an attempt. BackupRunner's catch block records one
+        // for every handled failure, five lines from here, and says why: a
+        // target that stays due retries on the very next tick, turning one
+        // broken backup into a new failed row every minute for as long as
+        // whatever killed the job keeps killing it. This path — the job dying
+        // outright — was the half that never recorded it.
+        BackupTarget::query()
+            ->where('id', $this->backupTargetId)
+            ->update(['last_run_at' => now()]);
     }
 }

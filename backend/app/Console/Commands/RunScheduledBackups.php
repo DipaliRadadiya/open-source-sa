@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\RunBackup;
 use App\Models\BackupTarget;
+use App\Services\Server\Backups\StaleBackupReaper;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Date;
 
@@ -22,7 +23,7 @@ class RunScheduledBackups extends Command
 
     protected $description = 'Queue any backup targets whose schedule is due';
 
-    public function handle(): int
+    public function handle(StaleBackupReaper $reaper): int
     {
         $now = Date::now();
 
@@ -34,6 +35,13 @@ class RunScheduledBackups extends Command
             ->filter(fn (BackupTarget $target): bool => $target->isDue($now));
 
         foreach ($due as $target) {
+            // Close out anything stranded before queueing. A row left at
+            // `running` by a killed worker blocks every later run for that
+            // target, and this tick is the only thing that visits a target
+            // nobody is looking at — without it a site stops being backed up
+            // and the first anyone hears of it is when they need the backup.
+            $reaper->reap($target);
+
             // Not marked as run here: the runner sets last_run_at when it
             // finishes, success or failure. Marking it now would mean a job
             // that never reached a worker looked like a completed backup.

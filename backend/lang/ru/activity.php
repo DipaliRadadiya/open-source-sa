@@ -135,6 +135,7 @@ return [
     'backup.deleted' => 'Удалена резервная копия :name',
     'backup.target_deleted' => 'Резервное копирование :name остановлено (удалено копий: :backups_deleted)',
     'backup.completed' => 'Создана резервная копия :application',
+    'backup.cleared' => 'Очистил зависшую резервную копию для :name',
     'backup.failed' => 'Резервное копирование :application не удалось (:reason)',
     'central.connected' => 'Подключил эту панель к центральной панели',
     'central.disconnected' => 'Отключил эту панель от центральной панели',

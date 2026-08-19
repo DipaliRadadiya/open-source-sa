@@ -2625,6 +2625,30 @@ Re-run a failed backup with the same configuration.
 
 ---
 
+### POST `/backups/{backup}/clear`
+**Permission:** `app_backup` (manage) | **Throttle:** 6/min
+
+Close out a backup stuck in flight after its worker died — a row left at `running` or `pending` that nothing is working on any more.
+
+**This matters because a stranded row blocks the site.** Every path that starts a backup refuses while one is in flight, so until the row is closed that application cannot be backed up at all.
+
+**Not a cancel.** A run that could still be executing is refused with `422`, and the message says how long until it clears itself. There is no way from the panel to stop a job already running on a worker, and marking it failed would leave the row saying one thing while the process kept going — and free the guard for a second backup to start alongside the first, both writing to the same archive key.
+
+**Response `200`:** `{"backup": {"id": 9, "status": "failed", "reason": "abandoned", …}}`
+
+`422` if the backup is not in flight, or if it is too recent to be certain it is dead.
+
+**You usually will not need this.** Stranded runs are closed out automatically the next time anything starts a backup for that target, and by the scheduler tick. This endpoint exists so nobody has to wait for that.
+
+**Two `reason` values relate to this:**
+
+| value | meaning |
+|---|---|
+| `crashed` | the worker died and the panel noticed — OOM, a restart mid-backup |
+| `abandoned` | the run never reported back at all and was closed out later |
+
+---
+
 ### DELETE `/backups/{backup}`
 **Permission:** `backup` (manage) | **Throttle:** 12/min
 

@@ -135,6 +135,7 @@ return [
     'backup.deleted' => ':name का एक बैकअप हटाया',
     'backup.target_deleted' => ':name का बैकअप लेना बंद किया (:backups_deleted बैकअप हटाए गए)',
     'backup.completed' => ':application का बैकअप लिया',
+    'backup.cleared' => ':name के लिए अटका हुआ बैकअप साफ़ किया',
     'backup.failed' => ':application का बैकअप विफल रहा (:reason)',
     'central.connected' => 'इस पैनल को केंद्रीय पैनल से जोड़ा',
     'central.disconnected' => 'इस पैनल का केंद्रीय पैनल से संबंध हटाया',

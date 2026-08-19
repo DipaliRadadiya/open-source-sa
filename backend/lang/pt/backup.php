@@ -48,6 +48,10 @@ return [
         'upload_artifact' => 'Não foi possível enviar o arquivo. Verifique se o destino de armazenamento ainda aceita escritas.',
         'verify_artifact' => 'O envio não corresponde ao que foi transmitido, por isso esta cópia não é fiável. Nada de antigo foi removido.',
         'unknown' => 'A cópia de segurança falhou por um motivo desconhecido.',
+        'crashed' => 'A cópia de segurança parou inesperadamente — o processo foi encerrado antes de terminar. Normalmente o servidor ficou sem memória, ou o worker reiniciou no meio.',
+        'abandoned' => 'Esta cópia de segurança nunca respondeu e foi encerrada. O seu worker desapareceu, portanto nada foi enviado.',
+        'clear_not_running' => 'Esta cópia de segurança não está em curso, portanto não há nada para limpar.',
+        'clear_too_soon' => 'Esta cópia de segurança pode ainda estar em execução. Ela encerra-se sozinha :minutes minutos após começar se o worker não responder.',
         'prune_old_backups' => 'Não foi possível remover as cópias antigas. A nova cópia está segura; o armazenamento pode ter mais cópias do que o configurado.',
     ],
 

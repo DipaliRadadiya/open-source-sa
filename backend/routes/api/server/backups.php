@@ -81,6 +81,17 @@ Route::delete('/backups/{backup}', [BackupController::class, 'destroy'])
 Route::post('/backups/{backup}/retry', [BackupController::class, 'retry'])
     ->middleware(['permission:app_backup,manage', 'throttle:6,1']);
 
+/*
+| Close out a run stuck in flight after its worker died. Not a cancel: a job
+| that could still be executing is refused, because nothing here can stop it
+| and freeing the guard would let a second backup start alongside the first.
+|
+| On `app_backup,manage` — the same tier as running one. This unblocks a site's
+| backups rather than destroying anything, so it does not belong with delete.
+*/
+Route::post('/backups/{backup}/clear', [BackupController::class, 'clear'])
+    ->middleware(['permission:app_backup,manage', 'throttle:6,1']);
+
 // Polled every couple of seconds while the bar moves. The 120/min it used to
 // declare never applied: a per-route throttle stacks with the global one rather
 // than replacing it, so the lower of the two won and this was bounded at — and

@@ -135,6 +135,7 @@ return [
     'backup.deleted' => 'Suppression d\'une sauvegarde de :name',
     'backup.target_deleted' => 'Arrêt des sauvegardes de :name (:backups_deleted sauvegarde(s) supprimées)',
     'backup.completed' => 'A sauvegardé :application',
+    'backup.cleared' => 'A effacé une sauvegarde bloquée pour :name',
     'backup.failed' => 'Échec de la sauvegarde de :application (:reason)',
     'central.connected' => 'A connecté ce panneau au panneau central',
     'central.disconnected' => 'A déconnecté ce panneau du panneau central',

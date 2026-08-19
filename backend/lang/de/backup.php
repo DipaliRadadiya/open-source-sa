@@ -48,6 +48,10 @@ return [
         'upload_artifact' => 'Das Archiv konnte nicht hochgeladen werden. Prüfen Sie, ob das Speicherziel weiterhin Schreibzugriffe annimmt.',
         'verify_artifact' => 'Der Upload stimmt nicht mit dem Gesendeten überein; dieser Sicherung ist nicht zu trauen. Es wurde nichts Altes gelöscht.',
         'unknown' => 'Die Sicherung schlug aus unbekanntem Grund fehl.',
+        'crashed' => 'Die Sicherung wurde unerwartet beendet — der Prozess wurde abgebrochen, bevor er fertig war. Meist ging dem Server der Arbeitsspeicher aus oder der Worker wurde mittendrin neu gestartet.',
+        'abandoned' => 'Diese Sicherung hat sich nie zurückgemeldet und wurde abgeschlossen. Ihr Worker existiert nicht mehr, es wurde nichts hochgeladen.',
+        'clear_not_running' => 'Diese Sicherung läuft nicht, es gibt nichts zu bereinigen.',
+        'clear_too_soon' => 'Diese Sicherung läuft möglicherweise noch. Sie wird :minutes Minuten nach dem Start automatisch abgeschlossen, wenn sich der Worker nicht meldet.',
         'prune_old_backups' => 'Alte Sicherungen konnten nicht entfernt werden. Die neue Sicherung ist unversehrt; im Speicher liegen möglicherweise mehr Kopien als eingestellt.',
     ],
 

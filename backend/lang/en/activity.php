@@ -135,6 +135,7 @@ return [
     'backup.deleted' => 'Deleted a backup of :name',
     'backup.target_deleted' => 'Stopped backing up :name (:backups_deleted backup(s) removed)',
     'backup.completed' => 'Backed up :application',
+    'backup.cleared' => 'Cleared a stuck backup for :name',
     'backup.failed' => 'Backup of :application failed (:reason)',
     'central.connected' => 'Connected this panel to the central panel',
     'central.disconnected' => 'Disconnected this panel from the central panel',
