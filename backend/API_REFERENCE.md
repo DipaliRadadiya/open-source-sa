@@ -565,8 +565,15 @@ That distinction now matters for the locale and country pickers. They used to la
 | `search` | free text over **name and domain**, max 255 chars |
 | `filter[status]` | `pending` · `provisioning` · `active` · `failed` |
 | `filter[site_type]` | any name from `GET /site-types` |
+| `sort` | `created_at` · `name` · `domain` · `status` · `site_type` · `directory_size_bytes` — prefix `-` for descending, default `-created_at` |
 
-Filters combine with each other and with `search` — all are AND.
+Filters combine with each other and with `search` — all are AND, and all survive a sort.
+
+**Sort on the server, not in the table.** The list is paged, so an in-table sort orders the current page and nothing else — which looks correct and is not. An unlisted column is a **`422`**, including `owner`: it lives on a relation, so sorting by it would mean a join, and the list can already be searched by username.
+
+**Sorting by `directory_size_bytes` puts never-measured sites at the small end** — before a site of `0` bytes, not mixed in with it. A site nothing has walked yet is not an empty site, and the two must not be confused. Descending therefore reads "biggest first, unknown last". This is set explicitly rather than left to the database: SQLite and MySQL sort NULL first ascending, PostgreSQL sorts it last, and the panel supports all three.
+
+Note the value is the **last measured** size — `null` for a site created in the last minute, until the per-minute sweep reaches it. The row already says so.
 
 **Both filters are validated against the real sets, so a wrong value is a `422`, not an empty list.** That matters more than it sounds: answering a typo with `{"applications": []}` reads to the user as *"you have no applications"*. Send `null` or omit the key to clear a filter.
 

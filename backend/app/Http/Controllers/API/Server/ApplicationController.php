@@ -27,6 +27,7 @@ use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\VisiblePermissions;
+use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,9 +53,14 @@ class ApplicationController extends Controller
                 $like = '%'.$search.'%';
 
                 $query->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('domain', 'like', $like));
-            })
-            ->latest('id')
-            ->paginate($request->validated('per_page', IndexApplicationsRequest::PER_PAGE));
+            });
+
+        $applications = ListSort::apply(
+            $applications,
+            $request->validated('sort'),
+            IndexApplicationsRequest::SORTS,
+            nullsSmallest: IndexApplicationsRequest::NULLS_SMALLEST,
+        )->paginate($request->validated('per_page', IndexApplicationsRequest::PER_PAGE));
 
         // Sites that have never been measured get queued for it, capped and
         // deduplicated by the job. Not measured inline: `du` walks every inode

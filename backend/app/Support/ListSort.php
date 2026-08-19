@@ -50,9 +50,15 @@ class ListSort
 
     /**
      * @param  array<int, string>  $columns  the whitelist, first entry used when nothing is asked for
+     * @param  array<int, string>  $nullsSmallest  columns whose NULLs must sort below every value
      */
-    public static function apply(Builder $query, ?string $sort, array $columns, string $defaultDirection = 'desc'): Builder
-    {
+    public static function apply(
+        Builder $query,
+        ?string $sort,
+        array $columns,
+        string $defaultDirection = 'desc',
+        array $nullsSmallest = [],
+    ): Builder {
         $requested = trim((string) $sort);
 
         $descending = str_starts_with($requested, '-');
@@ -65,6 +71,21 @@ class ListSort
         if (! in_array($column, $columns, true)) {
             $column = $columns[0];
             $descending = $defaultDirection === 'desc';
+        }
+
+        // Where NULL sorts is a per-database decision — SQLite and MySQL put it
+        // first ascending, PostgreSQL puts it last — and this panel supports all
+        // three. A column where "unknown" has a natural place therefore says so
+        // rather than inheriting whichever engine the user chose, or the same
+        // list would order differently on two installs of the same panel.
+        //
+        // The expression is built from the whitelisted column name, never from
+        // the request, which is what keeps it out of the injection this class
+        // exists to prevent.
+        if (in_array($column, $nullsSmallest, true)) {
+            $query->orderByRaw(
+                $query->getGrammar()->wrap($column).' is null '.($descending ? 'asc' : 'desc')
+            );
         }
 
         return $query

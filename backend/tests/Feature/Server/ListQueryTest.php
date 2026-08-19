@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Requests\Server\Application\IndexApplicationsRequest;
 use App\Models\Application;
 use App\Models\BackupTarget;
 use App\Models\Database;
@@ -169,6 +170,127 @@ describe('every paged list', function () {
 
         expect($sql)->toContain('order by "created_at" desc')
             ->and($sql)->not->toContain('password');
+    });
+});
+
+/*
+ * The applications table moved search, filters and paging into the URL when the
+ * endpoint began paging at ten — its own comment explains that client-side
+ * versions "silently operated on the first page alone". Sort was named in that
+ * migration and never built on either side: the API had no `sort`, the table
+ * stopped passing `sortable`, and the columns kept `sortingFn` entries nothing
+ * invoked. The list could not be ordered at all.
+ */
+describe('GET /applications', function () {
+
+    beforeEach(function () {
+        grantPermission($this->user, 'application');
+    });
+
+    it('orders newest first when nothing is asked for', function () {
+        $old = Application::factory()->create(['name' => 'first']);
+        $new = Application::factory()->create(['name' => 'second']);
+
+        $names = collect($this->getJson('/api/applications')->assertOk()->json('applications'))
+            ->pluck('name')->all();
+
+        expect($names)->toBe([$new->name, $old->name]);
+    });
+
+    it('sorts by name across the whole table, not the page', function () {
+        foreach (['delta', 'alpha', 'charlie'] as $name) {
+            Application::factory()->create(['name' => $name]);
+        }
+
+        expect($this->getJson('/api/applications?sort=name&per_page=1')->assertOk()->json('applications.0.name'))
+            ->toBe('alpha');
+    });
+
+    it('refuses a sort column the table does not show', function () {
+        // `owner` is a column on screen but lives on a relation, so it is
+        // deliberately not sortable — a 422 says so rather than silently
+        // ordering by something else.
+        $this->getJson('/api/applications?sort=owner')->assertStatus(422);
+        $this->getJson('/api/applications?sort=php_version')->assertStatus(422);
+    });
+
+    /*
+     * A site nothing has measured yet is not a site of zero bytes, and the two
+     * must not mix. The table decided this before the server did — it mapped
+     * null to -1 so the unmeasured group at one end — and the server has to
+     * reproduce it or the same click gives a different answer.
+     */
+    it('treats a never-measured site as smaller than an empty one', function () {
+        $unmeasured = Application::factory()->create(['name' => 'unmeasured', 'directory_size_bytes' => null]);
+        $empty = Application::factory()->create(['name' => 'empty', 'directory_size_bytes' => 0]);
+        $big = Application::factory()->create(['name' => 'big', 'directory_size_bytes' => 5_000_000]);
+
+        $ascending = collect($this->getJson('/api/applications?sort=directory_size_bytes')->assertOk()->json('applications'))
+            ->pluck('name')->all();
+
+        expect($ascending)->toBe([$unmeasured->name, $empty->name, $big->name]);
+    });
+
+    /*
+     * ⚠️ The two behavioural tests either side of this one pass with the null
+     * handling removed: SQLite already puts NULL first ascending, so the
+     * hazard cannot be provoked on the database the suite runs on. PostgreSQL
+     * puts it last, and this panel supports PostgreSQL — so the ordering would
+     * differ between two installs of the same panel and no test would notice.
+     *
+     * This asserts the generated SQL instead, which is the part that is
+     * actually true here. A test that cannot fail is not evidence.
+     */
+    it('orders nulls explicitly rather than inheriting the database default', function () {
+        $sql = ListSort::apply(
+            Application::query(),
+            '-directory_size_bytes',
+            IndexApplicationsRequest::SORTS,
+            nullsSmallest: IndexApplicationsRequest::NULLS_SMALLEST,
+        )->toSql();
+
+        // Descending: unknown goes last, so "is null" ascends (false before true).
+        expect($sql)->toContain('"directory_size_bytes" is null asc');
+
+        $ascending = ListSort::apply(
+            Application::query(),
+            'directory_size_bytes',
+            IndexApplicationsRequest::SORTS,
+            nullsSmallest: IndexApplicationsRequest::NULLS_SMALLEST,
+        )->toSql();
+
+        expect($ascending)->toContain('"directory_size_bytes" is null desc');
+
+        // A column not on the list is untouched — the clause is opt-in per
+        // column, not applied to everything that might be nullable.
+        expect(ListSort::apply(Application::query(), 'name', IndexApplicationsRequest::SORTS)->toSql())
+            ->not->toContain('is null');
+    });
+
+    /*
+     * Descending is "biggest first", and an unknown size is not big.
+     */
+    it('puts never-measured last when sorting biggest first', function () {
+        Application::factory()->create(['name' => 'unmeasured', 'directory_size_bytes' => null]);
+        Application::factory()->create(['name' => 'empty', 'directory_size_bytes' => 0]);
+        Application::factory()->create(['name' => 'big', 'directory_size_bytes' => 5_000_000]);
+
+        $descending = collect($this->getJson('/api/applications?sort=-directory_size_bytes')->assertOk()->json('applications'))
+            ->pluck('name')->all();
+
+        expect($descending)->toBe(['big', 'empty', 'unmeasured']);
+    });
+
+    it('still searches and filters while sorted', function () {
+        Application::factory()->create(['name' => 'shop', 'directory_size_bytes' => 10]);
+        Application::factory()->create(['name' => 'shop archive', 'directory_size_bytes' => 20]);
+        Application::factory()->create(['name' => 'blog', 'directory_size_bytes' => 30]);
+
+        $response = $this->getJson('/api/applications?search=shop&sort=-directory_size_bytes')->assertOk();
+
+        expect(collect($response->json('applications'))->pluck('name')->all())
+            ->toBe(['shop archive', 'shop'])
+            ->and($response->json('meta.total'))->toBe(2);
     });
 });
 

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Server\Application;
 use App\Enums\ApplicationStatus;
 use App\Http\Resources\ApplicationResource;
 use App\Services\Applications\SiteTypeManager;
+use App\Support\ListSort;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -31,6 +32,27 @@ class IndexApplicationsRequest extends FormRequest
      */
     public const PER_PAGE = 10;
 
+    /**
+     * The columns the applications table shows, in the order it shows them.
+     *
+     * Newest first by default — a site somebody just created is the one they
+     * came here to find. Owner is absent on purpose: it lives on a relation, so
+     * sorting by it means a join, and the column shows a username the list can
+     * already be searched by.
+     */
+    public const SORTS = ['created_at', 'name', 'domain', 'status', 'site_type', 'directory_size_bytes'];
+
+    /**
+     * Size is null for a site nothing has measured yet, and that is not the
+     * same as a site of zero bytes. Sorted as the smallest value so the
+     * unmeasured group together at one end rather than being mixed in with
+     * genuinely empty sites — which is the decision the table already made
+     * client-side, before paging moved sorting to the server.
+     *
+     * @var array<int, string>
+     */
+    public const NULLS_SMALLEST = ['directory_size_bytes'];
+
     public function authorize(): bool
     {
         return $this->user()?->canView('application') ?? false;
@@ -53,6 +75,8 @@ class IndexApplicationsRequest extends FormRequest
             // list the catalog is built from, so the filter cannot offer or
             // accept a type the panel does not have.
             'filter.site_type' => ['sometimes', 'nullable', Rule::in(app(SiteTypeManager::class)->names())],
+
+            'sort' => ListSort::rule(self::SORTS),
 
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ];
