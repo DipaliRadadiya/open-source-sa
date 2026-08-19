@@ -261,7 +261,12 @@ class ServerOps
      * @param  array<int, string>  $command
      */
     /** The option names whose values never belong in a log. */
-    private const SECRET_WORDS = '(?:password|secret|token|api[-_]?key|private[-_]?key)';
+    //  on its own, not just : Moodle takes `--adminpass` and
+    // Nextcloud `--admin-pass`, neither of which contains the word this used
+    // to look for — so a real admin password went to the log in clear on every
+    // Moodle install. Over-matching (`--passive`) costs a redacted value in a
+    // log; under-matching costs a credential.
+    private const SECRET_WORDS = '(?:pass(?:wd|word|phrase)?|secret|token|api[-_]?key|private[-_]?key)';
 
     private function loggableCommand(array $command): string
     {

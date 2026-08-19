@@ -254,3 +254,30 @@ it('redacts a secret a failing tool echoed back on stdout', function () {
         ->and($logged['stdout'])->toContain('[REDACTED]')
         ->and($logged['stdout'])->toContain('--db-name=x');
 });
+
+it('redacts pass-style option names, not just the word password', function () {
+    // Moodle takes `--adminpass` and Nextcloud `--admin-pass`; neither contains
+    // "password", so a real admin password reached the server-ops log in clear
+    // on every Moodle install. Over-matching costs a redacted value in a log,
+    // under-matching costs a credential.
+    $logged = [];
+    Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
+    Log::shouldReceive('info')->once()->withArgs(function (string $message, array $context) use (&$logged) {
+        $logged = $context;
+
+        return true;
+    });
+
+    Process::fake(['*' => Process::result(output: 'ok')]);
+
+    app(ServerOps::class)->run(
+        ['php', 'admin/cli/install_database.php', '--adminpass=Zv9qooXUsAJRdHCO', '--adminuser=admin'],
+        ['feature' => 'test', 'op' => 'probe'],
+    );
+
+    expect($logged['command'])->not->toContain('Zv9qooXUsAJRdHCO')
+        ->and($logged['command'])->toContain('--adminpass=[REDACTED]')
+        // The rest of the command still has to be readable, or the log stops
+        // being useful for the thing it exists for.
+        ->and($logged['command'])->toContain('--adminuser=admin');
+});
