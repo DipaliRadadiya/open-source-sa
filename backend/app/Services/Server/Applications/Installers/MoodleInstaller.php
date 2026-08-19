@@ -32,6 +32,15 @@ use Illuminate\Support\Str;
  */
 class MoodleInstaller extends AbstractPhpInstaller
 {
+    /**
+     * What Moodle's installer demands, and the CLI default is 1000.
+     *
+     * Its environment check reports this one as "this test must pass", so it
+     * is a hard stop rather than the advisory the database-version line beside
+     * it turns out to be.
+     */
+    private const MIN_INPUT_VARS = 5000;
+
     public function siteType(): string
     {
         return 'moodle';
@@ -71,8 +80,17 @@ class MoodleInstaller extends AbstractPhpInstaller
         $adminUser = (string) ($settings['admin_user'] ?? 'admin');
 
         // The password here is deliberately disposable — see the class note.
+        // `-d max_input_vars` on the interpreter, not in the site's php.ini:
+        // Moodle's installer refuses to run below 5000 — "this test must
+        // pass", unlike the database version note beside it, which is only a
+        // warning — and the CLI default is 1000. Setting it here fixes the
+        // install without editing a php.ini the user may later want to own.
+        //
+        // The site's own pool still needs it for Moodle to run in a browser;
+        // this flag does nothing for that. See the note in install().
         $this->runAsSiteUser('install_app', $application, [
-            $php, 'admin/cli/install_database.php',
+            $php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
+            'admin/cli/install_database.php',
             '--agree-license',
             '--adminuser='.$adminUser,
             '--adminemail='.($settings['admin_email'] ?? ''),
@@ -85,7 +103,8 @@ class MoodleInstaller extends AbstractPhpInstaller
         // thing when given a username, which is what makes this reliable
         // where feeding install.php's fourteen prompts would not be.
         $this->runAsSiteUser('set_password', $application, [
-            $php, 'admin/cli/reset_password.php', '--username='.$adminUser,
+            $php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
+            'admin/cli/reset_password.php', '--username='.$adminUser,
         ], ($settings['admin_password'] ?? '')."\n", $documentRoot);
     }
 

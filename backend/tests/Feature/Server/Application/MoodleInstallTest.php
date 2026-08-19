@@ -151,3 +151,23 @@ it('agrees to the licence, which Moodle refuses to install without', function ()
 
     expect($install['command'])->toContain('--agree-license');
 });
+
+it('raises max_input_vars on the interpreter, which Moodle refuses to install without', function () {
+    // Moodle's environment check reports this one as "this test must pass" —
+    // unlike the database-version line beside it, which is advisory — and the
+    // CLI default is 1000. Without it the install dies at the last step, on a
+    // site whose files and database are already created.
+    $runs = installMoodle();
+
+    $install = collect($runs)->first(
+        fn ($run) => in_array('admin/cli/install_database.php', $run['command'], true),
+    );
+
+    $flag = array_search('-d', $install['command'], true);
+
+    expect($flag)->not->toBeFalse()
+        ->and($install['command'][$flag + 1])->toBe('max_input_vars=5000')
+        // Before the script, or PHP reads it as one of the script's own
+        // arguments and applies nothing.
+        ->and($flag)->toBeLessThan(array_search('admin/cli/install_database.php', $install['command'], true));
+});
