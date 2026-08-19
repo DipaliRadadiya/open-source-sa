@@ -88,6 +88,8 @@ return [
     'cronjob.updated' => 'Updated cron job :name',
     'cronjob.deleted' => 'Deleted cron job :name',
     'cronjob.create_failed' => 'Failed to create cron job :name',
+    'cronjob.update_failed' => 'Failed to update cron job :name (step: :step)',
+    'cronjob.delete_failed' => 'Failed to delete cron job :name (step: :step)',
     'log.downloaded' => 'Downloaded the :log log',
     'disk_cleaner.cleaned' => 'Cleaned disk (:categories) — freed :freed',
     'disk_cleaner.auto_cleaned' => 'Cleaned disk automatically (:categories) — freed :freed',

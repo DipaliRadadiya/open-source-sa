@@ -38,6 +38,19 @@ abstract class ServerOperationException extends Exception
      */
     abstract protected function messageKey(): string;
 
+    /**
+     * The stable code for this failure, for a client that branches on it.
+     *
+     * Overridable because one feature's "the server operation failed" can be
+     * several different failures — a cron job write touches seven privileged
+     * paths — and a single code for all of them tells the user only that
+     * something went wrong, which they already knew.
+     */
+    protected function code(): string
+    {
+        return 'server_operation_failed';
+    }
+
     public function render(Request $request): JsonResponse
     {
         return response()->json([
@@ -51,7 +64,7 @@ abstract class ServerOperationException extends Exception
             'code' => match (true) {
                 $this->staleLock => 'server_stale_lock',
                 $this->busy => 'server_busy',
-                default => 'server_operation_failed',
+                default => $this->code(),
             },
             'reference' => $this->reference,
             // 503 for busy (come back later); 500 for a stale lock, because

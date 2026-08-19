@@ -88,6 +88,8 @@ return [
     'cronjob.updated' => 'cronジョブ :name を更新しました',
     'cronjob.deleted' => 'cronジョブ :name を削除しました',
     'cronjob.create_failed' => 'cronジョブ :name の作成に失敗しました',
+    'cronjob.update_failed' => 'Cronジョブ :name の更新に失敗しました（ステップ: :step）',
+    'cronjob.delete_failed' => 'Cronジョブ :name の削除に失敗しました（ステップ: :step）',
     'log.downloaded' => ':log ログをダウンロードしました',
     'disk_cleaner.cleaned' => 'ディスクをクリーンアップしました (:categories) — :freed 解放',
     'disk_cleaner.auto_cleaned' => 'ディスクを自動的にクリーンアップしました (:categories) — :freed を解放',

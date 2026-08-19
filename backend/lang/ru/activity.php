@@ -88,6 +88,8 @@ return [
     'cronjob.updated' => 'Обновлено задание cron :name',
     'cronjob.deleted' => 'Удалено задание cron :name',
     'cronjob.create_failed' => 'Не удалось создать задание cron :name',
+    'cronjob.update_failed' => 'Не удалось обновить cron-задачу :name (шаг: :step)',
+    'cronjob.delete_failed' => 'Не удалось удалить cron-задачу :name (шаг: :step)',
     'log.downloaded' => 'Скачал журнал :log',
     'disk_cleaner.cleaned' => 'Очищен диск (:categories) — освобождено :freed',
     'disk_cleaner.auto_cleaned' => 'Диск очищен автоматически (:categories) — освобождено :freed',

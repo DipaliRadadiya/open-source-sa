@@ -47,12 +47,23 @@ class CreateCronjob
         // mid-write; a transaction was never able to un-write the file either,
         // so the guarantee it appeared to give was already partly imaginary.
         if ($cronjob->active) {
-            $result = $this->crontab->write($cronjob);
-
-            if ($result->failed()) {
+            try {
+                $this->crontab->write($cronjob);
+            } catch (CronjobOperationException $e) {
                 $cronjob->delete();
 
-                throw new CronjobOperationException($result->reference);
+                // Recorded before rethrowing, because the row is about to be
+                // gone. Without this a failed creation left nothing behind at
+                // all: the user got a reference, the row vanished, and the
+                // activity log showed no sign anybody had ever tried. The
+                // string has existed since the feature shipped and nothing
+                // wrote it.
+                $this->activityLogger->log('cronjob.create_failed', null, [
+                    'name' => $data['name'],
+                    'step' => $e->step ?? '—',
+                ]);
+
+                throw $e;
             }
         }
 

@@ -88,6 +88,8 @@ return [
     'cronjob.updated' => 'Atualizou a tarefa cron :name',
     'cronjob.deleted' => 'Excluiu a tarefa cron :name',
     'cronjob.create_failed' => 'Falha ao criar a tarefa cron :name',
+    'cronjob.update_failed' => 'Falha ao atualizar a tarefa cron :name (passo: :step)',
+    'cronjob.delete_failed' => 'Falha ao eliminar a tarefa cron :name (passo: :step)',
     'log.downloaded' => 'Baixou o registro :log',
     'disk_cleaner.cleaned' => 'Limpou o disco (:categories) — liberou :freed',
     'disk_cleaner.auto_cleaned' => 'Limpou o disco automaticamente (:categories) — liberou :freed',

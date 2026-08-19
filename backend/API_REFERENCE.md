@@ -3471,6 +3471,29 @@ There is **no `human` field** (render the expression client-side or use the sche
 
 **Response `201`:** `{"cronjob": {...}}`
 
+**Response `500` — the job could not be written to the server.** Writing one touches seven privileged steps, and **`code` names the one that failed** so the message can be acted on rather than just reported:
+
+| `code` | what failed |
+|---|---|
+| `cronjob_log_dir` | creating the shared cron log directory |
+| `cronjob_log_touch` | creating this job's log file |
+| `cronjob_log_chown` | handing the log to the account the job runs as |
+| `cronjob_log_chmod` | setting the log's permissions |
+| `cronjob_rotation` | installing the logrotate policy — **the job is refused rather than left to grow its output without limit** |
+| `cronjob_write` | the `/etc/cron.d` file itself |
+| `cronjob_chmod` | the cron file's mode — cron ignores a file it does not trust, so the job would never run |
+
+```json
+{"message": "The cron file could not be written. Check there is free disk space.",
+ "code": "cronjob_write", "reference": "…"}
+```
+
+**No half-made job is left behind** — the row is deleted if the write fails, because a schedule the panel lists and the server does not have is worse than none. The attempt is recorded in the activity log as `cronjob.create_failed` with the failing step, so a failure that vanished from the UI is still traceable afterwards.
+
+`503` with `code: server_busy` instead means a lock was held and the write never started — that one is worth retrying.
+
+**Update and delete** report the same way: `cronjob_remove` (the file could not be deleted, so the job is still scheduled), `cronjob_remove_stale` (the old file after a rename), `cronjob_detach_source` (the file an adopted job was imported from). In every one of those the panel restores what it changed, so a failed edit never leaves two schedules running.
+
 ---
 
 ### GET `/cronjobs/{cronjob}`

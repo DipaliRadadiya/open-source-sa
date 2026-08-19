@@ -55,14 +55,27 @@ class UpdateCronjob
         // Ordered before the old file is removed, not after. If this fails the
         // job is still described on disk exactly as it was, so a rename that
         // cannot be written leaves a working cronjob rather than none.
-        $result = $cronjob->active
-            ? $this->crontab->write($cronjob)
-            : $this->crontab->remove($cronjob);
+        try {
+            if ($cronjob->active) {
+                // Throws with the step that failed — write() knows which of its
+                // seven privileged paths went wrong and nothing else can.
+                $this->crontab->write($cronjob);
+            } else {
+                $removed = $this->crontab->remove($cronjob);
 
-        if ($result->failed()) {
+                if ($removed->failed()) {
+                    throw new CronjobOperationException($removed->reference, step: 'remove');
+                }
+            }
+        } catch (CronjobOperationException $e) {
             $cronjob->forceFill($before)->save();
 
-            throw new CronjobOperationException($result->reference);
+            $this->activityLogger->log('cronjob.update_failed', $cronjob, [
+                'name' => $cronjob->name,
+                'step' => $e->step ?? '—',
+            ]);
+
+            throw $e;
         }
 
         if ($this->crontab->path($cronjob) !== $oldPath) {
@@ -76,7 +89,7 @@ class UpdateCronjob
                     Log::warning('cronjob rename cleanup failed', ['reference' => $cleanup->reference]);
                 }
                 $cronjob->forceFill($before)->save();
-                throw new CronjobOperationException($removed->reference);
+                throw new CronjobOperationException($removed->reference, step: 'remove_stale');
             }
 
             // Carry the output history over to the new name rather than
@@ -99,7 +112,7 @@ class UpdateCronjob
                     Log::warning('cronjob source detach cleanup failed', ['reference' => $cleanup->reference]);
                 }
                 $cronjob->forceFill($before)->save();
-                throw new CronjobOperationException($detached->reference);
+                throw new CronjobOperationException($detached->reference, step: 'detach_source');
             }
 
             $cronjob->forceFill(['source_path' => null])->save();

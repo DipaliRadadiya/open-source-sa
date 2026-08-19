@@ -88,6 +88,8 @@ return [
     'cronjob.updated' => 'Actualizó la tarea cron :name',
     'cronjob.deleted' => 'Eliminó la tarea cron :name',
     'cronjob.create_failed' => 'No se pudo crear la tarea cron :name',
+    'cronjob.update_failed' => 'No se pudo actualizar la tarea cron :name (paso: :step)',
+    'cronjob.delete_failed' => 'No se pudo eliminar la tarea cron :name (paso: :step)',
     'log.downloaded' => 'Descargó el registro :log',
     'disk_cleaner.cleaned' => 'Limpió el disco (:categories) — liberó :freed',
     'disk_cleaner.auto_cleaned' => 'Limpió el disco automáticamente (:categories) — liberó :freed',

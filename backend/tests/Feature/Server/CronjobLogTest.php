@@ -128,7 +128,11 @@ it('creates the log owned by the account the job runs as', function () {
     // Cron's `>>` would create it as whoever ran first, in a directory they
     // may not be able to write to at all.
     expect($commands)->toContain(['touch', $log])
-        ->and($commands)->toContain(['chown', 'deploy:deploy', $log])
+        // The user, no group. `user:user` assumed every account has a group
+        // of its own name — true for root and for panel-created users, false
+        // for the arbitrary accounts this feature accepts (`nobody`'s group is
+        // `nogroup`), where it failed and took the whole creation with it.
+        ->and($commands)->toContain(['chown', 'deploy', $log])
         ->and($commands)->toContain(['chmod', '0640', $log]);
 });
 

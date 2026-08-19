@@ -2,6 +2,7 @@
 
 namespace App\Services\Server;
 
+use App\Exceptions\Server\Cronjob\CronjobOperationException;
 use App\Models\Cronjob;
 
 /**
@@ -107,44 +108,38 @@ class CrontabManager
      * means the very first run has somewhere to write, and one user's job can
      * never overwrite another's log.
      */
-    private function prepareLog(Cronjob $cronjob): ServerOpsResult
+    private function prepareLog(Cronjob $cronjob): void
     {
         $dir = rtrim((string) config('server.cronjob_log_dir'), '/');
         $log = $this->logPath($cronjob);
 
-        $result = $this->serverOps->run(
+        $this->attempt('log_dir', $this->serverOps->run(
             ['mkdir', '-p', $dir],
             ['feature' => 'cronjob', 'op' => 'log_dir', 'cronjob' => $cronjob->id],
-        );
+        ));
 
-        if ($result->failed()) {
-            return $result;
-        }
-
-        $result = $this->serverOps->run(
+        $this->attempt('log_touch', $this->serverOps->run(
             ['touch', $log],
             ['feature' => 'cronjob', 'op' => 'log_touch', 'cronjob' => $cronjob->id],
-        );
+        ));
 
-        if ($result->failed()) {
-            return $result;
-        }
-
-        $result = $this->serverOps->run(
-            ['chown', "{$cronjob->username}:{$cronjob->username}", $log],
+        // The user, not `user:user`. A group of the same name exists for root
+        // and for every account the panel creates, but this feature accepts any
+        // account `getent` resolves — and `nobody`'s group on Debian is
+        // `nogroup`, so `chown nobody:nobody` fails and takes the whole
+        // creation with it. Omitting the group leaves the primary group alone,
+        // which is what was wanted in every case anyway.
+        $this->attempt('log_chown', $this->serverOps->run(
+            ['chown', $cronjob->username, $log],
             ['feature' => 'cronjob', 'op' => 'log_chown', 'cronjob' => $cronjob->id],
-        );
-
-        if ($result->failed()) {
-            return $result;
-        }
+        ));
 
         // A job's output can contain anything it printed — keep it off other
         // accounts.
-        return $this->serverOps->run(
+        $this->attempt('log_chmod', $this->serverOps->run(
             ['chmod', '0640', $log],
             ['feature' => 'cronjob', 'op' => 'log_chmod', 'cronjob' => $cronjob->id],
-        );
+        ));
     }
 
     /**
@@ -187,40 +182,56 @@ class CrontabManager
     }
 
     /**
-     * Write (or overwrite) the job's cron.d file via a privileged process, then
-     * enforce mode 0644 — cron silently ignores cron.d files that are writable
-     * by group or others.
+     * Write the job to disk, throwing with the step that failed.
+     *
+     * Throws rather than returning a result the caller inspects, because the
+     * thing worth knowing — *which* of seven privileged steps went wrong — has
+     * no room in a `ServerOpsResult`. It used to be discarded: every failure
+     * here produced one sentence, so the person who had to fix it learned only
+     * that something had gone wrong somewhere.
+     *
+     * @throws CronjobOperationException
      */
-    public function write(Cronjob $cronjob): ServerOpsResult
+    public function write(Cronjob $cronjob): void
     {
         $path = $this->path($cronjob);
 
-        $result = $this->prepareLog($cronjob);
+        $this->prepareLog($cronjob);
 
-        if ($result->failed()) {
-            return $result;
-        }
+        $this->attempt('rotation', $this->ensureRotation());
 
-        $result = $this->ensureRotation();
-
-        if ($result->failed()) {
-            return $result;
-        }
-
-        $result = $this->serverOps->run(
+        $this->attempt('write', $this->serverOps->run(
             ['tee', $path],
             ['feature' => 'cronjob', 'op' => 'write', 'cronjob' => $cronjob->id],
             input: $this->render($cronjob),
-        );
+        ));
 
-        if ($result->failed()) {
-            return $result;
-        }
-
-        return $this->serverOps->run(
+        // 0644 or cron ignores the file — a job that silently never runs.
+        $this->attempt('chmod', $this->serverOps->run(
             ['chmod', '0644', $path],
             ['feature' => 'cronjob', 'op' => 'chmod', 'cronjob' => $cronjob->id],
-        );
+        ));
+    }
+
+    /**
+     * Turn a failed step into an exception that names it.
+     *
+     * `busy` and `staleLock` are carried through: "the server is occupied" and
+     * "a lock file needs removing" are different advice from "this step
+     * failed", and the base exception already renders each differently.
+     *
+     * @throws CronjobOperationException
+     */
+    private function attempt(string $step, ServerOpsResult $result): void
+    {
+        if ($result->failed()) {
+            throw new CronjobOperationException(
+                $result->reference,
+                busy: $result->busy,
+                staleLock: $result->staleLock,
+                step: $step,
+            );
+        }
     }
 
     /**

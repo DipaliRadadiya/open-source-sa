@@ -31,7 +31,12 @@ class DeleteCronjob
         $result = $this->crontab->remove($cronjob);
 
         if ($result->failed()) {
-            throw new CronjobOperationException($result->reference);
+            $this->activityLogger->log('cronjob.delete_failed', $cronjob, [
+                'name' => $cronjob->name,
+                'step' => 'remove',
+            ]);
+
+            throw new CronjobOperationException($result->reference, step: 'remove');
         }
 
         // An adopted job also has the file Server Sync read it from, which the
@@ -42,7 +47,12 @@ class DeleteCronjob
         $detached = $this->crontab->detachSource($cronjob);
 
         if ($detached?->failed()) {
-            throw new CronjobOperationException($detached->reference);
+            $this->activityLogger->log('cronjob.delete_failed', $cronjob, [
+                'name' => $cronjob->name,
+                'step' => 'detach_source',
+            ]);
+
+            throw new CronjobOperationException($detached->reference, step: 'detach_source');
         }
 
         // The job is gone, so its output log has nothing left to describe.

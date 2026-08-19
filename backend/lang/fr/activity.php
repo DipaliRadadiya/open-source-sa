@@ -88,6 +88,8 @@ return [
     'cronjob.updated' => 'A mis à jour la tâche cron :name',
     'cronjob.deleted' => 'A supprimé la tâche cron :name',
     'cronjob.create_failed' => 'Échec de la création de la tâche cron :name',
+    'cronjob.update_failed' => 'Échec de la mise à jour de la tâche cron :name (étape : :step)',
+    'cronjob.delete_failed' => 'Échec de la suppression de la tâche cron :name (étape : :step)',
     'log.downloaded' => 'A téléchargé le journal :log',
     'disk_cleaner.cleaned' => 'A nettoyé le disque (:categories) — :freed libéré',
     'disk_cleaner.auto_cleaned' => 'Disque nettoyé automatiquement (:categories) — :freed libérés',

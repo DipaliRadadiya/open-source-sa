@@ -88,6 +88,8 @@ return [
     'cronjob.updated' => 'Cronjob :name aktualisiert',
     'cronjob.deleted' => 'Cronjob :name gelöscht',
     'cronjob.create_failed' => 'Cronjob :name konnte nicht erstellt werden',
+    'cronjob.update_failed' => 'Cronjob :name konnte nicht aktualisiert werden (Schritt: :step)',
+    'cronjob.delete_failed' => 'Cronjob :name konnte nicht gelöscht werden (Schritt: :step)',
     'log.downloaded' => 'Protokoll :log heruntergeladen',
     'disk_cleaner.cleaned' => 'Festplatte bereinigt (:categories) — :freed freigegeben',
     'disk_cleaner.auto_cleaned' => 'Datenträger automatisch bereinigt (:categories) — :freed freigegeben',
