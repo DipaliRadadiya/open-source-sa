@@ -39,6 +39,14 @@ export function formatRate(value, format) {
  * a missing value renders as a dash rather than "NaN B".
  */
 export function formatBytes(bytes, format) {
+  // Nullish and "" are rejected before Number() sees them, because it turns all
+  // three into 0 — finite, non-negative, and therefore "0 B". So "we have not
+  // measured this yet" rendered as "this is empty": the sites list showed 0 B on
+  // every row of a server whose sizes were all null, and its own
+  // "Not measured" branch could never be reached. The Number.isFinite guard
+  // below was written to catch exactly this and cannot.
+  if (bytes === null || bytes === undefined || bytes === "") return null;
+
   const n = Number(bytes);
   if (!Number.isFinite(n) || n < 0) return null;
   const units = ["B", "KB", "MB", "GB"];
