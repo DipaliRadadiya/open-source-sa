@@ -43,7 +43,24 @@ export function ConfirmDialog({
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className={className}>
+      {/* A confirmation carrying a body — a checkbox to weigh up, a list to
+          review, a domain to type — gets more width, because the alternative is
+          the same words in a taller, narrower column. The delete-site dialog
+          was 384px wide and 497px tall.
+
+          md, not lg: at 512px the height was identical to 448px — the body is
+          fixed blocks, not wrapping prose, so past this point the extra width
+          buys nothing and only makes the dialog wide.
+
+          Keyed on `children` rather than asked of every caller: having a body
+          IS the signal, and a prop would be forgotten. Still `size=default`
+          — the header and footer alignment rules are written against that
+          size, so a new one would centre the title. Hence the matching
+          `data-[size=default]:` prefix: a plain `sm:max-w-md` loses to the
+          base class on specificity and silently does nothing. */}
+      <AlertDialogContent
+        className={cn(children ? "data-[size=default]:sm:max-w-md" : null, className)}
+      >
         {/* min-w-0 twice, because the title is two levels deep: the header is a
             grid item of the dialog and the title is a flex item of this row.
             Either one defaulting to min-width:auto is enough to widen the
