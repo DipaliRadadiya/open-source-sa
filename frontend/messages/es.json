@@ -38,7 +38,8 @@
       "title": "Esa página no existe",
       "description": "{lastPage, plural, one {Solo hay una página de resultados.} other {Solo hay # páginas de resultados.}}",
       "action": "Volver a la primera página"
-    }
+    },
+    "sortBy": "Ordenar por esta columna"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",

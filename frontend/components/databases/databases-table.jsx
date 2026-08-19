@@ -16,6 +16,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { useSetQuery } from "@/hooks/use-set-query";
+import { SortHeader } from "@/components/data-table/sort-header";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import {
   Tooltip,
@@ -197,33 +198,33 @@ function DatabasesList({
   const [createOpen, setCreateOpen] = useState(false);
   const [deleting, setDeleting] = useState(null);
 
-  // The API filters and pages; the browser no longer re-filters the page it
-  // was handed, which could only ever search ten rows of a longer list.
-  const filtered = data;
-
-  // With one engine every row says the same word, and a column of one repeated
-  // value is noise dressed as information.
-  const engineNames = new Set(data.map((db) => db.engine));
-  const showEngine = engineNames.size > 1;
+  // Whether to show the Engine column is a question about the SERVER, not
+  // about the ten rows on screen. Counted from the page, the column appeared
+  // and vanished as you turned it — the same mistake as building filter
+  // options out of the current page.
+  // `engines` is the server's own list, already a prop here for the create
+  // guard below.
+  const showEngine = engines.length > 1;
 
   const columns = [
-    { accessorKey: "name", header: t("columns.name"), cell: NameCell, sortingFn: "alphanumeric" },
+    { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, cell: NameCell },
     ...(showEngine
-      ? [{ accessorKey: "engine", header: t("columns.engine"), cell: EngineCell }]
+      ? [{ accessorKey: "engine", header: () => <SortHeader col="engine">{t("columns.engine")}</SortHeader>, cell: EngineCell }]
       : []),
     {
       accessorKey: "size_bytes",
       header: t("columns.size"),
       cell: SizeCell,
-      // Sorts on the raw bytes, not the "148 MB" string — otherwise 9 KB
-      // sorts above 148 MB.
-      sortingFn: "basic",
+      // NOT sortable: `size_bytes` is absent from the API's sort whitelist, so
+      // asking for it is a 422. It used to sort here, and as the DEFAULT — which
+      // once the list was paged meant "biggest on this page first" while
+      // reading as "biggest first". Backend ask filed; a header that lies is
+      // worse than one that does nothing.
     },
     {
       accessorKey: "users_count",
-      header: t("columns.users"),
+      header: () => <SortHeader col="users_count" descFirst>{t("columns.users")}</SortHeader>,
       cell: UsersCell,
-      sortingFn: "basic",
     },
     {
       id: "lastBackup",
@@ -236,14 +237,13 @@ function DatabasesList({
       sortingFn: "basic",
     },
     {
-      // Sorts by id: "2 months ago" is a sentence, and created_at is
-      // DD-MM-YYYY, which sorts alphabetically into nonsense. Ids are issued in
-      // creation order.
+      // The API sorts this one properly. It used to sort by id in the browser,
+      // standing in for a date it could not compare: "2 months ago" is a
+      // sentence and created_at arrives as DD-MM-YYYY, which sorts
+      // alphabetically into nonsense. The server has the real column.
       id: "created",
-      accessorFn: (row) => row.id,
-      header: t("columns.created"),
+      header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>,
       cell: CreatedCell,
-      sortingFn: "basic",
     },
     ...(canManage
       ? [
@@ -290,9 +290,9 @@ function DatabasesList({
         </div>
       </div>
 
-      {filtered.length === 0 && (meta?.current_page ?? 1) > 1 ? (
+      {data.length === 0 && (meta?.current_page ?? 1) > 1 ? (
         <PageOutOfRange lastPage={meta?.last_page ?? 1} />
-      ) : filtered.length === 0 ? (
+      ) : data.length === 0 ? (
         isFiltered ? (
           <EmptyState
             icon={SearchX}
@@ -315,11 +315,7 @@ function DatabasesList({
       ) : (
         <DataTable
           columns={columns}
-          data={filtered}
-          sortable
-          // Biggest first: the reason to sort by size is to find what is
-          // filling the disk.
-          defaultSorting={[{ id: "size_bytes", desc: true }]}
+          data={data}
           meta={{
             canManage,
             onDelete: setDeleting,

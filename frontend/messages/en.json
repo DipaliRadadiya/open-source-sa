@@ -38,7 +38,8 @@
       "title": "That page does not exist",
       "description": "{lastPage, plural, one {There is only one page of results.} other {There are only # pages of results.}}",
       "action": "Back to the first page"
-    }
+    },
+    "sortBy": "Sort by this column"
   },
   "systemUsers": {
     "title": "System Users",
