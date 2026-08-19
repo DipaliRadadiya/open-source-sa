@@ -28,6 +28,10 @@ export const applicationLogSchema = z
     exists: z.boolean().default(false),
     lines: z.array(z.string()).default([]),
     truncated: z.boolean().default(false),
+    // Whether a FILTERED read hit the line cap. Distinct from `truncated`, and
+    // the distinction is the whole point: it is the difference between "this
+    // is not in your log" and "I only looked at the end of it".
+    search_window_capped: z.boolean().default(false),
   })
   .passthrough();
 

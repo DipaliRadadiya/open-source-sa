@@ -965,7 +965,8 @@
     },
     "noMatches": {
       "title": "No matching lines",
-      "body": "No lines in the loaded window match your filter. Try a different term or load more lines."
+      "bodyWholeFile": "Nothing in this log matches your filter.",
+      "bodyCapped": "Only the last {count, number} lines were searched, so a match further back would not be found. Load more lines to search deeper."
     },
     "noSources": {
       "title": "No logs detected",

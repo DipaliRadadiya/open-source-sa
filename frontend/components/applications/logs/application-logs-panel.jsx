@@ -51,6 +51,11 @@ export function ApplicationLogsPanel({
   const [lines, setLines] = useState(initial?.log?.lines ?? []);
   const [status, setStatus] = useState(initial?.status ?? "ok");
   const [truncated, setTruncated] = useState(Boolean(initial?.log?.truncated));
+  // Only meaningful while filtering: the API sets it when the search covered
+  // just the tail of the file, which is what makes an empty result honest.
+  const [searchCapped, setSearchCapped] = useState(
+    Boolean(initial?.log?.search_window_capped),
+  );
   const [lineCount, setLineCount] = useState(initialLines);
   const [term, setTerm] = useState("");
   const [debouncedTerm, setDebouncedTerm] = useState("");
@@ -84,6 +89,7 @@ export function ApplicationLogsPanel({
         });
         setLines(data?.log?.lines ?? []);
         setTruncated(Boolean(data?.log?.truncated));
+        setSearchCapped(Boolean(data?.log?.search_window_capped));
         setStatus("ok");
         return true;
       } catch (error) {
@@ -302,6 +308,8 @@ export function ApplicationLogsPanel({
           term={debouncedTerm}
           severity={severity}
           filtered={Boolean(debouncedTerm) || severity !== "all"}
+          searchCapped={searchCapped}
+          searchedLines={lineCount}
           wrap={wrap}
           status={status}
           following={follow}

@@ -965,7 +965,8 @@
     },
     "noMatches": {
       "title": "Sin líneas coincidentes",
-      "body": "Ninguna línea de la ventana cargada coincide con el filtro. Prueba otro término o carga más líneas."
+      "bodyWholeFile": "Nada en este registro coincide con tu filtro.",
+      "bodyCapped": "Solo se buscó en las últimas {count, number} líneas, así que una coincidencia anterior no aparecería. Carga más líneas para buscar más atrás."
     },
     "noSources": {
       "title": "No se detectaron registros",

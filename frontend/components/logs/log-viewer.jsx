@@ -29,6 +29,11 @@ export function LogViewer({
   onCopyLine,
   filtered,
   severity,
+  // Set only by the application log panel: its API says whether a filtered
+  // read reached the line cap. The server log endpoint has no equivalent, so
+  // this is undefined there and the wording stays as it was.
+  searchCapped = false,
+  searchedLines,
 }) {
   const t = useTranslations("logs");
   const scrollRef = useRef(null);
@@ -89,11 +94,21 @@ export function LogViewer({
     return <Notice icon={TriangleAlert} title={t("readFailed.title")} body={t("readFailed.body")} />;
   }
   if (!lines.length) {
+    // "No matches" is two different answers and they were rendered as one. A
+    // search that read the whole file proves the text is not there; one that
+    // read the last few thousand lines proves nothing about the rest, and
+    // saying so is the difference between trusting the result and being
+    // misled by it.
+    const noMatchBody =
+      searchCapped && searchedLines
+        ? t("noMatches.bodyCapped", { count: searchedLines })
+        : t("noMatches.bodyWholeFile");
+
     return (
       <Notice
         icon={Inbox}
         title={filtered ? t("noMatches.title") : t("emptyFile.title")}
-        body={filtered ? t("noMatches.body") : t("emptyFile.body")}
+        body={filtered ? noMatchBody : t("emptyFile.body")}
       />
     );
   }
