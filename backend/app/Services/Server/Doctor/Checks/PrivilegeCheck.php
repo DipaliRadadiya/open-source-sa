@@ -61,9 +61,9 @@ class PrivilegeCheck implements DoctorCheck
     /**
      * @return array<int, string>
      */
-    private function probe(string $binary, ?string $serviceUser): array
+    private function probe(?string $binary, ?string $serviceUser): array
     {
-        $probe = ['sudo', '-n', '-l', $binary];
+        $probe = array_filter(['sudo', '-n', '-l', $binary], fn ($part): bool => $part !== null);
 
         return $serviceUser === null
             ? $probe
@@ -135,7 +135,7 @@ class PrivilegeCheck implements DoctorCheck
         //
         // One `sudo -n -l` rather than one per binary: sixty round trips would
         // make the doctor slow enough that people stop running it.
-        $ungranted = $this->ungranted();
+        $ungranted = $this->ungranted($serviceUser);
 
         if ($ungranted !== []) {
             return [
@@ -158,9 +158,15 @@ class PrivilegeCheck implements DoctorCheck
      *
      * @return array<int, string>
      */
-    private function ungranted(): array
+    private function ungranted(?string $serviceUser): array
     {
-        $listing = Process::timeout(15)->run(['sudo', '-n', '-l']);
+        // Through the service account, exactly like the probes above. Asked as
+        // root this lists root's own `(ALL) ALL`, which contains no absolute
+        // paths at all — so the regex below matched nothing and every binary
+        // the panel uses was reported missing, on a server whose grant was
+        // fine. A check that cries wolf about all 76 is as useless as one that
+        // passes silently.
+        $listing = Process::timeout(15)->run($this->probe(null, $serviceUser));
 
         if (! $listing->successful()) {
             // sudo answered for the five above, so a failure here is something
