@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
@@ -22,12 +24,63 @@ import { ServiceStatusBadge } from "@/components/services/service-status-badge";
  * ------------------------------------------------------------------------- */
 
 function ServiceCell({ row }) {
+  const t = useTranslations("services");
+  const {
+    label,
+    unit,
+    state,
+    install_reason: installReason,
+    install_message: installMessage,
+    retryable,
+  } = row.original;
+  const installed = state === "installed";
+
+  // Only what the badge does not already say. "Installing…" is the badge's job,
+  // and the generic failure sentence is both a repeat of "Failed" and an
+  // instruction to quote a reference this screen does not show — so on those
+  // rows the retry link below is the whole useful content.
+  const note = installReason && installReason !== "unknown" ? installMessage : null;
+
+  // While a service is installing, or has failed to install, there is no unit
+  // yet — printing one would name a file that does not exist. The reason takes
+  // its place, since the row is otherwise inert (no actions, no usage, no logs)
+  // and would sit there explaining nothing.
+  //
+  // `whitespace-normal` is load-bearing: TableCell sets `whitespace-nowrap`,
+  // which is inherited, so this sentence rendered on one line and painted
+  // straight across the Status, Memory and CPU columns. Fixed column widths do
+  // not stop that on their own — a table cell does not clip its overflow.
+  let secondLine = null;
+  if (installed) {
+    // The unit name is what you'd type into systemctl, so it belongs here — but
+    // quietly, under the name people actually recognise.
+    secondLine = <p className="truncate font-mono text-xs text-muted-foreground">{unit}</p>;
+  } else if (note || retryable) {
+    secondLine = (
+      <p className="text-xs whitespace-normal wrap-anywhere text-muted-foreground">
+        {note}
+        {retryable ? (
+          <>
+            {note ? " " : null}
+            {/* A link, not a button: the install was started on the setup page
+                and that is where its retry belongs. Two doors to the same
+                install is how you end up running two at once. */}
+            <Link
+              href="/setup"
+              className="font-medium whitespace-nowrap text-foreground underline underline-offset-2"
+            >
+              {t("state.retryOnSetup")}
+            </Link>
+          </>
+        ) : null}
+      </p>
+    );
+  }
+
   return (
     <div className="min-w-0">
-      <p className="font-medium">{row.original.label}</p>
-      {/* The unit name is what you'd type into systemctl, so it belongs here —
-          but quietly, under the name people actually recognise. */}
-      <p className="truncate font-mono text-xs text-muted-foreground">{row.original.unit}</p>
+      <p className="font-medium">{label}</p>
+      {secondLine}
     </div>
   );
 }
@@ -36,6 +89,7 @@ function StatusCell({ row, table }) {
   return (
     <ServiceStatusBadge
       status={row.original.status}
+      state={row.original.state}
       busyAction={table.options.meta.busy[row.original.key]}
     />
   );
@@ -98,7 +152,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     {
       accessorKey: "label",
       header: t("columns.service"),
-      meta: { className: "w-[24%] min-w-48" },
+      meta: { className: "w-[34%]" },
       // No lock icon here: the "Always on" cell already carries one, with the
       // explanation attached. Two locks in one row is the same fact twice.
       cell: ServiceCell,
@@ -106,7 +160,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     {
       accessorKey: "status",
       header: t("columns.status"),
-      meta: { className: "w-[14%]" },
+      meta: { className: "w-[13%]" },
       cell: StatusCell,
     },
     // Two plain columns instead of one stacked block. The inline "RAM"/"CPU"
@@ -115,7 +169,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     {
       id: "memory",
       header: () => <span className="block text-right">{t("memoryShort")}</span>,
-      meta: { className: "w-[12%] text-right" },
+      meta: { className: "w-[10%] text-right" },
       cell: MemoryCell,
     },
     {
@@ -124,19 +178,19 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
       // cell AND the body cells. Repeating it on the header's own span indented
       // the label twice and knocked it out of line with its own numbers.
       header: () => <span className="block text-right">{t("cpuShort")}</span>,
-      meta: { className: "w-[12%] pr-8 text-right" },
+      meta: { className: "w-[10%] pr-8 text-right" },
       cell: CpuCell,
     },
     {
       id: "boot",
       header: t("columns.boot"),
-      meta: { className: "w-[16%]" },
+      meta: { className: "w-[15%]" },
       cell: BootCell,
     },
     {
       id: "actions",
       header: () => <span className="block text-right">{t("columns.actions")}</span>,
-      meta: { className: "text-right" },
+      meta: { className: "w-[18%] text-right" },
       cell: ActionsCell,
     },
   ];
@@ -145,6 +199,14 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     <DataTable
       columns={columns}
       data={data}
+      // Fixed layout, so the column widths above are obeyed rather than treated
+      // as hints. With the browser's default `auto`, a failed install's
+      // explanation — a whole sentence — set the first column's width from its
+      // longest line, pushed the table past its container and left Actions off
+      // the right-hand edge behind a horizontal scrollbar. Fixed makes the
+      // sentence wrap inside its column instead, so a row grows downwards when
+      // there is something to say and the table never grows sideways.
+      fixedLayout
       meta={{ busy, setRowBusy, canManage, phpVersions }}
       emptyMessage={t("empty.title")}
       // A failed unit is why you opened this page — tint the row so it's found
@@ -156,7 +218,13 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
       rowClassName={(service) =>
         cn(
           "[&_td]:py-2",
-          service.status === "failed" && "bg-destructive/5 hover:bg-destructive/10",
+          // Only a real unit that failed. An install that failed also reports
+          // `status: failed`, but tinting its row says "this broke" about
+          // something that never started — and it already explains itself in
+          // words beside the name.
+          service.status === "failed" &&
+            service.state === "installed" &&
+            "bg-destructive/5 hover:bg-destructive/10",
         )
       }
     />

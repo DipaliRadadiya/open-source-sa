@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ServiceActions } from "@/components/services/service-actions";
@@ -31,16 +33,50 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
             key={service.key}
             // Same signal as the table's tinted row: a failed unit is why you
             // opened the page.
-            className={cn(service.status === "failed" && "border-destructive/30 bg-destructive/5")}
+            className={cn(
+              service.status === "failed" &&
+                service.state === "installed" &&
+                "border-destructive/30 bg-destructive/5",
+            )}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-medium">{service.label}</p>
-                <p className="truncate font-mono text-xs text-muted-foreground">
-                  {service.unit}
-                </p>
+                {/* Same rule as the table's first column, and said here too so
+                    the two layouts cannot describe one state differently:
+                    installing or failed-to-install means there is no unit to
+                    name, so the reason takes its place. */}
+                {service.state !== "installed" ? (
+                  (service.install_reason && service.install_reason !== "unknown") ||
+                  service.retryable ? (
+                  <p className="text-xs whitespace-normal wrap-anywhere text-muted-foreground">
+                    {service.install_reason && service.install_reason !== "unknown"
+                      ? service.install_message
+                      : null}
+                    {service.retryable ? (
+                      <>
+                        {" "}
+                        <Link
+                          href="/setup"
+                          className="font-medium text-foreground underline underline-offset-2"
+                        >
+                          {t("state.retryOnSetup")}
+                        </Link>
+                      </>
+                    ) : null}
+                  </p>
+                  ) : null
+                ) : (
+                  <p className="truncate font-mono text-xs text-muted-foreground">
+                    {service.unit}
+                  </p>
+                )}
               </div>
-              <ServiceStatusBadge status={service.status} busyAction={busy[service.key]} />
+              <ServiceStatusBadge
+                status={service.status}
+                state={service.state}
+                busyAction={busy[service.key]}
+              />
             </div>
 
             {/* Both figures on one line: on a narrow card they're a pair to

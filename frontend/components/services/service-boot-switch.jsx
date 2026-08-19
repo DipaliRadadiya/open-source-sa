@@ -59,6 +59,14 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
     }
   }
 
+  // Nothing to enable: an installing or failed-to-install row has no unit yet,
+  // so `actions` is empty and the switch would render permanently disabled —
+  // the pale half-lit control this component already refuses to draw below. A
+  // dash, matching the empty usage figures on the same row.
+  if (service.state && service.state !== "installed") {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
   // A service that can never be switched off shouldn't be represented by a
   // switch. Disabled-and-on renders as a pale half-lit control that reads as a
   // glitch — "is that on? loading?" — so the fact is stated in words instead.

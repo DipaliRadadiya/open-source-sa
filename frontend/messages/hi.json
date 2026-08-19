@@ -1106,7 +1106,36 @@
     },
     "notMeasured": "मापा नहीं गया",
     "phpSettings": "PHP सेटिंग्स",
-    "iniPlaceholder": "memory_limit = 256M"
+    "iniPlaceholder": "memory_limit = 256M",
+    "state": {
+      "installing": "इंस्टॉल हो रहा है…",
+      "install_failed": "इंस्टॉल पूरा नहीं हुआ।",
+      "retryOnSetup": "सेटअप पेज पर फिर से कोशिश करें"
+    },
+    "summary": {
+      "attention": "{count, plural, =1 {1 सेवा पर ध्यान देना ज़रूरी है} other {# सेवाओं पर ध्यान देना ज़रूरी है}}",
+      "running": "{count, plural, =1 {1 चल रही} other {# चल रही}}",
+      "installing": "{count, plural, =1 {1 इंस्टॉल हो रही} other {# इंस्टॉल हो रही}}",
+      "allRunning": "{count, plural, =0 {कोई सेवा नहीं मिली} =1 {एकमात्र सेवा चल रही है} other {सभी # सेवाएँ चल रही हैं}}"
+    },
+    "sections": {
+      "attention": {
+        "title": "ध्यान देने की ज़रूरत",
+        "hint": "ये चल नहीं रही हैं। हर एक बताती है क्यों, और आगे क्या करना है।"
+      },
+      "running": {
+        "title": "चल रही सेवाएँ",
+        "hint": "मेमोरी, प्रोसेसर उपयोग, और क्या हर एक सर्वर के साथ शुरू होती है।"
+      },
+      "installing": {
+        "title": "इंस्टॉल हो रही हैं",
+        "hint": "कुछ करने की ज़रूरत नहीं — ये अपने आप पूरी हो जाएँगी।"
+      }
+    },
+    "attention": {
+      "openSetup": "सेटअप खोलें",
+      "unitFailed": "इंस्टॉल है लेकिन चल नहीं रही। इसका लॉग बताएगा क्यों।"
+    }
   },
   "fail2ban": {
     "title": "Fail2ban",

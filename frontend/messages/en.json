@@ -1106,7 +1106,36 @@
     },
     "notMeasured": "Not measured",
     "phpSettings": "PHP settings",
-    "iniPlaceholder": "memory_limit = 256M"
+    "iniPlaceholder": "memory_limit = 256M",
+    "state": {
+      "installing": "Installing…",
+      "install_failed": "The install did not finish.",
+      "retryOnSetup": "Retry on the setup page"
+    },
+    "summary": {
+      "attention": "{count, plural, =1 {1 service needs attention} other {# services need attention}}",
+      "running": "{count, plural, =1 {1 running} other {# running}}",
+      "installing": "{count, plural, =1 {1 installing} other {# installing}}",
+      "allRunning": "{count, plural, =0 {No services detected} =1 {The one service is running} other {All # services are running}}"
+    },
+    "sections": {
+      "attention": {
+        "title": "Needs attention",
+        "hint": "These are not running. Each one says why, and what to do about it."
+      },
+      "running": {
+        "title": "Running services",
+        "hint": "Memory, processor use and whether each one starts with the server."
+      },
+      "installing": {
+        "title": "Being installed",
+        "hint": "Nothing to do — these finish on their own."
+      }
+    },
+    "attention": {
+      "openSetup": "Open setup",
+      "unitFailed": "Installed but not running. Its log will say why."
+    }
   },
   "fail2ban": {
     "title": "Fail2ban",

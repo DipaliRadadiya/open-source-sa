@@ -5,6 +5,8 @@ import { useFormatter, useTranslations } from "next-intl";
 import { listServices } from "@/lib/api/services";
 import { servicesResponseSchema } from "@/lib/schemas/service";
 import { ServicesTable } from "@/components/services/services-table";
+import { ServiceAttentionList } from "@/components/services/service-attention-list";
+import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { ServicesCards } from "@/components/services/services-cards";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
@@ -69,51 +71,138 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
     };
   }, [format]);
 
-  const failedCount = services.filter((s) => s.status === "failed").length;
+  // Three groups, because the reader is asking three different questions and a
+  // single list answered none of them well. On a server whose engines all failed
+  // to install, the table was every row empty except its name.
+  //
+  //   attention   needs a person: never installed, or installed and not running
+  //   running     has a unit that is up — the only rows where Memory, CPU and
+  //               Start on boot mean anything, so they keep the table
+  //   installing  in progress; nothing to do but wait
+  const attention = services.filter(
+    (s) => s.state === "install_failed" || (s.state !== "installing" && s.status === "failed"),
+  );
+  const installing = services.filter((s) => s.state === "installing");
+  const running = services.filter(
+    (s) => (s.state ?? "installed") === "installed" && s.status !== "failed",
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2">
-        <span className="text-xs tabular-nums text-muted-foreground">
+    <div className="space-y-6">
+      {/* The two counts people open this page for, plus when the numbers were
+          taken. Tinted only when something is actually wrong — a permanently
+          coloured strip is decoration, and a permanently calm one that goes red
+          is a signal. */}
+      <div
+        className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border px-4 py-3 text-sm ${
+          attention.length > 0 ? "border-destructive/30 bg-destructive/5" : "bg-muted/30"
+        }`}
+      >
+        {/* One phrase when all is well: "Everything is running · 5 running"
+            said the same thing twice. The count only earns its own slot when it
+            is the REMAINDER after something has gone wrong. */}
+        {attention.length > 0 ? (
+          <>
+            <span className="font-medium text-destructive">
+              {t("summary.attention", { count: attention.length })}
+            </span>
+            <span className="text-muted-foreground">
+              {t("summary.running", { count: running.length })}
+            </span>
+          </>
+        ) : (
+          <span className="text-muted-foreground">
+            {t("summary.allRunning", { count: running.length })}
+          </span>
+        )}
+        {installing.length > 0 ? (
+          <span className="text-muted-foreground">
+            {t("summary.installing", { count: installing.length })}
+          </span>
+        ) : null}
+        {/* The stamp and the button that renews it, together, and in the one
+            place that speaks for the whole page. In a section header the same
+            button read as "refresh these rows". */}
+        <span className="ms-auto flex items-center gap-2 text-xs tabular-nums text-muted-foreground">
           {t("checkedAt", { time: checkedAt })}
+          <RefreshButton />
         </span>
-        <RefreshButton />
       </div>
 
-      {/* The reason most people open this page, answered before they scan the
-          table. Only shown when true — a permanent "all healthy" strip would be
-          noise, and a stale one would be a lie. */}
-      {failedCount > 0 ? (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
-        >
-          {t("failedSummary", { count: failedCount })}
-        </p>
+      {attention.length > 0 ? (
+        <Section title={t("sections.attention.title")} hint={t("sections.attention.hint")}>
+          <ServiceAttentionList
+            services={attention}
+            phpVersions={phpVersions}
+            canManage={canManage}
+            busy={busy}
+            setRowBusy={setRowBusy}
+          />
+        </Section>
       ) : null}
 
-      {/* Cards on narrow screens, the table from lg up. The table scrolls
-          sideways on a phone, but its action buttons land off-screen with
-          nothing hinting at a swipe — the one thing you opened the page to do
-          is the one thing you can't see. */}
-      <div className="lg:hidden">
-        <ServicesCards
-          data={services}
-          phpVersions={phpVersions}
-          canManage={canManage}
-          busy={busy}
-          setRowBusy={setRowBusy}
-        />
-      </div>
-      <div className="hidden lg:block">
-        <ServicesTable
-          data={services}
-          phpVersions={phpVersions}
-          canManage={canManage}
-          busy={busy}
-          setRowBusy={setRowBusy}
-        />
-      </div>
+      {installing.length > 0 ? (
+        <Section title={t("sections.installing.title")} hint={t("sections.installing.hint")}>
+          <ul className="divide-y rounded-xl border">
+            {installing.map((service) => (
+              <li key={service.key} className="flex items-center justify-between gap-3 p-4">
+                <p className="min-w-0 truncate font-medium">{service.label}</p>
+                <ServiceStatusBadge status={service.status} state={service.state} />
+              </li>
+            ))}
+          </ul>
+        </Section>
+      ) : null}
+
+      {/* Hidden when nothing is running: on a server whose engines all failed
+          to install, this drew a full six-column table with one "No services
+          detected" cell in it — a large empty frame saying what the summary
+          line already said in two words.
+
+          Kept when there are NO services at all, because then it is the only
+          thing that can explain an otherwise blank page. */}
+      {running.length > 0 || services.length === 0 ? (
+      <Section title={t("sections.running.title")} hint={t("sections.running.hint")}>
+        {/* Cards on narrow screens, the table from lg up. The table scrolls
+            sideways on a phone, but its action buttons land off-screen with
+            nothing hinting at a swipe — the one thing you opened the page to do
+            is the one thing you can't see. */}
+        <div className="lg:hidden">
+          <ServicesCards
+            data={running}
+            phpVersions={phpVersions}
+            canManage={canManage}
+            busy={busy}
+            setRowBusy={setRowBusy}
+          />
+        </div>
+        <div className="hidden lg:block">
+          <ServicesTable
+            data={running}
+            phpVersions={phpVersions}
+            canManage={canManage}
+            busy={busy}
+            setRowBusy={setRowBusy}
+          />
+        </div>
+      </Section>
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * A titled group of rows. Same shape as the setup page's sections: a heading
+ * that says what the group is and one line saying why it is separate.
+ */
+function Section({ title, hint, children }) {
+  return (
+    <section className="space-y-3">
+      <div className="space-y-0.5">
+        <h2 className="font-semibold tracking-tight">{title}</h2>
+        <p className="text-sm text-muted-foreground">{hint}</p>
+      </div>
+      {children}
+    </section>
   );
 }
