@@ -936,6 +936,12 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
   // inside the settings card it applies to (see SharedPhpState).
   if (!php.isolation_supported) return null;
 
+  // An isolated site has nothing to do here. The card carried no action and no
+  // fact the strip below it does not already state ("Runs as <user>"), so it
+  // was a banner announcing that things are normal — on every visit, above the
+  // settings somebody came to change.
+  if (php.isolated) return null;
+
   return (
     <Card className="gap-0 overflow-hidden border-blue-200 bg-blue-50/60 py-0 shadow-sm dark:border-blue-800 dark:bg-blue-950/20">
       <CardContent className="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -948,7 +954,7 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
           </div>
           <div className="min-w-0 space-y-1.5">
             <p className="flex flex-wrap items-center gap-2 font-semibold">
-              {php.isolated ? t("onTitle") : t("offTitle")}
+              {t("offTitle")}
               <Badge
                 variant="outline"
                 // whitespace-normal: this badge carries a sentence with the
@@ -957,23 +963,17 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
                 // 244px card, so it pushed the whole row past the edge.
                 className="h-auto border-blue-300 bg-blue-100/60 py-0.5 text-xs font-normal whitespace-normal text-blue-700 dark:border-blue-700 dark:bg-blue-900/60 dark:text-blue-300"
               >
-                {php.isolated
-                  ? t("dedicatedBadge")
-                  : t("sharedBadge", { user: php.runs_as ?? "www-data" })}
+                {t("sharedBadge", { user: php.runs_as ?? "www-data" })}
               </Badge>
             </p>
             <p className="text-sm text-muted-foreground">
-              {php.isolated ? t("onBody") : t("offBody")}
+              {t("offBody")}
             </p>
-            {!php.isolated ? (
-              <p className="text-xs text-muted-foreground">{t("isolateHelper")}</p>
-            ) : null}
+            <p className="text-xs text-muted-foreground">{t("isolateHelper")}</p>
           </div>
         </div>
 
-        {/* Only on a site that still lacks a pool. An isolated site has nothing
-            to do here — the card is a statement of fact, not a control. */}
-        {canManage && !php.isolated ? (
+        {canManage ? (
           <Button
             type="button"
             onClick={onIsolate}
@@ -1284,7 +1284,12 @@ function ToggleRow({ form, name, label, directive, hint, disabled }) {
       name={name}
       render={({ field }) => (
         <FormItem className="flex items-start justify-between gap-4 rounded-lg border px-3 py-2.5">
-          <div className="space-y-1">
+          {/* flex-1: without it this block is only as wide as its longest line,
+              so the Label's own justify-between has nothing to distribute and
+              Reset ends up jammed against the label text mid-row instead of
+              right-aligned like every other Reset on the page. The switch owns
+              the far right, so Reset lands immediately left of it. */}
+          <div className="min-w-0 flex-1 space-y-1">
             <Label label={label} name={name} />
             <Directive name={directive} />
             {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}

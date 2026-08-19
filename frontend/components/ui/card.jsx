@@ -34,12 +34,23 @@ function CardHeader({
   );
 }
 
+/*
+ * `as` exists because a card title usually IS a section heading, and shipping
+ * it as a <div> left whole pages with a single <h1> and no outline beneath it —
+ * nothing to jump between with a screen reader, and no structure for anything
+ * that reads the document rather than looks at it.
+ *
+ * It stays a <div> by default: cards also appear inside dialogs and nested in
+ * other sections, where an <h2> would land at the wrong depth. Callers that
+ * know they are a top-level section on a page pass `as="h2"`.
+ */
 function CardTitle({
+  as: Comp = "div",
   className,
   ...props
 }) {
   return (
-    <div
+    <Comp
       data-slot="card-title"
       className={cn(
         "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",

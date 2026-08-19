@@ -29,7 +29,7 @@ const DONE_KEY = { start: "started", stop: "stopped", restart: "restarted" };
  * because the code has not arrived yet. That reads as "deploy to start", not as
  * a fault, so it is not painted red.
  */
-export function ProcessCard({ application, canManage = false }) {
+export function ProcessCard({ application, canManage = false, className }) {
   const t = useTranslations("applications.process");
   const router = useRouter();
   const [pending, setPending] = useState(null);
@@ -59,9 +59,9 @@ export function ProcessCard({ application, canManage = false }) {
   ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
-        <CardTitle>{t("title")}</CardTitle>
+    <Card className={className}>
+      <CardHeader className="gap-1.5">
+        <CardTitle as="h2">{t("title")}</CardTitle>
         <Badge variant={STATE_VARIANT[state] ?? "secondary"} className="font-normal">
           {state}
         </Badge>

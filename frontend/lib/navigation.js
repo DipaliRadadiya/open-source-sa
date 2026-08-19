@@ -95,6 +95,18 @@ export function resolveNavItems(items, applicationId) {
   );
 }
 
+/**
+ * The catalog's title, unless the frontend calls the screen something clearer.
+ *
+ * "8G" is the name of the upstream ruleset, not a description of the feature —
+ * it tells somebody looking for a web firewall nothing at all. The API keeps
+ * its name; only the label changes.
+ */
+export function navTitle(item, t) {
+  if (item.name === "app_firewall") return t("navTitles.app_firewall");
+  return item.title;
+}
+
 // Buckets a flat, already-filtered list of nav items by their sub_level so the
 // sidebar can render them under section headers. Pure grouping — no permission
 // or panel logic lives here.

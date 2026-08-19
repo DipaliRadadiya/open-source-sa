@@ -182,7 +182,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Webhook className="size-4 text-muted-foreground" />
+          <Webhook className="size-4 text-primary" />
           {t("webhook.title")}
         </CardTitle>
         <CardDescription>

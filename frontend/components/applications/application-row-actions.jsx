@@ -6,7 +6,19 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { toast } from "sonner";
-import { ExternalLink, LayoutDashboard, Loader2, MoreHorizontal, RotateCw, Ruler, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ExternalLink,
+  FolderTree,
+  Globe2,
+  LayoutDashboard,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  RotateCw,
+  Ruler,
+  Trash2,
+} from "lucide-react";
 import { measureApplicationSize, retryProvisioning } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -19,6 +31,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
+import { WebRootDialog } from "@/components/applications/web-root-dialog";
+
+/**
+ * The screens worth reaching from the header menu, in the order a site is
+ * usually worked on. Keyed rather than passed whole because the caller is a
+ * server component: a Lucide component cannot cross that boundary, so the
+ * server sends the keys it has permission for and the icon is resolved here.
+ */
+const SHORTCUT_ICONS = {
+  files: FolderTree,
+  domains: Globe2,
+  backups: Archive,
+};
 
 /**
  * Row menu for one application. Open and Visit are reads and stay available to
@@ -33,6 +58,11 @@ export function ApplicationRowActions({
   // On the application's own dashboard page, "Open dashboard" points at the
   // current page and "Visit" duplicates the header button — hide both there.
   showNavigation = true,
+  // Keys of the app screens this user may open, already permission-filtered by
+  // the server. Only the detail header passes these — on the list, five extra
+  // links per row would bury Delete under navigation nobody opens a row menu
+  // for.
+  shortcuts = [],
   // Called after a successful delete, before redirecting (if redirectTo is set).
   // Useful on the list page to refresh the table immediately.
   afterDelete,
@@ -45,6 +75,7 @@ export function ApplicationRowActions({
   const [retrying, setRetrying] = useState(false);
   const [measuring, setMeasuring] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [webRootOpen, setWebRootOpen] = useState(false);
 
   const href = `/applications/${application.id}`;
   const canVisit = application.status === "active";
@@ -52,7 +83,7 @@ export function ApplicationRowActions({
   const showRetry = canManage && canRetry;
 
   // Nothing to offer (view-only, on the detail page) → no empty ⋯ trigger.
-  if (!showNavigation && !showRetry && !canManage) return null;
+  if (!showNavigation && !showRetry && !canManage && shortcuts.length === 0) return null;
 
   // Walks every inode on the site, so it is the user's decision and never a
   // side effect of opening a screen. Lives here because it is a per-row action
@@ -128,6 +159,33 @@ export function ApplicationRowActions({
             </>
           ) : null}
 
+          {shortcuts.length > 0 ? (
+            <>
+              {shortcuts.map((key) => {
+                const Icon = SHORTCUT_ICONS[key];
+                return (
+                  <DropdownMenuItem key={key} asChild>
+                    <Link href={`${href}/${key}`} prefetch={false}>
+                      <Icon className="size-4" />
+                      {t(`actions.go.${key}`)}
+                    </Link>
+                  </DropdownMenuItem>
+                );
+              })}
+              {/* The only property of an application the API can update. Sits
+                  with the navigation because it is what "edit this app" means
+                  here — there is no other editable field and no settings
+                  screen to send anyone to. */}
+              {canManage ? (
+                <DropdownMenuItem onSelect={() => setWebRootOpen(true)}>
+                  <Pencil className="size-4" />
+                  {t("webRoot.title")}
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
+
           <DropdownMenuItem disabled={measuring} onSelect={measure}>
             <Ruler className="size-4" />
             {measuring ? t("size.measuring") : t("size.measure")}
@@ -151,6 +209,12 @@ export function ApplicationRowActions({
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <WebRootDialog
+        application={application}
+        open={webRootOpen}
+        onOpenChange={setWebRootOpen}
+      />
 
       <DeleteApplicationDialog
         application={application}

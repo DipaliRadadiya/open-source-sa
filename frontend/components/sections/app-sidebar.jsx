@@ -8,6 +8,7 @@ import { ArrowLeft, Globe2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   groupBySubLevel,
+  navTitle,
   isNavBuilt,
   findActiveNavItem,
   resolveNavItems,
@@ -62,7 +63,7 @@ function MobileNavLink({ item, built, active, children, className }) {
     return (
       <SidebarMenuButton
         asChild
-        tooltip={`${item.title} · ${t("soon")}`}
+        tooltip={`${navTitle(item, t)} · ${t("soon")}`}
         className={cn(NAV_ITEM_CLASS, "cursor-default text-muted-foreground/55 hover:bg-transparent hover:text-muted-foreground/55")}
         onClick={handleClick}
       >
@@ -80,7 +81,7 @@ function MobileNavLink({ item, built, active, children, className }) {
       <SidebarMenuButton
         asChild
         isActive={active}
-        tooltip={item.title}
+        tooltip={navTitle(item, t)}
         className={cn(NAV_ITEM_CLASS, className)}
         onClick={handleClick}
       >
@@ -217,7 +218,7 @@ export function AppSidebar({ items }) {
                     <SidebarMenuItem key={`${item.name}-${item.href}`}>
                       <MobileNavLink item={item} built={false} active={active}>
                         <NavIcon name={item.icon} />
-                        <span>{item.title}</span>
+                        <span>{navTitle(item, t)}</span>
                       </MobileNavLink>
                     </SidebarMenuItem>
                   )
@@ -235,7 +236,7 @@ export function AppSidebar({ items }) {
                           prefetches; `loading.jsx` covers the rest. */}
                       <Link href={item.href} prefetch={false}>
                         <NavIcon name={item.icon} />
-                        <span>{item.title}</span>
+                        <span>{navTitle(item, t)}</span>
                       </Link>
                     </MobileNavLink>
                   </SidebarMenuItem>

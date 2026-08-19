@@ -39,7 +39,10 @@
       "description": "{lastPage, plural, one {There is only one page of results.} other {There are only # pages of results.}}",
       "action": "Back to the first page"
     },
-    "sortBy": "Sort by this column"
+    "sortBy": "Sort by this column",
+    "navTitles": {
+      "app_firewall": "Web Firewall"
+    }
   },
   "systemUsers": {
     "title": "System Users",
@@ -2676,7 +2679,8 @@
       "failedAt": "The last deploy failed at {step}. The previous version is still being served.",
       "reference": "Support reference: {reference}",
       "redeploy": "Re-deploy",
-      "manage": "Manage deployment"
+      "manage": "Manage deployment",
+      "description": "Where the code comes from and how it ships."
     },
     "gitAccount": "Git account",
     "gitAccountPlaceholder": "Choose a connected account",
@@ -2861,7 +2865,12 @@
       "open": "Open dashboard",
       "visit": "Visit site",
       "visitHint": "The site is served once provisioning finishes.",
-      "delete": "Delete application"
+      "delete": "Delete application",
+      "go": {
+        "files": "Open files",
+        "domains": "Manage domains",
+        "backups": "Backups"
+      }
     },
     "delete": {
       "title": "Delete {name}?",
@@ -2883,7 +2892,8 @@
       "webRoot": "Web root",
       "php": "PHP version",
       "node": "Node version",
-      "port": "Port"
+      "port": "Port",
+      "description": "Type, owner and where this site lives."
     },
     "process": {
       "title": "Process",
@@ -2904,7 +2914,6 @@
       "title": "Domains and SSL",
       "secured": "HTTPS",
       "noCertificate": "No certificate",
-      "counts": "{aliases, plural, =0 {No aliases} one {# alias} other {# aliases}} · {redirects, plural, =0 {no redirects} one {# redirect} other {# redirects}}",
       "expires": "Certificate renews {when}.",
       "manage": "Manage domains",
       "loadFailed": "We could not load the domains for this application.",
@@ -3025,6 +3034,14 @@
         "forceIssue": "Issue anyway",
         "issue": "Issue certificate",
         "issueFailed": "Couldn't issue the certificate."
+      },
+      "issueCertificate": "Issue SSL certificate",
+      "description": "Names that reach this site, and its certificate.",
+      "more": "+{count} more",
+      "types": {
+        "primary": "Primary",
+        "alias": "Alias",
+        "redirect": "Redirect"
       }
     },
     "markers": {
@@ -3664,7 +3681,7 @@
       "nothingToSave": "Nothing to save"
     },
     "firewall": {
-      "pageTitle": "8G Firewall",
+      "pageTitle": "Web Firewall",
       "pageSubtitle": "Turn away common attacks before they reach this site.",
       "loadFailed": "This couldn't be loaded.",
       "provisioning": "This site is still being set up. The firewall will be available once it's running.",
@@ -3715,7 +3732,7 @@
       "discard": "Discard",
       "saved": "Firewall settings saved.",
       "saveFailed": "That couldn't be saved.",
-      "noPermission": "Your role does not include 8G Firewall for this site with Manage access. Ask an administrator to grant it.",
+      "noPermission": "Your role does not include Web Firewall for this site with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing to save",
       "detectCaught": "{count, plural, one {# request would have been blocked so far} other {# requests would have been blocked so far}}.",
       "detectNothingYet": "Nothing has been caught yet.",
@@ -3912,13 +3929,10 @@
         "static": "Always running"
       },
       "isolation": {
-        "onTitle": "This site has its own PHP",
-        "onBody": "Its limits apply to this site alone, and its code runs as its own user.",
         "offTitle": "This site has no PHP pool of its own",
         "offBody": "It runs as the web server's account, shared with every other site, so per-site limits cannot be applied.",
         "runsAs": "runs as {user}",
         "sharedBadge": "Shared PHP · runs as {user}",
-        "dedicatedBadge": "Dedicated PHP",
         "isolateAction": "Give this site dedicated PHP",
         "isolateHelper": "Creates a PHP-FPM pool for this site and moves it onto its own user. Site files and database are not changed.",
         "required": "Give this site its own PHP first",
@@ -4138,6 +4152,49 @@
       "provisioning": "Provisioning",
       "active": "Active",
       "failed": "Failed"
+    },
+    "protection": {
+      "title": "Security",
+      "summary": "{on} of {total} on",
+      "password": "Password protection",
+      "firewall": "Web Firewall",
+      "fail2ban": "Brute-force protection",
+      "bots": "AI bots",
+      "on": "On",
+      "off": "Off",
+      "description": "Protection settings for this site."
+    },
+    "backups": {
+      "title": "Backups",
+      "state": {
+        "protected": "Protected",
+        "paused": "Paused",
+        "unprotected": "Not protected"
+      },
+      "schedule": "Schedule",
+      "lastRun": "Last backup",
+      "nextRun": "Next backup",
+      "never": "Never",
+      "backUpNow": "Back up now",
+      "starting": "Starting…",
+      "started": "The backup has started.",
+      "startFailed": "The backup could not be started.",
+      "manage": "Manage backups",
+      "setUp": "Set up backups",
+      "loadFailed": "The backup settings could not be loaded.",
+      "unprotectedRisk": "Nothing is being backed up. If this site is lost, there is nothing to restore.",
+      "pausedRisk": "Backups are set up but not running, so the newest copy keeps getting older.",
+      "description": "Whether this site could be restored."
+    },
+    "attention": {
+      "title": "Needs attention",
+      "allClear": "Nothing needs attention on this site.",
+      "noBackups": "Backups not configured",
+      "setUpBackups": "Set up backups",
+      "noCertificate": "SSL not installed",
+      "issueCertificate": "Issue SSL",
+      "reviewSecurity": "Review security",
+      "protectionsOff": "{count, plural, one {# protection off} other {# protections off}}"
     }
   },
   "panelUpdate": {

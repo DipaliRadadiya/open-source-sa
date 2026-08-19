@@ -76,7 +76,7 @@ export function LiveChartCard({
           of dropping to its own row. */}
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-x-4 gap-y-2 space-y-0">
         <div className="min-w-48 flex-1 space-y-1">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+          <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
             <Icon className="size-4 text-primary" />
             {title}
           </CardTitle>

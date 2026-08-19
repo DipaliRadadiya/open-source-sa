@@ -39,7 +39,10 @@
       "description": "{lastPage, plural, one {Solo hay una página de resultados.} other {Solo hay # páginas de resultados.}}",
       "action": "Volver a la primera página"
     },
-    "sortBy": "Ordenar por esta columna"
+    "sortBy": "Ordenar por esta columna",
+    "navTitles": {
+      "app_firewall": "Firewall web"
+    }
   },
   "auth": {
     "loginTitle": "Iniciar sesión",
@@ -2676,7 +2679,8 @@
       "failedAt": "El último despliegue falló en {step}. La versión anterior sigue sirviéndose.",
       "reference": "Referencia de soporte: {reference}",
       "redeploy": "Volver a desplegar",
-      "manage": "Gestionar despliegue"
+      "manage": "Gestionar despliegue",
+      "description": "De dónde viene el código y cómo se publica."
     },
     "gitAccount": "Cuenta de Git",
     "gitAccountPlaceholder": "Elige una cuenta conectada",
@@ -2861,7 +2865,12 @@
       "open": "Abrir panel",
       "visit": "Visitar sitio",
       "visitHint": "El sitio se sirve cuando termina el aprovisionamiento.",
-      "delete": "Eliminar aplicación"
+      "delete": "Eliminar aplicación",
+      "go": {
+        "files": "Abrir archivos",
+        "domains": "Gestionar dominios",
+        "backups": "Copias de seguridad"
+      }
     },
     "delete": {
       "title": "¿Eliminar {name}?",
@@ -2883,7 +2892,8 @@
       "webRoot": "Raíz web",
       "php": "Versión de PHP",
       "node": "Versión de Node",
-      "port": "Puerto"
+      "port": "Puerto",
+      "description": "Tipo, propietario y dónde vive este sitio."
     },
     "process": {
       "title": "Proceso",
@@ -2904,7 +2914,6 @@
       "title": "Dominios y SSL",
       "secured": "HTTPS",
       "noCertificate": "Sin certificado",
-      "counts": "{aliases, plural, =0 {Sin alias} one {# alias} other {# alias}} · {redirects, plural, =0 {sin redirecciones} one {# redirección} other {# redirecciones}}",
       "expires": "El certificado se renueva {when}.",
       "manage": "Gestionar dominios",
       "loadFailed": "No pudimos cargar los dominios de esta aplicación.",
@@ -3025,6 +3034,14 @@
         "forceIssue": "Emitir de todos modos",
         "issue": "Emitir certificado",
         "issueFailed": "No se pudo emitir el certificado."
+      },
+      "issueCertificate": "Emitir certificado SSL",
+      "description": "Nombres que llegan a este sitio y su certificado.",
+      "more": "+{count} más",
+      "types": {
+        "primary": "Principal",
+        "alias": "Alias",
+        "redirect": "Redirección"
       }
     },
     "markers": {
@@ -3664,7 +3681,7 @@
       "nothingToSave": "Nada que guardar"
     },
     "firewall": {
-      "pageTitle": "Firewall 8G",
+      "pageTitle": "Firewall web",
       "pageSubtitle": "Rechaza los ataques más comunes antes de que lleguen a este sitio.",
       "loadFailed": "No se pudo cargar esto.",
       "provisioning": "Este sitio todavía se está configurando. El cortafuegos estará disponible cuando esté en funcionamiento.",
@@ -3715,7 +3732,7 @@
       "discard": "Descartar",
       "saved": "Ajustes del cortafuegos guardados.",
       "saveFailed": "No se pudo guardar.",
-      "noPermission": "Tu rol no incluye Firewall 8G de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "noPermission": "Tu rol no incluye Firewall web de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
       "nothingToSave": "Nada que guardar",
       "detectCaught": "{count, plural, one {Se habría bloqueado # solicitud hasta ahora} other {Se habrían bloqueado # solicitudes hasta ahora}}.",
       "detectNothingYet": "Todavía no se ha detectado nada.",
@@ -3912,13 +3929,10 @@
         "static": "Siempre activos"
       },
       "isolation": {
-        "onTitle": "Este sitio tiene su propio PHP",
-        "onBody": "Sus límites se aplican solo a este sitio y su código se ejecuta como su propio usuario.",
         "offTitle": "Este sitio no tiene su propio pool de PHP",
         "offBody": "Se ejecuta con la cuenta del servidor web, compartida con todos los demás sitios, así que no se pueden aplicar límites por sitio.",
         "runsAs": "se ejecuta como {user}",
         "sharedBadge": "PHP compartido · se ejecuta como {user}",
-        "dedicatedBadge": "PHP dedicado",
         "isolateAction": "Dar PHP propio a este sitio",
         "isolateHelper": "Crea un pool PHP-FPM para este sitio y lo pasa a su propio usuario. Los archivos y la base de datos no cambian.",
         "required": "Primero dale a este sitio su propio PHP",
@@ -4138,6 +4152,49 @@
       "provisioning": "Aprovisionando",
       "active": "Activo",
       "failed": "Con error"
+    },
+    "protection": {
+      "title": "Seguridad",
+      "summary": "{on} de {total} activas",
+      "password": "Protección con contraseña",
+      "firewall": "Firewall web",
+      "fail2ban": "Protección contra fuerza bruta",
+      "bots": "Bots de IA",
+      "on": "Activado",
+      "off": "Desactivado",
+      "description": "Ajustes de protección de este sitio."
+    },
+    "backups": {
+      "title": "Copias de seguridad",
+      "state": {
+        "protected": "Protegido",
+        "paused": "En pausa",
+        "unprotected": "Sin protección"
+      },
+      "schedule": "Programación",
+      "lastRun": "Última copia",
+      "nextRun": "Próxima copia",
+      "never": "Nunca",
+      "backUpNow": "Hacer copia ahora",
+      "starting": "Iniciando…",
+      "started": "La copia de seguridad ha comenzado.",
+      "startFailed": "No se pudo iniciar la copia de seguridad.",
+      "manage": "Gestionar copias",
+      "setUp": "Configurar copias",
+      "loadFailed": "No se pudo cargar la configuración de copias.",
+      "unprotectedRisk": "No se está haciendo ninguna copia de seguridad. Si pierdes este sitio, no habrá nada que restaurar.",
+      "pausedRisk": "Las copias están configuradas pero no se ejecutan, así que la copia más reciente envejece.",
+      "description": "Si este sitio podría restaurarse."
+    },
+    "attention": {
+      "title": "Requiere atención",
+      "allClear": "No hay nada que requiera atención en este sitio.",
+      "noBackups": "Copias de seguridad sin configurar",
+      "setUpBackups": "Configurar copias",
+      "noCertificate": "SSL no instalado",
+      "issueCertificate": "Emitir SSL",
+      "reviewSecurity": "Revisar seguridad",
+      "protectionsOff": "{count, plural, one {# protección desactivada} other {# protecciones desactivadas}}"
     }
   },
   "panelUpdate": {

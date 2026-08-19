@@ -45,7 +45,7 @@ function ProcessesCardInner({ data, failed, canManage }) {
     <Card>
       <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+          <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
             <ListTree className="size-4 text-primary" />
             {t("processes.title")}
           </CardTitle>
