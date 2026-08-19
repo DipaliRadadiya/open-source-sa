@@ -78,9 +78,8 @@ export function BanRulesCard({ settings, presets, canManage }) {
       toast.success(t("settings.saved"));
       startRefresh(() => router.refresh());
     } catch (error) {
-      const data = error.response?.data;
       toast.error(
-        [apiMessage(error, t("settings.failed")), data?.reference].filter(Boolean).join(" · "),
+        apiMessage(error, t("settings.failed")),
       );
     } finally {
       setSaving(false);

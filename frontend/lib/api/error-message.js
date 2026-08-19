@@ -9,14 +9,39 @@
  * our own copy.
  *
  * A key has no spaces and is built from slashes/dots; any real sentence has spaces.
+ *
+ * The `reference` is appended when the API sends one. It exists so a person can
+ * quote a failure to whoever can look it up, and several of the backend's own
+ * sentences instruct them to — "Quote the reference below to support." — while
+ * every toast in the panel but three threw it away. So the reader was told to
+ * quote something the screen never showed them.
+ *
+ * Pass `{ reference: false }` where the caller renders the reference itself —
+ * `showActionError` gives it its own line, in monospace, with a copy button,
+ * which is better than a sentence with an id stuck on the end. Those callers
+ * would otherwise show it twice.
+ *
+ * Appended here rather than at each call site: ten files had already hand-rolled
+ * the same `[message, reference].join(" · ")` — thirteen copies between them —
+ * and the hundred-odd other callers had not. That is what a fix belonging in one
+ * place looks like when it is not in one place. The middot form is theirs, kept
+ * so nothing changes shape, and those thirteen copies are now gone.
  */
-export function apiMessage(error, fallback) {
-  const message = error?.response?.data?.message;
-  if (typeof message !== "string") return fallback;
+export function apiMessage(error, fallback, { reference: withReference = true } = {}) {
+  const data = error?.response?.data;
+  const message = data?.message;
+  const reference =
+    withReference && typeof data?.reference === "string" ? data.reference.trim() : "";
 
-  const trimmed = message.trim();
-  if (!trimmed) return fallback;
-  if (!/\s/.test(trimmed) && /[/.]/.test(trimmed)) return fallback;
+  const usable = typeof message === "string" ? message.trim() : "";
+  // Key-shaped, empty or missing: our own copy, which is written for a reader.
+  const sentence = !usable || (!/\s/.test(usable) && /[/.]/.test(usable)) ? fallback : usable;
 
-  return trimmed;
+  if (!reference) return sentence;
+  // A message that already carries it — some endpoints interpolate the
+  // reference into their own prose — must not carry it twice.
+  if (typeof sentence === "string" && sentence.includes(reference)) return sentence;
+  if (!sentence) return reference;
+
+  return `${sentence} · ${reference}`;
 }

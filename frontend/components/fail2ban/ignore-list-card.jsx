@@ -92,9 +92,8 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
       toast.success(t("settings.ignoreSaved"));
       startRefresh(() => router.refresh());
     } catch (error) {
-      const data = error.response?.data;
       toast.error(
-        [apiMessage(error, t("settings.failed")), data?.reference].filter(Boolean).join(" · "),
+        apiMessage(error, t("settings.failed")),
       );
     } finally {
       setSaving(false);

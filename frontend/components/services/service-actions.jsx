@@ -119,7 +119,7 @@ export function ServiceActions({
       // question after a failed restart is "so is it still up?".
       showActionError({
         title: t(`error.${action}`, { name: service.label }),
-        message: apiMessage(error),
+        message: apiMessage(error, undefined, { reference: false }),
         reference: data?.reference,
         copyLabel: t('copyReference'),
         copiedLabel: t('copiedReference'),

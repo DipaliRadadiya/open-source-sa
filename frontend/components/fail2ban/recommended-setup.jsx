@@ -60,9 +60,8 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
       toast.success(t("recommended.done"));
       router.refresh();
     } catch (error) {
-      const data = error.response?.data;
       toast.error(
-        [apiMessage(error, t("recommended.failed")), data?.reference].filter(Boolean).join(" · "),
+        apiMessage(error, t("recommended.failed")),
       );
     } finally {
       setPending(false);

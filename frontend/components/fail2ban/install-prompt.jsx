@@ -72,10 +72,9 @@ export function InstallPrompt({ canManage, install = null }) {
       // itself while that says installing.
       router.refresh();
     } catch (error) {
-      const data = error.response?.data;
       setStarting(false);
       toast.error(
-        [apiMessage(error, t("install.failed")), data?.reference].filter(Boolean).join(" · "),
+        apiMessage(error, t("install.failed")),
       );
     }
   }

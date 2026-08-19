@@ -45,7 +45,6 @@ export function KillProcessButton({ process, canManage }) {
       router.refresh();
     } catch (error) {
       const status = error.response?.status;
-      const data = error.response?.data;
 
       if (status === 404) {
         // Already gone — but NOT a success. PIDs are recycled, so the row may
@@ -66,7 +65,7 @@ export function KillProcessButton({ process, canManage }) {
       }
 
       toast.error(
-        [apiMessage(error, t("kill.failed")), data?.reference].filter(Boolean).join(" · "),
+        apiMessage(error, t("kill.failed")),
       );
       // The signal didn't land. KILL is the next thing to try, so surface it now
       // rather than making the user reopen the dialog.

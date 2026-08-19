@@ -195,9 +195,8 @@ export function RulesCard({
         delete reverted[rule.id];
         return reverted;
       });
-      const data = error.response?.data;
       toast.error(
-        [apiMessage(error, t("rules.toggleFailed")), data?.reference].filter(Boolean).join(" · "),
+        apiMessage(error, t("rules.toggleFailed")),
       );
     } finally {
       setPending(null);
@@ -225,9 +224,8 @@ export function RulesCard({
       setConfirming(null);
       router.refresh();
     } catch (error) {
-      const data = error.response?.data;
       toast.error(
-        [apiMessage(error, t("rules.deleteFailed")), data?.reference].filter(Boolean).join(" · "),
+        apiMessage(error, t("rules.deleteFailed")),
       );
     } finally {
       setPending(null);

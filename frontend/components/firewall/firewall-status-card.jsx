@@ -40,9 +40,8 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
       setConfirming(null);
       router.refresh();
     } catch (error) {
-      const data = error.response?.data;
       toast.error(
-        [apiMessage(error, t("status.toggleFailed")), data?.reference].filter(Boolean).join(" · "),
+        apiMessage(error, t("status.toggleFailed")),
       );
     } finally {
       setPending(false);

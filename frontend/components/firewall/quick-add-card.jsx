@@ -112,8 +112,7 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
       }
       router.refresh();
     } catch (error) {
-      const data = error.response?.data;
-      toast.error([apiMessage(error, t("quick.failed")), data?.reference].filter(Boolean).join(" · "));
+      toast.error(apiMessage(error, t("quick.failed")));
     } finally {
       setPending(null);
     }
@@ -128,9 +127,8 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
       setConfirming(null);
       router.refresh();
     } catch (error) {
-      const data = error.response?.data;
       toast.error(
-        [apiMessage(error, t("rules.deleteFailed")), data?.reference].filter(Boolean).join(" · "),
+        apiMessage(error, t("rules.deleteFailed")),
       );
     } finally {
       setPending(null);

@@ -173,8 +173,7 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
         refresh();
         return;
       }
-      const data = error.response?.data;
-      toast.error([apiMessage(error, t("banned.failed")), data?.reference].filter(Boolean).join(" · "));
+      toast.error(apiMessage(error, t("banned.failed")));
     } finally {
       setUnbanning(null);
       setUnbanConfirm(null);
@@ -195,8 +194,7 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
         refresh();
         return;
       }
-      const data = error.response?.data;
-      toast.error([apiMessage(error, t("banned.failed")), data?.reference].filter(Boolean).join(" · "));
+      toast.error(apiMessage(error, t("banned.failed")));
     } finally {
       setClearing(false);
     }

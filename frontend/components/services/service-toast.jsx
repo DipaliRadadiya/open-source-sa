@@ -84,10 +84,19 @@ export function showActionError({
   retryLabel,
   onRetry,
 }) {
+  // Both the sentence and the reference, now. This used to drop the server's
+  // sentence whenever a reference existed, which was reasonable while every
+  // failure produced the same generic "the operation failed": an id was strictly
+  // more useful than a sentence saying nothing.
+  //
+  // The backend now names the step that actually failed — "the log file could
+  // not be handed to that account" — so the sentence carries the cause and the
+  // reference only identifies the incident. Dropping the cause to show an id
+  // would be exactly backwards.
   toast.error(title, {
     description: (
       <ToastBody
-        message={reference ? null : message}
+        message={message}
         reference={reference}
         copyLabel={copyLabel}
         copiedLabel={copiedLabel}

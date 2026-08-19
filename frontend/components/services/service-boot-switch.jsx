@@ -45,7 +45,7 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
       const data = error.response?.data;
       showActionError({
         title: t(`error.${action}`, { name: service.label }),
-        message: apiMessage(error),
+        message: apiMessage(error, undefined, { reference: false }),
         reference: data?.reference,
         copyLabel: t('copyReference'),
         copiedLabel: t('copiedReference'),

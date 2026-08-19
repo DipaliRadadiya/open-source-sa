@@ -131,7 +131,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
         setGuarding({ jail, enabled, serverReason: data?.message ?? null });
       } else {
         toast.error(
-          [apiMessage(error, t("jails.failed")), data?.reference].filter(Boolean).join(" · "),
+          apiMessage(error, t("jails.failed")),
         );
       }
     } finally {
