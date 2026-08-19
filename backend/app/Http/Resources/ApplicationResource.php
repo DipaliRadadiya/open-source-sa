@@ -24,6 +24,17 @@ class ApplicationResource extends JsonResource
             // on every site that has no certificate yet — and every site has
             // no certificate for the first few minutes of its life.
             'url' => $this->resource->url(),
+            // Where the site is on disk. Two fields because they are two
+            // different directories on Craft and Statamic, and a cron job
+            // pointed at the wrong one runs a file that is not there and
+            // reports nothing.
+            //
+            // `document_root` is what the web server serves — the path to show
+            // somebody. `path` is where the application's own CLI runs, which
+            // is the value a `{path}` placeholder in a cron command or a deploy
+            // script expands to.
+            'document_root' => $this->resource->documentRoot(),
+            'path' => $this->resource->codePath(),
             'site_type' => $this->site_type,
             'site_type_title' => __("application.types.{$this->site_type}.title"),
             'serving_profile' => $this->serving_profile,

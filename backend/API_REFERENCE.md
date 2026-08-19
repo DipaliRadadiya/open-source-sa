@@ -648,9 +648,19 @@ Full application record. Poll this while `status` is `provisioning` or `deployin
 **Link to `url`, never build one from `domain`.** `url` is `http://…` until the site has a servable certificate and `https://…` afterwards. Assembling `https://${domain}` in the client — which three screens used to do — produces a dead link for every site that has not been issued a certificate yet, which is every site for the first few minutes of its life.
 
 ```json
+**`path` vs `document_root` — they are not the same directory, and picking the wrong one fails silently.**
+
+- **`document_root`** is what the web server serves. Use it to *show* somebody where their site is.
+- **`path`** is where the application's own command-line tools run. **This is the value to substitute for `{path}`** in a cron command preset or a deploy script.
+
+They are equal for fifteen of the seventeen site types, because most applications unpack into the directory they are served from. They differ for **Craft** (`document_root` ends `/web`) and **Statamic** (`/public`), whose `craft` and `please` binaries sit one level above the served directory. `php {path}/craft queue/run` handed a `document_root` points at a file that does not exist, and cron reports nothing — so substitute `path`, always, and never derive one of these from the other.
+
+```json
 {"application": {
   "id": 1, "name": "shop", "domain": "shop.example.com",
   "url": "https://shop.example.com",
+  "document_root": "/home/siteowner/shop/public_html",
+  "path": "/home/siteowner/shop/public_html",
   "site_type": "wordpress", "site_type_title": "WordPress",
   "serving_profile": "php", "rendering_type": null,
 
@@ -3360,12 +3370,16 @@ Framework shortcuts for the command field.
 
 ```json
 {"presets": [
-  {"label": "Laravel Scheduler", "command": "* * * * * cd {path} && php artisan schedule:run >> /dev/null 2>&1"},
-  {"label": "WP Cron", "command": "* * * * * cd {path} && wp cron event run --due-now >> /dev/null 2>&1"}
+  {"key": "laravel", "label": "Laravel Scheduler", "command": "php {path}/artisan schedule:run", "expression": "* * * * *"},
+  {"key": "wordpress", "label": "WP Cron", "command": "php {path}/wp-cron.php", "expression": "*/5 * * * *"},
+  {"key": "craftcms", "label": "Craft CMS queue", "command": "php {path}/craft queue/run", "expression": "* * * * *"},
+  {"key": "custom", "label": "Custom", "command": null, "expression": null}
 ], "placeholder": "{path}"}
 ```
 
-`{path}` is substituted with the application's root directory before saving.
+Each preset carries a **`command` and a separate `expression`** — the schedule is not embedded in the command string. `custom` has both `null`; it is the "let me write my own" entry, not a preset with a missing command. `label` is localized, `key` is not — render the label, key off the key.
+
+**Substitute `{path}` with the application's `path` field** (see `GET /applications/{id}`), *not* `document_root`. They are the same directory for most site types and different for Craft and Statamic, where the binary these presets invoke sits above the served directory. A cron job pointed at a file that is not there does not error — it runs, finds nothing, and reports success.
 
 ---
 

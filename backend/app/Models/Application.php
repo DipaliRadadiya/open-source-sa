@@ -392,6 +392,62 @@ class Application extends Model
     }
 
     /**
+     * The directory the web server serves: `{home}/{slug}/public_html/{web_root}`.
+     *
+     * `public_html` is always the base; `web_root` is appended inside it, so a
+     * site can serve from a subdirectory without anything escaping the site's
+     * own tree.
+     *
+     * The provisioner has computed this since the feature was built and still
+     * owns the call sites; this is the same arithmetic on the model, so that a
+     * resource or a form request can ask an application where it lives without
+     * resolving a service to find out.
+     */
+    public function documentRoot(): string
+    {
+        $webRoot = trim((string) $this->web_root, '/');
+        $base = $this->rootPath().'/public_html';
+
+        return $webRoot === '' ? $base : "{$base}/{$webRoot}";
+    }
+
+    /**
+     * The directory the application's own command-line tools run from.
+     *
+     * **Not always the document root**, which is why this is a separate method
+     * and not a comment on one. Three cases, and the difference is invisible in
+     * fifteen of the seventeen site types:
+     *
+     *  - Most marketplace applications unpack into the served directory, so
+     *    `wp-cron.php`, `admin/cli/cron.php` and `cron.php` sit in the document
+     *    root and the two answers coincide.
+     *  - **Craft and Statamic build a project around the served directory** —
+     *    `web/`, `public/` — and their `craft` and `please` binaries sit one
+     *    level above it. That is exactly where their installers `cd` to run
+     *    them.
+     *  - A git site has its repository cloned *into* the document root, so
+     *    whatever the checkout contains is there, `web_root` notwithstanding.
+     *
+     * Derived from the type's {@see SiteType::fixedWebRoot()} rather than by
+     * pattern-matching on `web_root`, because that method is already the
+     * codebase's answer to "does this type's installer build a layout around
+     * the web root" — and a second, independent guess at the same question is
+     * a second thing to get wrong later.
+     *
+     * This is the value `{path}` expands to in a cron command preset. A cron
+     * job pointed at the wrong one of these directories does not fail — it runs
+     * a file that is not there and reports nothing.
+     */
+    public function codePath(): string
+    {
+        $documentRoot = $this->documentRoot();
+
+        $fixed = app(SiteTypeManager::class)->find((string) $this->site_type)?->fixedWebRoot();
+
+        return $fixed === null ? $documentRoot : dirname($documentRoot);
+    }
+
+    /**
      * The HTTP Basic Auth credential file.
      *
      * Under the app root, deliberately **not** under the document root. The

@@ -50,15 +50,12 @@ class ApplicationProvisioner
      */
     public function documentRoot(Application $application): string
     {
-        $webRoot = trim((string) $application->web_root, '/');
-
-        // slug-based path, not domain-based — stable across domain changes.
-        // public_html is the fixed base; user's web_root is appended inside it.
-        // web_root = NULL  → /home/<user>/<slug>/public_html/
-        // web_root = public → /home/<user>/<slug>/public_html/public/
-        $base = $application->rootPath().'/public_html';
-
-        $path = $webRoot === '' ? $base : "{$base}/{$webRoot}";
+        // The arithmetic itself lives on the model, so that a resource or a
+        // form request can ask an application where it is served from without
+        // resolving this service — which pulls in half the provisioning stack
+        // to answer a question about two strings. The traversal guard stays
+        // here, on the path that hands a directory to a shell command.
+        $path = $application->documentRoot();
 
         abort_if(
             str_contains($path, '/../') || str_ends_with($path, '/..'),
