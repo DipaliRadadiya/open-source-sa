@@ -285,7 +285,13 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                           <SavedValue label={t("password")} value={justSaved.password} secret />
                         </div>
                         <Button asChild variant="outline" size="sm">
-                          <a href={`https://${domain}`} target="_blank" rel="noreferrer">
+                          {/* See application-row-actions: the API's own `url`,
+                              which is http:// until a certificate is servable. */}
+                          <a
+                            href={application?.url ?? `https://${domain}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
                             <ExternalLink className="size-3.5" />
                             {t("openSite")}
                           </a>

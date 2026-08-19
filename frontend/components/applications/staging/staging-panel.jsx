@@ -106,7 +106,9 @@ export function StagingPanel({ appId, production, staging, canManage }) {
             </p>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
               <a
-                href={`https://${staging.domain}`}
+                // See application-row-actions: link to the URL the API
+                // reports, which is http:// until a certificate is servable.
+                href={staging.url ?? `https://${staging.domain}`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 underline-offset-4 hover:text-foreground hover:underline"

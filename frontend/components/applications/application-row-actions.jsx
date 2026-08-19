@@ -91,10 +91,15 @@ export function ApplicationRowActions({
                 </Link>
               </DropdownMenuItem>
 
+              {/* `url`, never assembled from `domain`: the API serves http://
+                  until the site has a servable certificate, which every site
+                  lacks for the first few minutes of its life. An assumed
+                  https:// is a connection refused, because a site with no
+                  certificate has no TLS listener at all. */}
               <MenuItemHint hint={canVisit ? null : t("actions.visitHint")}>
                 <DropdownMenuItem asChild={canVisit} disabled={!canVisit}>
                   {canVisit ? (
-                    <a href={`https://${application.domain}`} target="_blank" rel="noreferrer">
+                    <a href={application.url ?? `https://${application.domain}`} target="_blank" rel="noreferrer">
                       <ExternalLink className="size-4" />
                       {t("actions.visit")}
                     </a>
