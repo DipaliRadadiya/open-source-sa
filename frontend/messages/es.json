@@ -366,7 +366,8 @@
       "submitCreate": "Añadir usuario",
       "submitEdit": "Guardar cambios",
       "saving": "Guardando…",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "rolesLoadFailed": "No se pudieron cargar los roles, así que no se puede mostrar ninguno. Eso no significa que no haya ninguno: inténtalo de nuevo en un momento."
     },
     "resetPassword": {
       "title": "Restablecer contraseña",
@@ -524,7 +525,8 @@
       "updated": "Rol actualizado.",
       "deleted": "Rol eliminado.",
       "deleteFailed": "No se pudo eliminar este rol."
-    }
+    },
+    "loadFailed": "No se pudieron cargar los roles. Esto no significa que el rol no exista: inténtalo de nuevo en un momento."
   },
   "systemUsers": {
     "title": "Usuarios del sistema",

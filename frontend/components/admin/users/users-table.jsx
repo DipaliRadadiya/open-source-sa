@@ -85,11 +85,18 @@ function JoinedCell({ row }) {
 }
 
 function RowActionsCell({ row, table }) {
-  const { roles, currentUserId } = table.options.meta;
-  return <UserRowActions user={row.original} roles={roles} currentUserId={currentUserId} />;
+  const { roles, rolesFailed, currentUserId } = table.options.meta;
+  return (
+    <UserRowActions
+      user={row.original}
+      roles={roles}
+      rolesFailed={rolesFailed}
+      currentUserId={currentUserId}
+    />
+  );
 }
 
-export function UsersTable({ data, roles = [], currentUserId, hasFilters }) {
+export function UsersTable({ data, roles = [], rolesFailed = false, currentUserId, hasFilters }) {
   const t = useTranslations("users");
   const isPending = useNavPending();
   const setQuery = useSetQuery();
@@ -159,7 +166,8 @@ export function UsersTable({ data, roles = [], currentUserId, hasFilters }) {
         />
       </div>
       <div className="hidden lg:block">
-        <DataTable columns={columns} data={data} meta={{ roles, currentUserId }} />
+        <DataTable columns={columns} data={data} meta={{ roles,
+          rolesFailed, currentUserId }} />
       </div>
     </div>
   );

@@ -11,18 +11,25 @@ import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
  * and a user saved without a role they were never shown is a permission bug
  * that looks like a UI one.
  *
- * Returns [] on any failure so pages can render an empty state.
+ * Reports `failed` rather than answering an empty list, because callers cannot
+ * tell those apart and both of them said the wrong thing:
+ *
+ * - The user form told an administrator "No roles exist yet. Create a role
+ *   first" — sending them to create something that already exists.
+ * - The role editor matches an id against this list, so a failure meant
+ *   `notFound()`: a 404 stating that a role which does exist does not.
  */
 export async function getRoles() {
-  const res = await serverFetch("/admin/roles", { searchParams: { per_page: 100 } });
-  if (!res.ok) return [];
+  const failure = { roles: [], failed: true };
 
   try {
-    const json = await res.json();
-    const parsed = rolesResponseSchema.safeParse(json);
-    return parsed.success ? parsed.data.roles : [];
+    const res = await serverFetch("/admin/roles", { searchParams: { per_page: 100 } });
+    if (!res.ok) return failure;
+
+    const parsed = rolesResponseSchema.safeParse(await res.json());
+    return parsed.success ? { roles: parsed.data.roles, failed: false } : failure;
   } catch {
-    return [];
+    return failure;
   }
 }
 

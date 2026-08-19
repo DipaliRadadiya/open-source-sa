@@ -26,7 +26,7 @@ import { DeleteUserDialog } from "@/components/admin/users/delete-user-dialog";
 import { impersonateUser } from "@/lib/api/users";
 import { apiMessage } from "@/lib/api/error-message";
 
-export function UserRowActions({ user, roles = [], currentUserId }) {
+export function UserRowActions({ user, roles = [], rolesFailed = false, currentUserId }) {
   const t = useTranslations("users");
   const [editOpen, setEditOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -104,6 +104,7 @@ export function UserRowActions({ user, roles = [], currentUserId }) {
         mode="edit"
         user={user}
         roles={roles}
+        rolesFailed={rolesFailed}
         open={editOpen}
         onOpenChange={setEditOpen}
       />

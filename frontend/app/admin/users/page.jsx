@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage({ searchParams }) {
   const sp = await searchParams;
-  const [user, { users, meta }, roles, t] = await Promise.all([
+  const [user, { users, meta }, { roles, failed: rolesFailed }, t] = await Promise.all([
     getCurrentUser(),
     getUsers(sp),
     getRoles(),
@@ -34,11 +34,12 @@ export default async function AdminUsersPage({ searchParams }) {
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <UsersView roles={roleOptions}>
+      <UsersView roles={roleOptions} rolesFailed={rolesFailed}>
         <UsersToolbar />
         <UsersTable
           data={users}
           roles={roleOptions}
+          rolesFailed={rolesFailed}
           currentUserId={user?.id}
           hasFilters={hasFilters}
         />

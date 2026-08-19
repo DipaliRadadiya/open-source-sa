@@ -16,7 +16,7 @@ export function useCreateUser() {
  * page) and hosts the create-user dialog so both the toolbar and the empty
  * state can open it.
  */
-export function UsersView({ roles, children }) {
+export function UsersView({ roles, rolesFailed = false, children }) {
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
@@ -26,6 +26,7 @@ export function UsersView({ roles, children }) {
         <UserFormDialog
           mode="create"
           roles={roles}
+          rolesFailed={rolesFailed}
           open={createOpen}
           onOpenChange={setCreateOpen}
         />

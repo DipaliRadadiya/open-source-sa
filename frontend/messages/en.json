@@ -296,7 +296,8 @@
       "submitCreate": "Add user",
       "submitEdit": "Save changes",
       "saving": "Saving…",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "rolesLoadFailed": "The roles could not be loaded, so none can be shown. This is not the same as there being none — try again in a moment."
     },
     "resetPassword": {
       "title": "Reset password",
@@ -454,7 +455,8 @@
       "updated": "Role updated.",
       "deleted": "Role deleted.",
       "deleteFailed": "Could not delete this role."
-    }
+    },
+    "loadFailed": "The roles could not be loaded. This does not mean the role is missing — try again in a moment."
   },
   "account": {
     "title": "Account",

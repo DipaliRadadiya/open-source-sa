@@ -28,7 +28,14 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 
-export function UserFormDialog({ mode = "create", user, roles = [], open, onOpenChange }) {
+export function UserFormDialog({
+  mode = "create",
+  user,
+  roles = [],
+  rolesFailed = false,
+  open,
+  onOpenChange,
+}) {
   const t = useTranslations("users");
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -246,7 +253,12 @@ export function UserFormDialog({ mode = "create", user, roles = [], open, onOpen
                       <FormDescription>{t("form.rolesHint")}</FormDescription>
                     </div>
                     <FormControl>
-                      <RolesField roles={roles} value={field.value} onChange={field.onChange} />
+                      <RolesField
+                        roles={roles}
+                        failed={rolesFailed}
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -8,11 +8,22 @@ import { Checkbox } from "@/components/ui/checkbox";
  * ([{ id, name, description? }]); `value` is an array of selected role ids.
  * Every user needs ≥1 role (enforced by the form schema).
  */
-export function RolesField({ roles, value = [], onChange }) {
+export function RolesField({ roles, value = [], onChange, failed = false }) {
   const t = useTranslations("users");
 
   function toggle(id, checked) {
     onChange(checked ? [...value, id] : value.filter((v) => v !== id));
+  }
+
+  // "None exist" and "we could not ask" are different, and the old copy said
+  // the first for both: "No roles exist yet. Create a role first" sent an
+  // administrator off to create something that was already there.
+  if (failed) {
+    return (
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-center text-sm text-destructive">
+        {t("form.rolesLoadFailed")}
+      </div>
+    );
   }
 
   if (roles.length === 0) {
