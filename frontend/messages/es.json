@@ -672,7 +672,11 @@
     },
     "noPermission": "Tu rol no incluye Usuario del sistema con acceso de gestión. Pide a un administrador que te lo conceda.",
     "shellNeedsLogin": "Este shell rechaza el inicio de sesión, así que no puede usarse con el acceso SSH activado. Desactiva SSH primero.",
-    "sshNeedsLoginShell": "El shell es «{shell}», que rechaza el inicio de sesión. Elige antes un shell que lo permita."
+    "sshNeedsLoginShell": "El shell es «{shell}», que rechaza el inicio de sesión. Elige antes un shell que lo permita.",
+    "sshKeys": {
+      "loadFailed": "No se pudieron cargar las claves de esta cuenta. Eso no es lo mismo que no tener ninguna.",
+      "retryLoad": "Intentar de nuevo"
+    }
   },
   "serverDashboard": {
     "title": "Panel",

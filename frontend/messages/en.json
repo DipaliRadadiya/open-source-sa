@@ -187,7 +187,11 @@
     },
     "noPermission": "Your role does not include System User with Manage access. Ask an administrator to grant it.",
     "shellNeedsLogin": "This shell refuses login, so it cannot be set while SSH access is on. Turn SSH off first.",
-    "sshNeedsLoginShell": "The shell is set to “{shell}”, which refuses login. Choose a shell that allows login first."
+    "sshNeedsLoginShell": "The shell is set to “{shell}”, which refuses login. Choose a shell that allows login first.",
+    "sshKeys": {
+      "loadFailed": "The keys for this account could not be loaded. This is not the same as having none.",
+      "retryLoad": "Try again"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

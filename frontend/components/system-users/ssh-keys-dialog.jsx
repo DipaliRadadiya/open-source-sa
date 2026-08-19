@@ -32,6 +32,10 @@ import { apiMessage } from "@/lib/api/error-message";
 export function SshKeysDialog({ user, open, onOpenChange }) {
   const t = useTranslations("systemUsers");
   const [keys, setKeys] = useState(null); // null = loading
+  // Distinct from an empty list on purpose. "This account has no keys" and "we
+  // could not ask" are opposite claims about who can reach the server, and the
+  // dialog used to render the first when it meant the second.
+  const [loadFailed, setLoadFailed] = useState(false);
   const [removing, setRemoving] = useState(null);
   const [pending, setPending] = useState(false);
 
@@ -44,8 +48,10 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
     try {
       const res = await listSystemUserSshKeys(user.id);
       setKeys(res.data?.ssh_keys ?? []);
+      setLoadFailed(false);
     } catch {
       setKeys([]);
+      setLoadFailed(true);
     }
   }
 
@@ -53,8 +59,16 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
     if (!open || !user) return;
     let active = true;
     listSystemUserSshKeys(user.id)
-      .then((res) => active && setKeys(res.data?.ssh_keys ?? []))
-      .catch(() => active && setKeys([]));
+      .then((res) => {
+        if (!active) return;
+        setKeys(res.data?.ssh_keys ?? []);
+        setLoadFailed(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setKeys([]);
+        setLoadFailed(true);
+      });
     return () => {
       active = false;
     };
@@ -64,6 +78,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
   function handleOpenChange(next) {
     if (!next) {
       setKeys(null);
+      setLoadFailed(false);
       setRemoving(null);
       form.reset();
     }
@@ -140,6 +155,13 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                     </li>
                   ))}
                 </ul>
+              ) : loadFailed ? (
+                <div className="space-y-2 rounded-lg border border-dashed py-6 text-center">
+                  <p className="text-sm text-muted-foreground">{t("sshKeys.loadFailed")}</p>
+                  <Button type="button" variant="outline" size="sm" onClick={load}>
+                    {t("sshKeys.retryLoad")}
+                  </Button>
+                </div>
               ) : keys.length === 0 ? (
                 <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
                   {t("detail.noSshKeys")}
