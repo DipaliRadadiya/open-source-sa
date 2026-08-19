@@ -224,9 +224,26 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
               {config ? t("state.onBody") : t("state.setupBody")}
             </p>
           </div>
+          {/* Destructive, not outline. This tears down the jail that is
+              currently banning attackers, and as a plain bordered button it
+              read like "Manage" — the same weight as every harmless control on
+              the page. The variant is deliberately the tinted one the design
+              system ships (bg-destructive/10, not solid red): unmistakably
+              dangerous without shouting at somebody whose site is fine.
+              The icon carries the meaning too, so it does not rest on colour —
+              red/green is the one pair a colour-blind reader cannot separate. */}
           {config && canManage ? (
-            <Button variant="outline" onClick={() => setConfirmRemove(true)} disabled={removing}>
-              {removing ? <Loader2 className="size-4 animate-spin" /> : null}
+            <Button
+              variant="destructive"
+              className="shrink-0"
+              onClick={() => setConfirmRemove(true)}
+              disabled={removing}
+            >
+              {removing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ShieldOff className="size-4" />
+              )}
               {t("removeAction")}
             </Button>
           ) : null}
