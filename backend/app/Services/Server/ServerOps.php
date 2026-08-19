@@ -76,6 +76,7 @@ class ServerOps
         $ok = false;
         $exitCode = null;
         $stderr = '';
+        $stdout = '';
         $result = null;
         $attempts = 0;
 
@@ -91,6 +92,7 @@ class ServerOps
             $ok = false;
             $exitCode = null;
             $stderr = '';
+            $stdout = '';
             $result = null;
 
             try {
@@ -121,6 +123,7 @@ class ServerOps
                 $ok = $result->successful();
                 $exitCode = $result->exitCode();
                 $stderr = $result->errorOutput();
+                $stdout = $result->output();
             } catch (ProcessTimedOutException) {
                 $stderr = 'process timed out';
             }
@@ -148,6 +151,18 @@ class ServerOps
             'command' => $this->loggableCommand($command),
             'exit_code' => $exitCode,
             'stderr' => $stderr,
+            // Only on failure, and only the tail. Plenty of the tools the
+            // panel drives report their errors on stdout and leave stderr
+            // empty — `artisan` does, and so do wp-cli and composer — so a
+            // failed operation was logged as `"stderr":""` beside a non-zero
+            // exit: proof that something broke, and nothing about what. That
+            // is the same blind spot the size-measurement job had.
+            //
+            // The tail rather than the head, because a command that printed
+            // progress before dying puts the reason last. Bounded because the
+            // successful path of some of these is a 90 MB file listing, and a
+            // log nobody can open is its own kind of missing.
+            'stdout' => $ok ? null : $this->loggableOutput($stdout),
             'attempts' => $attempts,
             'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             'actor_id' => Auth::id(),
@@ -245,6 +260,9 @@ class ServerOps
      *
      * @param  array<int, string>  $command
      */
+    /** The option names whose values never belong in a log. */
+    private const SECRET_WORDS = '(?:password|secret|token|api[-_]?key|private[-_]?key)';
+
     private function loggableCommand(array $command): string
     {
         $arguments = [];
@@ -258,7 +276,7 @@ class ServerOps
                 continue;
             }
 
-            if (preg_match('/^(--[a-z0-9_-]*(?:password|secret|token|api[-_]?key|private[-_]?key)[a-z0-9_-]*)(?:=(.*))?$/i', $argument, $matches)) {
+            if (preg_match('/^(--[a-z0-9_-]*'.self::SECRET_WORDS.'[a-z0-9_-]*)(?:=(.*))?$/i', $argument, $matches)) {
                 $arguments[] = isset($matches[2]) ? $matches[1].'=[REDACTED]' : $matches[1];
                 $redactNext = ! isset($matches[2]);
 
@@ -269,6 +287,37 @@ class ServerOps
         }
 
         return implode(' ', $arguments);
+    }
+
+    /**
+     * The tail of a failed command's stdout, bounded.
+     *
+     * Redacted through the same rules the command line is: an installer that
+     * echoes back what it was given would otherwise put a password in the log
+     * that the argv redaction was written to keep out of it.
+     */
+    private function loggableOutput(string $output): ?string
+    {
+        $output = trim($output);
+
+        if ($output === '') {
+            return null;
+        }
+
+        $limit = max(0, (int) config('server.log_output_limit', 4000));
+
+        if (mb_strlen($output) > $limit) {
+            $output = '…'.mb_substr($output, -$limit);
+        }
+
+        // The same option names, matched inside free text rather than across
+        // argv: a tool that echoes the command it was given prints them as one
+        // string, where the argument-by-argument pass above never looks.
+        return (string) preg_replace(
+            '/(--[a-z0-9_-]*'.self::SECRET_WORDS.'[a-z0-9_-]*[= ])\S+/i',
+            '$1[REDACTED]',
+            $output,
+        );
     }
 
     private function isTransient(string $stderr): bool

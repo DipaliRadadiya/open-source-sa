@@ -193,3 +193,64 @@ it('keeps the allowlist in step with what install.sh grants', function () {
     expect($configured->diff($granted)->all())->toBe([], 'in config but not granted by install.sh')
         ->and($granted->diff($configured)->all())->toBe([], 'granted by install.sh but not in config');
 });
+
+it('logs the tail of stdout when a command fails, because many tools report there', function () {
+    // Akaunting's installer failed with exit 1 and an empty stderr, so the
+    // ops log recorded proof that something broke and nothing about what.
+    // Laravel's own `artisan` writes command failures to stdout, and so do
+    // wp-cli and composer — logging stderr alone is blind to all of them.
+    Process::fake(['*' => Process::result(output: 'The admin password is required.', exitCode: 1)]);
+
+    $logged = [];
+    Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
+    Log::shouldReceive('error')->once()->withArgs(function (string $message, array $context) use (&$logged) {
+        $logged = $context;
+
+        return true;
+    });
+
+    app(ServerOps::class)->run(['php', 'artisan', 'install'], ['feature' => 'test', 'op' => 'probe']);
+
+    expect($logged['stdout'])->toContain('The admin password is required.');
+});
+
+it('does not log stdout for a command that succeeded', function () {
+    // The successful path of some of these is a 90 MB file listing.
+    Process::fake(['*' => Process::result(output: str_repeat('file.txt', 100))]);
+
+    $logged = [];
+    Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
+    Log::shouldReceive('info')->once()->withArgs(function (string $message, array $context) use (&$logged) {
+        $logged = $context;
+
+        return true;
+    });
+
+    app(ServerOps::class)->run(['ls'], ['feature' => 'test', 'op' => 'probe']);
+
+    expect($logged['stdout'])->toBeNull();
+});
+
+it('redacts a secret a failing tool echoed back on stdout', function () {
+    // The argv redaction walks arguments one at a time; a tool that prints the
+    // command it was given prints it as one string, where that pass never
+    // looks.
+    Process::fake(['*' => Process::result(
+        output: 'failed: php artisan install --admin-password=hunter2 --db-name=x',
+        exitCode: 1,
+    )]);
+
+    $logged = [];
+    Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
+    Log::shouldReceive('error')->once()->withArgs(function (string $message, array $context) use (&$logged) {
+        $logged = $context;
+
+        return true;
+    });
+
+    app(ServerOps::class)->run(['php', 'artisan', 'install'], ['feature' => 'test', 'op' => 'probe']);
+
+    expect($logged['stdout'])->not->toContain('hunter2')
+        ->and($logged['stdout'])->toContain('[REDACTED]')
+        ->and($logged['stdout'])->toContain('--db-name=x');
+});

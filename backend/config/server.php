@@ -1567,6 +1567,16 @@ return [
         'per_run' => (int) env('SERVER_APPLICATION_SIZE_PER_RUN', 0),
     ],
 
+    /*
+     * How much of a failed command's stdout is kept in the server-ops log.
+     *
+     * Enough to hold the error a tool printed before dying, not enough for the
+     * successful path of a command whose output is a file listing. The tail is
+     * kept rather than the head — a command that printed progress first puts
+     * the reason last.
+     */
+    'log_output_limit' => (int) env('SERVER_LOG_OUTPUT_LIMIT', 4000),
+
     'metrics' => [
         'sample_interval' => (int) env('SERVER_METRICS_SAMPLE_INTERVAL', 1),
         // Oldest previous poll still worth measuring against on the live
