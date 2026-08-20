@@ -292,12 +292,23 @@ class NodeRuntime implements Runtime
      */
     public function updateNpm(string $version): void
     {
-        $npm = dirname($this->binaryPath($version)).'/npm';
+        // PATH pinned for the same reason {@see npmVersion()} pins it, and it
+        // was missing here: npm is a Node script (`#!/usr/bin/env node`), so it
+        // needs `node` on PATH even when run by absolute path. Without it this
+        // died in three milliseconds with "/usr/bin/env: 'node': No such file
+        // or directory" — an error about node, from a command about npm, on a
+        // box where both are installed.
+        //
+        // This version's own bin dir, not a default: the point of the method is
+        // to update npm inside one version, and borrowing another version's
+        // node to do it is how the wrong thing gets updated.
+        $binDir = dirname($this->binaryPath($version));
 
         $this->must($this->serverOps->run(
-            [$npm, 'install', '-g', 'npm@latest'],
+            ["{$binDir}/npm", 'install', '-g', 'npm@latest'],
             ['feature' => 'runtime', 'op' => 'update_npm', 'version' => $version],
             timeout: (int) config('server.runtimes.node.install_timeout', 900),
+            env: ['PATH' => "{$binDir}:/usr/local/bin:/usr/bin:/bin"],
         ));
     }
 

@@ -5,6 +5,7 @@ use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Node\NodeOverview;
+use App\Services\Server\Runtimes\NodeRuntime;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -33,7 +34,13 @@ function fakeNode(bool $fnm = true, array $installed = [], ?string $default = nu
         ->implode("\n");
 
     Process::fake(function ($process) use ($runs, $fnm, $list, $systemNode) {
-        $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
+        $runs[] = [
+            'command' => $process->command,
+            'input' => (string) $process->input,
+            // npm is a Node script, so what PATH it is given decides whether it
+            // runs at all — recorded here so a test can say so.
+            'environment' => $process->environment,
+        ];
         $command = $process->command;
 
         if ($command[0] === 'which') {
@@ -322,4 +329,29 @@ it('reports no npm version rather than a wrong one when it cannot be read', func
     $versions = collect(app(NodeOverview::class)->read()['versions'])->keyBy('version');
 
     expect($versions['20.11.0']['npm_version'])->toBeNull();
+});
+
+it('gives npm a PATH with node on it when updating it', function () {
+    // npm is a Node script (`#!/usr/bin/env node`), so it needs `node` on PATH
+    // even when run by absolute path. Without it this failed in three
+    // milliseconds with "/usr/bin/env: 'node': No such file or directory" — an
+    // error about node, from a command about npm, on a box with both installed.
+    //
+    // `npmVersion()` directly below the method already pinned PATH for exactly
+    // this reason; the update path was written without it.
+    $runs = fakeNode(installed: ['v24.19.0'], default: 'v24.19.0');
+
+    app(NodeRuntime::class)->updateNpm('24.19.0');
+
+    $update = collect($runs)->first(fn ($run) => in_array('npm@latest', $run['command'], true));
+
+    expect($update)->not->toBeNull();
+
+    $path = $update['environment']['PATH'] ?? '';
+    $binDir = dirname((string) $update['command'][0]);
+
+    // This version's own bin dir, and first: the point of the method is to
+    // update npm inside one version, and borrowing another version's node to
+    // do it is how the wrong thing gets updated.
+    expect($path)->toStartWith($binDir.':');
 });
