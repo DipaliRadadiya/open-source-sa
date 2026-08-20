@@ -125,7 +125,22 @@ export default async function PhpPage({ searchParams }) {
           )}
 
           {current ? (
+            /*
+             * Keyed on the version for the same reason as the Node page: local
+             * state seeded from props does not re-seed when the props change,
+             * because React reuses the instance.
+             *
+             * It matters more here than the stale value it prevents. IniEditor
+             * holds the *edited php.ini text* in state, along with the file it
+             * was loaded from and whether the warning was acknowledged, and
+             * nothing re-syncs any of it when the version changes. Being a
+             * modal Dialog probably makes that unreachable today — you cannot
+             * click the version bar behind it — but "probably unreachable"
+             * guarding a save that writes one version's configuration into
+             * another's is not a guarantee worth keeping.
+             */
             <VersionSummary
+              key={current.version}
               version={current}
               canManage={canManage}
               lifecycleAvailable={lifecycleAvailable}

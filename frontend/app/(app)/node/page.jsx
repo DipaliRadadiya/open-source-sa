@@ -119,7 +119,23 @@ export default async function NodePage({ searchParams }) {
           )}
 
           {current ? (
+            /*
+             * Keyed on the version, so switching versions remounts the card.
+             *
+             * It holds the npm version in state — seeded from the prop, then
+             * replaced in place when npm is updated from here. A `useState`
+             * initialiser only ever runs on mount, so picking a different Node
+             * version re-rendered the same instance and left the previous
+             * version's npm number sitting under the new one. Every other field
+             * on the card reads straight from props, which is why npm was the
+             * only thing that lied, and why a reload "fixed" it.
+             *
+             * The key resets the confirm dialog and the pending flag too: a
+             * remove-confirmation opened for one version has no business
+             * surviving a switch to another.
+             */
             <VersionSummary
+              key={current.version}
               version={current}
               canManage={canManage}
               lifecycleAvailable={lifecycleAvailable}
