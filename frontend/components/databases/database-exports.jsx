@@ -105,12 +105,21 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
         const still = parsed.data.exports.some(
           (row) => row.database_id === database.id && IN_FLIGHT.includes(row.status),
         );
-        if (still) {
-          setPolled(parsed.data.exports);
-        } else {
-          // Finished: hand back to the server render so the row's final size
-          // and download link come from the same place as everything else.
-          setPolled(null);
+        // Kept either way, finished or not. This used to drop back to the
+        // server render on the last poll — `setPolled(null)` — on the reasoning
+        // that the final size and download link should come from one place.
+        // The effect was the opposite: `initial` is the snapshot taken when the
+        // page loaded, where the row was still queued, so a completed export
+        // reverted to "Waiting" the moment it succeeded. That also put the row
+        // back in flight, so the poll restarted, saw it finished, discarded it
+        // again, and the result could never appear at all.
+        //
+        // The polled rows carry the size, availability and download URL
+        // already, so there is nothing the server render adds here. It is still
+        // refreshed, so a later navigation reads the same thing this does.
+        setPolled(parsed.data.exports);
+
+        if (!still) {
           setSlow(false);
           router.refresh();
         }
