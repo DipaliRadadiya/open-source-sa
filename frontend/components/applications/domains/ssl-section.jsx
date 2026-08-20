@@ -32,6 +32,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IssueCertDialog } from "@/components/applications/domains/issue-cert-dialog";
+import { VisitSiteLink } from "@/components/applications/visit-site-link";
 
 const POLL_MS = 3000;
 const isPending = (c) =>
@@ -225,9 +226,16 @@ export function SslSection({
               ) : null}
             </p>
             {cert.domains?.length ? (
-              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                {cert.domains.join(", ")}
-              </p>
+              <ul className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                {cert.domains.map((domain) => (
+                  <li key={domain} className="flex min-w-0 items-center gap-1">
+                    <span className="truncate font-mono text-xs text-muted-foreground">{domain}</span>
+                    {/* https without hesitation here: being in this list is
+                        what "the certificate covers it" means. */}
+                    <VisitSiteLink domain={domain} secure label={t("openNamed", { domain })} className="size-5" />
+                  </li>
+                ))}
+              </ul>
             ) : null}
             {cert.expires_at_human ? (
               <p className={cn("mt-1 text-sm", expiryTone)}>
@@ -288,9 +296,14 @@ export function SslSection({
                 </span>
               </Label>
             </div>
+            {/* Destructive, like the same action forty lines up. As a ghost it
+                had no fill, no border and no colour — it read as a label, not a
+                control, sitting beside a switch on the one card that decides
+                whether this site serves HTTPS at all. Removing the certificate
+                takes the site back to plain http. */}
             <Button
               size="sm"
-              variant="ghost"
+              variant="destructive"
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="size-4" />

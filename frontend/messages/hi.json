@@ -28,7 +28,8 @@
     "breadcrumbServer": "सर्वर",
     "breadcrumbApplications": "ऐप्लिकेशन",
     "applicationContext": {
-      "back": "ऐप्लिकेशन पर वापस जाएँ"
+      "back": "ऐप्लिकेशन पर वापस जाएँ",
+      "visit": "{domain} को नए टैब में खोलें"
     },
     "unsavedTitle": "बिना सहेजे बाहर जाएँ?",
     "unsavedDescription": "इस पेज पर किए बदलाव सहेजे नहीं गए हैं। वे चले जाएँगे।",
@@ -2871,7 +2872,8 @@
         "files": "फ़ाइलें खोलें",
         "domains": "डोमेन प्रबंधित करें",
         "backups": "बैकअप"
-      }
+      },
+      "visitNamed": "{domain} को नए टैब में खोलें"
     },
     "delete": {
       "title": "{name} हटाएँ?",
@@ -3043,7 +3045,8 @@
         "primary": "प्राथमिक",
         "alias": "उपनाम",
         "redirect": "रीडायरेक्ट"
-      }
+      },
+      "openNamed": "{domain} को नए टैब में खोलें"
     },
     "markers": {
       "processFailed": "प्रोसेस विफल",

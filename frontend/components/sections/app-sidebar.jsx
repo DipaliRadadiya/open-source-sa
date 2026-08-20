@@ -17,6 +17,7 @@ import {
 import { useApplicationNav } from "@/components/sections/application-nav";
 import { Logo } from "@/components/logo";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
+import { VisitSiteLink } from "@/components/applications/visit-site-link";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { NavIcon } from "@/components/nav-icon";
@@ -169,7 +170,7 @@ export function AppSidebar({ items }) {
                 </Link>
               </MobileNavLink>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+            <SidebarMenuItem className="relative">
               <MobileNavLink
                 item={{ href: `/applications/${application.id}`, title: application.name }}
                 built
@@ -196,6 +197,18 @@ export function AppSidebar({ items }) {
                   </span>
                 </Link>
               </MobileNavLink>
+              {/* Sibling, not child: the card is already a link into the panel
+                  and nesting anchors is invalid. Only while the site is
+                  actually being served — a link to a site still provisioning
+                  lands on a connection error. Hidden when the rail is collapsed
+                  to icons, where the card is a 32px square. */}
+              {application.status === "active" && application.url ? (
+                <VisitSiteLink
+                  href={application.url}
+                  label={t("applicationContext.visit", { domain: application.domain })}
+                  className="absolute top-2 right-2 group-data-[collapsible=icon]:hidden"
+                />
+              ) : null}
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>

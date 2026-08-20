@@ -71,6 +71,19 @@ export const applicationSchema = z.object({
   id: z.number(),
   name: z.string(),
   domain: z.string(),
+  /*
+   * The address to actually open, decided by the server — `http://` until the
+   * site has a servable certificate, which every site lacks for the first few
+   * minutes of its life.
+   *
+   * Undeclared until now, so Zod stripped it and every reader silently fell
+   * back to assembling `https://{domain}` themselves — which is a connection
+   * refused on a site with no TLS listener. The ⋯ menu has carried that
+   * fallback since it was written and it has been the only branch ever taken.
+   * Same class as `disk_io`: the API sends it, the schema drops it, nothing
+   * errors.
+   */
+  url: z.string().nullish(),
   site_type: z.string(),
   site_type_title: z.string().nullish(),
   serving_profile: z.string().nullish(),

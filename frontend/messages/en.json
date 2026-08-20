@@ -28,7 +28,8 @@
     "breadcrumbServer": "Server",
     "breadcrumbApplications": "Applications",
     "applicationContext": {
-      "back": "Back to applications"
+      "back": "Back to applications",
+      "visit": "Open {domain} in a new tab"
     },
     "unsavedTitle": "Leave without saving?",
     "unsavedDescription": "Your changes on this page have not been saved. They will be lost.",
@@ -2871,7 +2872,8 @@
         "files": "Open files",
         "domains": "Manage domains",
         "backups": "Backups"
-      }
+      },
+      "visitNamed": "Open {domain} in a new tab"
     },
     "delete": {
       "title": "Delete {name}?",
@@ -3043,7 +3045,8 @@
         "primary": "Primary",
         "alias": "Alias",
         "redirect": "Redirect"
-      }
+      },
+      "openNamed": "Open {domain} in a new tab"
     },
     "markers": {
       "processFailed": "Process failed",
