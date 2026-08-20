@@ -1338,7 +1338,11 @@
       "toggleFailed": "No se pudo cambiar el cortafuegos.",
       "defaultPolicy": "Política por defecto",
       "incomingLabel": "Entrante",
-      "outgoingLabel": "Saliente"
+      "outgoingLabel": "Saliente",
+      "exposedTitle": "Tu cortafuegos está activo, pero no está bloqueando nada",
+      "exposedBody": "Tus reglas se están aplicando, pero todo lo que no aparece abajo sigue teniendo acceso. La política por defecto se cambió fuera del panel.",
+      "secureNow": "Bloquear entrante por defecto",
+      "secured": "El tráfico entrante vuelve a estar bloqueado por defecto."
     },
     "confirmOn": {
       "title": "¿Activar el cortafuegos?",
@@ -1457,7 +1461,11 @@
       "submit": "Guardar regla",
       "saved": "Regla actualizada."
     },
-    "noPermission": "Tu rol no incluye Cortafuegos con acceso de gestión. Pide a un administrador que te lo conceda."
+    "noPermission": "Tu rol no incluye Cortafuegos con acceso de gestión. Pide a un administrador que te lo conceda.",
+    "confirmSecure": {
+      "title": "¿Bloquear el tráfico entrante por defecto?",
+      "description": "Solo se permitirán las reglas que aparecen abajo. SSH y los puertos del propio panel se permiten primero, así que no perderás el acceso a este servidor."
+    }
   },
   "settings": {
     "title": "Ajustes",

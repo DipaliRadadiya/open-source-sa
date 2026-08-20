@@ -1338,7 +1338,11 @@
       "toggleFailed": "The firewall could not be changed.",
       "defaultPolicy": "Default policy",
       "incomingLabel": "Incoming",
-      "outgoingLabel": "Outgoing"
+      "outgoingLabel": "Outgoing",
+      "exposedTitle": "Your firewall is on, but it isn't blocking anything",
+      "exposedBody": "Your rules are being enforced, but anything not listed below is still allowed in. The default policy was changed outside the panel.",
+      "secureNow": "Block incoming by default",
+      "secured": "Incoming traffic is blocked by default again."
     },
     "confirmOn": {
       "title": "Turn the firewall on?",
@@ -1457,7 +1461,11 @@
       "submit": "Save rule",
       "saved": "Rule updated."
     },
-    "noPermission": "Your role does not include Firewall with Manage access. Ask an administrator to grant it."
+    "noPermission": "Your role does not include Firewall with Manage access. Ask an administrator to grant it.",
+    "confirmSecure": {
+      "title": "Block incoming traffic by default?",
+      "description": "Only the rules listed below will be let in. SSH and the panel's own ports are allowed first, so you will not lose access to this server."
+    }
   },
   "settings": {
     "title": "Settings",

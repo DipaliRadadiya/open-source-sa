@@ -7,11 +7,13 @@ import { toast } from "sonner";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  ShieldAlert,
   ShieldCheck,
   ShieldOff,
   TriangleAlert,
 } from "lucide-react";
 import { toggleFirewall } from "@/lib/api/firewall";
+import { firewallState } from "@/lib/firewall/state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -38,11 +40,24 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
   const [confirming, setConfirming] = useState(null);
   const [pending, setPending] = useState(false);
 
-  async function apply(next) {
+  // off | on | exposed — see lib/firewall/state.js for why there are three.
+  const state = firewallState(enabled, policy);
+  const safeLooking = state === "on";
+
+  /*
+   * `secure` re-runs the same enable path rather than needing an endpoint of
+   * its own. ToggleFirewall::execute(true) seeds the SSH and panel-port allow
+   * rules and then runs `ufw default deny incoming` + `allow outgoing` +
+   * `ufw --force enable`; the last is a no-op on an already-enabled firewall,
+   * so the posture is repaired with no window where the box is unprotected.
+   */
+  async function apply(next, { secured = false } = {}) {
     setPending(true);
     try {
       await toggleFirewall(next);
-      toast.success(next ? t("status.turnedOn") : t("status.turnedOff"));
+      toast.success(
+        secured ? t("status.secured") : next ? t("status.turnedOn") : t("status.turnedOff"),
+      );
       setConfirming(null);
       router.refresh();
     } catch (error) {
@@ -58,26 +73,38 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
     <>
       <Card
         className={
-          // Off is not a neutral state on this page: the rules below are inert.
-          // The card says so in colour before anyone reads a word of it.
-          enabled ? "border-success/30 bg-success/5" : "border-warning/40 bg-warning/5"
+          // Neither off nor exposed is a neutral state on this page — in one the
+          // rules below are inert, in the other they are the only thing being
+          // enforced while everything else walks in. The card says so in colour
+          // before anyone reads a word of it.
+          safeLooking ? "border-success/30 bg-success/5" : "border-warning/40 bg-warning/5"
         }
       >
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span
               className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
-                enabled ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
+                safeLooking ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
               }`}
             >
-              {enabled ? <ShieldCheck className="size-5" /> : <ShieldOff className="size-5" />}
+              {/* Not the same icon as "off": this firewall IS running, and a
+                  shield with a line through it would say it is not. */}
+              {state === "on" ? (
+                <ShieldCheck className="size-5" />
+              ) : state === "exposed" ? (
+                <ShieldAlert className="size-5" />
+              ) : (
+                <ShieldOff className="size-5" />
+              )}
             </span>
             <div className="space-y-1">
               <p className="text-base font-semibold">
-                {enabled ? t("status.onTitle") : t("status.offTitle")}
+                {t(`status.${state}Title`)}
               </p>
               <p className="text-sm text-muted-foreground">
-                {enabled ? t("status.onBody") : t("status.offBody", { count: ruleCount })}
+                {state === "off"
+                  ? t("status.offBody", { count: ruleCount })
+                  : t(`status.${state}Body`)}
               </p>
               {/* Labelled once rather than twice. Both pills used to end in "by
                   default", which pushed the one word that differs — blocked vs
@@ -106,21 +133,40 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
             </div>
           </div>
 
-          <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
-            {/* Destructive when it is the off switch: this stops enforcing every
-                rule on the page and puts the server back on the open internet.
-                As a plain outline button it was indistinguishable from "Add
-                rule" — and its own confirm dialog already opens warning-toned,
-                so the button was the only step in the flow saying nothing. */}
-            <Button
-              variant={enabled ? "destructive" : "default"}
-              disabled={!canManage || pending}
-              onClick={() => setConfirming(enabled ? "off" : "on")}
-            >
-              {enabled ? <ShieldOff className="size-4" /> : <ShieldCheck className="size-4" />}
-              {enabled ? t("status.turnOff") : t("status.turnOn")}
-            </Button>
-          </ReasonTooltip>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The repair, and it leads: an exposed firewall has one thing worth
+                doing. The off switch stays beside it rather than being replaced
+                — being in a bad state is not a reason to take away the control
+                for leaving it. */}
+            {state === "exposed" ? (
+              <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+                <Button
+                  disabled={!canManage || pending}
+                  onClick={() => setConfirming("secure")}
+                >
+                  <ShieldCheck className="size-4" />
+                  {t("status.secureNow")}
+                </Button>
+              </ReasonTooltip>
+            ) : null}
+
+            <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+              {/* Destructive when it is the off switch: this stops enforcing
+                  every rule on the page and puts the server back on the open
+                  internet. As a plain outline button it was indistinguishable
+                  from "Add rule" — and its own confirm dialog already opens
+                  warning-toned, so the button was the only step in the flow
+                  saying nothing. */}
+              <Button
+                variant={enabled ? "destructive" : "default"}
+                disabled={!canManage || pending}
+                onClick={() => setConfirming(enabled ? "off" : "on")}
+              >
+                {enabled ? <ShieldOff className="size-4" /> : <ShieldCheck className="size-4" />}
+                {enabled ? t("status.turnOff") : t("status.turnOn")}
+              </Button>
+            </ReasonTooltip>
+          </div>
         </CardContent>
       </Card>
 
@@ -136,11 +182,29 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
         onConfirm={() => apply(true)}
       />
 
+      {/* Confirmed like the others, because it changes what reaches the box:
+          traffic that was getting in stops. The description names the one thing
+          somebody would be afraid of — losing their own way in — and can say it
+          truthfully, since the same call seeds the SSH and panel-port rules
+          before it changes the policy. */}
+      <ConfirmDialog
+        open={confirming === "secure"}
+        onOpenChange={(open) => !pending && setConfirming(open ? "secure" : null)}
+        icon={ShieldCheck}
+        title={t("confirmSecure.title")}
+        description={t("confirmSecure.description")}
+        cancelLabel={t("common.cancel")}
+        confirmLabel={t("status.secureNow")}
+        pending={pending}
+        onConfirm={() => apply(true, { secured: true })}
+      />
+
       <ConfirmDialog
         open={confirming === "off"}
         onOpenChange={(open) => !pending && setConfirming(open ? "off" : null)}
         icon={TriangleAlert}
         tone="warning"
+        confirmVariant="destructive"
         title={t("confirmOff.title")}
         description={t("confirmOff.description")}
         cancelLabel={t("common.cancel")}
