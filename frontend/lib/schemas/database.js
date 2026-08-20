@@ -259,7 +259,15 @@ export const exportSchema = z.object({
   // but there is nothing to download.
   available: z.boolean().nullable().optional().default(false),
   download_url: z.string().nullable().optional(),
-  requested_by: z.string().nullable().optional(),
+  // An object, not a string. The list endpoint eager-loads the user, so this
+  // arrives as `{id, username}` — and `z.array()` fails whole if any element
+  // fails, so a single export started by a signed-in user made the entire list
+  // unparseable. The poll then fetched every three seconds and discarded the
+  // answer in silence, and the server render fell back to an empty list.
+  requested_by: z
+    .object({ id: z.number(), username: z.string() })
+    .nullable()
+    .optional(),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
   finished_at: z.string().nullable().optional(),
