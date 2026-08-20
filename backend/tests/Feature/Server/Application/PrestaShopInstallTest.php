@@ -55,6 +55,10 @@ function fakePrestaShopFeed(bool $ok = true): void
             .'<branch name="1.6"><link>http://download.prestashop.com/download/releases/prestashop_1.6.1.24.zip</link></branch>'
             .'<branch name="1.7"><link>https://github.com/PrestaShop/PrestaShop/releases/download/1.7.8.11/prestashop_1.7.8.11.zip</link></branch>'
             .'<branch name="8.2"><link>https://github.com/PrestaShop/PrestaShop/releases/download/8.2.1/prestashop_8.2.1.zip</link></branch>'
+            // Last in the real feed, and not PrestaShop: the autoupgrade
+            // module ships its own branch here. Absent from this fixture, the
+            // suite happily passed while every install downloaded the module.
+            .'<branch name="autoupgrade"><link>https://github.com/PrestaShop/autoupgrade/releases/download/v6.2.0/autoupgrade-v6.2.0.zip</link></branch>'
             .'</channel></prestashop>'
         )
         : Http::response('', 500),
@@ -149,4 +153,18 @@ it('passes the passwords as arguments, which is documented and deliberate', func
     // rather than being mistaken for an oversight.
     expect($command)->toContain('--password=ShopPass1234!')
         ->and(collect($command)->contains(fn ($a) => str_starts_with((string) $a, '--db_password=')))->toBeTrue();
+});
+
+it('ignores the autoupgrade module, which the feed lists last', function () {
+    // The feed carries more than PrestaShop. Taking the final branch — "oldest
+    // first, so the last one is current" — downloaded the autoupgrade module,
+    // an archive with no `prestashop.zip` inside it. The install then failed at
+    // the second unzip with "cannot find or open .../prestashop.zip", on a site
+    // whose files and database had already been created.
+    fakePrestaShopFeed();
+
+    $curl = collect(installPrestaShop())->first(fn ($run) => ($run['command'][0] ?? '') === 'curl')['command'];
+
+    expect(end($curl))->not->toContain('autoupgrade')
+        ->and(end($curl))->toBe('https://github.com/PrestaShop/PrestaShop/releases/download/8.2.1/prestashop_8.2.1.zip');
 });

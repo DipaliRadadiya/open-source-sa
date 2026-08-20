@@ -102,7 +102,17 @@ class PrestaShopInstaller extends AbstractPhpInstaller
 
         $response = Http::timeout(15)->get((string) config('server.installers.prestashop.channel_feed'));
 
-        // Branches are listed oldest first, so the last stable one is current.
+        // Branches are listed oldest first, so the last stable one is current
+        // — but only among branches that are PrestaShop itself. The feed also
+        // carries the autoupgrade module, whose branch is listed last, and
+        // taking the final link downloaded that instead: a module archive with
+        // no `prestashop.zip` inside it, so the second unzip failed with
+        // "cannot find or open .../prestashop.zip" on a site whose files had
+        // already been written.
+        //
+        // Matched on the release filename rather than by excluding the module
+        // by name. A deny-list is wrong the day they add a second one; this
+        // only ever accepts something that looks like the shop.
         $url = null;
         if ($response->successful() && preg_match_all(
             '/<branch\s[^>]*>.*?<link>\s*([^<]+?)\s*<\/link>/s',
@@ -111,6 +121,7 @@ class PrestaShopInstaller extends AbstractPhpInstaller
         )) {
             $url = collect($matches[1])
                 ->filter(fn (string $link) => str_starts_with($link, 'https://'))
+                ->filter(fn (string $link) => preg_match('#/prestashop_[\d.]+\.zip$#i', $link) === 1)
                 ->last();
         }
 
