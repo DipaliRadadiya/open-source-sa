@@ -1323,15 +1323,16 @@
       "onBody": "Anything not listed below is blocked before it reaches your server.",
       "offTitle": "Your server is not protected",
       "offBody": "{count, plural, =0 {Nothing is being blocked. Any port left open by a program is reachable from the internet.} one {Nothing is being blocked — your # rule is saved but not being enforced.} other {Nothing is being blocked — your # rules are saved but not being enforced.}}",
-      "incoming": "Incoming: {policy}",
-      "outgoing": "Outgoing: {policy}",
-      "policyDeny": "blocked by default",
-      "policyAllow": "allowed by default",
+      "policyDeny": "Blocked",
+      "policyAllow": "Allowed",
       "turnOn": "Turn on firewall",
       "turnOff": "Turn off firewall",
       "turnedOn": "Firewall is on.",
       "turnedOff": "Firewall is off. Your rules are kept.",
-      "toggleFailed": "The firewall could not be changed."
+      "toggleFailed": "The firewall could not be changed.",
+      "defaultPolicy": "Default policy",
+      "incomingLabel": "Incoming",
+      "outgoingLabel": "Outgoing"
     },
     "confirmOn": {
       "title": "Turn the firewall on?",

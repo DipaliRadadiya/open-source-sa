@@ -4,7 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ShieldCheck, ShieldOff, TriangleAlert } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ShieldCheck,
+  ShieldOff,
+  TriangleAlert,
+} from "lucide-react";
 import { toggleFirewall } from "@/lib/api/firewall";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,25 +79,45 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
               <p className="text-sm text-muted-foreground">
                 {enabled ? t("status.onBody") : t("status.offBody", { count: ruleCount })}
               </p>
+              {/* Labelled once rather than twice. Both pills used to end in "by
+                  default", which pushed the one word that differs — blocked vs
+                  allowed — into the middle of a sentence set in 12px. The label
+                  carries "by default" for the pair, so each pill is left with a
+                  direction and an answer. */}
               {enabled && policy?.incoming ? (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <Badge variant="outline" className="font-normal">
-                    {t("status.incoming", { policy: policyWord(t, policy.incoming) })}
-                  </Badge>
-                  <Badge variant="outline" className="font-normal">
-                    {t("status.outgoing", { policy: policyWord(t, policy.outgoing) })}
-                  </Badge>
+                <div className="flex flex-wrap items-center gap-2 pt-1.5">
+                  <span className="text-xs text-muted-foreground">
+                    {t("status.defaultPolicy")}
+                  </span>
+                  <PolicyBadge
+                    icon={ArrowDownToLine}
+                    label={t("status.incomingLabel")}
+                    value={policyWord(t, policy.incoming)}
+                    tone={incomingTone(policy.incoming)}
+                  />
+                  <PolicyBadge
+                    icon={ArrowUpFromLine}
+                    label={t("status.outgoingLabel")}
+                    value={policyWord(t, policy.outgoing)}
+                    tone={outgoingTone(policy.outgoing)}
+                  />
                 </div>
               ) : null}
             </div>
           </div>
 
           <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+            {/* Destructive when it is the off switch: this stops enforcing every
+                rule on the page and puts the server back on the open internet.
+                As a plain outline button it was indistinguishable from "Add
+                rule" — and its own confirm dialog already opens warning-toned,
+                so the button was the only step in the flow saying nothing. */}
             <Button
-              variant={enabled ? "outline" : "default"}
+              variant={enabled ? "destructive" : "default"}
               disabled={!canManage || pending}
               onClick={() => setConfirming(enabled ? "off" : "on")}
             >
+              {enabled ? <ShieldOff className="size-4" /> : <ShieldCheck className="size-4" />}
               {enabled ? t("status.turnOff") : t("status.turnOn")}
             </Button>
           </ReasonTooltip>
@@ -124,6 +150,47 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
       />
     </>
   );
+}
+
+/**
+ * One direction and its default, coloured by what that default actually means.
+ *
+ * The label is dimmed with opacity rather than `text-muted-foreground`, so it
+ * stays a shade of the badge's own colour instead of dropping to grey inside a
+ * tinted pill.
+ */
+function PolicyBadge({ icon: Icon, label, value, tone }) {
+  return (
+    <Badge variant={tone} className="gap-1.5 font-normal">
+      <Icon className="size-3 opacity-70" />
+      <span className="opacity-70">{label}</span>
+      <span className="font-medium">{value}</span>
+    </Badge>
+  );
+}
+
+/**
+ * Blocking by default is the whole point of switching a firewall on — and
+ * allowing by default is the one value on this card that contradicts the two
+ * sentences above it. The card claims "your server is protected" on the
+ * strength of the firewall being enabled, which an enabled-but-open firewall
+ * satisfies; this badge is currently the only thing that can say otherwise.
+ */
+function incomingTone(value) {
+  if (value === "deny") return "success";
+  if (value === "allow") return "warning";
+  return "secondary";
+}
+
+/**
+ * Outgoing-allow is what every ordinary server does, so it is stated in the
+ * same confident green rather than hedged in grey. Outgoing-deny is a
+ * deliberate hardening choice — unusual, but not a fault, so it is neither
+ * praised nor flagged.
+ */
+function outgoingTone(value) {
+  if (value === "allow") return "success";
+  return "secondary";
 }
 
 // "deny"/"allow" are UFW's words, not everyone's. Anything unexpected is shown

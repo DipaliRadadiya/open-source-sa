@@ -1323,15 +1323,16 @@
       "onBody": "Todo lo que no aparezca abajo se bloquea antes de llegar a tu servidor.",
       "offTitle": "Tu servidor no está protegido",
       "offBody": "{count, plural, =0 {No se bloquea nada. Cualquier puerto que un programa deje abierto es accesible desde internet.} one {No se bloquea nada — tu # regla está guardada pero no se aplica.} other {No se bloquea nada — tus # reglas están guardadas pero no se aplican.}}",
-      "incoming": "Entrante: {policy}",
-      "outgoing": "Saliente: {policy}",
-      "policyDeny": "bloqueado por defecto",
-      "policyAllow": "permitido por defecto",
+      "policyDeny": "Bloqueado",
+      "policyAllow": "Permitido",
       "turnOn": "Activar cortafuegos",
       "turnOff": "Apagar cortafuegos",
       "turnedOn": "El cortafuegos está activo.",
       "turnedOff": "El cortafuegos está apagado. Tus reglas se conservan.",
-      "toggleFailed": "No se pudo cambiar el cortafuegos."
+      "toggleFailed": "No se pudo cambiar el cortafuegos.",
+      "defaultPolicy": "Política por defecto",
+      "incomingLabel": "Entrante",
+      "outgoingLabel": "Saliente"
     },
     "confirmOn": {
       "title": "¿Activar el cortafuegos?",
