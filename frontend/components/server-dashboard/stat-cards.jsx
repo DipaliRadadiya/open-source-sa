@@ -48,10 +48,17 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
       <StatCard
         icon={Cpu}
         label={t("cpu")}
-        // A rate needs two samples. Until the second one lands the API returns
-        // 0, which would draw an idle machine we have no evidence for — so the
-        // card says "not measured yet" instead of a number.
-        value={ratesReady ? percentText(cpu?.percent, 1) : "—"}
+        /*
+         * A rate needs two samples. Until the second one lands the API returns
+         * 0, which would draw an idle machine we have no evidence for.
+         *
+         * It says so in words rather than with a dash. This is the first number
+         * on the dashboard and it sat at "—" for about four seconds on every
+         * load while Memory, Swap and Disk beside it already showed values —
+         * which reads as broken rather than as pending, because a dash is what
+         * the other cards use for "this machine has no swap".
+         */
+        value={ratesReady ? percentText(cpu?.percent, 1) : t("measuring")}
         percent={ratesReady ? cpu?.percent : null}
         hint={cpu?.cores ? t("cores", { count: cpu.cores }) : ""}
         loading={loading}

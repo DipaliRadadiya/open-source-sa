@@ -786,7 +786,8 @@
       "refused": "Este proceso no se puede detener desde aquí.",
       "failed": "No se pudo detener el proceso."
     },
-    "diskUnknown": "No informado"
+    "diskUnknown": "No informado",
+    "measuring": "Midiendo…"
   },
   "cronJobs": {
     "title": "Tareas cron",

@@ -786,7 +786,8 @@
       "refused": "This process cannot be stopped from here.",
       "failed": "The process could not be stopped."
     },
-    "diskUnknown": "Not reported"
+    "diskUnknown": "Not reported",
+    "measuring": "Measuring…"
   },
   "cronJobs": {
     "title": "Cron jobs",
