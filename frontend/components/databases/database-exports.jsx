@@ -60,6 +60,20 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
   const t = useTranslations("databases.exports");
   const router = useRouter();
   const [polled, setPolled] = useState(null);
+  // The polled rows override the server render — and have to stand down the
+  // moment the server render is newer than they are. Keeping them forever was
+  // the other half of the bug this pair fixes: dropping them on the last poll
+  // reverted a finished export to "Waiting", and keeping them meant a deleted
+  // export never left the list, because `router.refresh()` updated `initial`
+  // and nothing was reading it any more.
+  //
+  // Same derived-state shape the backups delete dialog uses for `open`: notice
+  // the prop changed, react to it during render rather than in an effect.
+  const [seenInitial, setSeenInitial] = useState(initial);
+  if (seenInitial !== initial) {
+    setSeenInitial(initial);
+    setPolled(null);
+  }
   const [starting, setStarting] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(false);
