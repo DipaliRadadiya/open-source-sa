@@ -8,6 +8,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { ServiceActions } from "@/components/services/service-actions";
 import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
+import { installHome } from "@/lib/services/install-home";
 
 /* ---------------------------------------------------------------------------
  * Cells are module-level components on purpose.
@@ -26,6 +27,7 @@ import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 function ServiceCell({ row }) {
   const t = useTranslations("services");
   const {
+    key,
     label,
     unit,
     state,
@@ -33,6 +35,7 @@ function ServiceCell({ row }) {
     install_message: installMessage,
     retryable,
   } = row.original;
+  const home = installHome(key);
   const installed = state === "installed";
 
   // Only what the badge does not already say. "Installing…" is the badge's job,
@@ -62,14 +65,15 @@ function ServiceCell({ row }) {
         {retryable ? (
           <>
             {note ? " " : null}
-            {/* A link, not a button: the install was started on the setup page
-                and that is where its retry belongs. Two doors to the same
-                install is how you end up running two at once. */}
+            {/* A link, not a button: the retry belongs on the screen that
+                owns this install, and two doors to the same install is how you
+                end up running two at once. Which screen that is depends on the
+                service — see lib/services/install-home.js. */}
             <Link
-              href="/setup"
+              href={home.href}
               className="font-medium whitespace-nowrap text-foreground underline underline-offset-2"
             >
-              {t("state.retryOnSetup")}
+              {t(`state.${home.retryLabel}`)}
             </Link>
           </>
         ) : null}

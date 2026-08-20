@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ServiceActions } from "@/components/services/service-actions";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
+import { installHome } from "@/lib/services/install-home";
 
 /**
  * The services that need a person, listed rather than tabulated.
@@ -18,7 +19,8 @@ import { ServiceStatusBadge } from "@/components/services/service-status-badge";
  * reader (attention) while needing different things done:
  *
  *   install_failed  never installed. There is no unit to start, so the only
- *                   move is the setup page, where the install came from.
+ *                   move is the screen that owns the install — which is not
+ *                   always the setup page. See lib/services/install-home.js.
  *   crashed unit    installed and not running. Start/restart are real options
  *                   and its log exists, so both are offered.
  */
@@ -29,6 +31,7 @@ export function ServiceAttentionList({ services, phpVersions = [], canManage, bu
     <ul className="divide-y rounded-xl border">
       {services.map((service) => {
         const failedInstall = service.state === "install_failed";
+        const home = installHome(service.key);
 
         // Say what is wrong in one line. A specific reason from the API is
         // always better than ours; `unknown` is its generic bucket, whose
@@ -74,7 +77,9 @@ export function ServiceAttentionList({ services, phpVersions = [], canManage, bu
               {failedInstall ? (
                 canManage ? (
                   <Button asChild variant="outline" size="sm">
-                    <Link href="/setup">{t("attention.openSetup")}</Link>
+                    {/* The screen that owns this install, not always /setup —
+                        see lib/services/install-home.js. */}
+                    <Link href={home.href}>{t(`attention.${home.label}`)}</Link>
                   </Button>
                 ) : null
               ) : (

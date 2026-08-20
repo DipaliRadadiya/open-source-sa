@@ -1121,7 +1121,10 @@
     "state": {
       "installing": "Instalando…",
       "install_failed": "La instalación no se completó.",
-      "retryOnSetup": "Reintentar en la página de configuración"
+      "retryOnSetup": "Reintentar en la página de configuración",
+      "retryOnDatabases": "Reintentar en la página de bases de datos",
+      "retryOnPhp": "Reintentar en la página de PHP",
+      "retryOnFail2ban": "Reintentar en la página de Fail2ban"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 servicio necesita atención} other {# servicios necesitan atención}}",
@@ -1145,7 +1148,10 @@
     },
     "attention": {
       "openSetup": "Abrir configuración",
-      "unitFailed": "Instalado pero no está funcionando. Su registro indicará por qué."
+      "unitFailed": "Instalado pero no está funcionando. Su registro indicará por qué.",
+      "openDatabases": "Abrir bases de datos",
+      "openPhp": "Abrir PHP",
+      "openFail2ban": "Abrir Fail2ban"
     }
   },
   "fail2ban": {

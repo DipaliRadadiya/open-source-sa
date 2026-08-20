@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ServiceActions } from "@/components/services/service-actions";
+import { installHome } from "@/lib/services/install-home";
 import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
@@ -57,10 +58,10 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
                       <>
                         {" "}
                         <Link
-                          href="/setup"
+                          href={installHome(service.key).href}
                           className="font-medium text-foreground underline underline-offset-2"
                         >
-                          {t("state.retryOnSetup")}
+                          {t(`state.${installHome(service.key).retryLabel}`)}
                         </Link>
                       </>
                     ) : null}

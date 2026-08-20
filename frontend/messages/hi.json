@@ -1121,7 +1121,10 @@
     "state": {
       "installing": "इंस्टॉल हो रहा है…",
       "install_failed": "इंस्टॉल पूरा नहीं हुआ।",
-      "retryOnSetup": "सेटअप पेज पर फिर से कोशिश करें"
+      "retryOnSetup": "सेटअप पेज पर फिर से कोशिश करें",
+      "retryOnDatabases": "डेटाबेस पेज पर फिर से कोशिश करें",
+      "retryOnPhp": "PHP पेज पर फिर से कोशिश करें",
+      "retryOnFail2ban": "Fail2ban पेज पर फिर से कोशिश करें"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 सेवा पर ध्यान देना ज़रूरी है} other {# सेवाओं पर ध्यान देना ज़रूरी है}}",
@@ -1145,7 +1148,10 @@
     },
     "attention": {
       "openSetup": "सेटअप खोलें",
-      "unitFailed": "इंस्टॉल है लेकिन चल नहीं रही। इसका लॉग बताएगा क्यों।"
+      "unitFailed": "इंस्टॉल है लेकिन चल नहीं रही। इसका लॉग बताएगा क्यों।",
+      "openDatabases": "डेटाबेस खोलें",
+      "openPhp": "PHP खोलें",
+      "openFail2ban": "Fail2ban खोलें"
     }
   },
   "fail2ban": {

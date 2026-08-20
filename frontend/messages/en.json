@@ -1121,7 +1121,10 @@
     "state": {
       "installing": "Installing…",
       "install_failed": "The install did not finish.",
-      "retryOnSetup": "Retry on the setup page"
+      "retryOnSetup": "Retry on the setup page",
+      "retryOnDatabases": "Retry on the databases page",
+      "retryOnPhp": "Retry on the PHP page",
+      "retryOnFail2ban": "Retry on the Fail2ban page"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 service needs attention} other {# services need attention}}",
@@ -1145,7 +1148,10 @@
     },
     "attention": {
       "openSetup": "Open setup",
-      "unitFailed": "Installed but not running. Its log will say why."
+      "unitFailed": "Installed but not running. Its log will say why.",
+      "openDatabases": "Open databases",
+      "openPhp": "Open PHP",
+      "openFail2ban": "Open Fail2ban"
     }
   },
   "fail2ban": {
