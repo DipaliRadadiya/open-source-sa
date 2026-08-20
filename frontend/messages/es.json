@@ -2025,7 +2025,7 @@
   },
   "databases": {
     "title": "Bases de datos",
-    "subtitle": "Crea bases de datos, gestiona quién puede conectarse a ellas y descarga copias de seguridad.",
+    "subtitle": "Crea bases de datos, gestiona quién puede conectarse a ellas y descarga exportaciones.",
     "loadFailed": "No pudimos cargar tus bases de datos.",
     "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
     "cancel": "Cancelar",
@@ -2085,8 +2085,8 @@
       "users": "Usuarios",
       "created": "Creada",
       "noUsers": "Sin usuarios",
-      "lastBackup": "Última copia",
-      "neverBackedUp": "Nunca"
+      "lastExport": "Última exportación",
+      "neverExported": "Nunca"
     },
     "empty": {
       "title": "Todavía no hay bases de datos",
@@ -2449,7 +2449,7 @@
     "tabs": {
       "users": "Usuarios",
       "tables": "Tablas",
-      "backups": "Copias"
+      "exports": "Exportaciones"
     },
     "phpmyadmin": {
       "open": "Abrir en phpMyAdmin",

@@ -76,7 +76,7 @@ export default async function DatabasePage({ params, searchParams }) {
           counts={{
             users: data.users?.length ?? 0,
             tables: tables.length,
-            backups: exportList.exports.filter(
+            exports: exportList.exports.filter(
               (row) => row.database_id === data.id,
             ).length,
           }}
@@ -88,7 +88,7 @@ export default async function DatabasePage({ params, searchParams }) {
               canManage={canManage}
             />
           }
-          backups={
+          exports={
             <DatabaseExports
               database={data}
               exports={exportList.exports}

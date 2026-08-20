@@ -85,7 +85,7 @@ function UsersCell({ row }) {
  * The question the list could not answer: is this database protected?
  *
  * A 2 GB production database nobody has ever dumped looked identical to one
- * backed up ten minutes ago. "Never" is the state worth the colour — and when
+ * exported ten minutes ago. "Never" is the state worth the colour — and when
  * the exports request itself failed, this says nothing rather than lie.
  */
 function BackupCell({ row, table }) {
@@ -100,7 +100,7 @@ function BackupCell({ row, table }) {
   if (!backup) {
     return (
       <Badge variant="warning" className="font-normal">
-        {t("columns.neverBackedUp")}
+        {t("columns.neverExported")}
       </Badge>
     );
   }
@@ -232,7 +232,7 @@ function DatabasesList({
       // ascending and rises to the top descending — the sort someone reaches
       // for this column to do.
       accessorFn: (row) => lastBackup?.[row.id]?.at ?? 0,
-      header: t("columns.lastBackup"),
+      header: t("columns.lastExport"),
       cell: BackupCell,
       sortingFn: "basic",
     },

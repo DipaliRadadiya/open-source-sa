@@ -2025,7 +2025,7 @@
   },
   "databases": {
     "title": "Databases",
-    "subtitle": "Create databases, manage who can connect to them, and download backups.",
+    "subtitle": "Create databases, manage who can connect to them, and download exports.",
     "loadFailed": "We couldn't load your databases.",
     "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
     "cancel": "Cancel",
@@ -2085,8 +2085,8 @@
       "users": "Users",
       "created": "Created",
       "noUsers": "No users",
-      "lastBackup": "Last backup",
-      "neverBackedUp": "Never"
+      "lastExport": "Last export",
+      "neverExported": "Never"
     },
     "empty": {
       "title": "No databases yet",
@@ -2449,7 +2449,7 @@
     "tabs": {
       "users": "Users",
       "tables": "Tables",
-      "backups": "Backups"
+      "exports": "Exports"
     },
     "phpmyadmin": {
       "open": "Open in phpMyAdmin",

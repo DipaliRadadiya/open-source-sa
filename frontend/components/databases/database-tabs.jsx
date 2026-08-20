@@ -10,8 +10,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
  * One database's sections, one at a time.
  *
  * They used to be four stacked cards. That reads fine with two users and two
- * backups, and falls apart the moment a database has twenty of either — tables
- * and backups end up below the fold, and someone who has not scrolled concludes
+ * exports, and falls apart the moment a database has twenty of either — tables
+ * and exports end up below the fold, and someone who has not scrolled concludes
  * they do not exist. Tabs keep every section one click from the top of the
  * page regardless of how long any one of them gets.
  *
@@ -19,23 +19,26 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
  * opening it — the main thing a tab strip otherwise costs you.
  *
  * The open tab is written to the URL, so refreshing after an export keeps you
- * on Backups and a link to it opens where it was sent from. `replaceState`
+ * on Exports and a link to it opens where it was sent from. `replaceState`
  * rather than a route change: the sections are already on the page, so there is
  * nothing to re-fetch, and Back should return to the list rather than step
  * through tabs.
  */
-const VALUES = ["users", "tables", "backups"];
+const VALUES = ["users", "tables", "exports"];
+// The tab value is in the URL, so a link made before the rename still exists.
+const LEGACY = { backups: "exports" };
 
-export function DatabaseTabs({ users, tables, backups, counts, initial }) {
+export function DatabaseTabs({ users, tables, exports: exportsNode, counts, initial }) {
   const t = useTranslations("databases.tabs");
-  const [tab, setTab] = useState(() =>
-    VALUES.includes(initial) ? initial : "users",
-  );
+  const [tab, setTab] = useState(() => {
+    const wanted = LEGACY[initial] ?? initial;
+    return VALUES.includes(wanted) ? wanted : "users";
+  });
 
   const sections = [
     { value: "users", label: t("users"), count: counts.users, node: users },
     { value: "tables", label: t("tables"), count: counts.tables, node: tables },
-    { value: "backups", label: t("backups"), count: counts.backups, node: backups },
+    { value: "exports", label: t("exports"), count: counts.exports, node: exportsNode },
   ];
 
   function select(next) {
