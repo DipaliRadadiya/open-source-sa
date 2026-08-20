@@ -94,6 +94,7 @@ function MobileNavLink({ item, built, active, children, className }) {
         onOpenChange={(open) => !open && setLeavingTo(null)}
         icon={TriangleAlert}
         tone="warning"
+        confirmVariant="destructive"
         title={t("unsavedTitle")}
         description={t("unsavedDescription")}
         cancelLabel={t("unsavedStay")}

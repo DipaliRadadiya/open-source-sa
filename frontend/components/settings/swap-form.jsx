@@ -219,6 +219,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
           onOpenChange={(open) => !open && setPendingValues(null)}
           icon={HardDriveDownload}
           tone="warning"
+          confirmVariant="destructive"
           title={t("swap.confirmTitle")}
           description={t("swap.confirmDescription", {
             used: swap?.used_human ?? "0 B",

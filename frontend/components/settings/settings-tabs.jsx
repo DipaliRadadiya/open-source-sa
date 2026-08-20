@@ -86,6 +86,7 @@ export function SettingsTabs({ badges = {} }) {
         onOpenChange={(open) => !open && setLeavingTo(null)}
         icon={TriangleAlert}
         tone="warning"
+        confirmVariant="destructive"
         title={t("unsavedTitle")}
         description={t("unsavedDescription")}
         cancelLabel={t("unsavedStay")}

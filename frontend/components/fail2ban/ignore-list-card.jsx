@@ -243,6 +243,7 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
           onOpenChange={setConfirmRemoveSelf}
           icon={TriangleAlert}
           tone="warning"
+          confirmVariant="destructive"
           title={t("settings.removeYouTitle")}
           description={t("settings.removeYouDescription", { ip: yourIp })}
           cancelLabel={t("settings.cancel")}

@@ -117,6 +117,7 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
         onOpenChange={setConfirming}
         icon={TriangleAlert}
         tone="warning"
+        confirmVariant="destructive"
         title={t("confirm.disable.title", { name: service.label })}
         description={t("confirm.disable.description")}
         cancelLabel={t("confirm.cancel")}
