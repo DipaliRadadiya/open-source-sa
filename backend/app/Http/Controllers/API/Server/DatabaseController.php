@@ -289,6 +289,27 @@ class DatabaseController extends Controller
      */
     public function exports(): JsonResponse
     {
+        // Reaped here as well as on the way in. `export()` closes out stranded
+        // rows before starting a new one, which unblocks the database — but
+        // only for somebody who tries again. Until then the screen polls a row
+        // that says "Waiting" and never will: the job it is waiting for was
+        // dropped when its queue lock outlived the worker holding it, so
+        // nothing is coming and nothing else was ever going to say so.
+        //
+        // This is the list the screen polls, so closing them out here is what
+        // turns an indefinite spinner into a failure the reader can act on.
+        DatabaseExport::query()
+            ->inFlight()
+            ->get()
+            ->filter(fn (DatabaseExport $export): bool => $export->isStale())
+            ->each(fn (DatabaseExport $export) => $export->update([
+                'status' => ExportStatus::Failed,
+                // Same code the start path uses for the same condition — an
+                // abandoned run is "the worker stopped", noticed later.
+                'reason' => 'worker',
+                'finished_at' => now(),
+            ]));
+
         $exports = DatabaseExport::query()->with('user:id,username')->latest('id')->get();
 
         return response()->json([

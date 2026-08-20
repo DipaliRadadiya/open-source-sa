@@ -191,3 +191,37 @@ describe('a dump stranded by a killed worker', function () {
             ->toContain('stopped unexpectedly');
     });
 });
+
+it('closes out a stranded export when the list is read, not only when one is started', function () {
+    // The job is unique per database, and a lock outliving the worker that held
+    // it makes Laravel discard the next dispatch silently — no exception, no
+    // failed_jobs row. The controller has already written a `queued` row and
+    // answered 202, so the screen polls something that will never arrive.
+    //
+    // `export()` reaped these, which unblocks the database for whoever tries
+    // again — but the reader watching the spinner has no reason to try. This is
+    // the list the screen polls, so it is where a stranded row has to resolve.
+    // Aged past the job's own timeout plus its grace, which is the only bound
+    // this feature has for "nothing can still be working on it".
+    grantPermission($this->user, 'database');
+
+    $export = exportRow(ExportStatus::Queued, (int) ceil((new RunDatabaseExport(0, 0))->uniqueFor() / 60) + 1);
+
+    $this->getJson('/api/databases/exports')->assertOk();
+
+    expect($export->fresh()->status)->toBe(ExportStatus::Failed)
+        ->and($export->fresh()->reason)->toBe('worker');
+});
+
+it('leaves a genuinely running export alone', function () {
+    // The bound is the job's own timeout plus a grace. Reaping early would fail
+    // a dump that is still writing, and the row is the only thing telling the
+    // user it is.
+    grantPermission($this->user, 'database');
+
+    $export = exportRow(ExportStatus::Running, 0);
+
+    $this->getJson('/api/databases/exports')->assertOk();
+
+    expect($export->fresh()->status)->toBe(ExportStatus::Running);
+});

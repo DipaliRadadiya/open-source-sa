@@ -2322,7 +2322,8 @@
       "confirmDescription": "This database is {size}. The file is written to this server's disk and can take several minutes.",
       "freeSpace": "{free} free on this server.",
       "inProgress": "Exporting…",
-      "diskUsed": "{count, plural, one {# export} other {# exports}} kept here — {size}. Nothing deletes these for you."
+      "diskUsed": "{count, plural, one {# export} other {# exports}} kept here — {size}. Nothing deletes these for you.",
+      "takingLonger": "This is taking longer than usual. Large databases can take a few minutes."
     },
     "manage": "Manage",
     "monitor": {

@@ -37,6 +37,11 @@ const POLL_MS = 3000;
 const CONFIRM_ABOVE_BYTES = 512 * 1024 * 1024;
 const IN_FLIGHT = ["queued", "running"];
 
+// Past this a dump is worth commenting on. Well under the server's own
+// abandonment window, so the hint appears while there is still something to
+// wait for rather than moments before the row fails anyway.
+const SLOW_AFTER_MS = 120_000;
+
 const TONE = {
   completed: "success",
   failed: "destructive",
@@ -61,6 +66,11 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
   // Only asked for when the dump is big enough to matter, and only then is the
   // free-space figure fetched — the page should not pay for it otherwise.
   const [confirming, setConfirming] = useState(false);
+  // A dump that has run past this is not necessarily broken — a large database
+  // legitimately takes minutes — but a bare spinner cannot say either. The row
+  // is closed out server-side once its queue lock has provably expired; until
+  // then this is the difference between "working" and "nothing is coming".
+  const [slow, setSlow] = useState(false);
   const [freeBytes, setFreeBytes] = useState(null);
   const format = useFormatter();
 
@@ -84,7 +94,9 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
     if (!inFlight) return;
 
     const controller = new AbortController();
+    const startedAt = Date.now();
     const id = setInterval(async () => {
+      if (Date.now() - startedAt > SLOW_AFTER_MS) setSlow(true);
       try {
         const { data } = await getExports({ signal: controller.signal });
         const parsed = exportsResponseSchema.safeParse(data);
@@ -99,6 +111,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
           // Finished: hand back to the server render so the row's final size
           // and download link come from the same place as everything else.
           setPolled(null);
+          setSlow(false);
           router.refresh();
         }
       } catch {
@@ -218,6 +231,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
                   row={row}
                   canManage={canManage}
                   onDelete={() => setDeleting(row)}
+                  slow={slow}
                 />
               ))}
             </div>
@@ -284,7 +298,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
   );
 }
 
-function ExportRow({ row, canManage, onDelete }) {
+function ExportRow({ row, canManage, onDelete, slow = false }) {
   const t = useTranslations("databases.exports");
   const running = IN_FLIGHT.includes(row.status);
 
@@ -315,6 +329,15 @@ function ExportRow({ row, canManage, onDelete }) {
             </span>
           ) : null}
         </div>
+
+        {/* Said only once it has been a while: a dump legitimately takes
+            minutes on a large database, and saying so immediately would make
+            every export look troubled. The server closes the row out once its
+            queue lock has provably expired, so this covers the gap between
+            "slow" and "already failed and nobody has noticed yet". */}
+        {running && slow ? (
+          <p className="text-xs text-muted-foreground">{t("takingLonger")}</p>
+        ) : null}
 
         {/* The server's own wording for a failure, plus the id support asks
             for. Ours would be a guess about something we did not witness. */}

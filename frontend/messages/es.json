@@ -2322,7 +2322,8 @@
       "confirmDescription": "Esta base de datos ocupa {size}. El archivo se escribe en el disco de este servidor y puede tardar varios minutos.",
       "freeSpace": "{free} libres en este servidor.",
       "inProgress": "Exportando…",
-      "diskUsed": "{count, plural, one {# exportación} other {# exportaciones}} aquí — {size}. Nada las elimina por ti."
+      "diskUsed": "{count, plural, one {# exportación} other {# exportaciones}} aquí — {size}. Nada las elimina por ti.",
+      "takingLonger": "Esto está tardando más de lo habitual. Las bases de datos grandes pueden tardar unos minutos."
     },
     "manage": "Gestionar",
     "monitor": {
