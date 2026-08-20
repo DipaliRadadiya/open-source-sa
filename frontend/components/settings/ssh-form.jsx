@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Form, FormField, FormControl } from "@/components/ui/form";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { isSevereSshChange } from "@/lib/settings/ssh-risks";
 import {
   Row,
   Section,
@@ -274,6 +275,9 @@ export function SshForm({
           onOpenChange={(open) => !open && setPendingValues(null)}
           icon={ShieldAlert}
           tone="warning"
+          // Matches the worst thing in the list, not the fact that this is a
+          // Save. Moving the port stays blue; losing your way in does not.
+          confirmVariant={isSevereSshChange(risks) ? "destructive" : "default"}
           title={t("confirm.title")}
           cancelLabel={t("confirm.cancel")}
           confirmLabel={t("confirm.submit")}
