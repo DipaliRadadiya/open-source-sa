@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ShieldOff, Ban, TriangleAlert, ScrollText } from "lucide-react";
+import { ShieldOff, Ban, ScrollText } from "lucide-react";
 import { unbanIp, unbanAll } from "@/lib/api/fail2ban";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -112,7 +112,7 @@ function ActionsCell({ row, table }) {
     <div className="flex justify-end">
       <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
         <Button
-          variant="ghost"
+          variant="destructive"
           size="sm"
           disabled={!canManage || unbanning === row.original.ip}
           onClick={() => onRequestUnban(row.original)}
@@ -238,7 +238,7 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
           {banned.length > 0 ? (
             <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
               <Button
-                variant="outline"
+                variant="destructive"
                 size="sm"
                 disabled={!canManage}
                 onClick={() => setConfirmAll(true)}
@@ -361,27 +361,34 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
       <ConfirmDialog
         open={confirmAll}
         onOpenChange={(open) => !clearing && setConfirmAll(open)}
-        icon={TriangleAlert}
+        icon={ShieldOff}
         tone="warning"
-        title={t("banned.unbanAllTitle")}
+        // The dialog is warning-toned but its confirm button fell through to
+        // `default` — so the friendliest button on the screen released every
+        // blocked attacker, while the Unban button that opened it is red.
+        confirmVariant="destructive"
+        title={t("banned.unbanAllTitle", { count: banned.length })}
+        description={t("banned.unbanAllDescription")}
         cancelLabel={t("banned.cancel")}
         confirmLabel={t("banned.unbanAll")}
         pending={clearing}
         onConfirm={onUnbanAll}
       >
-        <div className="py-1">
-          <p className="text-sm text-muted-foreground">
-            {t("banned.unbanAllDescription")}
-          </p>
-          <ul className="mt-2 flex flex-col gap-1">
-            {banned.map((ban) => (
-              <li key={`${ban.jail}-${ban.ip}`} className="flex items-start gap-2">
-                <span className="shrink-0 font-mono text-sm">{ban.ip}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">({ban.jail})</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* Capped and scrollable: this rendered every ban, and a server that has
+            been under attack has hundreds. The dialog grew until the confirm
+            button was off the bottom of the screen — on the one screen where
+            you most need to see what you are agreeing to. */}
+        <ul className="max-h-56 divide-y overflow-y-auto rounded-lg border">
+          {banned.map((ban) => (
+            <li
+              key={`${ban.jail}-${ban.ip}`}
+              className="flex items-center justify-between gap-3 px-3 py-2"
+            >
+              <span className="truncate font-mono text-sm">{ban.ip}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{ban.jail}</span>
+            </li>
+          ))}
+        </ul>
       </ConfirmDialog>
 
       <ConfirmDialog
@@ -389,8 +396,13 @@ export function BannedCard({ banned, jails, canManage, logHref }) {
         onOpenChange={(open) => !unbanning && !open && setUnbanConfirm(null)}
         icon={ShieldOff}
         tone="warning"
+        confirmVariant="destructive"
         title={t("banned.unbanIpTitle", { ip: unbanConfirm?.ip })}
-        description={t("banned.unbanIpDescription", { ip: unbanConfirm?.ip, jail: unbanConfirm?.jail })}
+        // Was "This will remove the ban for {ip} from {jail}" — the title above
+        // it already says the address, and "removes the ban" only restates the
+        // button. What the person is actually deciding is whether this address
+        // gets back in, and whether letting it back is permanent.
+        description={t("banned.unbanIpDescription", { jail: unbanConfirm?.jail })}
         cancelLabel={t("banned.cancel")}
         confirmLabel={t("banned.unban")}
         pending={!!unbanning}

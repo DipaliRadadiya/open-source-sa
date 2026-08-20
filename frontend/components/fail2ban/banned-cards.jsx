@@ -45,7 +45,7 @@ export function BannedCards({ data, canManage, onRequestUnban, unbanning, t, ren
           <div className="mt-3 flex justify-end border-t pt-3">
             <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
               <Button
-                variant="outline"
+                variant="destructive"
                 size="sm"
                 disabled={!canManage || unbanning === ban.ip}
                 onClick={() => onRequestUnban(ban)}
