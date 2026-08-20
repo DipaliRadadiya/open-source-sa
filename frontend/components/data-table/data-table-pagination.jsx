@@ -18,6 +18,21 @@ export function DataTablePagination({ meta }) {
 
   const { current_page: page, last_page: lastPage, total } = meta;
 
+  /*
+   * Nothing to page through. Three applications sat under a Previous / 1 /
+   * Next row with both arrows greyed out — a control that can only ever say
+   * "1", plus a rows-per-page selector for a list that fits on any setting.
+   *
+   * The per-page selector goes with it rather than staying behind alone: with
+   * everything already on screen there is no answer it could change. Once
+   * there is a second page both come back together.
+   *
+   * Only when we can positively tell. `last_page` missing means an older or
+   * unexpected `meta`, and the honest response to not knowing is to leave the
+   * controls where they are.
+   */
+  if (lastPage != null && lastPage <= 1) return null;
+
   return (
     <div className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
       <PerPageSelect label={t("perPage")} />
