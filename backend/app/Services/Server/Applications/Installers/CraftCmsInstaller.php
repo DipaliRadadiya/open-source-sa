@@ -12,11 +12,24 @@ use Illuminate\Support\Str;
  * The first installer that builds its application rather than unpacking one:
  * Craft is distributed through Composer, so there is no tarball to fetch.
  *
- * Its secrets are kept off the command line in two different ways, because it
- * has two kinds. The database credentials go into `.env`, which Craft reads —
- * so `craft install` is never told them. The administrator's password is
- * omitted from the options, which makes Craft prompt for it; Yii's prompt is
- * a plain read from stdin, so the answer can be piped in.
+ * Its two kinds of secret are handled differently, and only one of them can
+ * still be kept off the command line. The database credentials go into `.env`,
+ * which Craft reads — so `craft install` is never told them, and that remains
+ * true.
+ *
+ * The administrator's password used to be omitted from the options so Craft
+ * would prompt, on the reasoning that Yii's prompt is a plain read from stdin
+ * and the answer could be piped in. That stopped being true: with stdin not a
+ * TTY the prompt is never made, the password is taken as empty, and the
+ * install dies on Craft's own validation of a value nobody supplied —
+ *
+ *     Invalid options:
+ *      --password: New Password should contain at least 6 characters.
+ *
+ * naming an option the command line did not contain. So it is passed as an
+ * option, which puts it in `ps` for the life of the process. Same deliberate
+ * exception as Akaunting and PrestaShop, for the same reason: it is the only
+ * route the tool still supports.
  *
  * Craft also serves from `web/` rather than the site root. Pointing the web
  * server at the root would publish the application's own source, `.env`
@@ -67,6 +80,10 @@ class CraftCmsInstaller extends AbstractPhpInstaller
             '--site-name='.($settings['site_name'] ?? $application->name),
             '--site-url=https://'.$application->domain,
             '--language='.($settings['language'] ?? 'en-US'),
-        ], ($settings['admin_password'] ?? '')."\n", $projectRoot);
+            // On argv, not on stdin — see the class note. Required with a
+            // ten-character minimum by the site type, so an empty value here
+            // means the setting never arrived rather than a user choosing one.
+            '--password='.($settings['admin_password'] ?? ''),
+        ], null, $projectRoot);
     }
 }

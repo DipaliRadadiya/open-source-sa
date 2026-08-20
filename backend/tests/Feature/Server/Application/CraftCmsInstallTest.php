@@ -105,23 +105,39 @@ it('serves from web/, so the application source is not published', function () {
     expect($env['command'][1])->toBe("{$this->projectRoot}/.env");
 });
 
-it('keeps every secret off the command line', function () {
+it('keeps the database credentials off the command line', function () {
+    // Two kinds of secret, and only this one can still be kept off argv. The
+    // database credentials go into `.env`, which Craft reads for itself, so
+    // `craft install` is never told them.
     $runs = installCraft();
 
     foreach ($runs as $run) {
-        $line = implode(' ', $run['command']);
-        expect($line)->not->toContain('CraftPass1!')
-            ->and($line)->not->toContain('--password');
+        expect(implode(' ', $run['command']))->not->toContain('CraftDbPass1!');
     }
 
-    // The database password reaches Craft through .env; the admin password
-    // through the prompt Craft makes when --password is omitted.
     $env = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), '.env'))['input'];
     expect($env)->toContain('CRAFT_DB_PASSWORD=');
+});
 
-    $install = collect($runs)->first(fn ($run) => in_array('install', $run['command'], true)
+it('passes the admin password as an option, because the prompt no longer reads a pipe', function () {
+    // It used to be piped: omitting --password made Craft prompt, and Yii's
+    // prompt was a plain read from stdin. With stdin not a TTY the prompt is
+    // never made, the password is taken as empty, and the install dies on
+    // Craft's own validation of a value nobody supplied — naming an option the
+    // command line did not contain:
+    //
+    //     Invalid options:
+    //      --password: New Password should contain at least 6 characters.
+    //
+    // So this is a deliberate exception, asserted so nobody restores the pipe
+    // by reading the rule without the reason. The cost is real: `ps` shows it
+    // to every user on the box while the install runs.
+    $install = collect(installCraft())->first(fn ($run) => in_array('install', $run['command'], true)
         && in_array('craft', $run['command'], true));
-    expect($install['input'])->toBe("CraftPass1!\n");
+
+    expect($install['command'])->toContain('--password=CraftPass1!')
+        // Nothing left on stdin for a prompt that is not going to be made.
+        ->and($install['input'])->toBe('');
 });
 
 it('generates a distinct security key and app id per installation', function () {
