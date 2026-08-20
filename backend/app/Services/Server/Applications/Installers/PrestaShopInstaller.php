@@ -82,9 +82,50 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             '--db_clear=0',
         ], null, $documentRoot);
 
+        // Exit 0 is not evidence that anything happened. `index_cli.php` has
+        // returned success in half a second having written no configuration at
+        // all, leaving a shop that answers every request with
+        // `"install" directory is missing` — because the step below had by then
+        // removed the wizard that could have finished the job.
+        //
+        // So the config it must write is checked before anything is destroyed,
+        // the same shape as the restore flow's VerifyDownload: the last gate
+        // before the irreversible step. Failing here leaves `install/` in place,
+        // which is the difference between a site somebody can rescue in a
+        // browser and one that can only be deleted.
+        $this->assertInstalled($application, $documentRoot);
+
         // The installer directory is a working install wizard left in a public
         // web root; upstream requires its removal before the shop is usable.
         $this->run('harden', ['rm', '-rf', "{$documentRoot}/install"], $application);
+    }
+
+    /**
+     * Did the CLI installer actually install anything?
+     *
+     * PrestaShop writes its database credentials into `app/config/parameters.php`
+     * as the last thing it does, so its presence is the one cheap signal that
+     * the run got to the end. Older branches used `config/settings.inc.php`;
+     * both are accepted rather than pinning a version this installer does not
+     * choose — the feed does.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function assertInstalled(Application $application, string $documentRoot): void
+    {
+        foreach (['app/config/parameters.php', 'config/settings.inc.php'] as $candidate) {
+            $found = $this->serverOps->run(
+                ['test', '-f', "{$documentRoot}/{$candidate}"],
+                ['feature' => 'application', 'op' => 'installer.verify_install', 'application' => $application->id],
+                timeout: 15,
+            );
+
+            if ($found->ok) {
+                return;
+            }
+        }
+
+        throw new ProvisioningFailedException('install_app', (string) Str::uuid());
     }
 
     /**

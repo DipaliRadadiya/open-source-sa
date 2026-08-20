@@ -168,3 +168,36 @@ it('ignores the autoupgrade module, which the feed lists last', function () {
     expect(end($curl))->not->toContain('autoupgrade')
         ->and(end($curl))->toBe('https://github.com/PrestaShop/PrestaShop/releases/download/8.2.1/prestashop_8.2.1.zip');
 });
+
+it('checks the shop was really installed before removing the wizard', function () {
+    // `index_cli.php` has exited 0 in half a second having written no
+    // configuration at all. Trusting that, the harden step removed `install/`,
+    // and every request to the shop then answered `"install" directory is
+    // missing` — the wizard that could have finished the job was gone.
+    //
+    // So the config is checked before the irreversible step, and a failure
+    // leaves `install/` alone: the difference between a site somebody can
+    // rescue in a browser and one that can only be deleted.
+    fakePrestaShopFeed();
+
+    $runs = new ArrayObject;
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = ['command' => $process->command];
+
+        // Everything succeeds except the check for a written config — the exact
+        // shape of the failure seen on a real server.
+        return in_array('test', $process->command, true) && in_array('-f', $process->command, true)
+            ? Process::result(exitCode: 1)
+            : Process::result(exitCode: 0);
+    });
+
+    expect(fn () => app(ApplicationProvisioner::class)->provision(test()->application))
+        ->toThrow(ProvisioningFailedException::class);
+
+    $removedWizard = collect($runs)->contains(
+        fn ($run) => ($run['command'][0] ?? '') === 'rm'
+            && str_ends_with((string) end($run['command']), '/install'),
+    );
+
+    expect($removedWizard)->toBeFalse();
+});
