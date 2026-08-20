@@ -21,6 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useChromeOffset } from "@/hooks/use-chrome-offset";
 
 function TypeIcon({ type, className }) {
   const Icon =
@@ -44,6 +45,9 @@ function TypeIcon({ type, className }) {
 export function SiteTypePicker({ types = [], value, onChange }) {
   const t = useTranslations("applications");
   const [open, setOpen] = useState(false);
+  // The sticky header is not empty space, whatever the positioning engine
+  // thinks — see hooks/use-chrome-offset.js.
+  const [chromeOffset, measureChrome] = useChromeOffset();
   const [query, setQuery] = useState("");
   const searchRef = useRef(null);
 
@@ -68,6 +72,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
   const selectedType = types.find((type) => type.name === value);
 
   function handleOpenChange(next) {
+    if (next) measureChrome();
     setOpen(next);
     if (!next) setQuery("");
   }
@@ -113,14 +118,15 @@ export function SiteTypePicker({ types = [], value, onChange }) {
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-(--radix-popover-trigger-width) p-0"
+        className="flex max-h-(--radix-popover-content-available-height) w-(--radix-popover-trigger-width) flex-col p-0"
         align="start"
+        collisionPadding={{ top: chromeOffset, bottom: 12, left: 12, right: 12 }}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           searchRef.current?.focus();
         }}
       >
-        <div className="flex items-center gap-2 border-b px-3">
+        <div className="flex shrink-0 items-center gap-2 border-b px-3">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <Input
             ref={searchRef}
@@ -131,7 +137,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
             aria-label={t("form.typeSearch")}
           />
         </div>
-        <div className="max-h-80 overflow-y-auto p-1">
+        <div className="max-h-80 min-h-0 flex-1 overflow-y-auto p-1">
           {filtered.length ? (
             filtered.map((type) => {
               const isSelected = type.name === value;
