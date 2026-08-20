@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { History, RotateCw, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
@@ -292,7 +293,19 @@ export function BackupsHistoryTable({
       {/* Only once something is ticked. A bar that is always there, greyed,
           spends a row of the screen saying "you have selected nothing". */}
       {canDelete && selected.length > 0 ? (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-2.5">
+        <div
+          className={cn(
+            "flex flex-wrap items-center justify-between gap-3 bg-muted/40",
+            // `bare` means this table lives in a CardContent with no padding, so
+            // a rounded chip with an outline lands corner-to-corner against the
+            // card's own straight edges and reads as a strip that failed to
+            // render. Full-bleed with a single rule under it, matching the
+            // queued-run strip that appears in the same slot on that card.
+            bare
+              ? "border-b px-5 py-3"
+              : "mb-3 rounded-lg border px-4 py-2.5",
+          )}
+        >
           <span className="text-sm">{t("delete.selectedCount", { count: selected.length })}</span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => setSelection({})}>
