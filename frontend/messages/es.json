@@ -2291,7 +2291,7 @@
       "createdWhen": "creada {when}"
     },
     "exports": {
-      "title": "Copias de seguridad",
+      "title": "Exportaciones",
       "description": "Descarga una copia de esta base de datos.",
       "action": "Exportar ahora",
       "started": "Exportación iniciada. Se ejecuta en segundo plano.",
@@ -2304,7 +2304,7 @@
       "deleted": "Exportación eliminada.",
       "deleteFailed": "No se pudo eliminar la exportación.",
       "deleteTitle": "¿Eliminar esta exportación?",
-      "deleteDescription": "El archivo descargado se elimina del servidor. Tu base de datos no se toca.",
+      "deleteDescription": "El archivo se elimina de este servidor. Tu base de datos no se toca, y la copia que ya hayas descargado tampoco.",
       "deleteSubmit": "Eliminar exportación",
       "deleting": "Eliminando…",
       "cancel": "Cancelar",
@@ -2319,10 +2319,10 @@
       "sameDiskWarning": "Estos archivos se guardan en este servidor, junto a la propia base de datos. Descarga una copia en otro sitio: un archivo en el mismo disco no sobrevivirá a un fallo del disco.",
       "starting": "Iniciando…",
       "confirmTitle": "¿Exportar {name}?",
-      "confirmDescription": "Esta base de datos ocupa {size}. El volcado se escribe en el disco de este servidor y puede tardar varios minutos.",
+      "confirmDescription": "Esta base de datos ocupa {size}. El archivo se escribe en el disco de este servidor y puede tardar varios minutos.",
       "freeSpace": "{free} libres en este servidor.",
       "inProgress": "Exportando…",
-      "diskUsed": "{count, plural, one {# copia} other {# copias}} guardadas aquí — {size}."
+      "diskUsed": "{count, plural, one {# exportación} other {# exportaciones}} aquí — {size}. Nada las elimina por ti."
     },
     "manage": "Gestionar",
     "monitor": {
@@ -4101,7 +4101,7 @@
           },
           "full": {
             "label": "Archivos y base de datos",
-            "description": "También sustituye la base de datos, así que se pierde todo lo escrito desde que se hizo la copia: pedidos, comentarios, entradas nuevas. La base de datos anterior se vuelca antes."
+            "description": "También reemplaza la base de datos, así que todo lo escrito desde que se hizo la copia — pedidos, comentarios, entradas nuevas — se pierde. Antes se guarda una copia de la base de datos anterior."
           }
         },
         "backupFirst": "No hay vuelta atrás. <link>Haz antes una copia de seguridad</link> si aún no la tienes.",

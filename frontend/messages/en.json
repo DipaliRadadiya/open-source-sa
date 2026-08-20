@@ -2291,7 +2291,7 @@
       "createdWhen": "created {when}"
     },
     "exports": {
-      "title": "Backups",
+      "title": "Exports",
       "description": "Download a copy of this database.",
       "action": "Export now",
       "started": "Export started. It runs in the background.",
@@ -2304,7 +2304,7 @@
       "deleted": "Export deleted.",
       "deleteFailed": "The export could not be deleted.",
       "deleteTitle": "Delete this export?",
-      "deleteDescription": "The downloaded file is removed from the server. Your database is not touched.",
+      "deleteDescription": "The file is removed from this server. Your database is not touched, and any copy you already downloaded is not touched.",
       "deleteSubmit": "Delete export",
       "deleting": "Deleting…",
       "cancel": "Cancel",
@@ -2319,10 +2319,10 @@
       "sameDiskWarning": "These files are kept on this server, next to the database itself. Download a copy somewhere else — a file on the same disk will not survive a disk failure.",
       "starting": "Starting…",
       "confirmTitle": "Export {name}?",
-      "confirmDescription": "This database is {size}. The dump is written to this server's disk and can take several minutes.",
+      "confirmDescription": "This database is {size}. The file is written to this server's disk and can take several minutes.",
       "freeSpace": "{free} free on this server.",
       "inProgress": "Exporting…",
-      "diskUsed": "{count, plural, one {# export} other {# exports}} kept here — {size}."
+      "diskUsed": "{count, plural, one {# export} other {# exports}} kept here — {size}. Nothing deletes these for you."
     },
     "manage": "Manage",
     "monitor": {
@@ -4101,7 +4101,7 @@
           },
           "full": {
             "label": "Files and database",
-            "description": "Also replaces the database, so anything written since the copy was made — orders, comments, new posts — is gone. The old database is dumped first."
+            "description": "Also replaces the database, so anything written since the copy was made — orders, comments, new posts — is gone. A copy of the old database is saved first."
           }
         },
         "backupFirst": "There is no way back from this. <link>Take a backup first</link> if you have not.",

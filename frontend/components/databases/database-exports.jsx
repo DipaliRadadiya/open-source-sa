@@ -224,14 +224,15 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
           )}
         </CardContent>
 
-        {/* Said plainly, because the card is called Backups and that word
-            promises safety this feature cannot give on its own: the dump sits
-            on the same disk as the database it came from. */}
+        {/* Said plainly, because "export" still sounds like safety to most
+            people and this one cannot give it on its own: the dump sits on the
+            same disk as the database it came from. */}
         <div className="border-t bg-muted/30 px-5 py-3">
-          {/* How much of that disk these files are actually using. Nothing
-              prunes exports — they stay until someone deletes them by hand — so
-              the warning above was asking people to worry about a number the
-              page never showed them. */}
+          {/* How much of that disk these files are actually using, and that
+              they are nobody else's job. Nothing prunes exports — no age
+              limit, no count cap, no scheduled sweep — so ten dumps of a 2GB
+              database is 20GB gone quietly. Only shown once files exist:
+              before that there is nothing to warn about. */}
           {kept.count > 0 ? (
             <p className="mb-1 text-xs font-medium">
               {t("diskUsed", {
