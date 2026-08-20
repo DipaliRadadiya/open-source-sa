@@ -4174,7 +4174,8 @@
       "state": {
         "protected": "Protected",
         "paused": "Paused",
-        "unprotected": "Not protected"
+        "unprotected": "Not protected",
+        "running": "Backing up…"
       },
       "schedule": "Schedule",
       "lastRun": "Last backup",
@@ -4189,7 +4190,11 @@
       "loadFailed": "The backup settings could not be loaded.",
       "unprotectedRisk": "Nothing is being backed up. If this site is lost, there is nothing to restore.",
       "pausedRisk": "Backups are set up but not running, so the newest copy keeps getting older.",
-      "description": "Whether this site could be restored."
+      "description": "Whether this site could be restored.",
+      "runningNote": "A backup of this site is running now. This card updates on its own.",
+      "queuedNote": "Backup queued. It starts as soon as the server picks it up.",
+      "queuedStalled": "This backup has not started yet. If it stays this way, the background worker may not be running.",
+      "alreadyRunning": "A backup of this site is already running."
     },
     "attention": {
       "title": "Needs attention",

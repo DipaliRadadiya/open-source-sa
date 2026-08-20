@@ -5,7 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
-import { getBackupTarget } from "@/lib/backups/get-backups";
+import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
 import {
   getApplicationDomains,
   getApplicationCertificate,
@@ -68,7 +68,7 @@ export default async function ApplicationDetailPage({ params }) {
   // it is still being built, saying anything about them would be invention.
   const settled = application.status === "active";
 
-  const [domainList, certificate, backup] = await Promise.all([
+  const [domainList, certificate, backup, backupRuns] = await Promise.all([
     settled && canSeeDomains
       ? getApplicationDomains(id)
       : Promise.resolve({ domains: [], failed: false }),
@@ -78,6 +78,18 @@ export default async function ApplicationDetailPage({ params }) {
     settled && canSeeBackups
       ? getBackupTarget(id)
       : Promise.resolve({ target: null, failed: false }),
+    /*
+     * The target says what is scheduled; it says nothing about what is running
+     * right now. Without this the card goes on claiming "Protected · last
+     * backup 18 hours ago" throughout a run — including a scheduled one, or one
+     * a colleague started, which no amount of local click-state would catch.
+     *
+     * One row is enough: `GET /backups` orders by newest id, so a run in flight
+     * is always the first row back.
+     */
+    settled && canSeeBackups
+      ? getBackups({ application: id, per_page: 1 })
+      : Promise.resolve({ backups: [] }),
   ]);
 
   /*
@@ -305,6 +317,7 @@ export default async function ApplicationDetailPage({ params }) {
             <BackupCard
               applicationId={id}
               target={backup.target}
+              backups={backupRuns.backups}
               failed={backup.failed}
               canManage={canRunBackup}
               href={`/applications/${id}/backups`}

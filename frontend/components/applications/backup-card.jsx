@@ -1,16 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Archive, ArrowRight, Loader2, ShieldCheck, ShieldOff, PauseCircle } from "lucide-react";
+import {
+  Archive,
+  ArrowRight,
+  CircleAlert,
+  Loader2,
+  ShieldCheck,
+  ShieldOff,
+  PauseCircle,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { runBackupNow } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
+import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
+import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+// The same three minutes the Backups screen waits before admitting the worker
+// has not taken the job.
+const QUEUE_STALLED_MS = 3 * 60 * 1000;
 
 /**
  * Whether this site could be recovered, and the one action worth having here.
@@ -25,10 +41,37 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  * decisions — one call, no form. Setting a schedule, choosing a destination or
  * restoring all involve choices, and those live on the Backups screen.
  */
-export function BackupCard({ applicationId, target, failed = false, canManage, href }) {
+export function BackupCard({
+  applicationId,
+  target,
+  backups = [],
+  failed = false,
+  canManage,
+  href,
+}) {
   const t = useTranslations("applications.backups");
   const router = useRouter();
-  const [running, setRunning] = useState(false);
+  const [starting, setStarting] = useState(false);
+  // The newest backup id at the moment a run was started here, or null.
+  const [queuedAfter, setQueuedAfter] = useState(null);
+  const [stalled, setStalled] = useState(false);
+
+  // A row the server is writing right now. This is the half that also catches a
+  // scheduled run, or one somebody else started — neither of which this card
+  // could see before, because it only ever knew about its own click.
+  const busy = backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status));
+  // And the half before that: the POST answers 202 with the target, so for the
+  // first few seconds the run exists as a queued job and nothing else.
+  const queued = isBackupQueued(backups, queuedAfter);
+  const inProgress = busy || queued;
+
+  // Say so rather than spin forever — a worker that never picks the job up
+  // otherwise looks identical to one that is about to.
+  useEffect(() => {
+    if (!queued || stalled) return undefined;
+    const id = setTimeout(() => setStalled(true), QUEUE_STALLED_MS);
+    return () => clearTimeout(id);
+  }, [queued, stalled]);
 
   const state = !target
     ? "unprotected"
@@ -44,20 +87,28 @@ export function BackupCard({ applicationId, target, failed = false, canManage, h
   const Icon = meta.icon;
 
   async function backUpNow() {
-    setRunning(true);
+    setStarting(true);
+    setStalled(false);
     try {
       await runBackupNow(applicationId);
       toast.success(t("started"));
+      // Remember where the list stood, so the queued state ends itself the
+      // moment the worker's row appears.
+      setQueuedAfter(newestBackupId(backups));
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {
-      setRunning(false);
+      setStarting(false);
     }
   }
 
   return (
     <Card>
+      {/* Only while something is actually happening — a dashboard nobody is
+          waiting on should not be polling. Gives up after ten minutes. */}
+      {inProgress ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
+
       <CardHeader className="gap-1.5">
         <div className="min-w-0 space-y-1">
           <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
@@ -66,7 +117,15 @@ export function BackupCard({ applicationId, target, failed = false, canManage, h
           </CardTitle>
           <CardDescription>{t("description")}</CardDescription>
         </div>
-        {failed ? null : (
+        {/* A run in flight outranks the standing state: "Protected · last
+            backup 18 hours ago" is stale the second one starts, and it is the
+            only thing on this card that changes while somebody watches it. */}
+        {failed ? null : inProgress ? (
+          <Badge variant="secondary" className="w-fit gap-1.5 font-normal">
+            <Loader2 className="size-3 animate-spin" />
+            {t("state.running")}
+          </Badge>
+        ) : (
           <Badge variant={meta.variant} className="w-fit gap-1.5 font-normal">
             <Icon className="size-3" />
             {t(`state.${state}`)}
@@ -119,11 +178,37 @@ export function BackupCard({ applicationId, target, failed = false, canManage, h
           </p>
         ) : null}
 
+        {/* The gap the toast could not cover. Between the click and the first
+            row appearing, the card was byte-identical to the one the person was
+            looking at before they pressed the button. */}
+        {inProgress ? (
+          <p
+            role="status"
+            className={cn(
+              "flex items-start gap-2 rounded-lg px-3 py-2 text-sm",
+              stalled ? "bg-warning/10 text-foreground" : "bg-muted/50 text-muted-foreground",
+            )}
+          >
+            {stalled ? (
+              <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+            ) : (
+              <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
+            )}
+            <span>{stalled ? t("queuedStalled") : queued ? t("queuedNote") : t("runningNote")}</span>
+          </p>
+        ) : null}
+
         <div className="flex flex-wrap gap-2">
           {canManage && target ? (
-            <Button variant="outline" size="sm" disabled={running} onClick={backUpNow}>
-              {running ? <Loader2 className="size-4 animate-spin" /> : null}
-              {running ? t("starting") : t("backUpNow")}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={starting || inProgress}
+              disabledReason={!starting && inProgress ? t("alreadyRunning") : null}
+              onClick={backUpNow}
+            >
+              {starting || inProgress ? <Loader2 className="size-4 animate-spin" /> : null}
+              {starting || inProgress ? t("starting") : t("backUpNow")}
             </Button>
           ) : null}
           {/* Setting one up is the point of the card when there is no target;

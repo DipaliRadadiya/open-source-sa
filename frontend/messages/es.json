@@ -4174,7 +4174,8 @@
       "state": {
         "protected": "Protegido",
         "paused": "En pausa",
-        "unprotected": "Sin protección"
+        "unprotected": "Sin protección",
+        "running": "Copiando…"
       },
       "schedule": "Programación",
       "lastRun": "Última copia",
@@ -4189,7 +4190,11 @@
       "loadFailed": "No se pudo cargar la configuración de copias.",
       "unprotectedRisk": "No se está haciendo ninguna copia de seguridad. Si pierdes este sitio, no habrá nada que restaurar.",
       "pausedRisk": "Las copias están configuradas pero no se ejecutan, así que la copia más reciente envejece.",
-      "description": "Si este sitio podría restaurarse."
+      "description": "Si este sitio podría restaurarse.",
+      "runningNote": "Se está haciendo una copia de este sitio ahora. Esta tarjeta se actualiza sola.",
+      "queuedNote": "Copia en cola. Empieza en cuanto el servidor la recoja.",
+      "queuedStalled": "Esta copia aún no ha empezado. Si sigue así, puede que el proceso en segundo plano no esté funcionando.",
+      "alreadyRunning": "Ya se está haciendo una copia de este sitio."
     },
     "attention": {
       "title": "Requiere atención",
