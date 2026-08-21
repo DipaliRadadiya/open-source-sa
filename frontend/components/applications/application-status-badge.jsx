@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { CircleAlert, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { provisionStepLabel } from "@/lib/applications/provision-steps";
+import { PROVISION_STEPS, provisionStepLabel } from "@/lib/applications/provision-steps";
 import { Badge } from "@/components/ui/badge";
 
 /**
@@ -98,7 +98,38 @@ export function ApplicationStatusNotes({ application, className }) {
           {provisionStepLabel(application.steps.at(-1), t, "details.")}
         </p>
       ) : null}
-      {reference ? <p className="font-mono text-xs text-destructive">{application.reference}</p> : null}
+      {/* Where it stopped, not the support id.
+
+          This printed a bare 36-character UUID in red mono — no label, in a
+          Status column, unactionable. The detail page one click away shows the
+          same value as "Support reference: …" with a Copy button, and leads
+          with "Stopped at: Setting up PHP for this site" — the half that says
+          what happened. The list was showing the half that only helps somebody
+          else.
+
+          Falls back to the reference when the API sends no failed_step, so a
+          row is never left with nothing to say. */}
+      {reference ? (
+        /*
+           Only when the step is one we can actually name. `provisionStepLabel`
+           falls back to "Completed a step" for anything unrecognised — wording
+           written for the progress case, where it reads correctly. Dropped into
+           this sentence it produced "Stopped at: Completed a step", which is
+           worse than the id it replaced: the id was merely unhelpful, that is
+           nonsense. Caught by rendering it, not by reading it.
+        */
+        PROVISION_STEPS.has(application.failed_step) ? (
+          <p className="max-w-52 truncate text-xs text-destructive">
+            {/* The detail page's own string, not a second one that means the
+                same thing — the two screens describe one failure. */}
+            {t("details.failedAt", {
+              step: provisionStepLabel(application.failed_step, t, "details."),
+            })}
+          </p>
+        ) : (
+          <p className="font-mono text-xs text-destructive">{application.reference}</p>
+        )
+      ) : null}
       {processDown ? (
         <p className="flex items-center gap-1 text-xs text-destructive">
           <CircleAlert className="size-3 shrink-0" />
