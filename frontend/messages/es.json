@@ -1404,10 +1404,11 @@
       "created": "Regla añadida.",
       "errors": {
         "required": "Escribe un puerto.",
-        "portRange": "Los puertos van del 1 al 65535.",
-        "portOrder": "El final del rango debe ser mayor que el inicio.",
+        "portRange": "Los puertos van del 1 al 65534.",
+        "portOrder": "El final del rango no puede ser menor que el inicio.",
         "invalidSource": "Eso no es una dirección IP ni un rango válido.",
-        "portShape": "Usa un puerto como 443, o un rango como 8000-8090."
+        "portShape": "Usa un puerto como 443, o un rango como 8000-8090.",
+        "nameTooLong": "El nombre no puede superar los 255 caracteres."
       },
       "anywhere": "cualquier sitio",
       "summary": "Resumen",
@@ -2152,15 +2153,19 @@
     },
     "created": {
       "title": "{name} está lista",
-      "subtitle": "Guarda estos datos: este es el sitio más claro donde los verás.",
+      "subtitle": "Apunta tu aplicación a ella con los datos de abajo. Puedes volver a encontrarlos en la página de la base de datos.",
       "subtitleNoUser": "La base de datos se creó.",
       "done": "Listo",
+      "open": "Abrir base de datos",
       "host": "Servidor",
       "port": "Puerto",
       "database": "Base de datos",
       "username": "Nombre de usuario",
       "password": "Contraseña",
       "connectionString": "Cadena de conexión",
+      "copyString": "Copiar",
+      "connectionStringHint": "La mayoría de las aplicaciones solo necesitan esta línea.",
+      "passwordEscaped": "La contraseña va escapada dentro de la cadena de conexión, por eso allí se ve distinta. Ambas son correctas.",
       "noUserWarning": "Esta base de datos aún no tiene usuario, así que nada puede conectarse a ella. Añade uno desde su fila."
     },
     "delete": {

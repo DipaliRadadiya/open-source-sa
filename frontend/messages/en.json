@@ -1404,10 +1404,11 @@
       "created": "Rule added.",
       "errors": {
         "required": "Enter a port.",
-        "portRange": "Ports run from 1 to 65535.",
-        "portOrder": "The end of the range must be higher than the start.",
+        "portRange": "Ports run from 1 to 65534.",
+        "portOrder": "The end of the range cannot be lower than the start.",
         "invalidSource": "That is not a valid IP address or range.",
-        "portShape": "Use a port like 443, or a range like 8000-8090."
+        "portShape": "Use a port like 443, or a range like 8000-8090.",
+        "nameTooLong": "Keep the name under 255 characters."
       },
       "anywhere": "anywhere",
       "summary": "Summary",
@@ -2152,15 +2153,19 @@
     },
     "created": {
       "title": "{name} is ready",
-      "subtitle": "Save these details — this is the clearest place you'll see them.",
+      "subtitle": "Point your application at it with the details below. You can find them again on the database's page.",
       "subtitleNoUser": "The database was created.",
       "done": "Done",
+      "open": "Open database",
       "host": "Host",
       "port": "Port",
       "database": "Database",
       "username": "Username",
       "password": "Password",
       "connectionString": "Connection string",
+      "copyString": "Copy",
+      "connectionStringHint": "Most applications need only this line.",
+      "passwordEscaped": "The password is escaped inside the connection string, so it looks different there. Both are correct.",
       "noUserWarning": "This database has no user yet, so nothing can connect to it. Add one from the database's row."
     },
     "delete": {

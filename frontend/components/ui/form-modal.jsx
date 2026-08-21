@@ -16,10 +16,20 @@ import {
 // Pass `asForm` + `onSubmit` to wrap the body+footer in a <form> (so a submit
 // button in the footer works). `children` is the body; `footer` is the footer
 // slot (buttons).
+// Primary everywhere by default. `success` exists for the dialogs that report
+// a finished action rather than ask for one — a blue tick over "…is ready"
+// says "information", and the moment deserves the colour the rest of the panel
+// already uses for a good outcome.
+const ICON_TONES = {
+  primary: "bg-primary/10 text-primary",
+  success: "bg-success/10 text-success",
+};
+
 export function FormModal({
   open,
   onOpenChange,
   icon: Icon,
+  iconTone = "primary",
   title,
   description,
   children,
@@ -36,7 +46,12 @@ export function FormModal({
       <DialogHeader className="shrink-0 space-y-0 border-b py-4 pe-10 ps-6 text-left">
         <div className="flex items-center gap-3">
           {Icon ? (
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                ICON_TONES[iconTone] ?? ICON_TONES.primary,
+              )}
+            >
               <Icon className="size-5" />
             </span>
           ) : null}

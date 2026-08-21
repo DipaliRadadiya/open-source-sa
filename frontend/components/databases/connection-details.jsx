@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Plug } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { primaryUser, connectionAddress } from "@/lib/databases/connection-parts";
 import { Card, CardContent } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -78,23 +79,40 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminInsta
           and the database name needs 256px, so the panel's own identifier was
           cut in half — and generated names differ only in their suffix, which
           is exactly the half that disappeared. */}
-      <CardContent className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-3">
+      {/* Track counts are even numbers so the database name can take two of
+          them and still leave whole rows: 2 / 4 / 6, with the name spanning 2
+          at every size. Four short values and one long one in equal columns
+          made the name the only cell that wrapped, which dragged its row
+          taller than the rest and left the others floating at the top of it.
+          Six tracks at xl is exactly Host + Port + name(2) + Username +
+          Password — one straight row, nothing wrapped. */}
+      <CardContent className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-5 py-4 sm:grid-cols-4 xl:grid-cols-6">
         {fields.map((field) => (
-          <div key={field.key} className="min-w-0 space-y-0.5">
-            <p className="text-xs text-muted-foreground">{t(field.key)}</p>
+          <div
+            key={field.key}
+            className={cn("min-w-0", field.key === "database" && "col-span-2")}
+          >
+            {/* Label and copy button on one line, value on its own beneath —
+                the same cell as the dialog that created this database, so the
+                two screens showing these five values read as one thing. Inline
+                beside the value the button also took its width off every
+                wrapped line. */}
             <div className="flex items-center gap-0.5">
-              {/* Wraps rather than truncating. These are values to be read and
-                  typed into a config file; a name cut short still looks like a
-                  name, which is worse than a value that takes two lines. */}
-              <span className="min-w-0 font-mono text-sm break-all">
-                {field.mask ? "••••••••" : field.value}
-              </span>
+              <p className="min-w-0 truncate text-xs text-muted-foreground">
+                {t(field.key)}
+              </p>
               <CopyButton
                 value={field.value}
                 label={t("copyField", { field: t(field.key) })}
                 className="size-6"
               />
             </div>
+            {/* Wraps rather than truncating. These are values to be read and
+                typed into a config file; a name cut short still looks like a
+                name, which is worse than a value that takes two lines. */}
+            <p className="font-mono text-sm break-all">
+              {field.mask ? "••••••••" : field.value}
+            </p>
           </div>
         ))}
       </CardContent>

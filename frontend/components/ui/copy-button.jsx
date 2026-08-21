@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -46,24 +47,27 @@ export function CopyButton({ value, label, className, text = false }) {
 
   /* Labelled form, for when the icon has nothing beside it to explain what it
    * would copy. A bare icon works next to the value it belongs to and nowhere
-   * else. */
+   * else.
+   *
+   * The real Button, not a hand-rolled one. This used to copy the shape by
+   * hand at `h-8 … text-xs`, so it sat beside `size="sm"` buttons — "Copy
+   * connection string" next to "Install phpMyAdmin" — a visible step smaller
+   * than its neighbour. The cva's own `sm` comment records that exact bug
+   * being reported three times before the token was fixed; this call site
+   * carried a private copy of the old value and kept it alive. Matching by
+   * variant means it cannot drift again. */
   if (text) {
     return (
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={copy}
-        className={cn(
-          "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-          className,
-        )}
+        className={className}
       >
-        {copied ? (
-          <Check className="size-3.5 text-success" />
-        ) : (
-          <Copy className="size-3.5" />
-        )}
+        {copied ? <Check className="text-success" /> : <Copy />}
         {copied ? t("copied") : title}
-      </button>
+      </Button>
     );
   }
 
