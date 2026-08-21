@@ -42,7 +42,15 @@ export function CronjobsCards({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <CronjobName job={job} />
-              <p className="truncate font-mono text-xs text-muted-foreground">{job.command}</p>
+              {/* Wraps, not truncates. At 390px "/usr/bin/php /home/demoweb/ver…"
+                  is the whole card telling you nothing: a command cut short
+                  still looks like a command, so you cannot tell what the job
+                  runs or whether it is the one you came to check. Two lines
+                  cost less than that. Capped so one very long command cannot
+                  push the card's actions off the screen. */}
+              <p className="line-clamp-3 font-mono text-xs break-all text-muted-foreground">
+                {job.command}
+              </p>
             </div>
             {canManage ? (
               <div className="-me-2 -mt-1 shrink-0">

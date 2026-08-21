@@ -21,6 +21,7 @@ import {
   FormItem,
   FormLabel,
   FormControl,
+  FormDescription,
   FormMessage,
 } from "@/components/ui/form";
 import {
@@ -46,6 +47,7 @@ export function CreateCronjobDialog({
   open,
   onOpenChange,
   systemUsers = [],
+  systemUsersFailed = false,
   schedulePresets = [],
   commandPresets = [],
   applications = [],
@@ -173,6 +175,14 @@ export function CreateCronjobDialog({
                   <SelectItem value={OTHER_USER}>{t("form.otherUser")}</SelectItem>
                 </SelectContent>
               </Select>
+              {/* A picker holding nothing but "Other OS user…" is what you get
+                  when this list fails — and it needs the `system_user`
+                  permission, which has nothing to do with cronjob, so a 403 is
+                  ordinary. Unsaid, it reads as "this server has no accounts"
+                  and leaves you to guess that a username can be typed. */}
+              {systemUsersFailed ? (
+                <FormDescription>{t("form.runAsUnavailable")}</FormDescription>
+              ) : null}
               <FormMessage />
             </FormItem>
           )}
@@ -219,6 +229,11 @@ export function CreateCronjobDialog({
               <div className="space-y-0.5">
                 <FormLabel>{t("form.active")}</FormLabel>
                 <p className="text-xs text-muted-foreground">{t("form.activeHint")}</p>
+                {/* The only field here without one. `active` is registered and
+                    always sent, so a 422 on it would be set inline and render
+                    nowhere — silent, exactly like the firewall and system-user
+                    cases. Not reachable today; the slot costs nothing. */}
+                <FormMessage />
               </div>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />

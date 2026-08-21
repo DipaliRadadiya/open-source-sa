@@ -874,7 +874,8 @@
       },
       "commandHintPath": "cron न्यूनतम PATH के साथ चलता है — पूर्ण पथ उपयोग करें, जैसे /usr/bin/php।",
       "commandHintLog": "आउटपुट सहेजने के लिए >> /path/to/log 2>&1 जोड़ें।",
-      "serverTimeNote": "सर्वर समय ({timezone}) में चलता है"
+      "serverTimeNote": "सर्वर समय ({timezone}) में चलता है",
+      "runAsUnavailable": "खातों की सूची लोड नहीं हो सकी। «अन्य OS उपयोगकर्ता…» चुनें और नाम टाइप करें।"
     },
     "toast": {
       "created": "क्रॉन जॉब बनाई गई",

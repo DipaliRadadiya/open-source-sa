@@ -52,7 +52,13 @@ export function ScheduleField({ form, presets, timezone }) {
   const expression = useWatch({ control: form.control, name: "expression" });
 
   const matched = presets.find((p) => p.expression && p.expression === expression);
-  const selected = customMode ? CUSTOM : matched?.key;
+  // An expression that matches no preset IS a custom one — derived, not a flag
+  // somebody has to remember to set. Without this, editing a job whose schedule
+  // came from anywhere but the dropdown ("17 * * * *", and near enough every
+  // entry Server Sync adopts out of /etc/cron.d) showed "Select a schedule"
+  // over a job that plainly has one, hid the raw field that would reveal it,
+  // and left Save disabled because nothing was dirty.
+  const selected = customMode || (expression && !matched) ? CUSTOM : matched?.key;
 
   function onPreset(key) {
     setCustomMode(key === CUSTOM);

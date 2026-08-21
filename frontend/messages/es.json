@@ -874,7 +874,8 @@
       },
       "commandHintPath": "cron usa un PATH mínimo: usa rutas absolutas, p. ej. /usr/bin/php.",
       "commandHintLog": "Añade >> /ruta/al/log 2>&1 para conservar la salida.",
-      "serverTimeNote": "Se ejecuta en hora del servidor ({timezone})"
+      "serverTimeNote": "Se ejecuta en hora del servidor ({timezone})",
+      "runAsUnavailable": "No se pudo cargar la lista de cuentas. Elige «Otro usuario del sistema…» y escribe el nombre."
     },
     "toast": {
       "created": "Tarea cron creada",

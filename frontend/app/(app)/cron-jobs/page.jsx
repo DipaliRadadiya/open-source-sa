@@ -7,7 +7,7 @@ import {
   getSchedulePresets,
   getCommandPresets,
 } from "@/lib/cronjobs/get-cron-presets";
-import { getSystemUsers } from "@/lib/system-users/get-system-users";
+import { getSystemUserOptions } from "@/lib/system-users/get-system-users";
 import { getAllApplications } from "@/lib/applications/get-applications";
 import { getServerFacts } from "@/lib/server/get-server-facts";
 import { withTimeout } from "@/lib/api/with-timeout";
@@ -32,11 +32,19 @@ export default async function CronjobsPage({ searchParams }) {
   if (!can(permissions, "cronjob", "view")) redirect("/dashboard");
 
   const canManage = can(permissions, "cronjob", "manage");
-  const [{ cronjobs, meta, failed }, systemUsers, schedulePresets, commandPresets, facts, sites] =
+  const [{ cronjobs, meta, failed }, runAs, schedulePresets, commandPresets, facts, sites] =
     await Promise.all([
       getCronjobs(sp),
-      // Only needed for the run-as picker and the user filter.
-      canManage ? getSystemUsers() : Promise.resolve([]),
+      // Not gated on `canManage`: the "Runs as" FILTER is part of the toolbar,
+      // which every viewer sees. Tied to manage, a view-only role got a filter
+      // offering only the usernames that happened to be on the current page —
+      // no panel-managed account at all — which is not the job that filter has.
+      //
+      // `failed` is kept rather than flattened away: this endpoint needs the
+      // `system_user` permission, which is unrelated to `cronjob`, so a 403 is
+      // ordinary here. Without the flag an empty picker is indistinguishable
+      // from "this server has no system users".
+      getSystemUserOptions(),
       getSchedulePresets(),
       canManage ? getCommandPresets() : Promise.resolve({ presets: [] }),
       // Only for the timezone: a schedule is meaningless without knowing which
@@ -69,7 +77,8 @@ export default async function CronjobsPage({ searchParams }) {
           <CronjobsPanel
             cronjobs={cronjobs}
             meta={meta}
-            systemUsers={systemUsers}
+            systemUsers={runAs.users}
+            systemUsersFailed={runAs.failed}
             applications={sites.applications}
             canManage={canManage}
             schedulePresets={schedulePresets}

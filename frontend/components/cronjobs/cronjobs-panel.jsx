@@ -7,6 +7,7 @@ import { OTHER_USER } from "@/lib/schemas/cronjob";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { CronjobsToolbar } from "@/components/cronjobs/cronjobs-toolbar";
@@ -26,6 +27,7 @@ export function CronjobsPanel({
   cronjobs,
   meta,
   systemUsers,
+  systemUsersFailed = false,
   applications = [],
   canManage,
   schedulePresets,
@@ -77,12 +79,20 @@ export function CronjobsPanel({
     <>
       <CronjobsToolbar
         systemUsers={systemUsers}
+          systemUsersFailed={systemUsersFailed}
         cronjobs={cronjobs}
         canManage={canManage}
         onCreate={() => openCreate()}
       />
 
-      {cronjobs.length === 0 ? (
+      {/* Past the last page is not an empty server. `?page=99` on a list with
+          two jobs said "No cron jobs yet — schedule a command to run
+          automatically", and the pager that would have taken you back only
+          renders when there are rows. PageOutOfRange exists for exactly this
+          and every other list already uses it. */}
+      {cronjobs.length === 0 && (meta?.current_page ?? 1) > 1 ? (
+        <PageOutOfRange lastPage={meta?.last_page ?? 1} />
+      ) : cronjobs.length === 0 ? (
         isFiltered ? (
           <EmptyState
             icon={SearchX}
@@ -151,6 +161,7 @@ export function CronjobsPanel({
           open={createOpen}
           onOpenChange={setCreateOpen}
           systemUsers={systemUsers}
+          systemUsersFailed={systemUsersFailed}
           schedulePresets={schedulePresets}
           commandPresets={commandPresets}
           applications={applications}

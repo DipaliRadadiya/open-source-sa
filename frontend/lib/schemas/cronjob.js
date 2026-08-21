@@ -14,7 +14,10 @@ const linuxUsername = z
 
 // 5-field cron, or a macro like @daily. The backend owns the real parse — this
 // just catches obvious typos before a round-trip.
-const CRON_MACROS = ["@yearly", "@annually", "@monthly", "@weekly", "@daily", "@midnight", "@hourly", "@reboot"];
+// No "@reboot". It is the one macro the backend's parser refuses
+// (dragonmantank/cron-expression returns false for it while accepting the
+// other seven), so advertising it here only bought a round trip and a 422.
+const CRON_MACROS = ["@yearly", "@annually", "@monthly", "@weekly", "@daily", "@midnight", "@hourly"];
 const expressionField = z
   .string()
   .trim()

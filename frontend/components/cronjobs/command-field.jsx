@@ -80,6 +80,11 @@ export function CommandField({
     if (preset.key === CUSTOM || !preset.command) {
       setTemplate(null);
       setPath("");
+      // `source` too. It is the only thing the site picker renders from, so
+      // leaving it behind kept a site's name on screen after its path had been
+      // cleared — then the next template resolved {path} against nothing and
+      // Create refused it for a missing directory that was visibly selected.
+      setSource("");
       form.setValue("command", "", { shouldValidate: false });
       return;
     }

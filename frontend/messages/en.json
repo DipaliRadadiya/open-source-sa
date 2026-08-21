@@ -874,7 +874,8 @@
       },
       "commandHintPath": "cron runs with a minimal PATH — use absolute paths, e.g. /usr/bin/php.",
       "commandHintLog": "Append >> /path/to/log 2>&1 to keep the output.",
-      "serverTimeNote": "Runs in server time ({timezone})"
+      "serverTimeNote": "Runs in server time ({timezone})",
+      "runAsUnavailable": "The account list could not be loaded. Choose \"Other OS user…\" and type the username."
     },
     "toast": {
       "created": "Cron job created",

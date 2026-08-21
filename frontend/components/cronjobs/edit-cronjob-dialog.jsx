@@ -34,6 +34,11 @@ export function EditCronjobDialog({
   commandPresets = [],
   applications = [],
   placeholder,
+  // Passed by the row actions all along, just never accepted here — so Create
+  // said "Runs in server time (Asia/Kolkata)" and Edit said nothing, over the
+  // same field. A schedule with no clock named is the misreading this note
+  // exists to prevent.
+  timezone,
 }) {
   const t = useTranslations("cronJobs");
   const router = useRouter();
@@ -138,7 +143,7 @@ export function EditCronjobDialog({
           placeholder={placeholder}
           applications={applications}
         />
-        <ScheduleField form={form} presets={schedulePresets} />
+        <ScheduleField form={form} presets={schedulePresets} timezone={timezone} />
 
         <FormField
           control={form.control}
@@ -148,6 +153,8 @@ export function EditCronjobDialog({
               <div className="space-y-0.5">
                 <FormLabel>{t("form.active")}</FormLabel>
                 <p className="text-xs text-muted-foreground">{t("form.activeHint")}</p>
+                {/* Same missing slot as the create dialog. */}
+                <FormMessage />
               </div>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
