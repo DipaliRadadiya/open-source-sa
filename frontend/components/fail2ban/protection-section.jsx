@@ -64,7 +64,7 @@ export function ProtectionSection({ jails, settings, banned, yourIp, ignoreIps, 
       {shownJails.some((jail) => jail.enabled) ||
       (banned.length > 0 && Object.keys(asked).length === 0) ? (
         <NavTransitionProvider>
-          <BannedCard banned={banned} jails={jails} canManage={canManage} logHref={logHref} />
+          <BannedCard banned={banned} jails={jails} canManage={canManage} logHref={logHref} yourIp={yourIp} />
         </NavTransitionProvider>
       ) : null}
     </>

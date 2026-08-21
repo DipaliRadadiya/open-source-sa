@@ -22,6 +22,9 @@ import {
 } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
 
+// Matches `ignore_ips => array|max:100` in UpdateFail2banRequest.
+const MAX_IGNORE_IPS = 100;
+
 /**
  * Addresses that are never banned — and the one control that prevents the worst
  * outcome on this page: adding your own.
@@ -63,11 +66,19 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
       setDraftError(t("settings.invalidIp"));
       return;
     }
-    setDraftError(null);
     if (ips.includes(ip)) {
+      setDraftError(null);
       setDraft("");
       return;
     }
+    // The API caps this list at 100. Without the same cap here the 101st entry
+    // looked accepted — it appeared in the list, the card went dirty — and
+    // only died on Save, taking the whole settings write with it.
+    if (ips.length >= MAX_IGNORE_IPS) {
+      setDraftError(t("settings.ignoreLimit", { max: MAX_IGNORE_IPS }));
+      return;
+    }
+    setDraftError(null);
     setIps((prev) => [...prev, ip]);
     setDraft("");
   }

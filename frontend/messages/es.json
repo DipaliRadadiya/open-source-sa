@@ -1256,7 +1256,8 @@
       "cancel": "Cancelar",
       "banned": "{ip} bloqueada",
       "failed": "No hemos podido bloquear esa dirección.",
-      "invalidIp": "Eso no es una dirección IP válida. Aquí no se admiten rangos."
+      "invalidIp": "Eso no es una dirección IP válida. Aquí no se admiten rangos.",
+      "selfWarning": "Esta es la dirección desde la que se accedió al panel. Bloquearla puede dejarte fuera del servidor."
     },
     "settings": {
       "title": "Reglas de bloqueo",
@@ -1294,7 +1295,8 @@
       "removeYouTitle": "¿Quitar tu propia dirección?",
       "removeYouDescription": "{ip} es la dirección desde la que estás conectado. Si la quitas de esta lista, una jaula podrá bloquearla y perderías el acceso a este servidor.",
       "removeYouConfirm": "Quitarla",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "ignoreLimit": "Es el máximo de direcciones que admite esta lista ({max}). Elimina una para añadir otra."
     },
     "tabs": {
       "live": "Protección",
@@ -4087,7 +4089,9 @@
       "removed": "Protección eliminada.",
       "removeFailed": "No se pudo eliminar.",
       "createAction": "Activar la protección",
-      "removeBodyDirty": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar este sitio. Quien esté bloqueado quedará liberado, y {count, plural, one {el archivo que has editado sin guardar se perderá} other {los # archivos que has editado sin guardar se perderán}}."
+      "removeBodyDirty": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar este sitio. Quien esté bloqueado quedará liberado, y {count, plural, one {el archivo que has editado sin guardar se perderá} other {los # archivos que has editado sin guardar se perderán}}.",
+      "tooLong": "Esa configuración es demasiado larga. Cada archivo debe tener menos de 65.535 caracteres.",
+      "invalidConfig": "Esa configuración no se puede guardar. Comprueba que ambos archivos estén completos."
     },
     "staging": {
       "pageTitle": "Área de pruebas",

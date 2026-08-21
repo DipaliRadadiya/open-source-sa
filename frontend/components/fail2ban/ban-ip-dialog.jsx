@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, Plus, ShieldBan } from "lucide-react";
+import { Loader2, Plus, ShieldBan, TriangleAlert } from "lucide-react";
 import { banIp } from "@/lib/api/fail2ban";
 import { isIpAddress } from "@/lib/validation/ip";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ import { apiMessage } from "@/lib/api/error-message";
  * shell, and was the only dialog anywhere with no icon in its header — the one
  * that looked wrong at a glance without anyone being able to say why.
  */
-export function BanIpDialog({ jails = [], canManage }) {
+export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
   const t = useTranslations("fail2ban");
   // Refreshing through the list's own transition rather than the router
   // directly: the ban lands on the server long before the page has re-read it,
@@ -45,9 +45,16 @@ export function BanIpDialog({ jails = [], canManage }) {
   const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
   const [open, setOpen] = useState(false);
   const [ip, setIp] = useState("");
-  const [jail, setJail] = useState(jails[0]?.name ?? "");
+  // The chosen jail, or null while nothing has been chosen. A plain
+  // `useState(jails[0]?.name ?? "")` ran once, at mount: if the list arrived
+  // empty it stayed "" for good, and Submit — which is disabled on `!jail` —
+  // could never be pressed again however many jails turned up later.
+  const [chosen, setChosen] = useState(null);
+  const jail = chosen ?? jails[0]?.name ?? "";
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
+
+  const isSelf = Boolean(yourIp) && ip.trim() === yourIp;
 
   function handleOpenChange(next) {
     if (pending) return;
@@ -133,11 +140,29 @@ export function BanIpDialog({ jails = [], canManage }) {
           {/* The API takes a single address, not a range — say so here
               rather than letting the server reject it. */}
           <p className="text-xs text-muted-foreground">{t("ban.ipHint")}</p>
+
+          {/* The one ban you cannot undo from this screen. Every other control
+              on this page guards against locking yourself out — the ignore
+              list warns when your address is missing, confirms before you
+              remove it, and a lockout-risk jail asks you to acknowledge — but
+              the dialog that bans an address by hand knew nothing about it.
+
+              Worded as "the address this panel was reached from", not "your
+              address": `your_ip` is whatever the API saw make the request, and
+              this page is server-rendered, so on a real install it is the
+              panel's own server. Claiming it is definitely you would be the
+              same overclaim the jails card refuses to make. */}
+          {isSelf ? (
+            <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-xs leading-relaxed text-warning">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+              {t("ban.selfWarning")}
+            </p>
+          ) : null}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="ban-jail">{t("ban.jailLabel")}</Label>
-          <Select value={jail} onValueChange={setJail}>
+          <Select value={jail} onValueChange={setChosen}>
             <SelectTrigger id="ban-jail" className="w-full">
               <SelectValue />
             </SelectTrigger>

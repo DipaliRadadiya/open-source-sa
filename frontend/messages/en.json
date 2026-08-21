@@ -1256,7 +1256,8 @@
       "cancel": "Cancel",
       "banned": "{ip} banned",
       "failed": "We could not ban that address.",
-      "invalidIp": "That is not a valid IP address. Ranges are not allowed here."
+      "invalidIp": "That is not a valid IP address. Ranges are not allowed here.",
+      "selfWarning": "This is the address this panel was reached from. Banning it may lock you out of the server."
     },
     "settings": {
       "title": "Ban rules",
@@ -1294,7 +1295,8 @@
       "removeYouTitle": "Remove your own address?",
       "removeYouDescription": "{ip} is the address you are connected from. Take it off this list and a jail can ban it, which would cut off your access to this server.",
       "removeYouConfirm": "Remove it",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "ignoreLimit": "That is the most addresses this list can hold ({max}). Remove one to add another."
     },
     "tabs": {
       "live": "Protection",
@@ -4087,7 +4089,9 @@
       "removed": "Attack protection removed.",
       "removeFailed": "That could not be removed.",
       "createAction": "Turn on attack protection",
-      "removeBodyDirty": "The jail and filter files are deleted and fail2ban stops watching this site. Anyone already banned is released — and {count, plural, one {the file you have edited but not saved goes with them} other {the # files you have edited but not saved go with them}}."
+      "removeBodyDirty": "The jail and filter files are deleted and fail2ban stops watching this site. Anyone already banned is released — and {count, plural, one {the file you have edited but not saved goes with them} other {the # files you have edited but not saved go with them}}.",
+      "tooLong": "That config is too long. Each file has to stay under 65,535 characters.",
+      "invalidConfig": "That config cannot be saved. Check both files are filled in."
     },
     "staging": {
       "pageTitle": "Staging Area",

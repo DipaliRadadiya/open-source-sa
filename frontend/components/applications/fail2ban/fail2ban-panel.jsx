@@ -119,7 +119,24 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
       jail_config_content: draft.jail,
       filter_config_content: draft.filter,
     });
-    if (!parsed.success) return;
+    if (!parsed.success) {
+      // This used to be a bare `return`. Pressing Save on a config over the
+      // 65,535-character limit did nothing at all — no toast, no message, not
+      // even a spinner — and the only clue was that nothing happened. The
+      // empty case is already kept out by the disabled button, so over-length
+      // was the reachable path and the one with no way to find out.
+      //
+      // Rendered in the same panel the daemon's own refusal uses: it sits
+      // directly above the button that was just pressed.
+      const issue = parsed.error.issues[0];
+      setTestError({
+        message: t(
+          issue?.message === "max65535" ? "tooLong" : "invalidConfig",
+        ),
+        output: "",
+      });
+      return;
+    }
 
     setSaving(true);
     setTestError(null);
