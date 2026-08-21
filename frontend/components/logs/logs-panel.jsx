@@ -60,6 +60,47 @@ export function LogsPanel({ sources: initialSources, selected, initial, initialL
   const [tailState, setTailState] = useState("idle");
 
   const cursor = useRef(initial?.log?.cursor ?? 0);
+
+  /*
+   * Picking a different log only replaces the URL, so this component is NOT
+   * remounted — and every `useState` above keeps the value it was seeded with
+   * for the source you were reading before. Two of those matter:
+   *
+   *   - `follow`. Auto-follow is deliberately off above AUTO_FOLLOW_MAX_BYTES,
+   *     but that was decided once, from the FIRST source. Opening a 4 KB
+   *     nginx error log and then switching to a 10 MB syslog left the tail
+   *     running against exactly the file the limit exists to protect.
+   *   - `lines`. The previous log's content sat under the new log's name until
+   *     the re-read landed, which on a large grep is seconds of the wrong file
+   *     presented as the right one.
+   *
+   * Reset during render, the same way the catalog above drops a stale poll,
+   * rather than in an effect — an effect would paint the old log first.
+   *
+   * Deliberately NOT reset: the search term, severity, wrap and line count.
+   * Those are how the reader wants logs shown, not facts about one file, and
+   * the toolbar keeps them visible.
+   */
+  const [renderedSource, setRenderedSource] = useState(selected);
+  if (renderedSource !== selected) {
+    setRenderedSource(selected);
+    setLines(initial?.log?.lines ?? []);
+    setStatus(initial?.status ?? "ok");
+    setTruncated(Boolean(initial?.log?.truncated));
+    setTailState("idle");
+    setFollow(
+      Boolean(source?.readable) && (source?.size ?? 0) <= AUTO_FOLLOW_MAX_BYTES,
+    );
+  }
+
+  // The cursor moves with them, but a ref cannot be written during render and
+  // the lint rule is right to say so. An effect is early enough: the tail's
+  // first tick is a full POLL_MS away, so it can never read the old file's
+  // offset against the new file.
+  useEffect(() => {
+    cursor.current = initial?.log?.cursor ?? 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
   const controller = useRef(null);
   const atBottom = useRef(true);
 
