@@ -84,6 +84,21 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
   }, [open]);
 
   async function onSubmit(values) {
+    // Caught here rather than by the server, because the catalog says which
+    // shells refuse login and the pair is nonsense either way: SSH access on
+    // an account whose shell hangs up on you. Same rule ShellSelect enforces
+    // from the other direction.
+    if (values.ssh_access) {
+      const chosen = shells.find((entry) => entry.value === (values.shell || DEFAULT_SHELL));
+      if (chosen?.allows_login === false) {
+        form.setError("ssh_access", {
+          message: t("create.sshNeedsLoginShell", { shell: chosen.title }),
+        });
+        scrollToFirstError();
+        return;
+      }
+    }
+
     const payload = { username: values.username };
     if (values.public_key?.trim()) payload.public_key = values.public_key.trim();
     // Only send what was actually chosen. The backend treats every one of
@@ -97,8 +112,10 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
       const { data } = await createSystemUser(payload);
       toast.success(t("toast.created"));
       onCreated?.(data?.system_user ?? data?.user ?? null);
-      onOpenChange?.(false);
-      form.reset();
+      // handleOpenChange, not onOpenChange: closing by our own code path skips
+      // Radix's callback, so "More options" stayed expanded into the next open
+      // — a dialog that is supposed to start as three fields.
+      handleOpenChange(false);
       router.refresh();
     } catch (error) {
       handleValidationError(error, form);
@@ -317,6 +334,12 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                           </FormControl>
                         </div>
                       </label>
+                      {/* These two were the only fields in the dialog with no
+                          message slot. The server refuses SSH on a no-login
+                          shell by erroring on `ssh_access` — a real form field,
+                          so the handler set it inline — and it rendered
+                          nowhere: Create did nothing, said nothing. */}
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

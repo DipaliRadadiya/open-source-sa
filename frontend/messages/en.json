@@ -116,7 +116,8 @@
       "password": "Password",
       "passwordPlaceholder": "Leave empty for no password",
       "passwordHint": "Generated for you. Keep it, change it, or clear it — you can see it again later from the user's Set password action.",
-      "generate": "Generate"
+      "generate": "Generate",
+      "sshNeedsLoginShell": "{shell} does not allow login, so SSH access cannot be turned on with it."
     },
     "password": {
       "open": "Password",
@@ -195,7 +196,8 @@
     "sshKeys": {
       "loadFailed": "The keys for this account could not be loaded. This is not the same as having none.",
       "retryLoad": "Try again"
-    }
+    },
+    "loadFailed": "Your system users could not be loaded. They have not been changed or removed."
   },
   "dashboard": {
     "title": "Dashboard",

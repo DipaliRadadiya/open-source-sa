@@ -603,7 +603,8 @@
       "password": "Contraseña",
       "passwordPlaceholder": "Déjalo vacío para no poner contraseña",
       "passwordHint": "Generada automáticamente. Consérvala, cámbiala o bórrala: podrás volver a verla más tarde desde la acción Establecer contraseña del usuario.",
-      "generate": "Generar"
+      "generate": "Generar",
+      "sshNeedsLoginShell": "{shell} no permite iniciar sesión, así que no se puede activar el acceso SSH con ese shell."
     },
     "password": {
       "open": "Contraseña",
@@ -682,7 +683,8 @@
     "sshKeys": {
       "loadFailed": "No se pudieron cargar las claves de esta cuenta. Eso no es lo mismo que no tener ninguna.",
       "retryLoad": "Intentar de nuevo"
-    }
+    },
+    "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado."
   },
   "serverDashboard": {
     "title": "Panel",

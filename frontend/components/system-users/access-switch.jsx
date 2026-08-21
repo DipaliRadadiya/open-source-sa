@@ -77,8 +77,20 @@ export function AccessSwitch({ user, field, canManage = true }) {
       {/* PendingSwitch, not a private copy of it: this file grew the spinner
           and its reserved slot first, and cron and services then shipped
           without either. The shared one now owns that markup. */}
+      {/* Both reasons, not just one. The switch is disabled for two causes but
+          only `sshBlocked` supplied a sentence, so a view-only role saw every
+          Sudo and SSH switch dead and silent — while the Add button on the same
+          page explained itself. The string already existed and was translated;
+          it was simply never passed. Permission first: it outranks the shell
+          rule, because it stops you regardless of the shell. */}
       <ReasonTooltip
-        reason={sshBlocked ? t("sshNeedsLoginShell", { shell: user.shell_title ?? user.shell }) : null}
+        reason={
+          !canManage
+            ? t("noPermission")
+            : sshBlocked
+              ? t("sshNeedsLoginShell", { shell: user.shell_title ?? user.shell })
+              : null
+        }
       >
         <PendingSwitch
           checked={shown}
