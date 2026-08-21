@@ -76,10 +76,14 @@ function RequiredMark() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
-          className="ml-0.5 text-destructive"
-        >
-          *
+        <span className="ml-0.5 text-destructive">
+          {/* The asterisk is a picture of the word, and the tooltip explaining
+              it needs a hover — which a screen reader does not have and a
+              keyboard cannot reach, since this deliberately has no tab stop.
+              So the word goes in the label too, where it is announced as part
+              of the field's name: "Name, required, edit text". */}
+          <span aria-hidden="true">*</span>
+          <span className="sr-only">{t("required")}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>{t("required")}</TooltipContent>
