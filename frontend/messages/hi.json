@@ -2471,7 +2471,9 @@
       "failed": "phpMyAdmin नहीं खोला जा सका।",
       "noPermission": "आपकी भूमिका में डेटाबेस का Manage एक्सेस नहीं है। इसे देने के लिए किसी एडमिन से कहें।",
       "blocked": "आपके ब्राउज़र ने नया टैब ब्लॉक कर दिया।",
-      "openAnyway": "phpMyAdmin खोलें"
+      "openAnyway": "phpMyAdmin खोलें",
+      "install": "phpMyAdmin इंस्टॉल करें",
+      "needsUser": "पहले एक डेटाबेस उपयोगकर्ता जोड़ें — phpMyAdmin उसी के रूप में साइन इन करता है।"
     }
   },
   "git": {

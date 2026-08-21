@@ -588,6 +588,7 @@ function ConfigField({
 
 export function CreateApplicationForm({
   siteTypes = [],
+  initialType = "",
   systemUsers = [],
   systemUsersFailed = false,
   canCreateSystemUser = false,
@@ -633,7 +634,10 @@ export function CreateApplicationForm({
     mode: "onBlur",
     reValidateMode: "onChange",
     defaultValues: {
-      site_type: "",
+      // Seeded from the URL when something sent you here for a particular
+      // type — the databases page's "Install phpMyAdmin", for one. Empty
+      // otherwise, which is every other way in.
+      site_type: initialType,
       name: "",
       domain: "",
       system_user_id: "",

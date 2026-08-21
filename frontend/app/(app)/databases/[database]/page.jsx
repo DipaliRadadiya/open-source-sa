@@ -4,6 +4,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getDatabase } from "@/lib/databases/get-database";
 import { getExports } from "@/lib/databases/get-exports";
+import { getPhpmyadminSite } from "@/lib/applications/get-applications";
 import { getTables } from "@/lib/databases/get-monitor";
 import { Badge } from "@/components/ui/badge";
 import { DatabaseUsers } from "@/components/databases/database-users";
@@ -28,7 +29,7 @@ export default async function DatabasePage({ params, searchParams }) {
   const { database: id } = await params;
   const sp = await searchParams;
 
-  const [permissions, t, live, exportList, tables] = await Promise.all([
+  const [permissions, t, live, exportList, tables, phpmyadmin] = await Promise.all([
     getPermissions(),
     getTranslations("databases"),
     getDatabase(id),
@@ -36,6 +37,7 @@ export default async function DatabasePage({ params, searchParams }) {
     // the card rather than requested per database.
     getExports(),
     getTables(id),
+    getPhpmyadminSite(),
   ]);
   const { data, failed, status, failure } = live;
 
@@ -69,7 +71,11 @@ export default async function DatabasePage({ params, searchParams }) {
       <div className="max-w-4xl space-y-4">
         {/* Above the tabs: connecting an application is what this page is
             opened for, and it was three clicks deep inside Users. */}
-        <ConnectionDetails database={data} canManage={canManage} />
+        <ConnectionDetails
+          database={data}
+          canManage={canManage}
+          phpmyadminInstalled={phpmyadmin.known ? Boolean(phpmyadmin.site) : null}
+        />
 
         <DatabaseTabs
           initial={sp?.tab}

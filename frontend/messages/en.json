@@ -2471,7 +2471,9 @@
       "failed": "phpMyAdmin could not be opened.",
       "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "blocked": "Your browser blocked the new tab.",
-      "openAnyway": "Open phpMyAdmin"
+      "openAnyway": "Open phpMyAdmin",
+      "install": "Install phpMyAdmin",
+      "needsUser": "Add a database user first — phpMyAdmin signs in as one."
     }
   },
   "git": {

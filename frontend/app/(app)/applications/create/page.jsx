@@ -18,7 +18,8 @@ export async function generateMetadata() {
   return { title: t("createTitle") };
 }
 
-export default async function CreateApplicationPage() {
+export default async function CreateApplicationPage({ searchParams }) {
+  const sp = await searchParams;
   const [permissions, t, types, systemUsers, accounts, php, node, capabilities, timezones] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
@@ -57,6 +58,12 @@ export default async function CreateApplicationPage() {
         <p className="text-sm text-muted-foreground">{t("createSubtitle")}</p>
       </div>
       <CreateApplicationForm
+        // Prefilled from the URL, and only ever with a type the server
+        // actually offers — a query parameter is somebody else's input, and a
+        // made-up one would seed the form with a site type that does not exist.
+        initialType={
+          types.siteTypes.some((type) => type.name === sp?.type) ? sp.type : ""
+        }
         siteTypes={types.siteTypes}
         systemUsers={systemUsers.users}
         systemUsersFailed={systemUsers.failed}

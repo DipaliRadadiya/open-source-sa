@@ -2471,7 +2471,9 @@
       "failed": "No se pudo abrir phpMyAdmin.",
       "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
       "blocked": "Tu navegador bloqueó la nueva pestaña.",
-      "openAnyway": "Abrir phpMyAdmin"
+      "openAnyway": "Abrir phpMyAdmin",
+      "install": "Instalar phpMyAdmin",
+      "needsUser": "Añade primero un usuario de la base de datos — phpMyAdmin inicia sesión como uno."
     }
   },
   "git": {

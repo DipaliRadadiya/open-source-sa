@@ -9,6 +9,7 @@ import {
   getConnections,
 } from "@/lib/databases/get-databases";
 import { getExports } from "@/lib/databases/get-exports";
+import { getPhpmyadminSite } from "@/lib/applications/get-applications";
 import { formatBytes } from "@/lib/format/bytes";
 import { parseApiDate } from "@/lib/format/api-date";
 import { EngineBar } from "@/components/databases/engine-bar";
@@ -48,7 +49,7 @@ export default async function DatabasesPage({ searchParams }) {
   // table that then invites you to create a database nothing could store.
   const usable = engines.some((engine) => engine.running);
 
-  const [{ databases, meta: dbMeta }, untracked, connections, exportList] = await Promise.all([
+  const [{ databases, meta: dbMeta }, untracked, connections, exportList, phpmyadmin] = await Promise.all([
     usable ? getDatabases(query) : Promise.resolve({ databases: [] }),
     usable && canManage ? getUntracked(engines) : Promise.resolve([]),
     // Needed most when nothing is reachable — that is when someone has to look
@@ -57,6 +58,9 @@ export default async function DatabasesPage({ searchParams }) {
     // For the "Last backup" column. Global, so one request covers the whole
     // table rather than one per row.
     usable ? getExports() : Promise.resolve({ exports: [], failed: false }),
+    // Whether this server has a phpMyAdmin to open at all. Without it the
+    // button was offered on every row and refused on click.
+    getPhpmyadminSite(),
   ]);
 
   // The newest dump per database that you could actually restore from:
@@ -114,6 +118,8 @@ export default async function DatabasesPage({ searchParams }) {
             // A failed exports request must not read as "never backed up" —
             // that is the one wrong answer this column can give.
             backupsUnknown={exportList.failed}
+            // false only when we actually looked and found none.
+            phpmyadminInstalled={phpmyadmin.known ? Boolean(phpmyadmin.site) : null}
           />
         </div>
       ) : (

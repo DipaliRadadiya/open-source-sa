@@ -24,6 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CreateDatabaseDialog } from "@/components/databases/create-database-dialog";
+import { DatabasesCards } from "@/components/databases/databases-cards";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
 
 /* Cells are module-level components: flexRender treats a cell function's
@@ -126,6 +127,7 @@ function RowActionsCell({ row, table }) {
       database={row.original}
       onDelete={table.options.meta.onDelete}
       canManage={table.options.meta.canManage}
+      phpmyadminInstalled={table.options.meta.phpmyadminInstalled}
     />
   );
 }
@@ -135,7 +137,7 @@ function RowActionsCell({ row, table }) {
  * reveal one item costs a click and hides the only thing you can do. When a
  * second action arrives (export is the likely one) this goes back to a menu.
  */
-function RowActions({ database, onDelete, canManage }) {
+function RowActions({ database, onDelete, canManage, phpmyadminInstalled }) {
   const t = useTranslations("databases");
   const href = `/databases/${database.id}`;
 
@@ -154,7 +156,12 @@ function RowActions({ database, onDelete, canManage }) {
       {/* On the row, not only on the detail page: opening the database is
           what most visits to this list are for, and making it cost a page
           load first is the difference between a shortcut and a detour. */}
-      <PhpmyadminButton database={database} canManage={canManage} compact />
+      <PhpmyadminButton
+        database={database}
+        canManage={canManage}
+        installed={phpmyadminInstalled}
+        compact
+      />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -191,6 +198,8 @@ function DatabasesList({
   canManage = false,
   lastBackup = {},
   backupsUnknown = false,
+  // null when the lookup failed — see getPhpmyadminSite.
+  phpmyadminInstalled = null,
 }) {
   const t = useTranslations("databases");
   const searchParams = useSearchParams();
@@ -313,6 +322,23 @@ function DatabasesList({
           />
         )
       ) : (
+        /* Cards below lg, the table from lg up — the same rule as applications,
+           services, cron jobs and the rest. Databases was the one list that
+           never got a narrow-screen view: at 390px its seven columns are
+           1115px wide inside a 356px scroller. */
+        <>
+        <div className="lg:hidden">
+          <DatabasesCards
+            databases={data}
+            canManage={canManage}
+            phpmyadminInstalled={phpmyadminInstalled}
+            showEngine={showEngine}
+            engineName={(engine) => t(`engines.${engine}`)}
+            lastBackup={lastBackup}
+            backupsUnknown={backupsUnknown}
+          />
+        </div>
+        <div className="hidden lg:block">
         <DataTable
           columns={columns}
           data={data}
@@ -322,8 +348,11 @@ function DatabasesList({
             engineName: (engine) => t(`engines.${engine}`),
             lastBackup,
             backupsUnknown,
+            phpmyadminInstalled,
           }}
         />
+        </div>
+        </>
       )}
 
       <DataTablePagination meta={meta} />

@@ -165,3 +165,32 @@ export async function getApplicationStaging(id) {
     status: result.status,
   };
 }
+
+/**
+ * The active phpMyAdmin site, if this server has one.
+ *
+ * Asks the same question the SSO endpoint asks before it will issue a token:
+ *
+ *     Application::where('site_type', 'phpmyadmin')->where('status', Active)
+ *
+ * Without it the database pages cannot tell "open phpMyAdmin" from "there is
+ * no phpMyAdmin to open", so the button was offered either way and you found
+ * out by being refused. Matching the backend's own condition is what keeps the
+ * two answers from drifting apart.
+ *
+ * A failed request returns `null`, NOT false: "we could not ask" and "there
+ * isn't one" are different, and only the second should change what the button
+ * says. Callers treat null as "carry on as before".
+ *
+ * `cache`d and argument-free so the list page and a detail page on the same
+ * request share one call.
+ */
+export const getPhpmyadminSite = cache(async function getPhpmyadminSite() {
+  const result = await read("/applications", applicationsResponseSchema, {
+    searchParams: { "filter[site_type]": "phpmyadmin", "filter[status]": "active", per_page: 1 },
+  });
+
+  if (result.failed) return { site: null, known: false };
+
+  return { site: result.data?.applications?.[0] ?? null, known: true };
+});
