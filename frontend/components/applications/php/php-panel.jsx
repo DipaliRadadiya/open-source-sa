@@ -196,10 +196,18 @@ function SharedPhpState({ php, canManage, busy, onIsolate }) {
   // the vhost, not the pool, and the API strips it before refusing the rest.
   // This screen offered it nowhere, so those sites were stuck on whatever
   // version they were created with.
-  const [version, setVersion] = useState(php.php_version ?? "");
+  // What the user picked, until the server agrees with it — the same shape the
+  // access and cron switches use. Held as plain state it was seeded once at
+  // mount, so a version changed anywhere else (another tab, another admin) left
+  // this dropdown showing the old one AND claiming an unsaved change the user
+  // had not made.
+  const [picked, setPicked] = useState(null);
+  const serverVersion = php.php_version ?? "";
+  const version = picked !== null && picked !== serverVersion ? picked : serverVersion;
+  const setVersion = setPicked;
   const [savingVersion, setSavingVersion] = useState(false);
   const versions = php.available_versions ?? [];
-  const versionChanged = version !== (php.php_version ?? "");
+  const versionChanged = version !== serverVersion;
 
   async function saveVersion() {
     setSavingVersion(true);
@@ -843,9 +851,28 @@ function ValueSelect({
   onPick,
   customLabel,
 }) {
+  const tValidation = useTranslations("validation");
   const value = useWatch({ control: form.control, name });
   const inList = options.some((option) => String(option) === String(value));
   const [custom, setCustom] = useState(!inList);
+
+  /*
+   * Read here rather than through <FormMessage>, because the dropdown branch is
+   * not inside a <FormField> and FormMessage needs that context. Six settings
+   * are drawn this way — version, memory, max children, upload size, execution
+   * time, input vars — and every one of them had NOWHERE to show a refusal.
+   *
+   * Not theoretical: each offers a "Custom" box, so a value the API's size
+   * pattern rejects is one keystroke away, and `php_version` carries a rule
+   * that fails with "PHP 8.3 is not installed" whenever a version is removed
+   * between opening this page and saving it. Both landed in form state and
+   * rendered nothing — Save just did nothing at all.
+   *
+   * Same translation rule as FormMessage: Zod emits keys, the API sends
+   * finished sentences, and running a sentence through t() returns the key.
+   */
+  const raw = form.formState.errors?.[name]?.message;
+  const error = raw ? (tValidation.has(raw) ? tValidation(raw) : raw) : null;
 
   return (
     <div className="space-y-1.5">
@@ -894,6 +921,12 @@ function ValueSelect({
             </FormControl>
           )}
         />
+      ) : null}
+
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
       ) : null}
     </div>
   );
@@ -1302,6 +1335,10 @@ function ToggleRow({ form, name, label, directive, hint, disabled }) {
               disabled={disabled}
             />
           </FormControl>
+          {/* Inside the label column so it wraps with the text rather than
+              squeezing the switch. The two toggles here were the last fields on
+              the form with no way to show a refusal. */}
+          <FormMessage className="basis-full" />
         </FormItem>
       )}
     />
