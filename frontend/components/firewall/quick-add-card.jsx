@@ -82,6 +82,7 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
     setPending(label);
     const created = [];
     const already = [];
+    let failed = null;
     try {
       for (const preset of items) {
         if (exists(preset)) {
@@ -103,17 +104,23 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
           else throw error;
         }
       }
-
-      // Say which of the two things happened. "Done" over a no-op is a lie.
+    } catch (error) {
+      // The tile opens several ports and there is no bulk endpoint, so it can
+      // stop halfway. This used to rethrow past the toasts AND past
+      // `router.refresh()` — the ports it HAD opened stayed invisible until
+      // the page was reloaded by hand, and the only message was a flat "that
+      // rule could not be added", which reads as "nothing happened".
+      failed = apiMessage(error, t("quick.failed"));
+    } finally {
+      // Say which of the things happened — including when only some did.
       if (created.length) {
         toast.success(t("quick.added", { names: created.join(", ") }));
-      } else if (already.length) {
+      } else if (already.length && !failed) {
         toast.info(t("quick.alreadyThere", { names: already.join(", ") }));
       }
+      if (failed) toast.error(failed);
+      // Always: rules were created even on the failing path.
       router.refresh();
-    } catch (error) {
-      toast.error(apiMessage(error, t("quick.failed")));
-    } finally {
       setPending(null);
     }
   }

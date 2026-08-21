@@ -181,7 +181,12 @@ export function RulesCard({
   };
 
   async function onToggle(rule) {
-    const next = rule.enabled === false;
+    // What the switch is SHOWING, not what the server last said. `pending`
+    // clears the moment the PUT resolves, but `rules` only changes when
+    // `router.refresh()` lands — so a second click in that window read the
+    // stale server value, re-sent the value it had just sent, and toasted
+    // "switched off" for a click that meant on.
+    const next = !shownEnabled(rule);
     setPending(rule.id);
     setAsked((current) => ({ ...current, [rule.id]: { value: next, from: rule.enabled !== false } }));
     try {

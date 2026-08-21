@@ -16,7 +16,7 @@ import { apiMessage } from "@/lib/api/error-message";
  * is the honest test — not the form's field list, which still holds the keys of
  * branches the user is not using.
  */
-export function handleValidationError(error, form) {
+export function handleValidationError(error, form, { formError = false } = {}) {
   const errors = error.response?.data?.errors;
 
   if (errors && form) {
@@ -29,11 +29,24 @@ export function handleValidationError(error, form) {
       sent = {};
     }
 
+    // The form's own field names. `setError` will happily store a message
+    // against a name nothing renders, which is the other way an error goes
+    // missing: the firewall dialog sends `port_from` but its input is called
+    // `ports`, so "a rule with these settings already exists" landed in form
+    // state and appeared nowhere on screen.
+    const fields = form.getValues() ?? {};
+
     const orphaned = [];
     Object.entries(errors).forEach(([field, messages]) => {
       // Nested keys arrive dotted (`settings.token`); the root is what was sent.
       const root = field.split(".")[0];
-      if (Object.prototype.hasOwnProperty.call(sent, root)) {
+      // BOTH tests, because each catches a different disappearance. Sent-but-
+      // not-in-the-form is the firewall case above; in-the-form-but-not-sent is
+      // the cron one, where the API answers on `username` — a real field, on
+      // the branch the user is not looking at.
+      const rendered = Object.prototype.hasOwnProperty.call(fields, root);
+      const wasSent = Object.prototype.hasOwnProperty.call(sent, root);
+      if (rendered && wasSent) {
         form.setError(field, { message: messages[0] });
       } else {
         orphaned.push(messages[0]);
@@ -41,8 +54,18 @@ export function handleValidationError(error, form) {
     });
 
     if (orphaned.length === 0) return;
-    // One toast, first message: a 422 rarely carries two unrelated surprises,
-    // and stacking them buries the one the user can act on.
+    // One message, the first: a 422 rarely carries two unrelated surprises, and
+    // stacking them buries the one the user can act on.
+    //
+    // On the form when the form can show it, so it stays put while the dialog
+    // does — a toast slides away while the user is still reading the fields it
+    // was about. `root.server` is react-hook-form's own slot for an error that
+    // belongs to the submission rather than to any one input; forms that do not
+    // render it fall through to the toast, which is what every form did before.
+    if (formError) {
+      form.setError("root.server", { message: orphaned[0] });
+      return;
+    }
     toast.error(orphaned[0]);
     return;
   }

@@ -101,6 +101,12 @@ export function AddRuleDialog({
       if (!next) onClose?.();
       return;
     }
+    // Reset HERE, not only in the dialog's onOpenChange. Radix fires that for
+    // its own interactions (Esc, overlay, X) but not for our own Cancel button
+    // or trigger — and in create mode this component never unmounts, so the
+    // last attempt's red "already exists" banner and its filled-in port came
+    // back the next time the dialog was opened.
+    if (!next) resetForm();
     setSelfOpen(next);
   };
 
@@ -126,6 +132,13 @@ export function AddRuleDialog({
   // doesn't leave a rule called "HTTPS" on port 3306.
   const [autoName, setAutoName] = useState("");
 
+  // Everything a closed dialog must forget: the values, the field errors and
+  // the server's refusal banner.
+  function resetForm() {
+    setAutoName("");
+    form.reset(valuesFrom(rule));
+  }
+
   function choosePreset(key) {
     if (!key) return;
     form.setValue("preset", key);
@@ -144,6 +157,10 @@ export function AddRuleDialog({
   }
 
   async function onSubmit(submitted) {
+    // Last attempt's refusal, cleared before this one. It is not bound to a
+    // field, so nothing else clears it — and a stale "already exists" sitting
+    // above a rule you just changed is worse than no message.
+    form.clearErrors("root.server");
     const parsed = parsePorts(submitted.ports);
     const payload = {
       port_from: parsed.from,
@@ -172,15 +189,19 @@ export function AddRuleDialog({
       form.reset(editing ? valuesFrom(rule) : DEFAULTS);
       router.refresh();
     } catch (error) {
-      // 422 is usually "you already have this rule" — that belongs on the field,
-      // not in a toast that vanishes while the form sits there.
-      handleValidationError(error, form);
+      // 422 is usually "you already have this rule" — that belongs on the form,
+      // not in a toast that vanishes while the form sits there. It is not a
+      // port problem either: the server compares port AND protocol AND action
+      // AND source, so pinning it under Port would name the wrong culprit.
+      handleValidationError(error, form, { formError: true });
     }
   }
 
   const { isSubmitting } = form.formState;
   const portError = form.formState.errors.ports?.message;
   const sourceError = form.formState.errors.source_ip?.message;
+  const nameError = form.formState.errors.description?.message;
+  const serverError = form.formState.errors.root?.server?.message;
 
   const parsed = parsePorts(values.ports);
   // Named here rather than only after the server says 422: the form already has
@@ -221,11 +242,10 @@ export function AddRuleDialog({
         open={open}
         onOpenChange={(next) => {
           if (isSubmitting) return;
+          // setOpen resets on its own now, so Cancel, Esc, the overlay and the
+          // X all go through the same path.
           setOpen(next);
-          if (!next) {
-            setAutoName("");
-            form.reset(valuesFrom(rule));
-          }
+          if (!next && editing) resetForm();
         }}
         icon={editing ? Pencil : ShieldPlus}
         title={editing ? t("edit.title") : t("add.title")}
@@ -251,6 +271,19 @@ export function AddRuleDialog({
         }
       >
         <div className="space-y-5">
+          {/* What the server refused, kept on screen. Above the summary because
+              it is the reason the dialog is still open — everything below it is
+              the rule you were trying to make. */}
+          {serverError ? (
+            <p
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive"
+            >
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+              {serverError}
+            </p>
+          ) : null}
+
           {/* Leads, and scrolls with everything else.
               It was `sticky`, which meant the ACTION label and the Allow/Block
               buttons slid underneath it — and the checked toggle item carries
@@ -420,12 +453,24 @@ export function AddRuleDialog({
             <Label htmlFor="fw-name">{t("add.nameLabel")}</Label>
             <Input
               id="fw-name"
+              // The API's own limit. Stops the overrun at the keyboard rather
+              // than at the server.
+              maxLength={255}
               placeholder={t("add.namePlaceholder")}
+              aria-invalid={Boolean(nameError)}
               {...form.register("description")}
             />
             <p className="text-xs leading-relaxed text-muted-foreground">
               {t("add.nameHint")}
             </p>
+            {/* This was the only field with no error slot, so anything the
+                server said about it was written into form state and rendered
+                nowhere. */}
+            {nameError ? (
+              <p role="alert" className="text-xs text-destructive">
+                {message(t, nameError)}
+              </p>
+            ) : null}
           </div>
         </div>
       </FormModal>
@@ -461,6 +506,13 @@ function protocolWord(t, protocol) {
  * theirs through — a server message run through `t()` comes out as the key.
  */
 function message(t, text) {
-  const KEYS = ["required", "portShape", "portRange", "portOrder", "invalidSource"];
+  const KEYS = [
+    "required",
+    "portShape",
+    "portRange",
+    "portOrder",
+    "invalidSource",
+    "nameTooLong",
+  ];
   return KEYS.includes(text) ? t(`add.errors.${text}`) : text;
 }

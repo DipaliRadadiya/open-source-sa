@@ -105,15 +105,24 @@ export const createFirewallRuleSchema = z
     protocol: z.enum(["all", "tcp", "udp"]),
     action: z.enum(["allow", "deny"]),
     source_ip: z.string().optional(),
-    description: z.string().optional(),
+    // Bounded to match the API's `max:255`. Unbounded, a longer name sailed
+    // through, 422'd on `description` — a real form field, so the handler put
+    // the message on it — and the Name field renders no error, so it landed
+    // nowhere. The button spun and the dialog just sat there.
+    description: z.string().max(255, { message: "nameTooLong" }).optional(),
   })
   .superRefine((values, ctx) => {
     const parsed = parsePorts(values.ports);
     if (!parsed) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portShape" });
-    } else if (parsed.from < 1 || parsed.from > 65534 || (parsed.to && parsed.to > 65535)) {
+      // Both ends capped at 65534, which is what the create endpoint accepts
+      // (`between:1,65534` on port_from AND port_to). The end used to be
+      // allowed up to 65535: the client passed it, the server refused it on
+      // `port_to` — a field name that does not exist on this screen — and the
+      // matching message claimed "1 to 65535" while rejecting 65535.
+    } else if (parsed.from < 1 || parsed.from > 65534 || (parsed.to && parsed.to > 65534)) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portRange" });
-    } else if (parsed.to && parsed.to <= parsed.from) {
+    } else if (parsed.to && parsed.to < parsed.from) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portOrder" });
     }
 
