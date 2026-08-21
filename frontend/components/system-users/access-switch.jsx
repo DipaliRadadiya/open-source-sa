@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { setSystemUserSudo, setSystemUserSsh } from "@/lib/api/system-users";
-import { Switch } from "@/components/ui/switch";
+import { PendingSwitch } from "@/components/ui/pending-switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
@@ -74,24 +74,20 @@ export function AccessSwitch({ user, field, canManage = true }) {
 
   return (
     <>
-      {/* The spinner's slot is always present, so a row does not jump sideways
-          the moment someone flips a switch in it. */}
-      <span className="inline-flex items-center gap-2">
-        <ReasonTooltip
-          reason={sshBlocked ? t("sshNeedsLoginShell", { shell: user.shell_title ?? user.shell }) : null}
-        >
-          <Switch
-            checked={shown}
-            disabled={busy || !canManage || sshBlocked}
-            onCheckedChange={canManage && !sshBlocked ? onToggle : undefined}
-            aria-label={label}
-            aria-busy={busy}
-          />
-        </ReasonTooltip>
-        <span className="inline-flex size-4 shrink-0 items-center justify-center">
-          {busy ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : null}
-        </span>
-      </span>
+      {/* PendingSwitch, not a private copy of it: this file grew the spinner
+          and its reserved slot first, and cron and services then shipped
+          without either. The shared one now owns that markup. */}
+      <ReasonTooltip
+        reason={sshBlocked ? t("sshNeedsLoginShell", { shell: user.shell_title ?? user.shell }) : null}
+      >
+        <PendingSwitch
+          checked={shown}
+          pending={busy}
+          disabled={!canManage || sshBlocked}
+          onCheckedChange={canManage && !sshBlocked ? onToggle : undefined}
+          aria-label={label}
+        />
+      </ReasonTooltip>
 
       {field === "sudo" ? (
         <ConfirmDialog

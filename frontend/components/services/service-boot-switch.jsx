@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { TriangleAlert, Lock } from "lucide-react";
 import { runServiceAction } from "@/lib/api/services";
 import { showActionError } from "@/components/services/service-toast";
-import { Switch } from "@/components/ui/switch";
+import { PendingSwitch } from "@/components/ui/pending-switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Tooltip,
@@ -29,19 +29,30 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // The value we asked for, until the server agrees with it.
+  const [asked, setAsked] = useState(null);
 
   const allowed = service.actions ?? [];
   const canToggle =
     canManage && allowed.includes(service.enabled ? "disable" : "enable");
 
+  // Same reason as the cron and system-user switches: `service.enabled` only
+  // changes when `router.refresh()` lands, and enabling a unit is not instant,
+  // so the knob sat in its old position for the whole call.
+  const shown =
+    asked !== null && asked !== service.enabled ? asked : service.enabled;
+
   async function run(action) {
     setBusy(true);
+    setAsked(action === "enable");
     onBusyChange?.(action);
     try {
       await runServiceAction(service.key, action);
       toast.success(t(`toast.${action}`, { name: service.label }));
       router.refresh();
     } catch (error) {
+      // Put the knob back where it was: the change did not happen.
+      setAsked(null);
       const data = error.response?.data;
       showActionError({
         title: t(`error.${action}`, { name: service.label }),
@@ -88,9 +99,10 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
   }
 
   const control = (
-    <Switch
-      checked={service.enabled}
-      disabled={busy || !canToggle}
+    <PendingSwitch
+      checked={shown}
+      pending={busy}
+      disabled={!canToggle}
       onCheckedChange={(next) => (next ? run("enable") : setConfirming(true))}
       aria-label={t("columns.boot")}
     />
