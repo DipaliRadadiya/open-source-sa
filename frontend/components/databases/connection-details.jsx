@@ -18,7 +18,7 @@ import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
  * Rendered only when something can actually connect. A database with no users
  * has no credentials to show, and the Users tab says so properly.
  */
-export function ConnectionDetails({ database, canManage = false }) {
+export function ConnectionDetails({ database, canManage = false, phpmyadminInstalled = null }) {
   const t = useTranslations("databases.credentials");
   const user = primaryUser(database);
   if (!user) return null;
@@ -66,16 +66,27 @@ export function ConnectionDetails({ database, canManage = false }) {
               text
             />
           ) : null}
-          <PhpmyadminButton database={database} canManage={canManage} />
+          <PhpmyadminButton
+            database={database}
+            canManage={canManage}
+            installed={phpmyadminInstalled}
+          />
         </div>
       </div>
 
-      <CardContent className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-3 lg:grid-cols-5">
+      {/* Three columns at the top end, not five. At five each cell was 132px
+          and the database name needs 256px, so the panel's own identifier was
+          cut in half — and generated names differ only in their suffix, which
+          is exactly the half that disappeared. */}
+      <CardContent className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-3">
         {fields.map((field) => (
           <div key={field.key} className="min-w-0 space-y-0.5">
             <p className="text-xs text-muted-foreground">{t(field.key)}</p>
             <div className="flex items-center gap-0.5">
-              <span className="truncate font-mono text-sm">
+              {/* Wraps rather than truncating. These are values to be read and
+                  typed into a config file; a name cut short still looks like a
+                  name, which is worse than a value that takes two lines. */}
+              <span className="min-w-0 font-mono text-sm break-all">
                 {field.mask ? "••••••••" : field.value}
               </span>
               <CopyButton
