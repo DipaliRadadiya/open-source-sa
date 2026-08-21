@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { apiMessage } from "@/lib/api/error-message";
+import { errorTarget } from "@/lib/api/error-target";
 
 /**
  * Show a 422 where the user can act on it.
@@ -38,19 +39,12 @@ export function handleValidationError(error, form, { formError = false } = {}) {
 
     const orphaned = [];
     Object.entries(errors).forEach(([field, messages]) => {
-      // Nested keys arrive dotted (`settings.token`); the root is what was sent.
-      const root = field.split(".")[0];
-      // BOTH tests, because each catches a different disappearance. Sent-but-
-      // not-in-the-form is the firewall case above; in-the-form-but-not-sent is
-      // the cron one, where the API answers on `username` — a real field, on
-      // the branch the user is not looking at.
-      const rendered = Object.prototype.hasOwnProperty.call(fields, root);
-      const wasSent = Object.prototype.hasOwnProperty.call(sent, root);
-      if (rendered && wasSent) {
-        form.setError(field, { message: messages[0] });
-      } else {
-        orphaned.push(messages[0]);
-      }
+      // Which name to set it on, or null for "nothing here would render it".
+      // Pure and tested in lib/api/error-target.js — the three ways a message
+      // can vanish are all decided there.
+      const target = errorTarget(field, fields, sent);
+      if (target) form.setError(target, { message: messages[0] });
+      else orphaned.push(messages[0]);
     });
 
     if (orphaned.length === 0) return;

@@ -4830,7 +4830,9 @@
       "checkAgain": "Comprobar de nuevo",
       "hide": "Ocultar",
       "queued": "Restauración en cola",
-      "queuedBody": "Esperando a que el servidor la tome. Todavía no se ha cambiado nada en el sitio."
+      "queuedBody": "Esperando a que el servidor la tome. Todavía no se ha cambiado nada en el sitio.",
+      "stalledQueued": "Esta restauración no ha empezado",
+      "stalledQueuedBody": "Lleva un par de minutos esperando a que el servidor la recoja. No se ha cambiado nada en el sitio. Puede que el proceso no esté en marcha: vuelve a comprobarlo o pide a quien gestione el servidor que lo revise."
     },
     "application": {
       "pageTitle": "Copias de seguridad",

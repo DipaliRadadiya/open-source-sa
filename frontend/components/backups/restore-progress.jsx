@@ -214,8 +214,17 @@ export function RestoreProgress({ restore: initial, applicationDomain, onDismiss
             <TriangleAlert className="size-6 text-warning" aria-hidden />
           </span>
           <div className="min-w-0 space-y-1">
-            <p className="font-medium">{t("stalled")}</p>
-            <p className="text-sm text-muted-foreground">{t("stalledBody")}</p>
+            {/* Two timers, so two messages. There was one, hardcoded to "20
+                minutes" — but a restore still sitting on the queue gives up
+                after two, so it announced a twenty-minute wait it had not
+                waited. Worse, it said "it may still be running on the server"
+                over a restore the worker never picked up: the queued banner
+                one state earlier correctly says nothing has been changed, and
+                this replaced that with a reason to panic. */}
+            <p className="font-medium">{t(queued ? "stalledQueued" : "stalled")}</p>
+            <p className="text-sm text-muted-foreground">
+              {t(queued ? "stalledQueuedBody" : "stalledBody")}
+            </p>
             {restore.reference ? (
               // The one thing worth quoting to whoever looks at the server.
               <p className="pt-1 font-mono text-xs text-muted-foreground">

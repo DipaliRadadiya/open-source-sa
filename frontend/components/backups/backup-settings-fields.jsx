@@ -198,6 +198,12 @@ export function BackupSettingsFields({
                 <FormDescription>
                   {automatic ? t("automaticOn") : t("automaticOff")}
                 </FormDescription>
+                {/* The only field here without one. `enabled` is registered and
+                    always sent, so a 422 on it would be set inline and render
+                    nowhere. Not reachable today — the rule is `boolean` and the
+                    client always sends one — but it is the same silent shape as
+                    the errors that did go missing elsewhere. */}
+                <FormMessage />
               </div>
               <FormControl>
                 <Switch
