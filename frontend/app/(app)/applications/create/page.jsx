@@ -49,7 +49,15 @@ export default async function CreateApplicationPage({ searchParams }) {
   const nodeVersions = [...managedNode, ...systemNode];
 
   if (!can(permissions, "application", "manage")) redirect("/applications");
+
   if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} />;
+
+  // Only a type the server actually offers. A query parameter is somebody
+  // else's input, and a made-up one would seed the form with a site type that
+  // does not exist.
+  const prefillType = types.siteTypes.some((type) => type.name === sp?.type)
+    ? sp.type
+    : "";
 
   return (
     <div className="space-y-6">
@@ -61,9 +69,11 @@ export default async function CreateApplicationPage({ searchParams }) {
         // Prefilled from the URL, and only ever with a type the server
         // actually offers — a query parameter is somebody else's input, and a
         // made-up one would seed the form with a site type that does not exist.
-        initialType={
-          types.siteTypes.some((type) => type.name === sp?.type) ? sp.type : ""
-        }
+        initialType={prefillType}
+        // Same value as the name: a marketplace type's slug is a valid site
+        // name, and it saves the one field that has to be filled before the
+        // temporary domain can be generated from it.
+        initialName={prefillType}
         siteTypes={types.siteTypes}
         systemUsers={systemUsers.users}
         systemUsersFailed={systemUsers.failed}

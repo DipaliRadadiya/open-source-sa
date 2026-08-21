@@ -46,7 +46,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 import { ChoiceField } from "@/components/ui/choice-field";
-import { ipToLabel, temporaryDomain } from "@/lib/applications/temporary-domain";
+import { initialDomainMode, ipToLabel, temporaryDomain } from "@/lib/applications/temporary-domain";
 import {
   Collapsible,
   CollapsibleContent,
@@ -589,6 +589,7 @@ function ConfigField({
 export function CreateApplicationForm({
   siteTypes = [],
   initialType = "",
+  initialName = "",
   systemUsers = [],
   systemUsersFailed = false,
   canCreateSystemUser = false,
@@ -638,7 +639,7 @@ export function CreateApplicationForm({
       // type — the databases page's "Install phpMyAdmin", for one. Empty
       // otherwise, which is every other way in.
       site_type: initialType,
-      name: "",
+      name: initialName,
       domain: "",
       system_user_id: "",
       git_account_id: "",
@@ -673,7 +674,9 @@ export function CreateApplicationForm({
    * exactly what they saw before.
    */
   const canUseTemporary = Boolean(ipToLabel(serverIp));
-  const [domainMode, setDomainMode] = useState("own");
+  const [domainMode, setDomainMode] = useState(() =>
+    initialDomainMode({ prefilledName: initialName, serverIp }),
+  );
   const temporary = domainMode === "temporary";
   const generated = temporary
     ? temporaryDomain(name, serverIp, { suffixes: temporaryDomainSuffixes })
