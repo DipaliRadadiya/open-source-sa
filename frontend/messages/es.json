@@ -43,6 +43,10 @@
     "sortBy": "Ordenar por esta columna",
     "navTitles": {
       "app_firewall": "Firewall web"
+    },
+    "autoRefresh": {
+      "stopped": "El panel ha dejado de buscar novedades en esta página.",
+      "checkAgain": "Comprobar de nuevo"
     }
   },
   "auth": {

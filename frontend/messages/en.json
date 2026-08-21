@@ -43,6 +43,10 @@
     "sortBy": "Sort by this column",
     "navTitles": {
       "app_firewall": "Web Firewall"
+    },
+    "autoRefresh": {
+      "stopped": "The panel has stopped checking for updates on this page.",
+      "checkAgain": "Check again"
     }
   },
   "systemUsers": {
