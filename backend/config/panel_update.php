@@ -59,6 +59,19 @@ return [
     ],
 
     /*
+     * The directory holding `shared/`, `releases/` and `current` — or, on a
+     * legacy install, the checkout itself.
+     *
+     * Recorded rather than inferred because a migrated panel cannot work it
+     * out. Services are started through `current/backend`, but PHP resolves
+     * symlinks in `__DIR__`, so `base_path()` reports the release directory
+     * and the panel has no way to know which of its ancestors is the root.
+     * PanelLayout falls back to inference when this is unset, which is every
+     * install made before the migration existed.
+     */
+    'root' => env('PANEL_ROOT'),
+
+    /*
      * The account the panel's services run as. Composer and npm run as this
      * user, not as root: install.sh builds the frontend that way, and a build
      * run as root leaves node_modules and .next owned by root under a service

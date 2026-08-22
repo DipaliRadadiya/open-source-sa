@@ -2,6 +2,8 @@
 
 namespace App\Services\Panel;
 
+use Illuminate\Container\Container;
+
 /**
  * Where the panel's own files live, and which of two shapes they are in.
  *
@@ -44,16 +46,55 @@ class PanelLayout
      */
     public function root(): string
     {
+        // Config first, because on a migrated install the panel cannot work
+        // this out from where its code is. install.sh and the migration both
+        // record it; everything below is inference for installs that predate
+        // that, and for tests.
+        // Asked of the container rather than through config(), which resolves
+        // it and throws when nothing is bound. This class answers questions
+        // about paths and is used from places that have no application booted
+        // — including, by design, code that runs while the layout is being
+        // built. Inference is the fallback there, exactly as for an install
+        // that predates the setting.
+        $container = Container::getInstance();
+
+        $configured = $container->bound('config')
+            ? $container->make('config')->get('panel_update.root')
+            : null;
+
+        if (is_string($configured) && $configured !== '') {
+            return rtrim($configured, '/');
+        }
+
         $repository = dirname($this->basePath ?? base_path());
 
-        // Running from inside a release: `<root>/current/backend` resolves its
-        // repository to `<root>/current`, whose parent is the root. Compared on
-        // the basename rather than by checking for `releases/` above, so this
-        // answers correctly during a migration when only half the layout is
-        // built.
-        return basename($repository) === self::CURRENT
-            ? dirname($repository)
-            : $repository;
+        // `<root>/releases/<timestamp>/backend` — the shape that actually
+        // reaches this in production.
+        //
+        // NOT detected via `current`, even though that is the path the service
+        // is started with. `base_path()` comes from `dirname(__DIR__)` in
+        // bootstrap/app.php, and PHP resolves symlinks in `__DIR__` — so by the
+        // time this runs, `<root>/current/backend` has already become
+        // `<root>/releases/20260822-093000/backend` and the word `current`
+        // is gone. An earlier version matched on it and therefore never fired:
+        // root() answered `<root>/releases/<timestamp>`, isReleased() looked
+        // for a releases/ directory inside a release, found none, and every
+        // migrated server quietly ran the legacy update — a `git checkout` in
+        // a directory built by `git archive`, which has no .git at all.
+        if (basename(dirname($repository)) === 'releases') {
+            return dirname(dirname($repository));
+        }
+
+        // The literal `current` spelling, for a path handed in rather than
+        // resolved off disk. It cannot occur in production for the reason
+        // above, but a caller that constructs the path itself is entitled to
+        // a correct answer.
+        if (basename($repository) === self::CURRENT) {
+            return dirname($repository);
+        }
+
+        // Legacy: one checkout, `<root>/backend`.
+        return $repository;
     }
 
     /** The symlink every service points at. */

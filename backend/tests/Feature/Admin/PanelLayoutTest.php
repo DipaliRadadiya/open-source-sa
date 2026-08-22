@@ -13,16 +13,40 @@ function layoutFor(string $basePath): PanelLayout
     return new PanelLayout($basePath);
 }
 
-it('finds the root above a release when running from current', function () {
-    // `<root>/current/backend` is where the app lives once migrated. Its
-    // repository is `<root>/current`; the root is one further up, and that is
-    // where releases/ and shared/ are.
-    $layout = layoutFor('/var/www/panel/current/backend');
+it('finds the root from inside a release, which is the path production sees', function () {
+    // The service is started through `<root>/current/backend`, but this is the
+    // path the app reports: bootstrap/app.php derives base_path() from
+    // `dirname(__DIR__)`, and PHP resolves symlinks in __DIR__, so `current`
+    // has already been replaced by the release it points at.
+    //
+    // Matching on `current` therefore never fired in production. root()
+    // answered `<root>/releases/<timestamp>`, isReleased() looked for a
+    // releases/ directory inside a release and found none, and every migrated
+    // server silently ran the legacy update — `git checkout` in a tree built
+    // by `git archive`, which carries no .git.
+    $layout = layoutFor('/var/www/panel/releases/20260822-093000/backend');
 
     expect($layout->root())->toBe('/var/www/panel')
         ->and($layout->currentLink())->toBe('/var/www/panel/current')
         ->and($layout->releasesPath())->toBe('/var/www/panel/releases')
         ->and($layout->sharedPath())->toBe('/var/www/panel/shared');
+});
+
+it('still answers for a literal current path, which callers may construct', function () {
+    $layout = layoutFor('/var/www/panel/current/backend');
+
+    expect($layout->root())->toBe('/var/www/panel');
+});
+
+it('prefers the recorded root over anything it could infer', function () {
+    // The migration writes this into shared/.env. Inference is a fallback for
+    // installs that predate it, not the answer — a panel whose code has been
+    // moved cannot deduce where its own layout begins.
+    config()->set('panel_update.root', '/srv/control-panel/');
+
+    expect(layoutFor('/var/www/panel/releases/20260822-093000/backend')->root())
+        ->toBe('/srv/control-panel')
+        ->and(layoutFor('/var/www/panel/backend')->root())->toBe('/srv/control-panel');
 });
 
 it('treats the checkout itself as the root on a legacy install', function () {
