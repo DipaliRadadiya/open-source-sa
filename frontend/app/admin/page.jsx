@@ -13,6 +13,7 @@ import { StatusTile } from "@/components/admin/dashboard/status-tile";
 import { AttentionList } from "@/components/admin/dashboard/attention-list";
 import { ActivityFeed } from "@/components/admin/dashboard/activity-feed";
 import { PeopleCard } from "@/components/admin/dashboard/people-card";
+import { QuickActions } from "@/components/admin/dashboard/quick-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,10 @@ export default async function AdminDashboardPage() {
       getPanelUpdate(),
       getCentralStatus(),
       getErrorLogs(ERROR_WINDOW),
-      getActivityLog({ per_page: 10 }),
+      // The largest page the endpoint offers, and the same single request
+      // either way. Anything other than a login is rare enough that a shorter
+      // window collapses to one row of "logged in" and shows nothing else.
+      getActivityLog({ per_page: 100 }),
       getImpersonation(),
     ]);
 
@@ -40,21 +44,18 @@ export default async function AdminDashboardPage() {
 
   const health = (() => {
     if (!doctor) return { tone: "idle", value: t("unknown"), hint: t("tiles.healthUnknown") };
+    const hint = t("tiles.healthPassed", { count: doctor.passed });
     if (doctor.failed > 0) {
       return {
         tone: "attention",
-        value: t("tiles.healthFailed", { count: doctor.failed }),
-        hint: t("tiles.healthCounts", { passed: doctor.passed, warnings: doctor.warnings }),
+        value: t("tiles.healthSummary", { failed: doctor.failed, warnings: doctor.warnings }),
+        hint,
       };
     }
     if (doctor.warnings > 0) {
-      return {
-        tone: "warning",
-        value: t("tiles.healthWarnings", { count: doctor.warnings }),
-        hint: t("tiles.healthCounts", { passed: doctor.passed, warnings: doctor.warnings }),
-      };
+      return { tone: "warning", value: t("tiles.healthWarnings", { count: doctor.warnings }), hint };
     }
-    return { tone: "good", value: t("tiles.healthOk"), hint: t("tiles.healthCounts", { passed: doctor.passed, warnings: 0 }) };
+    return { tone: "good", value: t("tiles.healthOk"), hint };
   })();
 
   const version = (() => {
@@ -68,17 +69,17 @@ export default async function AdminDashboardPage() {
       return {
         tone: panelUpdate.preflight.ready ? "action" : "warning",
         value: t("tiles.versionAvailable", { version: panelUpdate.available.version }),
+        // Always says which version you are on: "v1.0.2 available" alone
+        // leaves you working out whether that is one release ahead or six.
         hint: panelUpdate.preflight.ready
-          ? installed
-            ? t("tiles.versionOn", { version: installed })
-            : undefined
-          : t("tiles.versionBlocked", { count: blocking }),
+          ? t("tiles.versionCurrent", { version: installed ?? "?" })
+          : t("tiles.versionBlocked", { version: installed ?? "?", count: blocking }),
       };
     }
     return {
       tone: "good",
       value: installed ? t("tiles.versionValue", { version: installed }) : t("unknown"),
-      hint: panelUpdate.available.checked ? t("tiles.versionCurrent") : t("tiles.versionUnchecked"),
+      hint: panelUpdate.available.checked ? t("tiles.versionUpToDate") : t("tiles.versionUnchecked"),
     };
   })();
 
@@ -101,14 +102,9 @@ export default async function AdminDashboardPage() {
         ? { tone: "good", value: t("tiles.centralOn"), hint: t("tiles.centralOnHint") }
         : { tone: "idle", value: t("tiles.centralOff"), hint: t("tiles.centralOffHint") };
 
-  // Failures first, then warnings — the same order System Health uses, so the
-  // two screens do not disagree about what matters most.
-  const attentionChecks = doctor
-    ? [
-        ...doctor.checks.filter((c) => c.status === "fail"),
-        ...doctor.checks.filter((c) => c.status === "warn"),
-      ]
-    : [];
+  // Ordering happens inside the list, which interleaves these with the recorded
+  // failures; here they are just the ones that are not passing.
+  const attentionChecks = doctor ? doctor.checks.filter((c) => c.status !== "pass") : [];
 
   return (
     <div className="space-y-6">
@@ -128,10 +124,14 @@ export default async function AdminDashboardPage() {
 
       <AttentionList checks={attentionChecks} errorGroups={errorGroups} />
 
-      {/* Weighted, and `items-start`: the feed is the wider of the two because
-          its rows are sentences, and stretching a two-row card to match ten
-          rows of feed just prints 300px of empty card. */}
-      <div className="grid items-start gap-4 lg:grid-cols-3">
+      <QuickActions />
+
+      {/* Weighted but equal height: the feed is the wider of the two because
+          its rows are sentences, and both stretch to the taller so the row
+          ends on one line. Each card pins its own footer link to the bottom,
+          so the slack falls between the list and the link rather than leaving
+          a card that stops halfway up its neighbour. */}
+      <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <ActivityFeed
             entries={activity.activity_log}
@@ -140,6 +140,7 @@ export default async function AdminDashboardPage() {
         </div>
         <PeopleCard users={stats?.users} roles={stats?.roles} impersonation={impersonation} />
       </div>
+
     </div>
   );
 }

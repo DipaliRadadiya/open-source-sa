@@ -240,25 +240,22 @@
       "central": "Central"
     },
     "dashboardTitle": "Panel de administración",
-    "dashboardSubtitle": "Todo lo que necesita tu atención, en un solo lugar.",
+    "dashboardSubtitle": "Supervisa el estado del panel, las actualizaciones, el acceso y la actividad reciente.",
     "unknown": "Desconocido",
     "tiles": {
       "health": "Estado del sistema",
       "healthOk": "Todas las comprobaciones superadas",
-      "healthFailed": "{count, plural, one {# comprobación fallida} other {# comprobaciones fallidas}}",
       "healthWarnings": "{count, plural, one {# advertencia} other {# advertencias}}",
-      "healthCounts": "{passed} superadas · {warnings} advertencias",
       "healthUnknown": "No se pudo ejecutar la comprobación",
       "version": "Versión del panel",
       "versionValue": "v{version}",
       "versionAvailable": "v{version} disponible",
-      "versionOn": "Estás en la v{version}",
-      "versionCurrent": "Al día",
+      "versionCurrent": "Actual v{version}",
       "versionUnchecked": "El servidor de versiones no respondió",
       "versionUnknown": "No se pudo leer la versión",
       "errors": "Fallos",
       "errorsNone": "Nada ha fallado",
-      "errorsFound": "{count, plural, one {# problema} other {# problemas}}",
+      "errorsFound": "{count, plural, one {# error reciente} other {# errores recientes}}",
       "errorsWindow": "En los últimos {count} registros",
       "errorsUnknown": "No se pudo leer el registro",
       "central": "Central",
@@ -267,37 +264,57 @@
       "centralOff": "Sin conectar",
       "centralOffHint": "Se gestiona solo desde este panel",
       "centralUnknown": "No se pudo leer la conexión",
-      "versionBlocked": "{count, plural, one {Bloqueada por # comprobación fallida} other {Bloqueada por # comprobaciones fallidas}}"
+      "versionBlocked": "Actual v{version} · {count, plural, one {bloqueada por # comprobación fallida} other {bloqueada por # comprobaciones fallidas}}",
+      "healthSummary": "{failed} fallidas · {warnings} advertencias",
+      "healthPassed": "{count, plural, one {# comprobación superada} other {# comprobaciones superadas}}",
+      "versionUpToDate": "Al día"
     },
     "attention": {
       "title": "Necesita atención",
-      "count": "{count, plural, one {# elemento} other {# elementos}}",
-      "checkFailed": "Comprobación fallida",
-      "checkWarning": "Advertencia",
-      "occurrences": "{count}×",
-      "more": "{count, plural, one {# más sin mostrar} other {# más sin mostrar}}"
+      "count": "{count, plural, one {# problema} other {# problemas}}",
+      "openHealth": "Abrir estado del sistema",
+      "openErrors": "Ver registro de errores",
+      "rowFailed": "Estado del sistema con {count, plural, one {# comprobación fallida} other {# comprobaciones fallidas}}",
+      "rowFailures": "{count, plural, one {# fallo de comando reciente} other {# fallos de comando recientes}}",
+      "rowWarnings": "{count, plural, one {# advertencia por revisar} other {# advertencias por revisar}}",
+      "namesMore": "{names} y {count} más",
+      "failuresReason": "La mayoría indica: {reason}",
+      "failuresOccurrences": "{count, plural, one {# aparición registrada} other {# apariciones registradas}}"
     },
     "feed": {
       "title": "Actividad reciente",
       "today": "{count, plural, one {# hoy} other {# hoy}}",
       "empty": "Todavía no ha pasado nada.",
       "viewAll": "Ver el registro completo",
-      "system": "Sistema"
+      "system": "Sistema",
+      "sentenceRepeated": "{who} {what} {count} veces",
+      "sentenceOnce": "{who} {what}",
+      "mostRecent": "Más reciente {when}",
+      "someone": "Alguien",
+      "between": "Desde {first} hasta {last}"
     },
     "people": {
       "title": "Acceso",
       "admins": "Administradores",
-      "ofUsers": "De {total} usuarios",
       "roles": "Roles de permisos",
-      "rolesHint": "A qué pueden llegar los no administradores",
       "manage": "Gestionar usuarios",
       "impersonation": "Suplantación",
-      "impersonationLast": "Última vez {when}",
-      "impersonationNever": "Nunca usada"
+      "impersonationNever": "Nunca usada",
+      "adminsOf": "{admins} de {total} usuarios",
+      "rolesConfigured": "{count, plural, one {# rol configurado} other {# roles configurados}}",
+      "impersonationUsed": "{count, plural, one {Usada una vez} other {Usada # veces}}, última {when}"
     },
     "usersPlaceholder": "La gestión de usuarios llegará en la próxima fase.",
     "rolesPlaceholder": "La gestión de roles llegará en una fase posterior.",
-    "activityPlaceholder": "El registro de actividad llegará en una fase posterior."
+    "activityPlaceholder": "El registro de actividad llegará en una fase posterior.",
+    "quick": {
+      "title": "Acciones rápidas",
+      "health": "Ejecutar comprobación",
+      "update": "Actualizar el panel",
+      "errors": "Ver registro de errores",
+      "users": "Gestionar usuarios",
+      "central": "Configurar Central"
+    }
   },
   "activity": {
     "title": "Registro de actividad",

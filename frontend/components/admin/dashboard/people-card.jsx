@@ -26,9 +26,11 @@ export async function PeopleCard({ users, roles, impersonation }) {
         icon: UserRoundCog,
         href: "/admin/activity-log?action=impersonation_started",
         label: t("impersonation"),
-        value: num(impersonation?.total ?? 0),
-        hint: impersonation?.total
-          ? t("impersonationLast", { when: impersonation.last?.created_at_human ?? "" })
+        value: impersonation?.total
+          ? t("impersonationUsed", {
+              count: impersonation.total,
+              when: impersonation.last?.created_at_human ?? "",
+            })
           : t("impersonationNever"),
       };
 
@@ -38,16 +40,14 @@ export async function PeopleCard({ users, roles, impersonation }) {
       icon: Users,
       href: "/admin/users",
       label: t("admins"),
-      value: num(users?.admins),
-      hint: t("ofUsers", { total: num(users?.total) }),
+      value: t("adminsOf", { admins: num(users?.admins), total: num(users?.total) }),
     },
     {
       key: "roles",
       icon: ShieldCheck,
       href: "/admin/roles",
       label: t("roles"),
-      value: num(roles?.total),
-      hint: t("rolesHint"),
+      value: t("rolesConfigured", { count: roles?.total ?? 0 }),
     },
     impersonationRow,
   ].filter(Boolean);
@@ -70,13 +70,13 @@ export async function PeopleCard({ users, roles, impersonation }) {
               <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                 <row.icon className="size-3.5" aria-hidden />
               </span>
+              {/* Label then the fact in words. A bare figure in a right-hand
+                  column made you pair "Administrators" with "2" across the
+                  width of the card and work out what the 2 counted. */}
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{row.label}</p>
-                <p className="text-xs text-muted-foreground">{row.hint}</p>
+                <p className="text-xs text-muted-foreground">{row.value}</p>
               </div>
-              <p className="shrink-0 font-mono text-base leading-none font-semibold tabular-nums">
-                {row.value}
-              </p>
             </Link>
           </li>
         ))}

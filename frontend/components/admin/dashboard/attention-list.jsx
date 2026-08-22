@@ -1,97 +1,130 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import { CircleX, TriangleAlert, Terminal, ChevronRight } from "lucide-react";
+import { getTranslations, getFormatter } from "next-intl/server";
+import { ArrowRight, CircleX, Terminal, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { MAX_NAMES, summarizeAttention } from "@/lib/admin/attention-summary";
 
 /**
- * What is wrong, spelled out, on the page you land on.
+ * Whether anything is urgent, what the biggest thing is, and where to go next.
  *
- * Two different sources — failed installation checks and recorded failures —
- * because from the reader's side they are the same question. Splitting them
- * into two screens means the answer to "is anything broken" is spread across
- * System Health and the Error Log, and the dashboard between them said neither.
+ * It used to print every failed check, every command failure and every warning
+ * — seventeen rows of shell output on the page you open to find out whether you
+ * need to do anything. That is a diagnostic report, and there are two pages
+ * that already do it properly. Here each kind of problem gets ONE row: how many
+ * there are, which ones (a few, by name), and the way through to the detail.
  *
- * The evidence is shown, not just the count: "Privileged commands failed" sends
- * you looking, while "not permitted: useradd, systemctl" is often the whole
- * diagnosis. Capped at six, with the overflow named rather than dropped.
+ * At most three rows, because there are only three kinds.
  */
-const MAX_ROWS = 6;
-
-function Row({ tone, icon: Icon, title, detail, meta, href }) {
+function Row({ tone, icon: Icon, title, summary, action, href }) {
   return (
     <li>
       <Link
         href={href}
-        className="group flex items-start gap-3 px-5 py-3 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="group flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
-        <Icon
+        {/* A tinted square rather than a loose glyph: it gives the three rows a
+            shared left edge to scan down, and the title lines up with it. */}
+        <span
           className={cn(
-            "mt-0.5 size-4 shrink-0",
-            tone === "fail" ? "text-destructive" : "text-warning",
+            "flex size-8 shrink-0 items-center justify-center rounded-lg",
+            tone === "fail" ? "bg-destructive/10" : "bg-warning/10",
           )}
-          aria-hidden
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <p
-              className={cn(
-                "text-sm font-medium",
-                tone === "fail" ? "text-destructive" : "text-warning",
-              )}
-            >
-              {title}
-            </p>
-            {meta ? <p className="text-xs text-muted-foreground">{meta}</p> : null}
-          </div>
-          {/* Wraps rather than truncates: this line is the diagnosis, and
-              "not permitted: useradd, systemctl, ufw, apt-ge…" cuts off at
-              exactly the point where it starts being useful. */}
-          {detail ? (
-            <p className="mt-0.5 font-mono text-xs break-words text-muted-foreground">{detail}</p>
-          ) : null}
+        >
+          <Icon
+            className={cn("size-4", tone === "fail" ? "text-destructive" : "text-warning")}
+            aria-hidden
+          />
+        </span>
+        <div className="min-w-64 flex-1 space-y-0.5">
+          <p
+            className={cn(
+              "text-sm font-medium",
+              tone === "fail" ? "text-destructive" : "text-foreground",
+            )}
+          >
+            {title}
+          </p>
+          {summary ? <p className="text-sm text-muted-foreground">{summary}</p> : null}
         </div>
-        <ChevronRight
-          className="mt-0.5 size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5"
-          aria-hidden
-        />
+        <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
+          {action}
+          <ArrowRight
+            className="size-3.5 transition-transform group-hover:translate-x-0.5"
+            aria-hidden
+          />
+        </span>
       </Link>
     </li>
   );
 }
 
 export async function AttentionList({ checks = [], errorGroups = [] }) {
-  const t = await getTranslations("admin.attention");
+  const [t, format] = await Promise.all([
+    getTranslations("admin.attention"),
+    getFormatter(),
+  ]);
 
-  const rows = [
-    ...checks.map((c) => ({
-      key: `check-${c.key}`,
-      tone: c.status === "fail" ? "fail" : "warn",
-      icon: c.status === "fail" ? CircleX : TriangleAlert,
-      title: c.title,
-      detail: c.detail,
-      meta: t(c.status === "fail" ? "checkFailed" : "checkWarning"),
+  const { failed, warnings, failures, total } = summarizeAttention({ checks, errorGroups });
+  if (!total) return null;
+
+  // "Privileged commands, Services and Web server" — the API's own titles, in
+  // the reader's language, with the tail counted rather than dropped.
+  const nameList = (names) => {
+    const shown = names.slice(0, MAX_NAMES);
+    const rest = names.length - shown.length;
+    // "A, B and C" when that is all of them; a plain comma list when a tail
+    // follows, so it does not read "A, B, and C and 1 more".
+    const joined = format.list(shown, { type: rest > 0 ? "unit" : "conjunction" });
+    return rest > 0 ? t("namesMore", { names: joined, count: rest }) : joined;
+  };
+
+  const rows = [];
+
+  if (failed.count) {
+    rows.push({
+      key: "failed",
+      tone: "fail",
+      icon: CircleX,
+      title: t("rowFailed", { count: failed.count }),
+      summary: nameList(failed.names),
+      action: t("openHealth"),
       href: "/admin/doctor",
-    })),
-    ...errorGroups.map((g) => ({
-      key: `error-${g.key}`,
+    });
+  }
+
+  if (failures.count) {
+    rows.push({
+      key: "failures",
       tone: "warn",
       icon: Terminal,
-      // Named by what broke, in the same words the Error Log uses.
-      title:
-        g.kind === "operation"
-          ? `${g.feature ?? "?"} · ${g.operation ?? "?"}`
-          : `${g.method ?? "?"} ${g.route ?? "?"}`,
-      detail: g.occurrences[0]?.error ?? g.exceptionShort ?? null,
-      meta: g.count > 1 ? t("occurrences", { count: g.count }) : null,
+      // Distinct problems, matching the Failures tile above it. Counting
+      // occurrences instead put "100 recent command failures" under a tile
+      // reading "11 recent errors" — two numbers for one thing, and the 100
+      // was really just the size of the window we looked at.
+      title: t("rowFailures", { count: failures.distinct }),
+      // Only claimed when one stderr genuinely accounts for most of them;
+      // otherwise say how many times they happened, which is true whatever
+      // they were.
+      summary: failures.reason
+        ? t("failuresReason", { reason: failures.reason })
+        : t("failuresOccurrences", { count: failures.count }),
+      action: t("openErrors"),
       href: "/admin/error-logs",
-    })),
-  ];
+    });
+  }
 
-  if (!rows.length) return null;
-
-  const shown = rows.slice(0, MAX_ROWS);
-  const hidden = rows.length - shown.length;
+  if (warnings.count) {
+    rows.push({
+      key: "warnings",
+      tone: "warn",
+      icon: TriangleAlert,
+      title: t("rowWarnings", { count: warnings.count }),
+      summary: nameList(warnings.names),
+      action: t("openHealth"),
+      href: "/admin/doctor",
+    });
+  }
 
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-sm">
@@ -99,20 +132,16 @@ export async function AttentionList({ checks = [], errorGroups = [] }) {
         <h2 className="font-heading text-base leading-snug font-semibold tracking-tight">
           {t("title")}
         </h2>
-        <p className="text-sm text-muted-foreground">{t("count", { count: rows.length })}</p>
+        {/* Text, not a link. These issues live on two different pages, so a
+            single "view all" would have to pick one and be wrong about the
+            rest; each row carries the destination that actually holds it. */}
+        <p className="text-sm text-muted-foreground">{t("count", { count: total })}</p>
       </div>
       <ul className="divide-y">
-        {shown.map((row) => (
+        {rows.map((row) => (
           <Row key={row.key} {...row} />
         ))}
       </ul>
-      {/* Never a silent cap: a list that quietly stops at six reads as "six is
-          all there is". */}
-      {hidden > 0 ? (
-        <div className="border-t bg-muted/20 px-5 py-2.5">
-          <p className="text-xs text-muted-foreground">{t("more", { count: hidden })}</p>
-        </div>
-      ) : null}
     </Card>
   );
 }

@@ -240,25 +240,22 @@
       "central": "सेंट्रल"
     },
     "dashboardTitle": "एडमिन डैशबोर्ड",
-    "dashboardSubtitle": "जिस पर आपका ध्यान चाहिए, सब एक जगह।",
+    "dashboardSubtitle": "पैनल की स्थिति, अपडेट, पहुँच और हाल की व्यवस्थापक गतिविधि पर नज़र रखें।",
     "unknown": "अज्ञात",
     "tiles": {
       "health": "सिस्टम स्थिति",
       "healthOk": "सभी जाँचें सफल",
-      "healthFailed": "{count, plural, one {# जाँच विफल} other {# जाँचें विफल}}",
       "healthWarnings": "{count, plural, one {# चेतावनी} other {# चेतावनियाँ}}",
-      "healthCounts": "{passed} सफल · {warnings} चेतावनियाँ",
       "healthUnknown": "जाँच नहीं चल सकी",
       "version": "पैनल संस्करण",
       "versionValue": "v{version}",
       "versionAvailable": "v{version} उपलब्ध",
-      "versionOn": "आप v{version} पर हैं",
-      "versionCurrent": "अद्यतित",
+      "versionCurrent": "वर्तमान v{version}",
       "versionUnchecked": "रिलीज़ सर्वर तक नहीं पहुँच सके",
       "versionUnknown": "संस्करण नहीं पढ़ा जा सका",
       "errors": "विफलताएँ",
       "errorsNone": "कुछ भी विफल नहीं हुआ",
-      "errorsFound": "{count, plural, one {# समस्या} other {# समस्याएँ}}",
+      "errorsFound": "{count, plural, one {# हालिया त्रुटि} other {# हालिया त्रुटियाँ}}",
       "errorsWindow": "पिछले {count} रिकॉर्ड में",
       "errorsUnknown": "लॉग नहीं पढ़ा जा सका",
       "central": "केंद्रीय",
@@ -267,37 +264,57 @@
       "centralOff": "जुड़ा नहीं",
       "centralOffHint": "केवल इसी पैनल से प्रबंधित",
       "centralUnknown": "कनेक्शन नहीं पढ़ा जा सका",
-      "versionBlocked": "{count, plural, one {# विफल जाँच से रुका} other {# विफल जाँचों से रुका}}"
+      "versionBlocked": "वर्तमान v{version} · {count, plural, one {# विफल जाँच से रुका} other {# विफल जाँचों से रुका}}",
+      "healthSummary": "{failed} विफल · {warnings} चेतावनियाँ",
+      "healthPassed": "{count, plural, one {# जाँच सफल} other {# जाँचें सफल}}",
+      "versionUpToDate": "अद्यतित"
     },
     "attention": {
       "title": "ध्यान चाहिए",
-      "count": "{count, plural, one {# आइटम} other {# आइटम}}",
-      "checkFailed": "विफल जाँच",
-      "checkWarning": "चेतावनी",
-      "occurrences": "{count}×",
-      "more": "{count, plural, one {# और नहीं दिखाया गया} other {# और नहीं दिखाए गए}}"
+      "count": "{count, plural, one {# समस्या} other {# समस्याएँ}}",
+      "openHealth": "सिस्टम स्थिति खोलें",
+      "openErrors": "त्रुटि लॉग देखें",
+      "rowFailed": "सिस्टम स्थिति में {count, plural, one {# विफल जाँच} other {# विफल जाँचें}}",
+      "rowFailures": "{count, plural, one {# हालिया कमांड विफलता} other {# हालिया कमांड विफलताएँ}}",
+      "rowWarnings": "{count, plural, one {# चेतावनी की समीक्षा चाहिए} other {# चेतावनियों की समीक्षा चाहिए}}",
+      "namesMore": "{names} और {count} अन्य",
+      "failuresReason": "अधिकतर बताते हैं: {reason}",
+      "failuresOccurrences": "{count, plural, one {# बार दर्ज} other {# बार दर्ज}}"
     },
     "feed": {
       "title": "हाल की गतिविधि",
       "today": "{count, plural, one {आज #} other {आज #}}",
       "empty": "अभी तक कुछ नहीं हुआ।",
       "viewAll": "पूरा लॉग देखें",
-      "system": "सिस्टम"
+      "system": "सिस्टम",
+      "sentenceRepeated": "{who} ने {count} बार {what}",
+      "sentenceOnce": "{who} ने {what}",
+      "mostRecent": "सबसे हाल में {when}",
+      "someone": "किसी ने",
+      "between": "{first} से {last} तक"
     },
     "people": {
       "title": "पहुँच",
       "admins": "प्रशासक",
-      "ofUsers": "{total} उपयोगकर्ताओं में से",
       "roles": "अनुमति भूमिकाएँ",
-      "rolesHint": "गैर-प्रशासक कहाँ तक पहुँच सकते हैं",
       "manage": "उपयोगकर्ता प्रबंधित करें",
       "impersonation": "प्रतिरूपण",
-      "impersonationLast": "पिछली बार {when}",
-      "impersonationNever": "कभी इस्तेमाल नहीं हुआ"
+      "impersonationNever": "कभी इस्तेमाल नहीं हुआ",
+      "adminsOf": "{total} उपयोगकर्ताओं में से {admins}",
+      "rolesConfigured": "{count, plural, one {# भूमिका कॉन्फ़िगर} other {# भूमिकाएँ कॉन्फ़िगर}}",
+      "impersonationUsed": "{count, plural, one {एक बार इस्तेमाल} other {# बार इस्तेमाल}}, पिछली {when}"
     },
     "usersPlaceholder": "उपयोगकर्ता प्रबंधन अगले चरण में आ रहा है।",
     "rolesPlaceholder": "भूमिका प्रबंधन बाद के चरण में आ रहा है।",
-    "activityPlaceholder": "गतिविधि लॉग बाद के चरण में आ रहा है।"
+    "activityPlaceholder": "गतिविधि लॉग बाद के चरण में आ रहा है।",
+    "quick": {
+      "title": "त्वरित कार्य",
+      "health": "जाँच चलाएँ",
+      "update": "पैनल अपडेट करें",
+      "errors": "त्रुटि लॉग देखें",
+      "users": "उपयोगकर्ता प्रबंधित करें",
+      "central": "Central कॉन्फ़िगर करें"
+    }
   },
   "activity": {
     "title": "गतिविधि लॉग",

@@ -12,39 +12,40 @@ import { Card } from "@/components/ui/card";
  * and then having to find System Health in the sidebar is the same dead end as
  * not being told at all.
  *
- * Tone is carried by the icon and the value, not by tinting the whole card:
- * four tinted cards side by side is a traffic light nobody can read. The one
- * exception is `attention`, which earns a border because it is the state the
- * page exists to surface.
+ * Severity is an accent down the left edge and a tinted icon, never a filled
+ * card. Four saturated cards in a row is a traffic light nobody can read —
+ * every tile shouts and none of them wins. With a 3px edge the eye still sorts
+ * them instantly, and the numbers stay legible foreground text.
  */
 const TONES = {
-  attention: { chip: "bg-destructive/10 text-destructive", value: "text-destructive", card: "border-destructive/30" },
-  warning: { chip: "bg-warning/10 text-warning", value: "text-warning", card: "" },
-  action: { chip: "bg-primary/10 text-primary", value: "text-primary", card: "" },
-  good: { chip: "bg-success/10 text-success", value: "", card: "" },
-  idle: { chip: "bg-muted text-muted-foreground", value: "text-muted-foreground", card: "" },
+  attention: { chip: "bg-destructive/10 text-destructive", accent: "bg-destructive/50", value: "text-destructive", card: "bg-destructive/[0.02]" },
+  warning: { chip: "bg-warning/10 text-warning", accent: "bg-warning/50", value: "", card: "" },
+  action: { chip: "bg-primary/10 text-primary", accent: "bg-primary/50", value: "", card: "" },
+  good: { chip: "bg-success/10 text-success", accent: "bg-success/45", value: "", card: "" },
+  idle: { chip: "bg-muted text-muted-foreground", accent: "bg-border", value: "", card: "" },
 };
 
 export function StatusTile({ icon: Icon, title, value, hint, tone = "idle", href }) {
-  const { chip, value: valueTint, card } = TONES[tone] ?? TONES.idle;
+  const { chip, accent, card, value: valueTint } = TONES[tone] ?? TONES.idle;
 
   return (
     <Card
       className={cn(
-        "group gap-0 py-0 shadow-sm transition-colors hover:bg-muted/40",
+        "group relative gap-0 overflow-hidden py-0 shadow-sm transition-colors hover:bg-muted/40",
         card,
       )}
     >
+      <span className={cn("absolute inset-y-0 left-0 w-[2px]", accent)} aria-hidden />
       <Link
         href={href}
         // The whole tile is the target: a 4px chevron is not a click area.
-        className="flex h-full flex-col gap-2 rounded-xl p-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+        className="flex h-full flex-col gap-2 rounded-xl py-4 pr-4 pl-5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
       >
         <div className="flex items-center gap-2">
           <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-md", chip)}>
             <Icon className="size-3.5" aria-hidden />
           </span>
-          <p className="min-w-0 flex-1 truncate text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          <p className="min-w-0 flex-1 text-xs font-medium tracking-wide text-balance text-muted-foreground uppercase">
             {title}
           </p>
           <ChevronRight
