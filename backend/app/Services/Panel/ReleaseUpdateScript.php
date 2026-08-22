@@ -42,6 +42,7 @@ class ReleaseUpdateScript
         'link_shared',
         'composer_install',
         'frontend_build',
+        'sync_privileges',
         'maintenance_on',
         'migrate',
         'swap',
@@ -190,6 +191,17 @@ class ReleaseUpdateScript
         else BUILD_HEAP_MB=2048; fi
         {$asUser}env "PATH={$node}:/usr/local/bin:/usr/bin:/bin" npm --prefix {$release}/frontend ci --no-audit --no-fund
         {$asUser}env "PATH={$node}:/usr/local/bin:/usr/bin:/bin" "NODE_OPTIONS=--max-old-space-size=\${BUILD_HEAP_MB}" npm --prefix {$release}/frontend run build
+
+        # The first step that changes anything outside the release directory,
+        # and so the first one after LAST_SAFE_STEP. It is deliberately not
+        # allowed to fail the update: an otherwise-good update refused over a
+        # privilege grant makes the update itself the outage, and the grant
+        # that is already there still works for the code that is already
+        # running. A failure leaves the existing file untouched -- see
+        # PanelSudoers -- and panel:doctor's PrivilegeCheck reports the drift
+        # by name afterwards, which is the surface an operator already reads.
+        note sync_privileges
+        {$run}{$php} {$newBackend}/artisan panel:sudoers || echo "WARNING: sudoers not synced; run 'artisan panel:sudoers' as root"
 
         # ---- Past here, failures are visible to users.
 

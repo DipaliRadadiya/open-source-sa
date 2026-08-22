@@ -26,6 +26,7 @@ return [
         'configure_services' => 'Dienste werden abgestimmt',
         'optimize' => 'Caches werden neu aufgebaut',
         'frontend_build' => 'Oberfläche wird gebaut (das ist der langsame Teil)',
+        'sync_privileges' => 'Berechtigungen des Panels werden aktualisiert',
         'restart_services' => 'Dienste werden neu gestartet',
         'maintenance_off' => 'Wartungsmodus wird verlassen',
         'health_check' => 'Neue Version wird überprüft',

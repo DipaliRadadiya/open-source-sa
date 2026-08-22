@@ -26,6 +26,7 @@ return [
         'configure_services' => 'Réglage des services',
         'optimize' => 'Reconstruction des caches',
         'frontend_build' => 'Compilation de l’interface (c’est la partie lente)',
+        'sync_privileges' => 'Mise à jour des privilèges du panneau',
         'restart_services' => 'Redémarrage des services',
         'maintenance_off' => 'Sortie du mode maintenance',
         'health_check' => 'Vérification de la nouvelle version',

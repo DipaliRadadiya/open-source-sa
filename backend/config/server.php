@@ -124,8 +124,18 @@ return [
     'privilege' => [
         'sudo' => (bool) env('SERVER_OPS_SUDO', true),
 
-        // Binaries that do not work as the panel user. Mirrors the `bins`
-        // array in install.sh's configure_sudoers().
+        // Binaries that do not work as the panel user.
+        //
+        // This is the ONE list. install.sh's configure_sudoers() no longer
+        // carries a copy of its own — it renders the sudoers file from here
+        // via `artisan panel:sudoers --print`, and so does every update. It
+        // used to be two hand-maintained lists, and every privilege bug this
+        // panel has had was that duplication: `touch`, `certbot`, `openssl`,
+        // `crontab`, `stat` and `mysqldump` were each added to one copy and
+        // not the other, and each one broke a feature that looked configured.
+        //
+        // Adding a binary here is now sufficient. Where it lives on disk, when
+        // that is not /usr/bin, goes in `paths` below.
         'binaries' => [
             'apt-get', 'apt-cache', 'dpkg-query',
             // systemd-run puts the panel update in a transient unit of its
@@ -164,6 +174,57 @@ return [
             'ps', 'kill', 'ss', 'curl', 'unzip', 'zip',
             'tar', 'git', 'fnm', 'wp',
         ],
+
+        // Where a binary lives, when it is not /usr/bin/<name>.
+        //
+        // Only the exceptions, so the list above stays the thing you read to
+        // answer "what may the panel elevate". sudo matches on the *resolved*
+        // absolute path, so a wrong entry here does not degrade — it silently
+        // denies the command with "a password is required", on a feature that
+        // looks configured.
+        //
+        // runuser carries both spellings deliberately: it is in /usr/sbin on
+        // Debian/Ubuntu and /usr/bin on RHEL-family, and sudo ignores entries
+        // whose file does not exist, so listing both is safe and listing one
+        // breaks every asUser() operation — file manager, deployments, wp-cli
+        // — on half the distributions.
+        'paths' => [
+            'useradd' => ['/usr/sbin/useradd'],
+            'userdel' => ['/usr/sbin/userdel'],
+            'usermod' => ['/usr/sbin/usermod'],
+            'groupadd' => ['/usr/sbin/groupadd'],
+            'chpasswd' => ['/usr/sbin/chpasswd'],
+            'runuser' => ['/usr/sbin/runuser', '/usr/bin/runuser'],
+            'nginx' => ['/usr/sbin/nginx'],
+            'apachectl' => ['/usr/sbin/apachectl'],
+            'phpenmod' => ['/usr/sbin/phpenmod'],
+            'phpdismod' => ['/usr/sbin/phpdismod'],
+            'ufw' => ['/usr/sbin/ufw'],
+            'sshd' => ['/usr/sbin/sshd'],
+            'mkswap' => ['/usr/sbin/mkswap'],
+            'swapon' => ['/usr/sbin/swapon'],
+            'swapoff' => ['/usr/sbin/swapoff'],
+            'shutdown' => ['/usr/sbin/shutdown'],
+            'fnm' => ['/usr/local/bin/fnm'],
+            'wp' => ['/usr/local/bin/wp'],
+        ],
+
+        // Granted as patterns rather than names, and so absent from `binaries`.
+        //
+        // PoolManager tests a per-app pool with `php-fpmX.Y -t` before every
+        // reload, and the set of installed versions changes through the panel's
+        // own PHP-version feature. An exact list would need editing every time
+        // a version is added; ServerOps::elevate() mirrors this with its
+        // str_starts_with('php-fpm') check.
+        'wildcards' => [
+            '/usr/sbin/php-fpm*',
+        ],
+
+        // The file the grant is written to. install.sh names it from
+        // PANEL_SLUG, which also defaults the panel's account name — so the
+        // account is the right derivation, with an override for an operator
+        // who set the two differently.
+        'sudoers_file' => env('PANEL_SUDOERS_FILE'),
     ],
 
     /*

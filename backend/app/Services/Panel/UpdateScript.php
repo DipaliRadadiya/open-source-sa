@@ -38,6 +38,7 @@ class UpdateScript
         'resync_site_configs',
         'optimize',
         'frontend_build',
+        'sync_privileges',
         'restart_services',
         'maintenance_off',
         'health_check',
@@ -200,6 +201,23 @@ class UpdateScript
         else BUILD_HEAP_MB=2048; fi
         {$run}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" npm --prefix {$frontend} ci --no-audit --no-fund
         {$run}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" "NODE_OPTIONS=--max-old-space-size=\${BUILD_HEAP_MB}" npm --prefix {$frontend} run build
+
+        # Before the restart, so the new code comes up with the grant it needs
+        # rather than one install-time snapshot older.
+        #
+        # This flow gets it too, and not only the release flow the design doc
+        # describes, because every server in the field is still this shape --
+        # a fix that waits for the migration is a fix nobody has. It is the
+        # single largest source of post-update breakage: touch, certbot and
+        # mysqldump each broke a shipped feature in one week on servers whose
+        # sudoers had not been rewritten since the day they were installed.
+        #
+        # Never fatal: the grant already on disk still serves the code already
+        # running, and refusing an otherwise-good update over it would make the
+        # update the outage. PanelSudoers leaves the existing file untouched on
+        # failure, and panel:doctor names the drift afterwards.
+        note sync_privileges
+        {$run}{$php} {$backend}/artisan panel:sudoers || echo "WARNING: sudoers not synced; run 'artisan panel:sudoers' as root"
 
         note restart_services
         {$run}sudo systemctl reload {$this->service('php_fpm')}

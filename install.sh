@@ -1566,6 +1566,8 @@ configure_sudoers() {
     # it needs root for specific commands. PHP itself runs unprivileged and only
     # these escalate.
     #
+    # The list itself lives in backend/config/server.php, under `privilege`.
+    #
     # Be clear about what this does and does not buy. The list includes `tee`,
     # `chown` and `sh`, because the panel's existing operations use them — and
     # any one of those as root is a path to full root. So this is **not**
@@ -1581,70 +1583,26 @@ configure_sudoers() {
     # (create-system-user, write-vhost-for-domain) that validate their arguments,
     # so the web tier never names a path at all. Until that exists, this is the
     # honest trade and it is written down rather than implied.
-    local bins=(
-        /usr/bin/apt-get /usr/bin/apt-cache /usr/bin/dpkg-query
-        /usr/bin/systemctl /usr/bin/journalctl
-        # The panel update starts from an HTTP request and so inherits the
-        # panel's own php-fpm cgroup, which systemd kills wholesale when that
-        # unit restarts -- which the update itself does, partway through.
-        # systemd-run puts the script in a transient unit of its own so it
-        # survives. setsid and nohup do not help: both deal with signals, and
-        # a cgroup kill is not a signal the process gets to ignore.
-        /usr/bin/systemd-run
-        /usr/sbin/useradd /usr/sbin/userdel /usr/sbin/usermod /usr/sbin/groupadd
-        /usr/sbin/chpasswd /usr/bin/gpasswd /usr/bin/getent /usr/bin/id
-        /usr/bin/tee /usr/bin/touch /usr/bin/mkdir /usr/bin/chown /usr/bin/chmod /usr/bin/rm
-        /usr/bin/cp /usr/bin/mv /usr/bin/ln /usr/bin/install /usr/bin/truncate
-        /usr/bin/find /usr/bin/tail /usr/bin/cat /usr/bin/test /usr/bin/which /usr/bin/stat
-        # openssl writes self-signed keys into /etc/ssl and reads certificate
-        # expiry out of /etc/letsencrypt/live; crontab -l -u reads another
-        # user's crontab during a server sync. Both are root-only.
-        /usr/bin/openssl /usr/bin/crontab
-        # certbot is installed above by install_web_server(); it also has to be
-        # runnable, or every Let's Encrypt issuance fails on /etc/letsencrypt.
-        /usr/bin/certbot
-        # Both paths, deliberately: runuser lives in /usr/sbin on Debian/Ubuntu
-        # and in /usr/bin on RHEL-family. sudo matches on the resolved absolute
-        # path, so a single wrong entry silently denies every asUser() operation
-        # -- file manager, deployments, wp-cli -- with "a password is required".
-        # sudo ignores entries whose file does not exist, so listing both is safe.
-        /usr/sbin/runuser /usr/bin/runuser /usr/bin/sh /usr/bin/env
-        /usr/sbin/nginx /usr/sbin/apachectl /usr/bin/lswsctrl
-        /usr/sbin/phpenmod /usr/sbin/phpdismod /usr/bin/update-alternatives
-        # Wildcard, not one entry per version: PoolManager tests a per-app
-        # pool with `php-fpmX.Y -t` before every reload, and the version list
-        # changes as PHP versions are added/removed through the panel's own
-        # Node/PHP-version feature -- a fixed list here would need editing
-        # every time that happens.
-        /usr/sbin/php-fpm*
-        # The dump/restore clients matter as much as the shells. Backups run
-        # `dump_client` from config/server.php -- mysqldump for MySQL,
-        # mongodump/mongorestore for MongoDB -- and a client missing here does
-        # not degrade: sudo answers "a password is required" and the backup
-        # fails with a reference, on a feature that looks configured. Only
-        # mariadb-dump was listed, so MariaDB backups worked and MySQL's did
-        # not, which is the kind of gap nobody finds until they need a restore.
-        /usr/bin/mysql /usr/bin/mysqldump /usr/bin/mariadb /usr/bin/mariadb-dump
-        /usr/bin/redis-cli
-        /usr/bin/mongosh /usr/bin/mongodump /usr/bin/mongorestore
-        /usr/sbin/ufw /usr/bin/fail2ban-client /usr/sbin/sshd
-        /usr/bin/fallocate /usr/sbin/mkswap /usr/sbin/swapon /usr/sbin/swapoff
-        /usr/bin/hostnamectl /usr/bin/timedatectl /usr/sbin/shutdown /usr/bin/df /usr/bin/du
-        /usr/bin/ps /usr/bin/kill /usr/bin/ss /usr/bin/curl /usr/bin/unzip /usr/bin/zip
-        /usr/bin/tar /usr/bin/git /usr/local/bin/fnm /usr/local/bin/wp
-        /usr/bin/rsync
-    )
 
-    local list
-    list=$(printf '%s, ' "${bins[@]}")
-    list="${list%, }"
-
-    cat >/etc/sudoers.d/${PANEL_SLUG} <<SUDOERS
-# Managed by the Control panel installer.
-# See configure_sudoers() in install.sh for what this does and does not contain.
-Defaults:${APP_USER} !requiretty
-${APP_USER} ALL=(root) NOPASSWD: ${list}
-SUDOERS
+    # Rendered by the panel, not written here.
+    #
+    # This function used to carry its own copy of the binary list, which had to
+    # agree with config/server.php and nothing made it. Every privilege bug the
+    # panel has had was that duplication -- touch, certbot, openssl, crontab,
+    # stat and mysqldump were each added to one copy and not the other, and each
+    # broke a feature that looked configured. There is now one list, and this
+    # asks for it.
+    #
+    # As APP_USER, like every other artisan call here: run as root it would
+    # leave root-owned files in storage/framework under a service that is not
+    # root, and the next cache write would fail.
+    #
+    # setup_backend has already run (see main), so vendor/ exists.
+    if ! sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:sudoers --print' \
+        -- "${APP_DIR}/backend" "/usr/bin/php${PHP_VERSION}" >/etc/sudoers.d/${PANEL_SLUG} 2>>"$LOG_FILE"; then
+        rm -f /etc/sudoers.d/${PANEL_SLUG}
+        die "could not render the sudoers grant from config/server.php"
+    fi
     chmod 440 /etc/sudoers.d/${PANEL_SLUG}
 
     # A malformed sudoers file locks everyone out of sudo, so it is validated

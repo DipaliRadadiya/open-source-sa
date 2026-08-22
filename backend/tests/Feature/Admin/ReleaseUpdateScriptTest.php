@@ -35,11 +35,24 @@ it('does nothing that touches the running panel before the build is done', funct
     // defined up there and contains a swap, which only runs on failure. An
     // earlier version of this test sliced from byte zero and failed on that
     // definition, which would have been a real bug had the function been called.
+    //
+    // The region ends at sync_privileges, not at maintenance_on. That step
+    // rewrites /etc/sudoers.d, which is outside the release directory and
+    // therefore outside the property this test is about — slicing to
+    // maintenance_on would have kept passing while quietly covering a step
+    // that does change the machine.
     $start = strpos($script, 'note preflight');
-    $end = strpos($script, 'note maintenance_on');
+    $end = strpos($script, 'note sync_privileges');
     $safeRegion = substr($script, $start, $end - $start);
 
     expect($safeRegion)->toContain('note '.ReleaseUpdateScript::LAST_SAFE_STEP);
+
+    // ...and it is the *last* thing in it, so a step added on the wrong side
+    // of the boundary fails here rather than silently giving up the property.
+    $steps = ReleaseUpdateScript::STEPS;
+    $boundary = array_search(ReleaseUpdateScript::LAST_SAFE_STEP, $steps, true);
+
+    expect($steps[$boundary + 1])->toBe('sync_privileges');
 
     foreach (['artisan down', 'artisan migrate', 'mv -T', 'systemctl restart'] as $live) {
         expect($safeRegion)->not->toContain($live);
@@ -115,4 +128,26 @@ it('never fails the update because pruning failed', function () {
     // Disk left uncollected is untidy. An update reported as failed over it is
     // a lie about work that succeeded.
     expect(renderedScript())->toMatch('/note prune\n[\s\S]*?\|\| true/');
+});
+
+it('syncs privileges before the restart, and never fails the update over it', function () {
+    $script = renderedScript();
+
+    // Against the NEW release: the whole point is to grant what the version
+    // being installed needs, and only its config knows that.
+    expect($script)->toMatch('#/releases/[0-9-]+/backend/artisan panel:sudoers#');
+
+    $line = collect(explode("\n", $script))
+        ->first(fn (string $l): bool => str_contains($l, 'panel:sudoers'));
+
+    // `|| echo` rather than a bare call. The script runs under `set -e` with an
+    // ERR trap, so an unguarded failure would roll the whole update back — and
+    // an otherwise-good update refused over a privilege grant makes the update
+    // itself the outage, on a server whose existing grant still works.
+    expect($line)->toContain('|| echo');
+
+    // Before the services come up on the new code, or the new code's first
+    // privileged operation is the one that discovers the grant is stale.
+    expect(strpos($script, 'note sync_privileges'))
+        ->toBeLessThan(strpos($script, 'note restart_services'));
 });

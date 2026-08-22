@@ -26,6 +26,7 @@ return [
         'configure_services' => 'Ajustando servicios',
         'optimize' => 'Reconstruyendo cachés',
         'frontend_build' => 'Compilando la interfaz (esta es la parte lenta)',
+        'sync_privileges' => 'Actualizando los privilegios del panel',
         'restart_services' => 'Reiniciando servicios',
         'maintenance_off' => 'Saliendo del modo de mantenimiento',
         'health_check' => 'Verificando la nueva versión',

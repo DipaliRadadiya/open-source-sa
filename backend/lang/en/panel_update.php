@@ -33,6 +33,7 @@ return [
         'configure_services' => 'Tuning services',
         'optimize' => 'Rebuilding caches',
         'frontend_build' => 'Building the interface (this is the slow part)',
+        'sync_privileges' => 'Updating the panel’s privileges',
         'restart_services' => 'Restarting services',
         'maintenance_off' => 'Leaving maintenance mode',
         'health_check' => 'Verifying the new version',

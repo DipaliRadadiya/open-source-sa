@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Server\ServerOps;
+use App\Services\Server\SudoersFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Psr\Log\LoggerInterface;
@@ -160,39 +161,30 @@ it('redacts secret command options from the server operations log', function () 
     ));
 });
 
-it('keeps the allowlist in step with what install.sh grants', function () {
-    // Drift here is silent and only shows up on a real server: a binary in
-    // config but not sudoers fails at runtime; one in sudoers but not config
-    // is a privilege granted for nothing.
-    $installer = file_get_contents(dirname(base_path()).'/install.sh');
-    expect($installer)->not->toBeFalse();
+it('escalates exactly what the written grant covers', function () {
+    // This used to diff config against a list parsed out of install.sh. That
+    // list is gone — the installer renders the file from this same config —
+    // so the drift it watched for cannot happen any more, and comparing a
+    // thing to itself would assert nothing.
+    //
+    // The link still worth checking is the other one: the file that ends up in
+    // /etc/sudoers.d against ServerOps at runtime. A binary in the grant that
+    // elevate() does not prefix is a privilege granted for nothing; one it
+    // prefixes that the grant omits fails on a real server with "a password is
+    // required", which is the failure this whole area exists to prevent.
+    $elevate = new ReflectionMethod($this->ops, 'elevate');
 
-    // Terminated on a `)` at the start of its own line, not the first `)` in
-    // the block: the list is commented, and a comment mentioning `asUser()`
-    // ended the match early — so this compared config against roughly half
-    // the grants and reported three dozen phantom omissions.
-    preg_match('/local bins=\((.*?)\n\s*\)/s', $installer, $matches);
-    expect($matches[1] ?? null)->not->toBeNull();
+    foreach (app(SudoersFile::class)->entries() as $path) {
+        $binary = basename($path);
 
-    $granted = collect(explode("\n", $matches[1]))
-        // Drop comment lines before splitting on whitespace, or every word in
-        // the prose becomes a "granted binary".
-        ->reject(fn (string $line): bool => str_starts_with(trim($line), '#'))
-        ->flatMap(fn (string $line): array => preg_split('/\s+/', trim($line)) ?: [])
-        ->filter()
-        // `php-fpm*` is a wildcard covering one binary per installed PHP
-        // version; ServerOps matches it by prefix rather than by name.
-        ->reject(fn (string $path): bool => str_contains($path, '*'))
-        ->map(fn (string $path): string => basename($path))
-        ->unique()
-        ->sort()
-        ->values();
+        // The wildcard stands for php-fpm8.4, php-fpm8.3 and whatever else is
+        // installed; probe it with a concrete member of that family.
+        $command = [str_contains($binary, '*') ? 'php-fpm8.4' : $binary];
 
-    $configured = collect(config('server.privilege.binaries'))->unique()->sort()->values();
-
-    expect($configured->diff($granted)->all())->toBe([], 'in config but not granted by install.sh')
-        ->and($granted->diff($configured)->all())->toBe([], 'granted by install.sh but not in config');
-});
+        expect($elevate->invoke($this->ops, $command))
+            ->toBe(array_merge(['sudo', '-n'], $command), "{$binary} is granted but not escalated");
+    }
+})->skip(fn () => ! function_exists('posix_geteuid') || posix_geteuid() === 0, 'runs as root — nothing is escalated');
 
 it('logs the tail of stdout when a command fails, because many tools report there', function () {
     // Akaunting's installer failed with exit 1 and an empty stderr, so the

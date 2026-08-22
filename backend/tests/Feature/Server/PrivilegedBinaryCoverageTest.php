@@ -148,8 +148,16 @@ it('elevates the binaries that come from config too', function () {
  * The allowlist the panel checks and the sudoers rule the installer writes have
  * to agree, or the panel asks for a privilege the server never granted — and
  * `sudo` answers "a password is required" to a process that cannot supply one.
+ *
+ * This used to parse the list back out of install.sh, because install.sh had a
+ * list to parse. It no longer does: it renders the file with `artisan
+ * panel:sudoers --print`, so the two cannot disagree by construction and there
+ * is nothing left to compare. What is worth asserting is that it still does
+ * that — a well-meaning change putting a literal list back into the installer
+ * would restore the whole class of bug silently, and every test here would
+ * pass.
  */
-it('grants in install.sh everything the panel will try to elevate', function () {
+it('leaves the grant to the panel rather than repeating it in install.sh', function () {
     $installer = base_path('../install.sh');
 
     if (! is_file($installer)) {
@@ -158,21 +166,12 @@ it('grants in install.sh everything the panel will try to elevate', function () 
 
     $source = (string) file_get_contents($installer);
 
-    $granted = [];
+    expect($source)->toContain('artisan panel:sudoers --print');
 
-    if (preg_match('/local bins=\((.*?)\n\s*\)/s', $source, $block) === 1) {
-        preg_match_all('#/(?:usr/)?(?:s?bin|local/bin|local/sbin)/([a-z0-9_.*-]+)#', $block[1], $paths);
-        $granted = array_unique($paths[1]);
-    }
+    // Nothing that looks like a second copy of the list. Matched on any run of
+    // absolute binary paths rather than on the old `bins=(` spelling, so a
+    // reintroduction under a different variable name is caught too.
+    preg_match_all('#(?:/usr(?:/local)?/s?bin/[a-z0-9_.*-]+[ ,]+){3,}#', $source, $runs);
 
-    expect($granted)->not->toBeEmpty('could not parse the sudoers list out of install.sh');
-
-    $missing = array_values(array_filter(
-        (array) config('server.privilege.binaries', []),
-        // `php-fpm*` is granted as a wildcard, matched by prefix in elevate().
-        fn (string $binary) => ! in_array($binary, $granted, true)
-            && ! str_starts_with($binary, 'php-fpm'),
-    ));
-
-    expect($missing)->toBe([], 'in the allowlist but not granted by install.sh: '.implode(', ', $missing));
+    expect($runs[0])->toBe([], 'install.sh appears to carry its own binary list again');
 });

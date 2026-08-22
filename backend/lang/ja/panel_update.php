@@ -26,6 +26,7 @@ return [
         'configure_services' => 'サービスを調整中',
         'optimize' => 'キャッシュを再構築しています',
         'frontend_build' => 'インターフェースをビルドしています (時間のかかる処理です)',
+        'sync_privileges' => 'パネルの権限を更新しています',
         'restart_services' => 'サービスを再起動しています',
         'maintenance_off' => 'メンテナンスモードを解除しています',
         'health_check' => '新しいバージョンを検証しています',
