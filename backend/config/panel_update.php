@@ -58,6 +58,15 @@ return [
         'queue' => env('PANEL_QUEUE_SERVICE', 'panel-queue.service'),
     ],
 
+    /*
+     * The account the panel's services run as. Composer and npm run as this
+     * user, not as root: install.sh builds the frontend that way, and a build
+     * run as root leaves node_modules and .next owned by root under a service
+     * that is not — the two disagreeing is a whole class of post-update
+     * breakage that only shows up at runtime.
+     */
+    'app_user' => env('PANEL_APP_USER', 'panel'),
+
     'preflight' => [
         'min_free_disk_mb' => (int) env('PANEL_UPDATE_MIN_DISK_MB', 2048),
         'min_free_memory_mb' => (int) env('PANEL_UPDATE_MIN_MEMORY_MB', 768),
