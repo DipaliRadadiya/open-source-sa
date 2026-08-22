@@ -91,6 +91,28 @@ class UpdateScript
 
         $run = $dryRun ? 'echo DRY-RUN: ' : '';
 
+        // Build steps run as the panel's own account, never as root.
+        //
+        // Two separate failures, one cause: `systemd-run` starts the update in
+        // a transient unit with a minimal environment, and HOME is not in it.
+        // Composer refuses outright -- "The HOME or COMPOSER_HOME environment
+        // variable must be set for composer to run correctly" -- so every
+        // update failed at composer_install and rolled back. Verified on a
+        // real box: `systemd-run --pipe sh -c 'echo $HOME'` prints nothing.
+        //
+        // The same emptiness sends npm's cache to /root/.npm and leaves
+        // vendor/, node_modules/ and .next/ owned by root under services that
+        // run as `panel` -- which Next.js cannot write its cache into. That
+        // one would only have surfaced *after* fixing composer, on the first
+        // update that got far enough to build.
+        //
+        // `sudo -u <user> -H` fixes both: -H sets HOME to that account's home.
+        // Exactly what ReleaseUpdateScript and install.sh already do; this is
+        // the same lesson as the `safe.directory` fix in 92b20be, which is
+        // also about systemd-run not carrying root's environment.
+        $user = (string) config('panel_update.app_user');
+        $asUser = $dryRun ? 'echo DRY-RUN: ' : "sudo -u {$user} -H ";
+
         return <<<BASH
         #!/usr/bin/env bash
         # Generated for panel update #{$update->getKey()}. Do not edit: this file
@@ -152,7 +174,7 @@ class UpdateScript
         {$run}{$git} checkout --force {$tag}
 
         note composer_install
-        {$run}composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d {$backend}
+        {$asUser}composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d {$backend}
 
         note migrate
         {$run}{$php} {$backend}/artisan migrate --force
@@ -199,8 +221,8 @@ class UpdateScript
         if [ "\$BUILD_RAM_MB" -ge 7500 ]; then BUILD_HEAP_MB=4096
         elif [ "\$BUILD_RAM_MB" -ge 3500 ]; then BUILD_HEAP_MB=3072
         else BUILD_HEAP_MB=2048; fi
-        {$run}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" npm --prefix {$frontend} ci --no-audit --no-fund
-        {$run}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" "NODE_OPTIONS=--max-old-space-size=\${BUILD_HEAP_MB}" npm --prefix {$frontend} run build
+        {$asUser}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" npm --prefix {$frontend} ci --no-audit --no-fund
+        {$asUser}env "PATH={$this->nodeBinDir()}:/usr/local/bin:/usr/bin:/bin" "NODE_OPTIONS=--max-old-space-size=\${BUILD_HEAP_MB}" npm --prefix {$frontend} run build
 
         # Before the restart, so the new code comes up with the grant it needs
         # rather than one install-time snapshot older.

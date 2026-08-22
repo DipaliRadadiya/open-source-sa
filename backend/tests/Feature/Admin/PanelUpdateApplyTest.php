@@ -96,6 +96,28 @@ describe('the generated update script', function () {
         expect($default['state_dir'])->not->toStartWith(dirname(base_path()));
     });
 
+    it('builds as the panel user, because a transient unit has no HOME', function () {
+        // The bug this pins: `systemd-run` starts the update with a minimal
+        // environment and HOME unset. Composer refuses to run at all -- "The
+        // HOME or COMPOSER_HOME environment variable must be set" -- so every
+        // update on every server failed at composer_install and rolled back.
+        // Confirmed on a real box: a transient unit prints an empty $HOME.
+        //
+        // Running as root was wrong for a second reason that would have
+        // surfaced the moment the first was fixed: vendor/, node_modules/ and
+        // .next/ would be owned by root under services that run as `panel`,
+        // and Next.js cannot write its cache into a directory it does not own.
+        $user = config('panel_update.app_user');
+
+        expect($this->script)->toContain("sudo -u {$user} -H composer install")
+            ->and($this->script)->toContain("sudo -u {$user} -H env \"PATH=")
+            // No bare invocation left behind. Asserted on the line start so a
+            // step that reverts to root fails here rather than at 3am on
+            // somebody's server.
+            ->and($this->script)->not->toMatch('/\n\s*composer install/')
+            ->and($this->script)->not->toMatch('/\n\s*env "PATH=/');
+    });
+
     it('pins PATH for the frontend build', function () {
         // npm's shebang is `env node`; unpinned, the build silently uses
         // whatever node happens to be first on PATH.
