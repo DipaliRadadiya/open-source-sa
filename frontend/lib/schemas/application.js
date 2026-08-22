@@ -125,8 +125,16 @@ export const applicationSchema = z.object({
   basic_auth_username: z.string().nullish(),
   is_disabled: z.boolean().default(false),
   disabled_at: z.string().nullish(),
-  // Whether per-application fail2ban is on. The live jail state is NOT here —
-  // that needs a fail2ban-client call, and has its own endpoint.
+  // "This site has a jail configured" — NOT "fail2ban is protecting this site".
+  // Derived by the API from the same jail column its sibling endpoint reports,
+  // since 2026-08-22: before that it came from a stored boolean whose only
+  // writer was unreachable code, so it read false for every site on the server
+  // including ones with a jail actively running, and the dashboard card
+  // disagreed with the site's own fail2ban screen.
+  //
+  // Whether the fail2ban SERVICE is up is a server-wide fact this field cannot
+  // answer — `GET /services` does. Live jail state (bans, counters) needs a
+  // fail2ban-client call and has its own endpoint.
   fail2ban_enabled: z.boolean().default(false),
   ai_bot_policy: z.string().nullish(),
   ai_bot_policy_title: z.string().nullish(),
