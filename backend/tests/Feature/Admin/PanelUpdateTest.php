@@ -1,11 +1,16 @@
 <?php
 
+use App\Actions\Admin\PanelUpdate\QueuePanelUpdate;
+use App\Enums\PanelUpdateStatus;
+use App\Models\PanelUpdate;
 use App\Models\User;
 use App\Services\Panel\AvailableRelease;
 use App\Services\Panel\InstalledPanelInfo;
 use App\Services\Panel\UpdatePreflight;
+use App\Services\Panel\UpdateScript;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
     Cache::flush();
@@ -204,4 +209,46 @@ it('still fails closed when git cannot answer', function () {
 
     expect($check['passed'])->toBeFalse()
         ->and($check['detail'])->toBe('unknown');
+});
+
+it('does not let a finished run nobody watched block the next update', function () {
+    // The row is only advanced by PanelUpdateRunner::reconcile(), and the only
+    // caller is somebody looking at the update page. The run itself is a
+    // detached script that cannot write to the database -- it restarts php-fpm
+    // partway through, which is why progress lives in a file at all.
+    //
+    // So an update that finished unobserved -- tab closed, browser reloaded
+    // into a restarting panel -- left a row saying "running" forever, and every
+    // later press was refused with "An update is already running", for good.
+    // On the test server row #7 said `pending` while its state file had said
+    // `succeeded` for minutes.
+    $dir = storage_path('framework/testing/panel-update');
+    is_dir($dir) || mkdir($dir, 0755, true);
+    config()->set('panel_update.state_dir', $dir);
+
+    $stale = PanelUpdate::create([
+        'user_id' => $this->admin->id,
+        'status' => PanelUpdateStatus::Running,
+        'from_version' => '1.0.0',
+        'from_commit' => str_repeat('a', 40),
+        'to_version' => '1.0.1',
+        'started_at' => now()->subHour(),
+    ]);
+
+    // What the detached script actually wrote, which nobody has read back.
+    file_put_contents(
+        app(UpdateScript::class)->statePath($stale),
+        json_encode(['step' => 'health_check', 'status' => 'succeeded', 'reason' => '', 'at' => now()->toIso8601String()]),
+    );
+
+    try {
+        app(QueuePanelUpdate::class)->execute($this->admin, dryRun: true);
+    } catch (ValidationException $e) {
+        // Whatever else stops it here -- this checkout is not a panel install
+        // -- it must no longer be the phantom run. That was the permanent one.
+        expect($e->getMessage())->not->toBe(__('panel_update.errors.in_progress'));
+    }
+
+    // ...and the phantom is settled rather than left to block the next press.
+    expect($stale->fresh()->status)->toBe(PanelUpdateStatus::Succeeded);
 });

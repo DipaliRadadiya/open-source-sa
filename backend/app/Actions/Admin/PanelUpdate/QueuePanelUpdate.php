@@ -38,13 +38,33 @@ class QueuePanelUpdate
         }
 
         try {
-            if (PanelUpdate::whereIn('status', [
+            // Ask the state file before believing the row.
+            //
+            // A row is only advanced by PanelUpdateRunner::reconcile(), and the
+            // only thing that calls it is somebody looking at the update page.
+            // The run itself is a detached script that cannot write to the
+            // database — it restarts php-fpm partway through, which is the
+            // whole reason progress lives in a file.
+            //
+            // So an update that finished while nobody was watching — the tab
+            // closed, the browser reloaded into a restarting panel, the run
+            // outlived the session — leaves a row saying "running" forever,
+            // and this check then refuses every future update. Permanently.
+            // On the test server: row #7 said `pending` while its state file
+            // had said `succeeded` for several minutes, and the panel answered
+            // "An update is already running" to every press.
+            //
+            // Reconciling first costs one file read and makes the check ask
+            // what actually happened rather than what was last written down.
+            foreach (PanelUpdate::whereIn('status', [
                 PanelUpdateStatus::Pending->value,
                 PanelUpdateStatus::Running->value,
-            ])->exists()) {
-                throw ValidationException::withMessages([
-                    'version' => [__('panel_update.errors.in_progress')],
-                ]);
+            ])->get() as $unfinished) {
+                if ($this->runner->reconcile($unfinished)->status->inFlight()) {
+                    throw ValidationException::withMessages([
+                        'version' => [__('panel_update.errors.in_progress')],
+                    ]);
+                }
             }
 
             $current = $this->installed->installed();
