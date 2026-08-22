@@ -76,7 +76,27 @@ class DatabaseController extends Controller
     ): JsonResponse {
         abort_unless($installers->canInstall($engine), 422, __('errors/database.engine_not_installable'));
 
-        if ($installers->installer($engine)->installed()) {
+        // "The package is present" is not "the panel can use it".
+        //
+        // Installing the engine is two things: apt, and then provisioning the
+        // account the panel connects with. Short-circuiting on the package
+        // alone skipped the second half entirely, so on any server where the
+        // engine was already installed the panel ended up with an engine it
+        // could see and could not touch: the stored connection stayed on
+        // DatabaseManager's defaults (root, TCP, no password), and every query
+        // came back `ERROR 1698 (28000): Access denied for user 'root'@'localhost'`
+        // because Ubuntu's root authenticates over the unix socket.
+        //
+        // Worse, it returned `queued: false`, so the setup page had nothing to
+        // poll and simply sat there — the install looked like it had stopped by
+        // itself. Seen on a real box: MariaDB installed by an earlier panel,
+        // the panel reinstalled beside it, and the engine unusable for ever
+        // with no way to retry from the UI.
+        //
+        // So the check is now "installed *and* answering". A dispatch when it
+        // is not answering re-runs provisionPanelAccount(), which is exactly
+        // the repair — install() already skips apt when the package is there.
+        if ($installers->installer($engine)->installed() && $manager->engine($engine)->available()) {
             return response()->json(['engines' => $manager->capabilities(), 'queued' => false]);
         }
 

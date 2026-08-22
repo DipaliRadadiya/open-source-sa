@@ -3,6 +3,7 @@
 use App\Actions\Server\Database\ExportDatabase;
 use App\Contracts\Firewall;
 use App\Enums\ExportStatus;
+use App\Jobs\InstallDatabaseEngine;
 use App\Jobs\RunDatabaseExport;
 use App\Models\Database;
 use App\Models\DatabaseExport;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Services\Server\ServerOpsResult;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -705,4 +707,71 @@ it('reports an engine that is neither running nor present as not installed', fun
 
     expect($res->json('engines.0.running'))->toBeFalse()
         ->and($res->json('engines.0.installed'))->toBeFalse();
+});
+
+it('repairs an engine that is installed but the panel cannot reach', function () {
+    // "The package is present" is not "the panel can use it". Installing an
+    // engine is apt *and* provisioning the account the panel connects with.
+    //
+    // Short-circuiting on the package alone skipped the second half, so on any
+    // server where the engine was already installed — one the panel was
+    // reinstalled beside, or where MariaDB predates the panel — the connection
+    // stayed on the defaults (root, TCP, no password) and every query came back
+    // ERROR 1698: Ubuntu's root authenticates over the unix socket, not TCP.
+    // The response said `queued: false`, so the setup page had nothing to poll
+    // and the install looked like it had stopped by itself, with no way to retry.
+    Bus::fake();
+
+    Process::fake(function ($process) {
+        $bin = $process->command[0] ?? '';
+
+        // The package is there...
+        if ($bin === 'dpkg-query') {
+            return Process::result(output: 'install ok installed');
+        }
+
+        // ...and the panel cannot authenticate against it.
+        if (in_array($bin, ['mysql', 'mariadb'], true)) {
+            return Process::result(
+                exitCode: 1,
+                errorOutput: "ERROR 1698 (28000): Access denied for user 'root'@'localhost'",
+            );
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    test()->withHeaders(dbAuth())
+        ->postJson('/api/databases/engines/mariadb')
+        ->assertStatus(202)
+        ->assertJsonPath('queued', true);
+
+    Bus::assertDispatched(InstallDatabaseEngine::class);
+});
+
+it('does nothing when the engine is installed and answering', function () {
+    // The normal case must stay a no-op: pressing install on a working engine
+    // should not re-provision it.
+    Bus::fake();
+
+    Process::fake(function ($process) {
+        $bin = $process->command[0] ?? '';
+
+        if ($bin === 'dpkg-query') {
+            return Process::result(output: 'install ok installed');
+        }
+
+        if (in_array($bin, ['mysql', 'mariadb'], true)) {
+            return Process::result(output: '1');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    test()->withHeaders(dbAuth())
+        ->postJson('/api/databases/engines/mariadb')
+        ->assertOk()
+        ->assertJsonPath('queued', false);
+
+    Bus::assertNotDispatched(InstallDatabaseEngine::class);
 });
