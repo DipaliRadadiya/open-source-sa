@@ -79,3 +79,37 @@ it('keeps the env file shared rather than inside a release', function () {
         // Storage too: logs, sessions and queued state must outlive a release.
         ->and($map)->toHaveKey('backend/storage');
 });
+
+it('shares the panel database when it is a SQLite file', function () {
+    config()->set('database.default', 'sqlite');
+    config()->set('database.connections.sqlite.driver', 'sqlite');
+
+    $map = layoutFor('/var/www/panel/releases/20260822-093000/backend')->sharedMap();
+
+    // git archive cannot carry it: backend/database/.gitignore excludes
+    // *.sqlite*, so every release is built without the panel's own database.
+    // Unshared, the panel would open a path that does not exist — and SQLite
+    // creates a missing database rather than refusing, so the update would
+    // migrate a fresh empty schema and report success.
+    expect($map)->toHaveKey('backend/database/database.sqlite')
+        ->and($map['backend/database/database.sqlite'])->toBe('database/database.sqlite');
+});
+
+it('shares no database file when the panel is on MySQL', function () {
+    $default = config('database.default');
+
+    config()->set('database.default', 'mysql');
+    config()->set('database.connections.mysql.driver', 'mysql');
+
+    // linkShared() removes the target before linking, so an unconditional
+    // entry would leave a dangling symlink at backend/database/database.sqlite
+    // — precisely where anything opening it would create an empty database.
+    $map = layoutFor('/var/www/panel/releases/20260822-093000/backend')->sharedMap();
+
+    // Put it back before the test ends: RefreshDatabase rolls its transaction
+    // back on the *default* connection during teardown, and leaving it pointed
+    // at MySQL fails the test for a reason that has nothing to do with it.
+    config()->set('database.default', $default);
+
+    expect($map)->not->toHaveKey('backend/database/database.sqlite');
+});

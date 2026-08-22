@@ -152,10 +152,56 @@ class PanelLayout
      */
     public function sharedMap(): array
     {
-        return [
+        $map = [
             'backend/.env' => '.env',
             'backend/storage' => 'storage',
             'frontend/.env.production' => 'frontend.env',
         ];
+
+        // The panel's own database, when it is a file.
+        //
+        // install.sh installs on SQLite by default (install.sh:925), and
+        // backend/database/.gitignore excludes `*.sqlite*` — so `git archive`
+        // never carries the database into a release, and without this the
+        // panel would come up pointed at a path that does not exist.
+        //
+        // That failure would not have announced itself. SQLite creates a
+        // missing database rather than refusing, so `migrate --force` would
+        // have built a complete fresh schema, the swap would have happened,
+        // /api/health would have answered with the new version, `verify` would
+        // have passed, and the update would have reported success onto a panel
+        // with no users, no servers and no applications. The database backup
+        // from step two would be the only way back, and nothing would have
+        // told anyone to reach for it.
+        //
+        // Added only for SQLite, not unconditionally: on a MySQL panel there
+        // is no file to share, and `linkShared()` removes the target before
+        // linking — leaving a dangling symlink exactly where something opening
+        // it would create an empty database.
+        if ($this->usesSqlite()) {
+            $map['backend/database/database.sqlite'] = 'database/database.sqlite';
+        }
+
+        return $map;
+    }
+
+    /**
+     * Whether this panel keeps its own data in a SQLite file.
+     *
+     * Container-guarded like {@see root()}: the map is read while the layout is
+     * being built, which is before there is reliably an application.
+     */
+    public function usesSqlite(): bool
+    {
+        $container = Container::getInstance();
+
+        if (! $container->bound('config')) {
+            return false;
+        }
+
+        $config = $container->make('config');
+        $connection = $config->get('database.default');
+
+        return $config->get("database.connections.{$connection}.driver") === 'sqlite';
     }
 }
