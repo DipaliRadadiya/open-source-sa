@@ -57,4 +57,12 @@ return [
         'bad_version' => '公開バージョンを読み取れませんでした。',
         'preflight_failed' => 'サーバーは更新の準備ができていません。事前チェックの結果を確認してください。',
     ],
+    'migration' => [
+        'already_migrated' => 'このパネルはすでにリリース構成を使用しています。',
+        'not_a_checkout' => 'backend/ と frontend/ ディレクトリが見つかりません。パネルのチェックアウトではありません。',
+        'no_repository' => 'git リポジトリが見つかりません。リリースの作成に必要です。',
+        'no_env' => 'backend/.env が見つかりません。これなしで移行すると新しい APP_KEY が生成され、保存済みの認証情報がすべて読めなくなります。',
+        'sqlite_not_found' => '設定された SQLite データベースファイルが存在しません。',
+        'root_not_writable' => 'パネルディレクトリに書き込めません。root で実行してください。',
+    ],
 ];

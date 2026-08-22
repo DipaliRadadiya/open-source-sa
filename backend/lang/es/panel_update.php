@@ -57,4 +57,12 @@ return [
         'bad_version' => 'No se pudo leer la versión publicada.',
         'preflight_failed' => 'El servidor no está listo para actualizar. Revisa las comprobaciones previas.',
     ],
+    'migration' => [
+        'already_migrated' => 'Este panel ya usa la estructura de releases.',
+        'not_a_checkout' => 'No se encontraron los directorios backend/ y frontend/, así que esto no es un checkout del panel.',
+        'no_repository' => 'No se encontró un repositorio git, y la actualización necesita uno para construir releases.',
+        'no_env' => 'No se encontró backend/.env. Migrar sin él generaría una nueva APP_KEY y haría ilegibles todas las credenciales guardadas.',
+        'sqlite_not_found' => 'El archivo de base de datos SQLite configurado no existe.',
+        'root_not_writable' => 'El directorio del panel no admite escritura; ejecuta esto como root.',
+    ],
 ];

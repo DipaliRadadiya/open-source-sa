@@ -57,4 +57,12 @@ return [
         'bad_version' => 'Die veröffentlichte Version konnte nicht gelesen werden.',
         'preflight_failed' => 'Der Server ist nicht bereit für ein Update. Prüfen Sie die Vorabprüfungen.',
     ],
+    'migration' => [
+        'already_migrated' => 'Dieses Panel verwendet bereits das Release-Layout.',
+        'not_a_checkout' => 'Keine Verzeichnisse backend/ und frontend/ gefunden – dies ist kein Panel-Checkout.',
+        'no_repository' => 'Kein Git-Repository gefunden; das Update benötigt eines, um Releases zu bauen.',
+        'no_env' => 'Keine backend/.env gefunden. Eine Migration ohne sie würde einen neuen APP_KEY erzeugen und alle gespeicherten Zugangsdaten unlesbar machen.',
+        'sqlite_not_found' => 'Die konfigurierte SQLite-Datenbankdatei existiert nicht.',
+        'root_not_writable' => 'Das Panel-Verzeichnis ist nicht beschreibbar; als root ausführen.',
+    ],
 ];
