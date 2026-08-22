@@ -369,3 +369,49 @@ it('does not let polling the update page use up the update button', function () 
 
     expect($response->status())->not->toBe(429);
 });
+
+it('keeps the update routes answering while the panel is down', function () {
+    // `artisan down` is step two of an update, so from that moment every API
+    // call returned 503 — including the progress feed the page polls and the
+    // button itself. The page could not show the run it exists to show, and
+    // pressing update during one answered "Couldn't start the update" when the
+    // truth was "step 12 of 16". Reproduced on a real server twice.
+    //
+    // Driven through the actual maintenance file rather than by asserting on
+    // config: the middleware reads that file, and a list that looks right but
+    // does not match the dispatched URI would pass a config assertion happily.
+    $down = storage_path('framework/down');
+    file_put_contents($down, json_encode(['except' => []]));
+
+    try {
+        $update = PanelUpdate::create([
+            'user_id' => $this->admin->id,
+            'status' => PanelUpdateStatus::Running,
+            'from_version' => '1.0.0',
+            'from_commit' => str_repeat('a', 40),
+            'to_version' => '1.0.1',
+            'started_at' => now(),
+        ]);
+
+        $headers = ['Authorization' => 'Bearer '.$this->token];
+
+        // The progress feed: what the page polls every few seconds.
+        expect(test()->withHeaders($headers)->getJson("/api/admin/panel-update/{$update->id}")->status())
+            ->not->toBe(503);
+
+        // The page's own read, and the button.
+        expect(test()->withHeaders($headers)->getJson('/api/admin/panel-update')->status())->not->toBe(503)
+            ->and(test()->withHeaders($headers)->postJson('/api/admin/panel-update')->status())->not->toBe(503);
+
+        // Health, because the release flow verifies *before* leaving
+        // maintenance — with health behind the gate it could never pass its
+        // own check and would roll back every time.
+        expect(test()->getJson('/api/health')->status())->not->toBe(503);
+
+        // Everything else still 503s. Maintenance mode has a job: no writes
+        // reach a half-updated panel.
+        expect(test()->withHeaders($headers)->getJson('/api/applications')->status())->toBe(503);
+    } finally {
+        @unlink($down);
+    }
+});
