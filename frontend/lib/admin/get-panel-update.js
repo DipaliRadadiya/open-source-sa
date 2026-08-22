@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { parsedOr } from "@/lib/api/parse-response";
 import { serverFetch } from "@/lib/api/server-fetch";
 import { panelUpdateStateSchema } from "@/lib/schemas/panel-update";
 
@@ -13,8 +14,7 @@ export const getPanelUpdate = cache(async () => {
     const res = await serverFetch("/admin/panel-update");
     if (!res.ok) return null;
     const json = await res.json();
-    const parsed = panelUpdateStateSchema.safeParse(json?.panel_update);
-    return parsed.success ? parsed.data : null;
+    return parsedOr(panelUpdateStateSchema, json?.panel_update, "getPanelUpdate", null);
   } catch {
     return null;
   }

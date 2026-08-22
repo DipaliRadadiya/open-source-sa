@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { parsedOr } from "@/lib/api/parse-response";
 import { serverFetch } from "@/lib/api/server-fetch";
 import { exportsResponseSchema } from "@/lib/schemas/database";
 
@@ -14,10 +15,12 @@ export const getExports = cache(async function getExports() {
     const res = await serverFetch("/databases/exports");
     if (!res.ok) return { exports: [], failed: true };
 
-    const parsed = exportsResponseSchema.safeParse(await res.json());
-    return parsed.success
-      ? { exports: parsed.data.exports, failed: false }
-      : { exports: [], failed: true };
+    // This is where `requested_by` was declared a string and arrives as an
+    // object: the list silently stayed empty for hours with nothing in the
+    // console to say why. The warning is the point.
+    const parsed = parsedOr(exportsResponseSchema, await res.json(), "getExports");
+
+    return parsed ? { exports: parsed.exports, failed: false } : { exports: [], failed: true };
   } catch {
     return { exports: [], failed: true };
   }
