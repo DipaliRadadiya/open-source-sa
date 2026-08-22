@@ -47,7 +47,13 @@ export function AppBreadcrumb({ items }) {
   const title = current?.title;
 
   const trail = [];
-  if (applicationId) {
+  // A page that owns its whole trail. Account is reached from the user menu
+  // rather than the sidebar, so `findActiveNavItem` had nothing to match and it
+  // rendered a lone "Server" — no page name, and the wrong parent for a screen
+  // about you rather than the machine.
+  if (crumb?.root) {
+    trail.push({ key: "root", label: crumb.label, mono: crumb.mono });
+  } else if (applicationId) {
     const applicationHref = `/applications/${applicationId}`;
     trail.push({ key: "root", label: t("breadcrumbApplications"), href: "/applications" });
     if (crumb) {

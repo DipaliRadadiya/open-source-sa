@@ -10,6 +10,11 @@ export const activityEntrySchema = z.object({
     .object({ id: z.number(), username: z.string() })
     .nullable()
     .optional(),
+  // The API has always sent this and this schema never declared it, so Zod
+  // stripped it — which left the log unable to tell "a person did this" from
+  // "the panel did it on a timer", the one distinction that matters when you
+  // are reading it to find out who changed something.
+  is_system: z.boolean().default(false),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
 });

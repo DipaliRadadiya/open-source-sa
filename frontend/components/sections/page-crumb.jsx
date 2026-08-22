@@ -34,15 +34,21 @@ export function usePageCrumb() {
  * `href` makes the entry a link — the application name is an ancestor of every
  * screen inside that site, not a dead end. `mono` is for entries that are
  * identifiers you might retype (a database name), not for display names.
+ *
+ * `root` replaces the trail entirely instead of hanging off "Server". The
+ * breadcrumb takes its section name from the sidebar catalog, so a page that is
+ * deliberately NOT in the sidebar — Account, reached from the user menu — found
+ * no name and rendered a bare "Server". Wrong twice over: it named no page, and
+ * your account is not part of the server.
  */
-export function PageCrumb({ children, href, mono = false }) {
+export function PageCrumb({ children, href, mono = false, root = false }) {
   const { setCrumb } = usePageCrumb();
 
   useEffect(() => {
     // Built inside the effect so a fresh object each render cannot re-trigger it.
-    setCrumb({ label: children, href, mono });
+    setCrumb({ label: children, href, mono, root });
     return () => setCrumb(null);
-  }, [children, href, mono, setCrumb]);
+  }, [children, href, mono, root, setCrumb]);
 
   return null;
 }

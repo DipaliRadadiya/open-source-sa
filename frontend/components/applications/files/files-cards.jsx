@@ -84,11 +84,19 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
                     {file.name}
                   </button>
                 )}
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="text-xs leading-relaxed text-muted-foreground">
                   {/* The card is the narrow-screen view of the same row, so it
                       carries the same facts — user and group included, since a
                       file owned by the wrong one is exactly what someone
-                      reaches for this screen to check. */}
+                      reaches for this screen to check.
+
+                      Wraps rather than truncating, which is the only way that
+                      sentence is true. At 390px this line has 202px and needs
+                      290px, so `truncate` cut it at "nextcloud:nextc…" — the
+                      owner unreadable, and the mode after it never rendered at
+                      all. That mode is not decoration: a world-writable file
+                      is printed in red right here, and the one screen where
+                      you would go looking for it was hiding it. */}
                   {[
                     file.size_human,
                     file.modified_at_human,

@@ -133,5 +133,5 @@ export const permissionsSchema = z.object({
   mode: z
     .string()
     .trim()
-    .regex(/^[0-7]{3}$/, "invalidMode"),
+    .regex(/^[0-7]?[0-7]{3}$/, "invalidMode"),
 });

@@ -10,6 +10,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { PermissionModeField } from "@/components/applications/files/permission-mode-field";
+import { modeParts } from "@/lib/files/describe-mode";
 
 const DEFAULT_MODE = "644";
 
@@ -25,7 +26,7 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
   // One piece of state: the mode itself. The checkboxes edit its digits, so no
   // combination can be entered that the server would reject.
   const [mode, setMode] = useState(() =>
-    /^[0-7]{3}$/.test(currentMode ?? "") ? currentMode : DEFAULT_MODE,
+    modeParts(currentMode) ? currentMode : DEFAULT_MODE,
   );
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -37,7 +38,14 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (busy || !/^[0-7]{3}$/.test(mode)) return;
+    // Accepts a four-digit mode too. This used to refuse one outright — and
+    // refuse it SILENTLY, with a bare return: on a sticky directory, pressing
+    // Save did nothing at all and said nothing about why.
+    if (busy) return;
+    if (!modeParts(mode)) {
+      setError(t("permissionsDialog.invalidMode"));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {

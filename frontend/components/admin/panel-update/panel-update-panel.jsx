@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations, useFormatter } from "next-intl";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ArrowUpCircle, ArrowRight, CircleCheck, RefreshCw, TriangleAlert, FlaskConical, ExternalLink, WifiOff } from "lucide-react";
+import { ArrowUpCircle, RefreshCw, TriangleAlert, FlaskConical } from "lucide-react";
 import { startPanelUpdate, fetchPanelUpdateRun, refreshPanelUpdateState } from "@/lib/api/panel-update";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { VersionCard } from "./version-card";
+import { PageHeader } from "@/components/ui/page-header";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { UpdateHeader } from "./update-header";
+import { ReleaseNotes } from "./release-notes";
 import { PreflightList } from "./preflight-list";
 import { UpdateProgress } from "./update-progress";
 
@@ -20,9 +24,13 @@ const SLOW_AFTER_MS = 8 * 60 * 1000;
 
 const isActive = (run) => Boolean(run) && (run.status === "pending" || run.status === "running");
 
-export function PanelUpdatePanel({ initialState }) {
+/**
+ * Owns the whole screen, heading included, because "Check again" belongs beside
+ * the title (as Re-check does on System health) and it drives the same state
+ * the card below reads.
+ */
+export function PanelUpdatePanel({ initialState, title, subtitle }) {
   const t = useTranslations("panelUpdate");
-  const format = useFormatter();
   const router = useRouter();
 
   const [state, setState] = useState(initialState);
@@ -112,15 +120,50 @@ export function PanelUpdatePanel({ initialState }) {
     router.refresh();
   }
 
-  const publishedLabel = (() => {
-    if (!state.available.published_at) return null;
-    const d = new Date(state.available.published_at);
-    return Number.isNaN(d.getTime()) ? null : format.dateTime(d, { dateStyle: "medium" });
-  })();
+  // What is standing in the way of the primary button, or null once it is live.
+  // Printed beside the button as well as read out on it: on a screen you visit
+  // once a month, "why is Update grey" should not need a hover to answer.
+  const blockedReason = !state.preflight.ready ? t("notReady") : null;
+
+  // Both actions plus the reason the primary one is off, as one block that the
+  // header band closes its row with. Printed as well as read out on hover: on a
+  // screen you visit once a month, "why is Update grey" should not need a hover.
+  const updateActions = (
+    // A column, sized by whichever of its two rows is wider. That is what keeps
+    // the reason on one line: given a fixed width it wrapped, and given the
+    // whole row it sat beside the buttons instead of under them.
+    <div className="flex w-full flex-col items-end gap-1.5 sm:ml-auto sm:w-auto">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => begin(true)} disabled={starting}>
+          <FlaskConical className="size-4" />
+          {t("dryRun")}
+        </Button>
+        <ReasonTooltip reason={blockedReason}>
+          <Button onClick={() => setConfirmOpen(true)} disabled={Boolean(blockedReason) || starting}>
+            <ArrowUpCircle className="size-4" />
+            {t("updateNow")}
+          </Button>
+        </ReasonTooltip>
+      </div>
+      {/* Capped so the long dry-run hint wraps rather than pushing the version
+          off its own row; every locale's blocked reason fits inside it. */}
+      <p className="max-w-md text-xs text-muted-foreground sm:text-right">
+        {blockedReason ?? t("dryRunHint")}
+      </p>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <VersionCard installed={state.installed} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader title={title} subtitle={subtitle} />
+        {/* Not shrink-0: "Check again" is a verb phrase and grows in other
+            locales, so it wraps under the heading rather than overflowing. */}
+        <Button variant="outline" onClick={checkAgain} disabled={checking}>
+          <RefreshCw className={checking ? "size-4 animate-spin" : "size-4"} />
+          {t("checkAgain")}
+        </Button>
+      </div>
 
       {isActive(run) ? (
         <UpdateProgress run={run} reconnecting={reconnecting} slow={slow} dryRun={dryRun} onFinish={onFinish} />
@@ -128,91 +171,22 @@ export function PanelUpdatePanel({ initialState }) {
         <>
           {run ? <UpdateProgress run={run} dryRun={dryRun} onFinish={onFinish} /> : null}
 
-          {state.update_available ? (
-            <div className="space-y-4 rounded-2xl border border-primary/30 bg-primary/[0.03] p-5">
-              <div className="flex items-start gap-4">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                  <ArrowUpCircle className="size-6 text-primary" aria-hidden />
-                </span>
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="font-medium">{t("updateAvailable", { version: state.available.version })}</p>
-                  {state.installed.version && state.available.version ? (
-                    <p className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground">
-                      v{state.installed.version}
-                      <ArrowRight className="size-3.5" aria-hidden />
-                      <span className="font-medium text-foreground">v{state.available.version}</span>
-                    </p>
-                  ) : null}
-                  {publishedLabel ? (
-                    <p className="text-sm text-muted-foreground">{t("published", { date: publishedLabel })}</p>
-                  ) : null}
-                  {state.available.notes ? (
-                    <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 font-sans text-sm leading-6">
-                      {state.available.notes}
-                    </pre>
-                  ) : null}
-                  {state.available.url ? (
-                    <a
-                      href={state.available.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                    >
-                      {t("releaseNotes")}
-                      <ExternalLink className="size-3.5" />
-                    </a>
-                  ) : null}
-                </div>
-              </div>
+          <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+            <UpdateHeader
+              state={state}
+              divided={state.update_available}
+              actions={state.update_available ? updateActions : null}
+            />
 
-              <PreflightList checks={state.preflight.checks} />
-              {!state.preflight.ready ? (
-                <p className="flex items-start gap-2 text-sm text-warning">
-                  <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-                  <span>{t("notReady")}</span>
-                </p>
-              ) : null}
-
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => setConfirmOpen(true)} disabled={!state.preflight.ready || starting}>
-                  <ArrowUpCircle className="size-4" />
-                  {t("updateNow")}
-                </Button>
-                <Button variant="outline" onClick={() => begin(true)} disabled={starting}>
-                  <FlaskConical className="size-4" />
-                  {t("dryRun")}
-                </Button>
-                <Button variant="ghost" onClick={checkAgain} disabled={checking}>
-                  <RefreshCw className={checking ? "size-4 animate-spin" : "size-4"} />
-                  {t("checkAgain")}
-                </Button>
-              </div>
-
-              {/* "Dry run" is jargon — say what it does so it isn't scary. */}
-              <p className="text-xs text-muted-foreground">{t("dryRunHint")}</p>
-            </div>
-          ) : state.available.checked ? (
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-success/30 bg-success/5 p-4">
-              <CircleCheck className="size-5 shrink-0 text-success" />
-              <p className="flex-1 text-sm font-medium">{t("upToDate")}</p>
-              <Button variant="outline" size="sm" onClick={checkAgain} disabled={checking}>
-                <RefreshCw className={checking ? "size-4 animate-spin" : "size-4"} />
-                {t("checkAgain")}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border bg-muted/30 p-4">
-              <WifiOff className="size-5 shrink-0 text-muted-foreground" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">{t("couldNotCheck")}</p>
-                <p className="text-sm text-muted-foreground">{t("couldNotCheckBody")}</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={checkAgain} disabled={checking}>
-                <RefreshCw className={checking ? "size-4 animate-spin" : "size-4"} />
-                {t("checkAgain")}
-              </Button>
-            </div>
-          )}
+            {state.update_available ? (
+              <>
+                <CardContent className="px-6 py-5">
+                  <PreflightList checks={state.preflight.checks} />
+                </CardContent>
+                <ReleaseNotes notes={state.available.notes} url={state.available.url} />
+              </>
+            ) : null}
+          </Card>
         </>
       )}
 
