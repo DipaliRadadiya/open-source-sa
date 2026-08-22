@@ -1342,7 +1342,12 @@ NGINX
     fi
 
     run systemctl enable nginx
-    run systemctl reload nginx
+    # reload-or-restart, not reload: a stopped unit cannot be reloaded, and
+    # the port check above tells the operator to stop whatever holds :80 --
+    # which on a re-install is this very web server. Following that advice
+    # then killed the install here. Both outcomes are wanted: reload if it is
+    # running, start it if it is not.
+    run systemctl reload-or-restart nginx
     ok "nginx serving ${PANEL_HOST}"
 }
 
@@ -1459,7 +1464,10 @@ CONF
     fi
 
     run systemctl enable apache2
-    run systemctl reload apache2
+    # reload-or-restart, not reload: see the nginx path. A stopped Apache
+    # cannot be reloaded, and the installer's own port-80 advice is what
+    # stops it.
+    run systemctl reload-or-restart apache2
     ok "Apache serving ${PANEL_HOST}"
 }
 
@@ -1673,7 +1681,7 @@ self_signed_apache() {
     run a2ensite "${PANEL_SLUG}-tls"
 
     if apache2ctl configtest >>"$LOG_FILE" 2>&1; then
-        run systemctl reload apache2
+        run systemctl reload-or-restart apache2
         ok "self-signed certificate in place — browsers will warn until a real one is issued"
         TLS_STATE="self-signed"
         SCHEME="https"
@@ -1682,7 +1690,7 @@ self_signed_apache() {
         # beats serving nothing.
         warn "the self-signed configuration did not validate; staying on HTTP"
         run a2dissite "${PANEL_SLUG}-tls"
-        apache2ctl configtest >>"$LOG_FILE" 2>&1 && systemctl reload apache2
+        apache2ctl configtest >>"$LOG_FILE" 2>&1 && systemctl reload-or-restart apache2
         TLS_STATE="none"
         SCHEME="http"
     fi
@@ -1807,7 +1815,7 @@ NGINX
     ln -sf "$tls_conf" /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
 
     if nginx -t >>"$LOG_FILE" 2>&1; then
-        run systemctl reload nginx
+        run systemctl reload-or-restart nginx
         ok "self-signed certificate in place — browsers will warn until a real one is issued"
         TLS_STATE="self-signed"
         SCHEME="https"
@@ -1817,7 +1825,7 @@ NGINX
         # one. Serving plain HTTP beats serving nothing.
         warn "the self-signed configuration did not validate; staying on HTTP"
         rm -f /etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf
-        nginx -t >>"$LOG_FILE" 2>&1 && systemctl reload nginx
+        nginx -t >>"$LOG_FILE" 2>&1 && systemctl reload-or-restart nginx
         TLS_STATE="none"
         SCHEME="http"
     fi

@@ -175,3 +175,23 @@ it('leaves the grant to the panel rather than repeating it in install.sh', funct
 
     expect($runs[0])->toBe([], 'install.sh appears to carry its own binary list again');
 });
+
+it('never reloads a web server it may have just told the operator to stop', function () {
+    // The installer refuses to run while something holds port 80 and tells you
+    // to stop it. On a re-install that something *is* the web server it is
+    // about to configure — so following the advice left the unit stopped, and
+    // `systemctl reload` on a stopped unit fails: "apache2.service is not
+    // active, cannot reload." The install died there, twice, on a real box.
+    //
+    // reload-or-restart is right in both states, which is why no bare reload
+    // of nginx or apache2 may come back.
+    $installer = base_path('../install.sh');
+
+    if (! is_file($installer)) {
+        $this->markTestSkipped('install.sh is not in this checkout');
+    }
+
+    preg_match_all('/systemctl reload (nginx|apache2)\b/', (string) file_get_contents($installer), $bare);
+
+    expect($bare[0])->toBe([], 'bare reload(s) in install.sh: '.implode(', ', $bare[0]));
+});
