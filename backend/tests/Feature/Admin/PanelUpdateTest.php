@@ -10,6 +10,7 @@ use App\Services\Panel\UpdatePreflight;
 use App\Services\Panel\UpdateScript;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
@@ -251,4 +252,95 @@ it('does not let a finished run nobody watched block the next update', function 
 
     // ...and the phantom is settled rather than left to block the next press.
     expect($stale->fresh()->status)->toBe(PanelUpdateStatus::Succeeded);
+});
+
+it('reports the tag it is checked out on, not a file somebody forgot', function () {
+    // v1.0.2 and v1.0.3 were both tagged without bumping VERSION, so both ship
+    // 1.0.1. The health check asserts the version it installed is the version
+    // answering, so an update to either builds for twenty minutes and rolls
+    // back. Three releases out of four got this wrong; the file is maintained
+    // by hand and hand-maintenance is the bug.
+    $repo = sys_get_temp_dir().'/panel-version-'.bin2hex(random_bytes(4));
+    mkdir($repo.'/backend', 0755, true);
+    file_put_contents($repo.'/VERSION', "1.0.1\n");
+
+    $git = fn (array $args) => Process::path($repo)->run(array_merge(['git'], $args));
+    $git(['init', '-q']);
+    $git(['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'r']);
+    $git(['tag', 'v1.0.3']);
+
+    $info = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+    $info->shouldReceive('repositoryPath')->andReturn($repo);
+
+    $installed = $info->installed();
+
+    expect($installed['version'])->toBe('1.0.3')
+        ->and($installed['source'])->toBe('tag');
+
+    Process::run(['rm', '-rf', $repo]);
+});
+
+it('falls back to the file on a branch, which every fresh install is on', function () {
+    // install.sh clones --depth 1 onto a branch and fetches no tags, so there
+    // is nothing to describe. That is exactly why the file stays as fallback
+    // rather than being removed.
+    $repo = sys_get_temp_dir().'/panel-version-'.bin2hex(random_bytes(4));
+    mkdir($repo.'/backend', 0755, true);
+    file_put_contents($repo.'/VERSION', "1.0.1\n");
+
+    $git = fn (array $args) => Process::path($repo)->run(array_merge(['git'], $args));
+    $git(['init', '-q']);
+    $git(['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'r']);
+
+    $info = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+    $info->shouldReceive('repositoryPath')->andReturn($repo);
+
+    expect($info->installed()['source'])->toBe('file')
+        ->and($info->installed()['version'])->toBe('1.0.1');
+
+    Process::run(['rm', '-rf', $repo]);
+});
+
+it('ignores a tag that is not version-shaped', function () {
+    // `nightly` or `staging` on a commit is a normal thing to do, and putting
+    // a word where the update compares numbers would break the comparison.
+    $repo = sys_get_temp_dir().'/panel-version-'.bin2hex(random_bytes(4));
+    mkdir($repo.'/backend', 0755, true);
+    file_put_contents($repo.'/VERSION', "1.0.1\n");
+
+    $git = fn (array $args) => Process::path($repo)->run(array_merge(['git'], $args));
+    $git(['init', '-q']);
+    $git(['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'r']);
+    $git(['tag', 'nightly']);
+
+    $info = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+    $info->shouldReceive('repositoryPath')->andReturn($repo);
+
+    expect($info->installed()['source'])->toBe('file');
+
+    Process::run(['rm', '-rf', $repo]);
+});
+
+it('does not claim a tag it has merely moved past', function () {
+    // The case every fresh install is in: cloned onto main, which is descended
+    // from the last tag. A nearest-tag describe answers `1.0.3-2-gabc1234` —
+    // sitting two commits past v1.0.3 is not v1.0.3, and reporting it as such
+    // would make the health check pass against code that is not the release.
+    $repo = sys_get_temp_dir().'/panel-version-'.bin2hex(random_bytes(4));
+    mkdir($repo.'/backend', 0755, true);
+    file_put_contents($repo.'/VERSION', "1.0.1\n");
+
+    $git = fn (array $args) => Process::path($repo)->run(array_merge(['git'], $args));
+    $git(['init', '-q']);
+    $git(['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'released']);
+    $git(['tag', 'v1.0.3']);
+    $git(['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'after']);
+
+    $info = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+    $info->shouldReceive('repositoryPath')->andReturn($repo);
+
+    expect($info->installed()['source'])->toBe('file')
+        ->and($info->installed()['version'])->toBe('1.0.1');
+
+    Process::run(['rm', '-rf', $repo]);
 });

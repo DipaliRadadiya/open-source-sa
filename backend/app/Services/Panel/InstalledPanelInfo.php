@@ -7,13 +7,25 @@ use Illuminate\Support\Facades\Process;
 /**
  * What the running panel actually is, read from disk.
  *
- * The version comes from the `VERSION` file at the repository root — not from
- * a git tag. install.sh clones with `--depth 1`, which fetches no tags at all,
- * so tag-derived versioning reports nothing on a real installation. A tracked
- * file ships with the shallow clone and is therefore always present.
+ * The version is the tag HEAD is sitting on, falling back to the `VERSION`
+ * file at the repository root.
+ *
+ * It used to be the file alone, on the reasoning that install.sh clones with
+ * `--depth 1` and fetches no tags. True for a *fresh* install — which is why
+ * the file is still the fallback — but false for the case that matters: an
+ * update runs `git fetch origin refs/tags/vX` and then checks that tag out, so
+ * afterwards the tag is present and HEAD is exactly on it. Verified on a real
+ * shallow clone: `git describe --tags --exact-match HEAD` answers `v1.0.3`.
+ *
+ * That ordering exists because the file is maintained by hand and keeps being
+ * forgotten. v1.0.2 and v1.0.3 were both tagged without bumping it, so both
+ * ship `VERSION=1.0.1` — and the update's health check asserts the version it
+ * installed is the version answering, which can never be true for those tags.
+ * Every update to them builds for twenty minutes and then rolls back. Asking
+ * git what was checked out cannot disagree with what was checked out.
  *
  * `APP_VERSION` in the environment still wins when set, so an operator running
- * from a package or a pinned build can override what the file says.
+ * from a package or a pinned build can override both.
  *
  * The commit is read from `.git/HEAD` and the ref it points at, the same way
  * git resolves it, rather than by shelling out — this is read on a screen the
@@ -28,7 +40,7 @@ class InstalledPanelInfo
      *     commit_hash: ?string,
      *     commit_short: ?string,
      *     branch: ?string,
-     *     source: 'file'|'env'|'unknown',
+     *     source: 'tag'|'file'|'env'|'unknown',
      *     is_git_checkout: bool,
      *     has_local_changes: ?bool,
      * }
@@ -49,6 +61,42 @@ class InstalledPanelInfo
             'is_git_checkout' => is_dir($this->repositoryPath().'/.git'),
             'has_local_changes' => $this->hasLocalChanges(),
         ];
+    }
+
+    /**
+     * The tag HEAD points at exactly, without the leading `v`.
+     *
+     * Shelling out, like {@see localChanges()} already does. Reconstructing
+     * this from .git by hand would mean resolving annotated tag objects to the
+     * commits they wrap, which is git's job and not worth reimplementing for a
+     * few milliseconds.
+     *
+     * Any failure is null, not an exception: a packaged install with no .git,
+     * a shallow clone with no tags fetched yet, or a git that refuses the
+     * directory. All of those mean "no tag here", and the file answers.
+     */
+    private function exactTag(): ?string
+    {
+        $path = $this->repositoryPath();
+
+        if (! is_dir($path.'/.git')) {
+            return null;
+        }
+
+        $result = Process::path($path)
+            ->timeout(10)
+            ->run(['git', '-c', 'safe.directory='.$path, 'describe', '--tags', '--exact-match', 'HEAD']);
+
+        if (! $result->successful()) {
+            return null;
+        }
+
+        $tag = ltrim(trim($result->output()), 'vV');
+
+        // Only a version-shaped tag. A `nightly` or `staging` tag is a real
+        // thing to have on a commit, and reporting it as the installed version
+        // would put a word where the update compares numbers.
+        return preg_match('/^\d+(\.\d+){0,3}$/', $tag) === 1 ? $tag : null;
     }
 
     /**
@@ -120,6 +168,22 @@ class InstalledPanelInfo
 
         if (is_string($env) && $env !== '') {
             return [$env, 'env'];
+        }
+
+        // The tag HEAD is on, when it is on one. After an update this is the
+        // tag that was just checked out, which is the most direct possible
+        // answer to "what is installed" — and unlike the file, it cannot have
+        // been forgotten.
+        //
+        // `--exact-match` rather than a nearest-tag describe: sitting five
+        // commits past v1.0.3 is not v1.0.3, and reporting it as such would
+        // make the health check pass against code that is not the release.
+        // A branch checkout (every fresh install) matches nothing and falls
+        // through to the file.
+        $tag = $this->exactTag();
+
+        if ($tag !== null) {
+            return [$tag, 'tag'];
         }
 
         $file = $this->repositoryPath().'/VERSION';
