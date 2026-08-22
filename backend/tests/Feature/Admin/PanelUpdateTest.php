@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Services\Panel\AvailableRelease;
 use App\Services\Panel\InstalledPanelInfo;
+use App\Services\Panel\UpdatePreflight;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -154,4 +155,53 @@ describe('preflight', function () {
         expect($response->json('panel_update.preflight.ready'))
             ->toBe($checks->every(fn ($check) => $check['passed'] === true));
     });
+});
+
+it('names the files that are blocking an update', function () {
+    // The check that actually stops people used to report nothing: on a real
+    // server it refused every update with an empty detail, and the only way to
+    // learn what was dirty was to SSH in and run `git status`. A blocker the
+    // reader cannot act on is barely better than no blocker at all.
+    $installed = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+    $installed->shouldReceive('localChanges')->andReturn([
+        'M backend/config/server.php',
+        'D frontend/tests/a.mjs',
+    ]);
+
+    $check = collect((new UpdatePreflight($installed))->run()['checks'])
+        ->firstWhere('key', 'clean_working_tree');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['detail'])->toContain('2 uncommitted changes')
+        ->and($check['detail'])->toContain('backend/config/server.php')
+        ->and($check['detail'])->toContain('frontend/tests/a.mjs');
+});
+
+it('caps the blocking list rather than pasting a whole git status', function () {
+    // A stale checkout can have hundreds of entries. The point is to identify
+    // the problem, not to reproduce git status in a status card.
+    $installed = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+    $installed->shouldReceive('localChanges')->andReturn(
+        array_map(fn (int $i): string => "M file-{$i}.php", range(1, 40)),
+    );
+
+    $detail = collect((new UpdatePreflight($installed))->run()['checks'])
+        ->firstWhere('key', 'clean_working_tree')['detail'];
+
+    expect($detail)->toContain('40 uncommitted changes')
+        ->and($detail)->toContain('and 35 more')
+        ->and(substr_count($detail, 'file-'))->toBe(5);
+});
+
+it('still fails closed when git cannot answer', function () {
+    // Unknown is not clean. If we cannot prove the tree is safe we do not get
+    // to run `git checkout --force` over whatever is in it.
+    $installed = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+    $installed->shouldReceive('localChanges')->andReturn(null);
+
+    $check = collect((new UpdatePreflight($installed))->run()['checks'])
+        ->firstWhere('key', 'clean_working_tree');
+
+    expect($check['passed'])->toBeFalse()
+        ->and($check['detail'])->toBe('unknown');
 });

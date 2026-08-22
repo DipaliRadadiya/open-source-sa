@@ -64,15 +64,51 @@ class UpdatePreflight
      */
     private function cleanWorkingTree(): array
     {
-        $dirty = $this->installed->hasLocalChanges();
+        $changes = $this->installed->localChanges();
 
         return [
             'key' => 'clean_working_tree',
             // Unknown (null) fails closed: if we cannot prove the tree is
             // clean, we do not get to destroy what might be in it.
-            'passed' => $dirty === false,
-            'detail' => $dirty === null ? 'unknown' : null,
+            'passed' => $changes === [],
+            'detail' => $this->changesDetail($changes),
         ];
+    }
+
+    /**
+     * Say which files are in the way.
+     *
+     * This check is the one that actually stops people, and it used to report
+     * nothing at all — a blocked update, no reason, and no way to act on it
+     * short of an SSH session. Naming the paths turns it into something the
+     * reader can fix.
+     *
+     * Capped, because the answer to "why is my update blocked" is not a
+     * thousand-line diff: a stale checkout can have hundreds of entries, and
+     * the point is to identify the problem, not to reproduce `git status`.
+     *
+     * @param  array<int, string>|null  $changes
+     */
+    private function changesDetail(?array $changes): ?string
+    {
+        if ($changes === null) {
+            return 'unknown';
+        }
+
+        if ($changes === []) {
+            return null;
+        }
+
+        $shown = array_slice($changes, 0, 5);
+        $rest = count($changes) - count($shown);
+
+        return sprintf(
+            '%d uncommitted change%s: %s%s',
+            count($changes),
+            count($changes) === 1 ? '' : 's',
+            implode(', ', $shown),
+            $rest > 0 ? sprintf(' and %d more', $rest) : '',
+        );
     }
 
     /**

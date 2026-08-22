@@ -68,19 +68,46 @@ class InstalledPanelInfo
      */
     public function hasLocalChanges(): ?bool
     {
-        if (! is_dir($this->repositoryPath().'/.git')) {
+        $changes = $this->localChanges();
+
+        return $changes === null ? null : $changes !== [];
+    }
+
+    /**
+     * The paths git reports as changed, or null when that cannot be determined.
+     *
+     * The list, not just the yes/no, because this is what blocks an update and
+     * "not ready, and I won't say why" is the worst thing a preflight can tell
+     * you. On a real server this check refused every update while the detail
+     * shown in the panel was empty — the only way to find out what was dirty
+     * was to SSH in and run `git status` by hand.
+     *
+     * `safe.directory` travels with the call for the same reason it does in
+     * the update script: an operator who has been root in this tree leaves
+     * ownership git refuses to work with, and answering "unknown" there fails
+     * the check closed and blocks updates for a reason nobody can see either.
+     *
+     * @return array<int, string>|null
+     */
+    public function localChanges(): ?array
+    {
+        $path = $this->repositoryPath();
+
+        if (! is_dir($path.'/.git')) {
             return null;
         }
 
-        $result = Process::path($this->repositoryPath())
+        $result = Process::path($path)
             ->timeout(10)
-            ->run(['git', 'status', '--porcelain']);
+            ->run(['git', '-c', 'safe.directory='.$path, 'status', '--porcelain']);
 
         if (! $result->successful()) {
             return null;
         }
 
-        return trim($result->output()) !== '';
+        return array_values(array_filter(
+            array_map(trim(...), explode("\n", trim($result->output()))),
+        ));
     }
 
     /**
