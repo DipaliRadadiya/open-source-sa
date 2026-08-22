@@ -5067,7 +5067,8 @@
       "startFailed": "Couldn't start the scan.",
       "ignoreFailed": "Couldn't dismiss that.",
       "unignoreFailed": "Couldn't undo that."
-    }
+    },
+    "stalled": "This scan has stopped reporting progress. It may have failed on the server."
   },
   "central": {
     "title": "Central management",

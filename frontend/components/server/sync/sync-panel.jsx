@@ -27,6 +27,9 @@ import { Button } from "@/components/ui/button";
    forty seconds of deliberate idling. */
 const PAGE_SIZE = 500;
 const POLL_MS = 2000;
+/* A scan walks the disk; ten minutes is generous for the largest box and
+   still short enough that a dead worker is noticed the same session. */
+const SCAN_STOP_MS = 10 * 60 * 1000;
 
 export function SyncPanel({ run: initialRun, items: initialItems, ignores: initialIgnores, canManage }) {
   const t = useTranslations("sync");
@@ -38,6 +41,8 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
   const [starting, setStarting] = useState(false);
   const [adoptOpen, setAdoptOpen] = useState(false);
   const [pendingKey, setPendingKey] = useState(null);
+  // Set when the poll gives up: the run never reported finishing.
+  const [stalled, setStalled] = useState(false);
 
   /* The cursor is a ref, not state: the poll loop reads it between renders and
      a stale closure over a state value would re-request from the same id
@@ -62,7 +67,23 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       });
 
     (async () => {
+      // When this loop started, so it can stop. It had no stopping point at
+      // all: a run whose worker died never sets `finished`, so the page asked
+      // again every two seconds for as long as the tab stayed open — and said
+      // nothing, because the catch below swallows a failure and tries again.
+      // A 404 on a deleted run polled forever against an endpoint that could
+      // never succeed.
+      const startedAt = Date.now();
+
       while (!cancelled) {
+        if (Date.now() - startedAt > SCAN_STOP_MS) {
+          // Say so rather than going quiet, the same as the restore screen and
+          // the shared auto-refresh: a progress bar that has silently stopped
+          // advancing still claims work is happening.
+          if (!cancelled) setStalled(true);
+          return;
+        }
+
         let batchLength = 0;
 
         try {
@@ -113,6 +134,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
 
       cursor.current = 0;
       setItems([]);
+      setStalled(false);
       setRun(parsed.data.sync);
       setAdoptOpen(false);
     } catch (error) {
@@ -202,6 +224,24 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
           </Button>
         ) : null}
       </div>
+
+      {/* The scan stopped reporting. Above the summary, because the summary's
+          counts are the thing that stopped being true. */}
+      {stalled ? (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+          {t("stalled")}
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-sm text-warning"
+            onClick={() => begin("preview")}
+            disabled={starting}
+          >
+            <RefreshCw className="size-3.5" aria-hidden />
+            {t("actions.rescan")}
+          </Button>
+        </p>
+      ) : null}
 
       {run ? (
         <SyncSummary run={run} loaded={items.length} running={running} />

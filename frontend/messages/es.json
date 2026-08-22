@@ -5067,7 +5067,8 @@
       "startFailed": "No se pudo iniciar el análisis.",
       "ignoreFailed": "No se pudo descartar.",
       "unignoreFailed": "No se pudo deshacer."
-    }
+    },
+    "stalled": "Este análisis ha dejado de informar de su progreso. Puede que haya fallado en el servidor."
   },
   "central": {
     "title": "Gestión central",
