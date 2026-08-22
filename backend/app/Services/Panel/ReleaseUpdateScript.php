@@ -141,7 +141,7 @@ class ReleaseUpdateScript
                 {$run}sudo systemctl restart {$this->service('queue')}
             fi
 
-            {$run}{$php} {$liveBackend}/artisan up
+            {$asUser}{$php} {$liveBackend}/artisan up
             {$run}rm -rf {$release}
 
             if [ "\$MIGRATED" = "1" ]; then
@@ -169,7 +169,7 @@ class ReleaseUpdateScript
         PREVIOUS={$previous}
 
         note backup_database
-        {$run}{$php} {$liveBackend}/artisan panel:backup-database
+        {$asUser}{$php} {$liveBackend}/artisan panel:backup-database
 
         note create_release
         {$run}git -c safe.directory={$repository} -C {$repository} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
@@ -206,23 +206,23 @@ class ReleaseUpdateScript
         # ---- Past here, failures are visible to users.
 
         note maintenance_on
-        {$run}{$php} {$liveBackend}/artisan down --retry=60
+        {$asUser}{$php} {$liveBackend}/artisan down --retry=60
 
         # The hinge. Run against the NEW release, because the migrations belong
         # to the version being installed. Nothing after this is undone by the
         # rollback except the code.
         note migrate
-        {$run}{$php} {$newBackend}/artisan migrate --force
+        {$asUser}{$php} {$newBackend}/artisan migrate --force
         MIGRATED=1
-        {$run}{$php} {$newBackend}/artisan db:seed --class=PermissionSeeder --force
+        {$asUser}{$php} {$newBackend}/artisan db:seed --class=PermissionSeeder --force
 
         note swap
         {$this->releases->activate($release)}
         SWAPPED=1
 
         note restart_services
-        {$run}{$php} {$liveBackend}/artisan optimize:clear
-        {$run}{$php} {$liveBackend}/artisan optimize
+        {$asUser}{$php} {$liveBackend}/artisan optimize:clear
+        {$asUser}{$php} {$liveBackend}/artisan optimize
         {$run}sudo systemctl reload {$this->service('php_fpm')}
         {$run}sudo systemctl restart {$this->service('frontend')}
         {$run}sudo systemctl restart {$this->service('queue')}
@@ -231,7 +231,7 @@ class ReleaseUpdateScript
         {$this->verify($health, $version, $dryRun)}
 
         note maintenance_off
-        {$run}{$php} {$liveBackend}/artisan up
+        {$asUser}{$php} {$liveBackend}/artisan up
 
         # Last, and its failure is not the update's failure: disk left
         # uncollected is untidy; an update reported as failed over it is a lie.

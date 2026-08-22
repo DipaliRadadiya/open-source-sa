@@ -134,6 +134,27 @@ describe('the generated update script', function () {
         }
     });
 
+    it('runs artisan as the panel account, except the one command needing root', function () {
+        // A successful update still left 50 root-owned files under
+        // backend/storage on the real box: compiled Blade views from
+        // `optimize`, and the dump from `panel:backup-database`. php-fpm runs
+        // as `panel` and cannot overwrite a root-owned view cache; a 0640
+        // root-owned backup is one the panel cannot read back.
+        //
+        // migrate is the sharp one -- SQLite writes -wal and -shm beside the
+        // database, and root-owned ones make the panel's own database
+        // unwritable straight after an update it called successful.
+        $user = config('panel_update.app_user');
+
+        foreach (['migrate --force', 'optimize', 'panel:backup-database', 'artisan up', 'artisan down'] as $call) {
+            expect($this->script)->not->toMatch('/\n\s*\/usr\/bin\/php[0-9.]+ [^\n]*'.preg_quote($call, '/').'/');
+        }
+
+        // ...and sudoers stays root, because it writes /etc/sudoers.d.
+        expect($this->script)->toMatch('/\n\s*\/usr\/bin\/php[0-9.]+ [^\n]*panel:sudoers/')
+            ->and($this->script)->not->toContain("sudo -u {$user} -H /usr/bin/php8.4 ".dirname(base_path()).'/backend/artisan panel:sudoers');
+    });
+
     it('pins PATH for the frontend build', function () {
         // npm's shebang is `env node`; unpinned, the build silently uses
         // whatever node happens to be first on PATH.

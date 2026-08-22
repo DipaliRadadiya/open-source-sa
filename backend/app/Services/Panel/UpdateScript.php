@@ -132,6 +132,22 @@ class UpdateScript
         $user = (string) config('panel_update.app_user');
         $asUser = $dryRun ? 'echo DRY-RUN: ' : "sudo -u {$user} -H ";
 
+        // artisan too, and for a reason the first fix did not cover. After a
+        // successful update on a real box, 50 files under backend/storage were
+        // still owned by root: the compiled Blade views written by `optimize`,
+        // and the database dump from `panel:backup-database`. php-fpm runs as
+        // `panel` and cannot overwrite a root-owned view cache, and a 0640
+        // root-owned backup is one the panel cannot read back.
+        //
+        // The migration step is the sharper one: SQLite writes `-wal` and
+        // `-shm` beside the database, and root-owned ones make the panel's own
+        // database unwritable -- "attempt to write a readonly database" on a
+        // panel that just reported a successful update.
+        //
+        // `panel:sudoers` is the deliberate exception: it writes
+        // /etc/sudoers.d and is the one command here that genuinely needs
+        // root.
+
         return <<<BASH
         #!/usr/bin/env bash
         # Generated for panel update #{$update->getKey()}. Do not edit: this file
@@ -163,7 +179,7 @@ class UpdateScript
             local failed_step="\$STEP"
             note "rollback"
             {$run}{$git} checkout --force {$rollbackTo}
-            {$run}{$php} {$backend}/artisan up
+            {$asUser}{$php} {$backend}/artisan up
             finish failed "\$failed_step"
             exit 1
         }
@@ -181,10 +197,10 @@ class UpdateScript
         {$git} rev-parse HEAD > /dev/null
 
         note maintenance_on
-        {$run}{$php} {$backend}/artisan down --retry=60
+        {$asUser}{$php} {$backend}/artisan down --retry=60
 
         note backup_database
-        {$run}{$php} {$backend}/artisan panel:backup-database
+        {$asUser}{$php} {$backend}/artisan panel:backup-database
 
         note fetch_release
         {$run}{$git} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
@@ -196,12 +212,12 @@ class UpdateScript
         {$asUser}composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d {$backend}
 
         note migrate
-        {$run}{$php} {$backend}/artisan migrate --force
+        {$asUser}{$php} {$backend}/artisan migrate --force
 
         # Idempotent, and required on every deploy: it re-syncs the permission
         # catalogue so permissions added by this release reach administrators.
         note seed_permissions
-        {$run}{$php} {$backend}/artisan db:seed --class=PermissionSeeder --force
+        {$asUser}{$php} {$backend}/artisan db:seed --class=PermissionSeeder --force
 
         # Existing installs were written with the queue and sessions on the
         # database, which for a SQLite panel means the worker polls the same
@@ -211,7 +227,7 @@ class UpdateScript
         # answers first and changes nothing if it does not; must run before
         # `optimize`, which caches the config this rewrites.
         note configure_services
-        {$run}{$php} {$backend}/artisan panel:configure-services
+        {$asUser}{$php} {$backend}/artisan panel:configure-services
 
         # A vhost is a rendered file, so the AI bot list, the 8G ruleset and
         # the templates shipped in this release do not reach an existing site
@@ -220,11 +236,11 @@ class UpdateScript
         # side can tell. Never fails the update: a site that could not be
         # re-rendered was rolled back and is still serving.
         note resync_site_configs
-        {$run}{$php} {$backend}/artisan sites:resync
+        {$asUser}{$php} {$backend}/artisan sites:resync
 
         note optimize
-        {$run}{$php} {$backend}/artisan optimize:clear
-        {$run}{$php} {$backend}/artisan optimize
+        {$asUser}{$php} {$backend}/artisan optimize:clear
+        {$asUser}{$php} {$backend}/artisan optimize
 
         # PATH is pinned because npm's shebang is `env node`: unpinned, the
         # build silently uses whatever node is first on PATH.
@@ -266,7 +282,7 @@ class UpdateScript
         {$run}sudo systemctl restart {$this->service('queue')}
 
         note maintenance_off
-        {$run}{$php} {$backend}/artisan up
+        {$asUser}{$php} {$backend}/artisan up
 
         # Verify the NEW code is what answered. Without asserting the version,
         # a health check passes just as happily against the old release.
