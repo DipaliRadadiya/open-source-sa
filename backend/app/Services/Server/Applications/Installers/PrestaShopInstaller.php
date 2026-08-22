@@ -75,8 +75,15 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             '--language='.($settings['language'] ?? 'en'),
             '--timezone='.($settings['timezone'] ?? 'UTC'),
             '--prefix='.($settings['table_prefix'] ?? 'ps_'),
-            // Their licence must be accepted for the install to proceed.
-            '--license=1',
+            // No `--license`. It reads as "accept the licence" and is the
+            // opposite: PrestaShop's own datas.php defines it as
+            // `'show_license' => ['name' => 'license', 'default' => 0,
+            // 'help' => 'show PrestaShop license']`. Passing 1 told the
+            // installer to print the licence and stop, so every install exited
+            // 0 in a third of a second having created nothing, and the shop
+            // then answered `"install" directory is missing`.
+            //
+            // The default is correct, so the option is simply absent.
             // Never drop tables: the database is ours and freshly made, and a
             // retry must not be able to wipe a shop that already installed.
             '--db_clear=0',

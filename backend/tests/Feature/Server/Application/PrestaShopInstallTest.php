@@ -138,8 +138,26 @@ it('never lets a retry drop the tables of a shop that already installed', functi
     // db_clear defaults to 1 — dropping existing tables. The database is ours
     // and freshly created, so there is nothing to clear and everything to
     // lose if a second attempt runs against a working shop.
-    expect($command)->toContain('--db_clear=0')
-        ->and($command)->toContain('--license=1');
+    expect($command)->toContain('--db_clear=0');
+});
+
+it('never passes --license, which prints the licence instead of accepting it', function () {
+    // It reads as "accept the licence" and does the opposite. PrestaShop's own
+    // datas.php defines it as
+    // `'show_license' => ['name' => 'license', 'default' => 0,
+    //  'help' => 'show PrestaShop license']`.
+    //
+    // So `--license=1` told the installer to print the licence and stop. Every
+    // install exited 0 in a third of a second having created nothing, the
+    // panel took that as success and removed `install/`, and the shop answered
+    // `"install" directory is missing` for good.
+    fakePrestaShopFeed();
+    $command = collect(installPrestaShop())
+        ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
+
+    foreach ($command as $argument) {
+        expect($argument)->not->toStartWith('--license');
+    }
 });
 
 it('passes the passwords as arguments, which is documented and deliberate', function () {
