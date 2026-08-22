@@ -82,7 +82,26 @@ class UpdateScript
         // `"commit":"unknown"` beside a cheerful `"status":"succeeded"`. A
         // real update would have failed at fetch_release and then failed to
         // roll back, because rollback is a git checkout too.
-        $git = sprintf('git -c %s -C %s', escapeshellarg('safe.directory='.$repo), escapeshellarg($repo));
+        // ...and it runs as the account that owns the repository, not as root.
+        //
+        // Running it as root left 1331 files under /var/www/panel owned by
+        // root on a real server — `git checkout --force` writes every file it
+        // touches as the calling user, and install.sh had chowned the tree to
+        // `panel`. The damage compounds: the panel account can then no longer
+        // check out or clean its own repository, so `clean_working_tree` fails
+        // for good and *every subsequent update is refused by preflight*. One
+        // update attempt was enough to wedge the box permanently.
+        //
+        // As the owning account there is no ownership mismatch left for
+        // safe.directory to forgive, but it is kept: the exception costs
+        // nothing and the fetch still has to work if an operator has been
+        // root in this tree by hand.
+        $git = sprintf(
+            'sudo -u %s -H git -c %s -C %s',
+            escapeshellarg((string) config('panel_update.app_user')),
+            escapeshellarg('safe.directory='.$repo),
+            escapeshellarg($repo),
+        );
 
         // Health check goes through the panel's own URL, not 127.0.0.1: the
         // web server routes by hostname and a bare-IP request 404s, which

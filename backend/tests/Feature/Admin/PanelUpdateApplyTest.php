@@ -118,6 +118,22 @@ describe('the generated update script', function () {
             ->and($this->script)->not->toMatch('/\n\s*env "PATH=/');
     });
 
+    it('never runs git as root, or the update wedges the box for good', function () {
+        // `git checkout --force` writes every file it touches as the calling
+        // user. Run as root against a tree install.sh chowned to `panel`, one
+        // update left 1331 root-owned files on a real server -- counted on the
+        // box, not estimated. The panel account could then no longer check out
+        // or clean its own repository, so preflight's clean_working_tree failed
+        // for good and every later update was refused before it started. A
+        // single attempt wedged the machine permanently.
+        $user = config('panel_update.app_user');
+
+        foreach (['rev-parse', 'fetch', 'checkout'] as $verb) {
+            expect($this->script)->toMatch('/sudo -u \''.$user.'\' -H git -c [^\n]*'.$verb.'/')
+                ->and($this->script)->not->toMatch('/(?<!-H )git -c [^\n]*'.$verb.'/');
+        }
+    });
+
     it('pins PATH for the frontend build', function () {
         // npm's shebang is `env node`; unpinned, the build silently uses
         // whatever node happens to be first on PATH.
@@ -127,7 +143,7 @@ describe('the generated update script', function () {
     it('echoes instead of executing in dry-run mode', function () {
         $dry = app(UpdateScript::class)->render($this->update, '99.0.0', dryRun: true);
 
-        expect($dry)->toContain('echo DRY-RUN: git -c')
+        expect($dry)->toContain('echo DRY-RUN: sudo -u \'panel\' -H git -c')
             // The mutating ones. `checkout` and `fetch` must never run for
             // real here; the preflight read below is the deliberate exception.
             ->and($dry)->not->toContain("\ngit -c safe.directory=/var/www/panel -C '/var/www/panel' checkout")
@@ -144,7 +160,7 @@ describe('the generated update script', function () {
         $dry = app(UpdateScript::class)->render($this->update, '99.0.0', dryRun: true);
 
         expect($dry)->toContain('note preflight_git')
-            ->and($dry)->toMatch('/\nnote preflight_git\n\s*git -c /');
+            ->and($dry)->toMatch('/\nnote preflight_git\n\s*sudo -u \'panel\' -H git -c /');
     });
 
     it('carries the safe.directory exception on every git call', function () {
@@ -218,6 +234,7 @@ describe('starting an update', function () {
         $this->postJson('/api/admin/panel-update')->assertUnauthorized();
         expect(PanelUpdate::count())->toBe(0);
     });
+
 });
 
 describe('progress reconciliation', function () {
