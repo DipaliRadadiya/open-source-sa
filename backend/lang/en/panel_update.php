@@ -16,6 +16,12 @@ return [
 
     'steps' => [
         'preflight_git' => 'Checking the panel repository',
+        'preflight' => 'Checking the server is ready',
+        'create_release' => 'Building the new release',
+        'link_shared' => 'Linking shared files',
+        'swap' => 'Switching to the new release',
+        'verify' => 'Verifying the new release',
+        'prune' => 'Removing old releases',
         'maintenance_on' => 'Putting the panel into maintenance mode',
         'backup_database' => 'Backing up the database',
         'fetch_release' => 'Downloading the release',

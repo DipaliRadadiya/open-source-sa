@@ -9,6 +9,12 @@ return [
     ],
     'steps' => [
         'preflight_git' => 'Comprobando el repositorio del panel',
+        'preflight' => 'Comprobando que el servidor está listo',
+        'create_release' => 'Creando la nueva versión',
+        'link_shared' => 'Enlazando archivos compartidos',
+        'swap' => 'Cambiando a la nueva versión',
+        'verify' => 'Verificando la nueva versión',
+        'prune' => 'Eliminando versiones antiguas',
         'maintenance_on' => 'Poniendo el panel en modo de mantenimiento',
         'backup_database' => 'Copiando la base de datos',
         'fetch_release' => 'Descargando la versión',

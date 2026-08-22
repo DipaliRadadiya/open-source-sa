@@ -9,6 +9,12 @@ return [
     ],
     'steps' => [
         'preflight_git' => 'Verificando o repositório do painel',
+        'preflight' => 'A verificar se o servidor está pronto',
+        'create_release' => 'A criar a nova versão',
+        'link_shared' => 'A ligar os ficheiros partilhados',
+        'swap' => 'A mudar para a nova versão',
+        'verify' => 'A verificar a nova versão',
+        'prune' => 'A remover versões antigas',
         'maintenance_on' => 'A colocar o painel em modo de manutenção',
         'backup_database' => 'A copiar a base de dados',
         'fetch_release' => 'A descarregar a versão',

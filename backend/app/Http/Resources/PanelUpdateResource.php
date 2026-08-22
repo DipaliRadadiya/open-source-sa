@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources;
 
-use App\Services\Panel\UpdateScript;
+use App\Services\Panel\UpdateSteps;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,7 +24,7 @@ class PanelUpdateResource extends JsonResource
             // Position in the sequence, so the UI can draw a progress bar
             // without hardcoding the step list.
             'step_number' => $this->stepNumber(),
-            'total_steps' => count(UpdateScript::STEPS),
+            'total_steps' => app(UpdateSteps::class)->total(),
             'from_version' => $this->from_version,
             'to_version' => $this->to_version,
             'from_commit' => $this->from_commit,
@@ -43,14 +43,15 @@ class PanelUpdateResource extends JsonResource
         ];
     }
 
+    /**
+     * Asked of the flow this installation actually runs.
+     *
+     * Two flows exist with different steps. Counting against the wrong one
+     * reports a position that is not true, and a migrated panel would draw its
+     * progress against a sequence it is not following.
+     */
     private function stepNumber(): ?int
     {
-        if ($this->current_step === null) {
-            return null;
-        }
-
-        $index = array_search($this->current_step, UpdateScript::STEPS, true);
-
-        return $index === false ? null : $index + 1;
+        return app(UpdateSteps::class)->numberOf($this->current_step);
     }
 }

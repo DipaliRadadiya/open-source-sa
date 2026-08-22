@@ -23,6 +23,7 @@ class PanelUpdateRunner
 {
     public function __construct(
         private UpdateScript $script,
+        private UpdateFlow $flow,
         private ActivityLogger $activity,
     ) {}
 
@@ -43,9 +44,11 @@ class PanelUpdateRunner
             return false;
         }
 
+        // Legacy or release — asked of the layout. See UpdateFlow.
+        $flow = $this->flow->script();
         $path = $this->script->scriptPath($update);
 
-        if (@file_put_contents($path, $this->script->render($update, $version, $dryRun)) === false) {
+        if (@file_put_contents($path, $flow->render($update, $version, $dryRun)) === false) {
             Log::error('Panel update could not write its runner script.', [
                 'feature' => 'panel_update',
                 'path' => $path,

@@ -9,6 +9,12 @@ return [
     ],
     'steps' => [
         'preflight_git' => 'Panel-Repository wird geprüft',
+        'preflight' => 'Server wird auf Bereitschaft geprüft',
+        'create_release' => 'Neues Release wird erstellt',
+        'link_shared' => 'Gemeinsame Dateien werden verknüpft',
+        'swap' => 'Auf das neue Release wird umgeschaltet',
+        'verify' => 'Neues Release wird überprüft',
+        'prune' => 'Alte Releases werden entfernt',
         'maintenance_on' => 'Panel wird in den Wartungsmodus versetzt',
         'backup_database' => 'Datenbank wird gesichert',
         'fetch_release' => 'Version wird heruntergeladen',

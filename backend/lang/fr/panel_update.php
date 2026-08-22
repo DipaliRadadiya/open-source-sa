@@ -9,6 +9,12 @@ return [
     ],
     'steps' => [
         'preflight_git' => 'Vérification du dépôt du panneau',
+        'preflight' => 'Vérification que le serveur est prêt',
+        'create_release' => 'Création de la nouvelle version',
+        'link_shared' => 'Liaison des fichiers partagés',
+        'swap' => 'Bascule vers la nouvelle version',
+        'verify' => 'Vérification de la nouvelle version',
+        'prune' => 'Suppression des anciennes versions',
         'maintenance_on' => 'Passage du panneau en mode maintenance',
         'backup_database' => 'Sauvegarde de la base de données',
         'fetch_release' => 'Téléchargement de la version',
