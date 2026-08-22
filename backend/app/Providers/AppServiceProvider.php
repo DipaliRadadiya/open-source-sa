@@ -166,6 +166,32 @@ class AppServiceProvider extends ServiceProvider
                 ->by($request->user()->id.'|'.$this->routeScope($request))
             : Limit::perMinute((int) config('server.rate_limits.guest', 20))->by($request->ip()));
 
+        // Starting an update, and asking about one, must not share a bucket.
+        //
+        // `throttle:3,1` and `throttle:30,1` look like two independent limits.
+        // They are not: Laravel keys an inline throttle on the route URI and
+        // the user, with no reference to the HTTP method or the limit itself —
+        // and GET and POST here are both `/panel-update`. One counter, two
+        // readings of it.
+        //
+        // So every poll of the update page spent one of the update button's
+        // three attempts, and after three requests of any kind in a minute the
+        // button answered 429 "Too Many Requests". Measured on a real server:
+        // GET remaining 29/30, then POST reading 1/3, then GET remaining 27/30
+        // — a single counter at 1, 2, 3.
+        //
+        // Named limiters include the limiter name in the key, so these two are
+        // finally separate. The numbers are unchanged: checking is cheap and
+        // may reach the release host, starting takes the panel down and
+        // rebuilds it.
+        RateLimiter::for('panel-update-check', fn (Request $request) => $request->user()
+            ? Limit::perMinute(30)->by($request->user()->id)
+            : Limit::perMinute((int) config('server.rate_limits.guest', 20))->by($request->ip()));
+
+        RateLimiter::for('panel-update-start', fn (Request $request) => $request->user()
+            ? Limit::perMinute(3)->by($request->user()->id)
+            : Limit::perMinute(3)->by($request->ip()));
+
         // Deploy webhooks: keyed on the webhook, not the caller's IP. A provider
         // delivers from shared egress, so an IP bucket would have one busy
         // repository throttle another user's, while doing nothing to bound the

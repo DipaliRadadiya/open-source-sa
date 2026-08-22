@@ -344,3 +344,28 @@ it('does not claim a tag it has merely moved past', function () {
 
     Process::run(['rm', '-rf', $repo]);
 });
+
+it('does not let polling the update page use up the update button', function () {
+    // `throttle:3,1` and `throttle:30,1` looked like two independent limits and
+    // were one. Laravel keys an inline throttle on the route URI and the user,
+    // with no reference to the method or the limit — and GET and POST here are
+    // both `/panel-update`. So every poll spent one of the button's three
+    // attempts, and after three requests of any kind in a minute the update
+    // answered 429 "Too Many Requests". Measured on a real server as a single
+    // counter climbing 1, 2, 3 while two endpoints read it against 30 and 3.
+    Cache::flush();
+
+    // Well past the start limit of 3, nowhere near the check limit of 30.
+    foreach (range(1, 10) as $ignored) {
+        test()->withHeaders(['Authorization' => 'Bearer '.$this->token])
+            ->getJson('/api/admin/panel-update')
+            ->assertOk();
+    }
+
+    // The button must still be pressable. Whatever it answers, it must not be
+    // 429 — that was the bug, and it made the feature unreachable from the UI.
+    $response = test()->withHeaders(['Authorization' => 'Bearer '.$this->token])
+        ->postJson('/api/admin/panel-update');
+
+    expect($response->status())->not->toBe(429);
+});
