@@ -305,3 +305,82 @@ it('refuses POST without manage permission', function () {
         ])
         ->assertStatus(403);
 });
+
+/*
+ * The dashboard card and this screen disagreed for as long as both existed.
+ *
+ * The card reads `fail2ban_enabled` off the application resource; this screen
+ * reads the jail columns. The column had exactly one writer — an action nothing
+ * called, which itself called a manager method that does not exist — so it was
+ * `false` on every application ever created, and the card said "Off" for sites
+ * with a jail running. Two representations of one fact, and the orphaned one
+ * won wherever it was consulted.
+ *
+ * These assert the two answers together, in one test, because that is the only
+ * shape that fails when they drift apart again.
+ */
+it('agrees with the application resource about whether fail2ban is on', function () {
+    $this->application = createFail2banApp('Nextcloud', 'cloud.test');
+
+    fakeAppFail2ban();
+
+    // Before: no jail, and both screens say so.
+    $before = $this->withHeaders(appFail2banHeaders())
+        ->getJson('/api/applications/'.$this->application->id)->assertOk();
+
+    expect($before->json('application.fail2ban_enabled'))->toBeFalse()
+        ->and($this->withHeaders(appFail2banHeaders())->getJson(appFail2banUrl())->json('fail2ban'))->toBeNull();
+
+    $this->withHeaders(appFail2banHeaders())
+        ->postJson(appFail2banUrl(), [
+            'jail_config_content' => "[nextcloud]\nenabled  = true\nfilter   = nextcloud\nlogpath  = /tmp/log\nmaxretry = 5\n",
+            'filter_config_content' => "[nextcloud]\nfailregex = ^<HOST> .*\nignoreregex =\n",
+        ])->assertOk();
+
+    // After: the jail exists, so the card must say on. This is the assertion
+    // that was missing — the screen below was already right.
+    $after = $this->withHeaders(appFail2banHeaders())
+        ->getJson('/api/applications/'.$this->application->id)->assertOk();
+
+    expect($after->json('application.fail2ban_enabled'))->toBeTrue()
+        ->and($this->withHeaders(appFail2banHeaders())->getJson(appFail2banUrl())->json('fail2ban.jail_name'))
+        ->toBe('nextcloud');
+});
+
+it('goes back to off for both screens when the jail is removed', function () {
+    $this->application = createFail2banApp('Nextcloud', 'cloud.test');
+
+    fakeAppFail2ban();
+
+    $this->withHeaders(appFail2banHeaders())
+        ->postJson(appFail2banUrl(), [
+            'jail_config_content' => "[nextcloud]\nenabled  = true\nfilter   = nextcloud\nlogpath  = /tmp/log\nmaxretry = 5\n",
+            'filter_config_content' => "[nextcloud]\nfailregex = ^<HOST> .*\nignoreregex =\n",
+        ])->assertOk();
+
+    $this->withHeaders(appFail2banHeaders())->deleteJson(appFail2banUrl())->assertOk();
+
+    // `destroy()` nulls the jail columns, so the derived flag follows without
+    // anything having to remember to clear a second one.
+    expect($this->withHeaders(appFail2banHeaders())
+        ->getJson('/api/applications/'.$this->application->id)
+        ->json('application.fail2ban_enabled'))->toBeFalse();
+});
+
+/*
+ * The stored boolean is deliberately not consulted any more. Pinned because the
+ * column still exists — dropping it needs a schema change, and pre-1.0 that
+ * means migrate:fresh, which must never touch the shared dev database — so the
+ * temptation to "use the field that is right there" outlives this fix.
+ */
+it('ignores the orphaned fail2ban_enabled column entirely', function () {
+    $this->application = createFail2banApp('Docs', 'docs.test');
+
+    // A stale true, of the kind no code path can produce today but a hand-edit
+    // or an old row could: the answer still comes from the jail.
+    $this->application->forceFill(['fail2ban_enabled' => true])->save();
+
+    expect($this->withHeaders(appFail2banHeaders())
+        ->getJson('/api/applications/'.$this->application->id)
+        ->json('application.fail2ban_enabled'))->toBeFalse();
+});

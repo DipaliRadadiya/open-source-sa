@@ -90,10 +90,29 @@ class ApplicationResource extends JsonResource
             'waf_exceptions' => $this->whenLoaded('wafRules', fn () => $this->wafRules->where('type', 'exception')->pluck('value')->values()),
             'waf_custom_rules' => $this->whenLoaded('wafRules', fn () => $this->wafRules->where('type', 'block')->pluck('value')->values()),
 
-            // Live jail state (banned IPs, counters) is deliberately not
-            // here — it needs a live fail2ban-client call per request, which
-            // this resource is not the place for. See GET .../fail2ban.
-            'fail2ban_enabled' => (bool) $this->fail2ban_enabled,
+            /*
+             * Derived from the jail, not from the `fail2ban_enabled` column.
+             *
+             * That column had exactly one writer — an action nothing called,
+             * which itself called a manager method that does not exist — so it
+             * was `false` on every application that has ever existed. The
+             * fail2ban screen reads the jail columns and was right; the
+             * dashboard read this and said "Off" for sites with a running
+             * jail. Two representations of one fact, and the orphaned one won
+             * wherever it was consulted.
+             *
+             * `fail2ban_jail_name` is on this row already, so both screens now
+             * answer from the same column at no extra cost. It is set when the
+             * jail is written and cleared when it is removed.
+             *
+             * This says a jail is *configured for this site*, not that
+             * fail2ban is running — that is a server-wide fact and belongs to
+             * the services list. Live jail state (banned IPs, counters) is
+             * deliberately absent too: it needs a fail2ban-client call per
+             * request, which a list resource is not the place for.
+             * See GET .../fail2ban.
+             */
+            'fail2ban_enabled' => $this->fail2ban_jail_name !== null,
 
             // Staging is just another application row — `is_staging` is the
             // whole marker. `has_staging` lets the production site's own

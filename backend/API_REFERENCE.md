@@ -654,6 +654,10 @@ Full application record. Poll this while `status` is `provisioning` or `deployin
 
 **Link to `url`, never build one from `domain`.** `url` is `http://…` until the site has a servable certificate and `https://…` afterwards. Assembling `https://${domain}` in the client — which three screens used to do — produces a dead link for every site that has not been issued a certificate yet, which is every site for the first few minutes of its life.
 
+**`fail2ban_enabled` means "this site has a jail configured"** — it is derived from the same jail this resource's sibling endpoint reports, so a dashboard card and the site's fail2ban screen can no longer disagree. It went the other way until 2026-08-22: the field came from a stored boolean whose only writer was unreachable, so it read `false` for every site on the server, including ones with a jail actively running. **Do not read the `fail2ban_enabled` column directly** — it is orphaned and stays only because dropping it needs a schema change.
+
+It does **not** mean fail2ban is running. That is a server-wide fact; `GET /services` answers it. Live jail state — banned addresses, counters — is on `GET /applications/{id}/fail2ban`, which costs a `fail2ban-client` call and so is deliberately not in this response.
+
 ```json
 **`path` vs `document_root` — they are not the same directory, and picking the wrong one fails silently.**
 
