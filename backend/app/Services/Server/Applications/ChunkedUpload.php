@@ -142,7 +142,14 @@ class ChunkedUpload
 
     public function begin(Application $application, string $path, int $expectedBytes = 0): string
     {
-        $this->assertDirectoryExists($application, dirname($this->resolve($application, $path)));
+        $target = $this->resolve($application, $path);
+
+        $this->assertDirectoryExists($application, dirname($target));
+
+        // Checked here as well as at finalize, and this is the one that
+        // matters to the user: refusing now costs nothing, refusing after a
+        // two-gigabyte upload costs the upload.
+        $this->assertAbsent($application, $target);
 
         // Checked against the *whole* declared size, not just the floor: the
         // point is to fail now rather than an hour in, with the disk full and
@@ -206,6 +213,10 @@ class ChunkedUpload
 
         abort_if($this->size($application, $part) === null, 404);
         $this->assertDirectoryExists($application, dirname($target));
+
+        // Again, because an upload is not instant: the file can appear between
+        // `begin` and here, and `mv -f` would take it away without a word.
+        $this->assertAbsent($application, $target);
 
         $this->run($application, ['mv', '-f', $part, $target], 'upload_finalize');
     }
@@ -278,6 +289,23 @@ class ChunkedUpload
         );
 
         return $result->failed() ? null : (int) trim($result->output());
+    }
+
+    /**
+     * Refuse a target that already exists.
+     *
+     * `mv -f` at the end of an upload replaces silently, so without this the
+     * only sign a file had been destroyed was that its contents changed.
+     */
+    private function assertAbsent(Application $application, string $target): void
+    {
+        $result = $this->serverOps->run(
+            $this->asUser($application, ['test', '-e', $target]),
+            ['feature' => 'application', 'op' => 'file_upload_exists_check', 'application' => $application->id],
+            timeout: 15,
+        );
+
+        abort_if($result->ok, 422, __('errors/application.upload_exists', ['name' => basename($target)]));
     }
 
     private function assertDirectoryExists(Application $application, string $directory): void

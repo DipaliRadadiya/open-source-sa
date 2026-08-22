@@ -44,6 +44,8 @@ return [
     'archive_has_symlink' => 'Cette archive contient un lien symbolique, ce qui n\'est pas autorisé.',
     'archive_unsafe_entry' => 'Cette archive contient un chemin de fichier qui n\'est pas autorisé.',
 
+    'upload_exists' => '« :name » existe déjà ici. Supprimez-le d’abord pour le remplacer : un envoi n’écrase jamais un fichier.',
+
     'path_exists' => 'Quelque chose existe déjà à ce chemin.',
     'cannot_delete_root' => 'Le dossier racine du site ne peut pas être supprimé.',
     'target_not_archive' => 'Le nom de la nouvelle archive doit se terminer par .zip, .tar.gz ou .tgz.',

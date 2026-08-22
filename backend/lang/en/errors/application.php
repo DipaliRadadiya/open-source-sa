@@ -44,6 +44,8 @@ return [
     'archive_has_symlink' => 'That archive contains a symbolic link, which is not allowed.',
     'archive_unsafe_entry' => 'That archive contains a file path that is not allowed.',
 
+    'upload_exists' => '‘:name’ already exists here. Delete it first if you mean to replace it — an upload will not overwrite a file.',
+
     'path_exists' => 'Something already exists at that path.',
     'cannot_delete_root' => 'The site\'s own root folder cannot be deleted.',
     'target_not_archive' => 'The new archive\'s name must end in .zip, .tar.gz or .tgz.',

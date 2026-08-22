@@ -44,6 +44,8 @@ return [
     'archive_has_symlink' => 'Esse arquivo contém uma ligação simbólica, o que não é permitido.',
     'archive_unsafe_entry' => 'Esse arquivo contém um caminho de ficheiro que não é permitido.',
 
+    'upload_exists' => '«:name» já existe aqui. Elimine-o primeiro se pretende substituí-lo — um carregamento não substitui um ficheiro.',
+
     'path_exists' => 'Já existe algo nesse caminho.',
     'cannot_delete_root' => 'A pasta raiz do site não pode ser eliminada.',
     'target_not_archive' => 'O nome do novo arquivo deve terminar em .zip, .tar.gz ou .tgz.',

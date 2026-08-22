@@ -44,6 +44,8 @@ return [
     'archive_has_symlink' => 'Dieses Archiv enthält einen symbolischen Link, der nicht zulässig ist.',
     'archive_unsafe_entry' => 'Dieses Archiv enthält einen Dateipfad, der nicht zulässig ist.',
 
+    'upload_exists' => '„:name“ ist hier bereits vorhanden. Löschen Sie die Datei zuerst, wenn Sie sie ersetzen möchten – ein Upload überschreibt keine Datei.',
+
     'path_exists' => 'An diesem Pfad existiert bereits etwas.',
     'cannot_delete_root' => 'Der Stammordner der Website kann nicht gelöscht werden.',
     'target_not_archive' => 'Der Name des neuen Archivs muss auf .zip, .tar.gz oder .tgz enden.',

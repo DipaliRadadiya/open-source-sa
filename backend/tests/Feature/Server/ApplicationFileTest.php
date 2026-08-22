@@ -1081,16 +1081,24 @@ describe('uploading', function () {
             ->assertNotFound();
     });
 
-    it('overwrites an existing file at that path', function () {
+    it('refuses to upload onto a file that is already there', function () {
+        // It used to overwrite. An upload that lands on an existing file
+        // destroys it with no undo and no trace — the panel keeps a backup when
+        // *it* replaces a file on an edit, and an upload kept none. It is also
+        // the one operation here a user can do by accident, with a drag onto a
+        // folder they did not check.
+        //
+        // Deleting the file first is the deliberate act that makes a
+        // replacement intentional.
         fakeFileBrowserServer();
         FileBrowserFake::$fs['wp-content/plugins/thing.zip'] = ['type' => 'f', 'content' => 'old'];
         $file = UploadedFile::fake()->createWithContent('thing.zip', 'new');
 
         $this->actingAs($this->admin)
             ->post(filesUrl('/upload'), ['path' => 'wp-content/plugins/thing.zip', 'file' => $file])
-            ->assertOk();
+            ->assertStatus(422);
 
-        expect(FileBrowserFake::$fs['wp-content/plugins/thing.zip']['content'])->toBe('new');
+        expect(FileBrowserFake::$fs['wp-content/plugins/thing.zip']['content'])->toBe('old');
     });
 
     it('refuses a file above the upload size cap', function () {

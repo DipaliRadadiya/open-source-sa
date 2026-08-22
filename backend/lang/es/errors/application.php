@@ -44,6 +44,8 @@ return [
     'archive_has_symlink' => 'Ese archivo contiene un enlace simbólico, lo cual no está permitido.',
     'archive_unsafe_entry' => 'Ese archivo contiene una ruta de archivo que no está permitida.',
 
+    'upload_exists' => '«:name» ya existe aquí. Elimínalo primero si quieres reemplazarlo: una subida no sobrescribe un archivo.',
+
     'path_exists' => 'Ya existe algo en esa ruta.',
     'cannot_delete_root' => 'No se puede eliminar la carpeta raíz del sitio.',
     'target_not_archive' => 'El nombre del nuevo archivo comprimido debe terminar en .zip, .tar.gz o .tgz.',

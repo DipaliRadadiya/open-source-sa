@@ -629,7 +629,7 @@ class FileBrowser
     }
 
     /**
-     * Writes a new file at `path`, or overwrites one that is already there.
+     * Writes a new file at `path`, refusing to stand on one already there.
      *
      * The original client-supplied filename is never used to build the
      * target — `$path` is the whole answer to "where does this go", validated
@@ -647,6 +647,22 @@ class FileBrowser
         // restraint the rest of this feature keeps. The file itself is what
         // upload is allowed to create; the folder structure is not.
         $this->assertType($application, $directory, 'd');
+
+        // Refused rather than overwritten. An upload that lands on an existing
+        // file destroys it with no undo and no trace — the panel keeps a copy
+        // when *it* replaces a file (see the backup this class writes before an
+        // edit), and an upload had none. Dropping a file into a folder is also
+        // the one operation here a user can do by accident, with a drag they
+        // did not mean onto a folder they did not check.
+        //
+        // Same shape as createDirectory below: refuse, and name what is in the
+        // way. Deleting the file first is the deliberate act that makes the
+        // replacement intentional.
+        abort_if(
+            $this->stat($application, $target) !== null,
+            422,
+            __('errors/application.upload_exists', ['name' => basename($target)]),
+        );
 
         $this->run($application, ['tee', $target], 'upload', input: $contents);
 

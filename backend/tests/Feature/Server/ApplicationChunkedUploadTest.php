@@ -20,6 +20,16 @@ class ChunkedUploadFake
     /** @var array<string, int> part-file path => bytes currently "on disk" */
     public static array $sizes = [];
 
+    /**
+     * Paths the site already has, for `test -e`.
+     *
+     * Empty by default: an upload landing on nothing is the ordinary case, and
+     * every other test in this file assumes it.
+     *
+     * @var array<int, string>
+     */
+    public static array $existing = [];
+
     /** Free space reported by `df`, in 1K blocks. */
     public static int $availableBlocks = 200 * 1024 * 1024;
 
@@ -36,6 +46,7 @@ class ChunkedUploadFake
         self::$availableBlocks = 200 * 1024 * 1024;
         self::$totalBlocks = 300 * 1024 * 1024;
         self::$directoryExists = true;
+        self::$existing = [];
     }
 
     /** @return array<int, string> */
@@ -107,6 +118,14 @@ function fakeUploadServer(): void
 
         if ($binary === 'test' && ($inner[1] ?? '') === '-d') {
             return Process::result(exitCode: ChunkedUploadFake::$directoryExists ? 0 : 1);
+        }
+
+        // An upload refuses to stand on an existing file, so what is already
+        // there decides whether it is allowed to start at all.
+        if ($binary === 'test' && ($inner[1] ?? '') === '-e') {
+            return Process::result(
+                exitCode: in_array($inner[2] ?? '', ChunkedUploadFake::$existing, true) ? 0 : 1,
+            );
         }
 
         if ($binary === 'touch') {
@@ -354,4 +373,33 @@ it('denies a user without manage rights', function () {
     $this->actingAs($viewer)
         ->postJson(uploadsUrl(), ['path' => 'big.zip'])
         ->assertForbidden();
+});
+
+it('refuses to start an upload onto a file that is already there', function () {
+    // Checked at begin, not only at finalize: refusing now costs nothing,
+    // refusing after a two-gigabyte upload costs the upload.
+    ChunkedUploadFake::$existing = ['/home/siteowner/shop/public_html/big.zip'];
+
+    $this->actingAs($this->admin)
+        ->postJson(uploadsUrl(), ['path' => 'big.zip'])
+        ->assertStatus(422);
+
+    // Nothing was created for an upload that was never allowed to open.
+    expect(ChunkedUploadFake::binaries())->not->toContain('touch');
+});
+
+it('refuses to finalise onto a file that appeared during the upload', function () {
+    // An upload is not instant. A file can arrive between begin and finalize,
+    // and `mv -f` would take it away without a word.
+    $id = $this->actingAs($this->admin)
+        ->postJson(uploadsUrl(), ['path' => 'big.zip'])
+        ->json('upload_id');
+
+    ChunkedUploadFake::$existing = ['/home/siteowner/shop/public_html/big.zip'];
+
+    $this->actingAs($this->admin)
+        ->postJson(uploadsUrl().'/'.$id.'/finalize', ['path' => 'big.zip'])
+        ->assertStatus(422);
+
+    expect(ChunkedUploadFake::binaries())->not->toContain('mv');
 });
