@@ -365,7 +365,17 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     {
         $result = $this->serverOps->run(
             $command,
-            ['feature' => 'application', 'op' => "installer.{$step}", 'application' => $application->id],
+            [
+                'feature' => 'application',
+                'op' => "installer.{$step}",
+                'application' => $application->id,
+                // Third-party installers report what they did on stdout and
+                // are not reliable about exit codes — PrestaShop's returned 0
+                // having installed nothing. These commands are quiet when they
+                // work, so keeping their output costs little and is the only
+                // way to answer why one did nothing.
+                'log_output' => true,
+            ],
             timeout: $this->timeout(),
             input: $input,
             cwd: $cwd,

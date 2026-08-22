@@ -281,3 +281,30 @@ it('redacts pass-style option names, not just the word password', function () {
         // being useful for the thing it exists for.
         ->and($logged['command'])->toContain('--adminuser=admin');
 });
+
+it('keeps stdout on success when the caller asks, for tools that lie about exit codes', function () {
+    // PrestaShop's installer exited 0 in half a second having written no
+    // configuration. Failure-only capture answers "what went wrong" and cannot
+    // answer "why did nothing happen" — the only account of that was on a
+    // stdout nobody kept.
+    Process::fake(['*' => Process::result(output: 'Nothing to do; database already installed.')]);
+
+    $logged = [];
+    Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
+    Log::shouldReceive('info')->once()->withArgs(function (string $message, array $context) use (&$logged) {
+        $logged = $context;
+
+        return true;
+    });
+
+    app(ServerOps::class)->run(
+        ['php', 'install/index_cli.php'],
+        ['feature' => 'application', 'op' => 'installer.install_app', 'log_output' => true],
+    );
+
+    // `toBeString()` first, deliberately: with failure-only capture this key is
+    // null, and asserting only `toContain` let the null through — the test
+    // passed against the very behaviour it exists to forbid.
+    expect($logged['stdout'] ?? null)->toBeString()
+        ->and($logged['stdout'])->toContain('Nothing to do');
+});

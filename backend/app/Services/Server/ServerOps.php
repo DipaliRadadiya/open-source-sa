@@ -162,7 +162,15 @@ class ServerOps
             // progress before dying puts the reason last. Bounded because the
             // successful path of some of these is a 90 MB file listing, and a
             // log nobody can open is its own kind of missing.
-            'stdout' => $ok ? null : $this->loggableOutput($stdout),
+            // Kept on success too when the caller asks. A command that exits 0
+            // having done nothing is not hypothetical: PrestaShop's installer
+            // returned success in half a second, wrote no configuration, and
+            // the only record of why was on a stdout nobody kept. Failure-only
+            // capture answers "what went wrong" and cannot answer "why did
+            // nothing happen".
+            'stdout' => $ok && ! ($context['log_output'] ?? false)
+                ? null
+                : $this->loggableOutput($stdout),
             'attempts' => $attempts,
             'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             'actor_id' => Auth::id(),
