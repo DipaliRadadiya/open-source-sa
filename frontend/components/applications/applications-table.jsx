@@ -115,16 +115,11 @@ function SizeCell({ row }) {
     );
   }
 
-  return (
-    <span className="whitespace-nowrap">
-      <span className="tabular-nums">{size}</span>
-      {row.original.directory_size_measured_at_human ? (
-        <span className="ml-2 text-xs text-muted-foreground">
-          {row.original.directory_size_measured_at_human}
-        </span>
-      ) : null}
-    </span>
-  );
+  // The number alone. When it was measured used to sit beside it, and on a
+  // freshly measured site that read "10 seconds ago" against every row — a
+  // second value competing with the one the column is named for, and the least
+  // interesting reading of it at exactly the moment it appears.
+  return <span className="whitespace-nowrap tabular-nums">{size}</span>;
 }
 
 function ActionsCell({ row, table }) {
