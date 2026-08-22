@@ -20,7 +20,19 @@ export const panelUpdateRunSchema = z
     // the localized explanation. rolled_back means the previous version was restored.
     reason: z.string().nullish(),
     reason_title: z.string().nullish(),
-    rolled_back: z.boolean().default(false),
+    // `.nullish()` then coalesce, NOT `.default(false)`. Zod's default only
+    // fills `undefined`; the API sends `null` here, because the column is
+    // nullable until a run either rolls back or does not. So `.default(false)`
+    // threw on every fresh run.
+    //
+    // That single mismatch caused both halves of the worst bug in this
+    // feature. `startPanelUpdate` parses the 202 with this schema, so a
+    // successful start threw a ZodError -- which carries no `response.data`,
+    // so apiMessage fell back to "Couldn't start the update" while the update
+    // was already running. And `fetchPanelUpdateRun` parses every poll with it
+    // too, so the progress bar never advanced: the user was told it failed,
+    // then shown nothing, while the panel updated perfectly behind them.
+    rolled_back: z.boolean().nullish().transform((value) => value ?? false),
     reference: z.string().nullish(),
     started_at: z.string().nullish(),
     started_at_human: z.string().nullish(),
