@@ -5186,6 +5186,12 @@
       "label": "Connection key",
       "lost": "Only part of the key is shown. If you've lost it, generate a new one — Central will stop working until you paste the new key in."
     },
+    "confirmGenerate": {
+      "title": "Allow Central management?",
+      "description": "This grants ServerAvatar Central Panel full management access to this server.",
+      "acknowledgement": "I understand this key grants ServerAvatar Central Panel management access to this server, and I want to proceed.",
+      "submit": "Generate connection key"
+    },
     "confirmRegenerate": {
       "title": "Generate a new key?",
       "description": "The current key stops working immediately. Central will lose access to this server until you paste the new key into it.",

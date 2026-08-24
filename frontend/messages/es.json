@@ -5186,6 +5186,12 @@
       "label": "Clave de conexión",
       "lost": "Solo se muestra una parte de la clave. Si la has perdido, genera una nueva: Central dejará de funcionar hasta que pegues la nueva clave."
     },
+    "confirmGenerate": {
+      "title": "¿Permitir la gestión central?",
+      "description": "Esto concede al Panel Central de ServerAvatar acceso completo para administrar este servidor.",
+      "acknowledgement": "Entiendo que esta clave concede al Panel Central de ServerAvatar acceso de administración a este servidor y quiero continuar.",
+      "submit": "Generar clave de conexión"
+    },
     "confirmRegenerate": {
       "title": "¿Generar una clave nueva?",
       "description": "La clave actual deja de funcionar de inmediato. Central perderá el acceso a este servidor hasta que pegues en él la clave nueva.",

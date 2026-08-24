@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /**
  * Connect this server to a central panel, and the two ways to undo it.
@@ -31,6 +32,7 @@ export function CentralPanel({ status }) {
   const [token, setToken] = useState(null);
   const [pending, setPending] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  const [acknowledged, setAcknowledged] = useState(false);
 
   const connected = Boolean(status?.enabled);
 
@@ -45,6 +47,7 @@ export function CentralPanel({ status }) {
       // log line. When this component unmounts the value is gone for good,
       // which is exactly what the backend promises.
       setToken(parsed.data.central_token);
+      setAcknowledged(false);
       setConfirming(null);
       router.refresh();
     } catch (error) {
@@ -151,12 +154,8 @@ export function CentralPanel({ status }) {
           </>
         ) : (
           <div className="space-y-2">
-            <Button disabled={pending !== null} onClick={generate}>
-              {pending === "generate" ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : (
-                <PlugZap className="size-4" aria-hidden />
-              )}
+            <Button disabled={pending !== null} onClick={() => setConfirming("generate")}>
+              <PlugZap className="size-4" aria-hidden />
               {t("actions.generate")}
             </Button>
             {/* Said before the press, not only after it. Nobody should meet the
@@ -165,6 +164,39 @@ export function CentralPanel({ status }) {
           </div>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={confirming === "generate"}
+        onOpenChange={(next) => {
+          if (!next && pending === null) {
+            setAcknowledged(false);
+            setConfirming(null);
+          }
+        }}
+        icon={ShieldAlert}
+        tone="warning"
+        title={t("confirmGenerate.title")}
+        description={t("confirmGenerate.description")}
+        cancelLabel={t("cancel")}
+        confirmLabel={t("confirmGenerate.submit")}
+        confirmDisabled={!acknowledged}
+        pending={pending === "generate"}
+        onConfirm={generate}
+      >
+        <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
+          <Checkbox
+            id="central-key-acknowledgement"
+            checked={acknowledged}
+            onCheckedChange={(checked) => setAcknowledged(checked === true)}
+          />
+          <label
+            htmlFor="central-key-acknowledgement"
+            className="cursor-pointer text-sm leading-5 text-foreground"
+          >
+            {t("confirmGenerate.acknowledgement")}
+          </label>
+        </div>
+      </ConfirmDialog>
 
       {/* Regenerating is the destructive one, and the damage is on a screen the
           reader cannot see: the old token dies on the next request, so Central
