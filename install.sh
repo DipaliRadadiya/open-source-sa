@@ -647,6 +647,73 @@ wait_for_apt_lock() {
     ok "the other package manager finished (${waited}s)"
 }
 
+# MongoDB publishes an ASCII-armoured signing key. Panel releases before this
+# repair saved that response with a `.gpg` extension, which tells apt to parse
+# it as a dearmoured binary keyring. The repository list survived the failed
+# engine install, so every later `apt-get update` — including this installer's
+# first package step — stopped with NO_PUBKEY before updated panel code could
+# repair its own file.
+#
+# Touch only the exact MongoDB source/key pattern the panel wrote. An unrelated
+# third-party repository is the server owner's configuration, not ours to
+# rewrite. The old `.gpg` file is left in place; once no source references it,
+# it is harmless, and deleting an operator-managed file would be needless.
+repair_panel_mongodb_repository() {
+    local list series old_key keyring current fixed
+
+    for list in /etc/apt/sources.list.d/mongodb-org-*.list; do
+        [[ -e "$list" ]] || continue
+
+        series=${list##*/mongodb-org-}
+        series=${series%.list}
+        [[ "$series" =~ ^[0-9]+\.[0-9]+$ ]] || continue
+
+        old_key="/etc/apt/keyrings/mongodb-server-${series}.gpg"
+        keyring="/etc/apt/keyrings/mongodb-server-${series}.asc"
+        current=$(cat "$list" 2>/dev/null || true)
+
+        # Only the official MongoDB Ubuntu source with the panel's old key path
+        # is ours to rewrite. A correct `.asc` source with a missing key is also
+        # repaired, covering a download interrupted between the two writes.
+        if [[ "$current" == *"https://repo.mongodb.org/apt/ubuntu"* \
+              && "$current" == *"signed-by=${old_key}"* ]]; then
+            run install -d -m 0755 /etc/apt/keyrings
+            run_progress "Repairing the MongoDB ${series} repository signing key" \
+                curl -fsSL --proto '=https' --proto-redir '=https' \
+                -o "$keyring" "https://pgp.mongodb.com/server-${series}.asc"
+
+            if (( ! DRY_RUN )) && ! grep -q '^-----BEGIN PGP PUBLIC KEY BLOCK-----$' "$keyring"; then
+                die "MongoDB ${series} returned an invalid repository signing key."
+            fi
+
+            run chmod 0644 "$keyring"
+            fixed=${current//$old_key/$keyring}
+
+            if (( DRY_RUN )); then
+                printf '     %s$ rewrite %s to use %s%s\n' "$DIM" "$list" "$keyring" "$RESET"
+            else
+                printf '%s\n' "$fixed" >"$list"
+            fi
+
+            ok "MongoDB ${series} repository key repaired"
+        elif [[ "$current" == *"https://repo.mongodb.org/apt/ubuntu"* \
+                && "$current" == *"signed-by=${keyring}"* \
+                && ! -s "$keyring" ]]; then
+            run install -d -m 0755 /etc/apt/keyrings
+            run_progress "Restoring the MongoDB ${series} repository signing key" \
+                curl -fsSL --proto '=https' --proto-redir '=https' \
+                -o "$keyring" "https://pgp.mongodb.com/server-${series}.asc"
+
+            if (( ! DRY_RUN )) && ! grep -q '^-----BEGIN PGP PUBLIC KEY BLOCK-----$' "$keyring"; then
+                die "MongoDB ${series} returned an invalid repository signing key."
+            fi
+
+            run chmod 0644 "$keyring"
+            ok "MongoDB ${series} repository key restored"
+        fi
+    done
+}
+
 install_packages() {
     step "Installing packages"
 
@@ -654,6 +721,7 @@ install_packages() {
 
     configure_apt_lock_wait
     wait_for_apt_lock
+    repair_panel_mongodb_repository
 
     run_progress "Refreshing system package lists" apt-get update -qq
     # update-notifier-common provides `apt-check`, which is how the panel counts

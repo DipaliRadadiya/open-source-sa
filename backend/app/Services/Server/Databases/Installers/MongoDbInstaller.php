@@ -109,10 +109,34 @@ class MongoDbInstaller implements EngineInstaller
     private function addRepository(): void
     {
         $series = $this->series();
-        $keyring = "/etc/apt/keyrings/mongodb-server-{$series}.gpg";
+        // MongoDB publishes an ASCII-armoured key. APT chooses the keyring
+        // parser from the extension: `.asc` is armoured, while `.gpg` must be
+        // dearmoured binary data. The old installer saved the armoured response
+        // as `.gpg`, so apt ignored it and reported NO_PUBKEY even though the
+        // file existed.
+        $keyring = "/etc/apt/keyrings/mongodb-server-{$series}.asc";
         $list = "/etc/apt/sources.list.d/mongodb-org-{$series}.list";
 
-        if ($this->serverOps->run(['test', '-f', $list], $this->context('repo_check'))->ok) {
+        $line = sprintf(
+            "deb [ arch=%s signed-by=%s ] %s %s/mongodb-org/%s %s\n",
+            $this->architecture(),
+            $keyring,
+            (string) config('server.databases.mongodb.repository_url'),
+            $this->codename(),
+            $series,
+            (string) config('server.databases.mongodb.component', 'multiverse'),
+        );
+
+        // The pair is the unit of idempotency. Checking only the list made a
+        // failed first attempt permanent: the malformed key remained beside a
+        // source file, and every retry skipped the code that could repair it.
+        $existingList = $this->serverOps->run(['cat', $list], $this->context('repo_check_list'));
+        $existingKey = $this->serverOps->run(['cat', $keyring], $this->context('repo_check_key'));
+
+        if ($existingList->ok
+            && trim($existingList->output()) === trim($line)
+            && $existingKey->ok
+            && str_contains($existingKey->output(), '-----BEGIN PGP PUBLIC KEY BLOCK-----')) {
             return;
         }
 
@@ -134,21 +158,18 @@ class MongoDbInstaller implements EngineInstaller
             timeout: 120,
         ), 'repository_failed');
 
+        $downloadedKey = $this->serverOps->run(['cat', $keyring], $this->context('repo_key_verify'));
+
+        if ($downloadedKey->failed()
+            || ! str_contains($downloadedKey->output(), '-----BEGIN PGP PUBLIC KEY BLOCK-----')) {
+            throw EngineInstallException::because('repository_failed', $downloadedKey->reference);
+        }
+
         $this->must($this->serverOps->run(['chmod', '0644', $keyring], $this->context('repo_key_mode')), 'repository_failed');
 
         // The codename is the panel's own, from the OS it detected — not a
         // guess. A list naming a codename MongoDB does not publish for adds
         // without complaint and then carries no packages at all.
-        $line = sprintf(
-            "deb [ arch=%s signed-by=%s ] %s %s/mongodb-org/%s %s\n",
-            $this->architecture(),
-            $keyring,
-            (string) config('server.databases.mongodb.repository_url'),
-            $this->codename(),
-            $series,
-            (string) config('server.databases.mongodb.component', 'multiverse'),
-        );
-
         $this->must($this->serverOps->run(
             ['tee', $list],
             $this->context('repo_list'),

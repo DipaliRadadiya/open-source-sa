@@ -51,6 +51,10 @@ function fakeMongoBox(array &$seen, string $installedPackage = '', bool $authOn 
             return Process::result(output: "ID=ubuntu\nVERSION_CODENAME=jammy\n");
         }
 
+        if ($binary === 'cat' && str_contains((string) ($command[1] ?? ''), 'mongodb-server-8.0.asc')) {
+            return Process::result(output: "-----BEGIN PGP PUBLIC KEY BLOCK-----\nkey\n");
+        }
+
         // `test -f` on the sources list: absent, so the repository gets added.
         if ($binary === 'test') {
             return Process::result(exitCode: 1);
@@ -106,9 +110,128 @@ describe('a fresh install', function () {
             && str_contains((string) ($p->command[1] ?? ''), 'sources.list.d'));
 
         // A key in the global store signs for *every* repository on the box,
-        // not just this one.
+        // not just this one. MongoDB publishes an armoured key, so its `.asc`
+        // extension is also part of the contract: naming it `.gpg` makes apt
+        // parse it as a binary keyring and report NO_PUBKEY.
         expect($line->input)->toContain('signed-by=/etc/apt/keyrings/')
+            ->and($line->input)->toContain('mongodb-server-8.0.asc')
+            ->and($line->input)->not->toContain('mongodb-server-8.0.gpg')
             ->and($line->input)->toContain('repo.mongodb.org');
+    });
+
+    it('repairs the old armoured key that was incorrectly named as a binary keyring', function () {
+        $seen = [];
+
+        Process::fake(function ($process) use (&$seen) {
+            $seen[] = $process;
+            $command = $process->command;
+            $path = (string) ($command[1] ?? '');
+
+            if (($command[0] ?? '') === 'dpkg-query') {
+                return Process::result(output: 'unknown ok not-installed');
+            }
+
+            if (($command[0] ?? '') === 'cat' && str_contains($path, 'os-release')) {
+                return Process::result(output: "ID=ubuntu\nVERSION_CODENAME=noble\n");
+            }
+
+            if (($command[0] ?? '') === 'cat' && str_contains($path, 'mongodb-org-8.0.list')) {
+                return Process::result(output: "deb [ arch=amd64 signed-by=/etc/apt/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse\n");
+            }
+
+            if (($command[0] ?? '') === 'cat' && str_contains($path, 'mongodb-server-8.0.asc')) {
+                $downloaded = collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'curl');
+
+                return $downloaded
+                    ? Process::result(output: "-----BEGIN PGP PUBLIC KEY BLOCK-----\nkey\n")
+                    : Process::result(errorOutput: 'missing', exitCode: 1);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        mongoInstaller()->install();
+
+        $download = collect($seen)->first(fn ($p) => ($p->command[0] ?? '') === 'curl');
+        $write = collect($seen)->first(fn ($p) => ($p->command[0] ?? '') === 'tee'
+            && str_contains((string) ($p->command[1] ?? ''), 'mongodb-org-8.0.list'));
+
+        expect($download)->not->toBeNull()
+            ->and($download->command)->toContain('/etc/apt/keyrings/mongodb-server-8.0.asc')
+            ->and($write->input)->toContain('signed-by=/etc/apt/keyrings/mongodb-server-8.0.asc')
+            ->and(collect($seen)->contains(fn ($p) => $p->command === ['apt-get', 'update']))->toBeTrue();
+    });
+
+    it('restores a missing key even when the repository list is already correct', function () {
+        $seen = [];
+
+        Process::fake(function ($process) use (&$seen) {
+            $seen[] = $process;
+            $command = $process->command;
+            $path = (string) ($command[1] ?? '');
+
+            if (($command[0] ?? '') === 'dpkg-query') {
+                return Process::result(output: 'unknown ok not-installed');
+            }
+
+            if (($command[0] ?? '') === 'cat' && str_contains($path, 'os-release')) {
+                return Process::result(output: "VERSION_CODENAME=noble\n");
+            }
+
+            if (($command[0] ?? '') === 'cat' && str_contains($path, 'mongodb-org-8.0.list')) {
+                return Process::result(output: "deb [ arch=amd64 signed-by=/etc/apt/keyrings/mongodb-server-8.0.asc ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse\n");
+            }
+
+            if (($command[0] ?? '') === 'cat' && str_contains($path, 'mongodb-server-8.0.asc')) {
+                $downloaded = collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'curl');
+
+                return $downloaded
+                    ? Process::result(output: "-----BEGIN PGP PUBLIC KEY BLOCK-----\nkey\n")
+                    : Process::result(errorOutput: 'missing', exitCode: 1);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        mongoInstaller()->install();
+
+        expect(collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'curl'))->toBeTrue()
+            ->and(collect($seen)->contains(fn ($p) => $p->command === ['apt-get', 'update']))->toBeTrue();
+    });
+
+    it('leaves a valid repository pair alone', function () {
+        $seen = [];
+
+        Process::fake(function ($process) use (&$seen) {
+            $seen[] = $process;
+            $command = $process->command;
+            $path = (string) ($command[1] ?? '');
+
+            if (($command[0] ?? '') === 'dpkg-query') {
+                return Process::result(output: 'unknown ok not-installed');
+            }
+
+            if (($command[0] ?? '') === 'cat' && str_contains($path, 'os-release')) {
+                return Process::result(output: "VERSION_CODENAME=noble\n");
+            }
+
+            if (($command[0] ?? '') === 'cat' && str_contains($path, 'mongodb-org-8.0.list')) {
+                return Process::result(output: "deb [ arch=amd64 signed-by=/etc/apt/keyrings/mongodb-server-8.0.asc ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse\n");
+            }
+
+            if (($command[0] ?? '') === 'cat' && str_contains($path, 'mongodb-server-8.0.asc')) {
+                return Process::result(output: "-----BEGIN PGP PUBLIC KEY BLOCK-----\nkey\n");
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        mongoInstaller()->install();
+
+        expect(collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'curl'))->toBeFalse()
+            ->and(collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'tee'
+                && str_contains((string) ($p->command[1] ?? ''), 'mongodb-org-8.0.list')))->toBeFalse()
+            ->and(collect($seen)->contains(fn ($p) => $p->command === ['apt-get', 'update']))->toBeFalse();
     });
 
     it('names the codename the server actually runs, not a guess', function () {
@@ -282,4 +405,23 @@ it('reports the server package as what decides "installed", not the shell', func
 it('is offerable in the setup page now that it has an installer', function () {
     // The one config value that turns the card from greyed to clickable.
     expect(app(EngineInstallerManager::class)->canInstall('mongodb'))->toBeTrue();
+});
+
+it('repairs the panel-created MongoDB key before the bootstrap installer updates apt', function () {
+    $path = base_path('../install.sh');
+
+    if (! is_file($path)) {
+        $this->markTestSkipped('install.sh is not in this checkout');
+    }
+
+    $installer = file_get_contents($path);
+    $repair = strpos($installer, 'repair_panel_mongodb_repository');
+    $firstUpdate = strpos($installer, 'run_progress "Refreshing system package lists" apt-get update -qq');
+
+    expect($repair)->not->toBeFalse()
+        ->and($firstUpdate)->not->toBeFalse()
+        ->and($repair)->toBeLessThan($firstUpdate)
+        ->and($installer)->toContain('signed-by=${old_key}')
+        ->and($installer)->toContain('mongodb-server-${series}.asc')
+        ->and($installer)->toContain('https://repo.mongodb.org/apt/ubuntu');
 });
