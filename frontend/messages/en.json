@@ -4263,7 +4263,7 @@
     "status": {
       "pending": "Pending",
       "provisioning": "Provisioning",
-      "active": "Active",
+      "active": "Running",
       "failed": "Failed"
     },
     "protection": {

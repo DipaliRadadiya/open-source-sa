@@ -33,6 +33,7 @@ export function Combobox({
   disabledReason,
   className,
   id,
+  ariaLabel,
 }) {
   const t = useTranslations("common");
   const [open, setOpen] = useState(false);
@@ -67,6 +68,7 @@ export function Combobox({
           id={id}
           variant="outline"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
           disabled={disabled}
           disabledReason={disabledReason}
