@@ -101,7 +101,17 @@ class NextcloudInstaller extends AbstractPhpInstaller
         // address; from the CLI there is nothing to infer it from.
         $this->runAsSiteUser('trust_domain', $application, [
             $php, 'occ', 'config:system:set', 'overwrite.cli.url',
-            '--value=https://'.$application->domain,
+            '--value='.$application->url(),
+        ], null, $documentRoot);
+    }
+
+    public function syncUrl(Application $application, string $url): void
+    {
+        $documentRoot = $application->documentRoot();
+
+        $this->runAsSiteUser('sync_url', $application, [
+            $this->phpBinary($application), 'occ', 'config:system:set', 'overwrite.cli.url',
+            '--value='.$url,
         ], null, $documentRoot);
     }
 }

@@ -142,7 +142,9 @@ it('trusts the site\'s own domain, or the site refuses every visitor', function 
         ->and($trust['path'])->toBe($this->docRoot);
 
     $cliUrl = occRun($runs, 'overwrite.cli.url');
-    expect($cliUrl['command'])->toContain('--value=https://cloud.example.com');
+    // Installation happens before optional certificate issuance. Persist only
+    // what the vhost can serve now; the certificate lifecycle promotes it.
+    expect($cliUrl['command'])->toContain('--value=http://cloud.example.com');
 });
 
 it('takes the zip, not the bzip2 tarball', function () {

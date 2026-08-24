@@ -190,7 +190,7 @@ server {
     }
 
     location / {
-        return {{ $redirect->redirect_status }} {{ $redirect->redirect_to ?: 'https://'.$domain }}$request_uri;
+        return {{ $redirect->redirect_status }} {{ $redirect->redirect_to ?: $canonicalUrl }}$request_uri;
     }
 }
 @endforeach

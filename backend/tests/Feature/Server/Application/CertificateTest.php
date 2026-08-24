@@ -58,6 +58,25 @@ beforeEach(function () {
     Process::fake(fn () => Process::result(exitCode: 0));
 });
 
+it('uses HTTPS only when an active certificate covers the primary hostname', function () {
+    expect($this->application->fresh()->url())->toBe('http://shop.example.com');
+
+    $certificate = activeCertificate($this->application);
+    expect($this->application->fresh()->url())->toBe('https://shop.example.com');
+
+    $certificate->update(['domains' => ['other.example.com']]);
+    expect($this->application->fresh()->url())->toBe('http://shop.example.com');
+
+    $certificate->update(['domains' => ['*.example.com']]);
+    expect($this->application->fresh()->url())->toBe('https://shop.example.com');
+
+    $this->application->update(['domain' => 'deep.shop.example.com']);
+    expect($this->application->fresh()->url())->toBe('http://deep.shop.example.com');
+
+    $this->application->update(['domain' => 'example.com']);
+    expect($this->application->fresh()->url())->toBe('http://example.com');
+});
+
 it('queues issuance and reports 202 rather than pretending it is done', function () {
     Queue::fake();
 
@@ -107,7 +126,12 @@ it('issues, records the paths and puts TLS into the vhost', function () {
 
     expect($certificate->status)->toBe(CertificateStatus::Active)
         ->and($certificate->certificate_path)->toBe('/etc/letsencrypt/live/shop.example.com/fullchain.pem')
-        ->and($certificate->expires_at?->format('Y-m-d'))->toBe('2030-01-01');
+        ->and($certificate->expires_at?->format('Y-m-d'))->toBe('2030-01-01')
+        ->and($this->application->fresh()->url())->toBe('https://shop.example.com');
+
+    Process::assertRan(fn ($process) => in_array('option', $process->command, true)
+        && in_array('home', $process->command, true)
+        && in_array('https://shop.example.com', $process->command, true));
 
     $config = renderedCertVhost($this->application);
 
@@ -339,7 +363,12 @@ it('clears force HTTPS before rewriting the vhost when the certificate is remove
     // Rewriting first would leave a config that redirects every visitor to a
     // port nothing is listening on — not "no HTTPS", but no site.
     expect($config)->not->toContain('return 301 https://$host')
-        ->and($config)->toContain('listen 80');
+        ->and($config)->toContain('listen 80')
+        ->and($this->application->fresh()->url())->toBe('http://shop.example.com');
+
+    Process::assertRan(fn ($process) => in_array('option', $process->command, true)
+        && in_array('home', $process->command, true)
+        && in_array('http://shop.example.com', $process->command, true));
 
     Process::assertRan(fn ($process) => in_array('delete', $process->command, true)
         && in_array('--cert-name', $process->command, true));

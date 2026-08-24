@@ -82,7 +82,7 @@ class MauticInstaller extends AbstractPhpInstaller
 
         $this->runAsSiteUser('install_app', $application, [
             $this->phpBinary($application), 'bin/console', 'mautic:install',
-            'https://'.$application->domain,
+            $application->url(),
             // Mautic treats recommendations (including its 512M memory
             // preference) as a confirmation prompt. With nobody to answer,
             // --no-interaction declines that prompt at step zero — whose
@@ -101,6 +101,41 @@ class MauticInstaller extends AbstractPhpInstaller
             'SELECT COUNT(*) FROM users',
             '--no-interaction',
         ], null, $documentRoot);
+    }
+
+    public function syncUrl(Application $application, string $url): void
+    {
+        $documentRoot = $application->documentRoot();
+        $path = $documentRoot.'/'.trim((string) config('server.installers.mautic.config_dir', 'config'), '/').'/local.php';
+
+        $changed = $this->configMutator->transform($application, $path, function (string $contents) use ($url): string {
+            $literal = var_export($url, true);
+            $updated = preg_replace(
+                "/('site_url'\\s*=>\\s*)'(?:\\\\.|[^'])*'/",
+                '$1'.$literal,
+                $contents,
+                1,
+                $count,
+            );
+
+            if (is_string($updated) && $count === 1) {
+                return $updated;
+            }
+
+            $updated = preg_replace('/\\n];\\s*$/', "\n  'site_url' => {$literal},\n];\n", $contents, 1, $count);
+
+            if (! is_string($updated) || $count !== 1) {
+                throw new \RuntimeException('Mautic parameters array was not found.');
+            }
+
+            return $updated;
+        });
+
+        if ($changed) {
+            $this->runAsSiteUser('sync_url', $application, [
+                $this->phpBinary($application), 'bin/console', 'mautic:cache:clear', '--no-interaction',
+            ], null, $documentRoot);
+        }
     }
 
     /**

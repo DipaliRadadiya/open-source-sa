@@ -82,6 +82,27 @@ class InstallerManager
     }
 
     /**
+     * Bring an installed application's own canonical URL in line with the
+     * domain and certificate the panel currently serves.
+     *
+     * An explicit target is used while transitioning a certificate: before it
+     * is marked active Application::url() still correctly reports HTTP.
+     *
+     * @throws ProvisioningFailedException
+     */
+    public function syncUrl(Application $application, ?string $target = null): void
+    {
+        $installer = $this->installerFor($application);
+
+        if ($installer === null) {
+            return;
+        }
+
+        $application->loadMissing(['systemUser', 'certificate']);
+        $installer->syncUrl($application, $target ?? $application->url());
+    }
+
+    /**
      * Create the application's database and a dedicated user for it.
      *
      * The password is generated, never asked for — one fewer weak secret, and

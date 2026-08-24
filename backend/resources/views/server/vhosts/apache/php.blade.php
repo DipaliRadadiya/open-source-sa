@@ -64,7 +64,7 @@
         Require all granted
     </Directory>
 
-    RedirectMatch {{ $redirect->redirect_status }} ^/(?!\.well-known/acme-challenge/)(.*)$ {{ $redirect->redirect_to ?: 'https://'.$domain }}/$1
+    RedirectMatch {{ $redirect->redirect_status }} ^/(?!\.well-known/acme-challenge/)(.*)$ {{ $redirect->redirect_to ?: $canonicalUrl }}/$1
 </VirtualHost>
 @if ($certificate && in_array($redirect->domain, $certificate->domains ?? [], true))
 {{-- A redirect needs its own HTTPS listener. `http://old` → `https://new` looks
@@ -79,7 +79,7 @@
     SSLCertificateKeyFile {{ $certificate->private_key_path }}
     SSLProtocol -all +TLSv1.2 +TLSv1.3
 
-    Redirect {{ $redirect->redirect_status }} / {{ $redirect->redirect_to ?: 'https://'.$domain }}/
+    Redirect {{ $redirect->redirect_status }} / {{ $redirect->redirect_to ?: $canonicalUrl }}/
 </VirtualHost>
 @endif
 @endforeach

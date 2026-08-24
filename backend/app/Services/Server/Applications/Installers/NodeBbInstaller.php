@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use Illuminate\Support\Str;
 
@@ -102,12 +103,10 @@ class NodeBbInstaller extends AbstractNodeInstaller
      */
     private function config(Application $application, string $documentRoot, array $context): string
     {
-        $domain = (string) $application->domain;
-
         return json_encode([
             // NodeBB builds every absolute link from this, so a wrong value is
             // a forum whose links all point somewhere else.
-            'url' => "https://{$domain}",
+            'url' => $application->url(),
             'secret' => Str::random(40),
             'database' => 'mongo',
             'port' => (int) ($application->app_port ?: 4567),
@@ -122,5 +121,35 @@ class NodeBbInstaller extends AbstractNodeInstaller
                 'uri' => '',
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n";
+    }
+
+    public function syncUrl(Application $application, string $url): void
+    {
+        $path = $application->documentRoot().'/config.json';
+
+        $changed = $this->configMutator->transform($application, $path, function (string $contents) use ($url): string {
+            $config = json_decode($contents, true, flags: JSON_THROW_ON_ERROR);
+
+            if (! is_array($config)) {
+                throw new \RuntimeException('NodeBB config is not an object.');
+            }
+
+            $config['url'] = $url;
+
+            return json_encode(
+                $config,
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            )."\n";
+        });
+
+        if (! $changed) {
+            return;
+        }
+
+        $result = $this->supervisor->restart($application);
+
+        if ($result->failed()) {
+            throw new ProvisioningFailedException('sync_url', $result->reference);
+        }
     }
 }

@@ -68,7 +68,7 @@ class CraftCmsInstaller extends AbstractPhpInstaller
             'database' => $context['database'],
             'username' => $context['db_user'],
             'password' => $context['db_password'],
-            'siteUrl' => 'https://'.$application->domain,
+            'siteUrl' => $application->url(),
         ])->render());
 
         // `--password` is left out on purpose: Craft then asks, and Yii's
@@ -78,12 +78,35 @@ class CraftCmsInstaller extends AbstractPhpInstaller
             '--username='.($settings['admin_user'] ?? 'admin'),
             '--email='.($settings['admin_email'] ?? ''),
             '--site-name='.($settings['site_name'] ?? $application->name),
-            '--site-url=https://'.$application->domain,
+            '--site-url='.$application->url(),
             '--language='.($settings['language'] ?? 'en-US'),
             // On argv, not on stdin — see the class note. Required with a
             // ten-character minimum by the site type, so an empty value here
             // means the setting never arrived rather than a user choosing one.
             '--password='.($settings['admin_password'] ?? ''),
         ], null, $projectRoot);
+    }
+
+    public function syncUrl(Application $application, string $url): void
+    {
+        $projectRoot = $application->codePath();
+        $path = $projectRoot.'/.env';
+
+        $changed = $this->configMutator->transform($application, $path, function (string $contents) use ($url): string {
+            $line = 'PRIMARY_SITE_URL='.$url;
+            $updated = preg_replace('/^PRIMARY_SITE_URL=.*$/m', $line, $contents, 1, $count);
+
+            if (! is_string($updated)) {
+                throw new \RuntimeException('Craft site URL could not be updated.');
+            }
+
+            return $count === 1 ? $updated : rtrim($contents, "\n")."\n{$line}\n";
+        });
+
+        if ($changed) {
+            $this->runAsSiteUser('sync_url', $application, [
+                $this->phpBinary($application), 'craft', 'clear-caches/all', '--interactive=0',
+            ], null, $projectRoot);
+        }
     }
 }

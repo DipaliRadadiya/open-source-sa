@@ -9,6 +9,7 @@ use App\Jobs\Concerns\TracksActor;
 use App\Models\Certificate;
 use App\Services\ActivityLogger;
 use App\Services\Server\Certificates\CertbotClient;
+use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -53,7 +54,9 @@ class IssueCertificate implements ShouldQueue
         ApplyVhost $vhost,
         WebServerManager $webServers,
         ActivityLogger $activityLogger,
+        ?InstallerManager $installers = null,
     ): void {
+        $installers ??= app(InstallerManager::class);
         $certificate = Certificate::with('application.domains')->find($this->certificateId);
 
         if ($certificate === null || $certificate->application === null) {
@@ -83,22 +86,48 @@ class IssueCertificate implements ShouldQueue
             return;
         }
 
-        $certificate->update([
-            'status' => CertificateStatus::Active,
-            'certificate_path' => $paths['certificate'],
-            'private_key_path' => $paths['private_key'],
-            'chain_path' => $paths['chain'] ?? null,
-            'issued_at' => now(),
-            // Read off the file rather than assumed from the lifetime. Let's
-            // Encrypt has started issuing shorter-lived certificates, so a
-            // hardcoded 90 days would quietly become wrong.
-            'expires_at' => $files->expiresAt($paths['certificate']),
-        ]);
+        $application = $certificate->application->fresh(['domains', 'certificate', 'systemUser']);
+        $previousUrl = $application->url();
+        $targetUrl = $certificate->covers((string) $application->domain)
+            ? 'https://'.$application->domain
+            : 'http://'.$application->domain;
 
-        // Only now does the vhost gain its TLS directives — pointing a server
-        // block at files that are not there fails the config test and takes the
-        // site down over a certificate it never had.
-        $vhost->execute($certificate->application->fresh(['domains', 'certificate']));
+        try {
+            // Reconcile before advertising the certificate as active. If an
+            // application's own config cannot be changed, its existing HTTP
+            // site stays coherent and the certificate job fails visibly.
+            $installers->syncUrl($application, $targetUrl);
+
+            $certificate->update([
+                'status' => CertificateStatus::Active,
+                'certificate_path' => $paths['certificate'],
+                'private_key_path' => $paths['private_key'],
+                'chain_path' => $paths['chain'] ?? null,
+                'issued_at' => now(),
+                // Read off the file rather than assumed from the lifetime. Let's
+                // Encrypt has started issuing shorter-lived certificates, so a
+                // hardcoded 90 days would quietly become wrong.
+                'expires_at' => $files->expiresAt($paths['certificate']),
+            ]);
+
+            // Only now does the vhost gain its TLS directives — pointing a
+            // server block at files that are not there fails the config test
+            // and takes the site down over a certificate it never had.
+            $vhost->execute($application->fresh(['domains', 'certificate']));
+        } catch (Throwable $exception) {
+            try {
+                $installers->syncUrl($application, $previousUrl);
+            } catch (Throwable) {
+                // Preserve the original failure reference.
+            }
+
+            $certificate->update([
+                'status' => CertificateStatus::Failed,
+                'reason' => 'unknown',
+            ]);
+
+            throw $exception;
+        }
 
         if ($certificate->type === CertificateType::LetsEncrypt) {
             $certbot->ensureRenewalHook(implode(' ', $webServers->driver()->reloadCommandForHook()));

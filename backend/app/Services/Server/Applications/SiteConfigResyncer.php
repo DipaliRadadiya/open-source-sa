@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Contracts\WebServerDriver;
 use App\Enums\ApplicationStatus;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
@@ -45,6 +46,7 @@ class SiteConfigResyncer
         private ManagedFile $files,
         private ServerOps $serverOps,
         private BasicAuthManager $basicAuth,
+        private InstallerManager $installers,
     ) {}
 
     /**
@@ -60,7 +62,7 @@ class SiteConfigResyncer
             // page. Re-rendering the real one here would put it back online
             // as a side effect of a panel update.
             ->whereNull('disabled_at')
-            ->with(['systemUser', 'botRules', 'wafRules'])
+            ->with(['systemUser', 'certificate', 'botRules', 'wafRules'])
             ->get();
 
         $updated = 0;
@@ -68,6 +70,18 @@ class SiteConfigResyncer
         $failed = [];
 
         foreach ($applications as $application) {
+            try {
+                // The application config is rendered state too: certificates
+                // and primary domains can change its canonical URL after the
+                // installer has finished. Reconcile it on every panel update
+                // so existing installations converge as well as new ones.
+                $this->installers->syncUrl($application);
+            } catch (ProvisioningFailedException $exception) {
+                $failed[] = $this->failure($application, $exception->reference);
+
+                continue;
+            }
+
             // Sites provisioned before configs were named after the
             // application still have a `{domain}.conf` on disk. Writing the new
             // one without removing that leaves both loaded, two server blocks

@@ -62,7 +62,7 @@ class WordPressInstaller extends AbstractPhpInstaller
             (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
             'core', 'install',
             '--path='.$documentRoot,
-            '--url=https://'.$application->domain,
+            '--url='.$application->url(),
             '--title='.($settings['site_title'] ?? $application->name),
             '--admin_user='.($settings['admin_user'] ?? 'admin'),
             '--admin_email='.($settings['admin_email'] ?? ''),
@@ -94,6 +94,21 @@ class WordPressInstaller extends AbstractPhpInstaller
                 // A site with a wrong timezone string still works. Log and continue.
                 report($e);
             }
+        }
+    }
+
+    public function syncUrl(Application $application, string $url): void
+    {
+        $documentRoot = $application->documentRoot();
+
+        foreach (['home', 'siteurl'] as $option) {
+            $this->runAsSiteUser('sync_url', $application, [
+                $this->phpBinary($application),
+                (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
+                'option', 'update', $option, $url,
+                '--path='.$documentRoot,
+                '--skip-plugins', '--skip-themes',
+            ], null, $documentRoot);
         }
     }
 

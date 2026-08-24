@@ -127,23 +127,19 @@ it('rejects hostnames that could break out of the config file', function (string
     'sp ace.example.com',
 ]);
 
-it('removes the old configuration file when the primary domain changes', function () {
+it('updates the canonical URL and keeps the old primary as an alias', function () {
     $alias = $this->application->domains()->create([
         'domain' => 'newshop.example.com',
         'type' => DomainType::Alias,
     ]);
 
-    $sitesDir = config('server.web_server_drivers.nginx.sites_dir');
-
     $this->actingAs($this->admin)
         ->postJson("/api/applications/{$this->application->id}/domains/{$alias->id}/primary")
         ->assertOk();
 
-    // The vhost and both log files are named after the primary domain, so the
-    // file under the old name has to go — two vhosts claiming one site is
-    // resolved by whichever the web server reads first.
-    Process::assertRan(fn ($process) => in_array("{$sitesDir}/shop.example.com.conf", $process->command, true)
-        && in_array('rm', $process->command, true));
+    Process::assertRan(fn ($process) => in_array('option', $process->command, true)
+        && in_array('home', $process->command, true)
+        && in_array('http://newshop.example.com', $process->command, true));
 
     expect($this->application->fresh()->domain)->toBe('newshop.example.com')
         ->and($alias->fresh()->type)->toBe(DomainType::Primary)

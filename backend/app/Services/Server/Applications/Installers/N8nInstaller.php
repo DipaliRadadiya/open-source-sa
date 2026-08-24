@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use Illuminate\Support\Str;
 
@@ -74,11 +75,11 @@ class N8nInstaller extends AbstractNodeInstaller
             // address too, past whatever the vhost does.
             'N8N_LISTEN_ADDRESS' => '127.0.0.1',
             'N8N_HOST' => $domain,
-            // The proxy terminates TLS, so n8n has to be told what the browser
-            // sees — otherwise every webhook URL it prints and every OAuth
-            // callback it builds says http.
-            'N8N_PROTOCOL' => 'https',
-            'WEBHOOK_URL' => "https://{$domain}/",
+            // The proxy's public scheme changes only when the vhost gains or
+            // loses a certificate. These values are reconciled on that event.
+            'N8N_PROTOCOL' => $application->scheme(),
+            'N8N_WEBHOOK_URL' => $application->url('/'),
+            'N8N_EDITOR_BASE_URL' => $application->url(),
             'N8N_PROXY_HOPS' => '1',
             'GENERIC_TIMEZONE' => (string) config('app.timezone', 'UTC'),
             'N8N_DIAGNOSTICS_ENABLED' => 'false',
@@ -93,5 +94,45 @@ class N8nInstaller extends AbstractNodeInstaller
         }
 
         return $contents;
+    }
+
+    public function syncUrl(Application $application, string $url): void
+    {
+        $path = $application->documentRoot().'/.env';
+        $scheme = (string) parse_url($url, PHP_URL_SCHEME);
+        $values = [
+            'N8N_PROTOCOL' => $scheme,
+            'N8N_WEBHOOK_URL' => rtrim($url, '/').'/',
+            'N8N_EDITOR_BASE_URL' => rtrim($url, '/'),
+        ];
+
+        $changed = $this->configMutator->transform($application, $path, function (string $contents) use ($values): string {
+            // Remove the deprecated predecessor so two variables cannot
+            // disagree about the public webhook URL.
+            $contents = preg_replace('/^WEBHOOK_URL=.*\\R?/m', '', $contents) ?? $contents;
+
+            foreach ($values as $key => $value) {
+                $line = $key.'="'.Str::replace('"', '\\"', $value).'"';
+                $updated = preg_replace('/^'.preg_quote($key, '/').'=.*$/m', $line, $contents, 1, $count);
+
+                if (! is_string($updated)) {
+                    throw new \RuntimeException('n8n environment could not be updated.');
+                }
+
+                $contents = $count === 1 ? $updated : rtrim($contents, "\n")."\n{$line}\n";
+            }
+
+            return $contents;
+        });
+
+        if (! $changed) {
+            return;
+        }
+
+        $result = $this->supervisor->restart($application);
+
+        if ($result->failed()) {
+            throw new ProvisioningFailedException('sync_url', $result->reference);
+        }
     }
 }

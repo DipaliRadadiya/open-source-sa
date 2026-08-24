@@ -58,7 +58,7 @@ class WordPressCloneStrategy implements CloneStrategy
 
         $this->writeWpConfig($clone, $documentRoot, $cloneDatabase, "{$connection->host}:{$connection->port}");
 
-        $this->searchReplace($clone, $documentRoot, "https://{$source->domain}", "https://{$clone->domain}");
+        $this->searchReplace($clone, $documentRoot, $source->url(), $clone->url());
     }
 
     private function createCloneDatabase(Application $clone, string $engine): Database

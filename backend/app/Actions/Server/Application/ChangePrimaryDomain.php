@@ -6,7 +6,8 @@ use App\Enums\DomainType;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
 use App\Services\ActivityLogger;
-use App\Services\Server\WebServers\WebServerManager;
+use App\Services\Server\Applications\InstallerManager;
+use Throwable;
 
 /**
  * Promote one of an application's names to be the canonical one.
@@ -20,9 +21,9 @@ use App\Services\Server\WebServers\WebServerManager;
 class ChangePrimaryDomain
 {
     public function __construct(
-        private WebServerManager $webServers,
         private ApplyVhost $vhost,
         private ActivityLogger $activityLogger,
+        private InstallerManager $installers,
     ) {}
 
     public function execute(Application $application, ApplicationDomain $domain): Application
@@ -33,23 +34,46 @@ class ChangePrimaryDomain
             return $application;
         }
 
-        // Remove the configuration under the old name *first*, while the
-        // application still knows what that name was. `configPath()` is built
-        // from `applications.domain`, so once the mirror moves there is no way
-        // left to address the old file.
-        $this->webServers->driver()->remove($application);
-
-        $application->domains()
+        $previousPrimary = $application->domains()
             ->where('type', DomainType::Primary->value)
-            ->update(['type' => DomainType::Alias->value]);
+            ->firstOrFail();
+        $previousUrl = $application->fresh(['certificate'])->url();
+        $certificate = $application->certificate;
+        $scheme = $certificate?->servable() && $certificate->covers($domain->domain)
+            ? 'https'
+            : 'http';
 
-        $domain->update(['type' => DomainType::Primary]);
+        // The new name is already an alias on this vhost, so it is reachable
+        // while the application's own canonical setting is reconciled.
+        $this->installers->syncUrl(
+            $application->fresh(['systemUser', 'certificate']),
+            $scheme.'://'.$domain->domain,
+        );
 
-        // The mirror. Everything downstream — vhost filename, log paths, the
-        // application resource — reads this rather than the domains table.
-        $application->update(['domain' => $domain->domain]);
+        try {
+            $previousPrimary->update(['type' => DomainType::Alias]);
+            $domain->update(['type' => DomainType::Primary]);
 
-        $this->vhost->execute($application->fresh(['domains']));
+            // The mirror. Everything downstream — vhost filename, log paths,
+            // the application resource — reads this value.
+            $application->update(['domain' => $domain->domain]);
+
+            $this->vhost->execute($application->fresh(['domains', 'certificate']));
+        } catch (Throwable $exception) {
+            $domain->update(['type' => DomainType::Alias]);
+            $previousPrimary->update(['type' => DomainType::Primary]);
+            $application->update(['domain' => $previous]);
+
+            try {
+                $restored = $application->fresh(['domains', 'certificate', 'systemUser']);
+                $this->installers->syncUrl($restored, $previousUrl);
+                $this->vhost->execute($restored);
+            } catch (Throwable) {
+                // Preserve the transition's original failure reference.
+            }
+
+            throw $exception;
+        }
 
         // Its own verb, not a generic "updated": the site's canonical URL just
         // changed, which for a CMS also means its stored URLs are now wrong.

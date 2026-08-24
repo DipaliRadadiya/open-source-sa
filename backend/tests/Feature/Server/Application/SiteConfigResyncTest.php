@@ -116,6 +116,19 @@ it('re-renders a stale site config and reloads once', function () {
     expect($reloads)->toBeLessThanOrEqual(1);
 });
 
+it('reconciles the canonical URL of an existing installed site', function () {
+    $site = makeSite('one.test');
+    $site->update(['site_type' => 'wordpress']);
+
+    fakeResyncServer();
+
+    app(SiteConfigResyncer::class)->run();
+
+    Process::assertRan(fn ($process) => in_array('option', $process->command, true)
+        && in_array('home', $process->command, true)
+        && in_array('http://one.test', $process->command, true));
+});
+
 it('skips a site whose config is already current', function () {
     $site = makeSite('one.test');
 

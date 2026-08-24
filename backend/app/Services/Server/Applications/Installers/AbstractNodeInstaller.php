@@ -4,6 +4,8 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Applications\ApplicationConfigMutator;
+use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
@@ -33,8 +35,10 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
         ServerOps $serverOps,
         ProvisionProgress $progress,
         protected NodeRuntime $node,
+        ApplicationConfigMutator $configMutator,
+        ProcessSupervisor $supervisor,
     ) {
-        parent::__construct($serverOps, $progress);
+        parent::__construct($serverOps, $progress, $configMutator, $supervisor);
     }
 
     public function needsDatabase(): bool

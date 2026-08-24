@@ -72,7 +72,7 @@ class MoodleInstaller extends AbstractPhpInstaller
             'username' => $context['db_user'],
             'password' => $context['db_password'],
             'prefix' => $settings['table_prefix'] ?? 'mdl_',
-            'wwwroot' => 'https://'.$application->domain,
+            'wwwroot' => $application->url(),
             'dataroot' => $dataDir,
         ])->render());
 
@@ -106,6 +106,28 @@ class MoodleInstaller extends AbstractPhpInstaller
             $php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
             'admin/cli/reset_password.php', '--username='.$adminUser,
         ], ($settings['admin_password'] ?? '')."\n", $documentRoot);
+    }
+
+    public function syncUrl(Application $application, string $url): void
+    {
+        $path = $application->documentRoot().'/config.php';
+
+        $this->configMutator->transform($application, $path, function (string $contents) use ($url): string {
+            $replacement = '$CFG->wwwroot   = '.var_export($url, true).';';
+            $updated = preg_replace(
+                '/^\$CFG->wwwroot\s*=\s*[\'\"][^\r\n]*[\'\"];\s*$/m',
+                $replacement,
+                $contents,
+                1,
+                $count,
+            );
+
+            if (! is_string($updated) || $count !== 1) {
+                throw new \RuntimeException('Moodle wwwroot was not found.');
+            }
+
+            return $updated;
+        });
     }
 
     /**

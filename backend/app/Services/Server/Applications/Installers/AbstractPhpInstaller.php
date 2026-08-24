@@ -4,6 +4,8 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Contracts\PhpStack;
 use App\Models\Application;
+use App\Services\Server\Applications\ApplicationConfigMutator;
+use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\ServerOps;
 
@@ -21,8 +23,10 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
         ServerOps $serverOps,
         ProvisionProgress $progress,
         protected PhpStack $stack,
+        ApplicationConfigMutator $configMutator,
+        ProcessSupervisor $supervisor,
     ) {
-        parent::__construct($serverOps, $progress);
+        parent::__construct($serverOps, $progress, $configMutator, $supervisor);
     }
 
     /**

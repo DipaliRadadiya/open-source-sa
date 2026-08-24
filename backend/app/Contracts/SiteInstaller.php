@@ -46,6 +46,16 @@ interface SiteInstaller
     public function startCommand(Application $application, string $documentRoot): ?string;
 
     /**
+     * Reconcile the application's own canonical URL with what the vhost serves.
+     *
+     * Called after certificate and primary-domain changes as well as during
+     * brownfield resync. Installers that persist no public URL inherit a no-op.
+     *
+     * @throws ProvisioningFailedException
+     */
+    public function syncUrl(Application $application, string $url): void;
+
+    /**
      * Install into the prepared document root.
      *
      * The database (when needed) is already created and passed in `$context`

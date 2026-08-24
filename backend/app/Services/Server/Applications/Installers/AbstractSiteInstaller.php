@@ -5,6 +5,8 @@ namespace App\Services\Server\Applications\Installers;
 use App\Contracts\SiteInstaller;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Applications\ApplicationConfigMutator;
+use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisioningBudget;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\ServerOps;
@@ -28,6 +30,8 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     public function __construct(
         protected ServerOps $serverOps,
         protected ProvisionProgress $progress,
+        protected ApplicationConfigMutator $configMutator,
+        protected ProcessSupervisor $supervisor,
     ) {}
 
     /**
@@ -43,6 +47,15 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     public function acceptedEngines(): array
     {
         return ['mysql', 'mariadb'];
+    }
+
+    /**
+     * Most installers persist no canonical URL. Applications that do own the
+     * exact, application-native reconciliation command in their class.
+     */
+    public function syncUrl(Application $application, string $url): void
+    {
+        // Deliberate no-op.
     }
 
     /**

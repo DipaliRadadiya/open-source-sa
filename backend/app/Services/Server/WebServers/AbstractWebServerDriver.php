@@ -145,6 +145,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         return [
             'application' => $application,
             'domain' => $application->domain,
+            'canonicalUrl' => $application->url(),
             // Log filenames, not server_name: named after the app the same
             // way the vhost and pool files already are (see fileName()) so
             // all three agree on one identifier, and a domain change doesn't
@@ -166,7 +167,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // at a path that is not there fails the config test and takes a
             // working site down over a certificate it never had.
             'certificate' => $application->certificate?->servable() ? $application->certificate : null,
-            'forceHttps' => (bool) ($application->certificate?->servable() && $application->certificate->force_https),
+            'forceHttps' => (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
             // The shared ACME webroot, aliased into every profile. Per-site
             // document roots cannot work for node and proxy sites — they serve
             // nothing from disk, so there is nowhere for certbot to drop the

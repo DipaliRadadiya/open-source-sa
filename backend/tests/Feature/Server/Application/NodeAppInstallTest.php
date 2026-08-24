@@ -6,6 +6,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\Installers\N8nInstaller;
 use App\Services\Server\Applications\Installers\NodeBbInstaller;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
@@ -181,8 +182,21 @@ it('keeps n8n inside the site, with a key generated before first start', functio
         // Lose this and every stored credential is unreadable, with no error
         // until a workflow runs.
         ->toMatch('/N8N_ENCRYPTION_KEY="[0-9a-f]{64}"/')
-        // The proxy terminates TLS, so n8n has to be told what the browser sees.
-        ->toContain('WEBHOOK_URL="https://n8n.test/"');
+        // TLS is optional and is issued only after installation. The
+        // certificate lifecycle promotes this once HTTPS is really servable.
+        ->toContain('WEBHOOK_URL="http://n8n.test/"');
+});
+
+it('restarts n8n when its public URL changes', function () {
+    $application = oneClickApp('n8n');
+    $application->forceFill([
+        'status' => 'active',
+        'start_command' => '/home/apps/n8n/public_html/node_modules/.bin/n8n start',
+    ])->save();
+
+    app(N8nInstaller::class)->syncUrl($application, 'https://n8n.test');
+
+    expect(ranCommands())->toContain('systemctl restart sv-app-'.$application->id.'.service');
 });
 
 it('gives Node-RED a password, because it ships without one', function () {

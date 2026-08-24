@@ -57,6 +57,38 @@ class Certificate extends Model
             && $this->private_key_path !== null;
     }
 
+    /**
+     * Whether this certificate is valid for a hostname.
+     *
+     * A wildcard covers one label only: *.example.com covers app.example.com,
+     * never example.com or deep.app.example.com.
+     */
+    public function covers(string $domain): bool
+    {
+        $domain = strtolower(rtrim($domain, '.'));
+
+        foreach ($this->domains ?? [] as $covered) {
+            $covered = strtolower(rtrim((string) $covered, '.'));
+
+            if ($covered === $domain) {
+                return true;
+            }
+
+            if (! str_starts_with($covered, '*.')) {
+                continue;
+            }
+
+            $suffix = substr($covered, 2);
+
+            if (str_ends_with($domain, '.'.$suffix)
+                && substr_count($domain, '.') === substr_count($suffix, '.') + 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function expired(): bool
     {
         return $this->expires_at !== null && $this->expires_at->isPast();

@@ -62,7 +62,7 @@ class WordPressStagingStrategy implements StagingStrategy
 
         $this->writeWpConfig($staging, $stagingDocumentRoot, $stagingDatabase, "{$connection->host}:{$connection->port}");
 
-        $this->searchReplace($staging, $stagingDocumentRoot, "https://{$production->domain}", "https://{$staging->domain}");
+        $this->searchReplace($staging, $stagingDocumentRoot, $production->url(), $staging->url());
 
         $this->writeMailTrap($staging, $stagingDocumentRoot);
 
@@ -97,7 +97,7 @@ class WordPressStagingStrategy implements StagingStrategy
         // not the staging one; the staging site's own files/config are
         // untouched by a push.
         $productionDocumentRoot = $this->provisioner->documentRoot($production);
-        $this->searchReplace($production, $productionDocumentRoot, "https://{$staging->domain}", "https://{$production->domain}");
+        $this->searchReplace($production, $productionDocumentRoot, $staging->url(), $production->url());
     }
 
     private function createStagingDatabase(Application $staging, string $engine): Database
@@ -132,7 +132,7 @@ class WordPressStagingStrategy implements StagingStrategy
             'host' => $host,
             'prefix' => 'wp_',
             'salts' => $this->salts(),
-            'home' => "https://{$staging->domain}",
+            'home' => $staging->url(),
             'environmentType' => 'staging',
             'disableCron' => true,
         ])->render();

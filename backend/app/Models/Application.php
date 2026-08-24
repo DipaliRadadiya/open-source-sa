@@ -350,7 +350,10 @@ class Application extends Model
      */
     public function scheme(): string
     {
-        return $this->certificate?->servable() ? 'https' : 'http';
+        return $this->certificate?->servable()
+            && $this->certificate->covers((string) $this->domain)
+                ? 'https'
+                : 'http';
     }
 
     /**
