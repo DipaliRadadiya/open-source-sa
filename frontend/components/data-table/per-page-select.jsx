@@ -14,18 +14,16 @@ import {
 /**
  * Rows-per-page selector, URL-driven (writes `per_page`, resets to page 1).
  */
-export function PerPageSelect({ label }) {
+export function PerPageSelect({ label, value, onValueChange }) {
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
-  const current = searchParams.get("per_page") ?? "10";
+  const current = value ?? searchParams.get("per_page") ?? "10";
+  const change = onValueChange ?? ((next) => setQuery({ per_page: next }, { resetPage: true }));
 
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
       <span className="whitespace-nowrap">{label}</span>
-      <Select
-        value={current}
-        onValueChange={(v) => setQuery({ per_page: v }, { resetPage: true })}
-      >
+      <Select value={current} onValueChange={change}>
         <SelectTrigger className="w-[4.5rem]">
           <SelectValue />
         </SelectTrigger>

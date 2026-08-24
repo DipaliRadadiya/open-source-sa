@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Pager } from "@/components/data-table/pager";
+import { PerPageSelect } from "@/components/data-table/per-page-select";
 
 /**
  * What changed on this firewall, and when.
@@ -27,13 +28,18 @@ import { Pager } from "@/components/data-table/pager";
  */
 export function HistoryDialog({ isAdmin }) {
   const t = useTranslations("firewall");
+  const paginationT = useTranslations("pagination");
   const [open, setOpen] = useState(false);
+  const [perPage, setPerPage] = useState(10);
   const [state, setState] = useState({ loading: false, failed: false, entries: [], meta: null });
 
-  async function load(page = 1) {
+  async function load(page = 1, requestedPerPage = perPage) {
     setState({ loading: true, failed: false, entries: [], meta: null });
     try {
-      const { data } = await getMyActivityByType("firewall", { page });
+      const { data } = await getMyActivityByType("firewall", {
+        page,
+        perPage: requestedPerPage,
+      });
       const parsed = myActivityResponseSchema.safeParse(data);
       if (!parsed.success) {
         setState({ loading: false, failed: true, entries: [], meta: null });
@@ -56,7 +62,7 @@ export function HistoryDialog({ isAdmin }) {
         variant="outline"
         onClick={() => {
           setOpen(true);
-          load();
+          load(1, perPage);
         }}
       >
         <History className="size-4" />
@@ -121,13 +127,24 @@ export function HistoryDialog({ isAdmin }) {
               ))}
             </ul>
             {state.meta?.last_page > 1 ? (
-              <Pager
-                page={state.meta.current_page}
-                lastPage={state.meta.last_page}
-                total={state.meta.total}
-                pending={state.loading}
-                onPageChange={load}
-              />
+              <div className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
+                <PerPageSelect
+                  label={paginationT("perPage")}
+                  value={String(perPage)}
+                  onValueChange={(value) => {
+                    const nextPerPage = Number(value);
+                    setPerPage(nextPerPage);
+                    load(1, nextPerPage);
+                  }}
+                />
+                <Pager
+                  page={state.meta.current_page}
+                  lastPage={state.meta.last_page}
+                  total={state.meta.total}
+                  pending={state.loading}
+                  onPageChange={load}
+                />
+              </div>
             ) : null}
           </div>
         )}
