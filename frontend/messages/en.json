@@ -4449,6 +4449,7 @@
     "optionInstalled": "Installed",
     "optionUnavailable": "Not installable here",
     "continue": "Continue to dashboard",
+    "openingDashboard": "Opening dashboard…",
     "skip": "Skip for now",
     "doneHint": "You're all set.",
     "skipHint": "You can finish setup later from the dashboard.",

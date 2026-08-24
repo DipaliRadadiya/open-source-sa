@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
   // and the page never noticed the install finishing.
   const [started, setStarted] = useState({});
   const [slow, setSlow] = useState(false);
+  const [finishing, startTransition] = useTransition();
 
   // Server truth, with our own known-started installs laid over it. Derived
   // rather than merged into `setup`: an override simply stops applying once the
@@ -101,8 +102,10 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
   }
 
   function finish() {
-    router.push("/dashboard");
-    router.refresh();
+    // The dashboard navigation re-runs its Server Component itself. Refreshing
+    // as well issued a second request and left the button looking inert while
+    // both navigations competed.
+    startTransition(() => router.push("/dashboard"));
   }
 
   const recommended = components.filter((c) => c.recommended);
@@ -275,10 +278,16 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
         <p className="text-sm text-muted-foreground">
           {setup.complete ? t("doneHint") : anyInstalling ? t("skipWhileInstalling") : t("skipHint")}
         </p>
-        <Button onClick={finish} variant={setup.complete ? "default" : "outline"} className="shrink-0">
-          {setup.complete ? <CheckCircle2 className="size-4" /> : null}
-          {setup.complete ? t("continue") : t("skip")}
-          {setup.complete ? null : <ArrowRight className="size-4" />}
+        <Button
+          onClick={finish}
+          variant={setup.complete ? "default" : "outline"}
+          className="shrink-0"
+          disabled={finishing}
+          aria-busy={finishing}
+        >
+          {finishing ? <Loader2 className="size-4 animate-spin" /> : setup.complete ? <CheckCircle2 className="size-4" /> : null}
+          {finishing ? t("openingDashboard") : setup.complete ? t("continue") : t("skip")}
+          {finishing || setup.complete ? null : <ArrowRight className="size-4" />}
         </Button>
       </div>
     </div>

@@ -4449,6 +4449,7 @@
     "optionInstalled": "Instalado",
     "optionUnavailable": "No instalable aquí",
     "continue": "Ir al panel",
+    "openingDashboard": "Abriendo el panel…",
     "skip": "Omitir por ahora",
     "doneHint": "Todo listo.",
     "skipHint": "Puedes terminar la configuración más tarde desde el panel.",
