@@ -67,7 +67,7 @@ export function ApplicationStatusBadge({ application }) {
       variant={STATUS_VARIANTS[application.status] ?? "secondary"}
       className="font-normal"
     >
-      {application.status_title ?? application.status}
+      {t(`status.${application.status}`) ?? application.status_title ?? application.status}
     </Badge>
   );
 }
