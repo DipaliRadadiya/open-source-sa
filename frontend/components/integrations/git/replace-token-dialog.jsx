@@ -131,7 +131,7 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
                   <ExternalLink className="size-3" />
                 </a>
               ) : null}
-              <FormMessage />
+              <FormMessage field={t("tokenLabel")} />
             </FormItem>
           )}
         />

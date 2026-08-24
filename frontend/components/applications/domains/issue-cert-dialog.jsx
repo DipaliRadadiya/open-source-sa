@@ -37,7 +37,17 @@ const FALLBACK_TYPES = [
  * guessing that from the domain name is how such a site ends up being told it
  * cannot have SSL at all.
  */
-export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange, onIssued }) {
+export function IssueCertDialog({
+  appId,
+  availableTypes = [],
+  // What the site has right now, so the dialog can tell "secure this site" from
+  // "replace what is already securing it" — two very different acts behind one
+  // button. Null when there is no certificate.
+  current = null,
+  open,
+  onOpenChange,
+  onIssued,
+}) {
   const t = useTranslations("applications.domains");
   const types = availableTypes.length ? availableTypes : FALLBACK_TYPES;
   // The server's recommendation, else the first thing that actually works —
@@ -101,13 +111,23 @@ export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange
 
   const canForce = type === "letsencrypt" && refusals.length > 0;
 
+  // Reached from "Reissue" on a site that is already served over HTTPS. The
+  // dialog said "Issue a certificate — secure this site over HTTPS" either way,
+  // which describes the wrong job: you came here to cover a name the current
+  // certificate misses, not to turn HTTPS on.
+  const replacing = Boolean(current);
+  // Picking a different method throws the current certificate away. That is
+  // fine for a self-signed one and a real loss for an uploaded one, which
+  // cannot be re-issued from here — so it is said out loud before the button.
+  const swapsMethod = replacing && current.type && current.type !== type;
+
   return (
     <FormModal
       open={open}
       onOpenChange={handleOpenChange}
       icon={ShieldCheck}
-      title={t("ssl.issueTitle")}
-      description={t("ssl.issueSubtitle")}
+      title={replacing ? t("ssl.reissueTitle") : t("ssl.issueTitle")}
+      description={replacing ? t("ssl.reissueSubtitle") : t("ssl.issueSubtitle")}
       footer={
         <>
           <Button type="button" variant="outline" disabled={submitting} onClick={() => handleOpenChange(false)}>
@@ -157,6 +177,20 @@ export function IssueCertDialog({ appId, availableTypes = [], open, onOpenChange
           </SelectContent>
         </Select>
       </div>
+
+      {/* Said before the button, not after the fact: an uploaded certificate
+          cannot be re-issued from this panel, so swapping method throws away
+          something the user may not be able to get back. */}
+      {swapsMethod ? (
+        <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          <span>
+            {t("ssl.replacesCurrent", {
+              current: current.type_title ?? t(`ssl.method_${current.type}`),
+            })}
+          </span>
+        </p>
+      ) : null}
 
       {/* The server's own words about the selected method. On an available type
           this is information — self-signed works everywhere and browsers warn

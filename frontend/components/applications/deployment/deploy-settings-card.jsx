@@ -81,23 +81,20 @@ export function DeploySettingsCard({ applicationId, settings, canManage }) {
         <form onSubmit={form.handleSubmit(save)}>
           <Card className="gap-0 overflow-hidden py-0 shadow-sm">
             <CardContent className="space-y-5 px-5 py-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="branch"
-                  render={({ field }) => (
-                    <FormItem className="min-w-0">
-                      <FormLabel>{t("branch")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} disabled={!canManage || saving} className="font-mono text-sm" />
-                      </FormControl>
-                      <FormDescription>{t("branchHint")}</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-  
-              </div>
+              <FormField
+                control={form.control}
+                name="branch"
+                render={({ field }) => (
+                  <FormItem className="min-w-0">
+                    <FormLabel>{t("branch")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={!canManage || saving} className="font-mono text-sm" />
+                    </FormControl>
+                    <FormDescription>{t("branchHint")}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
   
               <FormField
                 control={form.control}

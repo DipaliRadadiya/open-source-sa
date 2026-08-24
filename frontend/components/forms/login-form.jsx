@@ -64,7 +64,7 @@ export function LoginForm() {
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage field={t('fields.username')} />
             </FormItem>
           )}
         />
@@ -81,7 +81,7 @@ export function LoginForm() {
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage field={t('fields.password')} />
             </FormItem>
           )}
         />

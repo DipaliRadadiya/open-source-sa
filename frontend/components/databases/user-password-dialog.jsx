@@ -162,7 +162,7 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
                     <Sparkles className="size-3" />
                     {t("generate")}
                   </Button>
-                  <FormMessage />
+                  <FormMessage field={t('newPassword')} />
                 </FormItem>
               )}
             />

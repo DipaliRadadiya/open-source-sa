@@ -88,7 +88,7 @@ export const deploySettingsFormSchema = z.object({
   branch: z
     .string()
     .trim()
-    .min(1, "required")
+    .min(1, "requiredField")
     .max(255, "max255")
     .regex(/^[A-Za-z0-9._/-]+$/, "gitRef"),
   // Deliberately unvalidated beyond a length cap, matching the backend: it is

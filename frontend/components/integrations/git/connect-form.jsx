@@ -180,7 +180,7 @@ export function ConnectForm({
                 />
               </FormControl>
               <FormDescription>{t("nameHelp")}</FormDescription>
-              <FormMessage />
+              <FormMessage field={t("nameLabel")} />
             </FormItem>
           )}
         />
@@ -229,7 +229,7 @@ export function ConnectForm({
                     provider={provider}
                   />
                 ) : null}
-                <FormMessage />
+                <FormMessage field={spec.label} />
               </FormItem>
             )}
           />

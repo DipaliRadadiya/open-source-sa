@@ -108,7 +108,7 @@ export function EditDialog({ account, open, onOpenChange }) {
                 <Input placeholder={t("namePlaceholder")} autoComplete="off" {...field} />
               </FormControl>
               <FormDescription>{t("nameHelp")}</FormDescription>
-              <FormMessage />
+              <FormMessage field={t("nameLabel")} />
             </FormItem>
           )}
         />
@@ -128,7 +128,7 @@ export function EditDialog({ account, open, onOpenChange }) {
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage field={t("workspaceLabel")} />
               </FormItem>
             )}
           />
@@ -150,7 +150,7 @@ export function EditDialog({ account, open, onOpenChange }) {
                   />
                 </FormControl>
                 <FormDescription>{t("hostHelp")}</FormDescription>
-                <FormMessage />
+                <FormMessage field={t("hostLabel")} />
               </FormItem>
             )}
           />

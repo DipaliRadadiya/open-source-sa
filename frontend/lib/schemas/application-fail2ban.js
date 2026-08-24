@@ -52,7 +52,7 @@ export function missingPlaceholders(original = "", draft = "") {
  * round trip — the backend rejects a half-empty submission because fail2ban
  * would load a jail whose filter does not exist.
  */
-const iniContent = z.string().trim().min(1, "required").max(65535, "max65535");
+const iniContent = z.string().trim().min(1, "requiredField").max(65535, "max65535");
 
 export const fail2banConfigFormSchema = z.object({
   jail_config_content: iniContent,

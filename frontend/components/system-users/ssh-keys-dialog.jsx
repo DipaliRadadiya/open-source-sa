@@ -243,7 +243,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage field={t('sshForm.name')} />
                     </FormItem>
                   )}
                 />
@@ -263,7 +263,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage field={t('sshForm.publicKey')} />
                     </FormItem>
                   )}
                 />

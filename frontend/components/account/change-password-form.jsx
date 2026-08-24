@@ -83,7 +83,7 @@ export function ChangePasswordForm() {
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage field={t('password.current')} />
                 </FormItem>
               )}
             />
@@ -119,7 +119,7 @@ export function ChangePasswordForm() {
                         </li>
                       ))}
                     </ul>
-                    <FormMessage />
+                    <FormMessage field={t('password.new')} />
                   </FormItem>
                 )}
               />
@@ -136,7 +136,7 @@ export function ChangePasswordForm() {
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage field={t('password.confirm')} />
                   </FormItem>
                 )}
               />

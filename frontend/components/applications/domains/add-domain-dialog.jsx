@@ -162,10 +162,14 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null }) 
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
+                    {/* Named, not numbered. The list used to read
+                        "301 · 302 · 307 · 308", which tells you which one to
+                        pick only if you already knew. The number stays because
+                        it is what every other tool calls it. */}
                     <SelectContent>
                       {REDIRECT_STATUSES.map((code) => (
                         <SelectItem key={code} value={String(code)}>
-                          {code}
+                          {t(`add.redirectStatusOption.${code}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>

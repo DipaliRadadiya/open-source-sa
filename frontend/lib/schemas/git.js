@@ -81,7 +81,7 @@ export const gitStatusesResponseSchema = z.object({
 export const labelSchema = z
   .string()
   .trim()
-  .min(1, "required")
+  .min(1, "requiredField")
   .max(60, "tooLong");
 
 /**
@@ -96,7 +96,7 @@ export function connectFormSchema(provider) {
 
   for (const field of provider?.fields ?? []) {
     const base = z.string().trim();
-    shape[field.name] = field.required ? base.min(1, "required") : base.optional();
+    shape[field.name] = field.required ? base.min(1, "requiredField") : base.optional();
   }
 
   return z.object(shape);
@@ -104,7 +104,7 @@ export function connectFormSchema(provider) {
 
 /** Rotation: the new credential and nothing else. */
 export const replaceTokenSchema = z.object({
-  token: z.string().trim().min(1, "required"),
+  token: z.string().trim().min(1, "requiredField"),
 });
 
 /**

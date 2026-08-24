@@ -24,6 +24,8 @@
     "noResults": "No matches.",
     "soon": "Soon",
     "required": "Required",
+    "requiredField": "This field is required.",
+    "requiredFieldNamed": "The {field} field is required.",
     "disabledControl": "This control is unavailable right now.",
     "breadcrumbServer": "Server",
     "breadcrumbApplications": "Applications",
@@ -3046,7 +3048,13 @@
         "submit": "Add domain",
         "submitting": "Adding…",
         "dnsNoteIp": "After adding, point an A record for this name to your server:",
-        "dnsNote": "After adding, point an A record for this name to your server so HTTPS can be issued."
+        "dnsNote": "After adding, point an A record for this name to your server so HTTPS can be issued.",
+        "redirectStatusOption": {
+          "301": "301 — Permanent",
+          "302": "302 — Temporary",
+          "307": "307 — Temporary, keeps the method",
+          "308": "308 — Permanent, keeps the method"
+        }
       },
       "type": {
         "alias": "Alias (same site, second name)",
@@ -3131,7 +3139,10 @@
         "forceHint": "If this server can't reach its own public address (e.g. behind NAT), you can skip the reachability check.",
         "forceIssue": "Issue anyway",
         "issue": "Issue certificate",
-        "issueFailed": "Couldn't issue the certificate."
+        "issueFailed": "Couldn't issue the certificate.",
+        "reissueTitle": "Reissue the certificate",
+        "reissueSubtitle": "Replace the current certificate — usually to cover a name it is missing.",
+        "replacesCurrent": "This replaces the current {current} certificate. An uploaded certificate cannot be re-issued from here."
       },
       "issueCertificate": "Issue SSL certificate",
       "description": "Names that reach this site, and its certificate.",

@@ -173,7 +173,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage field={t('create.username')} />
             </FormItem>
           )}
         />
@@ -220,7 +220,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                 {t("create.generate")}
               </Button>
               <p className="text-xs text-muted-foreground">{t("create.passwordHint")}</p>
-              <FormMessage />
+              <FormMessage field={t('create.password')} />
             </FormItem>
           )}
         />
@@ -247,7 +247,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
               <p className="text-xs text-muted-foreground">
                 {t("create.publicKeyHint")}
               </p>
-              <FormMessage />
+              <FormMessage field={t('create.publicKey')} />
             </FormItem>
           )}
         />

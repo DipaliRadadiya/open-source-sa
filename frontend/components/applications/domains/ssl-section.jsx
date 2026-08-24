@@ -328,6 +328,7 @@ export function SslSection({
       <IssueCertDialog
         appId={appId}
         availableTypes={availableTypes}
+        current={cert}
         open={issueOpen}
         onOpenChange={setIssueOpen}
         onIssued={setCert}

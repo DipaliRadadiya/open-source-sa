@@ -104,7 +104,7 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage field={t('password.new')} />
               </FormItem>
             )}
           />
@@ -121,7 +121,7 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage field={t('password.confirm')} />
               </FormItem>
             )}
           />

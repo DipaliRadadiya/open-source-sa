@@ -138,10 +138,10 @@ export const generalFormSchema = z.object({
   hostname: z
     .string()
     .trim()
-    .min(1, "required")
+    .min(1, "requiredField")
     .max(253, "tooLong")
     .regex(HOSTNAME_RE, "invalidHostname"),
-  timezone: z.string().min(1, "required"),
+  timezone: z.string().min(1, "requiredField"),
   ntp: z.boolean(),
 });
 

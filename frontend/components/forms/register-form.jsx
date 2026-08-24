@@ -68,7 +68,7 @@ export function RegisterForm() {
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage field={t('fields.name')} />
             </FormItem>
           )}
         />
@@ -85,7 +85,7 @@ export function RegisterForm() {
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage field={t('fields.username')} />
             </FormItem>
           )}
         />
@@ -102,7 +102,7 @@ export function RegisterForm() {
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage field={t('fields.password')} />
             </FormItem>
           )}
         />
@@ -119,7 +119,7 @@ export function RegisterForm() {
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage field={t('fields.confirmPassword')} />
             </FormItem>
           )}
         />

@@ -24,6 +24,8 @@
     "noResults": "Sin coincidencias.",
     "soon": "Pronto",
     "required": "Obligatorio",
+    "requiredField": "Este campo es obligatorio.",
+    "requiredFieldNamed": "El campo {field} es obligatorio.",
     "disabledControl": "Este control no está disponible en este momento.",
     "breadcrumbServer": "Servidor",
     "breadcrumbApplications": "Aplicaciones",
@@ -3046,7 +3048,13 @@
         "submit": "Añadir dominio",
         "submitting": "Añadiendo…",
         "dnsNoteIp": "Después de añadirlo, apunta un registro A de este nombre a tu servidor:",
-        "dnsNote": "Después de añadirlo, apunta un registro A de este nombre a tu servidor para poder emitir HTTPS."
+        "dnsNote": "Después de añadirlo, apunta un registro A de este nombre a tu servidor para poder emitir HTTPS.",
+        "redirectStatusOption": {
+          "301": "301 — Permanente",
+          "302": "302 — Temporal",
+          "307": "307 — Temporal, conserva el método",
+          "308": "308 — Permanente, conserva el método"
+        }
       },
       "type": {
         "alias": "Alias (mismo sitio, segundo nombre)",
@@ -3131,7 +3139,10 @@
         "forceHint": "Si este servidor no puede alcanzar su propia dirección pública (p. ej. detrás de NAT), puedes omitir la comprobación de accesibilidad.",
         "forceIssue": "Emitir de todos modos",
         "issue": "Emitir certificado",
-        "issueFailed": "No se pudo emitir el certificado."
+        "issueFailed": "No se pudo emitir el certificado.",
+        "reissueTitle": "Reemitir el certificado",
+        "reissueSubtitle": "Sustituye el certificado actual — normalmente para cubrir un nombre que le falta.",
+        "replacesCurrent": "Esto sustituye el certificado {current} actual. Un certificado subido no se puede reemitir desde aquí."
       },
       "issueCertificate": "Emitir certificado SSL",
       "description": "Nombres que llegan a este sitio y su certificado.",

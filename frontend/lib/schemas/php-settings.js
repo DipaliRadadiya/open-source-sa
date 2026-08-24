@@ -76,7 +76,7 @@ export function budgetWith(memory, memoryLimit, maxChildren) {
 const size = z
   .string()
   .trim()
-  .min(1, "required")
+  .min(1, "requiredField")
   .max(12, "max12")
   .regex(PHP_SIZE_PATTERN, "phpSize");
 
@@ -193,7 +193,7 @@ export const applicationPhpResponseSchema = z.object({ php: applicationPhpSchema
  * refuses is a round trip that teaches nothing.
  */
 export const phpSettingsFormSchema = z.object({
-  php_version: z.string().min(1, "required"),
+  php_version: z.string().min(1, "requiredField"),
   memory_limit: size,
   upload_max_filesize: size,
   post_max_size: size,

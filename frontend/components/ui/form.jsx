@@ -49,13 +49,18 @@ function useFormField() {
   }
 }
 
-const FormItemContext = React.createContext({})
+// FormItemContext carries the registered label so FormMessage can auto-detect
+// it and render "The Name field is required." instead of "This field is required."
+// labelRef.current is set during render by FormLabel, before FormMessage renders,
+// so it is always available when FormMessage reads it.
+const FormItemContext = React.createContext({ labelRef: { current: null } })
 
 function FormItem({ className, ...props }) {
   const id = React.useId()
+  const labelRef = React.useRef(null)
 
   return (
-    <FormItemContext.Provider value={{ id }}>
+    <FormItemContext.Provider value={{ id, labelRef }}>
       {/* content-start: without it a shorter field stretched by a taller
           neighbour in the same grid row spreads the leftover height into its
           gap, dropping its input below the neighbour's. */}
@@ -95,6 +100,16 @@ function RequiredMark() {
 // everywhere, instead of every form re-implementing (or forgetting) it.
 function FormLabel({ className, required, children, ...props }) {
   const { error, formItemId } = useFormField()
+  const { labelRef } = React.useContext(FormItemContext)
+
+  // Store the string label text so FormMessage can auto-detect it.
+  // children is always a string when used correctly (a <Label> always wraps
+  // text content). React elements used as children would not match this, which
+  // is fine — those are the exception, not the rule, and they are always
+  // followed by an explicit <FormMessage field="..." /> prop.
+  if (typeof children === "string") {
+    labelRef.current = children
+  }
 
   return (
     <Label
@@ -144,9 +159,12 @@ function FormDescription({ className, ...props }) {
   )
 }
 
-function FormMessage({ className, ...props }) {
+function FormMessage({ className, field, ...props }) {
   const { error, formMessageId } = useFormField()
-  const t = useTranslations("validation")
+  const tv = useTranslations("validation")
+  const tc = useTranslations("common")
+  const { labelRef } = React.useContext(FormItemContext)
+
   // Zod messages are validation keys (e.g. "min10") — translate them. Anything
   // that isn't a known key (e.g. a backend error, already localized) renders
   // as-is.
@@ -155,7 +173,19 @@ function FormMessage({ className, ...props }) {
   // form translates them itself and passes the sentence in — before this, the
   // raw error always shadowed it and the user read "invalidHostname".
   const raw = props.children ?? (error ? String(error?.message ?? "") : null)
-  const body = typeof raw === "string" && raw && t.has(raw) ? t(raw) : raw
+  // "requiredField" means the field was left empty. Priority: explicit `field`
+  // prop > auto-detected label from FormLabel > generic message.
+  const label = field ?? labelRef.current ?? null
+  const body =
+    typeof raw === "string" && raw
+      ? raw === "requiredField"
+        ? label
+          ? tc("requiredFieldNamed", { field: label })
+          : tc("requiredField")
+        : tv.has(raw)
+          ? tv(raw)
+          : raw
+      : raw
 
   if (!body) {
     return null

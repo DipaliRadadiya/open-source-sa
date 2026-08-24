@@ -117,7 +117,7 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
                     {...field}
                   />
               </FormControl>
-              <FormMessage />
+              <FormMessage field={t("accessKey")} />
             </FormItem>
           )}
         />
@@ -135,7 +135,7 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
                     {...field}
                   />
               </FormControl>
-              <FormMessage />
+              <FormMessage field={t("secretKey")} />
             </FormItem>
           )}
         />

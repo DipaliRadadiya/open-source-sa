@@ -101,7 +101,7 @@ export const CUSTOM_PRESET = "custom";
 export const createFirewallRuleSchema = z
   .object({
     preset: z.string().default(CUSTOM_PRESET),
-    ports: z.string().min(1, { message: "required" }),
+    ports: z.string().min(1, { message: "requiredField" }),
     protocol: z.enum(["all", "tcp", "udp"]),
     action: z.enum(["allow", "deny"]),
     source_ip: z.string().optional(),
