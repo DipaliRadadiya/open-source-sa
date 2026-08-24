@@ -4,19 +4,21 @@ namespace App\Actions\Server\Application;
 
 use App\Enums\CertificateStatus;
 use App\Enums\CertificateType;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Certificate;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Certificates\CertbotClient;
+use App\Services\Server\Certificates\CertificateFiles;
 use Throwable;
 
 /**
  * Takes TLS off a site.
  *
  * Order matters and is not obvious: force-HTTPS is cleared *before* the vhost
- * is rewritten. Rewriting first would produce a config that redirects every
- * visitor to a port no longer listening — the site would not merely lose HTTPS,
- * it would stop answering at all.
+ * is rewritten. Rewriting first would leave HTTP redirecting into the TLS
+ * rejection vhost — the site would not merely lose HTTPS, it would stop
+ * answering usable requests at all.
  */
 class RemoveCertificate
 {
@@ -25,6 +27,7 @@ class RemoveCertificate
         private ApplyVhost $vhost,
         private ActivityLogger $activityLogger,
         private InstallerManager $installers,
+        private CertificateFiles $files,
     ) {}
 
     public function execute(Certificate $certificate): void
@@ -35,18 +38,21 @@ class RemoveCertificate
         $previousStatus = $certificate->status;
         $previousUrl = $application->fresh(['certificate'])->url();
 
-        // Change the application's own canonical URL first. If that cannot be
-        // done, leave the working certificate and vhost untouched.
-        $this->installers->syncUrl(
-            $application->fresh(['systemUser', 'certificate']),
-            'http://'.$application->domain,
-        );
-
-        // Make the relation non-servable while rendering, but keep the row so
-        // the whole transition can be rolled back if the vhost rejects it.
-        $certificate->update(['status' => CertificateStatus::Pending]);
-
         try {
+            // Change the application's own canonical URL first. `syncUrl()` is
+            // not necessarily one operation: WordPress updates two options,
+            // while file-backed installers can write successfully and then
+            // fail clearing a cache or restarting a process. Its own failure
+            // therefore needs the same best-effort rollback as the vhost.
+            $this->installers->syncUrl(
+                $application->fresh(['systemUser', 'certificate']),
+                'http://'.$application->domain,
+            );
+
+            // Make the relation non-servable while rendering, but keep the row
+            // so the transition and physical cleanup remain retryable.
+            $certificate->update(['status' => CertificateStatus::Pending]);
+
             $this->vhost->execute($application->fresh(['domains', 'certificate']));
         } catch (Throwable $exception) {
             $certificate->update(['status' => $previousStatus]);
@@ -62,14 +68,26 @@ class RemoveCertificate
             throw $exception;
         }
 
-        $certificate->delete();
+        // Cleanup is deliberately after the HTTP vhost is live. From this
+        // point onward rollback to HTTPS is unsafe: a deletion command can
+        // remove only part of a key pair or lineage before failing. Retaining
+        // the pending row gives the same endpoint enough state to retry.
+        $cleanup = match ($type) {
+            CertificateType::LetsEncrypt => $domains === []
+                ? null
+                : $this->certbot->revoke($domains[0], $application->id),
+            CertificateType::Custom, CertificateType::SelfSigned => $this->files->remove([
+                $certificate->certificate_path,
+                $certificate->private_key_path,
+                $certificate->chain_path,
+            ], $application->id),
+        };
 
-        // Stop certbot renewing something nothing is serving. Left behind, the
-        // renewal keeps running forever, keeps spending rate limit, and
-        // eventually emails the user about a site they removed.
-        if ($type === CertificateType::LetsEncrypt && $domains !== []) {
-            $this->certbot->revoke($domains[0], $application->id);
+        if ($cleanup?->failed()) {
+            throw new ProvisioningFailedException('remove_certificate', $cleanup->reference);
         }
+
+        $certificate->delete();
 
         $this->activityLogger->log('application.certificate_removed', $application, [
             'domain' => $application->domain,

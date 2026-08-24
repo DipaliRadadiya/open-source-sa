@@ -18,6 +18,7 @@ use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -234,7 +235,7 @@ it('leaves a readable row when the job dies outright', function () {
     expect($certificate->fresh()->status)->toBe(CertificateStatus::Failed);
 });
 
-it('serves no TLS directives while a certificate is still pending', function () {
+it('rejects TLS without pointing at certificate files while issuance is pending', function () {
     Certificate::create([
         'application_id' => $this->application->id,
         'type' => CertificateType::LetsEncrypt,
@@ -242,9 +243,14 @@ it('serves no TLS directives while a certificate is still pending', function () 
         'domains' => ['shop.example.com'],
     ]);
 
-    // Pointing a server block at files that are not there fails the config test
-    // and takes a working site down over a certificate it never had.
-    expect(renderedCertVhost($this->application->fresh()))->not->toContain('listen 443');
+    $config = renderedCertVhost($this->application->fresh());
+
+    // The hostname must still own 443 or nginx falls through to another site's
+    // SSL vhost. It rejects the handshake without naming the not-yet-created
+    // certbot files.
+    expect($config)->toContain('listen 443 ssl')
+        ->and($config)->toContain('ssl_reject_handshake on')
+        ->and($config)->not->toContain('/etc/letsencrypt/live/shop.example.com');
 });
 
 it('refuses to force HTTPS without a working certificate', function () {
@@ -255,8 +261,8 @@ it('refuses to force HTTPS without a working certificate', function () {
         'domains' => ['shop.example.com'],
     ]);
 
-    // Not a preference. Redirecting to HTTPS with nothing listening on 443
-    // takes the site off the internet for every visitor at once.
+    // Not a preference. Redirecting HTTP into the TLS rejection vhost takes
+    // the site off the internet for every visitor at once.
     $this->actingAs($this->admin)
         ->putJson("/api/applications/{$this->application->id}/certificate/force-https", ['force_https' => true])
         ->assertStatus(422)
@@ -360,8 +366,8 @@ it('clears force HTTPS before rewriting the vhost when the certificate is remove
 
     $config = renderedCertVhost($this->application->fresh());
 
-    // Rewriting first would leave a config that redirects every visitor to a
-    // port nothing is listening on — not "no HTTPS", but no site.
+    // Rewriting first would leave a config that redirects every visitor into
+    // the TLS rejection vhost — not "no HTTPS", but no usable site.
     expect($config)->not->toContain('return 301 https://$host')
         ->and($config)->toContain('listen 80')
         ->and($this->application->fresh()->url())->toBe('http://shop.example.com');
@@ -372,6 +378,191 @@ it('clears force HTTPS before rewriting the vhost when the certificate is remove
 
     Process::assertRan(fn ($process) => in_array('delete', $process->command, true)
         && in_array('--cert-name', $process->command, true));
+});
+
+it('keeps a failed certbot cleanup retryable and does not report success', function () {
+    $certificate = activeCertificate($this->application);
+
+    Process::fake(function ($process) {
+        if (in_array('delete', $process->command, true)) {
+            return Process::result(errorOutput: 'certbot cleanup failed', exitCode: 1);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/applications/{$this->application->id}/certificate")
+        ->assertStatus(500);
+
+    expect($certificate->fresh()->status)->toBe(CertificateStatus::Pending)
+        ->and($this->application->fresh()->url())->toBe('http://shop.example.com');
+
+    $this->assertDatabaseMissing('activity_logs', [
+        'type' => 'application',
+        'action' => 'certificate_removed',
+    ]);
+
+    // The retained row is the retry state. A second request completes cleanup
+    // rather than claiming there is nothing left to remove.
+    Process::fake(fn () => Process::result(exitCode: 0));
+
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/applications/{$this->application->id}/certificate")
+        ->assertNoContent();
+
+    expect($certificate->fresh())->toBeNull();
+});
+
+it('removes uploaded and self-signed certificate files before deleting their rows', function (CertificateType $type) {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => $type,
+        'status' => CertificateStatus::Active,
+        'domains' => ['shop.example.com'],
+        'certificate_path' => '/etc/ssl/sv-oss/original.example.com.crt',
+        'private_key_path' => '/etc/ssl/sv-oss/original.example.com.key',
+        'chain_path' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/applications/{$this->application->id}/certificate")
+        ->assertNoContent();
+
+    Process::assertRan(fn ($process) => in_array('rm', $process->command, true)
+        && in_array('/etc/ssl/sv-oss/original.example.com.crt', $process->command, true)
+        && in_array('/etc/ssl/sv-oss/original.example.com.key', $process->command, true));
+
+    expect($certificate->fresh())->toBeNull();
+})->with([CertificateType::Custom, CertificateType::SelfSigned]);
+
+it('refuses a stored certificate path that escapes the private certificate directory', function () {
+    Process::fake();
+
+    expect(fn () => app(CertificateFiles::class)->remove([
+        '/etc/ssl/sv-oss/../../etc/passwd',
+    ], $this->application->id))->toThrow(HttpException::class);
+
+    Process::assertNotRan(fn ($process) => in_array('rm', $process->command, true));
+});
+
+it('rolls a partial application URL downgrade back when synchronization fails', function () {
+    $certificate = activeCertificate($this->application);
+
+    Process::fake(function ($process) {
+        if (in_array('siteurl', $process->command, true)
+            && in_array('http://shop.example.com', $process->command, true)) {
+            return Process::result(errorOutput: 'second option failed', exitCode: 1);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/applications/{$this->application->id}/certificate")
+        ->assertStatus(500);
+
+    expect($certificate->fresh()->status)->toBe(CertificateStatus::Active)
+        ->and($this->application->fresh()->url())->toBe('https://shop.example.com');
+
+    Process::assertRan(fn ($process) => in_array('home', $process->command, true)
+        && in_array('http://shop.example.com', $process->command, true));
+    Process::assertRan(fn ($process) => in_array('home', $process->command, true)
+        && in_array('https://shop.example.com', $process->command, true));
+});
+
+it('renders an isolated no-certificate TLS sink for every web server', function (string $driver) {
+    config(['server.web_server' => $driver]);
+
+    $config = renderedCertVhost($this->application->fresh(), $driver);
+
+    expect($config)->toContain('shop.example.com');
+
+    match ($driver) {
+        'nginx' => expect($config)->toContain('ssl_reject_handshake on'),
+        'apache' => expect($config)
+            ->toContain('<VirtualHost *:443>')
+            ->toContain('/etc/ssl/sv-oss/.panel-tls-reject.crt')
+            ->toContain('Require all denied'),
+        'openlitespeed' => expect($config)
+            ->toContain('/etc/ssl/sv-oss/.panel-tls-reject.crt')
+            ->toContain('RewriteCond %{HTTPS} =on')
+            ->toContain('RewriteRule ^ - [F,L]'),
+    };
+})->with(['nginx', 'apache', 'openlitespeed']);
+
+it('never serves an SSL-enabled Craft site for a certificate-less Mautic hostname', function (string $driver) {
+    $this->application->update(['site_type' => 'mautic']);
+
+    $craft = Application::forceCreate([
+        'system_user_id' => $this->application->system_user_id,
+        'name' => 'Craft',
+        'slug' => 'craft',
+        'domain' => 'craft.example.com',
+        'site_type' => 'craftcms',
+        'serving_profile' => 'php',
+        'php_version' => '8.4',
+        'web_root' => '/web',
+        'status' => 'active',
+    ]);
+    $craft->domains()->create([
+        'domain' => 'craft.example.com',
+        'type' => DomainType::Primary,
+        'dns_verified_at' => now(),
+    ]);
+    Certificate::create([
+        'application_id' => $craft->id,
+        'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Active,
+        'domains' => ['craft.example.com'],
+        'certificate_path' => '/etc/letsencrypt/live/craft.example.com/fullchain.pem',
+        'private_key_path' => '/etc/letsencrypt/live/craft.example.com/privkey.pem',
+    ]);
+
+    $mauticConfig = renderedCertVhost($this->application->fresh(), $driver);
+    $craftConfig = renderedCertVhost($craft->fresh(), $driver);
+
+    expect($mauticConfig)->toContain('shop.example.com')
+        ->not->toContain('/etc/letsencrypt/live/craft.example.com')
+        ->and($craftConfig)->toContain('/etc/letsencrypt/live/craft.example.com/fullchain.pem');
+
+    match ($driver) {
+        'nginx' => expect($mauticConfig)->toContain('ssl_reject_handshake on'),
+        'apache' => expect($mauticConfig)->toContain('Require all denied'),
+        'openlitespeed' => expect($mauticConfig)->toContain('RewriteCond %{HTTPS} =on'),
+    };
+})->with(['nginx', 'apache', 'openlitespeed']);
+
+it('creates the shared TLS rejection certificate lazily on a brownfield server', function () {
+    Process::fake(function ($process) {
+        $command = $process->command[0] === 'sudo'
+            ? array_slice($process->command, 2)
+            : $process->command;
+
+        if (($command[0] ?? null) === 'test'
+            && in_array('/etc/ssl/sv-oss/.panel-tls-reject.crt', $command, true)) {
+            return Process::result(exitCode: 1);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $driver = app((string) config('server.web_server_drivers.apache.driver'));
+    $result = $driver->apply($this->application->fresh(['domains', 'certificate', 'systemUser']), $this->application->documentRoot());
+
+    expect($result->ok)->toBeTrue();
+
+    Process::assertRan(function ($process) {
+        $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        return ($command[0] ?? null) === 'openssl' && in_array('/CN=unmatched.invalid', $command, true);
+    });
+    Process::assertRan(function ($process) {
+        $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        return ($command[0] ?? null) === 'chmod'
+            && in_array('/etc/ssl/sv-oss/.panel-tls-reject.key', $command, true);
+    });
 });
 
 it('returns null rather than 404 when a site has no certificate', function () {
@@ -413,7 +604,7 @@ it('renders TLS on all three web servers', function (string $driver) {
 
     activeCertificate($this->application);
 
-    $config = renderedCertVhost($this->application->fresh());
+    $config = renderedCertVhost($this->application->fresh(), $driver);
 
     expect($config)->toContain('/etc/letsencrypt/live/shop.example.com/fullchain.pem')
         ->and($config)->toContain('/etc/letsencrypt/live/shop.example.com/privkey.pem');
@@ -449,9 +640,11 @@ function activeCertificate(Application $application): Certificate
     ]);
 }
 
-function renderedCertVhost(Application $application): string
+function renderedCertVhost(Application $application, ?string $driverName = null): string
 {
-    $driver = app(WebServerManager::class)->driver();
+    $driver = $driverName === null
+        ? app(WebServerManager::class)->driver()
+        : app((string) config("server.web_server_drivers.{$driverName}.driver"));
 
     return $driver->renderConfig(
         $application->fresh(['domains', 'certificate', 'systemUser']),

@@ -219,7 +219,7 @@ class PhpMyAdminSso
      * Drop a one-time token and return the URL that redeems it.
      *
      * The scheme comes from the application rather than being assumed: a site
-     * with no certificate does not answer on 443 at all, and sending someone
+     * with no certificate rejects requests on 443, and sending someone
      * there produces a connection refused that reads as a broken panel.
      */
     public function issue(

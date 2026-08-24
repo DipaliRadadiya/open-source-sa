@@ -337,12 +337,11 @@ class Application extends Model
     /**
      * The scheme this site can actually be reached on right now.
      *
-     * Not a preference and not a default: `https` is a claim that a TLS
-     * listener exists, and one only exists when the vhost has a certificate to
-     * point at — `AbstractWebServerDriver` emits the `listen 443 ssl` block
-     * under exactly this condition. Saying `https` without one produces a
-     * connection refused, which reads to the user as a broken site rather than
-     * as a missing certificate.
+     * Not a preference and not a default: `https` is a claim that the site can
+     * complete TLS with a certificate covering its primary hostname. A site
+     * without one still owns its name on port 443 only to reject stale HSTS or
+     * HTTPS-first traffic safely; that isolation listener is deliberately not
+     * a usable public URL and must never make this method advertise HTTPS.
      *
      * `force_https` is deliberately not consulted. That flag decides whether
      * plain HTTP *redirects*, not whether HTTPS answers; a site with a

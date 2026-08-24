@@ -57,6 +57,13 @@ server {
          session it ever issued, which is the property TLS 1.3 exists to
          remove. --}}
     ssl_session_tickets off;
+@else
+    {{-- Own this SNI name even without a certificate, so nginx rejects the
+         handshake instead of falling through to another application's first
+         SSL vhost. --}}
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    ssl_reject_handshake on;
 @endif
 @if (! $forceHttps)
     listen 80;

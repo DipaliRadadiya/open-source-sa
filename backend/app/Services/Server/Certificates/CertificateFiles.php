@@ -6,6 +6,7 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * The two certificate sources that are not certbot: a key pair generated on the
@@ -33,6 +34,77 @@ class CertificateFiles
             'certificate' => "{$dir}/{$domain}.crt",
             'private_key' => "{$dir}/{$domain}.key",
         ];
+    }
+
+    /**
+     * @return array{certificate: string, private_key: string}
+     */
+    public function fallbackPaths(): array
+    {
+        $directory = rtrim((string) config('server.certificates.custom_dir'), '/');
+
+        // Hidden, panel-reserved filenames rather than `paths()` for a domain:
+        // `unmatched.invalid` is a legitimate internal hostname and must never
+        // overwrite — or remove — the shared rejection key pair.
+        return [
+            'certificate' => $directory.'/.panel-tls-reject.crt',
+            'private_key' => $directory.'/.panel-tls-reject.key',
+        ];
+    }
+
+    /**
+     * Ensure web servers have a non-application certificate for a TLS reject
+     * vhost. Apache and OpenLiteSpeed require a key pair before they can reject
+     * an unmatched HTTPS request; without a reject vhost they serve whichever
+     * real application happens to be first in configuration order.
+     */
+    public function ensureFallback(): ServerOpsResult
+    {
+        // Two sites can provision in parallel. Generating directly into one
+        // shared pair without a lock can leave the certificate from one
+        // process beside the key from the other.
+        return Cache::lock('tls-fallback-certificate', 30)
+            ->block(20, fn () => $this->ensureFallbackLocked());
+    }
+
+    private function ensureFallbackLocked(): ServerOpsResult
+    {
+        $paths = $this->fallbackPaths();
+        $existing = $this->serverOps->run(
+            ['test', '-s', $paths['certificate'], '-a', '-s', $paths['private_key']],
+            ['feature' => 'certificate', 'op' => 'check_tls_fallback'],
+        );
+
+        if ($existing->ok) {
+            return $existing;
+        }
+
+        $ensured = $this->ensureDirectory();
+
+        if ($ensured->failed()) {
+            return $ensured;
+        }
+
+        $generated = $this->serverOps->run([
+            'openssl', 'req', '-x509', '-nodes',
+            '-newkey', 'rsa:2048',
+            '-days', '3650',
+            '-keyout', $paths['private_key'],
+            '-out', $paths['certificate'],
+            '-subj', '/CN=unmatched.invalid',
+            '-addext', 'subjectAltName=DNS:unmatched.invalid',
+        ], ['feature' => 'certificate', 'op' => 'create_tls_fallback'],
+            timeout: (int) config('server.certificates.timeout'),
+        );
+
+        if ($generated->failed()) {
+            return $generated;
+        }
+
+        return $this->serverOps->run(
+            ['chmod', '0600', $paths['private_key']],
+            ['feature' => 'certificate', 'op' => 'chmod_tls_fallback_key'],
+        );
     }
 
     /**
@@ -115,6 +187,39 @@ class CertificateFiles
         return $this->serverOps->run(
             ['chmod', '0600', $paths['private_key']],
             ['feature' => 'certificate', 'op' => 'chmod_private_key', 'application' => $applicationId],
+        );
+    }
+
+    /**
+     * Remove a panel-managed uploaded or self-signed certificate pair.
+     *
+     * Stored paths are used rather than rebuilding them from the application's
+     * current domain: the primary domain may have changed since the files were
+     * created. Every path is constrained to the private certificate directory
+     * before it reaches `rm`; a corrupted row must never become arbitrary-file
+     * deletion.
+     *
+     * @param  array<int, string|null>  $paths
+     */
+    public function remove(array $paths, int $applicationId): ServerOpsResult
+    {
+        $directory = rtrim((string) config('server.certificates.custom_dir'), '/');
+        $files = array_values(array_unique(array_filter($paths, fn (?string $path): bool => filled($path))));
+
+        foreach ($files as $path) {
+            // These files are always direct children. Prefix-only validation
+            // would accept `/custom/../../etc/passwd`, so compare the lexical
+            // parent too; the path need not exist for a retry-safe removal.
+            abort_unless(dirname($path) === $directory, 500);
+        }
+
+        if ($files === []) {
+            return new ServerOpsResult(true, 'certificate-files-already-absent');
+        }
+
+        return $this->serverOps->run(
+            ['rm', '-f', '--', ...$files],
+            ['feature' => 'certificate', 'op' => 'delete_files', 'application' => $applicationId],
         );
     }
 

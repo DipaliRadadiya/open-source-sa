@@ -7,6 +7,7 @@ use App\Enums\AiBotPolicy;
 use App\Enums\DomainType;
 use App\Enums\WafMode;
 use App\Models\Application;
+use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
@@ -18,6 +19,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     public function __construct(
         protected ServerOps $serverOps,
         protected ManagedFile $files,
+        protected CertificateFiles $certificateFiles,
     ) {}
 
     /**
@@ -29,6 +31,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      */
     public function apply(Application $application, string $documentRoot): ServerOpsResult
     {
+        $fallback = $this->ensureTlsFallback($application);
+
+        if ($fallback->failed()) {
+            return $fallback;
+        }
+
         $this->ensurePanelDirectory($application);
 
         $written = $this->files->put(
@@ -46,6 +54,22 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             $this->enabledPath($application),
             ['feature' => 'application', 'op' => 'enable_config', 'application' => $application->id],
         );
+    }
+
+    /**
+     * A no-certificate site must still own its hostname on port 443. Browsers
+     * retain HSTS and HTTPS-first state after uninstall; without a reject
+     * vhost, that request falls through to another application's first/default
+     * TLS vhost. Apache and OpenLiteSpeed need a harmless shared key pair to
+     * reject it without serving another tenant.
+     */
+    protected function ensureTlsFallback(Application $application): ServerOpsResult
+    {
+        if ($application->certificate?->servable() || $this->name() === 'nginx') {
+            return new ServerOpsResult(true, 'tls-fallback-not-required');
+        }
+
+        return $this->certificateFiles->ensureFallback();
     }
 
     /**
@@ -167,6 +191,11 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // at a path that is not there fails the config test and takes a
             // working site down over a certificate it never had.
             'certificate' => $application->certificate?->servable() ? $application->certificate : null,
+            // Never borrow a real site's certificate when a no-certificate
+            // hostname reaches 443. Apache/OLS require a key pair before they
+            // can reject the request; this reserved-name pair identifies no
+            // user application and is generated lazily on brownfield boxes.
+            'tlsFallback' => $this->certificateFiles->fallbackPaths(),
             'forceHttps' => (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
             // The shared ACME webroot, aliased into every profile. Per-site
             // document roots cannot work for node and proxy sites — they serve

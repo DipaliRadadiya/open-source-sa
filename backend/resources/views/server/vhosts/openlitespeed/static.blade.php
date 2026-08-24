@@ -21,6 +21,13 @@ vhssl {
        updates years ago. --}}
   sslProtocol             24
 }
+@else
+vhssl {
+  keyFile                 {{ $tlsFallback['private_key'] }}
+  certFile                {{ $tlsFallback['certificate'] }}
+  certChain               0
+  sslProtocol             24
+}
 @endif
 
 {{-- The ACME challenge is served from one shared directory rather than the
@@ -88,9 +95,13 @@ context exp:^/\.(git|svn|hg|bzr|env|panel) {
      HTTPS-force, or an active bot policy. OLS routes redirect names here as
      aliases, so they must be sent on explicitly or they would serve the
      site under a second name. --}}
-@if ($redirects->isNotEmpty() || $forceHttps || $botBlock)
+@if (! $certificate || $redirects->isNotEmpty() || $forceHttps || $botBlock)
 rewrite {
   enable                  1
+@if (! $certificate)
+  RewriteCond %{HTTPS} =on
+  RewriteRule ^ - [F,L]
+@endif
 @if ($botBlock)
   {{-- Checked first — a blocked bot gets [F] (403) immediately, ahead of
        HTTPS-force or any redirect. Apache mod_rewrite syntax, which OLS

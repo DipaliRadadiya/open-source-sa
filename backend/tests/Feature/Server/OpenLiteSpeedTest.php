@@ -358,12 +358,15 @@ describe('the driver', function () {
         app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop.test');
 
         $order = collect($runs)->pluck('command')->map(fn ($c) => $c[0] ?? '')->values()->all();
+        $mkdir = array_search('mkdir', $order, true);
         $tee = array_search('tee', $order, true);
         $cat = array_search('cat', $order, true);
 
-        // A virtualHost block naming a file that does not exist yet fails the
-        // config test — and strands the whole server, not just this site.
-        expect($order[0])->toBe('mkdir')
+        // The fallback-certificate existence check may safely happen first.
+        // The site directory and vhost still have to exist before the shared
+        // virtualHost block can point at them — reversing that strands the
+        // whole server, not just this site.
+        expect($mkdir)->toBeLessThan($tee)
             ->and($tee)->toBeLessThan($cat);
     });
 
@@ -388,7 +391,7 @@ describe('the driver', function () {
         // the region, `unregister()` changes nothing and reports success, and
         // deleting the file it still points at breaks config_test for every
         // site on the box.
-        fakeOls("listener Default {\n  address *:80\n  map shop.test shop.test\n}\n\nvirtualHost shop.test {\n  vhRoot /x/\n}\n");
+        fakeOls("listener Default {\n  address *:80\n  map shop shop.test\n}\n\nvirtualHost shop {\n  vhRoot /x/\n}\n");
 
         app(OlsDriver::class)->remove($this->app_);
 

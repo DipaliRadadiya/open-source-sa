@@ -57,6 +57,14 @@ server {
          session it ever issued, which is the property TLS 1.3 exists to
          remove. --}}
     ssl_session_tickets off;
+@else
+    {{-- Keep this hostname owned on 443 after SSL uninstall. Without an exact
+         SNI match nginx serves the first SSL vhost on the box — another
+         customer's application. nginx 1.19.4+ can reject before presenting a
+         certificate, and Ubuntu 24.04 ships a newer version. --}}
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    ssl_reject_handshake on;
 @endif
 @if (! $forceHttps)
     listen 80;

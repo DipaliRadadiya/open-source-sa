@@ -21,6 +21,15 @@ vhssl {
        updates years ago. --}}
   sslProtocol             24
 }
+@else
+{{-- Keep this hostname mapped to its own denied TLS vhost. Without vhssl OLS
+     borrows the secure listener's first real certificate/vhost. --}}
+vhssl {
+  keyFile                 {{ $tlsFallback['private_key'] }}
+  certFile                {{ $tlsFallback['certificate'] }}
+  certChain               0
+  sslProtocol             24
+}
 @endif
 
 {{-- The ACME challenge is served from one shared directory rather than the
@@ -119,6 +128,12 @@ scripthandler {
        it the rule rewrites index.php to itself. --}}
 rewrite {
   enable                  1
+@if (! $certificate)
+  {{-- HTTP remains the application's working transport. Only stale/HSTS HTTPS
+       requests are denied before they can reach this or another site. --}}
+  RewriteCond %{HTTPS} =on
+  RewriteRule ^ - [F,L]
+@endif
 @if ($botBlock)
   {{-- Checked first, ahead of HTTPS-force/redirects/the front controller —
        a blocked bot gets [F] (403) immediately. Apache mod_rewrite syntax,

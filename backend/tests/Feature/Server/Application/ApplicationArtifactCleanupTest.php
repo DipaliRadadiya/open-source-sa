@@ -112,12 +112,14 @@ it('stops the certificate renewing', function () {
         && in_array('shop.example.com', $c, true)))->toBeTrue();
 });
 
-it('leaves a self-signed certificate alone, because certbot never had it', function () {
+it('removes self-signed certificate files without calling certbot', function () {
     Certificate::create([
         'application_id' => $this->application->id,
         'type' => CertificateType::SelfSigned,
         'status' => CertificateStatus::Active,
         'domains' => ['shop.example.com'],
+        'certificate_path' => '/etc/ssl/sv-oss/shop.example.com.crt',
+        'private_key_path' => '/etc/ssl/sv-oss/shop.example.com.key',
         'auto_renew' => false,
     ]);
 
@@ -125,7 +127,10 @@ it('leaves a self-signed certificate alone, because certbot never had it', funct
 
     app(ApplicationProvisioner::class)->deprovision($this->application->fresh(['systemUser', 'certificate']));
 
-    expect(ranCommand($ran, fn (array $c) => in_array('--cert-name', $c, true)))->toBeFalse();
+    expect(ranCommand($ran, fn (array $c) => in_array('--cert-name', $c, true)))->toBeFalse()
+        ->and(ranCommand($ran, fn (array $c) => ($c[0] ?? '') === 'rm'
+            && in_array('/etc/ssl/sv-oss/shop.example.com.crt', $c, true)
+            && in_array('/etc/ssl/sv-oss/shop.example.com.key', $c, true)))->toBeTrue();
 });
 
 it('removes the worker units the cascade would otherwise orphan', function () {

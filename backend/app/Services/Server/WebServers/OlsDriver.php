@@ -3,7 +3,9 @@
 namespace App\Services\Server\WebServers;
 
 use App\Contracts\PhpStack;
+use App\Enums\DomainType;
 use App\Models\Application;
+use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -36,10 +38,11 @@ class OlsDriver extends AbstractWebServerDriver
     public function __construct(
         ServerOps $serverOps,
         ManagedFile $files,
+        CertificateFiles $certificateFiles,
         private OlsSharedConfig $shared,
         private PhpStack $stack,
     ) {
-        parent::__construct($serverOps, $files);
+        parent::__construct($serverOps, $files, $certificateFiles);
     }
 
     /**
@@ -114,6 +117,11 @@ class OlsDriver extends AbstractWebServerDriver
     public function apply(Application $application, string $documentRoot): ServerOpsResult
     {
         $context = ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id];
+        $fallback = $this->ensureTlsFallback($application);
+
+        if ($fallback->failed()) {
+            return $fallback;
+        }
 
         // This driver overrides apply(), so it does not inherit the base
         // class's guarantee that `.panel/` exists before a config naming it
@@ -213,7 +221,13 @@ class OlsDriver extends AbstractWebServerDriver
      */
     private function domains(Application $application): array
     {
-        return [$application->domain, 'www.'.$application->domain];
+        return array_values(array_unique([
+            ...$application->serverNames(),
+            ...$application->domains
+                ->where('type', DomainType::Redirect)
+                ->pluck('domain')
+                ->all(),
+        ]));
     }
 
     /**

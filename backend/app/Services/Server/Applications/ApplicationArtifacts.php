@@ -5,10 +5,12 @@ namespace App\Services\Server\Applications;
 use App\Actions\Server\Application\RemoveCertificate;
 use App\Actions\Server\Backup\DeleteBackup;
 use App\Enums\CertificateType;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\Worker;
 use App\Services\Server\Certificates\CertbotClient;
+use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\Php\PoolManager;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -66,6 +68,7 @@ class ApplicationArtifacts
         private PoolManager $pools,
         private ApplicationFail2banManager $fail2ban,
         private CertbotClient $certbot,
+        private CertificateFiles $certificateFiles,
     ) {}
 
     /**
@@ -127,22 +130,25 @@ class ApplicationArtifacts
         $this->attempt($application, 'certificate', function () use ($application) {
             $certificate = $application->certificate;
 
-            // Only Let's Encrypt has anything to stop. A self-signed or
-            // uploaded certificate is a pair of files under the site, and the
-            // site is being removed.
-            if ($certificate === null || $certificate->type !== CertificateType::LetsEncrypt) {
+            if ($certificate === null) {
                 return;
             }
 
             $domains = $certificate->domains ?? [];
+            $result = match ($certificate->type) {
+                CertificateType::LetsEncrypt => $domains === []
+                    ? null
+                    : $this->certbot->revoke($domains[0], $application->id),
+                CertificateType::Custom, CertificateType::SelfSigned => $this->certificateFiles->remove([
+                    $certificate->certificate_path,
+                    $certificate->private_key_path,
+                    $certificate->chain_path,
+                ], $application->id),
+            };
 
-            if ($domains === []) {
-                return;
+            if ($result?->failed()) {
+                throw new ProvisioningFailedException('remove_certificate', $result->reference);
             }
-
-            // The lineage is named after the first domain — see
-            // CertbotClient::issue()'s `--cert-name`.
-            $this->certbot->revoke($domains[0], $application->id);
         });
     }
 

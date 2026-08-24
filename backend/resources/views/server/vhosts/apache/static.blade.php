@@ -48,6 +48,8 @@
 
 @include('server.vhosts.apache._static-body')
 </VirtualHost>
+@else
+@include('server.vhosts.apache._tls-reject')
 @endif
 
 {{-- Redirects get their own VirtualHost. Serving the same content under a
