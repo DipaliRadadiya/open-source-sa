@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { Pager } from "@/components/data-table/pager";
 
 /**
  * What changed on this firewall, and when.
@@ -27,20 +28,25 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 export function HistoryDialog({ isAdmin }) {
   const t = useTranslations("firewall");
   const [open, setOpen] = useState(false);
-  const [state, setState] = useState({ loading: false, failed: false, entries: [] });
+  const [state, setState] = useState({ loading: false, failed: false, entries: [], meta: null });
 
-  async function load() {
-    setState({ loading: true, failed: false, entries: [] });
+  async function load(page = 1) {
+    setState({ loading: true, failed: false, entries: [], meta: null });
     try {
-      const { data } = await getMyActivityByType("firewall");
+      const { data } = await getMyActivityByType("firewall", { page });
       const parsed = myActivityResponseSchema.safeParse(data);
       if (!parsed.success) {
-        setState({ loading: false, failed: true, entries: [] });
+        setState({ loading: false, failed: true, entries: [], meta: null });
         return;
       }
-      setState({ loading: false, failed: false, entries: parsed.data.activity_log });
+      setState({
+        loading: false,
+        failed: false,
+        entries: parsed.data.activity_log,
+        meta: parsed.data.meta,
+      });
     } catch {
-      setState({ loading: false, failed: true, entries: [] });
+      setState({ loading: false, failed: true, entries: [], meta: null });
     }
   }
 
@@ -94,25 +100,36 @@ export function HistoryDialog({ isAdmin }) {
             {t("history.empty")}
           </p>
         ) : (
-          <ul className="divide-y">
-            {state.entries.map((entry) => (
-              <li key={entry.id} className="flex items-start justify-between gap-3 py-2.5">
-                <div className="min-w-0 space-y-1">
-                  {/* `description` is the server's finished sentence; the
-                      humanized verb is only a fallback for rows without one. */}
-                  <p className="text-sm leading-snug">
-                    {entry.description || humanizeActivity(entry.action)}
-                  </p>
-                  <Badge variant={actionBadgeVariant(entry.action)} className="font-normal">
-                    {humanizeActivity(entry.action)}
-                  </Badge>
-                </div>
-                <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
-                  {entry.created_at_human || entry.created_at || "—"}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-4">
+            <ul className="divide-y">
+              {state.entries.map((entry) => (
+                <li key={entry.id} className="flex items-start justify-between gap-3 py-2.5">
+                  <div className="min-w-0 space-y-1">
+                    {/* `description` is the server's finished sentence; the
+                        humanized verb is only a fallback for rows without one. */}
+                    <p className="text-sm leading-snug">
+                      {entry.description || humanizeActivity(entry.action)}
+                    </p>
+                    <Badge variant={actionBadgeVariant(entry.action)} className="font-normal">
+                      {humanizeActivity(entry.action)}
+                    </Badge>
+                  </div>
+                  <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
+                    {entry.created_at_human || entry.created_at || "—"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {state.meta?.last_page > 1 ? (
+              <Pager
+                page={state.meta.current_page}
+                lastPage={state.meta.last_page}
+                total={state.meta.total}
+                pending={state.loading}
+                onPageChange={load}
+              />
+            ) : null}
+          </div>
         )}
       </FormModal>
     </>

@@ -10,9 +10,9 @@ import { api } from "@/lib/api/client";
  * user field. It answers "what did I change", never "who changed this". Only
  * `/admin/activity-log` spans users.
  */
-export function getMyActivityByType(type, { perPage = 20, signal } = {}) {
+export function getMyActivityByType(type, { page = 1, perPage = 20, signal } = {}) {
   return api.get("/activity-log", {
-    params: { "filter[type]": type, per_page: perPage },
+    params: { "filter[type]": type, page, per_page: perPage },
     signal,
   });
 }
