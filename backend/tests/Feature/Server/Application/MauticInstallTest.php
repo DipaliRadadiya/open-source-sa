@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -33,11 +34,18 @@ beforeEach(function () {
         'web_root' => '/',
         'status' => 'pending',
         'settings' => [
+            'site_title' => "Growth & O'Reilly",
             'admin_first_name' => 'Ada',
-            'admin_last_name' => 'Lovelace',
+            'admin_last_name' => "O'Reilly",
             'admin_user' => 'ada',
             'admin_email' => 'ada@example.com',
-            'admin_password' => 'MauticPass1!',
+            'admin_password' => "Mautic&<Pass>'\"1!",
+            'mailer_name' => "Ada & O'Reilly",
+            'mailer_email' => 'mailer@example.com',
+            'mailer_host' => 'smtp.example.com',
+            'mailer_port' => 587,
+            'mailer_username' => 'mailer-user',
+            'mailer_password' => "SMTP&<Pass>'\"1!",
         ],
     ]);
 
@@ -67,33 +75,51 @@ function mauticLocalConfig(ArrayObject $runs): string
     return collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'local.php'))['input'];
 }
 
+/** @return array<string, mixed> */
+function mauticLocalParameters(ArrayObject $runs): array
+{
+    $path = tempnam(sys_get_temp_dir(), 'mtc');
+    file_put_contents($path, mauticLocalConfig($runs));
+
+    $parameters = [];
+    include $path;
+    @unlink($path);
+
+    return $parameters;
+}
+
 it('runs the install with no secret on the command line at all', function () {
     $runs = installMautic();
 
-    // mautic:install takes every credential as an option and never prompts —
-    // but it merges local.php first, so nothing has to be argued for.
+    // Mautic merges local.php before command-line options, so credentials do
+    // not have to be exposed to every local user through `ps`.
     foreach ($runs as $run) {
         $line = implode(' ', $run['command']);
-        expect($line)->not->toContain('MauticPass1!')
+        expect($line)->not->toContain("Mautic&<Pass>'\"1!")
+            ->and($line)->not->toContain("SMTP&<Pass>'\"1!")
             ->and($line)->not->toContain('--db_password')
             ->and($line)->not->toContain('--admin_password');
     }
 });
 
-it('puts both the database and the administrator into local.php', function () {
-    $config = mauticLocalConfig(installMautic());
+it('keeps the pre-install config incomplete and preserves special characters', function () {
+    $runs = installMautic();
+    $config = mauticLocalConfig($runs);
+    $parameters = mauticLocalParameters($runs);
 
     expect($config)->toStartWith('<?php')
-        ->and($config)->toContain("'db_password' => ")
-        ->and($config)->toContain("'admin_password' => 'MauticPass1!'")
-        ->and($config)->toContain("'admin_email' => 'ada@example.com'")
-        ->and($config)->toContain("'site_url' => 'https://mautic.example.com'");
+        // Mautic 7.1 treats db_driver + site_url as proof that installation
+        // already finished. The URL belongs to the CLI argument until Mautic
+        // writes it here in its own final step.
+        ->and($config)->not->toContain("'site_url'");
 
-    $path = tempnam(sys_get_temp_dir(), 'mtc').'.php';
-    file_put_contents($path, $config);
-    exec('php -l '.escapeshellarg($path).' 2>&1', $out, $status);
-    expect($status)->toBe(0);
-    @unlink($path);
+    expect($parameters)->not->toHaveKey('site_url');
+    expect($parameters['db_password'])->not->toBeEmpty()
+        ->and($parameters['admin_password'])->toBe("Mautic&<Pass>'\"1!")
+        ->and($parameters['admin_lastname'])->toBe("O'Reilly")
+        ->and($parameters['site_title'])->toBe("Growth & O'Reilly")
+        ->and($parameters['mailer_from_name'])->toBe("Ada & O'Reilly")
+        ->and($parameters['mailer_password'])->toBe("SMTP&<Pass>'\"1!");
 });
 
 it('unzips, because Mautic publishes no tarball', function () {
@@ -117,12 +143,46 @@ it('takes the full package, not the update package', function () {
     expect(end($curl))->toBe('https://github.com/mautic/mautic/releases/download/7.1.3/7.1.3.zip');
 });
 
-it('runs the installer from the site directory as the site user', function () {
+it('runs the installer non-interactively from the site directory as the site user', function () {
     $runs = installMautic();
 
     $install = collect($runs)->first(fn ($run) => in_array('mautic:install', $run['command'], true));
 
     expect($install['path'])->toBe("{$this->home}/marketing/public_html")
         ->and(array_slice($install['command'], 0, 4))->toBe(['runuser', '-u', 'mtcuser', '--'])
+        ->and($install['command'])->toContain('--force')
         ->and($install['command'])->toContain('--no-interaction');
+});
+
+it('verifies the installed schema before accepting a zero exit code', function () {
+    $runs = installMautic();
+
+    $verify = collect($runs)->first(fn ($run) => in_array('doctrine:query:sql', $run['command'], true));
+
+    expect($verify)->not->toBeNull()
+        ->and($verify['path'])->toBe("{$this->home}/marketing/public_html")
+        ->and(array_slice($verify['command'], 0, 4))->toBe(['runuser', '-u', 'mtcuser', '--'])
+        ->and($verify['command'])->toContain('SELECT COUNT(*) FROM users')
+        ->and($verify['command'])->toContain('--no-interaction');
+});
+
+it('rejects Mautic already installed exit zero when the schema is empty', function () {
+    Process::fake(function ($process) {
+        if (in_array('mautic:install', $process->command, true)) {
+            return Process::result(output: "Mautic already installed\n", exitCode: 0);
+        }
+
+        if (in_array('doctrine:query:sql', $process->command, true)) {
+            return Process::result(errorOutput: "Table 'users' does not exist\n", exitCode: 1);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    try {
+        app(ApplicationProvisioner::class)->provision($this->application);
+        $this->fail('An empty Mautic schema must not be accepted as an installed application.');
+    } catch (ProvisioningFailedException $exception) {
+        expect($exception->step)->toBe('verify_install');
+    }
 });

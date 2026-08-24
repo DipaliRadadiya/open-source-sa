@@ -45,32 +45,60 @@ class MauticInstaller extends AbstractPhpInstaller
         $configDir = $documentRoot.'/'.trim((string) config('server.installers.mautic.config_dir', 'config'), '/');
         $this->run('configure', ['mkdir', '-p', $configDir], $application);
 
-        // Everything the installer needs, so that nothing has to be argued
-        // for on a command line.
+        // Everything the installer needs, so that no secret has to be argued
+        // for on a command line. `site_url` is deliberately absent: Mautic
+        // treats a local.php containing both db_driver and site_url as proof
+        // that installation already finished, prints "Mautic already
+        // installed", and exits 0 without creating a single table. The URL is
+        // the command's non-secret positional argument instead, and Mautic
+        // writes it into local.php itself in its final installation step.
         $this->writeSecretFile($application, "{$configDir}/local.php", View::make('server.apps.mautic.local', [
-            'host' => $context['db_host'] ?? '127.0.0.1',
-            'port' => $context['db_port'] ?? 3306,
-            'database' => $context['database'],
-            'username' => $context['db_user'],
-            'password' => $context['db_password'],
-            'adminEmail' => $settings['admin_email'] ?? '',
-            'adminUsername' => $settings['admin_user'] ?? 'admin',
-            'adminPassword' => $settings['admin_password'] ?? '',
-            'adminFirstName' => $settings['admin_first_name'] ?? 'Admin',
-            'adminLastName' => $settings['admin_last_name'] ?? 'User',
-            'siteUrl' => 'https://'.$application->domain,
-            'siteTitle' => $settings['site_title'] ?? $application->name,
-            'mailerName' => $settings['mailer_name'] ?? '',
-            'mailerEmail' => $settings['mailer_email'] ?? '',
-            'mailerHost' => $settings['mailer_host'] ?? '',
-            'mailerPort' => (int) ($settings['mailer_port'] ?? 587),
-            'mailerUsername' => $settings['mailer_username'] ?? '',
-            'mailerPassword' => $settings['mailer_password'] ?? '',
+            'parameters' => [
+                'db_driver' => 'pdo_mysql',
+                'db_host' => (string) ($context['db_host'] ?? '127.0.0.1'),
+                'db_port' => (int) ($context['db_port'] ?? 3306),
+                'db_name' => (string) $context['database'],
+                'db_user' => (string) $context['db_user'],
+                'db_password' => (string) $context['db_password'],
+                'db_table_prefix' => null,
+                'db_backup_tables' => false,
+                'admin_email' => (string) ($settings['admin_email'] ?? ''),
+                'admin_username' => (string) ($settings['admin_user'] ?? 'admin'),
+                'admin_password' => (string) ($settings['admin_password'] ?? ''),
+                'admin_firstname' => (string) ($settings['admin_first_name'] ?? 'Admin'),
+                'admin_lastname' => (string) ($settings['admin_last_name'] ?? 'User'),
+                'site_title' => (string) ($settings['site_title'] ?? $application->name),
+                'mailer_transport' => 'smtp',
+                'mailer_from_email' => (string) ($settings['mailer_email'] ?? ''),
+                'mailer_from_name' => (string) ($settings['mailer_name'] ?? ''),
+                'mailer_host' => (string) ($settings['mailer_host'] ?? ''),
+                'mailer_port' => (int) ($settings['mailer_port'] ?? 587),
+                'mailer_user' => (string) ($settings['mailer_username'] ?? ''),
+                'mailer_password' => (string) ($settings['mailer_password'] ?? ''),
+                'mailer_auth_mode' => null,
+                'mailer_encryption' => null,
+            ],
         ])->render());
 
         $this->runAsSiteUser('install_app', $application, [
             $this->phpBinary($application), 'bin/console', 'mautic:install',
             'https://'.$application->domain,
+            // Mautic treats recommendations (including its 512M memory
+            // preference) as a confirmation prompt. With nobody to answer,
+            // --no-interaction declines that prompt at step zero — whose
+            // negated exit code is still zero. --force means continue past
+            // recommendations; hard requirements still fail normally.
+            '--force',
+            '--no-interaction',
+        ], null, $documentRoot);
+
+        // Mautic has two known success-without-installing paths: "already
+        // installed" and a declined step-zero recommendation both return 0.
+        // Ask Doctrine for a table the installer creates instead of trusting
+        // that exit code. This is read-only and carries no credentials.
+        $this->runAsSiteUser('verify_install', $application, [
+            $this->phpBinary($application), 'bin/console', 'doctrine:query:sql',
+            'SELECT COUNT(*) FROM users',
             '--no-interaction',
         ], null, $documentRoot);
     }
