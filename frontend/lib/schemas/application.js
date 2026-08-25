@@ -302,9 +302,55 @@ export const securityFormSchema = z
     }
   });
 
+const applicationDomainLabel =
+  /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/** A hostname only — no protocol, path, query, credentials, or port. */
+export function isValidApplicationDomain(value) {
+  const domain = String(value ?? "").trim().toLowerCase();
+  if (
+    !domain ||
+    domain.length > 253 ||
+    domain.endsWith(".") ||
+    domain.includes("://") ||
+    /[/?#:@]/.test(domain)
+  )
+    return false;
+
+  const labels = domain.split(".");
+  return labels.length >= 2 && labels.every((label) => applicationDomainLabel.test(label));
+}
+
+/**
+ * Turn a pasted URL into a hostname the form can offer back to the user.
+ * This never mutates their input silently — the UI renders an explicit “Use …”
+ * action when the candidate is valid and differs from what they entered.
+ */
+export function suggestApplicationDomain(value) {
+  const entered = String(value ?? "").trim();
+  if (!entered) return null;
+
+  try {
+    const parsed = new URL(
+      entered.includes("://") ? entered : `http://${entered}`,
+    );
+    const candidate = parsed.hostname.toLowerCase().replace(/\.$/, "");
+    return candidate !== entered && isValidApplicationDomain(candidate)
+      ? candidate
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export const createApplicationSchema = z.object({
   site_type: z.string().min(1, "applicationTypeRequired"),
   name: z.string().trim().min(1, "applicationNameRequired").max(255, "tooLong"),
-  domain: z.string().trim().min(1, "applicationDomainRequired").max(255, "tooLong"),
+  domain: z
+    .string()
+    .trim()
+    .min(1, "applicationDomainRequired")
+    .max(255, "tooLong")
+    .refine(isValidApplicationDomain, "hostnameInvalid"),
   system_user_id: z.coerce.number().int().positive("applicationSystemUserRequired"),
 }).passthrough();

@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleAlert,
+  Info,
   Loader2,
   RefreshCw,
   Sparkles,
@@ -21,7 +22,9 @@ import {
 import { toast } from "sonner";
 import {
   createApplicationSchema,
+  isValidApplicationDomain,
   portCheckResponseSchema,
+  suggestApplicationDomain,
 } from "@/lib/schemas/application";
 import {
   branchesResponseSchema,
@@ -44,6 +47,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { PasswordInput } from "@/components/ui/password-input";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { cn } from "@/lib/utils";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { initialDomainMode, ipToLabel, temporaryDomain } from "@/lib/applications/temporary-domain";
@@ -265,6 +270,20 @@ function summariseValue(value, t) {
   return `${lines[0]} ${t("form.moreLines", { count: lines.length - 1 })}`;
 }
 
+function hasConfigValue(config, value) {
+  if (config.type === "toggle") return value !== undefined && value !== null;
+  return String(value ?? "").trim() !== "";
+}
+
+function isSensitiveConfig(config) {
+  return (
+    config.type === "password" ||
+    /(?:password|passwd|secret|token|private[_-]?key|access[_-]?key|api[_-]?key|credential)/i.test(
+      config.name,
+    )
+  );
+}
+
 function ConfigField({
   config,
   form,
@@ -375,7 +394,10 @@ function ConfigField({
       name={config.name}
       defaultValue={runtimeDefault}
       render={({ field }) => (
-        <FormItem className={cn("min-w-0 self-start", isTextarea && "@2xl:col-span-2")}>
+        <FormItem
+          data-field-name={config.name}
+          className={cn("min-w-0 self-start", isTextarea && "@2xl:col-span-2")}
+        >
           {/* Every label row in this form is exactly h-7, whether or not it
               carries an action — that fixed height is what keeps the two
               inputs in a grid row starting at the same Y. The label truncates
@@ -626,6 +648,9 @@ export function CreateApplicationForm({
   const [repositoriesNonce, setRepositoriesNonce] = useState(0);
   const [systemUserDialogOpen, setSystemUserDialogOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [focusRequest, setFocusRequest] = useState(null);
   // Bumped to ask for a scroll; the effect runs after the reveal has committed.
   const [scrollRequest, setScrollRequest] = useState(0);
   const formRef = useRef(null);
@@ -664,6 +689,12 @@ export function CreateApplicationForm({
   });
   const name = useWatch({ control: form.control, name: "name" });
   const domain = useWatch({ control: form.control, name: "domain" });
+  const repositoryUrl = useWatch({
+    control: form.control,
+    name: "repository_url",
+  });
+  const isDirty = form.formState.isDirty && !submitted;
+  useWatchUnsaved("application-create", isDirty);
 
   /**
    * Somewhere to put a site that has no domain yet.
@@ -736,73 +767,77 @@ export function CreateApplicationForm({
       (created) => !systemUsers.some((user) => user.id === created.id),
     ),
   ];
-  const runtimeSummaryItems = visibleFields
-    .filter(
-      (config) =>
-        config.source === "php_versions" || config.source === "node_versions",
-    )
-    .map((config) => {
-      const versions =
-        config.source === "php_versions" ? phpVersions : nodeVersions;
-      const value =
-        values?.[config.name] ??
-        form.getValues(config.name) ??
-        versions[0]?.version;
-      return value
-        ? {
-            key: `runtime-${config.name}`,
-            label: fieldLabel(config),
-            value: String(value),
-            ready: true,
-          }
-        : null;
-    })
-    .filter(Boolean);
   // A deploy script makes the build command dead weight, so the last thing
   // read before pressing Create must not list it as set and ready.
   const hasDeployScript = String(values?.deploy_script ?? "").trim() !== "";
-  const advancedSummaryItems = advancedFields
+  const configurationSummaryItems = visibleFields
     .filter(
       (config) =>
         !(config.name === "build_command" && hasDeployScript) &&
-        (config.type === "toggle" || String(values?.[config.name] ?? "").trim()),
+        (config.required || hasConfigValue(config, values?.[config.name])),
     )
-    .map((config) => ({
-      key: `advanced-${config.name}`,
-      label: fieldLabel(config),
-      // A raw `false` under a switch labelled "Enabled" is a contradiction —
-      // the review reads back the same words the control shows.
-      value:
-        config.type === "toggle"
-          ? toggleValue(values?.[config.name])
-            ? t("form.toggleOn")
-            : t("form.toggleOff")
-          : // A script joined onto one line reads as though the newlines were
-            // lost. Say how many lines there are instead of pretending.
-            summariseValue(String(values[config.name]), t),
-      ready: true,
-    }));
+    .map((config) => {
+      const value = values?.[config.name];
+      const ready = !config.required || hasConfigValue(config, value);
+      return {
+        key: `configuration-${config.name}`,
+        target: config.name,
+        label: fieldLabel(config),
+        // Passwords, tokens and keys are presence-only in a review. Rendering
+        // their actual value in a sticky card leaks it to shoulder-surfers and
+        // screen recordings.
+        value: isSensitiveConfig(config)
+          ? t("readiness.configured")
+          : config.type === "toggle"
+            ? toggleValue(value)
+              ? t("form.toggleOn")
+              : t("form.toggleOff")
+            : ready
+              ? summariseValue(String(value), t)
+              : "—",
+        ready,
+      };
+    });
+  const missingGitTarget = !isGit
+    ? null
+    : gitSource === "account"
+      ? !gitAccountId
+        ? "git_account_id"
+        : !repository
+          ? "repository"
+          : !branch
+            ? "branch"
+            : null
+      : !repositoryUrl?.trim()
+        ? "repository_url"
+        : !branch?.trim()
+          ? "branch"
+          : null;
   const readinessItems = [
     {
       key: "type",
+      target: "site_type",
       label: t("chooseType"),
       value: selected?.title ?? t("form.chooseTypeHint"),
       ready: Boolean(selected),
     },
     {
       key: "name",
+      target: "name",
       label: t("name"),
       value: name || "—",
       ready: Boolean(name?.trim()),
     },
     {
       key: "domain",
+      target: "domain",
       label: t("domain"),
       value: domain || "—",
-      ready: Boolean(domain?.trim()),
+      ready: isValidApplicationDomain(domain),
     },
     {
       key: "user",
+      target: "system_user_id",
       label: t("systemUser"),
       value:
         availableSystemUsers.find(
@@ -814,6 +849,7 @@ export function CreateApplicationForm({
       ? [
           {
             key: "source",
+            target: missingGitTarget ?? "git_account_id",
             label: t("sourceLabel"),
             value:
               gitSource === "account"
@@ -826,19 +862,22 @@ export function CreateApplicationForm({
                   ]
                     .filter(Boolean)
                     .join(" · ") || "—"
-                : [form.getValues("repository_url"), branch]
-                    .filter(Boolean)
-                    .join(" · ") || "—",
-            ready:
-              gitSource === "account"
-                ? Boolean(gitAccountId && repository && branch)
-                : Boolean(form.getValues("repository_url") && branch),
+                : [repositoryUrl, branch].filter(Boolean).join(" · ") || "—",
+            ready: !missingGitTarget,
           },
         ]
       : []),
-    ...runtimeSummaryItems,
-    ...advancedSummaryItems,
+    ...configurationSummaryItems,
   ];
+  const missingReadinessItems = readinessItems.filter((item) => !item.ready);
+  const submitReason = !selected
+    ? t("form.submitNeedsType")
+    : missingReadinessItems.length
+      ? t("form.submitMissing", { count: missingReadinessItems.length })
+      : null;
+  const suggestedDomain = form.formState.touchedFields.domain
+    ? suggestApplicationDomain(domain)
+    : null;
 
   function handleGitAccountChange(value) {
     form.setValue("git_account_id", value);
@@ -880,6 +919,16 @@ export function CreateApplicationForm({
     form.setValue("branch", "");
     setBranches([]);
     setBranchesState(value ? "loading" : "idle");
+  }
+
+  function focusReadinessItem(name) {
+    if (advancedFieldNames.has(name)) setAdvancedOpen(true);
+    setFocusRequest(name);
+  }
+
+  function handleCancel() {
+    if (isDirty) setConfirmLeave(true);
+    else router.push("/applications");
   }
 
   useEffect(() => {
@@ -1073,19 +1122,39 @@ export function CreateApplicationForm({
     scrollToFirstError(formRef.current);
   }, [scrollRequest, advancedOpen]);
 
+  useEffect(() => {
+    if (!focusRequest) return;
+    const frame = requestAnimationFrame(() => {
+      const fields = formRef.current?.querySelectorAll("[data-field-name]") ?? [];
+      const container = [...fields].find(
+        (item) => item.dataset.fieldName === focusRequest,
+      );
+      container?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const control = container?.querySelector(
+        '[data-slot="form-control"], input, textarea, button:not([disabled])',
+      );
+      control?.focus({ preventScroll: true });
+      setFocusRequest(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusRequest, advancedOpen]);
+
   async function onSubmit(values) {
     const missingFields = visibleFields.filter(
       (config) => config.required && !String(values[config.name] ?? "").trim(),
     );
-    const missingGitFields =
-      isGit && gitSource === "account"
+    const missingGitFields = !isGit
+      ? []
+      : gitSource === "account"
         ? [
             { name: "git_account_id", label: t("gitAccount") },
             { name: "repository", label: t("repository") },
+            { name: "branch", label: t("branch") },
           ].filter((field) => !String(values[field.name] ?? "").trim())
-        : isGit && !String(values.repository_url ?? "").trim()
-          ? [{ name: "repository_url", label: t("publicRepository") }]
-          : [];
+        : [
+            { name: "repository_url", label: t("publicRepository") },
+            { name: "branch", label: t("branch") },
+          ].filter((field) => !String(values[field.name] ?? "").trim());
     if (missingFields.length || missingGitFields.length) {
       [...missingFields, ...missingGitFields].forEach((field) =>
         form.setError(field.name, {
@@ -1134,6 +1203,7 @@ export function CreateApplicationForm({
 
     try {
       const { data } = await createApplication(payload);
+      setSubmitted(true);
       toast.success(t("created"));
       router.push(
         data?.application?.id
@@ -1180,7 +1250,7 @@ export function CreateApplicationForm({
                 control={form.control}
                 name="site_type"
                 render={({ field }) => (
-                  <FormItem className="min-w-0">
+                  <FormItem data-field-name="site_type" className="min-w-0">
                     {/* min-w-0 on both: this is a grid item, and a grid item
                         keeps min-width:auto, so it grows to its content's
                         min-content width instead of its track. The trigger
@@ -1214,7 +1284,7 @@ export function CreateApplicationForm({
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem className="min-w-0">
+                    <FormItem data-field-name="name" className="min-w-0">
                       {/* Empty right side, same h-7 as Domain, which carries a
                           control: two cells side by side only line up if their
                           heads are the same height. */}
@@ -1247,7 +1317,7 @@ export function CreateApplicationForm({
                     // min-w-0: a grid item keeps min-width:auto, so without this
                     // its contents set the column's floor and the widest of them
                     // hangs over the card's edge at larger text sizes.
-                    <FormItem className="min-w-0">
+                    <FormItem data-field-name="domain" className="min-w-0">
                       <div className="flex min-h-7 items-center justify-between gap-2">
                         <FormLabel className="min-w-0" required>
                           {t("domain")}
@@ -1282,6 +1352,8 @@ export function CreateApplicationForm({
                         <Input
                           inputMode="url"
                           autoComplete="url"
+                          autoCapitalize="none"
+                          spellCheck={false}
                           placeholder={t("form.domainPlaceholder")}
                           {...field}
                           // Read-only, not disabled: a disabled field is
@@ -1304,10 +1376,44 @@ export function CreateApplicationForm({
                       </FormControl>
 
                       <FormDescription>
-                        {temporary
-                          ? t("form.temporaryDomainHint")
-                          : t("form.domainHint")}
+                        {suggestedDomain ? (
+                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span>{t("form.domainSuggestion")}</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                form.setValue("domain", suggestedDomain, {
+                                  shouldDirty: true,
+                                  shouldTouch: true,
+                                  shouldValidate: true,
+                                })
+                              }
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {t("form.useDomain", { domain: suggestedDomain })}
+                            </button>
+                          </span>
+                        ) : temporary ? (
+                          t("form.temporaryDomainHint")
+                        ) : (
+                          t("form.domainHint")
+                        )}
                       </FormDescription>
+
+                      {!temporary &&
+                      serverIp &&
+                      isValidApplicationDomain(domain) ? (
+                        <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
+                          <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                          <p className="flex flex-wrap items-center gap-1.5">
+                            <span>{t("form.dnsNote")}</span>
+                            <code className="rounded bg-background px-1.5 py-0.5 font-mono text-foreground">
+                              {serverIp}
+                            </code>
+                            <CopyButton value={serverIp} className="size-6" />
+                          </p>
+                        </div>
+                      ) : null}
 
                       <FormMessage />
                     </FormItem>
@@ -1317,7 +1423,10 @@ export function CreateApplicationForm({
                   control={form.control}
                   name="system_user_id"
                   render={({ field }) => (
-                    <FormItem className="min-w-0 @2xl:col-span-2">
+                    <FormItem
+                      data-field-name="system_user_id"
+                      className="min-w-0 @2xl:col-span-2"
+                    >
                       <div className="flex min-h-7 items-center justify-between gap-2">
                         <FormLabel className="min-w-0" required>
                           {t("systemUser")}
@@ -1410,7 +1519,7 @@ export function CreateApplicationForm({
                             control={form.control}
                             name="git_account_id"
                             render={({ field }) => (
-                              <FormItem className="min-w-0">
+                              <FormItem data-field-name="git_account_id" className="min-w-0">
                                 {/* Same min-h-7 label row as Repository beside
                                     it, so both comboboxes share one baseline. */}
                                 <div className="flex min-h-7 items-center justify-between gap-2">
@@ -1478,7 +1587,7 @@ export function CreateApplicationForm({
                             control={form.control}
                             name="repository"
                             render={({ field }) => (
-                              <FormItem className="min-w-0">
+                              <FormItem data-field-name="repository" className="min-w-0">
                                 {/* Action on the label row, matching the System
                                     user field — keeping it out of the control row
                                     leaves every input's right edge aligned with
@@ -1552,7 +1661,10 @@ export function CreateApplicationForm({
                             control={form.control}
                             name="branch"
                             render={({ field }) => (
-                              <FormItem className="min-w-0 @2xl:col-span-2">
+                              <FormItem
+                                data-field-name="branch"
+                                className="min-w-0 @2xl:col-span-2"
+                              >
                                 <FormLabel>{t("branch")}</FormLabel>
                                 <ReasonTooltip
                                   reason={
@@ -1602,7 +1714,7 @@ export function CreateApplicationForm({
                             control={form.control}
                             name="repository_url"
                             render={({ field }) => (
-                              <FormItem className="min-w-0">
+                              <FormItem data-field-name="repository_url" className="min-w-0">
                                 <FormLabel>{t("publicRepository")}</FormLabel>
                                 <FormControl>
                                   <Input
@@ -1622,7 +1734,7 @@ export function CreateApplicationForm({
                             control={form.control}
                             name="branch"
                             render={({ field }) => (
-                              <FormItem className="min-w-0">
+                              <FormItem data-field-name="branch" className="min-w-0">
                                 <FormLabel>{t("branch")}</FormLabel>
                                 <FormControl>
                                   <Input
@@ -1712,20 +1824,32 @@ export function CreateApplicationForm({
               )}
             </section>
 
+            {selected ? (
+              <div className="lg:hidden">
+                <CreateReadinessPanel
+                  items={readinessItems}
+                  onSelectItem={focusReadinessItem}
+                />
+              </div>
+            ) : null}
+
             <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 {selected ? t("guided.reviewHint", { brand }) : t("form.chooseTypeHint")}
               </p>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" asChild>
-                  <Link href="/applications">{t("cancel")}</Link>
-                </Button>
-                <ReasonTooltip
-                  reason={!selected ? t("form.submitNeedsType") : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={form.formState.isSubmitting}
                 >
+                  {t("cancel")}
+                </Button>
+                <ReasonTooltip reason={submitReason}>
                   <Button
                     type="submit"
-                    disabled={!selected || form.formState.isSubmitting}
+                    disabled={Boolean(submitReason) || form.formState.isSubmitting}
                   >
                     {form.formState.isSubmitting ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -1743,8 +1867,13 @@ export function CreateApplicationForm({
           {/* Clears the shell's sticky chrome, whatever it currently is — a
               fixed offset slid this panel under the breadcrumb as soon as a
               banner appeared above the header. */}
-          <aside className="lg:sticky lg:top-[calc(var(--app-chrome,7rem)_+_1.5rem)]">
-            {selected ? <CreateReadinessPanel items={readinessItems} /> : null}
+          <aside className="hidden lg:sticky lg:top-[calc(var(--app-chrome,7rem)_+_1.5rem)] lg:block">
+            {selected ? (
+              <CreateReadinessPanel
+                items={readinessItems}
+                onSelectItem={focusReadinessItem}
+              />
+            ) : null}
           </aside>
         </div>
       </form>
@@ -1758,6 +1887,21 @@ export function CreateApplicationForm({
             shouldDirty: true,
             shouldValidate: true,
           });
+        }}
+      />
+      <ConfirmDialog
+        open={confirmLeave}
+        onOpenChange={setConfirmLeave}
+        icon={TriangleAlert}
+        tone="warning"
+        confirmVariant="destructive"
+        title={tCommon("unsavedTitle")}
+        description={tCommon("unsavedDescription")}
+        cancelLabel={tCommon("unsavedStay")}
+        confirmLabel={tCommon("unsavedLeave")}
+        onConfirm={() => {
+          setSubmitted(true);
+          router.push("/applications");
         }}
       />
     </Form>

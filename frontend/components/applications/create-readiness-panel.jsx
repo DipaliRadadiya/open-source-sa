@@ -15,7 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  * (it is the sidebar) and wide at narrow ones (it is stacked). The viewport says
  * nothing useful about it.
  */
-export function CreateReadinessPanel({ items = [] }) {
+export function CreateReadinessPanel({ items = [], onSelectItem }) {
   const t = useTranslations("applications");
   const complete = items.every((item) => item.ready);
 
@@ -46,9 +46,21 @@ export function CreateReadinessPanel({ items = [] }) {
               )}
             </span>
             <div className="min-w-0">
-              <p className="font-medium">
-                {item.ready ? item.label : t("readiness.complete", { field: item.label })}
-              </p>
+              {item.ready ? (
+                <p className="font-medium">{item.label}</p>
+              ) : onSelectItem ? (
+                <button
+                  type="button"
+                  onClick={() => onSelectItem(item.target ?? item.key)}
+                  className="rounded-sm text-left font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {t("readiness.complete", { field: item.label })}
+                </button>
+              ) : (
+                <p className="font-medium">
+                  {t("readiness.complete", { field: item.label })}
+                </p>
+              )}
               {item.ready ? <p className="truncate text-muted-foreground">{item.value}</p> : null}
             </div>
           </div>
