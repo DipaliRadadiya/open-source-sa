@@ -8,6 +8,7 @@ use App\Services\Server\Applications\FileBrowser;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -225,6 +226,13 @@ function fakeFileBrowserServer(): void
     Process::fake(function ($process) use ($root) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
+        // ApplicationResource may probe a runtime while serializing the
+        // response. It is not a file-browser command and does not belong in
+        // this fake's command assertions.
+        if (($args[0] ?? null) === 'which') {
+            return Process::result(exitCode: 0);
+        }
+
         FileBrowserFake::$ran[] = implode(' ', $args);
         FileBrowserFake::$cwds[] = $process->path;
 
@@ -243,6 +251,12 @@ function fakeFileBrowserServer(): void
             str_starts_with($target, $root.'/') => ltrim(substr($target, strlen($root)), '/'),
             default => $target,
         };
+
+        if ($binary === 'test' && ($inner[1] ?? null) === '-d') {
+            $entry = FileBrowserFake::$fs[$relative($inner[2] ?? '')] ?? null;
+
+            return Process::result(exitCode: ($entry['type'] ?? null) === 'd' ? 0 : 1);
+        }
 
         // `-maxdepth 0` stats the named paths themselves. One target with
         // `%y\t%s` is stat(); many with `%p\t%y\t%m` is statMany(), which
@@ -620,6 +634,19 @@ describe('browsing', function () {
         FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
         FileBrowserFake::$fs['wp-content/uploads'] = ['type' => 'd'];
         FileBrowserFake::$fs['shortcut'] = ['type' => 'l'];
+    });
+
+    it('returns a client error for a missing web root without recording a failed server operation', function () {
+        unset(FileBrowserFake::$fs['']);
+        fakeFileBrowserServer();
+
+        Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('error')->never();
+
+        $this->actingAs($this->admin)->getJson(filesUrl())
+            ->assertUnprocessable()
+            ->assertJsonPath('message', __('errors/application.web_root_not_found'));
     });
 
     it('lists a directory with directories first, then alphabetically', function () {

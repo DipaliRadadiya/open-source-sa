@@ -314,7 +314,7 @@ class MongoEngine implements DatabaseEngine
         try {
             return $this->serverOps->run(
                 [$client, '--quiet', '--nodb', '--file', $file],
-                ['feature' => 'database', 'engine' => 'mongodb'],
+                ['feature' => 'database', 'engine' => 'mongodb', 'op' => 'query'],
             );
         } finally {
             @unlink($file);

@@ -1316,7 +1316,7 @@ class FileBrowser
     {
         $root = rtrim($this->provisioner->documentRoot($application), '/');
 
-        $result = $this->serverOps->run(
+        $result = $this->serverOps->probe(
             $this->asUser($application, ['test', '-d', $root]),
             ['feature' => 'application', 'op' => 'file_root_check', 'application' => $application->id],
             timeout: 15,

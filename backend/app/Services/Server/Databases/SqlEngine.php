@@ -380,7 +380,7 @@ class SqlEngine implements DatabaseEngine
         try {
             return $this->serverOps->run(
                 [$client, '--defaults-extra-file='.$authFile, '--batch', '--skip-column-names'],
-                ['feature' => 'database', 'engine' => $this->connection->engine],
+                ['feature' => 'database', 'engine' => $this->connection->engine, 'op' => 'query'],
                 60,
                 $sql, // statements over stdin — never on argv
             );

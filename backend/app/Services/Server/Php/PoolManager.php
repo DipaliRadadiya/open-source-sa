@@ -253,7 +253,7 @@ class PoolManager
     {
         $path = $this->poolPath($application);
 
-        return $path !== null && $this->serverOps->run(
+        return $path !== null && $this->serverOps->probe(
             ['test', '-f', $path],
             $this->context($application, 'pool_exists'),
             timeout: 15,

@@ -65,8 +65,10 @@ class ServerOps
      *                                   a retry replays from the start, so a
      *                                   consumer that accumulates should
      *                                   expect to see the beginning twice.
+     * @param  array<int, int>  $expectedExitCodes  Exit codes that answer an
+     *                                              expected negative probe.
      */
-    public function run(array $command, array $context = [], int $timeout = 60, mixed $input = null, ?string $cwd = null, array $env = [], ?callable $onOutput = null): ServerOpsResult
+    public function run(array $command, array $context = [], int $timeout = 60, mixed $input = null, ?string $cwd = null, array $env = [], ?callable $onOutput = null, array $expectedExitCodes = []): ServerOpsResult
     {
         $command = $this->elevate($command);
 
@@ -146,10 +148,17 @@ class ServerOps
             usleep(max(0, (int) config('server.transient.delay_ms', 1500)) * 1000);
         }
 
-        Log::channel('server-ops')->{$ok ? 'info' : 'error'}('server operation', array_merge($context, [
+        // Some commands answer a question rather than perform an operation:
+        // `test -f` uses exit 1 for "no", which is useful state rather than a
+        // failed server command. Keep the unsuccessful result for the caller,
+        // but do not put an expected answer on the admin error dashboard.
+        $expectedExit = ! $ok && $exitCode !== null && in_array($exitCode, $expectedExitCodes, true);
+
+        Log::channel('server-ops')->{$ok || $expectedExit ? 'info' : 'error'}('server operation', array_merge($context, [
             'reference' => $reference,
             'command' => $this->loggableCommand($command),
             'exit_code' => $exitCode,
+            'expected_exit' => $expectedExit,
             'stderr' => $stderr,
             // Only on failure, and only the tail. Plenty of the tools the
             // panel drives report their errors on stdout and leave stderr
@@ -186,6 +195,19 @@ class ServerOps
             // once nobody does.
             staleLock: ! $ok && $this->isStaleLock($stderr),
         );
+    }
+
+    /**
+     * Run a boolean existence probe. Exit 1 means "not found", so it remains
+     * a false result for the caller while being logged as an expected answer.
+     * Timeouts and every other exit code remain genuine operation failures.
+     *
+     * @param  array<int, string>  $command
+     * @param  array<string, mixed>  $context
+     */
+    public function probe(array $command, array $context = [], int $timeout = 60): ServerOpsResult
+    {
+        return $this->run($command, $context, $timeout, expectedExitCodes: [1]);
     }
 
     /**

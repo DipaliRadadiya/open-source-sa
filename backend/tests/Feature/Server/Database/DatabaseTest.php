@@ -6,11 +6,15 @@ use App\Enums\ExportStatus;
 use App\Jobs\InstallDatabaseEngine;
 use App\Jobs\RunDatabaseExport;
 use App\Models\Database;
+use App\Models\DatabaseConnection;
 use App\Models\DatabaseExport;
 use App\Models\DatabaseUser;
 use App\Models\DbMetric;
 use App\Models\FirewallRule;
 use App\Models\User;
+use App\Services\Server\Databases\MongoEngine;
+use App\Services\Server\Databases\SqlEngine;
+use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Carbon;
@@ -62,6 +66,30 @@ function dbAuth(): array
 {
     return ['Authorization' => 'Bearer '.test()->token];
 }
+
+it('names generic SQL and MongoDB client operations in the server log', function (string $engine, string $class) {
+    $connection = new DatabaseConnection([
+        'engine' => $engine,
+        'connection_type' => 'tcp',
+        'host' => '127.0.0.1',
+        'port' => $engine === 'mongodb' ? 27017 : 3306,
+        'username' => 'panel',
+        'password' => 'secret',
+        'options' => [],
+    ]);
+
+    $ops = Mockery::mock(ServerOps::class);
+    $ops->shouldReceive('run')->once()->withArgs(
+        fn (array $command, array $context): bool => $context['feature'] === 'database'
+            && $context['engine'] === $engine
+            && $context['op'] === 'query',
+    )->andReturn(new ServerOpsResult(true, 'query-reference', null));
+
+    expect((new $class($connection, $ops))->available())->toBeTrue();
+})->with([
+    'SQL' => ['mysql', SqlEngine::class],
+    'MongoDB' => ['mongodb', MongoEngine::class],
+]);
 
 it('lists engine capabilities with live version', function () {
     fakeDb();

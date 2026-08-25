@@ -186,6 +186,44 @@ it('escalates exactly what the written grant covers', function () {
     }
 })->skip(fn () => ! function_exists('posix_geteuid') || posix_geteuid() === 0, 'runs as root — nothing is escalated');
 
+it('keeps an expected negative probe out of the error log without turning it into success', function () {
+    $logger = Mockery::spy(LoggerInterface::class);
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+    Process::fake(['*' => Process::result(exitCode: 1)]);
+
+    $result = $this->ops->probe(
+        ['test', '-f', '/etc/php/8.4/fpm/pool.d/missing.conf'],
+        ['feature' => 'application', 'op' => 'pool_exists'],
+    );
+
+    expect($result->failed())->toBeTrue();
+
+    $logger->shouldHaveReceived('info')->once()->with('server operation', Mockery::on(
+        fn (array $context): bool => $context['exit_code'] === 1
+            && $context['expected_exit'] === true
+            && $context['op'] === 'pool_exists',
+    ));
+    $logger->shouldNotHaveReceived('error');
+});
+
+it('still logs an unexpected probe exit as an error', function () {
+    $logger = Mockery::spy(LoggerInterface::class);
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+    Process::fake(['*' => Process::result(errorOutput: 'permission denied', exitCode: 2)]);
+
+    $result = $this->ops->probe(
+        ['test', '-f', '/etc/php/8.4/fpm/pool.d/unreadable.conf'],
+        ['feature' => 'application', 'op' => 'pool_exists'],
+    );
+
+    expect($result->failed())->toBeTrue();
+
+    $logger->shouldHaveReceived('error')->once()->with('server operation', Mockery::on(
+        fn (array $context): bool => $context['exit_code'] === 2
+            && $context['expected_exit'] === false,
+    ));
+});
+
 it('logs the tail of stdout when a command fails, because many tools report there', function () {
     // Akaunting's installer failed with exit 1 and an empty stderr, so the
     // ops log recorded proof that something broke and nothing about what.

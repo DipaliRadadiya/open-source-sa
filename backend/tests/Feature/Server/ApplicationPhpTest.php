@@ -11,7 +11,9 @@ use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Psr\Log\LoggerInterface;
 
 /**
  * Fake server state. Held statically because Pest's `test()` proxy does not
@@ -144,6 +146,22 @@ function poolFile(): ?string
 
     return null;
 }
+
+it('treats a missing pool as an expected negative probe', function () {
+    fakePhpServer();
+
+    $logger = Mockery::spy(LoggerInterface::class);
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+
+    expect(app(PoolManager::class)->exists($this->application))->toBeFalse();
+
+    $logger->shouldHaveReceived('info')->once()->with('server operation', Mockery::on(
+        fn (array $context): bool => $context['op'] === 'pool_exists'
+            && $context['exit_code'] === 1
+            && $context['expected_exit'] === true,
+    ));
+    $logger->shouldNotHaveReceived('error');
+});
 
 it('reports a site as sharing the server pool until it is isolated', function () {
     fakePhpServer();
