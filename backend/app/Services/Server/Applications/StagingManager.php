@@ -92,7 +92,12 @@ class StagingManager
         // that failed once blocked every later attempt, and the panel listed a
         // site that was never created. See `discard()`.
         try {
-            $this->provisioner->provision($staging);
+            // skipInstaller=true: staging is provisioned from production's copied
+            // files, not from a fresh installation. Running the marketplace
+            // installer would call `wp core install` against a site that already
+            // has a database and configuration — the same bug CloneManager already
+            // avoids with the same flag.
+            $this->provisioner->provision($staging, skipInstaller: true);
 
             $this->rsync(
                 $this->provisioner->documentRoot($production->load('systemUser')),

@@ -163,6 +163,37 @@ it('treats a missing pool as an expected negative probe', function () {
     $logger->shouldNotHaveReceived('error');
 });
 
+it('pools that do not exist never attempt a cat', function () {
+    // A pool file that does not exist must never shell out `cat` — that would
+    // be a genuine error logged against every staging site that was never
+    // isolated. `PoolManager::read()` now probes first and only cats a
+    // confirmed-present path.
+    $catCalls = [];
+    Process::fake(function ($process) use (&$catCalls) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'cat') {
+            $catCalls[] = $args;
+        }
+
+        if (($args[0] ?? '') === 'test') {
+            // No pool files exist.
+            return Process::result(exitCode: 1);
+        }
+
+        if (($args[0] ?? '') === 'find') {
+            return Process::result(exitCode: 0, output: '');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $manager = app(PoolManager::class);
+
+    expect($manager->exists($this->application))->toBeFalse()
+        ->and($catCalls)->toBeEmpty();
+});
+
 it('reports a site as sharing the server pool until it is isolated', function () {
     fakePhpServer();
 

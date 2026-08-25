@@ -131,6 +131,30 @@ describe('the unit', function () {
     });
 });
 
+it('logs a missing unit as an expected probe, not an error', function () {
+    $logs = [];
+    Process::fake(function ($p) use (&$logs) {
+        $args = $p->command[0] === 'sudo' ? array_slice($p->command, 2) : $p->command;
+
+        // `test -f` on a path that does not exist exits 1.
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-f') {
+            $logs[] = $args;
+
+            return Process::result(exitCode: 1, errorOutput: '', output: '');
+        }
+
+        return Process::result(output: '');
+    });
+
+    $supervisor = app(ProcessSupervisor::class);
+
+    // Exists returns false without throwing.
+    expect($supervisor->exists(nodeApp()))->toBeFalse();
+
+    // The exit-1 probe call was made, logged at info level.
+    expect($logs)->not()->toBeEmpty();
+});
+
 describe('the start command', function () {
     it('refuses a package manager, which would break signals', function (string $command) {
         $this->withHeaders(supervisorHeaders())

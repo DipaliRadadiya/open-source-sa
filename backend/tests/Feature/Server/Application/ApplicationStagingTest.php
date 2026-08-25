@@ -226,6 +226,40 @@ it('re-enables production even when the push fails partway', function () {
     expect($this->production->fresh()->disabled_at)->toBeNull();
 });
 
+it('never runs the marketplace installer against the copied files', function () {
+    // Staging copies production's files first, then runs its own DB setup.
+    // Running the installer would call `wp core install` against a site that
+    // already has a database and URL configured — the same failure CloneManager
+    // already avoids with `skipInstaller: true`.
+    $installCalls = [];
+    Process::fake(function ($process) use (&$installCalls) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        // Track any WordPress CLI call during provisioning.
+        if (($args[0] ?? '') === 'wp' && ($args[1] ?? '') === 'core') {
+            $installCalls[] = $args;
+        }
+
+        if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
+            return Process::result(exitCode: 0);
+        }
+
+        if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+            && str_contains((string) $process->input, 'information_schema.schemata')) {
+            return Process::result(output: '1');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
+        ->assertCreated();
+
+    // The installer must never have been asked to run `wp core install`.
+    expect($installCalls)->toBeEmpty();
+});
+
 it('refuses without manage permission', function () {
     fakeStagingServer();
     $viewer = User::factory()->create();

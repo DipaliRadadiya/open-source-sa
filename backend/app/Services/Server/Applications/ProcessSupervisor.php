@@ -199,7 +199,10 @@ class ProcessSupervisor
 
     private function exists(Application $application): bool
     {
-        return $this->serverOps->run(
+        // `probe()` treats exit-1 as a normal "not found" result rather than a
+        // failed operation — WordPress and static sites have no unit at all, and
+        // that is not an error state.
+        return $this->serverOps->probe(
             ['test', '-f', $this->unitPath($application)],
             ['feature' => 'application', 'op' => 'unit_exists', 'application' => $application->id],
         )->ok;

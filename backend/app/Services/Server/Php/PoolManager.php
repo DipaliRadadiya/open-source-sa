@@ -405,6 +405,17 @@ class PoolManager
             return $this->readCache[$path];
         }
 
+        // Probing first: a missing file is a normal state for an isolated site
+        // that has not had a pool written yet — not an error.  We `cat` only
+        // when the file is confirmed present, so a genuine read failure (wrong
+        // permissions, inode vanished mid-check) is the only thing that returns
+        // null.  See also `ServerOps::probe()` which marks exit-1 as expected.
+        $probe = $this->serverOps->probe(['test', '-f', $path], ['feature' => 'php', 'op' => 'pool_exists']);
+
+        if (! $probe->ok) {
+            return $this->readCache[$path] = null;
+        }
+
         $result = $this->serverOps->run(['cat', $path], ['feature' => 'php', 'op' => 'pool_read'], timeout: 30);
 
         return $this->readCache[$path] = $result->failed() ? null : $result->output();
