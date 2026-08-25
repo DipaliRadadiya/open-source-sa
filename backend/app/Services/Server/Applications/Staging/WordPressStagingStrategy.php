@@ -8,6 +8,7 @@ use App\Exceptions\Server\Application\StagingOperationException;
 use App\Models\Application;
 use App\Models\Database;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
 use App\Services\Server\ServerOps;
@@ -31,6 +32,7 @@ class WordPressStagingStrategy implements StagingStrategy
     public function __construct(
         private ApplicationProvisioner $provisioner,
         private DatabaseManager $databases,
+        private DatabaseIdentifier $databaseIdentifiers,
         private CreateDatabase $createDatabase,
         private ServerOps $serverOps,
     ) {}
@@ -52,7 +54,7 @@ class WordPressStagingStrategy implements StagingStrategy
 
         $engine->dump($productionDatabase->name, $dumpPath);
 
-        $stagingDatabase = $this->createStagingDatabase($staging, $productionDatabase->engine);
+        $stagingDatabase = $this->createStagingDatabase($production, $staging, $productionDatabase->engine);
 
         $engine->restore($stagingDatabase->name, $dumpPath);
 
@@ -100,9 +102,9 @@ class WordPressStagingStrategy implements StagingStrategy
         $this->searchReplace($production, $productionDocumentRoot, $staging->url(), $production->url());
     }
 
-    private function createStagingDatabase(Application $staging, string $engine): Database
+    private function createStagingDatabase(Application $production, Application $staging, string $engine): Database
     {
-        $name = $this->identifier($staging);
+        $name = $this->databaseIdentifiers->generateAvailable($production->name, $engine, 'staging');
         $password = DatabasePassword::generate();
 
         try {
@@ -224,18 +226,6 @@ class WordPressStagingStrategy implements StagingStrategy
         return collect(['AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT'])
             ->mapWithKeys(fn (string $key) => [$key => Str::random(64)])
             ->all();
-    }
-
-    private function identifier(Application $application): string
-    {
-        $base = Str::of($application->domain)
-            ->replace('.', '_')
-            ->replaceMatches('/[^A-Za-z0-9_]/', '')
-            ->lower()
-            ->limit(48, '')
-            ->value();
-
-        return ($base ?: 'staging').'_'.Str::lower(Str::random(6));
     }
 
     /**

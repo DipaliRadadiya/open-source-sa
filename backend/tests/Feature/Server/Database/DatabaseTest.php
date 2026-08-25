@@ -1,8 +1,10 @@
 <?php
 
 use App\Actions\Server\Database\ExportDatabase;
+use App\Contracts\DatabaseEngine;
 use App\Contracts\Firewall;
 use App\Enums\ExportStatus;
+use App\Exceptions\Server\Database\DatabaseOperationException;
 use App\Jobs\InstallDatabaseEngine;
 use App\Jobs\RunDatabaseExport;
 use App\Models\Database;
@@ -12,6 +14,8 @@ use App\Models\DatabaseUser;
 use App\Models\DbMetric;
 use App\Models\FirewallRule;
 use App\Models\User;
+use App\Services\Server\Databases\DatabaseIdentifier;
+use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\MongoEngine;
 use App\Services\Server\Databases\SqlEngine;
 use App\Services\Server\ServerOps;
@@ -22,6 +26,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -90,6 +95,68 @@ it('names generic SQL and MongoDB client operations in the server log', function
     'SQL' => ['mysql', SqlEngine::class],
     'MongoDB' => ['mongodb', MongoEngine::class],
 ]);
+
+it('checks the live SQL server before approving a generated identifier', function () {
+    Process::fake(fn () => Process::result(output: '0'));
+
+    $connection = new DatabaseConnection([
+        'engine' => 'mysql',
+        'connection_type' => 'tcp',
+        'host' => '127.0.0.1',
+        'port' => 3306,
+        'username' => 'panel',
+        'password' => 'secret',
+    ]);
+
+    $engine = new SqlEngine($connection, app(ServerOps::class));
+
+    expect($engine->identifierAvailable('clone_shop_abc123'))->toBeFalse();
+
+    Process::assertRan(fn ($process) => str_contains((string) $process->input, "schema_name = 'clone_shop_abc123'")
+        && str_contains((string) $process->input, "user = 'clone_shop_abc123'"));
+});
+
+it('refuses to approve an identifier when the live check cannot be completed', function () {
+    Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'unreachable'));
+
+    $connection = new DatabaseConnection([
+        'engine' => 'mysql',
+        'connection_type' => 'tcp',
+        'host' => '127.0.0.1',
+        'port' => 3306,
+        'username' => 'panel',
+        'password' => 'secret',
+    ]);
+
+    $engine = new SqlEngine($connection, app(ServerOps::class));
+
+    expect(fn () => $engine->identifierAvailable('clone_shop_abc123'))
+        ->toThrow(DatabaseOperationException::class);
+});
+
+it('regenerates an automatic identifier when the panel or live server already uses it', function () {
+    Database::create(['name' => 'clone_shop_aaaaaa', 'engine' => 'mysql']);
+
+    $engine = Mockery::mock(DatabaseEngine::class);
+    $engine->shouldReceive('identifierAvailable')->once()->with('clone_shop_bbbbbb')->andReturnFalse();
+    $engine->shouldReceive('identifierAvailable')->once()->with('clone_shop_cccccc')->andReturnTrue();
+
+    $manager = Mockery::mock(DatabaseManager::class);
+    $manager->shouldReceive('engine')->once()->with('mysql')->andReturn($engine);
+
+    $suffixes = ['aaaaaa', 'bbbbbb', 'cccccc'];
+    Str::createRandomStringsUsing(function (int $length) use (&$suffixes): string {
+        return array_shift($suffixes) ?? str_repeat('z', $length);
+    });
+
+    try {
+        $identifier = (new DatabaseIdentifier($manager))->generateAvailable('Shop', 'mysql', 'clone');
+    } finally {
+        Str::createRandomStringsNormally();
+    }
+
+    expect($identifier)->toBe('clone_shop_cccccc');
+});
 
 it('lists engine capabilities with live version', function () {
     fakeDb();

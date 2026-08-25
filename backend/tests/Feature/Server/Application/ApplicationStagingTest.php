@@ -63,6 +63,11 @@ function fakeStagingServer(bool $testPasses = true): void
             return Process::result(exitCode: $testPasses ? 0 : 1, errorOutput: $testPasses ? '' : 'invalid');
         }
 
+        if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+            && str_contains((string) $process->input, 'information_schema.schemata')) {
+            return Process::result(output: '1');
+        }
+
         return Process::result(exitCode: 0);
     });
 }
@@ -74,6 +79,7 @@ function stagingUrl(): string
 
 it('creates a staging site with its own database, linked back to production', function () {
     fakeStagingServer();
+    $this->production->update(['name' => 'My Extremely Long Online Shop Application Name']);
 
     $response = $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
@@ -96,8 +102,15 @@ it('creates a staging site with its own database, linked back to production', fu
         ->and(app(ApplicationProvisioner::class)
             ->documentRoot($staging->load('systemUser')))
         ->toBe("/home/siteowner/{$staging->slug}/public_html")
-        ->and(Database::where('application_id', $staging->id)->exists())->toBeTrue()
         ->and(ActivityLog::where('type', 'application')->where('action', 'staging_created')->exists())->toBeTrue();
+
+    $stagingDatabase = Database::where('application_id', $staging->id)->with('users')->first();
+
+    expect($stagingDatabase)->not->toBeNull()
+        ->and($stagingDatabase->name)->toStartWith('staging_')
+        ->and(strlen($stagingDatabase->name))->toBeLessThanOrEqual(32)
+        ->and($stagingDatabase->name)->toMatch('/_[a-z0-9]{6}$/')
+        ->and($stagingDatabase->users->first()->username)->toBe($stagingDatabase->name);
 
     Process::assertRan(fn ($p) => ($p->command[0] ?? '') === 'rsync');
 });

@@ -6,6 +6,7 @@ use App\Actions\Server\Database\CreateDatabase;
 use App\Contracts\SiteInstaller;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
 use Illuminate\Support\Str;
@@ -24,6 +25,7 @@ class InstallerManager
     public function __construct(
         private CreateDatabase $createDatabase,
         private DatabaseManager $databases,
+        private DatabaseIdentifier $databaseIdentifiers,
         private ProvisionProgress $progress,
     ) {}
 
@@ -125,7 +127,7 @@ class InstallerManager
             throw new ProvisioningFailedException('create_database', 'no-database-engine');
         }
 
-        $name = $this->identifier($application);
+        $name = $this->databaseIdentifiers->generate($application->domain);
         $password = DatabasePassword::generate();
 
         try {
@@ -166,49 +168,6 @@ class InstallerManager
             // MariaDB as one thing; Moodle picks a different driver for each.
             'engine' => $engine,
         ];
-    }
-
-    /**
-     * Longest identifier this may produce.
-     *
-     * 32 because that is MySQL 8's hard limit on a **user** name, and this one
-     * string names both the database and its user. Exceeding it does not
-     * degrade — `CREATE USER` fails outright with "ERROR 1470 ... is too long
-     * for user name" and the whole install dies at create_database.
-     *
-     * Database names may be 64, so this only binds because the two are
-     * deliberately the same string. Splitting them would buy 32 characters
-     * nobody wants and cost the "a database and its user share a name"
-     * property that makes these greppable in `SHOW GRANTS`.
-     */
-    private const MAX_IDENTIFIER = 32;
-
-    /** Random tail that keeps two similar domains apart. */
-    private const IDENTIFIER_SUFFIX = 6;
-
-    /**
-     * A database identifier derived from the domain: predictable for the user,
-     * and constrained to the charset *and length* every engine accepts.
-     *
-     * The domain part is truncated rather than the whole string, so the
-     * random suffix always survives: it is the only thing keeping
-     * `shop.example.com` and `shop.example.net` from colliding once both have
-     * been cut to the same prefix.
-     */
-    private function identifier(Application $application): string
-    {
-        $base = Str::of($application->domain)
-            ->replace('.', '_')
-            ->replaceMatches('/[^A-Za-z0-9_]/', '')
-            ->lower()
-            // Room for the suffix and the underscore joining it.
-            ->limit(self::MAX_IDENTIFIER - self::IDENTIFIER_SUFFIX - 1, '')
-            // Truncation can land on a separator; a trailing underscore before
-            // the suffix reads as a typo.
-            ->rtrim('_')
-            ->value();
-
-        return ($base ?: 'app').'_'.Str::lower(Str::random(self::IDENTIFIER_SUFFIX));
     }
 
     /**

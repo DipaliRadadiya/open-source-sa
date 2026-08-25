@@ -96,6 +96,24 @@ class MongoEngine implements DatabaseEngine
         return $users;
     }
 
+    public function identifierAvailable(string $name, string $host = 'localhost'): bool
+    {
+        $quoted = $this->js($name);
+        $result = $this->run(
+            'const candidate = '.$quoted.'; '
+            .'const databaseExists = db.adminCommand({ listDatabases: 1, nameOnly: true }).databases'
+            .'.some(d => d.name === candidate); '
+            .'const userExists = db.getSiblingDB(candidate).getUser(candidate) !== null; '
+            .'print(databaseExists || userExists ? "0" : "1");'
+        );
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+
+        return trim($result->output()) === '1';
+    }
+
     public function createDatabase(string $name, ?string $charset, ?string $collation): void
     {
         // Mongo creates a DB lazily; make a placeholder collection so it lists.

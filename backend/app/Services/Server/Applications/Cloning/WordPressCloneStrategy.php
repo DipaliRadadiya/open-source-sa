@@ -8,6 +8,7 @@ use App\Exceptions\Server\Application\CloneOperationException;
 use App\Models\Application;
 use App\Models\Database;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
 use App\Services\Server\ServerOps;
@@ -30,6 +31,7 @@ class WordPressCloneStrategy implements CloneStrategy
     public function __construct(
         private ApplicationProvisioner $provisioner,
         private DatabaseManager $databases,
+        private DatabaseIdentifier $databaseIdentifiers,
         private ServerOps $serverOps,
         private CreateDatabase $createDatabase,
     ) {}
@@ -48,7 +50,7 @@ class WordPressCloneStrategy implements CloneStrategy
 
         $engine->dump($sourceDatabase->name, $dumpPath);
 
-        $cloneDatabase = $this->createCloneDatabase($clone, $sourceDatabase->engine);
+        $cloneDatabase = $this->createCloneDatabase($source, $clone, $sourceDatabase->engine);
 
         $engine->restore($cloneDatabase->name, $dumpPath);
 
@@ -61,9 +63,9 @@ class WordPressCloneStrategy implements CloneStrategy
         $this->searchReplace($clone, $documentRoot, $source->url(), $clone->url());
     }
 
-    private function createCloneDatabase(Application $clone, string $engine): Database
+    private function createCloneDatabase(Application $source, Application $clone, string $engine): Database
     {
-        $name = $this->identifier($clone);
+        $name = $this->databaseIdentifiers->generateAvailable($source->name, $engine, 'clone');
         $password = DatabasePassword::generate();
 
         try {
@@ -149,18 +151,6 @@ class WordPressCloneStrategy implements CloneStrategy
         return collect(['AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT'])
             ->mapWithKeys(fn (string $key) => [$key => Str::random(64)])
             ->all();
-    }
-
-    private function identifier(Application $application): string
-    {
-        $base = Str::of($application->domain)
-            ->replace('.', '_')
-            ->replaceMatches('/[^A-Za-z0-9_]/', '')
-            ->lower()
-            ->limit(48, '')
-            ->value();
-
-        return ($base ?: 'clone').'_'.Str::lower(Str::random(6));
     }
 
     /**

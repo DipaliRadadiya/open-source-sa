@@ -77,6 +77,11 @@ function fakeCloneServer(bool $testPasses = true): void
             return Process::result(exitCode: $testPasses ? 0 : 1, errorOutput: $testPasses ? '' : 'invalid');
         }
 
+        if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+            && str_contains((string) $process->input, 'information_schema.schemata')) {
+            return Process::result(output: '1');
+        }
+
         return Process::result(exitCode: 0);
     });
 }
@@ -116,7 +121,7 @@ it('clones a WordPress site including its database', function () {
 
     $source = Application::forceCreate([
         'system_user_id' => $this->systemUser->id,
-        'name' => 'Shop',
+        'name' => 'My Extremely Long Online Shop Application Name',
         'slug' => 'shop', 'domain' => 'shop.test', 'site_type' => 'wordpress',
         'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
     ]);
@@ -130,7 +135,13 @@ it('clones a WordPress site including its database', function () {
 
     $clone = Application::find($record->target_application_id);
 
-    expect(Database::where('application_id', $clone->id)->exists())->toBeTrue();
+    $cloneDatabase = Database::where('application_id', $clone->id)->with('users')->first();
+
+    expect($cloneDatabase)->not->toBeNull()
+        ->and($cloneDatabase->name)->toStartWith('clone_')
+        ->and(strlen($cloneDatabase->name))->toBeLessThanOrEqual(32)
+        ->and($cloneDatabase->name)->toMatch('/_[a-z0-9]{6}$/')
+        ->and($cloneDatabase->users->first()->username)->toBe($cloneDatabase->name);
 
     Process::assertRan(fn ($p) => ($p->command[0] ?? '') === 'mysqldump');
     Process::assertRan(fn ($p) => in_array('runuser', $p->command, true) && in_array('search-replace', $p->command, true));

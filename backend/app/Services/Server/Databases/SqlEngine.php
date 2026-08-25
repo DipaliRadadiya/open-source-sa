@@ -99,6 +99,23 @@ class SqlEngine implements DatabaseEngine
         return $users;
     }
 
+    public function identifierAvailable(string $name, string $host = 'localhost'): bool
+    {
+        $result = $this->run(sprintf(
+            "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = '%s') "
+            ."OR EXISTS (SELECT 1 FROM mysql.user WHERE user = '%s' AND host = '%s') THEN 0 ELSE 1 END;",
+            $this->esc($name),
+            $this->esc($name),
+            $this->esc($host),
+        ));
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+
+        return trim($result->output()) === '1';
+    }
+
     /**
      * The databases one account has been granted something on.
      *

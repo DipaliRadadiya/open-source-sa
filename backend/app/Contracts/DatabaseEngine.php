@@ -41,6 +41,14 @@ interface DatabaseEngine
      */
     public function listUsers(): array;
 
+    /**
+     * Whether a name is free for both a new database and its dedicated user.
+     *
+     * This is a strict preflight: unlike discovery lists, an unavailable
+     * server must throw rather than look empty and falsely approve a name.
+     */
+    public function identifierAvailable(string $name, string $host = 'localhost'): bool;
+
     public function createDatabase(string $name, ?string $charset, ?string $collation): void;
 
     public function dropDatabase(string $name): void;
