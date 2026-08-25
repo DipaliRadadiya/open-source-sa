@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Server\Application\CreateApplication;
 use App\Models\Application;
 use App\Models\GitAccount;
 use App\Models\ServerCapability;
@@ -8,6 +9,7 @@ use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -190,6 +192,88 @@ it('requires the fields the chosen site type declares', function () {
         ->assertJsonValidationErrors(['site_title', 'admin_email', 'admin_password']);
 
     expect(Application::count())->toBe(0);
+});
+
+it('rejects a primary domain already owned by another application', function () {
+    capableServer();
+
+    $existing = Application::forceCreate([
+        'system_user_id' => $this->su->id,
+        'name' => 'Existing site',
+        'slug' => 'existing-site',
+        'domain' => 'taken.example.com',
+        'site_type' => 'static',
+        'serving_profile' => 'static',
+        'status' => 'pending',
+    ]);
+    $existing->domains()->create([
+        'domain' => 'taken.example.com',
+        'type' => 'primary',
+    ]);
+
+    $this->withHeaders(appHeaders())->postJson('/api/applications', [
+        'site_type' => 'static',
+        'name' => 'New site',
+        'domain' => ' TAKEN.EXAMPLE.COM ',
+        'system_user_id' => $this->su->id,
+    ])->assertStatus(422)->assertJsonValidationErrors('domain');
+
+    expect(Application::count())->toBe(1);
+});
+
+it('rolls back the application when its primary domain loses a uniqueness race', function () {
+    capableServer();
+
+    $existing = Application::forceCreate([
+        'system_user_id' => $this->su->id,
+        'name' => 'Existing site',
+        'slug' => 'existing-site',
+        'domain' => 'taken.example.com',
+        'site_type' => 'static',
+        'serving_profile' => 'static',
+        'status' => 'pending',
+    ]);
+    $existing->domains()->create([
+        'domain' => 'taken.example.com',
+        'type' => 'primary',
+    ]);
+
+    expect(fn () => app(CreateApplication::class)->execute([
+        'site_type' => 'static',
+        'name' => 'New site',
+        'domain' => 'taken.example.com',
+        'system_user_id' => $this->su->id,
+    ]))->toThrow(ValidationException::class);
+
+    expect(Application::pluck('name')->all())->toBe(['Existing site']);
+});
+
+it('can recreate an application with the same name and domain after deletion', function () {
+    capableServer();
+
+    $payload = [
+        'site_type' => 'static',
+        'name' => 'Reusable site',
+        'domain' => 'reusable.example.com',
+        'system_user_id' => $this->su->id,
+    ];
+
+    $created = $this->withHeaders(appHeaders())
+        ->postJson('/api/applications', $payload)
+        ->assertCreated();
+
+    $this->withHeaders(appHeaders())
+        ->deleteJson('/api/applications/'.$created->json('application.id'))
+        ->assertOk();
+
+    expect(Application::count())->toBe(0);
+
+    $this->withHeaders(appHeaders())
+        ->postJson('/api/applications', $payload)
+        ->assertCreated();
+
+    expect(Application::count())->toBe(1)
+        ->and(Application::first()->domains()->where('domain', 'reusable.example.com')->exists())->toBeTrue();
 });
 
 it('stores the type-specific answers and ignores anything not in the schema', function () {

@@ -12,7 +12,11 @@ use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\PortAllocator;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 /**
  * Record an application the user asked for.
@@ -36,72 +40,94 @@ class CreateApplication
     {
         $type = $this->siteTypes->find((string) $data['site_type']);
         $servingProfile = ServingProfile::resolve($type, $data);
-
-        $application = Application::forceCreate([
-            // Derived here, not accepted from the client: it names the
-            // web-server config file, and a caller choosing that is a caller
-            // choosing which file the panel overwrites.
-            'slug' => Application::uniqueSlug((string) $data['name']),
-            'site_type' => $type->name(),
-            // Derived, never taken from the client — from the rendering type
-            // the user chose, or the site type where there is none. See the
-            // resolver for why the two must not be decided separately.
-            'serving_profile' => $servingProfile,
-            'rendering_type' => $data['rendering_type'] ?? null,
-            'status' => ApplicationStatus::Pending,
-            'system_user_id' => $data['system_user_id'],
-            'name' => $data['name'],
-            'domain' => $data['domain'],
-            'php_version' => $data['php_version'] ?? null,
-            'node_version' => $data['node_version'] ?? null,
-            // Allocated when the app needs a process and the user did not pick
-            // one. A port the panel chose is checked against both the database
-            // and what is actually listening; a port the user typed is checked
-            // the same way at validation.
-            'app_port' => $this->port($data, $servingProfile),
-            // The type's own default, not a bare '/': a framework
-            // application served from its root publishes its own source.
-            'web_root' => $data['web_root'] ?? $type?->defaultWebRoot() ?? '/',
-            'build_command' => $data['build_command'] ?? null,
-            // Normalised the same way UpdateDeploySettingsRequest does: a
-            // script pasted from Windows carries \r, and `sh` reads it as part
-            // of the command — "command not found: composer\r" is impossible
-            // to see in a log.
-            'deploy_script' => isset($data['deploy_script'])
-                ? str_replace("\r\n", "\n", (string) $data['deploy_script'])
-                : null,
-            'start_command' => $data['start_command'] ?? null,
-            'git_account_id' => $data['git_account_id'] ?? null,
-            'repository' => $data['repository'] ?? null,
-            'repository_url' => $data['repository_url'] ?? null,
-            'branch' => $data['branch'] ?? null,
-            'settings' => $this->typeSettings($type->fields(), $data),
-        ]);
-
-        // The domains table is the list the Domains screen reads, and until now
-        // nothing wrote to it at create time — only the migration that
-        // introduced the table backfilled the sites that existed then. So every
-        // application made since came up with an empty Domains section while
-        // plainly answering on a domain.
-        //
-        // `applications.domain` stays the mirror of whichever row is primary;
-        // this is the row it mirrors.
         $origin = DomainOrigin::tryFrom((string) ($data['domain_type'] ?? '')) ?? DomainOrigin::Custom;
 
-        $application->domains()->create([
-            'domain' => strtolower(trim((string) $application->domain)),
-            'type' => DomainType::Primary,
-            // Trusted from the client, but not only: a wildcard-DNS name
-            // mislabelled as the user's own would be sent to Let's Encrypt and
-            // spend from a weekly limit shared with the whole internet.
-            'is_test' => $origin->isTemporary()
-                || ApplicationDomain::looksTemporary((string) $application->domain),
-        ]);
+        try {
+            // The application and its primary hostname are one record from the
+            // caller's point of view. If the hostname loses a uniqueness race,
+            // rolling both back avoids an invisible half-created application
+            // that then blocks the same name on retry.
+            $application = DB::transaction(function () use ($data, $type, $servingProfile, $origin): Application {
+                $application = Application::forceCreate([
+                    // Derived here, not accepted from the client: it names the
+                    // web-server config file, and a caller choosing that is a caller
+                    // choosing which file the panel overwrites.
+                    'slug' => Application::uniqueSlug((string) $data['name']),
+                    'site_type' => $type->name(),
+                    // Derived, never taken from the client — from the rendering type
+                    // the user chose, or the site type where there is none. See the
+                    // resolver for why the two must not be decided separately.
+                    'serving_profile' => $servingProfile,
+                    'rendering_type' => $data['rendering_type'] ?? null,
+                    'status' => ApplicationStatus::Pending,
+                    'system_user_id' => $data['system_user_id'],
+                    'name' => $data['name'],
+                    'domain' => $data['domain'],
+                    'php_version' => $data['php_version'] ?? null,
+                    'node_version' => $data['node_version'] ?? null,
+                    // Allocated when the app needs a process and the user did not pick
+                    // one. A port the panel chose is checked against both the database
+                    // and what is actually listening; a port the user typed is checked
+                    // the same way at validation.
+                    'app_port' => $this->port($data, $servingProfile),
+                    // The type's own default, not a bare '/': a framework
+                    // application served from its root publishes its own source.
+                    'web_root' => $data['web_root'] ?? $type?->defaultWebRoot() ?? '/',
+                    'build_command' => $data['build_command'] ?? null,
+                    // Normalised the same way UpdateDeploySettingsRequest does: a
+                    // script pasted from Windows carries \r, and `sh` reads it as part
+                    // of the command — "command not found: composer\r" is impossible
+                    // to see in a log.
+                    'deploy_script' => isset($data['deploy_script'])
+                        ? str_replace("\r\n", "\n", (string) $data['deploy_script'])
+                        : null,
+                    'start_command' => $data['start_command'] ?? null,
+                    'git_account_id' => $data['git_account_id'] ?? null,
+                    'repository' => $data['repository'] ?? null,
+                    'repository_url' => $data['repository_url'] ?? null,
+                    'branch' => $data['branch'] ?? null,
+                    'settings' => $this->typeSettings($type->fields(), $data),
+                ]);
 
-        $this->activityLogger->log('application.created', $application, [
-            'name' => $application->name,
-            'site_type' => $application->site_type,
-        ]);
+                // The domains table is the list the Domains screen reads, and until now
+                // nothing wrote to it at create time — only the migration that
+                // introduced the table backfilled the sites that existed then. So every
+                // application made since came up with an empty Domains section while
+                // plainly answering on a domain.
+                //
+                // `applications.domain` stays the mirror of whichever row is primary;
+                // this is the row it mirrors.
+                $application->domains()->create([
+                    'domain' => strtolower(trim((string) $application->domain)),
+                    'type' => DomainType::Primary,
+                    // Trusted from the client, but not only: a wildcard-DNS name
+                    // mislabelled as the user's own would be sent to Let's Encrypt and
+                    // spend from a weekly limit shared with the whole internet.
+                    'is_test' => $origin->isTemporary()
+                        || ApplicationDomain::looksTemporary((string) $application->domain),
+                ]);
+
+                $this->activityLogger->log('application.created', $application, [
+                    'name' => $application->name,
+                    'site_type' => $application->site_type,
+                ]);
+
+                return $application;
+            });
+        } catch (UniqueConstraintViolationException $exception) {
+            // Validation runs before this transaction, but another request can
+            // claim the same name or domain between that check and the insert.
+            // Re-run the two user-owned unique rules after rollback so Laravel
+            // returns its normal localized 422 instead of leaking a DB error.
+            Validator::make($data, [
+                'name' => [Rule::unique('applications', 'name')],
+                'domain' => [Rule::unique('application_domains', 'domain')],
+            ])->validate();
+
+            // A different unique index (slug, port, webhook identifier) failed;
+            // do not mislabel it as a name/domain validation problem.
+            throw $exception;
+        }
 
         // Provisioning is long enough that the request must not wait for it;
         // the client polls the application's status.

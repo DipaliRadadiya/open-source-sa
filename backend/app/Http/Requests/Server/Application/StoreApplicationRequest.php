@@ -38,7 +38,15 @@ class StoreApplicationRequest extends FormRequest
             // sharing a name shared a file, and the second silently replaced
             // the first with nothing anywhere saying so.
             'name' => ['required', 'string', 'max:255', Rule::unique('applications', 'name')],
-            'domain' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/'],
+            'domain' => [
+                'required', 'string', 'max:255',
+                'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',
+                // The domains table owns hostnames across the whole server.
+                // Validate that fact here rather than letting its unique
+                // index surface as a database exception after the application
+                // row has already been inserted.
+                Rule::unique('application_domains', 'domain'),
+            ],
             // Whether the hostname above is one the user owns or the temporary
             // `<name>.<ip>.nip.io` the panel offers. The name itself is sent
             // either way — only its provenance differs, and that is what
@@ -89,6 +97,13 @@ class StoreApplicationRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('domain')) {
+            $this->merge(['domain' => strtolower(trim((string) $this->input('domain')))]);
+        }
     }
 
     /**
