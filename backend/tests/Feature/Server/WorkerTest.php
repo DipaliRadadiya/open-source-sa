@@ -5,6 +5,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Models\Worker;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\FrameworkDetector;
 use App\Services\Server\Applications\WorkerSupervisor;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
@@ -35,7 +36,7 @@ class WorkerFake
         self::$active = [];
         self::$ran = [];
         self::$env = "APP_ENV=production\nCACHE_STORE=redis\n";
-        self::$present = ['/home/workerowner/queued.test/artisan'];
+        self::$present = ['/home/workerowner/queued-site/public_html/artisan'];
     }
 }
 
@@ -78,7 +79,7 @@ function fakeWorkerSystemd(): void
         if ($binary === 'test') {
             $path = $args[2] ?? '';
             $exists = in_array($path, WorkerFake::$present, true)
-                || $path === '/home/workerowner/queued.test/.env';
+                || $path === test()->application->rootPath().'/.env';
 
             return Process::result(exitCode: $exists ? 0 : 1);
         }
@@ -138,6 +139,95 @@ it('offers presets for the framework it finds, not a blank box', function () {
         ->and($presets->firstWhere('key', 'queue')['command'])->toContain('artisan queue:work')
         ->and($presets->firstWhere('key', 'queue')['title'])->toBe('Queue worker');
 });
+
+it('finds Craft above its served web directory and runs the worker there', function () {
+    $this->application->update(['site_type' => 'craftcms', 'web_root' => '/web']);
+    WorkerFake::$present = ['/home/workerowner/queued-site/public_html/craft'];
+    fakeWorkerSystemd();
+
+    $presets = collect($this->actingAs($this->admin)->getJson(workerUrl())->assertOk()->json('presets'));
+
+    expect($presets->pluck('key')->all())->toBe(['queue', 'custom'])
+        ->and($presets->firstWhere('key', 'queue')['command'])->toBe('php8.4 craft queue/listen');
+
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload([
+        'command' => 'php8.4 craft queue/listen',
+        'kind' => 'queue',
+    ]))->assertCreated();
+
+    Process::assertRan(fn ($process) => str_contains((string) $process->input, 'WorkingDirectory=/home/workerowner/queued-site/public_html')
+        && str_contains((string) $process->input, 'EnvironmentFile=-/home/workerowner/queued-site/public_html/.env')
+        && str_contains((string) $process->input, 'ReadWritePaths=/home/workerowner/queued-site/public_html'));
+
+    $worker = Worker::firstOrFail();
+    WorkerFake::$ran = [];
+    $this->actingAs($this->admin)->postJson(workerUrl("/{$worker->id}/restart"))->assertOk();
+
+    expect(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, 'artisan queue:restart')))
+        ->toBeFalse()
+        ->and(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, "restart sv-worker-{$worker->id}@1")))
+        ->toBeTrue();
+});
+
+it('finds Statamic above its public web directory', function () {
+    $this->application->update(['site_type' => 'statamic', 'web_root' => '/public']);
+    WorkerFake::$present = [
+        '/home/workerowner/queued-site/public_html/please',
+        '/home/workerowner/queued-site/public_html/artisan',
+        '/home/workerowner/queued-site/public_html/bootstrap/cache/config.php',
+    ];
+    fakeWorkerSystemd();
+
+    $presets = collect($this->actingAs($this->admin)->getJson(workerUrl())->assertOk()->json('presets'));
+    $detector = app(FrameworkDetector::class);
+
+    expect($presets->pluck('key')->all())->toBe(['queue', 'horizon', 'custom'])
+        ->and($presets->firstWhere('key', 'queue')['command'])->toContain('artisan queue:work')
+        ->and($detector->requiresApply($this->application, FrameworkDetector::STATAMIC))->toBeTrue()
+        ->and($detector->applyCommand($this->application, FrameworkDetector::STATAMIC))
+        ->toBe(['php8.4', '/home/workerowner/queued-site/public_html/artisan', 'config:clear']);
+});
+
+it('finds a brownfield Laravel project above its public web directory', function () {
+    $this->application->update(['web_root' => '/public']);
+    WorkerFake::$present = [
+        '/home/workerowner/queued-site/public_html/artisan',
+        '/home/workerowner/queued-site/public_html/bootstrap/cache/config.php',
+    ];
+    fakeWorkerSystemd();
+
+    $detector = app(FrameworkDetector::class);
+
+    expect($detector->detect($this->application))->toBe(FrameworkDetector::LARAVEL)
+        ->and($detector->root($this->application))->toBe('/home/workerowner/queued-site/public_html')
+        ->and($detector->requiresApply($this->application, FrameworkDetector::LARAVEL))->toBeTrue()
+        ->and($detector->applyCommand($this->application, FrameworkDetector::LARAVEL))
+        ->toBe(['php8.4', '/home/workerowner/queued-site/public_html/artisan', 'config:clear']);
+});
+
+it('keeps current flat git deployments rooted in the served directory', function () {
+    $this->application->update(['web_root' => '/public']);
+    WorkerFake::$present = ['/home/workerowner/queued-site/public_html/public/artisan'];
+    fakeWorkerSystemd();
+
+    $detector = app(FrameworkDetector::class);
+
+    expect($detector->detect($this->application))->toBe(FrameworkDetector::LARAVEL)
+        ->and($detector->root($this->application))->toBe('/home/workerowner/queued-site/public_html/public');
+});
+
+it('keeps n8n and Node-RED on the custom worker preset', function (string $siteType) {
+    $this->application->update([
+        'site_type' => $siteType,
+        'serving_profile' => 'node',
+        'web_root' => '/',
+    ]);
+    WorkerFake::$present = ['/home/workerowner/queued-site/public_html/package.json'];
+    fakeWorkerSystemd();
+
+    expect($this->actingAs($this->admin)->getJson(workerUrl())->assertOk()->json('presets.*.key'))
+        ->toBe(['custom']);
+})->with(['n8n', 'nodered']);
 
 it('creates a worker and starts as many copies as asked for', function () {
     fakeWorkerSystemd();

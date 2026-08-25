@@ -31,8 +31,8 @@ beforeEach(function () {
         'web_root' => '/',
     ]);
 
-    $this->disk = ['/home/envowner/deployed.test/.env' => "APP_ENV=production\nAPP_KEY=base64:abc\nDB_PASSWORD=hunter2\n"];
-    $this->present = ['/home/envowner/deployed.test/artisan'];
+    $this->disk = ['/home/envowner/deployed-site/.env' => "APP_ENV=production\nAPP_KEY=base64:abc\nDB_PASSWORD=hunter2\n"];
+    $this->present = ['/home/envowner/deployed-site/public_html/artisan'];
     $this->backupNames = [];
     $this->written = null;
 });
@@ -90,7 +90,7 @@ it('returns the file, its parsed variables and what it thinks of them', function
         ->and($response->json('environment.framework'))->toBe('laravel')
         ->and($response->json('environment.framework_title'))->toBe('Laravel')
         ->and($response->json('environment.raw'))->toContain('APP_ENV=production')
-        ->and($response->json('environment.path'))->toBe('/home/envowner/deployed.test/.env');
+        ->and($response->json('environment.path'))->toBe('/home/envowner/deployed-site/.env');
 
     // The parsed view the UI renders values from, with the secret withheld.
     $variables = collect($response->json('environment.variables'));
@@ -114,7 +114,7 @@ it('never sends a secret value in any field of the response', function () {
 });
 
 it('reports that a Laravel site with a cached config needs applying', function () {
-    $this->present[] = '/home/envowner/deployed.test/bootstrap/cache/config.php';
+    $this->present[] = '/home/envowner/deployed-site/public_html/bootstrap/cache/config.php';
     fakeSite();
 
     // Without this the panel says "Saved" and the site carries on reading the

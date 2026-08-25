@@ -28,7 +28,7 @@ class WorkerSupervisor
     public function __construct(
         private ServerOps $serverOps,
         private ManagedFile $files,
-        private ApplicationProvisioner $provisioner,
+        private FrameworkDetector $frameworks,
     ) {}
 
     /** `sv-worker-3@.service` — the template. */
@@ -196,10 +196,20 @@ class WorkerSupervisor
         $root = $this->directory($worker);
         $php = 'php'.($application->php_version ?: '');
 
+        if (! in_array($worker->kind, [Worker::KIND_QUEUE, Worker::KIND_HORIZON], true)) {
+            return null;
+        }
+
+        // Craft has a queue, but not Laravel's `artisan queue:restart`. Let
+        // systemd restart its unit directly instead of logging an expected
+        // missing-command failure before doing that anyway.
+        if ($this->frameworks->detect($application) === FrameworkDetector::CRAFT) {
+            return null;
+        }
+
         return match ($worker->kind) {
             Worker::KIND_QUEUE => [$php, $root.'/artisan', 'queue:restart'],
             Worker::KIND_HORIZON => [$php, $root.'/artisan', 'horizon:terminate'],
-            default => null,
         };
     }
 
@@ -261,14 +271,14 @@ class WorkerSupervisor
     private function render(Worker $worker): string
     {
         $application = $worker->application;
-        $documentRoot = $this->provisioner->documentRoot($application);
+        $projectRoot = $this->frameworks->root($application);
 
         return View::make('server.units.worker', [
             'worker' => $worker,
             'application' => $application,
             'user' => $application->systemUser->username,
-            'documentRoot' => $documentRoot,
-            'directory' => $this->directory($worker),
+            'projectRoot' => $projectRoot,
+            'directory' => $worker->directory ?: $projectRoot,
             'exec' => $this->execStart($worker),
             'path' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
             'stopWaitSeconds' => $worker->stop_wait_seconds,
@@ -278,7 +288,7 @@ class WorkerSupervisor
 
     private function directory(Worker $worker): string
     {
-        return $worker->directory ?: $this->provisioner->documentRoot($worker->application);
+        return $worker->directory ?: $this->frameworks->root($worker->application);
     }
 
     /**

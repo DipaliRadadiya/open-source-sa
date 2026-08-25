@@ -16,7 +16,7 @@ WorkingDirectory={{ $directory }}
 {{-- The dash means "if it exists". A worker reads the same environment as the
      application it belongs to — a queue worker with different credentials from
      the site that queued the job is a long afternoon. --}}
-EnvironmentFile=-{{ $documentRoot }}/.env
+EnvironmentFile=-{{ $projectRoot }}/.env
 Environment=PATH={{ $path }}
 
 ExecStart={{ $exec }}
@@ -52,7 +52,7 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=full
 ProtectHome=read-only
-ReadWritePaths={{ $documentRoot }}
+ReadWritePaths={{ $projectRoot }}
 
 StandardOutput=journal
 StandardError=journal

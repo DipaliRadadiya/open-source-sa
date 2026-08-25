@@ -2314,7 +2314,9 @@ Workers are systemd units. The old supervisor-style field names (`numprocs`, `au
 
 `log_identifier` is the journal identifier, so the logs screen can be linked to without the frontend assembling a unit name.
 
-`presets` are starting points for the detected framework — key/kind/command, already localised. `checks` is a list (empty for non-Laravel sites), each entry a `code` + `severity` + localised `title`/`detail`; `cache_driver_array` is the one worth surfacing loudly, because on the `array` cache driver `queue:restart` silently does nothing.
+`presets` are starting points for the detected framework — key/kind/command, already localised. Craft returns `queue` + `custom`; Statamic returns `queue` + `horizon` + `custom`; Node applications without a recognised queue framework (including n8n and Node-RED) return only `custom`. Detection follows the application's actual project root rather than assuming its served directory contains the CLI, so Craft's `craft`, Statamic's `please`/`artisan`, and brownfield Laravel layouts with `artisan` beside `public/` are found correctly. When `directory` is null, the worker uses that same detected project root as its working and writable directory.
+
+`checks` is a list (empty for non-Laravel sites), each entry a `code` + `severity` + localised `title`/`detail`; `cache_driver_array` is the one worth surfacing loudly, because on the `array` cache driver `queue:restart` silently does nothing.
 
 ---
 
