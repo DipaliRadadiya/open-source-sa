@@ -113,6 +113,16 @@ it('refuses a target already contained in the live commit before building it', f
         ->toBeLessThan(strpos($script, 'note link_shared'));
 });
 
+it('restarts php-fpm after both the release swap and a rollback', function () {
+    $script = renderedScript();
+    $restart = 'systemctl restart '.config('panel_update.services.php_fpm');
+
+    // Reload can preserve workers and shared OPcache entries for the stable
+    // current/backend path, making the new release answer as the old version.
+    expect(substr_count($script, $restart))->toBe(2)
+        ->and($script)->not->toContain('systemctl reload '.config('panel_update.services.php_fpm'));
+});
+
 it('verifies the frontend, not only the backend', function () {
     // The old health check curled the backend alone, which is why a client
     // could be told the update succeeded and reload into a service that was

@@ -97,9 +97,15 @@ describe('the generated update script', function () {
             ->and($this->script)->toContain('finish failed target_not_newer');
     });
 
-    it('restores the previous commit and leaves maintenance mode on any failure', function () {
+    it('restores the previous commit and restarts services on any failure', function () {
+        $phpFpmRestart = 'systemctl restart '.config('panel_update.services.php_fpm');
+
         expect($this->script)->toContain('trap rollback ERR')
             ->and($this->script)->toContain('checkout --force abc1234def5678901234567890abcdef12345678')
+            // Both the installed release and the restored checkout need fresh
+            // workers: reload can retain stale OPcache at the unchanged path.
+            ->and(substr_count($this->script, $phpFpmRestart))->toBe(2)
+            ->and($this->script)->not->toContain('systemctl reload '.config('panel_update.services.php_fpm'))
             // A panel stuck in maintenance is worse than a failed update.
             ->and(substr_count($this->script, 'artisan up'))->toBeGreaterThan(1);
     });

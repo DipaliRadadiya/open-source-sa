@@ -179,6 +179,10 @@ class UpdateScript
             local failed_step="\$STEP"
             note "rollback"
             {$run}{$git} checkout --force {$rollbackTo}
+            # Clear workers and OPcache that may have loaded the failed tree.
+            {$run}sudo systemctl restart {$this->service('php_fpm')}
+            {$run}sudo systemctl restart {$this->service('frontend')}
+            {$run}sudo systemctl restart {$this->service('queue')}
             {$asUser}{$php} {$backend}/artisan up
             finish failed "\$failed_step" true
             exit 1
@@ -287,7 +291,10 @@ class UpdateScript
         {$run}{$php} {$backend}/artisan panel:sudoers || echo "WARNING: sudoers not synced; run 'artisan panel:sudoers' as root"
 
         note restart_services
-        {$run}sudo systemctl reload {$this->service('php_fpm')}
+        # The checkout keeps the same backend path. A graceful reload can keep
+        # old workers and OPcache alive at that path, so only a restart proves
+        # the health endpoint is executing this release.
+        {$run}sudo systemctl restart {$this->service('php_fpm')}
         {$run}sudo systemctl restart {$this->service('frontend')}
         {$run}sudo systemctl restart {$this->service('queue')}
 

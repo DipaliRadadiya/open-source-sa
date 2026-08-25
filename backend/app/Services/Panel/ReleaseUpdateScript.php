@@ -142,7 +142,7 @@ class ReleaseUpdateScript
             if [ "\$SWAPPED" = "1" ] && [ -n "\$PREVIOUS" ]; then
                 {$run}ln -sfn "\$PREVIOUS" {$root}/.current.pending
                 {$run}mv -T {$root}/.current.pending {$this->layout->currentLink()}
-                {$run}sudo systemctl reload {$this->service('php_fpm')}
+                {$run}sudo systemctl restart {$this->service('php_fpm')}
                 {$run}sudo systemctl restart {$this->service('frontend')}
                 {$run}sudo systemctl restart {$this->service('queue')}
             fi
@@ -234,7 +234,10 @@ class ReleaseUpdateScript
         note restart_services
         {$asUser}{$php} {$liveBackend}/artisan optimize:clear
         {$asUser}{$php} {$liveBackend}/artisan optimize
-        {$run}sudo systemctl reload {$this->service('php_fpm')}
+        # A graceful reload can preserve workers and shared OPcache entries for
+        # the stable /current/backend path after the symlink moves. Restart so
+        # the first health probe can only execute code from the new release.
+        {$run}sudo systemctl restart {$this->service('php_fpm')}
         {$run}sudo systemctl restart {$this->service('frontend')}
         {$run}sudo systemctl restart {$this->service('queue')}
 
