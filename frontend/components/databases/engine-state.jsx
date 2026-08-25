@@ -58,7 +58,7 @@ export function EngineState({ engines = [], connections = [], canManage }) {
   // Present on the server, whether or not the panel can talk to it. A second
   // SQL engine can never join it.
   const sqlPresent = list.find(
-    (engine) => engine.driver === "sql" && present(engine),
+    (engine) => ["mysql", "mariadb"].includes(engine.engine) && present(engine),
   );
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export function EngineState({ engines = [], connections = [], canManage }) {
       <InstallConfirm
         engine={pending}
         open={pending !== null}
-        choosing={pending?.driver === "sql" && !sqlPresent}
+        choosing={["mysql", "mariadb"].includes(pending?.engine) && !sqlPresent}
         onOpenChange={(next) => !next && setPending(null)}
       />
 
