@@ -57,22 +57,30 @@ export function QueryChart({ metrics = [], timeZone }) {
     threads_running: Number(point.threads_running ?? 0),
   }));
 
+  // Concrete hex colors (not CSS vars) so Recharts 3.x SVG strokes always render.
+  // Chart-1 = blue, chart-2 = teal, chart-4 = purple — matching the CSS theme.
+  const COLORS = {
+    qps: "hsl(221 83% 53%)",       // blue — left axis
+    connections: "hsl(173 58% 39%)", // teal — right axis
+    threads_running: "hsl(262 83% 58%)", // purple — right axis
+  };
+
   const config = {
     qps: {
       label: t("qps"),
-      color: "hsl(var(--chart-1))",
+      color: COLORS.qps,
       icon: <CircleDot className="size-3" />,
       yAxis: "left",
     },
     connections: {
       label: t("connections"),
-      color: "hsl(var(--chart-2))",
+      color: COLORS.connections,
       icon: null,
       yAxis: "right",
     },
     threads_running: {
       label: t("threadsRunning"),
-      color: "hsl(var(--chart-4))",
+      color: COLORS.threads_running,
       icon: null,
       yAxis: "right",
     },
