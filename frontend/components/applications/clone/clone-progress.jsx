@@ -220,8 +220,8 @@ function Completed({ clone, sourceApplication, onAgain }) {
         </div>
 
         <div className="flex-1 space-y-4 px-5 py-5 sm:px-6">
-          <dl className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.2fr)] sm:items-center">
-            <div className="min-w-0">
+          <dl className="grid gap-2 rounded-xl border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1.2fr)] sm:items-stretch">
+            <div className="min-w-0 rounded-lg border bg-background/80 px-3 py-2.5">
               <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {t("source")}
               </dt>
@@ -233,8 +233,9 @@ function Completed({ clone, sourceApplication, onAgain }) {
               ) : null}
             </div>
 
-            <span className="hidden size-8 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-xs sm:flex">
-              <ArrowRight className="size-4" aria-hidden />
+            <span className="hidden items-center gap-1 text-muted-foreground/70 sm:flex" aria-hidden>
+              <span className="h-px flex-1 bg-border" />
+              <ArrowRight className="size-4 shrink-0" />
             </span>
 
             <div className="min-w-0 rounded-lg border border-success/20 bg-success/[0.06] px-3 py-2.5">
