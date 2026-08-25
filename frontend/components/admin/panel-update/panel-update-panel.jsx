@@ -5,8 +5,14 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowUpCircle, RefreshCw, TriangleAlert, FlaskConical } from "lucide-react";
-import { startPanelUpdate, fetchPanelUpdateRun, refreshPanelUpdateState } from "@/lib/api/panel-update";
+import {
+  startPanelUpdate,
+  fetchPanelUpdateRun,
+  fetchPanelUpdateState,
+  refreshPanelUpdateState,
+} from "@/lib/api/panel-update";
 import { apiMessage } from "@/lib/api/error-message";
+import { shouldRecoverPanelUpdate } from "@/lib/admin/recover-panel-update";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -98,7 +104,33 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
       setRun(started);
       setConfirmOpen(false);
     } catch (error) {
-      toast.error(apiMessage(error, t("startFailed")));
+      // A failed reply does not prove the update failed to start. The request
+      // can create the run and then lose its response while the panel begins
+      // restarting; a client schema mismatch can also reject an otherwise
+      // valid 202. Ask the source of truth before telling the user nothing
+      // happened. If a run exists, the progress screen is the answer.
+      let recovered = false;
+
+      try {
+        const next = await fetchPanelUpdateState();
+        const latest = next.latest_run;
+        setState(next);
+
+        if (shouldRecoverPanelUpdate(latest, state.latest_run?.id)) {
+          setDryRun(asDryRun);
+          setSlow(false);
+          setReconnecting(false);
+          setRun(latest);
+          setConfirmOpen(false);
+          recovered = true;
+        }
+      } catch {
+        // The panel may be in the brief service-restart window. Preserve the
+        // original error below; the recovery probe must never hide it unless
+        // it can prove a run exists.
+      }
+
+      if (!recovered) toast.error(apiMessage(error, t("startFailed")));
     } finally {
       setStarting(false);
     }

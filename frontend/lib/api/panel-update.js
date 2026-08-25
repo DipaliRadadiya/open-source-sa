@@ -2,6 +2,15 @@ import { api } from "@/lib/api/client";
 import { parsedOrThrow } from "@/lib/api/parse-response";
 import { panelUpdateStateSchema, panelUpdateRunSchema } from "@/lib/schemas/panel-update";
 
+// Read the current state without forcing another release-host lookup. This is
+// also the recovery probe after an ambiguous start response: the POST may have
+// created a run even when its reply was lost during a restart or rejected by a
+// newer client-side schema.
+export async function fetchPanelUpdateState() {
+  const res = await api.get("/admin/panel-update");
+  return parsedOrThrow(panelUpdateStateSchema, res.data?.panel_update, "fetchPanelUpdateState");
+}
+
 // "Check now" — bypasses the 60-min availability cache.
 export async function refreshPanelUpdateState() {
   const res = await api.get("/admin/panel-update", { params: { refresh: true } });
