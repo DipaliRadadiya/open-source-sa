@@ -76,7 +76,10 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false })
     }
   }
 
-  if (!engine && !choosing) return null;
+  if (!choosing && !engine) return null;
+  // ↑ "engine && choosing" can never both be falsy when choosing=true — engine
+  // is set to null in that case so this guard blocks the picker. The guard only
+  // needs to catch the "nothing to do" case.
 
   // ── Choosing phase: pick MySQL or MariaDB ──────────────────────────────────
   if (choosing && phase === "picker") {
