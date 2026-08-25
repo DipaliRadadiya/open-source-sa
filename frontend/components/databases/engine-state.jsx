@@ -138,7 +138,7 @@ export function EngineState({ engines = [], connections = [], canManage }) {
       </Card>
 
       <InstallConfirm
-        engine={pending}
+        engine={["mysql", "mariadb"].includes(pending?.engine) && !sqlPresent ? null : pending ?? null}
         open={pending !== null}
         choosing={["mysql", "mariadb"].includes(pending?.engine) && !sqlPresent}
         onOpenChange={(next) => !next && setPending(null)}
