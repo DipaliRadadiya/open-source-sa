@@ -89,6 +89,17 @@ export function retryBackup(backupId) {
 }
 
 /**
+ * Close a pending/running row only after its worker has definitely stopped.
+ *
+ * This is deliberately not a cancel operation: the API refuses a job that may
+ * still be writing the archive, because freeing the per-site guard early could
+ * allow two writers to target the same backup key.
+ */
+export function clearStuckBackup(backupId) {
+  return api.post(`/backups/${backupId}/clear`);
+}
+
+/**
  * Delete one backup — the archive in object storage first, then the record.
  *
  * That order is the server's and it matters: a row deleted before its archive

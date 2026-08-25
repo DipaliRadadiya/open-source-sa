@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
-import { History, RotateCw } from "lucide-react";
+import { CircleAlert, History, RotateCw } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
@@ -26,8 +26,10 @@ export function BackupsCards({
   canRun,
   onRestore,
   onRetry,
+  onClear,
   busyId,
   retryBlockedFor = null,
+  canClear = false,
   showSite = true,
   restoreInFlight = false,
 }) {
@@ -104,7 +106,19 @@ export function BackupsCards({
                     for the word, and no hover to explain a lone glyph. */}
                 <DownloadBackupButton backup={backup} canDownload={canRestore} label />
 
-                {backup.status === "failed" ? (
+                {["pending", "running"].includes(backup.status) ? (
+                  canClear ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId === backup.id}
+                      onClick={() => onClear?.(backup)}
+                    >
+                      <CircleAlert className="size-4" />
+                      {t("clear.action")}
+                    </Button>
+                  ) : null
+                ) : backup.status === "failed" ? (
                   canRun ? (
                     <Button
                       size="sm"

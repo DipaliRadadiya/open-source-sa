@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ShieldX, Trash2, Pencil } from "lucide-react";
@@ -10,10 +10,11 @@ import { unreachablePorts } from "@/lib/firewall/listening";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { SearchInput } from "@/components/data-table/search-input";
+import { FacetSelect } from "@/components/data-table/facet-select";
 import {
   Card,
   CardContent,
@@ -33,11 +34,6 @@ import {
   DeleteRuleButton,
 } from "@/components/firewall/rule-parts";
 import { apiMessage } from "@/lib/api/error-message";
-
-// A UFW rule list is short by nature — a handful to a few dozen. Search earns
-// its space past this, and paging never does: 20 rules paged is worse than 20
-// rules scrolled.
-const SEARCH_FROM = 8;
 
 /* Cells at module level — flexRender treats a cell function's identity as the
  * component type, so an inline cell remounts on every render. */
@@ -118,6 +114,7 @@ function ActionsCell({ row, table }) {
 
 export function RulesCard({
   rules,
+  allRules = rules,
   enabled,
   presets,
   canManage,
@@ -128,7 +125,8 @@ export function RulesCard({
 }) {
   const t = useTranslations("firewall");
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const hasFilters = ["search", "enabled", "action", "origin", "sort"].some((key) => searchParams.has(key));
   const [pending, setPending] = useState(null);
   const [confirming, setConfirming] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -139,15 +137,6 @@ export function RulesCard({
   // jail switch has worked this way since 7e1c6cc and these two should not
   // behave differently.
   const [asked, setAsked] = useState({});
-
-  const term = query.trim().toLowerCase();
-  const filtered = term
-    ? rules.filter((rule) =>
-        [rule.description, rule.summary, String(rule.port_from), rule.source_ip]
-          .filter(Boolean)
-          .some((field) => String(field).toLowerCase().includes(term)),
-      )
-    : rules;
 
   // A rule with no name of its own is named after the service on its port. The
   // map is built from the API's own preset list, so it can't disagree with the
@@ -214,7 +203,7 @@ export function RulesCard({
     return override && override.from === server ? override.value : server;
   }
 
-  const blocked = unreachablePorts({ listening, rules, enabled });
+  const blocked = unreachablePorts({ listening, rules: allRules, enabled });
 
   async function onDelete(rule) {
     setConfirming(rule);
@@ -284,7 +273,7 @@ export function RulesCard({
           <HistoryDialog isAdmin={isAdmin} />
           <AddRuleDialog
             presets={presets}
-            rules={rules}
+            rules={allRules}
             canManage={canManage}
             yourIp={yourIp}
             riskyPorts={riskyPorts}
@@ -306,34 +295,64 @@ export function RulesCard({
           </p>
         ) : null}
 
-        {rules.length > SEARCH_FROM ? (
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("rules.search")}
-            className="sm:max-w-72"
-            autoComplete="off"
-            spellCheck={false}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <SearchInput placeholder={t("rules.search")} />
+          <FacetSelect
+            paramKey="enabled"
+            allLabel={t("rules.filters.anyEnabled")}
+            options={[
+              { value: "1", label: t("rules.filters.enabled") },
+              { value: "0", label: t("rules.filters.disabled") },
+            ]}
+            className="w-full sm:w-40"
           />
-        ) : null}
+          <FacetSelect
+            paramKey="action"
+            allLabel={t("rules.filters.anyAction")}
+            options={[
+              { value: "allow", label: t("rules.allow") },
+              { value: "deny", label: t("rules.deny") },
+            ]}
+            className="w-full sm:w-36"
+          />
+          <FacetSelect
+            paramKey="origin"
+            allLabel={t("rules.filters.anyOrigin")}
+            options={[
+              { value: "user", label: t("rules.filters.user") },
+              { value: "default", label: t("rules.filters.default") },
+              { value: "db_user", label: t("rules.filters.database") },
+            ]}
+            className="w-full sm:w-40"
+          />
+          <FacetSelect
+            paramKey="sort"
+            allLabel={t("rules.filters.newest")}
+            options={[
+              { value: "port_from", label: t("rules.filters.portAsc") },
+              { value: "-port_from", label: t("rules.filters.portDesc") },
+              { value: "action", label: t("rules.filters.actionAsc") },
+              { value: "protocol", label: t("rules.filters.protocolAsc") },
+            ]}
+            className="w-full sm:w-44"
+          />
+        </div>
 
-        {/* "Nothing here yet" and "nothing matched your search" are different
-            problems with different fixes, so they are different messages. */}
         {rules.length === 0 ? (
-          <EmptyState
-            icon={ShieldX}
-            title={t("rules.emptyTitle")}
-            description={t("rules.emptyBody")}
-          />
-        ) : filtered.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            {t("rules.noMatches")}
-          </p>
+          hasFilters ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">{t("rules.noMatches")}</p>
+          ) : (
+            <EmptyState
+              icon={ShieldX}
+              title={t("rules.emptyTitle")}
+              description={t("rules.emptyBody")}
+            />
+          )
         ) : (
           <>
             <div className="lg:hidden">
               <RulesCards
-                rules={filtered}
+                rules={rules}
                 enabled={enabled}
                 canManage={canManage}
                 pending={pending}
@@ -346,15 +365,12 @@ export function RulesCard({
             </div>
 
             <div className="hidden max-h-[30rem] overflow-auto rounded-xl border lg:block [&>div]:rounded-none [&>div]:border-0">
-              {/* Sortable, low port first. Insertion order is the least
-                  useful order once there are more than a few rules — you look
-                  for a port, not for whichever rule was added third. */}
+              {/* The API owns sort order, so a page is never re-sorted locally
+                  into an order that conflicts with the URL's selected sort. */}
               <DataTable
                 columns={columns}
-                data={filtered}
+                data={rules}
                 stickyHeader
-                sortable
-                defaultSorting={[{ id: "port_from", desc: false }]}
                 meta={{
                   enabled,
                   canManage,
@@ -381,7 +397,7 @@ export function RulesCard({
         <AddRuleDialog
           key={editing.id}
           rule={editing}
-          rules={rules}
+          rules={allRules}
           presets={presets}
           canManage={canManage}
           yourIp={yourIp}

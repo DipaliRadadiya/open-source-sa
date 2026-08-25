@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { History, RotateCw, Trash2 } from "lucide-react";
+import { CircleAlert, History, RotateCw, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
@@ -132,8 +132,17 @@ export function sizeNote(backup, t) {
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
-  const { canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight, retryBlockedFor } =
-    table.options.meta;
+  const {
+    canRestore,
+    canRun,
+    canClear,
+    onRestore,
+    onRetry,
+    onClear,
+    busyId,
+    restoreInFlight,
+    retryBlockedFor,
+  } = table.options.meta;
   const backup = row.original;
 
   // Download rides alongside whichever action the state earns, including on a
@@ -141,6 +150,26 @@ function ActionsCell({ row, table }) {
   // the archive is every file plus a database dump.
   const download = <DownloadBackupButton backup={backup} canDownload={canRestore} />;
   const retryBlocked = retryBlockedFor?.(backup) ?? null;
+
+  if (["pending", "running"].includes(backup.status)) {
+    return (
+      <div className="flex items-center justify-end gap-2">
+        {download}
+        {canClear ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="min-w-28"
+            disabled={busyId === backup.id}
+            onClick={() => onClear?.(backup)}
+          >
+            <CircleAlert className="size-4" />
+            {t("clear.action")}
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
 
   if (backup.status === "failed") {
     return (
@@ -225,6 +254,7 @@ export function BackupsHistoryTable({
   canRun,
   onRestore,
   onRetry,
+  onClear,
   busyId,
   // `(backup) => reason | null`. Per row rather than one flag, because this
   // table also renders a list spanning every site: a run under way for one site
@@ -241,6 +271,7 @@ export function BackupsHistoryTable({
   // it is gated on the same permission as restore rather than on whoever can
   // configure a schedule.
   canDelete = false,
+  canClear = false,
   onDeleted,
 }) {
   const t = useTranslations("backups.history");
@@ -324,7 +355,17 @@ export function BackupsHistoryTable({
         data={backups}
         emptyMessage={emptyMessage ?? t("empty.title")}
         bare={bare}
-        meta={{ canRestore, canRun, onRestore, onRetry, busyId, restoreInFlight, retryBlockedFor }}
+        meta={{
+          canRestore,
+          canRun,
+          canClear,
+          onRestore,
+          onRetry,
+          onClear,
+          busyId,
+          restoreInFlight,
+          retryBlockedFor,
+        }}
         {...(canDelete
           ? {
               rowSelection: selection,

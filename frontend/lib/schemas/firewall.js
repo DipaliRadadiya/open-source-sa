@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isIpOrCidr } from "@/lib/validation/ip";
+import { listMetaSchema } from "@/lib/schemas/list";
 
 /**
  * `summary` is the API's own plain-English sentence for the rule ("Allow 443/tcp
@@ -83,6 +84,17 @@ export const firewallPresetSchema = z.object({
 
 export const firewallPresetsResponseSchema = z.object({
   presets: z.array(firewallPresetSchema).default([]),
+});
+
+/**
+ * The paginated rules endpoint deliberately avoids the live UFW/status work
+ * performed by GET /firewall. Its rows are the same resource shape, but its
+ * meta is required: silently treating a paged response as a complete list
+ * would make rules beyond page one unreachable.
+ */
+export const firewallRulesResponseSchema = z.object({
+  rules: z.array(firewallRuleSchema).default([]),
+  meta: listMetaSchema,
 });
 
 export const CUSTOM_PRESET = "custom";

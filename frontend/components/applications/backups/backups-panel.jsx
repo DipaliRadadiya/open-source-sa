@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
-import { retryBackup, runBackupNow } from "@/lib/api/backups";
+import { clearStuckBackup, retryBackup, runBackupNow } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +30,7 @@ import { ActiveRestore } from "@/components/backups/active-restore";
 import { DestinationHealth } from "@/components/backups/destination-health";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
  * This site's backups: whether it is protected, how, and what has run.
@@ -55,6 +56,7 @@ export function BackupsPanel({
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [retryingId, setRetryingId] = useState(null);
+  const [clearing, setClearing] = useState(null);
   const [restoring, setRestoring] = useState(null);
   const [editing, setEditing] = useState(false);
   // Seeded from the server, then replaced the moment a restore is started here
@@ -105,6 +107,23 @@ export function BackupsPanel({
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("retryFailed")));
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
+  async function confirmClear() {
+    const backup = clearing;
+    if (!backup) return;
+
+    setRetryingId(backup.id);
+    try {
+      await clearStuckBackup(backup.id);
+      toast.success(t("clear.done"));
+      setClearing(null);
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("clear.failed")));
     } finally {
       setRetryingId(null);
     }
@@ -176,6 +195,7 @@ export function BackupsPanel({
         canManage={canManage}
         onRestore={setRestoring}
         onRetry={retry}
+        onClear={setClearing}
         busyId={retryingId}
         queued={queued}
         stalled={stalled}
@@ -195,6 +215,19 @@ export function BackupsPanel({
         applicationId={application.id}
         destinations={destinations}
         target={target}
+      />
+
+      <ConfirmDialog
+        open={Boolean(clearing)}
+        onOpenChange={(open) => !retryingId && setClearing(open ? clearing : null)}
+        icon={CircleAlert}
+        tone="warning"
+        title={t("clear.title")}
+        description={clearing ? t("clear.description") : ""}
+        cancelLabel={t("clear.cancel")}
+        confirmLabel={t("clear.confirm")}
+        pending={Boolean(clearing && retryingId === clearing.id)}
+        onConfirm={confirmClear}
       />
 
       <RestoreDialog
@@ -391,6 +424,7 @@ function RecentBackups({
   canManage,
   onRestore,
   onRetry,
+  onClear,
   busyId,
   queued = false,
   stalled = false,
@@ -409,6 +443,8 @@ function RecentBackups({
     canRun: canManage,
     onRestore,
     onRetry,
+    onClear,
+    canClear: canManage,
     busyId,
     retryBlockedFor: retryBlockedReason ? () => retryBlockedReason : null,
     showSite: false,

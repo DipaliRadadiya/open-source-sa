@@ -13,7 +13,7 @@ import {
   BACKUP_TYPES,
   RESTORE_IN_FLIGHT,
 } from "@/lib/schemas/backup";
-import { retryBackup } from "@/lib/api/backups";
+import { clearStuckBackup, retryBackup } from "@/lib/api/backups";
 import { newestBackupId, queuedApplications } from "@/lib/backups/queued";
 import { apiMessage } from "@/lib/api/error-message";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
@@ -22,6 +22,7 @@ import { BackupsCards } from "@/components/backups/backups-cards";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { BackupsHistoryTable } from "@/components/backups/backups-history-table";
 
@@ -48,6 +49,7 @@ export function BackupsHistory({
   const params = useSearchParams();
   const { active, start } = useRestoreWatch();
   const [restoring, setRestoring] = useState(null);
+  const [clearing, setClearing] = useState(null);
   const [busyId, setBusyId] = useState(null);
   // Runs started here: application id → that site's newest backup id at the
   // click. Per site, not one flag — this list spans every application, and one
@@ -79,6 +81,23 @@ export function BackupsHistory({
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("retryFailed")));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function confirmClear() {
+    const backup = clearing;
+    if (!backup) return;
+
+    setBusyId(backup.id);
+    try {
+      await clearStuckBackup(backup.id);
+      toast.success(t("clear.done", { name: backup.application_name ?? "" }));
+      setClearing(null);
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("clear.failed")));
     } finally {
       setBusyId(null);
     }
@@ -123,6 +142,8 @@ export function BackupsHistory({
     canRun,
     onRestore: setRestoring,
     onRetry: retry,
+    onClear: setClearing,
+    canClear: canRun,
     busyId,
     restoreInFlight,
     // Per site: a run under way for THIS site blocks its rows, and leaves every
@@ -246,6 +267,23 @@ export function BackupsHistory({
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(clearing)}
+        onOpenChange={(open) => !busyId && setClearing(open ? clearing : null)}
+        icon={CircleAlert}
+        tone="warning"
+        title={t("clear.title")}
+        description={
+          clearing
+            ? t("clear.description", { name: clearing.application_name ?? t("unknownApplication") })
+            : ""
+        }
+        cancelLabel={t("clear.cancel")}
+        confirmLabel={t("clear.confirm")}
+        pending={Boolean(clearing && busyId === clearing.id)}
+        onConfirm={confirmClear}
+      />
 
       <RestoreDialog
         key={restoring?.id}

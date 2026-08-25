@@ -1462,7 +1462,23 @@
       "toggleFailed": "That rule could not be changed.",
       "unreachable": "{count, plural, one {Port # is} other {Ports # are}} in use but blocked: {ports}. Nothing outside can reach them.",
       "edit": "Edit rule",
-      "off": "Off"
+      "off": "Off",
+      "loadFailed": "Rules could not be loaded. Try again in a moment.",
+      "filters": {
+        "anyEnabled": "Any state",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "anyAction": "Any action",
+        "anyOrigin": "Any source",
+        "user": "Custom",
+        "default": "System default",
+        "database": "Database user",
+        "newest": "Newest first",
+        "portAsc": "Port: low to high",
+        "portDesc": "Port: high to low",
+        "actionAsc": "Action: A–Z",
+        "protocolAsc": "Protocol: A–Z"
+      }
     },
     "add": {
       "action": "Custom rule",
@@ -4827,6 +4843,15 @@
       "retry": "Retry",
       "retryStarted": "Retrying that backup for {name}.",
       "retryFailed": "That backup could not be retried.",
+      "clear": {
+        "action": "Clear stuck run",
+        "title": "Clear this stuck backup?",
+        "description": "Use this only if the backup for {name} is no longer running. It does not stop a live worker; the server will refuse it if the run may still be active.",
+        "cancel": "Keep waiting",
+        "confirm": "Clear stuck run",
+        "done": "The stuck backup for {name} was marked as failed.",
+        "failed": "That backup could not be cleared."
+      },
       "queuedNote": "Backup queued for {name}. It appears in this list as soon as the server starts writing it.",
       "queuedHidden": "Backup queued for {name}. The status filter you have set will hide it — clear the filter to watch it run.",
       "queuedStalled": "The backup queued for {name} has not started yet. If it stays this way, the background worker may not be running.",
@@ -4982,6 +5007,15 @@
       "sizeUnknown": "Unknown",
       "retryStarted": "Retrying that backup.",
       "retryFailed": "That backup could not be retried.",
+      "clear": {
+        "action": "Clear stuck run",
+        "title": "Clear this stuck backup?",
+        "description": "Use this only if the backup is no longer running. It does not stop a live worker; the server will refuse it if the run may still be active.",
+        "cancel": "Keep waiting",
+        "confirm": "Clear stuck run",
+        "done": "The stuck backup was marked as failed.",
+        "failed": "That backup could not be cleared."
+      },
       "queuedNote": "Backup queued. It appears here as soon as the server starts writing it.",
       "queuedStalled": "This backup has not started yet. It is still queued — if it stays this way, the background worker may not be running.",
       "alreadyRunning": "A backup of this site is already running. You can start another once it finishes."

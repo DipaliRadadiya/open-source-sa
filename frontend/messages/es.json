@@ -1462,7 +1462,23 @@
       "toggleFailed": "No se pudo cambiar esa regla.",
       "unreachable": "{count, plural, one {Hay # puerto en uso pero bloqueado} other {Hay # puertos en uso pero bloqueados}}: {ports}. Nada de fuera puede alcanzarlos.",
       "edit": "Editar regla",
-      "off": "Desactivada"
+      "off": "Desactivada",
+      "loadFailed": "No se pudieron cargar las reglas. Inténtalo de nuevo en un momento.",
+      "filters": {
+        "anyEnabled": "Cualquier estado",
+        "enabled": "Activa",
+        "disabled": "Desactivada",
+        "anyAction": "Cualquier acción",
+        "anyOrigin": "Cualquier origen",
+        "user": "Personalizada",
+        "default": "Predeterminada del sistema",
+        "database": "Usuario de base de datos",
+        "newest": "Más recientes primero",
+        "portAsc": "Puerto: menor a mayor",
+        "portDesc": "Puerto: mayor a menor",
+        "actionAsc": "Acción: A–Z",
+        "protocolAsc": "Protocolo: A–Z"
+      }
     },
     "add": {
       "action": "Regla personalizada",
@@ -4827,6 +4843,15 @@
       "retry": "Reintentar",
       "retryStarted": "Reintentando esa copia de {name}.",
       "retryFailed": "No se pudo reintentar esa copia.",
+      "clear": {
+        "action": "Limpiar ejecución bloqueada",
+        "title": "¿Limpiar esta copia bloqueada?",
+        "description": "Úsalo solo si la copia de {name} ya no se está ejecutando. No detiene un proceso activo; el servidor lo rechazará si la ejecución podría seguir activa.",
+        "cancel": "Seguir esperando",
+        "confirm": "Limpiar ejecución bloqueada",
+        "done": "La copia bloqueada de {name} se marcó como fallida.",
+        "failed": "No se pudo limpiar esa copia."
+      },
       "queuedNote": "Copia de seguridad en cola para {name}. Aparecerá en esta lista en cuanto el servidor empiece a escribirla.",
       "queuedHidden": "Copia de seguridad en cola para {name}. El filtro de estado que has aplicado la ocultará: quita el filtro para verla ejecutarse.",
       "queuedStalled": "La copia de seguridad en cola para {name} aún no ha comenzado. Si continúa así, es posible que el proceso en segundo plano no esté funcionando.",
@@ -4982,6 +5007,15 @@
       "sizeUnknown": "Desconocido",
       "retryStarted": "Reintentando esa copia.",
       "retryFailed": "No se pudo reintentar esa copia.",
+      "clear": {
+        "action": "Limpiar ejecución bloqueada",
+        "title": "¿Limpiar esta copia bloqueada?",
+        "description": "Úsalo solo si la copia ya no se está ejecutando. No detiene un proceso activo; el servidor lo rechazará si la ejecución podría seguir activa.",
+        "cancel": "Seguir esperando",
+        "confirm": "Limpiar ejecución bloqueada",
+        "done": "La copia bloqueada se marcó como fallida.",
+        "failed": "No se pudo limpiar esa copia."
+      },
       "queuedNote": "Copia de seguridad en cola. Aparecerá aquí en cuanto el servidor empiece a escribirla.",
       "queuedStalled": "Esta copia de seguridad aún no ha comenzado. Sigue en cola: si continúa así, es posible que el proceso en segundo plano no esté funcionando.",
       "alreadyRunning": "Ya se está ejecutando una copia de seguridad de este sitio. Podrás iniciar otra cuando termine."
