@@ -34,6 +34,10 @@ export const panelUpdateRunSchema = z
     // then shown nothing, while the panel updated perfectly behind them.
     rolled_back: z.boolean().nullish().transform((value) => value ?? false),
     reference: z.string().nullish(),
+    // Sanitized, bounded tail of the detached runner log. The backend never
+    // returns the raw file; absent on older panel versions during an upgrade.
+    output: z.string().catch(""),
+    output_truncated: z.boolean().catch(false),
     started_at: z.string().nullish(),
     started_at_human: z.string().nullish(),
     finished_at: z.string().nullish(),

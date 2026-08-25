@@ -192,14 +192,16 @@ class PanelUpdateRunner
             // The step that failed is the reason code — a stable key the UI
             // can translate, never raw stderr.
             $attributes['reason'] = (string) ($state['reason'] ?: 'unknown');
-            // The script's ERR trap always puts the old commit back.
-            $attributes['rolled_back'] = true;
+            // New scripts say whether anything had to be restored. Older
+            // state files predate the field and only wrote failures after the
+            // rollback trap, so true is the compatible fallback.
+            $attributes['rolled_back'] = (bool) ($state['rolled_back'] ?? true);
 
             $this->activity->log('panel_update.failed', $update, [
                 'from_version' => $update->from_version,
                 'to_version' => $update->to_version,
                 'reason' => $attributes['reason'],
-                'rolled_back' => true,
+                'rolled_back' => $attributes['rolled_back'],
             ], actor: $update->user);
         }
 

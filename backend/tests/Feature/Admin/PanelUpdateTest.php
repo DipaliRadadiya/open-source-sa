@@ -118,11 +118,11 @@ describe('version comparison', function () {
 });
 
 describe('installed panel info', function () {
-    it('reads the version from the VERSION file at the repository root', function () {
+    it('reports a reachable release baseline for this branch checkout', function () {
         $info = app(InstalledPanelInfo::class)->installed();
 
         expect($info['version'])->not->toBeNull()
-            ->and($info['source'])->toBe('file');
+            ->and($info['source'])->toBeIn(['tag-ahead', 'tag', 'file']);
     });
 
     it('resolves the commit from .git without shelling out', function () {
@@ -321,11 +321,11 @@ it('ignores a tag that is not version-shaped', function () {
     Process::run(['rm', '-rf', $repo]);
 });
 
-it('does not claim a tag it has merely moved past', function () {
-    // The case every fresh install is in: cloned onto main, which is descended
-    // from the last tag. A nearest-tag describe answers `1.0.3-2-gabc1234` —
-    // sitting two commits past v1.0.3 is not v1.0.3, and reporting it as such
-    // would make the health check pass against code that is not the release.
+it('uses the nearest release as the baseline when HEAD is ahead of it', function () {
+    // A branch deployed from main can be newer than the latest release while
+    // VERSION is stale. Reporting the file here offered v1.0.3 as an update
+    // and `checkout --force` downgraded the panel to that older tag. Keep the
+    // distinction in `source`, but compare from the reachable release version.
     $repo = sys_get_temp_dir().'/panel-version-'.bin2hex(random_bytes(4));
     mkdir($repo.'/backend', 0755, true);
     file_put_contents($repo.'/VERSION', "1.0.1\n");
@@ -339,8 +339,8 @@ it('does not claim a tag it has merely moved past', function () {
     $info = Mockery::mock(InstalledPanelInfo::class)->makePartial();
     $info->shouldReceive('repositoryPath')->andReturn($repo);
 
-    expect($info->installed()['source'])->toBe('file')
-        ->and($info->installed()['version'])->toBe('1.0.1');
+    expect($info->installed()['source'])->toBe('tag-ahead')
+        ->and($info->installed()['version'])->toBe('1.0.3');
 
     Process::run(['rm', '-rf', $repo]);
 });

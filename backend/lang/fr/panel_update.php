@@ -49,6 +49,7 @@ return [
         'restart_services' => 'Les services n’ont pas pu être redémarrés.',
         'maintenance_off' => 'Le panneau n’a pas pu sortir du mode maintenance.',
         'health_check' => 'Le panneau mis à jour n’a pas répondu correctement ; la version précédente a été restaurée.',
+        'target_not_newer' => 'La version sélectionnée est déjà incluse dans cette build du panneau ; le retour en arrière a été refusé.',
         'unknown' => 'La mise à jour a échoué pour une raison inconnue.',
     ],
     'errors' => [

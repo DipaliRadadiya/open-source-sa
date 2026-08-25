@@ -2914,7 +2914,8 @@
       "ready": "Ready",
       "incompleteHint": "Complete these items to continue.",
       "readyHint": "Review this configuration, then create the application.",
-      "complete": "Add {field}"
+      "complete": "Add {field}",
+      "configured": "Configured"
     },
     "form": {
       "detailsTitle": "Application details",
@@ -2943,7 +2944,10 @@
       "branchesFailed": "We could not load branches. Select the repository again to retry.",
       "branchHint": "The default branch is selected when available.",
       "generate": "Generate",
-      "domainHint": "Lowercase letters, numbers and dashes.",
+      "domainHint": "Enter only the hostname, such as app.example.com.",
+      "domainSuggestion": "Use the hostname without the protocol or path.",
+      "useDomain": "Use {domain}",
+      "dnsNote": "Point this domain’s A record to:",
       "portChecking": "Checking availability…",
       "portFree": "Port {port} is free.",
       "portUseSuggested": "Use {port}",
@@ -2958,6 +2962,7 @@
         "packageManager": "Use the entry file, e.g. node server.js — a package manager forks the real process, so stop signals never reach it."
       },
       "submitNeedsType": "Choose an application type to continue.",
+      "submitMissing": "{count, plural, one {Complete # required item to continue.} other {Complete # required items to continue.}}",
       "repositoryNeedsAccount": "Choose a Git account first.",
       "branchNeedsRepository": "Choose a repository first.",
       "changeType": "Change",
@@ -4386,8 +4391,11 @@
     "dismiss": "Done",
     "failed": "The update didn't finish",
     "rolledBack": "The previous version was restored, so the panel is still working.",
+    "notChanged": "Nothing was changed; this panel already contains that release.",
     "notRolledBack": "The panel may be in an inconsistent state — check the server.",
     "reference": "Reference: {reference}",
+    "outputTitle": "Update output",
+    "outputTruncated": "Showing the latest output. Earlier lines were omitted.",
     "checkFailed": "Couldn't check for updates.",
     "startFailed": "Couldn't start the update."
   },

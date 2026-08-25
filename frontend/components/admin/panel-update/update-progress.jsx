@@ -1,11 +1,24 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Loader2, CircleCheck, CircleX, RotateCcw, WifiOff } from "lucide-react";
+import {
+  Loader2,
+  CircleCheck,
+  CircleX,
+  RotateCcw,
+  WifiOff,
+  SquareTerminal,
+  ChevronDown,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 // Renders one run: a live progress bar while it works, then a success or
 // failure card. The parent owns polling and passes `reconnecting` when the
@@ -14,6 +27,32 @@ import { Progress } from "@/components/ui/progress";
 // All three states are the same card the resting page uses: a chip-and-headline
 // band, and where there is an action, its own footer strip. The button used to
 // hang off an `ml-14` that guessed the chip's width.
+function UpdateOutput({ run, defaultOpen = false }) {
+  const t = useTranslations("panelUpdate");
+
+  if (!run.output) return null;
+
+  return (
+    <Collapsible defaultOpen={defaultOpen} className="group/output pt-2">
+      <CollapsibleTrigger asChild>
+        <Button variant="ghost" size="sm" className="-ml-2 h-8 gap-2 px-2">
+          <SquareTerminal className="size-4" />
+          {t("outputTitle")}
+          <ChevronDown className="size-4 transition-transform group-data-[state=open]/output:rotate-180" />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-2">
+        {run.output_truncated ? (
+          <p className="mb-1 text-xs text-muted-foreground">{t("outputTruncated")}</p>
+        ) : null}
+        <pre className="max-h-80 overflow-auto rounded-md border bg-zinc-950 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-zinc-100">
+          {run.output}
+        </pre>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function Outcome({ chip, tint, Icon, title, children, action }) {
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-sm">
@@ -60,6 +99,7 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
         <p className="text-sm text-muted-foreground">
           {dryRun ? t("dryRunDoneBody") : t("succeededBody")}
         </p>
+        <UpdateOutput run={run} />
       </Outcome>
     );
   }
@@ -83,12 +123,19 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
         ) : null}
         {/* Whether the panel is still the thing you were using a minute ago is
             the only question being asked here, so it is not muted. */}
-        <p className="text-sm">{run.rolled_back ? t("rolledBack") : t("notRolledBack")}</p>
+        <p className="text-sm">
+          {run.reason === "target_not_newer"
+            ? t("notChanged")
+            : run.rolled_back
+              ? t("rolledBack")
+              : t("notRolledBack")}
+        </p>
         {run.reference ? (
           <p className="pt-1 font-mono text-xs break-words text-muted-foreground">
             {t("reference", { reference: run.reference })}
           </p>
         ) : null}
+        <UpdateOutput run={run} defaultOpen />
       </Outcome>
     );
   }
@@ -120,6 +167,7 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
         </p>
         {/* The panel goes dark for minutes — reassure that walking away is fine. */}
         <p className="text-xs text-muted-foreground">{t("safeToLeave")}</p>
+        <UpdateOutput run={run} />
       </CardContent>
     </Card>
   );

@@ -62,6 +62,7 @@ return [
         'restart_services' => 'Services could not be restarted.',
         'maintenance_off' => 'The panel could not be taken out of maintenance mode.',
         'health_check' => 'The updated panel did not answer correctly, so the previous version was restored.',
+        'target_not_newer' => 'The selected release is already contained in this panel build, so the downgrade was refused.',
         'unknown' => 'The update failed for an unknown reason.',
     ],
 

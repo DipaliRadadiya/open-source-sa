@@ -2914,7 +2914,8 @@
       "ready": "Listo",
       "incompleteHint": "Completa estos elementos para continuar.",
       "readyHint": "Revisa esta configuración y crea la aplicación.",
-      "complete": "Añade {field}"
+      "complete": "Añade {field}",
+      "configured": "Configurado"
     },
     "form": {
       "detailsTitle": "Detalles de la aplicación",
@@ -2943,7 +2944,10 @@
       "branchesFailed": "No pudimos cargar las ramas. Selecciona el repositorio de nuevo para reintentar.",
       "branchHint": "La rama predeterminada se selecciona cuando está disponible.",
       "generate": "Generar",
-      "domainHint": "Minúsculas, números y guiones.",
+      "domainHint": "Introduce solo el nombre de host, por ejemplo app.ejemplo.com.",
+      "domainSuggestion": "Usa el nombre de host sin el protocolo ni la ruta.",
+      "useDomain": "Usar {domain}",
+      "dnsNote": "Apunta el registro A de este dominio a:",
       "portChecking": "Comprobando disponibilidad…",
       "portFree": "El puerto {port} está libre.",
       "portUseSuggested": "Usar {port}",
@@ -2958,6 +2962,7 @@
         "packageManager": "Usa el archivo de entrada, p. ej. node server.js — un gestor de paquetes bifurca el proceso real, así que las señales de parada no le llegan."
       },
       "submitNeedsType": "Elige un tipo de aplicación para continuar.",
+      "submitMissing": "{count, plural, one {Completa # elemento obligatorio para continuar.} other {Completa # elementos obligatorios para continuar.}}",
       "repositoryNeedsAccount": "Elige primero una cuenta de Git.",
       "branchNeedsRepository": "Elige primero un repositorio.",
       "changeType": "Cambiar",
@@ -4386,8 +4391,11 @@
     "dismiss": "Hecho",
     "failed": "La actualización no se completó",
     "rolledBack": "Se restauró la versión anterior, por lo que el panel sigue funcionando.",
+    "notChanged": "No se cambió nada; este panel ya contiene esa versión.",
     "notRolledBack": "El panel puede estar en un estado inconsistente: revisa el servidor.",
     "reference": "Referencia: {reference}",
+    "outputTitle": "Salida de la actualización",
+    "outputTruncated": "Se muestra la salida más reciente. Se omitieron las líneas anteriores.",
     "checkFailed": "No se pudo comprobar si hay actualizaciones.",
     "startFailed": "No se pudo iniciar la actualización."
   },

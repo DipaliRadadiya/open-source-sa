@@ -80,6 +80,12 @@ class ReleaseUpdateScript
         $php = '/usr/bin/php'.config('panel_update.php_version');
         $user = (string) config('panel_update.app_user');
         $node = (string) config('panel_update.node_bin_dir');
+        $currentCommit = escapeshellarg((string) $update->from_commit);
+        $git = sprintf(
+            'git -c %s -C %s',
+            escapeshellarg('safe.directory='.$repository),
+            escapeshellarg($repository),
+        );
 
         // The *currently live* release, captured before anything moves. This is
         // what rollback returns to, and it has to be read now: after the swap
@@ -115,8 +121,8 @@ class ReleaseUpdateScript
         }
 
         finish() {
-            printf '{"step":"%s","status":"%s","reason":"%s","release":"%s","at":"%s"}\\n' \\
-                "\$STEP" "\$1" "\${2:-}" "{$release}" "\$(date -u +%FT%TZ)" > "\$STATE"
+            printf '{"step":"%s","status":"%s","reason":"%s","rolled_back":%s,"release":"%s","at":"%s"}\\n' \\
+                "\$STEP" "\$1" "\${2:-}" "\${3:-false}" "{$release}" "\$(date -u +%FT%TZ)" > "\$STATE"
         }
 
         # Undo as much as was done, in the reverse order it was done.
@@ -145,9 +151,9 @@ class ReleaseUpdateScript
             {$run}rm -rf {$release}
 
             if [ "\$MIGRATED" = "1" ]; then
-                finish failed "\$failed_step:migrated"
+                finish failed "\$failed_step:migrated" true
             else
-                finish failed "\$failed_step"
+                finish failed "\$failed_step" true
             fi
             exit 1
         }
@@ -172,7 +178,12 @@ class ReleaseUpdateScript
         {$asUser}{$php} {$liveBackend}/artisan panel:backup-database
 
         note create_release
-        {$run}git -c safe.directory={$repository} -C {$repository} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
+        {$run}{$git} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
+        if {$git} merge-base --is-ancestor {$tag} {$currentCommit}; then
+            echo "Refusing update: {$tag} is already contained in current commit {$currentCommit}."
+            finish failed target_not_newer
+            exit 1
+        fi
         {$this->releases->create($repository, $tag, $release)}
 
         note link_shared
@@ -277,30 +288,43 @@ class ReleaseUpdateScript
             return "echo 'DRY-RUN: verification skipped'";
         }
 
-        $bare = ltrim($version, 'vV');
+        $healthUrl = escapeshellarg($baseUrl.'/api/health');
+        $frontendUrl = escapeshellarg($baseUrl.'/');
+        $expected = escapeshellarg(ltrim($version, 'vV'));
+        $queue = escapeshellarg($this->service('queue'));
 
-        return implode("\n        ", [
-            // Backend: the new version must be what answers.
-            sprintf(
-                'for i in $(seq 1 30); do curl -fsS --max-time 5 %s | grep -q \'"version":"%s"\' && break || sleep 1; done',
-                escapeshellarg($baseUrl.'/api/health'),
-                $bare,
-            ),
-            sprintf(
-                'curl -fsS --max-time 5 %s | grep -q \'"version":"%s"\'',
-                escapeshellarg($baseUrl.'/api/health'),
-                $bare,
-            ),
-            // Frontend: it has to actually serve, not merely have been started.
-            sprintf(
-                'for i in $(seq 1 30); do curl -fsS -o /dev/null --max-time 5 %s && break || sleep 1; done',
-                escapeshellarg($baseUrl.'/'),
-            ),
-            sprintf('curl -fsS -o /dev/null --max-time 5 %s', escapeshellarg($baseUrl.'/')),
-            // The worker: a queue that does not start means every backup,
-            // install and restore silently stops, on a panel that looks fine.
-            sprintf('sudo systemctl is-active --quiet %s', escapeshellarg($this->service('queue'))),
-        ]);
+        return <<<BASH
+        HEALTH_URL={$healthUrl}
+        EXPECTED_VERSION={$expected}
+        HEALTH_OK=0
+        for attempt in \$(seq 1 30); do
+            response="\$(curl -sS --max-time 5 "\$HEALTH_URL" 2>&1)" && curl_status=0 || curl_status=\$?
+            if [ "\$curl_status" = "0" ] && printf '%s' "\$response" | grep -q "\\\"version\\\":\\\"\$EXPECTED_VERSION\\\""; then
+                echo "Backend health check passed on attempt \$attempt/30."
+                HEALTH_OK=1
+                break
+            fi
+            echo "Backend health attempt \$attempt/30 failed (curl exit \$curl_status); expected version \$EXPECTED_VERSION."
+            printf 'Health response: %.1000s\\n' "\$response"
+            sleep 1
+        done
+        test "\$HEALTH_OK" = "1"
+
+        FRONTEND_URL={$frontendUrl}
+        FRONTEND_OK=0
+        for attempt in \$(seq 1 30); do
+            if status="\$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "\$FRONTEND_URL")" && [ "\$status" -ge 200 ] && [ "\$status" -lt 400 ]; then
+                echo "Frontend health check passed on attempt \$attempt/30 with HTTP \$status."
+                FRONTEND_OK=1
+                break
+            fi
+            echo "Frontend health attempt \$attempt/30 failed with HTTP \${status:-000}."
+            sleep 1
+        done
+        test "\$FRONTEND_OK" = "1"
+
+        sudo systemctl is-active --quiet {$queue}
+        BASH;
     }
 
     private function service(string $key): string

@@ -20,7 +20,10 @@ function releaseScript(): ReleaseUpdateScript
 
 function renderedScript(bool $dryRun = false): string
 {
-    return releaseScript()->render(new PanelUpdate(['id' => 1]), '1.0.2', $dryRun);
+    return releaseScript()->render(new PanelUpdate([
+        'id' => 1,
+        'from_commit' => str_repeat('a', 40),
+    ]), '1.0.2', $dryRun);
 }
 
 it('does nothing that touches the running panel before the build is done', function () {
@@ -99,6 +102,15 @@ it('builds as the panel user, never as root', function () {
 
     expect($script)->toContain('sudo -u '.config('panel_update.app_user'))
         ->and($script)->toMatch('/sudo -u \S+ -H env "PATH=[^"]+" npm --prefix \S+ ci/');
+});
+
+it('refuses a target already contained in the live commit before building it', function () {
+    $script = renderedScript();
+
+    expect($script)->toContain('merge-base --is-ancestor')
+        ->and($script)->toContain('finish failed target_not_newer')
+        ->and(strpos($script, 'merge-base --is-ancestor'))
+        ->toBeLessThan(strpos($script, 'note link_shared'));
 });
 
 it('verifies the frontend, not only the backend', function () {

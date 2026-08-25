@@ -76,7 +76,23 @@ describe('the generated update script', function () {
     });
 
     it('asserts the new version answered, not merely that something answered', function () {
-        expect($this->script)->toContain('"version":"99.0.0"');
+        expect($this->script)->toContain('EXPECTED_VERSION=\'99.0.0\'')
+            ->and($this->script)->toContain('grep -q');
+    });
+
+    it('retries health checks and records diagnostic output before rollback', function () {
+        expect($this->script)->toContain('seq 1 30')
+            ->and($this->script)->toContain('Health check attempt')
+            ->and($this->script)->toContain('Health response:')
+            ->and($this->script)->toContain('test "$HEALTH_OK" = "1"');
+    });
+
+    it('refuses a target already contained in the current commit before maintenance', function () {
+        $guard = strpos($this->script, 'merge-base --is-ancestor');
+
+        expect($guard)->not->toBeFalse()
+            ->and($guard)->toBeLessThan(strpos($this->script, 'artisan down'))
+            ->and($this->script)->toContain('finish failed target_not_newer');
     });
 
     it('restores the previous commit and leaves maintenance mode on any failure', function () {
@@ -327,6 +343,28 @@ describe('progress reconciliation', function () {
         @unlink($path);
     });
 
+    it('does not claim a rollback when the downgrade guard changed nothing', function () {
+        $update = PanelUpdate::create([
+            'user_id' => $this->admin->id,
+            'status' => PanelUpdateStatus::Running,
+            'from_version' => '1.0.7',
+            'to_version' => '1.0.7',
+        ]);
+
+        $path = app(UpdateScript::class)->statePath($update);
+        @mkdir(dirname($path), 0750, true);
+        file_put_contents($path, json_encode([
+            'step' => 'fetch_release',
+            'status' => 'failed',
+            'reason' => 'target_not_newer',
+            'rolled_back' => false,
+        ]));
+
+        expect(app(PanelUpdateRunner::class)->reconcile($update)->rolled_back)->toBeFalse();
+
+        @unlink($path);
+    });
+
     it('does not log again once a run has already settled', function () {
         $update = PanelUpdate::create([
             'user_id' => $this->admin->id,
@@ -393,5 +431,51 @@ describe('the status endpoint', function () {
 
         expect($response->json('panel_update.current_step_title'))
             ->toBe('Updating the database schema');
+    });
+
+    it('returns a bounded redacted log tail to the administrator', function () {
+        $update = PanelUpdate::create([
+            'user_id' => $this->admin->id,
+            'status' => PanelUpdateStatus::Running,
+            'to_version' => '99.0.0',
+        ]);
+
+        $log = config('panel_update.state_dir').'/update-'.$update->id.'.log';
+        @mkdir(dirname($log), 0750, true);
+        file_put_contents($log, implode("\n", [
+            'Installing dependencies',
+            'Authorization: Bearer secret-token',
+            'APP_KEY=base64:should-not-leak',
+            'Health check attempt 1/30 failed',
+        ]));
+
+        try {
+            $response = $this->withHeaders(applyHeader())
+                ->getJson("/api/admin/panel-update/{$update->id}")
+                ->assertOk()
+                ->assertJsonPath('panel_update.output_truncated', false);
+
+            expect($response->json('panel_update.output'))
+                ->toContain('Installing dependencies')
+                ->toContain('Health check attempt 1/30 failed')
+                ->toContain('[REDACTED]')
+                ->not->toContain('secret-token')
+                ->not->toContain('should-not-leak');
+        } finally {
+            @unlink($log);
+        }
+    });
+
+    it('does not expose update output outside the admin route', function () {
+        $user = User::factory()->create();
+        $token = $user->createToken('t')->plainTextToken;
+        $update = PanelUpdate::create([
+            'status' => PanelUpdateStatus::Running,
+            'to_version' => '99.0.0',
+        ]);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson("/api/admin/panel-update/{$update->id}")
+            ->assertForbidden();
     });
 });

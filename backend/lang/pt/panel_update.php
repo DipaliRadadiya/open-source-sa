@@ -49,6 +49,7 @@ return [
         'restart_services' => 'Não foi possível reiniciar os serviços.',
         'maintenance_off' => 'Não foi possível retirar o painel do modo de manutenção.',
         'health_check' => 'O painel atualizado não respondeu corretamente, por isso a versão anterior foi restaurada.',
+        'target_not_newer' => 'A versão selecionada já está incluída nesta compilação do painel, por isso o downgrade foi recusado.',
         'unknown' => 'A atualização falhou por um motivo desconhecido.',
     ],
     'errors' => [

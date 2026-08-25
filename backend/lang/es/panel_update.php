@@ -49,6 +49,7 @@ return [
         'restart_services' => 'No se pudieron reiniciar los servicios.',
         'maintenance_off' => 'No se pudo sacar el panel del modo de mantenimiento.',
         'health_check' => 'El panel actualizado no respondió correctamente, así que se restauró la versión anterior.',
+        'target_not_newer' => 'La versión seleccionada ya está incluida en esta compilación del panel, por lo que se rechazó la degradación.',
         'unknown' => 'La actualización falló por un motivo desconocido.',
     ],
     'errors' => [

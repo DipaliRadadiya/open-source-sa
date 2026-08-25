@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Panel\PanelUpdateOutput;
 use App\Services\Panel\UpdateSteps;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -13,6 +14,12 @@ class PanelUpdateResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // This Resource is currently used only by admin routes, but keep the
+        // sensitive operational output fail-closed if it is reused elsewhere.
+        $output = $request->user()?->isAdmin()
+            ? app(PanelUpdateOutput::class)->read($this->resource)
+            : ['content' => '', 'truncated' => false];
+
         return [
             'id' => $this->id,
             'status' => $this->status->value,
@@ -36,6 +43,8 @@ class PanelUpdateResource extends JsonResource
                 : __('panel_update.reasons.'.$this->reason),
             'rolled_back' => $this->rolled_back,
             'reference' => $this->reference,
+            'output' => $output['content'],
+            'output_truncated' => $output['truncated'],
             'started_at' => $this->started_at?->format('d-m-Y H:i:s'),
             'started_at_human' => $this->started_at?->diffForHumans(),
             'finished_at' => $this->finished_at?->format('d-m-Y H:i:s'),

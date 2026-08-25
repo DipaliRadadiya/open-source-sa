@@ -7,8 +7,9 @@ use Illuminate\Support\Facades\Process;
 /**
  * What the running panel actually is, read from disk.
  *
- * The version is the tag HEAD is sitting on, falling back to the `VERSION`
- * file at the repository root.
+ * The version is the exact tag at HEAD, or the newest version tag reachable
+ * from HEAD when this is a development build ahead of a release. Only a clone
+ * with no reachable tags falls back to the `VERSION` file.
  *
  * It used to be the file alone, on the reasoning that install.sh clones with
  * `--depth 1` and fetches no tags. True for a *fresh* install — which is why
@@ -40,7 +41,7 @@ class InstalledPanelInfo
      *     commit_hash: ?string,
      *     commit_short: ?string,
      *     branch: ?string,
-     *     source: 'tag'|'file'|'env'|'unknown',
+     *     source: 'tag'|'tag-ahead'|'file'|'env'|'unknown',
      *     is_git_checkout: bool,
      *     has_local_changes: ?bool,
      * }
@@ -159,7 +160,37 @@ class InstalledPanelInfo
     }
 
     /**
-     * @return array{0: ?string, 1: 'file'|'env'|'unknown'}
+     * The nearest reachable version tag, without claiming HEAD is exactly it.
+     *
+     * A panel deployed from main can be several commits ahead of the latest
+     * release. Falling back to a stale VERSION file in that case made the UI
+     * offer the latest tag as an "update", then git checked out older code.
+     * The nearest ancestor tag is the version baseline for comparison; source
+     * `tag-ahead` keeps the distinction visible to API consumers.
+     */
+    private function nearestTag(): ?string
+    {
+        $path = $this->repositoryPath();
+
+        if (! is_dir($path.'/.git')) {
+            return null;
+        }
+
+        $result = Process::path($path)
+            ->timeout(10)
+            ->run(['git', '-c', 'safe.directory='.$path, 'describe', '--tags', '--abbrev=0', 'HEAD']);
+
+        if (! $result->successful()) {
+            return null;
+        }
+
+        $tag = ltrim(trim($result->output()), 'vV');
+
+        return preg_match('/^\d+(\.\d+){0,3}$/', $tag) === 1 ? $tag : null;
+    }
+
+    /**
+     * @return array{0: ?string, 1: 'tag'|'tag-ahead'|'file'|'env'|'unknown'}
      */
     private function version(): array
     {
@@ -184,6 +215,12 @@ class InstalledPanelInfo
 
         if ($tag !== null) {
             return [$tag, 'tag'];
+        }
+
+        $nearest = $this->nearestTag();
+
+        if ($nearest !== null) {
+            return [$nearest, 'tag-ahead'];
         }
 
         $file = $this->repositoryPath().'/VERSION';

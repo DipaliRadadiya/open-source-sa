@@ -53,3 +53,17 @@ test("a real rollback is still reported as one", () => {
   assert.ok(result.success);
   assert.equal(result.data.rolled_back, true);
 });
+
+test("sanitized update output survives parsing and remains optional for old releases", () => {
+  const withOutput = panelUpdateRunSchema.parse({
+    ...freshlyQueued,
+    output: "Health check attempt 1/30 failed",
+    output_truncated: true,
+  });
+  const withoutOutput = panelUpdateRunSchema.parse(freshlyQueued);
+
+  assert.equal(withOutput.output, "Health check attempt 1/30 failed");
+  assert.equal(withOutput.output_truncated, true);
+  assert.equal(withoutOutput.output, "");
+  assert.equal(withoutOutput.output_truncated, false);
+});

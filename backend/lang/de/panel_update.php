@@ -49,6 +49,7 @@ return [
         'restart_services' => 'Dienste konnten nicht neu gestartet werden.',
         'maintenance_off' => 'Der Wartungsmodus konnte nicht beendet werden.',
         'health_check' => 'Das aktualisierte Panel antwortete nicht korrekt, daher wurde die vorherige Version wiederhergestellt.',
+        'target_not_newer' => 'Die ausgewählte Version ist bereits in diesem Panel-Build enthalten; das Downgrade wurde abgelehnt.',
         'unknown' => 'Das Update schlug aus unbekanntem Grund fehl.',
     ],
     'errors' => [

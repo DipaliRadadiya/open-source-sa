@@ -27,9 +27,9 @@ class UpdateScript
     /** Ordered steps. The runner echoes each one into the state file. */
     public const STEPS = [
         'preflight_git',
+        'fetch_release',
         'maintenance_on',
         'backup_database',
-        'fetch_release',
         'checkout_release',
         'composer_install',
         'migrate',
@@ -166,9 +166,9 @@ class UpdateScript
         }
 
         finish() {
-            printf '{"step":"%s","status":"%s","reason":"%s","commit":"%s","at":"%s"}\\n' \\
-                "\$STEP" "\$1" "\${2:-}" "\$({$git} rev-parse HEAD 2>/dev/null || echo unknown)" \\
-                "\$(date -u +%FT%TZ)" > "\$STATE"
+            printf '{"step":"%s","status":"%s","reason":"%s","rolled_back":%s,"commit":"%s","at":"%s"}\\n' \\
+                "\$STEP" "\$1" "\${2:-}" "\${3:-false}" \\
+                "\$({$git} rev-parse HEAD 2>/dev/null || echo unknown)" "\$(date -u +%FT%TZ)" > "\$STATE"
         }
 
         # Any failure lands here. The old commit goes back before anything else
@@ -180,7 +180,7 @@ class UpdateScript
             note "rollback"
             {$run}{$git} checkout --force {$rollbackTo}
             {$asUser}{$php} {$backend}/artisan up
-            finish failed "\$failed_step"
+            finish failed "\$failed_step" true
             exit 1
         }
 
@@ -196,14 +196,24 @@ class UpdateScript
         note preflight_git
         {$git} rev-parse HEAD > /dev/null
 
+        # Fetch and compare before maintenance. A panel deployed from main can
+        # already contain the latest release plus newer commits; VERSION used
+        # to report 1.0.1 there, so the updater offered v1.0.7 and checked out
+        # older code. The API prevents that now, and this second guard closes
+        # the race between checking and executing.
+        note fetch_release
+        {$run}{$git} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
+        if {$git} merge-base --is-ancestor {$tag} {$rollbackTo}; then
+            echo "Refusing update: {$tag} is already contained in current commit {$rollbackTo}."
+            finish failed target_not_newer
+            exit 1
+        fi
+
         note maintenance_on
         {$asUser}{$php} {$backend}/artisan down --retry=60
 
         note backup_database
         {$asUser}{$php} {$backend}/artisan panel:backup-database
-
-        note fetch_release
-        {$run}{$git} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
 
         note checkout_release
         {$run}{$git} checkout --force {$tag}
@@ -323,11 +333,26 @@ class UpdateScript
             return "echo 'DRY-RUN: health check skipped'";
         }
 
-        return sprintf(
-            'curl -fsS --max-time 15 "%s" | grep -q \'"version":"%s"\'',
-            $url,
-            $this->bareVersion($version),
-        );
+        $healthUrl = escapeshellarg($url);
+        $expected = escapeshellarg($this->bareVersion($version));
+
+        return <<<BASH
+        HEALTH_URL={$healthUrl}
+        EXPECTED_VERSION={$expected}
+        HEALTH_OK=0
+        for attempt in \$(seq 1 30); do
+            response="\$(curl -sS --max-time 5 "\$HEALTH_URL" 2>&1)" && curl_status=0 || curl_status=\$?
+            if [ "\$curl_status" = "0" ] && printf '%s' "\$response" | grep -q "\\\"version\\\":\\\"\$EXPECTED_VERSION\\\""; then
+                echo "Health check passed on attempt \$attempt/30."
+                HEALTH_OK=1
+                break
+            fi
+            echo "Health check attempt \$attempt/30 failed (curl exit \$curl_status); expected version \$EXPECTED_VERSION."
+            printf 'Health response: %.1000s\\n' "\$response"
+            sleep 1
+        done
+        test "\$HEALTH_OK" = "1"
+        BASH;
     }
 
     private function bareVersion(string $version): string
