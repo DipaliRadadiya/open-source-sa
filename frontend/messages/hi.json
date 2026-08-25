@@ -2291,7 +2291,7 @@
     "engineList": {
       "title": "डेटाबेस इंजन",
       "description": "डेटाबेस बनाने से पहले आपको इनमें से एक चाहिए।",
-      "installing": "इंस्टॉल हो रहा है",
+      "installing": "इंस्टॉल हो रहा है {name}",
       "failed": "इंस्टॉल नहीं हो सका",
       "notInstalled": "इंस्टॉल नहीं है",
       "unreachable": "पहुँच नहीं",

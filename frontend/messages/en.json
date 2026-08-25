@@ -2291,7 +2291,7 @@
     "engineList": {
       "title": "Database engines",
       "description": "You need one of these before you can create a database.",
-      "installing": "Installing",
+      "installing": "Installing {name}",
       "failed": "Couldn't install",
       "notInstalled": "Not installed",
       "unreachable": "Not reachable",

@@ -2291,7 +2291,7 @@
     "engineList": {
       "title": "Motores de base de datos",
       "description": "Necesitas uno de estos antes de poder crear una base de datos.",
-      "installing": "Instalando",
+      "installing": "Instalando {name}",
       "failed": "No se pudo instalar",
       "notInstalled": "No instalado",
       "unreachable": "Sin conexión",

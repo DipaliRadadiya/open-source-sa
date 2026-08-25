@@ -258,7 +258,7 @@ function EngineBadge({ engine, present }) {
     return (
       <Badge variant="secondary" className="font-normal">
         <Loader2 className="size-3 animate-spin" />
-        {t("engineList.installing")}
+        {t("engineList.installing", { name: t(`engines.${engine.engine}`) })}
       </Badge>
     );
   }
