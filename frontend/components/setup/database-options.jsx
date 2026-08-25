@@ -31,10 +31,11 @@ const PURPOSE = {
 export function DatabaseOptions({ options, failed = false, disabled = false, disabledReason, onInstall }) {
   const t = useTranslations("setup");
   const installable = useMemo(() => options.filter((o) => o.installable && !o.installed), [options]);
-  const defaultValue = useMemo(
-    () => installable.find((o) => o.recommended)?.value ?? installable[0]?.value ?? "",
-    [installable],
-  );
+  // Only auto-select when exactly one SQL engine is installable. Otherwise
+  // (e.g. MongoDB already installed → both MySQL and MariaDB available)
+  // the user must pick explicitly, so leave selected = null and disable
+  // the install button until they do.
+  const defaultValue = installable.length === 1 ? installable[0].value : null;
   const [selected, setSelected] = useState(defaultValue);
   const chosen = options.find((o) => o.value === selected);
 
@@ -106,8 +107,8 @@ export function DatabaseOptions({ options, failed = false, disabled = false, dis
       {chosen?.action ? (
         <Button
           onClick={() => onInstall(chosen.action)}
-          disabled={disabled}
-          disabledReason={disabledReason}
+          disabled={disabled || selected === null}
+          disabledReason={selected === null ? t("chooseEngineFirst") : disabledReason}
           // Same treatment as the settings save buttons: a Button is shrink-0
           // and whitespace-nowrap, and this label carries an engine name that
           // grows in other locales — "Reintentar la instalación de MariaDB" ran

@@ -140,6 +140,7 @@ export function EngineState({ engines = [], connections = [], canManage }) {
       <InstallConfirm
         engine={pending}
         open={pending !== null}
+        choosing={pending?.driver === "sql" && !sqlPresent}
         onOpenChange={(next) => !next && setPending(null)}
       />
 

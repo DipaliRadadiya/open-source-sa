@@ -4516,7 +4516,8 @@
     "sectionAttentionHint": "Algo no terminó. Conviene resolverlo antes de añadir un sitio.",
     "sectionRecommendedHint": "Aconsejado para la mayoría de servidores. Puedes añadirlos cuando quieras.",
     "sectionOptionalHint": "Solo los necesitan algunos sitios.",
-    "alreadyInstalledHint": "Ya están en este servidor. Aquí no hay nada que hacer."
+    "alreadyInstalledHint": "Ya están en este servidor. Aquí no hay nada que hacer.",
+    "chooseEngineFirst": "Elige primero un motor de base de datos"
   },
   "storage": {
     "title": "Almacenamiento",

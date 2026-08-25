@@ -2300,7 +2300,12 @@
     "confirmInstall": {
       "title": "Install {name}?",
       "description": "The server will download and set it up in the background.",
-      "submit": "Install"
+      "submit": "Install",
+      "chooseEngine": {
+        "title": "Choose a SQL engine",
+        "description": "Both run on the same port. Pick the one your application uses.",
+        "submit": "Install engine"
+      }
     },
     "connection": {
       "title": "{name} connection",
@@ -4516,7 +4521,8 @@
     "sectionAttentionHint": "Something did not finish. Worth sorting before you add a site.",
     "sectionRecommendedHint": "Advised for most servers. You can add these at any time.",
     "sectionOptionalHint": "Only needed by some sites.",
-    "alreadyInstalledHint": "Already on this server. Nothing to do here."
+    "alreadyInstalledHint": "Already on this server. Nothing to do here.",
+    "chooseEngineFirst": "Pick a database engine first"
   },
   "storage": {
     "title": "Storage",
