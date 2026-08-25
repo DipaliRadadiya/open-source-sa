@@ -176,14 +176,41 @@ export function CloneApplicationPanel({
   if (remembered && !clone) return <Resuming />;
 
   if (clone) {
+    const completedClone =
+      finished?.status === "completed"
+        ? finished
+        : clone.status === "completed"
+          ? clone
+          : null;
+    const hasNextSteps = Boolean(completedClone?.target_application_id);
+
     return (
-      <div className="space-y-6">
-        <CloneProgress clone={clone} onDone={settled} onAgain={reset} />
-        {finished?.status === "completed" && finished.target_application_id ? (
-          <CloneNextSteps
-            applicationId={finished.target_application_id}
-            sourceProtected={application.basic_auth_enabled}
+      <div
+        className={cn(
+          completedClone
+            ? "grid gap-6 lg:grid-cols-12 lg:items-stretch"
+            : "space-y-6",
+        )}
+      >
+        <div
+          className={cn(
+            completedClone && (hasNextSteps ? "lg:col-span-7" : "lg:col-span-12"),
+          )}
+        >
+          <CloneProgress
+            clone={clone}
+            sourceApplication={application}
+            onDone={settled}
+            onAgain={reset}
           />
+        </div>
+        {hasNextSteps ? (
+          <div className="lg:col-span-5">
+            <CloneNextSteps
+              applicationId={completedClone.target_application_id}
+              sourceProtected={application.basic_auth_enabled}
+            />
+          </div>
         ) : null}
       </div>
     );
