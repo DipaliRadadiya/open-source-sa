@@ -334,15 +334,15 @@ class UpdateScript
         }
 
         $healthUrl = escapeshellarg($url);
-        $expected = escapeshellarg($this->bareVersion($version));
+        $expected = $this->bareVersion($version); // bare "1.0.7" — used as fixed string, not regex
 
         return <<<BASH
         HEALTH_URL={$healthUrl}
-        EXPECTED_VERSION={$expected}
+        EXPECTED_VERSION='{$expected}'
         HEALTH_OK=0
         for attempt in \$(seq 1 30); do
             response="\$(curl -sS --max-time 5 "\$HEALTH_URL" 2>&1)" && curl_status=0 || curl_status=\$?
-            if [ "\$curl_status" = "0" ] && printf '%s' "\$response" | grep -q "\\\"version\\\":\\\"\$EXPECTED_VERSION\\\""; then
+            if [ "\$curl_status" = "0" ] && printf '%s' "\$response" | grep -qF "version\":\"\$EXPECTED_VERSION\""; then
                 echo "Health check passed on attempt \$attempt/30."
                 HEALTH_OK=1
                 break
