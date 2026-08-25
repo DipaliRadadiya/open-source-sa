@@ -2530,7 +2530,8 @@
         "average": "Media"
       },
       "runningQueries": "Consultas en ejecución",
-      "longRunningCount": "{count, plural, one {# de larga duración} other {# de larga duración}}"
+      "longRunningCount": "{count, plural, one {# de larga duración} other {# de larga duración}}",
+      "chartDescription": "Queries per second, connections, and running threads — 24 hours."
     },
     "tables": {
       "title": "Tablas",

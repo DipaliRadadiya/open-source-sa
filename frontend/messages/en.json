@@ -2535,7 +2535,8 @@
         "average": "Average"
       },
       "runningQueries": "Running queries",
-      "longRunningCount": "{count, plural, one {# long-running} other {# long-running}}"
+      "longRunningCount": "{count, plural, one {# long-running} other {# long-running}}",
+      "chartDescription": "Queries per second, connections, and running threads — 24 hours."
     },
     "tables": {
       "title": "Tables",

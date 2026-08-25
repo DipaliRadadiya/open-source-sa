@@ -2530,7 +2530,8 @@
         "average": "औसत"
       },
       "runningQueries": "चल रही क्वेरी",
-      "longRunningCount": "{count, plural, one {# लंबी चलने वाली} other {# लंबी चलने वाली}}"
+      "longRunningCount": "{count, plural, one {# लंबी चलने वाली} other {# लंबी चलने वाली}}",
+      "chartDescription": "Queries per second, connections, and running threads — 24 hours."
     },
     "tables": {
       "title": "टेबल",
