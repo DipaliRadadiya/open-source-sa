@@ -120,6 +120,9 @@ it('verifies the frontend, not only the backend', function () {
     $script = renderedScript();
 
     expect($script)->toContain('/api/health')
+        ->and($script)->toContain('grep -qF')
+        ->and($script)->toContain('$EXPECTED_VERSION')
+        ->and($script)->not->toContain('grep -q "')
         // And the frontend's own root, retried — `systemctl restart` returns
         // when a unit is started, not when it is ready.
         ->and($script)->toContain('seq 1 30')

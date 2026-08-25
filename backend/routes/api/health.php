@@ -22,4 +22,8 @@ Route::get('/health', function (InstalledPanelInfo $installed) {
             'version' => $installed->installed()['version'],
         ],
     ]);
-})->middleware('throttle:60,1');
+})
+    // Health retries must not share the global API bucket with browser polling
+    // and other requests. Keep a dedicated public-endpoint limit instead.
+    ->withoutMiddleware('throttle:api')
+    ->middleware('throttle:60,1');

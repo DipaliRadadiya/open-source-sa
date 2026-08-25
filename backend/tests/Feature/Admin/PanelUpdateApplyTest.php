@@ -77,7 +77,9 @@ describe('the generated update script', function () {
 
     it('asserts the new version answered, not merely that something answered', function () {
         expect($this->script)->toContain('EXPECTED_VERSION=\'99.0.0\'')
-            ->and($this->script)->toContain('grep -q');
+            ->and($this->script)->toContain('grep -qF')
+            ->and($this->script)->toContain('$EXPECTED_VERSION')
+            ->and($this->script)->not->toContain('grep -q "');
     });
 
     it('retries health checks and records diagnostic output before rollback', function () {
