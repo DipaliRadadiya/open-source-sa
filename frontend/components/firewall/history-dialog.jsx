@@ -127,7 +127,11 @@ export function HistoryDialog({ isAdmin }) {
               ))}
             </ul>
             {state.meta?.last_page > 1 ? (
-              <div className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
+              <div className="flex flex-col gap-3">
+                {/* This dialog is capped at `sm:max-w-lg`, so a viewport-sized
+                    `sm:flex-row` layout made the selector squeeze the pager and
+                    wrap "48 total" at otherwise desktop widths. Keep each
+                    control group on its own row inside the constrained surface. */}
                 <PerPageSelect
                   label={paginationT("perPage")}
                   value={String(perPage)}
@@ -137,13 +141,15 @@ export function HistoryDialog({ isAdmin }) {
                     load(1, nextPerPage);
                   }}
                 />
-                <Pager
-                  page={state.meta.current_page}
-                  lastPage={state.meta.last_page}
-                  total={state.meta.total}
-                  pending={state.loading}
-                  onPageChange={load}
-                />
+                <div className="self-end">
+                  <Pager
+                    page={state.meta.current_page}
+                    lastPage={state.meta.last_page}
+                    total={state.meta.total}
+                    pending={state.loading}
+                    onPageChange={load}
+                  />
+                </div>
               </div>
             ) : null}
           </div>
