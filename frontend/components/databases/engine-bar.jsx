@@ -1,40 +1,57 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Activity, Plus } from "lucide-react";
+import { Activity, Loader2, Plus, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallConfirm } from "@/components/databases/install-confirm";
+import { useEngineInstallPolling } from "@/components/databases/use-engine-install-polling";
+import {
+  findInstallCandidate,
+  findPresentSqlEngine,
+  isSqlEngine,
+} from "@/lib/databases/install-lifecycle";
 
 /**
- * What is running, above the list it explains.
+ * What is running, plus any second engine currently being added.
  *
- * Only rendered when at least one engine is reachable — installing, failed and
- * never-installed are the whole page rather than a line in this bar, and live
- * in `engine-state.jsx`.
+ * This surface remains mounted whenever at least one engine is reachable, so
+ * it owns the complete lifecycle for an additional engine. Closing the install
+ * confirmation must not close the only evidence that work was queued.
  */
 export function EngineBar({ engines = [], canManage, summary }) {
   const t = useTranslations("databases");
+  const router = useRouter();
   const [pending, setPending] = useState(null);
+  const {
+    engines: list,
+    installingEngine,
+    slow,
+    pollIssue,
+    markStarted,
+  } = useEngineInstallPolling(engines);
 
-  const running = engines.filter((engine) => engine.running);
-
-  // A second SQL engine can never join one that is already here, so offering
-  // "Add engine" on a MariaDB server with only MySQL left to install would open
-  // a dialog whose every option is blocked.
-  const hasSql = running.some((engine) => engine.driver === "sql");
-  // At most one candidate in practice: a second SQL engine can never join one
-  // already here, so this is Mongo alongside MariaDB.
-  const addable = engines.find(
-    (engine) =>
-      engine.installable &&
-      !engine.running &&
-      !engine.install_status &&
-      !(engine.driver === "sql" && hasSql),
+  const running = list.filter((engine) => engine.running);
+  const installing = list.filter(
+    (engine) => !engine.running && engine.install_status === "installing",
   );
+  const failed = list.filter(
+    (engine) => !engine.running && engine.install_status === "failed",
+  );
+
+  // Recovery wins over a fresh choice. Previously failed engines were excluded
+  // by `!engine.install_status`, so Retry vanished permanently whenever another
+  // engine kept this populated page visible.
+  const addable = findInstallCandidate(list);
+  const failureMessage = failed.find(
+    (engine) => engine.install_message,
+  )?.install_message;
+  const hasPresentSql = Boolean(findPresentSqlEngine(list));
+  const choosingSql = isSqlEngine(pending) && !hasPresentSql;
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -46,10 +63,8 @@ export function EngineBar({ engines = [], canManage, summary }) {
           >
             <span className="font-medium">{t(`engines.${engine.engine}`)}</span>
             {engine.version ? (
-              // whitespace-nowrap: a version is one token. Left to wrap it broke
-              // at the hyphen — "8.0.46-" above "0ubuntu0.24.04.3" — which reads
-              // as two different numbers. It moves to its own line intact
-              // instead, which is what the wrap on the row is for.
+              // A version is one token. Let the row wrap around it rather than
+              // splitting a distro suffix into what looks like a second value.
               <span className="font-mono text-xs whitespace-nowrap text-muted-foreground">
                 {engine.version}
               </span>
@@ -59,17 +74,39 @@ export function EngineBar({ engines = [], canManage, summary }) {
             </Badge>
           </span>
         ))}
+
+        {installing.map((engine) => (
+          <span
+            key={engine.engine}
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+          >
+            <span className="font-medium">{t(`engines.${engine.engine}`)}</span>
+            <Badge variant="warning" className="font-normal">
+              <Loader2 className="size-3 animate-spin" />
+              {t("install.installing")}
+            </Badge>
+          </span>
+        ))}
+
+        {failed.map((engine) => (
+          <span
+            key={engine.engine}
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+          >
+            <span className="font-medium">{t(`engines.${engine.engine}`)}</span>
+            <Badge variant="destructive" className="font-normal">
+              <TriangleAlert className="size-3" />
+              {t("engineList.failed")}
+            </Badge>
+          </span>
+        ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        {/* A caption beside the engine, not a stat tile — nobody makes a
-            decision from "4 databases". */}
         {summary ? (
           <p className="text-sm text-muted-foreground">{summary}</p>
         ) : null}
 
-        {/* The health screen has no sidebar entry of its own — this is the
-            way in, next to the engine it reports on. */}
         <Button asChild variant="outline" size="sm">
           <Link href="/databases/monitor">
             <Activity className="size-4" />
@@ -85,19 +122,43 @@ export function EngineBar({ engines = [], canManage, summary }) {
               disabled={!canManage}
               onClick={() => setPending(addable)}
             >
-              <Plus className="size-4" />
-              {t("install.addEngine")}
+              {addable.install_status === "failed" ? (
+                <TriangleAlert className="size-4" />
+              ) : (
+                <Plus className="size-4" />
+              )}
+              {addable.install_status === "failed"
+                ? t("status.tryAgain")
+                : t("install.addEngine")}
             </Button>
           </ReasonTooltip>
         ) : null}
       </div>
 
+      {failureMessage ? (
+        <p className="basis-full text-xs leading-relaxed text-destructive">
+          {failureMessage}
+        </p>
+      ) : pollIssue ? (
+        <p className="basis-full text-xs text-warning">
+          {t("install.pollIssue")}
+        </p>
+      ) : slow ? (
+        <p className="basis-full text-xs text-muted-foreground">
+          {t("install.takingLonger")}
+        </p>
+      ) : null}
+
       <InstallConfirm
-        engine={["mysql", "mariadb"].includes(pending?.engine) && !running.some((e) => ["mysql", "mariadb"].includes(e.engine)) ? null : pending ?? null}
+        engine={choosingSql ? null : pending ?? null}
         open={pending !== null}
-        choosing={["mysql", "mariadb"].includes(pending?.engine) && !running.some((e) => ["mysql", "mariadb"].includes(e.engine))}
+        choosing={choosingSql}
         onOpenChange={(next) => !next && setPending(null)}
-        onSuccess={() => setPending(null)}
+        onSuccess={({ engine, queued }) => {
+          setPending(null);
+          if (queued) markStarted(engine);
+          else router.refresh();
+        }}
       />
     </div>
   );

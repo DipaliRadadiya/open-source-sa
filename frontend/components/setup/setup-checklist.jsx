@@ -283,6 +283,7 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
           variant={setup.complete ? "default" : "outline"}
           className="shrink-0"
           disabled={finishing}
+          disabledReason={finishing ? t("openingDashboard") : null}
           aria-busy={finishing}
         >
           {finishing ? <Loader2 className="size-4 animate-spin" /> : setup.complete ? <CheckCircle2 className="size-4" /> : null}

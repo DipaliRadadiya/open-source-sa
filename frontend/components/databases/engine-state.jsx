@@ -1,20 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Activity, Database, Loader2, Plug, TriangleAlert } from "lucide-react";
-import { getEngines } from "@/lib/api/databases";
-import { enginesResponseSchema } from "@/lib/schemas/database";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InstallConfirm } from "@/components/databases/install-confirm";
 import { ConnectionDialog } from "@/components/databases/connection-dialog";
+import { useEngineInstallPolling } from "@/components/databases/use-engine-install-polling";
+import {
+  engineIsPresent,
+  findPresentSqlEngine,
+  isSqlEngine,
+} from "@/lib/databases/install-lifecycle";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
-
-const POLL_MS = 5000;
 
 /**
  * Retrying these can never change the outcome: the port belongs to the other
@@ -42,53 +44,17 @@ const NOT_RETRYABLE = [
 export function EngineState({ engines = [], connections = [], canManage }) {
   const t = useTranslations("databases");
   const router = useRouter();
-  const [polled, setPolled] = useState(null);
   const [pending, setPending] = useState(null);
   const [connecting, setConnecting] = useState(null);
-
-  const list = polled ?? engines;
-  const inFlight = list.find((engine) => engine.install_status === "installing");
-
-  // The API now says this outright. This used to be inferred from another
-  // engine every failure naming the port owner (`port_in_use_by_mariadb`),
-  // because mariadb reported running:false version:null while MySQL was being
-  // told MariaDB owned the port.
-  const present = (engine) => Boolean(engine.installed || engine.running);
+  const { engines: list, slow, pollIssue, markStarted } =
+    useEngineInstallPolling(engines);
+  const inFlight = list.find(
+    (engine) => engine.install_status === "installing",
+  );
 
   // Present on the server, whether or not the panel can talk to it. A second
   // SQL engine can never join it.
-  const sqlPresent = list.find(
-    (engine) => ["mysql", "mariadb"].includes(engine.engine) && present(engine),
-  );
-
-  useEffect(() => {
-    if (!inFlight) return;
-
-    const controller = new AbortController();
-    const id = setInterval(async () => {
-      try {
-        const { data } = await getEngines({ signal: controller.signal });
-        const parsed = enginesResponseSchema.safeParse(data);
-        if (!parsed.success) return;
-
-        if (parsed.data.engines.some((e) => e.install_status === "installing")) {
-          setPolled(parsed.data.engines);
-        } else {
-          // Finished either way — re-render from the server so a success swaps
-          // this whole screen for the databases list.
-          setPolled(null);
-          router.refresh();
-        }
-      } catch {
-        // A dropped poll isn't worth reporting; the next one runs in 5s.
-      }
-    }, POLL_MS);
-
-    return () => {
-      controller.abort();
-      clearInterval(id);
-    };
-  }, [inFlight, router]);
+  const sqlPresent = findPresentSqlEngine(list);
 
   return (
     <>
@@ -128,23 +94,26 @@ export function EngineState({ engines = [], connections = [], canManage }) {
               engine={engine}
               canManage={canManage}
               sqlPresent={sqlPresent}
-              present={present(engine)}
+              present={engineIsPresent(engine)}
               busy={Boolean(inFlight)}
               onInstall={() => setPending(engine)}
               onConnection={() => setConnecting(engine)}
+              slow={slow && inFlight?.engine === engine.engine}
+              pollIssue={pollIssue && inFlight?.engine === engine.engine}
             />
           ))}
         </CardContent>
       </Card>
 
       <InstallConfirm
-        engine={["mysql", "mariadb"].includes(pending?.engine) && !sqlPresent ? null : pending ?? null}
+        engine={isSqlEngine(pending) && !sqlPresent ? null : pending ?? null}
         open={pending !== null}
-        choosing={["mysql", "mariadb"].includes(pending?.engine) && !sqlPresent}
+        choosing={isSqlEngine(pending) && !sqlPresent}
         onOpenChange={(next) => !next && setPending(null)}
-        onSuccess={() => {
+        onSuccess={({ engine, queued }) => {
           setPending(null);
-          router.refresh();
+          if (queued) markStarted(engine);
+          else router.refresh();
         }}
       />
 
@@ -168,13 +137,15 @@ function EngineRow({
   busy,
   onInstall,
   onConnection,
+  slow,
+  pollIssue,
 }) {
   const t = useTranslations("databases");
   const name = t(`engines.${engine.engine}`);
   const failed = engine.install_status === "failed";
   const installing = engine.install_status === "installing";
   const conflicted =
-    engine.driver === "sql" && sqlPresent && sqlPresent !== engine;
+    isSqlEngine(engine) && sqlPresent && sqlPresent !== engine;
 
   // Retrying these can only fail the same way, so the row offers nothing.
   const deadEnd = failed && NOT_RETRYABLE.includes(engine.install_reason);
@@ -198,7 +169,11 @@ function EngineRow({
   // ours for a state it never reports.
   const note = failed
     ? engine.install_message
-    : !engine.installable
+    : installing && pollIssue
+      ? t("install.pollIssue")
+      : installing && slow
+        ? t("install.takingLonger")
+        : !engine.installable
       ? t("install.notInstallable")
       : conflicted
         ? t("install.sqlConflict", {

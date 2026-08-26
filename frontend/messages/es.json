@@ -2174,7 +2174,9 @@
         "mariadb": "Un sustituto directo de MySQL y la opción habitual en servidores Linux. Recomendado.",
         "mongodb": "Guarda documentos en lugar de tablas. Solo para aplicaciones hechas para él."
       },
-      "oneAtATime": "Se está instalando otro motor. Espera a que termine."
+      "oneAtATime": "Se está instalando otro motor. Espera a que termine.",
+      "takingLonger": "Está tardando más de lo habitual. Puede que siga funcionando.",
+      "pollIssue": "Hemos perdido temporalmente las actualizaciones de progreso. La instalación puede seguir en marcha y esta página continuará comprobándolo."
     },
     "noEngine": {
       "title": "No hay ningún motor de base de datos instalado",
@@ -2305,7 +2307,8 @@
         "title": "Elige un motor SQL",
         "description": "Ambos se ejecutan en el mismo puerto. Elige el que use tu aplicación.",
         "submit": "Instalar motor"
-      }
+      },
+      "chooseEngineFirst": "Elige primero un motor de base de datos"
     },
     "connection": {
       "title": "Conexión de {name}",

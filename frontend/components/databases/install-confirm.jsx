@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CheckCircle2, Database } from "lucide-react";
@@ -34,26 +34,30 @@ const SQL_ENGINES = [
  * When `choosing` is true, neither SQL engine has been installed yet and the
  * user must pick one before the install begins.
  */
-export function InstallConfirm({ engine, open, onOpenChange, choosing = false, onSuccess }) {
+export function InstallConfirm(props) {
+  if (!props.open) return null;
+
+  // The inner component exists only while the dialog is open. Closing it
+  // unmounts the session, so phase, selection and pending state reset naturally
+  // on the next open instead of being synchronously rewritten from an effect.
+  const sessionKey = `${props.choosing ? "picker" : "direct"}:${
+    props.engine?.engine ?? "sql"
+  }`;
+
+  return <InstallConfirmSession key={sessionKey} {...props} />;
+}
+
+function InstallConfirmSession({ engine, open, onOpenChange, choosing = false, onSuccess }) {
   const t = useTranslations("databases");
 
   // phase tracks which step the dialog is on:
   //   "picker"  — choosing between MySQL / MariaDB
   //   "confirm" — showing the "Install X?" confirmation
-  const [phase, setPhase] = useState("picker");
+  const [phase, setPhase] = useState(choosing ? "picker" : "confirm");
   // The engine the user picked in the picker (SQL engines only).
   const [picked, setPicked] = useState(null);
   // True while the API call is in flight.
   const [pending, setPending] = useState(false);
-
-  // Reset all state whenever the dialog opens fresh.
-  useEffect(() => {
-    if (open) {
-      setPhase(choosing ? "picker" : "confirm");
-      setPicked(null);
-      setPending(false);
-    }
-  }, [open, choosing]);
 
   // ── Picker step ─────────────────────────────────────────────────────────────
   if (choosing && phase === "picker") {
@@ -130,7 +134,10 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
       toast.success(
         data?.queued === false ? t("install.already") : t("install.queued"),
       );
-      onSuccess?.();
+      onSuccess?.({
+        engine: engineName,
+        queued: data?.queued !== false,
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("install.failed")));
     } finally {

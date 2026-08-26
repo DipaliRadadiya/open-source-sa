@@ -49,22 +49,38 @@ function useFormField() {
   }
 }
 
-// FormItemContext carries the registered label so FormMessage can auto-detect
-// it and render "The Name field is required." instead of "This field is required."
-// labelRef.current is set during render by FormLabel, before FormMessage renders,
-// so it is always available when FormMessage reads it.
-const FormItemContext = React.createContext({ labelRef: { current: null } })
+// FormItemContext carries the label so FormMessage can render "The Name field
+// is required." instead of the generic sentence. It is derived from the direct
+// FormLabel child rather than written through a ref during render — refs are
+// not render state, and React correctly rejects reading or mutating them here.
+const FormItemContext = React.createContext({ label: null })
 
-function FormItem({ className, ...props }) {
+function formLabelText(children) {
+  for (const child of React.Children.toArray(children)) {
+    if (!React.isValidElement(child)) continue
+    if (child.type === FormLabel && typeof child.props.children === "string") {
+      return child.props.children
+    }
+    if (child.type === React.Fragment) {
+      const nested = formLabelText(child.props.children)
+      if (nested) return nested
+    }
+  }
+  return null
+}
+
+function FormItem({ className, children, ...props }) {
   const id = React.useId()
-  const labelRef = React.useRef(null)
+  const label = formLabelText(children)
 
   return (
-    <FormItemContext.Provider value={{ id, labelRef }}>
+    <FormItemContext.Provider value={{ id, label }}>
       {/* content-start: without it a shorter field stretched by a taller
           neighbour in the same grid row spreads the leftover height into its
           gap, dropping its input below the neighbour's. */}
-      <div data-slot="form-item" className={cn("grid content-start gap-2", className)} {...props} />
+      <div data-slot="form-item" className={cn("grid content-start gap-2", className)} {...props}>
+        {children}
+      </div>
     </FormItemContext.Provider>
   )
 }
@@ -100,16 +116,6 @@ function RequiredMark() {
 // everywhere, instead of every form re-implementing (or forgetting) it.
 function FormLabel({ className, required, children, ...props }) {
   const { error, formItemId } = useFormField()
-  const { labelRef } = React.useContext(FormItemContext)
-
-  // Store the string label text so FormMessage can auto-detect it.
-  // children is always a string when used correctly (a <Label> always wraps
-  // text content). React elements used as children would not match this, which
-  // is fine — those are the exception, not the rule, and they are always
-  // followed by an explicit <FormMessage field="..." /> prop.
-  if (typeof children === "string") {
-    labelRef.current = children
-  }
 
   return (
     <Label
@@ -163,7 +169,7 @@ function FormMessage({ className, field, ...props }) {
   const { error, formMessageId } = useFormField()
   const tv = useTranslations("validation")
   const tc = useTranslations("common")
-  const { labelRef } = React.useContext(FormItemContext)
+  const { label: detectedLabel } = React.useContext(FormItemContext)
 
   // Zod messages are validation keys (e.g. "min10") — translate them. Anything
   // that isn't a known key (e.g. a backend error, already localized) renders
@@ -175,7 +181,7 @@ function FormMessage({ className, field, ...props }) {
   const raw = props.children ?? (error ? String(error?.message ?? "") : null)
   // "requiredField" means the field was left empty. Priority: explicit `field`
   // prop > auto-detected label from FormLabel > generic message.
-  const label = field ?? labelRef.current ?? null
+  const label = field ?? detectedLabel ?? null
   const body =
     typeof raw === "string" && raw
       ? raw === "requiredField"

@@ -2174,7 +2174,9 @@
         "mariadb": "A drop-in replacement for MySQL, and the usual choice on Linux servers. Recommended.",
         "mongodb": "Stores documents instead of tables. Only for apps built for it."
       },
-      "oneAtATime": "Another engine is installing. Wait for it to finish."
+      "oneAtATime": "Another engine is installing. Wait for it to finish.",
+      "takingLonger": "This is taking longer than usual. It may still be working.",
+      "pollIssue": "We temporarily lost progress updates. The installation may still be running, and this page will keep checking."
     },
     "noEngine": {
       "title": "No database engine installed",
