@@ -37,10 +37,8 @@ const SQL_ENGINES = [
  */
 export function InstallConfirm({ engine, open, onOpenChange, choosing = false }) {
   const t = useTranslations("databases");
-  const router = useRouter();
   const [phase, setPhase] = useState("picker");
   const [selected, setSelected] = useState(null);
-  const [pending, setPending] = useState(false);
 
   // Reset picker phase when dialog opens fresh
   useEffect(() => {
@@ -51,28 +49,21 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false })
   }, [open]);
 
   async function onConfirm() {
+    const engineName = phase === "picker" ? selected.engine : engine.engine;
     if (phase === "picker") {
       if (!selected) return;
       setPhase("confirming");
-      await doInstall(selected.engine);
-      return;
     }
-    await doInstall(engine.engine);
-  }
-
-  async function doInstall(engineName) {
-    setPending(true);
+    // Show ConfirmDialog loading state while the API call runs.
+    // Do NOT close the dialog here — the parent drives that via the `open`
+    // prop, which is controlled by the `pending` state in engine-state.jsx.
     try {
       const { data } = await installEngine(engineName);
       toast.success(
         data?.queued === false ? t("install.already") : t("install.queued"),
       );
-      onOpenChange?.(false);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("install.failed")));
-    } finally {
-      setPending(false);
     }
   }
 
@@ -134,11 +125,11 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false })
               {t("cancel")}
             </Button>
             <Button
-              disabled={!selected || pending}
+              disabled={!selected || phase === "confirming"}
               disabledReason={!selected ? t("chooseEngineFirst") : null}
               onClick={onConfirm}
             >
-              {pending ? t("install.installing") : t("confirmInstall.chooseEngine.submit")}
+              {phase === "confirming" ? t("install.installing") : t("confirmInstall.chooseEngine.submit")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -156,8 +147,8 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false })
       title={t("confirmInstall.title", { name: t(`engines.${engine.engine}`) })}
       description={t("confirmInstall.description")}
       cancelLabel={t("cancel")}
-      confirmLabel={pending ? t("install.installing") : t("confirmInstall.submit")}
-      pending={pending || phase === "confirming"}
+      confirmLabel={phase === "confirming" ? t("install.installing") : t("confirmInstall.submit")}
+      pending={phase === "confirming"}
       onConfirm={onConfirm}
     >
       {engine.driver === "sql" ? (
