@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('clones', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('source_application_id')->constrained('applications');
-            $table->foreignId('target_application_id')->nullable()->constrained('applications');
-            $table->foreignId('user_id')->nullable()->constrained();
+            $table->foreignId('source_application_id')->constrained('applications')->cascadeOnDelete();
+            $table->foreignId('target_application_id')->nullable()->constrained('applications')->nullOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name', 255)->nullable();         // optional clone name
             // The domain the clone will be served on. Required, and captured
             // here rather than only on the target application because the
