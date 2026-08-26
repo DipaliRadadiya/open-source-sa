@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CheckCircle2, Database } from "lucide-react";
@@ -49,11 +48,11 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false })
   }, [open]);
 
   async function onConfirm() {
-    const engineName = phase === "picker" ? selected.engine : engine.engine;
     if (phase === "picker") {
       if (!selected) return;
       setPhase("confirming");
     }
+    const engineName = phase === "picker" ? selected.engine : engine?.engine;
     // Show ConfirmDialog loading state while the API call runs.
     // Do NOT close the dialog here — the parent drives that via the `open`
     // prop, which is controlled by the `pending` state in engine-state.jsx.
