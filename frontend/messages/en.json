@@ -2305,7 +2305,8 @@
         "title": "Choose a SQL engine",
         "description": "Both run on the same port. Pick the one your application uses.",
         "submit": "Install engine"
-      }
+      },
+      "chooseEngineFirst": "Pick a database engine first"
     },
     "connection": {
       "title": "{name} connection",
