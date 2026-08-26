@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Activity, Database, Loader2, Plug, TriangleAlert } from "lucide-react";
@@ -142,6 +142,10 @@ export function EngineState({ engines = [], connections = [], canManage }) {
         open={pending !== null}
         choosing={["mysql", "mariadb"].includes(pending?.engine) && !sqlPresent}
         onOpenChange={(next) => !next && setPending(null)}
+        onSuccess={() => {
+          setPending(null);
+          router.refresh();
+        }}
       />
 
       {connecting ? (

@@ -34,36 +34,51 @@ const SQL_ENGINES = [
  * When `choosing` is true, neither SQL engine has been installed yet and the
  * user must pick one before the install begins.
  */
-export function InstallConfirm({ engine, open, onOpenChange, choosing = false }) {
+export function InstallConfirm({ engine, open, onOpenChange, choosing = false, onSuccess }) {
   const t = useTranslations("databases");
   const [phase, setPhase] = useState(choosing ? "picker" : "confirming");
   const [selected, setSelected] = useState(null);
+  // Distinct from `phase === "confirming"` because the single-engine branch
+  // (MongoDB) starts in confirming too — using phase for the button's pending
+  // state shipped the dialog with the button already disabled and showing
+  // "Installing…", so nothing could ever be clicked. `pending` is the actual
+  // "API call in flight" flag and is only true between the click and the
+  // resolved/awaited response.
+  const [pending, setPending] = useState(false);
 
-  // Reset picker phase when dialog opens fresh — only relevant when choosing,
-  // since the single-engine branch has no picker and stays in confirming.
+  // Reset state when dialog opens fresh — only the picker actually changes
+  // phase; the single-engine branch stays in confirming, and `pending` is
+  // cleared so a previous failed install can be retried.
   useEffect(() => {
     if (open) {
       setPhase(choosing ? "picker" : "confirming");
       setSelected(null);
+      setPending(false);
     }
   }, [open, choosing]);
 
   async function onConfirm() {
+    if (pending) return;
     if (phase === "picker") {
       if (!selected) return;
       setPhase("confirming");
     }
     const engineName = phase === "picker" ? selected.engine : engine?.engine;
-    // Show ConfirmDialog loading state while the API call runs.
-    // Do NOT close the dialog here — the parent drives that via the `open`
-    // prop, which is controlled by the `pending` state in engine-state.jsx.
+    if (!engineName) return;
+    setPending(true);
     try {
       const { data } = await installEngine(engineName);
       toast.success(
         data?.queued === false ? t("install.already") : t("install.queued"),
       );
+      // Tell the parent the install succeeded so it can close the dialog and
+      // clear the pending state that keeps it open. The parent is responsible
+      // for router.refresh() if it also wants a server re-render.
+      onSuccess?.();
     } catch (error) {
       toast.error(apiMessage(error, t("install.failed")));
+    } finally {
+      setPending(false);
     }
   }
 
@@ -125,11 +140,11 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false })
               {t("cancel")}
             </Button>
             <Button
-              disabled={!selected || phase === "confirming"}
+              disabled={!selected || pending}
               disabledReason={!selected ? t("chooseEngineFirst") : null}
               onClick={onConfirm}
             >
-              {phase === "confirming" ? t("install.installing") : t("confirmInstall.chooseEngine.submit")}
+              {pending ? t("install.installing") : t("confirmInstall.chooseEngine.submit")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -147,8 +162,8 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false })
       title={t("confirmInstall.title", { name: t(`engines.${engine.engine}`) })}
       description={t("confirmInstall.description")}
       cancelLabel={t("cancel")}
-      confirmLabel={phase === "confirming" ? t("install.installing") : t("confirmInstall.submit")}
-      pending={phase === "confirming"}
+      confirmLabel={pending ? t("install.installing") : t("confirmInstall.submit")}
+      pending={pending}
       onConfirm={onConfirm}
     >
       {engine.driver === "sql" ? (

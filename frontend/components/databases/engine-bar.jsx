@@ -97,6 +97,7 @@ export function EngineBar({ engines = [], canManage, summary }) {
         open={pending !== null}
         choosing={["mysql", "mariadb"].includes(pending?.engine) && !running.some((e) => ["mysql", "mariadb"].includes(e.engine))}
         onOpenChange={(next) => !next && setPending(null)}
+        onSuccess={() => setPending(null)}
       />
     </div>
   );
