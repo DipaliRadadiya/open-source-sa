@@ -63,6 +63,8 @@ return new class extends Migration
 
             // Runtime — only one applies, decided by the serving profile.
             $table->string('php_version')->nullable();
+            // Null means this site still uses the server-wide PHP pool.
+            $table->timestamp('isolated_at')->nullable();
             $table->string('node_version')->nullable();
             $table->unsignedInteger('app_port')->nullable();
             // php | ssr | csr | static — how a git repository is served. Only
@@ -99,6 +101,7 @@ return new class extends Migration
             // server-ops log reference for that failure.
             $table->json('steps')->nullable();
             $table->string('failed_step')->nullable();
+            $table->timestamp('provisioning_started_at')->nullable();
             $table->string('reference')->nullable();
 
             // Last successful git deploy — the commit actually on disk, which
@@ -106,6 +109,7 @@ return new class extends Migration
             $table->string('last_commit')->nullable();
             $table->timestamp('last_deployed_at')->nullable();
             $table->unsignedBigInteger('directory_size_bytes')->nullable();
+            $table->timestamp('directory_size_updated_at')->nullable();
 
             // Deploy-on-push. `webhook_identifier` is the public part, and only
             // names the application — it is not a credential, so it can sit in

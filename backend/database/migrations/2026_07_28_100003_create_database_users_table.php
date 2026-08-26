@@ -19,7 +19,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('database_id')->constrained()->cascadeOnDelete();
             $table->string('username');
-            $table->text('password'); // encrypted cast
+            $table->text('password')->nullable(); // encrypted when known; null for adopted users
             $table->string('connection_preference')->default('localhost'); // localhost | remote | anywhere
             $table->string('host')->default('localhost');
             $table->timestamps();

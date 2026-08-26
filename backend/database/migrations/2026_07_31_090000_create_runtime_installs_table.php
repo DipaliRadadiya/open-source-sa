@@ -36,6 +36,10 @@ return new class extends Migration
 
             $table->string('status');
 
+            // Progress derived from installer output; output is bounded on write.
+            $table->string('current_step')->nullable();
+            $table->text('output')->nullable();
+
             // A stable code (`package_not_found`, `apt_lock`, `worker`, …).
             // The human sentence is built from this at read time in the
             // viewer's locale; raw stderr is never stored here — it stays in

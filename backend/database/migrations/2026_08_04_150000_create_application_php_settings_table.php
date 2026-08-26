@@ -35,6 +35,7 @@ return new class extends Migration
             $table->unsignedInteger('pm_max_requests')->nullable();
 
             $table->boolean('open_basedir_enabled')->default(false);
+            $table->text('open_basedir_paths')->nullable();
             $table->text('disable_functions')->nullable();
             $table->boolean('allow_url_fopen')->nullable();
             $table->string('php_timezone')->nullable();
@@ -48,20 +49,10 @@ return new class extends Migration
 
             $table->timestamps();
         });
-
-        Schema::table('applications', function (Blueprint $table) {
-            // When this site got its own pool. Null means it is still sharing
-            // the server-wide pool, which is what every site does today.
-            $table->timestamp('isolated_at')->nullable()->after('php_version');
-        });
     }
 
     public function down(): void
     {
-        Schema::table('applications', function (Blueprint $table) {
-            $table->dropColumn('isolated_at');
-        });
-
         Schema::dropIfExists('application_php_settings');
     }
 };

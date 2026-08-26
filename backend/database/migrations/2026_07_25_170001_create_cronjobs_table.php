@@ -17,6 +17,8 @@ return new class extends Migration
             // unlike the auto-increment id). Always set by the app on create;
             // nullable at the DB level only.
             $table->string('slug')->nullable()->unique();
+            // Original server path for an adopted job; null for panel-created jobs.
+            $table->string('source_path')->nullable();
             // The OS user the job runs as — canonical, always set. May be a
             // panel System User or a default/unmanaged account (root, www-data).
             $table->string('username')->index();

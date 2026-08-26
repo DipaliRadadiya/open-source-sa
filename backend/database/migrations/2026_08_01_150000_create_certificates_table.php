@@ -62,6 +62,10 @@ return new class extends Migration
             $table->timestamp('issued_at')->nullable();
             $table->timestamp('expires_at')->nullable();
 
+            // What the web server is actually presenting, which may differ from disk.
+            $table->timestamp('served_expires_at')->nullable();
+            $table->timestamp('served_checked_at')->nullable();
+
             // A classified code, never raw certbot output — the same rule the
             // runtime installer follows. Rendered into a sentence in the
             // viewer's locale at read time.
