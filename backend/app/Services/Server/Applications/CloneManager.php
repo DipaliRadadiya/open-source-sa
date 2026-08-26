@@ -192,9 +192,13 @@ class CloneManager
             throw new CloneOperationException($result->reference);
         }
 
-        $this->serverOps->run(
+        $ownership = $this->serverOps->run(
             ['chown', '-R', "{$owner->systemUser->username}:{$owner->systemUser->username}", $destination],
             ['feature' => 'application', 'op' => 'clone_rsync_chown', 'application' => $owner->id],
         );
+
+        if ($ownership->failed()) {
+            throw new CloneOperationException($ownership->reference, $ownership->busy, $ownership->staleLock);
+        }
     }
 }

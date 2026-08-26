@@ -4,6 +4,8 @@ namespace App\Services\Server\Applications;
 
 use App\Contracts\StagingStrategy;
 use App\Exceptions\Server\Application\StagingOperationException;
+use App\Exceptions\Server\Application\StagingRollbackException;
+use App\Exceptions\Server\ServerOperationException;
 use App\Models\Application;
 use App\Models\Database;
 use App\Services\Applications\SiteTypeManager;
@@ -168,14 +170,38 @@ class StagingManager
         $production->load('systemUser');
         $staging->load('systemUser');
 
+        $rollbackDirectory = $production->panelPath().'/staging-rollbacks/'.Str::uuid();
+        $fileSnapshot = $rollbackDirectory.'/files';
+        $databaseSnapshot = null;
+
+        try {
+            $this->snapshotFiles($production, $fileSnapshot);
+        } catch (Throwable $failure) {
+            $this->discardFileSnapshot($production, $rollbackDirectory);
+
+            throw $failure;
+        }
+
         if ($mode === 'full') {
-            $this->safetyDump($production);
+            try {
+                $databaseSnapshot = $this->safetyDump($production);
+            } catch (Throwable $failure) {
+                $this->discardFileSnapshot($production, $rollbackDirectory);
+
+                throw $failure;
+            }
         }
 
         // A visitor mid-checkout must never see the site half-swapped —
         // the same "unavailable" page enable/disable already trusts, reused
         // rather than a second maintenance-mode mechanism invented here.
-        $this->provisioner->disable($production);
+        try {
+            $this->provisioner->disable($production);
+        } catch (Throwable $failure) {
+            $this->discardFileSnapshot($production, $rollbackDirectory);
+
+            throw $failure;
+        }
 
         try {
             $this->rsync(
@@ -185,12 +211,43 @@ class StagingManager
             );
 
             $strategy->push($production, $staging, $mode);
-        } finally {
-            // Re-enabled even if the push itself failed partway — a site
-            // left showing "unavailable" forever because a push errored is
-            // worse than one serving whatever state the rsync got to.
             $this->provisioner->enable($production);
+        } catch (Throwable $pushFailure) {
+            try {
+                $this->restoreFiles($production, $fileSnapshot);
+
+                if ($databaseSnapshot !== null) {
+                    $database = $databaseSnapshot['database'];
+                    $this->databases->engine($database->engine)->restore($database->name, $databaseSnapshot['path']);
+                }
+
+                $production->refresh();
+
+                if ($production->disabled_at !== null) {
+                    $this->provisioner->enable($production);
+                }
+
+                $this->discardFileSnapshot($production, $rollbackDirectory);
+            } catch (Throwable $rollbackFailure) {
+                $reference = $this->failureReference($rollbackFailure);
+
+                Log::channel('server-ops')->critical('staging push rollback failed', [
+                    'feature' => 'application',
+                    'op' => 'staging_push_rollback',
+                    'application' => $production->id,
+                    'reference' => $reference,
+                    'push_reference' => $this->failureReference($pushFailure),
+                    'rollback_reference' => $reference,
+                    'rollback_directory' => $rollbackDirectory,
+                ]);
+
+                throw new StagingRollbackException($reference);
+            }
+
+            throw $pushFailure;
         }
+
+        $this->discardFileSnapshot($production, $rollbackDirectory);
     }
 
     private function strategyFor(Application $production): ?StagingStrategy
@@ -214,10 +271,84 @@ class StagingManager
             throw new StagingOperationException($result->reference);
         }
 
-        $this->serverOps->run(
+        $ownership = $this->serverOps->run(
             ['chown', '-R', "{$owner->systemUser->username}:{$owner->systemUser->username}", $destination],
             ['feature' => 'application', 'op' => 'staging_rsync_chown', 'application' => $owner->id],
         );
+
+        if ($ownership->failed()) {
+            throw new StagingOperationException($ownership->reference, $ownership->busy, $ownership->staleLock);
+        }
+    }
+
+    private function snapshotFiles(Application $production, string $destination): void
+    {
+        $directory = $this->serverOps->run(
+            ['mkdir', '-p', $destination],
+            ['feature' => 'application', 'op' => 'staging_snapshot_dir', 'application' => $production->id],
+        );
+
+        if ($directory->failed()) {
+            throw new StagingOperationException($directory->reference, $directory->busy, $directory->staleLock);
+        }
+
+        $snapshot = $this->serverOps->run(
+            ['rsync', '-a', '--delete', rtrim($this->provisioner->documentRoot($production), '/').'/', rtrim($destination, '/').'/'],
+            ['feature' => 'application', 'op' => 'staging_snapshot', 'application' => $production->id],
+            timeout: 300,
+        );
+
+        if ($snapshot->failed()) {
+            throw new StagingOperationException($snapshot->reference, $snapshot->busy, $snapshot->staleLock);
+        }
+    }
+
+    private function restoreFiles(Application $production, string $snapshot): void
+    {
+        $destination = $this->provisioner->documentRoot($production);
+        $restored = $this->serverOps->run(
+            ['rsync', '-a', '--delete', rtrim($snapshot, '/').'/', rtrim($destination, '/').'/'],
+            ['feature' => 'application', 'op' => 'staging_restore_files', 'application' => $production->id],
+            timeout: 300,
+        );
+
+        if ($restored->failed()) {
+            throw new StagingOperationException($restored->reference, $restored->busy, $restored->staleLock);
+        }
+
+        $ownership = $this->serverOps->run(
+            ['chown', '-R', "{$production->systemUser->username}:{$production->systemUser->username}", $destination],
+            ['feature' => 'application', 'op' => 'staging_restore_chown', 'application' => $production->id],
+        );
+
+        if ($ownership->failed()) {
+            throw new StagingOperationException($ownership->reference, $ownership->busy, $ownership->staleLock);
+        }
+    }
+
+    private function discardFileSnapshot(Application $production, string $directory): void
+    {
+        $removed = $this->serverOps->run(
+            ['rm', '-rf', $directory],
+            ['feature' => 'application', 'op' => 'staging_snapshot_cleanup', 'application' => $production->id],
+        );
+
+        if ($removed->failed()) {
+            Log::channel('server-ops')->warning('could not remove staging rollback files', [
+                'feature' => 'application',
+                'op' => 'staging_snapshot_cleanup',
+                'application' => $production->id,
+                'reference' => $removed->reference,
+                'rollback_directory' => $directory,
+            ]);
+        }
+    }
+
+    private function failureReference(Throwable $failure): string
+    {
+        return $failure instanceof ServerOperationException
+            ? $failure->reference
+            : (string) Str::uuid();
     }
 
     /**
@@ -227,23 +358,34 @@ class StagingManager
      * may not exist), just a same-box safety net for the one irreversible
      * part of a push. Kept, not pruned — a handful of SQL files is cheap,
      * and this is the file someone reaches for the day a push goes wrong.
+     *
+     * @return array{database: Database, path: string}|null
      */
-    private function safetyDump(Application $production): void
+    private function safetyDump(Application $production): ?array
     {
         $database = Database::where('application_id', $production->id)->first();
 
         if ($database === null) {
-            return;
+            return null;
         }
 
         // Above the document root: this is a full dump of the production
         // database, and inside the served directory the only thing between it
         // and the internet is a vhost deny rule.
         $directory = $production->panelPath().'/staging-backups';
-        $path = $directory.'/pre-push-'.now()->format('Ymd-His').'.sql';
+        $path = $directory.'/pre-push-'.now()->format('Ymd-His').'-'.Str::lower(Str::random(6)).'.sql';
 
-        $this->serverOps->run(['mkdir', '-p', $directory], ['feature' => 'application', 'op' => 'staging_safety_dir', 'application' => $production->id]);
+        $created = $this->serverOps->run(
+            ['mkdir', '-p', $directory],
+            ['feature' => 'application', 'op' => 'staging_safety_dir', 'application' => $production->id],
+        );
+
+        if ($created->failed()) {
+            throw new StagingOperationException($created->reference, $created->busy, $created->staleLock);
+        }
 
         $this->databases->engine($database->engine)->dump($database->name, $path);
+
+        return ['database' => $database, 'path' => $path];
     }
 }

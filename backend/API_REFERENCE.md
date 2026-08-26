@@ -1981,12 +1981,21 @@ Create a staging clone.
 
 Push staging changes back to production.
 
-**Request:** `{"mode": "full|partial"}`
+**Request:** `{"mode": "files|full"}`
 
-- `full` — replace production files + database.
-- `partial` — database only (safer).
+- `files` — replace production files only; production uploads, caches, VCS metadata, build artefacts, logs and panel bookkeeping are excluded.
+- `full` — replace production files and database. The panel writes a private production database dump before making changes.
+
+Before either mode changes production, the panel creates a temporary private file snapshot. If the push fails, it restores the files (and the database for `full`) before bringing production back online. A successful push or successful recovery removes the temporary file snapshot; the pre-push SQL dump is retained.
 
 **Response `200`:** `{"application": {...updated production record...}}`
+
+**Recovery failure `500`:**
+```json
+{"message":"The staging push failed and production could not be restored. The site remains disabled. Quote the reference to support.","code":"staging_rollback_failed","reference":"…"}
+```
+
+When recovery itself fails, production deliberately remains disabled and the private recovery files are preserved. The `reference` correlates with the server-operations log.
 
 ---
 

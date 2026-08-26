@@ -26,6 +26,7 @@ return [
     'waf_unsupported' => 'The 8G Firewall is not available on :server yet.',
     'waf_failed' => 'Changing the firewall settings failed on the server.',
     'staging_failed' => 'The staging operation failed on the server.',
+    'staging_rollback_failed' => 'The staging push failed and production could not be restored. The site remains disabled. Quote the reference to support.',
     'clone_failed' => 'The clone operation failed on the server.',
     'fail2ban_failed' => 'The fail2ban operation failed on the server.',
 

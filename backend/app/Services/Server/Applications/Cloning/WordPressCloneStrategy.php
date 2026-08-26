@@ -138,11 +138,20 @@ class WordPressCloneStrategy implements CloneStrategy
             throw new CloneOperationException($written->reference);
         }
 
-        $this->serverOps->run(['chmod', '0640', $path], $this->context($application, 'clone_chmod'));
-        $this->serverOps->run(
+        $mode = $this->serverOps->run(['chmod', '0640', $path], $this->context($application, 'clone_chmod'));
+
+        if ($mode->failed()) {
+            throw new CloneOperationException($mode->reference, $mode->busy, $mode->staleLock);
+        }
+
+        $ownership = $this->serverOps->run(
             ['chown', "{$application->systemUser->username}:{$application->systemUser->username}", $path],
             $this->context($application, 'clone_chown'),
         );
+
+        if ($ownership->failed()) {
+            throw new CloneOperationException($ownership->reference, $ownership->busy, $ownership->staleLock);
+        }
     }
 
     /** @return array<string, string> */

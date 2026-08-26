@@ -26,6 +26,7 @@ return [
     'waf_unsupported' => 'Die 8G-Firewall ist auf :server noch nicht verfügbar.',
     'waf_failed' => 'Das Ändern der Firewall-Einstellungen ist auf dem Server fehlgeschlagen.',
     'staging_failed' => 'Der Staging-Vorgang ist auf dem Server fehlgeschlagen.',
+    'staging_rollback_failed' => 'Der Staging-Push ist fehlgeschlagen und die Produktionswebsite konnte nicht wiederhergestellt werden. Die Website bleibt deaktiviert. Nennen Sie dem Support die Referenz.',
     'clone_failed' => 'Der Klonvorgang ist auf dem Server fehlgeschlagen.',
     'fail2ban_failed' => 'Der Fail2ban-Vorgang ist auf dem Server fehlgeschlagen.',
 

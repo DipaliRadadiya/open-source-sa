@@ -26,6 +26,7 @@ return [
     'waf_unsupported' => 'Le pare-feu 8G n\'est pas encore disponible sur :server.',
     'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
     'staging_failed' => 'L\'opération de staging a échoué sur le serveur.',
+    'staging_rollback_failed' => 'La publication depuis le staging a échoué et la production n\'a pas pu être restaurée. Le site reste désactivé. Communiquez la référence au support.',
     'clone_failed' => 'L\'opération de clonage a échoué sur le serveur.',
     'fail2ban_failed' => 'L\'opération fail2ban a échoué sur le serveur.',
 

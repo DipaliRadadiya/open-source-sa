@@ -144,10 +144,14 @@ class WordPressStagingStrategy implements StagingStrategy
 
     private function writeMailTrap(Application $staging, string $documentRoot): void
     {
-        $this->serverOps->run(
+        $directory = $this->serverOps->run(
             ['mkdir', '-p', "{$documentRoot}/wp-content/mu-plugins"],
             $this->context($staging, 'staging_mu_plugins_dir'),
         );
+
+        if ($directory->failed()) {
+            throw new StagingOperationException($directory->reference, $directory->busy, $directory->staleLock);
+        }
 
         $contents = View::make('server.apps.wordpress.mu-plugin-trap-mail')->render();
 
@@ -213,11 +217,20 @@ class WordPressStagingStrategy implements StagingStrategy
             throw new StagingOperationException($written->reference);
         }
 
-        $this->serverOps->run(['chmod', $mode, $path], $this->context($application, 'staging_chmod'));
-        $this->serverOps->run(
+        $modeResult = $this->serverOps->run(['chmod', $mode, $path], $this->context($application, 'staging_chmod'));
+
+        if ($modeResult->failed()) {
+            throw new StagingOperationException($modeResult->reference, $modeResult->busy, $modeResult->staleLock);
+        }
+
+        $ownership = $this->serverOps->run(
             ['chown', "{$application->systemUser->username}:{$application->systemUser->username}", $path],
             $this->context($application, 'staging_chown'),
         );
+
+        if ($ownership->failed()) {
+            throw new StagingOperationException($ownership->reference, $ownership->busy, $ownership->staleLock);
+        }
     }
 
     /** @return array<string, string> */

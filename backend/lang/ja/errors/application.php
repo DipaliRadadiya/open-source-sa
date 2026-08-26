@@ -26,6 +26,7 @@ return [
     'waf_unsupported' => '8G ファイアウォールは :server ではまだ利用できません。',
     'waf_failed' => 'ファイアウォール設定の変更がサーバーで失敗しました。',
     'staging_failed' => 'ステージング操作がサーバーで失敗しました。',
+    'staging_rollback_failed' => 'ステージングの反映に失敗し、本番環境を復元できませんでした。サイトは無効のままです。参照番号をサポートにお伝えください。',
     'clone_failed' => 'クローン操作がサーバーで失敗しました。',
     'fail2ban_failed' => 'fail2ban操作がサーバーで失敗しました。',
 

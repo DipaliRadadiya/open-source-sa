@@ -254,4 +254,88 @@ describe('when a clone fails partway', function () {
 
         expect($record->reason)->not->toBeEmpty();
     });
+
+    it('does not report success when copied files cannot be owned by the site user', function () {
+        $filesCopied = false;
+
+        Process::fake(function ($process) use (&$filesCopied) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
+                return Process::result(exitCode: 0);
+            }
+
+            if (($args[0] ?? '') === 'rsync') {
+                $filesCopied = true;
+
+                return Process::result(exitCode: 0);
+            }
+
+            if ($filesCopied && ($args[0] ?? '') === 'chown' && ($args[1] ?? '') === '-R') {
+                return Process::result(exitCode: 1, errorOutput: 'ownership denied');
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $source = Application::forceCreate([
+            'system_user_id' => $this->systemUser->id,
+            'name' => 'Docs',
+            'slug' => 'docs', 'domain' => 'docs.test', 'site_type' => 'static',
+            'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
+        ]);
+
+        $record = runClone($source, 'docs-clone.test');
+
+        expect($record->status->value)->toBe('failed')
+            ->and($record->target_application_id)->toBeNull()
+            ->and(Application::where('domain', 'docs-clone.test')->exists())->toBeFalse();
+    });
+
+    it('does not keep a WordPress clone whose secret config cannot be secured', function (string $command) {
+        Process::fake(function ($process) use ($command) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
+                return Process::result(exitCode: 0);
+            }
+
+            if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+                && str_contains((string) $process->input, 'information_schema.schemata')) {
+                return Process::result(output: '1');
+            }
+
+            if (($args[0] ?? '') === $command && str_ends_with((string) end($args), '/wp-config.php')) {
+                return Process::result(exitCode: 1, errorOutput: 'permission denied');
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $source = Application::forceCreate([
+            'system_user_id' => $this->systemUser->id,
+            'name' => 'Shop',
+            'slug' => 'shop', 'domain' => 'shop.test', 'site_type' => 'wordpress',
+            'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
+        ]);
+
+        $database = Database::create([
+            'name' => 'shop_db',
+            'engine' => 'mysql',
+            'application_id' => $source->id,
+        ]);
+        DatabaseUser::create([
+            'database_id' => $database->id,
+            'username' => 'shop_user',
+            'password' => 'secret',
+            'connection_preference' => 'localhost',
+            'host' => 'localhost',
+        ]);
+
+        $record = runClone($source, 'shop-clone.test');
+
+        expect($record->status->value)->toBe('failed')
+            ->and($record->target_application_id)->toBeNull()
+            ->and(Application::where('domain', 'shop-clone.test')->exists())->toBeFalse();
+    })->with(['chmod', 'chown']);
 });

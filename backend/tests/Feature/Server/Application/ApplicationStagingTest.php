@@ -205,15 +205,29 @@ it('dumps a local safety copy before a full push', function () {
         ->and($this->production->fresh()->disabled_at)->toBeNull(); // re-enabled after the push
 });
 
-it('re-enables production even when the push fails partway', function () {
+it('restores production files before re-enabling when a push fails partway', function () {
     fakeStagingServer();
     $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
 
-    Process::fake(function ($process) {
+    $rsyncCalls = [];
+    $snapshotRemoved = false;
+
+    Process::fake(function ($process) use (&$rsyncCalls, &$snapshotRemoved) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         if (($args[0] ?? '') === 'rsync') {
-            return Process::result(exitCode: 1, errorOutput: 'rsync failed');
+            $rsyncCalls[] = $args;
+
+            // Snapshot succeeds, staging -> production fails, snapshot ->
+            // production succeeds. The site may only come back after #3.
+            if (count($rsyncCalls) === 2) {
+                return Process::result(exitCode: 1, errorOutput: 'push rsync failed');
+            }
+        }
+
+        if (($args[0] ?? '') === 'rm' && ($args[1] ?? '') === '-rf'
+            && str_contains((string) ($args[2] ?? ''), '/staging-rollbacks/')) {
+            $snapshotRemoved = true;
         }
 
         return Process::result(exitCode: 0);
@@ -223,7 +237,84 @@ it('re-enables production even when the push fails partway', function () {
         ->postJson(stagingUrl().'/push', ['mode' => 'files'])
         ->assertStatus(500);
 
-    expect($this->production->fresh()->disabled_at)->toBeNull();
+    expect($rsyncCalls)->toHaveCount(3)
+        ->and(implode(' ', $rsyncCalls[0]))->toContain('/staging-rollbacks/')
+        ->and(implode(' ', $rsyncCalls[2]))->toContain('/staging-rollbacks/')
+        ->and($snapshotRemoved)->toBeTrue()
+        ->and($this->production->fresh()->disabled_at)->toBeNull();
+});
+
+it('restores the production database as well as files after a full push fails', function () {
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $rsyncCalls = [];
+    $databaseRestores = [];
+
+    Process::fake(function ($process) use (&$rsyncCalls, &$databaseRestores) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'rsync') {
+            $rsyncCalls[] = $args;
+        }
+
+        if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true) && in_array('-e', $args, true)) {
+            $databaseRestores[] = (string) ($args[array_search('-e', $args, true) + 1] ?? '');
+        }
+
+        // Fail after staging's database has already replaced production.
+        if (($args[0] ?? '') === 'runuser' && in_array('search-replace', $args, true)) {
+            return Process::result(exitCode: 1, errorOutput: 'url rewrite failed');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'full'])
+        ->assertStatus(500);
+
+    expect($rsyncCalls)->toHaveCount(3)
+        ->and($databaseRestores)->toHaveCount(2)
+        ->and($databaseRestores[1])->toContain('/staging-backups/pre-push-')
+        ->and($this->production->fresh()->disabled_at)->toBeNull();
+});
+
+it('leaves production disabled and preserves recovery files when rollback fails', function () {
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $rsyncCount = 0;
+    $snapshotRemoved = false;
+
+    Process::fake(function ($process) use (&$rsyncCount, &$snapshotRemoved) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'rsync') {
+            $rsyncCount++;
+
+            if ($rsyncCount >= 2) {
+                return Process::result(exitCode: 1, errorOutput: $rsyncCount === 2 ? 'push failed' : 'restore failed');
+            }
+        }
+
+        if (($args[0] ?? '') === 'rm' && ($args[1] ?? '') === '-rf'
+            && str_contains((string) ($args[2] ?? ''), '/staging-rollbacks/')) {
+            $snapshotRemoved = true;
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'files'])
+        ->assertStatus(500)
+        ->assertJsonPath('code', 'staging_rollback_failed')
+        ->assertJsonPath('message', __('errors/application.staging_rollback_failed'));
+
+    expect($rsyncCount)->toBe(3)
+        ->and($snapshotRemoved)->toBeFalse()
+        ->and($this->production->fresh()->disabled_at)->not->toBeNull();
 });
 
 it('never runs the marketplace installer against the copied files', function () {
@@ -314,4 +405,66 @@ describe('when creating staging fails', function () {
         expect($message)->toContain('test_config')
             ->and($message)->toMatch('/reference [0-9a-f-]{36}/');
     });
+
+    it('does not activate staging when copied files cannot be owned by the site user', function () {
+        $filesCopied = false;
+
+        Process::fake(function ($process) use (&$filesCopied) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
+                return Process::result(exitCode: 0);
+            }
+
+            if (($args[0] ?? '') === 'rsync') {
+                $filesCopied = true;
+
+                return Process::result(exitCode: 0);
+            }
+
+            if ($filesCopied && ($args[0] ?? '') === 'chown' && ($args[1] ?? '') === '-R') {
+                return Process::result(exitCode: 1, errorOutput: 'ownership denied');
+            }
+
+            if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+                && str_contains((string) $process->input, 'information_schema.schemata')) {
+                return Process::result(output: '1');
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
+            ->assertStatus(500);
+
+        expect(Application::where('production_application_id', $this->production->id)->exists())->toBeFalse();
+    });
+
+    it('does not keep staging when its secret config cannot be secured', function (string $command) {
+        Process::fake(function ($process) use ($command) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
+                return Process::result(exitCode: 0);
+            }
+
+            if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+                && str_contains((string) $process->input, 'information_schema.schemata')) {
+                return Process::result(output: '1');
+            }
+
+            if (($args[0] ?? '') === $command && str_ends_with((string) end($args), '/wp-config.php')) {
+                return Process::result(exitCode: 1, errorOutput: 'permission denied');
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
+            ->assertStatus(500);
+
+        expect(Application::where('production_application_id', $this->production->id)->exists())->toBeFalse();
+    })->with(['chmod', 'chown']);
 });
