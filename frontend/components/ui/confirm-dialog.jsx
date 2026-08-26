@@ -4,7 +4,6 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -107,17 +106,14 @@ export function ConfirmDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>
-          <AlertDialogAction
+          <Button
             variant={confirmVariant ?? (tone === "destructive" ? "destructive" : "default")}
             disabled={pending || confirmDisabled}
-            onClick={(e) => {
-              e.preventDefault();
-              onConfirm?.();
-            }}
+            onClick={() => onConfirm?.()}
           >
             {pending && <Loader2 className="size-4 animate-spin" />}
             {confirmLabel}
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

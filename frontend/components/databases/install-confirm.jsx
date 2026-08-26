@@ -68,15 +68,26 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
   }, [open, choosing]);
 
   const onConfirm = useCallback(async () => {
-    if (pending) return;
+    console.log("[DEBUG onConfirm] START", {
+      pending,
+      phase: phaseRef.current,
+      phaseState,
+      selected,
+      engine: engine?.engine,
+    });
+    if (pending) { console.log("[DEBUG onConfirm] early exit: pending"); return; }
     const currentPhase = phaseRef.current;
+    console.log("[DEBUG onConfirm] currentPhase=", currentPhase);
     if (currentPhase === "picker") {
-      if (!selected) return;
+      console.log("[DEBUG onConfirm] in picker phase, selected=", selected);
+      if (!selected) { console.log("[DEBUG onConfirm] early exit: no selected"); return; }
       setPhaseState("confirming");
+      console.log("[DEBUG onConfirm] transitioned to confirming, returning");
       return; // do not fire the install on the same click — show the warning first
     }
     const engineName = currentPhase === "picker" ? selected.engine : engine?.engine;
-    if (!engineName) return;
+    console.log("[DEBUG onConfirm] engineName=", engineName);
+    if (!engineName) { console.log("[DEBUG onConfirm] early exit: no engineName"); return; }
     setPending(true);
     try {
       const { data } = await installEngine(engineName);
