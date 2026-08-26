@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Loader2,
@@ -74,7 +75,27 @@ function Outcome({ chip, tint, Icon, title, children, action }) {
 
 export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun = false, onFinish }) {
   const t = useTranslations("panelUpdate");
+  const [reloadIn, setReloadIn] = useState(15);
+  const onFinishRef = useRef(onFinish);
   const pct = run.total_steps > 0 ? Math.round((run.step_number / run.total_steps) * 100) : 0;
+
+  useEffect(() => {
+    onFinishRef.current = onFinish;
+  }, [onFinish]);
+
+  useEffect(() => {
+    if (run.status !== "succeeded" || dryRun) return undefined;
+
+    const interval = window.setInterval(() => {
+      setReloadIn((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+    const timeout = window.setTimeout(() => onFinishRef.current(), 15000);
+
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(timeout);
+    };
+  }, [run.id, run.status, dryRun]);
 
   if (run.status === "succeeded") {
     return (
@@ -92,7 +113,7 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
         action={
           <Button onClick={onFinish}>
             <RotateCcw className="size-4" />
-            {dryRun ? t("dismiss") : t("reload")}
+            {dryRun ? t("dismiss") : t("reloadCountdown", { seconds: reloadIn })}
           </Button>
         }
       >

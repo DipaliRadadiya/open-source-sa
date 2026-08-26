@@ -4399,6 +4399,7 @@
     "dryRunDone": "Dry run complete",
     "dryRunDoneBody": "Nothing was changed. The run shows exactly what a real update would do.",
     "reload": "Reload panel",
+    "reloadCountdown": "Reload panel ({seconds}s)",
     "dismiss": "Done",
     "failed": "The update didn't finish",
     "rolledBack": "The previous version was restored, so the panel is still working.",

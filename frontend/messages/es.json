@@ -4394,6 +4394,7 @@
     "dryRunDone": "Simulación completada",
     "dryRunDoneBody": "No se cambió nada. La ejecución muestra exactamente lo que haría una actualización real.",
     "reload": "Recargar panel",
+    "reloadCountdown": "Recargar panel ({seconds} s)",
     "dismiss": "Hecho",
     "failed": "La actualización no se completó",
     "rolledBack": "Se restauró la versión anterior, por lo que el panel sigue funcionando.",
