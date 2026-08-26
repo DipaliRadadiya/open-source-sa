@@ -13,6 +13,10 @@ import {
 } from "@/lib/api/panel-update";
 import { apiMessage } from "@/lib/api/error-message";
 import { shouldRecoverPanelUpdate } from "@/lib/admin/recover-panel-update";
+import {
+  acknowledgePanelUpdate,
+  isPanelUpdateAcknowledged,
+} from "@/lib/admin/panel-update-acknowledgement";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -54,6 +58,23 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
   const [slow, setSlow] = useState(false);
 
   const activeRunId = isActive(run) ? run.id : null;
+
+  // A successful run remains the backend's latest_run after the browser has
+  // reloaded into the new code. Remember the run we reloaded for and hide that
+  // one on the next mount, otherwise it starts a fresh countdown forever.
+  useEffect(() => {
+    if (run?.status !== "succeeded") return undefined;
+    if (!isPanelUpdateAcknowledged(window.sessionStorage, run.id)) return undefined;
+
+    let live = true;
+    queueMicrotask(() => {
+      if (live) setRun(null);
+    });
+
+    return () => {
+      live = false;
+    };
+  }, [run?.id, run?.status]);
 
   // Poll only while a run is active. Same id + still active → no re-subscribe;
   // terminal → the effect re-runs and tears the interval down. Mid-update the
@@ -143,6 +164,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     // cases the running code is exactly what it was before, so reloading
     // would just replay the same page pointlessly.
     if (!dryRun && run?.status === "succeeded") {
+      acknowledgePanelUpdate(window.sessionStorage, run.id);
       window.location.reload();
       return;
     }
