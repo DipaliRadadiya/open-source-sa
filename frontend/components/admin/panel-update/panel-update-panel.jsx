@@ -56,19 +56,28 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [slow, setSlow] = useState(false);
+  // A terminal success may already have triggered a reload. Keep it out of
+  // the first paint until sessionStorage can say whether it is new or stale.
+  const [successReady, setSuccessReady] = useState(
+    initialState.latest_run?.status !== "succeeded",
+  );
 
   const activeRunId = isActive(run) ? run.id : null;
+  const visibleRun = run?.status === "succeeded" && !successReady ? null : run;
 
   // A successful run remains the backend's latest_run after the browser has
   // reloaded into the new code. Remember the run we reloaded for and hide that
   // one on the next mount, otherwise it starts a fresh countdown forever.
   useEffect(() => {
     if (run?.status !== "succeeded") return undefined;
-    if (!isPanelUpdateAcknowledged(window.sessionStorage, run.id)) return undefined;
 
     let live = true;
+    const acknowledged = isPanelUpdateAcknowledged(window.sessionStorage, run.id);
+
     queueMicrotask(() => {
-      if (live) setRun(null);
+      if (!live) return;
+      if (acknowledged) setRun(null);
+      setSuccessReady(true);
     });
 
     return () => {
@@ -223,7 +232,9 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
         <UpdateProgress run={run} reconnecting={reconnecting} slow={slow} dryRun={dryRun} onFinish={onFinish} />
       ) : (
         <>
-          {run ? <UpdateProgress run={run} dryRun={dryRun} onFinish={onFinish} /> : null}
+          {visibleRun ? (
+            <UpdateProgress run={visibleRun} dryRun={dryRun} onFinish={onFinish} />
+          ) : null}
 
           <Card className="gap-0 overflow-hidden py-0 shadow-sm">
             <UpdateHeader
