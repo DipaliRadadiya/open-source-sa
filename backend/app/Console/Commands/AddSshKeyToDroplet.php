@@ -7,13 +7,22 @@ use Illuminate\Support\Facades\Http;
 
 class AddSshKeyToDroplet extends Command
 {
-    protected $signature = 'droplet:add-ssh-key {droplet_id} {public_key}';
+    protected $signature = 'droplet:add-ssh-key
+                            {droplet_id}
+                            {public_key}
+                            {--token= : DigitalOcean API token}';
 
     protected $description = 'Add an SSH public key to a DigitalOcean droplet';
 
     public function handle(): int
     {
-        $token = config('services.digitalocean.token');
+        $token = $this->option('token') ?? config('services.digitalocean.token');
+
+        if (! $token) {
+            $this->error('No DO token. Pass --token= or set digitalocean.token in config.');
+            return self::FAILURE;
+        }
+
         $dropletId = $this->argument('droplet_id');
         $publicKey = $this->argument('public_key');
 

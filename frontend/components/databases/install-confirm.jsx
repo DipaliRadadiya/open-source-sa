@@ -62,6 +62,7 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
     if (phase === "picker") {
       if (!selected) return;
       setPhase("confirming");
+      return; // do not fire the install on the same click — show the warning first
     }
     const engineName = phase === "picker" ? selected.engine : engine?.engine;
     if (!engineName) return;
@@ -153,20 +154,29 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
   }
 
   // ── Confirming / single-engine confirm ─────────────────────────────────────
+  // `engine` may be null here when `choosing=true` and the user just clicked
+  // an option in the picker — the parent passes null so the single-engine
+  // branch doesn't render its own "Install?" dialog alongside the picker.
+  // Use `selected` as the source of truth in that case; it's only set when
+  // the picker was used (and the picker is SQL-only, so driver="sql").
+  const effectiveEngine = engine ?? selected;
+
+  if (!effectiveEngine) return null;
+
   return (
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
       icon={Database}
       tone="warning"
-      title={t("confirmInstall.title", { name: t(`engines.${engine.engine}`) })}
+      title={t("confirmInstall.title", { name: t(`engines.${effectiveEngine.engine}`) })}
       description={t("confirmInstall.description")}
       cancelLabel={t("cancel")}
       confirmLabel={pending ? t("install.installing") : t("confirmInstall.submit")}
       pending={pending}
       onConfirm={onConfirm}
     >
-      {engine.driver === "sql" ? (
+      {effectiveEngine.driver === "sql" ? (
         <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed">
           {t("install.oneSqlOnly")}
         </p>

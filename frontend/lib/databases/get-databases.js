@@ -24,10 +24,10 @@ export const getEngines = cache(async function getEngines() {
  * happen to hold.
  */
 export const getDatabases = cache(async function getDatabases(query = "") {
-  const { data, failed } = await read("/databases", databasesResponseSchema, {
+  const { data, failed, status, failure } = await read("/databases", databasesResponseSchema, {
     searchParams: listQuery(query, { filters: { engine: "engine" } }),
   });
-  return { databases: data?.databases ?? [], meta: data?.meta ?? EMPTY_LIST_META, failed };
+  return { databases: data?.databases ?? [], meta: data?.meta ?? EMPTY_LIST_META, failed, status, failure };
 });
 
 /**

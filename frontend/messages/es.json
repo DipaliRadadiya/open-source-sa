@@ -2300,7 +2300,12 @@
     "confirmInstall": {
       "title": "¿Instalar {name}?",
       "description": "El servidor lo descargará y lo configurará en segundo plano.",
-      "submit": "Instalar"
+      "submit": "Instalar",
+      "chooseEngine": {
+        "title": "Elige un motor SQL",
+        "description": "Ambos se ejecutan en el mismo puerto. Elige el que use tu aplicación.",
+        "submit": "Instalar motor"
+      }
     },
     "connection": {
       "title": "Conexión de {name}",

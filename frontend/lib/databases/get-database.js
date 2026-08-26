@@ -12,10 +12,16 @@ export const getDatabase = cache(async function getDatabase(id) {
     if (!res.ok) return { data: null, failed: true, status: res.status };
 
     const parsed = databaseResponseSchema.safeParse(await res.json());
-    return parsed.success
-      ? { data: parsed.data.database, failed: false }
-      : { data: null, failed: true };
-  } catch {
-    return { data: null, failed: true };
+    if (!parsed.success) {
+      const issue = parsed.error.issues?.[0];
+      console.error(
+        `[get-database] database ${id} shape mismatch${issue ? `: ${issue.path?.join(".")} — ${issue.message}` : ""}`,
+      );
+      return { data: null, failed: true, status: res.status, failure: "shape" };
+    }
+    return { data: parsed.data.database, failed: false, status: res.status, failure: null };
+  } catch (error) {
+    console.error(`[get-database] database ${id} network error:`, error?.message);
+    return { data: null, failed: true, status: null, failure: "network" };
   }
 });

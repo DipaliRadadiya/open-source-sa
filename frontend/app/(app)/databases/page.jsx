@@ -49,8 +49,8 @@ export default async function DatabasesPage({ searchParams }) {
   // table that then invites you to create a database nothing could store.
   const usable = engines.some((engine) => engine.running);
 
-  const [{ databases, meta: dbMeta }, untracked, connections, exportList, phpmyadmin] = await Promise.all([
-    usable ? getDatabases(query) : Promise.resolve({ databases: [] }),
+  const [{ databases, meta: dbMeta, failed: dbFailed, status: dbStatus, failure: dbFailure }, untracked, connections, exportList, phpmyadmin] = await Promise.all([
+    usable ? getDatabases(query) : Promise.resolve({ databases: [], failed: false }),
     usable && canManage ? getUntracked(engines) : Promise.resolve([]),
     // Needed most when nothing is reachable — that is when someone has to look
     // at these settings.
@@ -60,8 +60,10 @@ export default async function DatabasesPage({ searchParams }) {
     usable ? getExports() : Promise.resolve({ exports: [], failed: false }),
     // Whether this server has a phpMyAdmin to open at all. Without it the
     // button was offered on every row and refused on click.
-    getPhpmyadminSite(),
+    usable ? getPhpmyadminSite() : Promise.resolve(null),
   ]);
+
+  if (dbFailed) return <LoadFailed description={t("loadFailed")} status={dbStatus} failure={dbFailure} />;
 
   // The newest dump per database that you could actually restore from:
   // finished, and its file still on disk. A completed export whose file was
