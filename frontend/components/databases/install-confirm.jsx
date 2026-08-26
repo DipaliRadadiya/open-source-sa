@@ -37,6 +37,7 @@ const SQL_ENGINES = [
 export function InstallConfirm({ engine, open, onOpenChange, choosing = false, onSuccess }) {
   const t = useTranslations("databases");
   const [phase, setPhase] = useState(choosing ? "picker" : "confirming");
+  // Store as { engine, driver } objects to match what engine-state passes.
   const [selected, setSelected] = useState(null);
   // Distinct from `phase === "confirming"` because the single-engine branch
   // (MongoDB) starts in confirming too — using phase for the button's pending
@@ -105,14 +106,14 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
               // Both SQL engines are always available to pick in the choosing
               // dialog. engine-state already filtered installable rows before
               // offering the Install button, so no unavailable state is needed here.
-              const active = selected === sql;
+              const active = selected?.engine === sql;
               return (
                 <button
                   key={sql}
                   type="button"
                   role="radio"
                   aria-checked={active}
-                  onClick={() => setSelected(sql)}
+                  onClick={() => setSelected({ engine: sql, driver: "sql" })}
                   className={cn(
                     "flex flex-col gap-1.5 rounded-xl border px-4 py-3 text-left transition-colors",
                     active && "border-primary/60 bg-primary/5",
