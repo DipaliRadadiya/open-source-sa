@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CheckCircle2, Database } from "lucide-react";
@@ -36,82 +36,27 @@ const SQL_ENGINES = [
  */
 export function InstallConfirm({ engine, open, onOpenChange, choosing = false, onSuccess }) {
   const t = useTranslations("databases");
-  // phaseRef tracks the current phase WITHOUT triggering re-renders, so
-  // onConfirm's closure always sees the live value (no stale-closure bug).
-  // phaseState still drives rendering so React re-renders on phase transitions.
-  const [phaseState, setPhaseState] = useState(choosing ? "picker" : "confirming");
-  const phaseRef = useRef(phaseState);
-  // Store as { engine, driver } objects to match what engine-state passes.
-  const [selected, setSelected] = useState(null);
-  // Distinct from `phaseState === "confirming"` because the single-engine branch
-  // (MongoDB) starts in confirming too — using phaseState for the button's pending
-  // state shipped the dialog with the button already disabled and showing
-  // "Installing…", so nothing could ever be clicked. `pending` is the actual
-  // "API call in flight" flag and is only true between the click and the
-  // resolved/awaited response.
+
+  // phase tracks which step the dialog is on:
+  //   "picker"  — choosing between MySQL / MariaDB
+  //   "confirm" — showing the "Install X?" confirmation
+  const [phase, setPhase] = useState("picker");
+  // The engine the user picked in the picker (SQL engines only).
+  const [picked, setPicked] = useState(null);
+  // True while the API call is in flight.
   const [pending, setPending] = useState(false);
 
-  // Keep phaseRef in sync whenever phaseState changes.
-  useEffect(() => {
-    phaseRef.current = phaseState;
-  }, [phaseState]);
-
-  // Reset state when dialog opens fresh — only the picker actually changes
-  // phase; the single-engine branch stays in confirming, and `pending` is
-  // cleared so a previous failed install can be retried.
+  // Reset all state whenever the dialog opens fresh.
   useEffect(() => {
     if (open) {
-      setPhaseState(choosing ? "picker" : "confirming");
-      setSelected(null);
+      setPhase(choosing ? "picker" : "confirm");
+      setPicked(null);
       setPending(false);
     }
   }, [open, choosing]);
 
-  const onConfirm = useCallback(async () => {
-    console.log("[DEBUG onConfirm] START", {
-      pending,
-      phase: phaseRef.current,
-      phaseState,
-      selected,
-      engine: engine?.engine,
-    });
-    if (pending) { console.log("[DEBUG onConfirm] early exit: pending"); return; }
-    const currentPhase = phaseRef.current;
-    console.log("[DEBUG onConfirm] currentPhase=", currentPhase);
-    if (currentPhase === "picker") {
-      console.log("[DEBUG onConfirm] in picker phase, selected=", selected);
-      if (!selected) { console.log("[DEBUG onConfirm] early exit: no selected"); return; }
-      setPhaseState("confirming");
-      console.log("[DEBUG onConfirm] transitioned to confirming, returning");
-      return; // do not fire the install on the same click — show the warning first
-    }
-    const engineName = currentPhase === "picker" ? selected.engine : engine?.engine;
-    console.log("[DEBUG onConfirm] engineName=", engineName);
-    if (!engineName) { console.log("[DEBUG onConfirm] early exit: no engineName"); return; }
-    setPending(true);
-    try {
-      const { data } = await installEngine(engineName);
-      toast.success(
-        data?.queued === false ? t("install.already") : t("install.queued"),
-      );
-      // Tell the parent the install succeeded so it can close the dialog and
-      // clear the pending state that keeps it open. The parent is responsible
-      // for router.refresh() if it also wants a server re-render.
-      onSuccess?.();
-    } catch (error) {
-      toast.error(apiMessage(error, t("install.failed")));
-    } finally {
-      setPending(false);
-    }
-  }, [pending, selected, engine, onSuccess, t]);
-
-  if (!choosing && !engine) return null;
-  // ↑ "engine && choosing" can never both be falsy when choosing=true — engine
-  // is set to null in that case so this guard blocks the picker. The guard only
-  // needs to catch the "nothing to do" case.
-
-  // ── Choosing phase: pick MySQL or MariaDB ──────────────────────────────────
-  if (choosing && phaseState === "picker") {
+  // ── Picker step ─────────────────────────────────────────────────────────────
+  if (choosing && phase === "picker") {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-sm">
@@ -123,51 +68,44 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-3 py-2">
-            {SQL_ENGINES.map(({ engine: sql }) => {
-              // Both SQL engines are always available to pick in the choosing
-              // dialog. engine-state already filtered installable rows before
-              // offering the Install button, so no unavailable state is needed here.
-              const active = selected?.engine === sql;
-              return (
-                <button
-                  key={sql}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setSelected({ engine: sql, driver: "sql" })}
-                  className={cn(
-                    "flex flex-col gap-1.5 rounded-xl border px-4 py-3 text-left transition-colors",
-                    active && "border-primary/60 bg-primary/5",
-                    !active && "hover:border-primary/40 hover:bg-muted/40",
-                  )}
-                >
-                  <span className="flex items-center justify-between gap-2 font-medium">
-                    {t(`engines.${sql}`)}
-                    {active ? (
-                      <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
-                    ) : null}
-                  </span>
-                  <span className="text-xs leading-snug text-muted-foreground">
-                    {t(`install.hint.${sql}`)}
-                  </span>
-                </button>
-              );
-            })}
+            {SQL_ENGINES.map(({ engine: sql }) => (
+              <button
+                key={sql}
+                type="button"
+                role="radio"
+                aria-checked={picked?.engine === sql}
+                onClick={() => setPicked({ engine: sql, driver: "sql" })}
+                className={cn(
+                  "flex flex-col gap-1.5 rounded-xl border px-4 py-3 text-left transition-colors",
+                  picked?.engine === sql && "border-primary/60 bg-primary/5",
+                  picked?.engine !== sql && "hover:border-primary/40 hover:bg-muted/40",
+                )}
+              >
+                <span className="flex items-center justify-between gap-2 font-medium">
+                  {t(`engines.${sql}`)}
+                  {picked?.engine === sql ? (
+                    <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
+                  ) : null}
+                </span>
+                <span className="text-xs leading-snug text-muted-foreground">
+                  {t(`install.hint.${sql}`)}
+                </span>
+              </button>
+            ))}
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange?.(false)}
-            >
+            <Button variant="outline" onClick={() => onOpenChange?.(false)}>
               {t("cancel")}
             </Button>
             <Button
-              disabled={!selected || pending}
-              disabledReason={!selected ? t("chooseEngineFirst") : null}
-              onClick={onConfirm}
+              disabled={!picked || pending}
+              onClick={() => {
+                if (!picked) return;
+                setPhase("confirm");
+              }}
             >
-              {pending ? t("install.installing") : t("confirmInstall.chooseEngine.submit")}
+              {t("confirmInstall.chooseEngine.submit")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -175,15 +113,30 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
     );
   }
 
-  // ── Confirming / single-engine confirm ─────────────────────────────────────
-  // `engine` may be null here when `choosing=true` and the user just clicked
-  // an option in the picker — the parent passes null so the single-engine
-  // branch doesn't render its own "Install?" dialog alongside the picker.
-  // Use `selected` as the source of truth in that case; it's only set when
-  // the picker was used (and the picker is SQL-only, so driver="sql").
-  const effectiveEngine = engine ?? selected;
+  // ── Confirm step ───────────────────────────────────────────────────────────
+  // The engine to confirm: from the parent (single-engine path) or from the
+  // picker (SQL engine path).
+  const effectiveEngine = engine ?? picked;
 
   if (!effectiveEngine) return null;
+
+  async function handleConfirm() {
+    if (pending) return;
+    const engineName = effectiveEngine.engine;
+    if (!engineName) return;
+    setPending(true);
+    try {
+      const { data } = await installEngine(engineName);
+      toast.success(
+        data?.queued === false ? t("install.already") : t("install.queued"),
+      );
+      onSuccess?.();
+    } catch (error) {
+      toast.error(apiMessage(error, t("install.failed")));
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <ConfirmDialog
@@ -196,7 +149,7 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
       cancelLabel={t("cancel")}
       confirmLabel={pending ? t("install.installing") : t("confirmInstall.submit")}
       pending={pending}
-      onConfirm={onConfirm}
+      onConfirm={handleConfirm}
     >
       {effectiveEngine.driver === "sql" ? (
         <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed">
