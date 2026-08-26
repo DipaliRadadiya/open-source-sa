@@ -36,16 +36,17 @@ const SQL_ENGINES = [
  */
 export function InstallConfirm({ engine, open, onOpenChange, choosing = false }) {
   const t = useTranslations("databases");
-  const [phase, setPhase] = useState("picker");
+  const [phase, setPhase] = useState(choosing ? "picker" : "confirming");
   const [selected, setSelected] = useState(null);
 
-  // Reset picker phase when dialog opens fresh
+  // Reset picker phase when dialog opens fresh — only relevant when choosing,
+  // since the single-engine branch has no picker and stays in confirming.
   useEffect(() => {
     if (open) {
-      setPhase("picker");
+      setPhase(choosing ? "picker" : "confirming");
       setSelected(null);
     }
-  }, [open]);
+  }, [open, choosing]);
 
   async function onConfirm() {
     if (phase === "picker") {
