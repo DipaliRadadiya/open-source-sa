@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CheckCircle2, Database } from "lucide-react";
@@ -36,36 +36,46 @@ const SQL_ENGINES = [
  */
 export function InstallConfirm({ engine, open, onOpenChange, choosing = false, onSuccess }) {
   const t = useTranslations("databases");
-  const [phase, setPhase] = useState(choosing ? "picker" : "confirming");
+  // phaseRef tracks the current phase WITHOUT triggering re-renders, so
+  // onConfirm's closure always sees the live value (no stale-closure bug).
+  // phaseState still drives rendering so React re-renders on phase transitions.
+  const [phaseState, setPhaseState] = useState(choosing ? "picker" : "confirming");
+  const phaseRef = useRef(phaseState);
   // Store as { engine, driver } objects to match what engine-state passes.
   const [selected, setSelected] = useState(null);
-  // Distinct from `phase === "confirming"` because the single-engine branch
-  // (MongoDB) starts in confirming too — using phase for the button's pending
+  // Distinct from `phaseState === "confirming"` because the single-engine branch
+  // (MongoDB) starts in confirming too — using phaseState for the button's pending
   // state shipped the dialog with the button already disabled and showing
   // "Installing…", so nothing could ever be clicked. `pending` is the actual
   // "API call in flight" flag and is only true between the click and the
   // resolved/awaited response.
   const [pending, setPending] = useState(false);
 
+  // Keep phaseRef in sync whenever phaseState changes.
+  useEffect(() => {
+    phaseRef.current = phaseState;
+  }, [phaseState]);
+
   // Reset state when dialog opens fresh — only the picker actually changes
   // phase; the single-engine branch stays in confirming, and `pending` is
   // cleared so a previous failed install can be retried.
   useEffect(() => {
     if (open) {
-      setPhase(choosing ? "picker" : "confirming");
+      setPhaseState(choosing ? "picker" : "confirming");
       setSelected(null);
       setPending(false);
     }
   }, [open, choosing]);
 
-  async function onConfirm() {
+  const onConfirm = useCallback(async () => {
     if (pending) return;
-    if (phase === "picker") {
+    const currentPhase = phaseRef.current;
+    if (currentPhase === "picker") {
       if (!selected) return;
-      setPhase("confirming");
+      setPhaseState("confirming");
       return; // do not fire the install on the same click — show the warning first
     }
-    const engineName = phase === "picker" ? selected.engine : engine?.engine;
+    const engineName = currentPhase === "picker" ? selected.engine : engine?.engine;
     if (!engineName) return;
     setPending(true);
     try {
@@ -82,7 +92,7 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
     } finally {
       setPending(false);
     }
-  }
+  }, [pending, selected, engine, onSuccess, t]);
 
   if (!choosing && !engine) return null;
   // ↑ "engine && choosing" can never both be falsy when choosing=true — engine
@@ -90,7 +100,7 @@ export function InstallConfirm({ engine, open, onOpenChange, choosing = false, o
   // needs to catch the "nothing to do" case.
 
   // ── Choosing phase: pick MySQL or MariaDB ──────────────────────────────────
-  if (choosing && phase === "picker") {
+  if (choosing && phaseState === "picker") {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-sm">
