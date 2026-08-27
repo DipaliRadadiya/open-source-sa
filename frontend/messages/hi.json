@@ -2482,6 +2482,7 @@
         "threads_running": "एक साथ चल रही क्वेरी।"
       },
       "collecting": "अभी कोई इतिहास नहीं। माप हर 5 मिनट में लिया जाता है।",
+      "noActivity": "पिछले 24 घंटों में डेटाबेस की कोई गतिविधि दर्ज नहीं हुई।",
       "processes": "चल रही क्वेरी",
       "processesDescription": "काम कर रहे सक्रिय कनेक्शन। निष्क्रिय गिने जाते हैं, सूचीबद्ध नहीं।",
       "noProcesses": "अभी कुछ भी नहीं चल रहा।",
@@ -2552,7 +2553,7 @@
       },
       "runningQueries": "चल रही क्वेरी",
       "longRunningCount": "{count, plural, one {# लंबी चलने वाली} other {# लंबी चलने वाली}}",
-      "chartDescription": "Queries per second, connections, and running threads — 24 hours."
+      "chartDescription": "प्रति सेकंड क्वेरी, कनेक्शन और चल रहे थ्रेड, जिन्हें हर 5 मिनट में मापा जाता है।"
     },
     "tables": {
       "title": "टेबल",
