@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Play, RotateCw, Square } from "lucide-react";
 import { controlApplicationProcess } from "@/lib/api/applications";
@@ -10,6 +10,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatBytes } from "@/lib/format/bytes";
 
 const STATE_VARIANT = { active: "success", failed: "destructive", activating: "warning" };
 
@@ -31,11 +32,28 @@ const DONE_KEY = { start: "started", stop: "stopped", restart: "restarted" };
  */
 export function ProcessCard({ application, canManage = false, className }) {
   const t = useTranslations("applications.process");
+  const tApp = useTranslations("applications");
+  const format = useFormatter();
   const router = useRouter();
   const [pending, setPending] = useState(null);
 
   const process = application.process ?? {};
   const state = process.state ?? "unknown";
+  const stateLabel =
+    state === "active"
+      ? tApp("status.active")
+      : state === "inactive"
+        ? tApp("markers.processStopped")
+        : state === "failed"
+          ? tApp("markers.processFailed")
+          : state === "activating"
+            ? tApp("details.starting")
+            : state;
+  const memory =
+    formatBytes(process.memory, format) ??
+    (typeof process.memory === "string" && process.memory.trim()
+      ? process.memory.trim()
+      : "—");
   const notStartedYet = state !== "active" && !application.deployed;
 
   async function run(action) {
@@ -52,9 +70,9 @@ export function ProcessCard({ application, canManage = false, className }) {
   }
 
   const facts = [
-    { label: t("state"), value: process.sub_state ?? state },
+    { label: t("state"), value: stateLabel },
     { label: t("since"), value: process.since },
-    { label: t("memory"), value: process.memory },
+    { label: t("memory"), value: memory },
     { label: t("restarts"), value: process.restarts },
   ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");
 
@@ -63,7 +81,7 @@ export function ProcessCard({ application, canManage = false, className }) {
       <CardHeader className="gap-1.5">
         <CardTitle as="h2">{t("title")}</CardTitle>
         <Badge variant={STATE_VARIANT[state] ?? "secondary"} className="font-normal">
-          {state}
+          {stateLabel}
         </Badge>
       </CardHeader>
       <CardContent className="space-y-4">

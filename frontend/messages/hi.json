@@ -4312,7 +4312,7 @@
     "status": {
       "pending": "लंबित",
       "provisioning": "तैयार हो रहा है",
-      "active": "सक्रिय",
+      "active": "चल रहा है",
       "failed": "विफल"
     },
     "protection": {

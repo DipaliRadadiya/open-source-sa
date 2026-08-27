@@ -89,6 +89,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
           type="button"
           variant="outline"
           role="combobox"
+          aria-label={t("chooseType")}
           aria-expanded={open}
           className={cn(
             "h-auto w-full justify-between gap-2 py-2 font-normal",

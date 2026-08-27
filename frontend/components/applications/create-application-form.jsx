@@ -119,14 +119,14 @@ function toggleValue(value) {
 }
 
 
-function SectionHeading({ number, title, description }) {
+function SectionHeading({ number, title, description, headingId }) {
   return (
     <div className="flex items-start gap-3">
       <span className="flex size-6 shrink-0 items-center justify-center rounded-full border bg-background text-xs font-semibold text-muted-foreground">
         {number}
       </span>
       <div className="space-y-0.5">
-        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+        <h2 id={headingId} className="text-base font-semibold tracking-tight">{title}</h2>
         <p className="text-sm leading-5 text-muted-foreground">{description}</p>
       </div>
     </div>
@@ -1245,6 +1245,7 @@ export function CreateApplicationForm({
                 number="1"
                 title={t("guided.stageType")}
                 description={t("guided.typeHint")}
+                headingId="application-type-heading"
               />
               <FormField
                 control={form.control}
@@ -1257,7 +1258,7 @@ export function CreateApplicationForm({
                         carries a long tagline, which pushed the whole page into
                         horizontal scroll on a phone — the truncate inside never
                         got a chance because nothing above it was constrained. */}
-                    <div id="application-type-heading" className="min-w-0">
+                    <div className="min-w-0">
                       <SiteTypePicker
                         types={siteTypes}
                         value={field.value}
@@ -1278,6 +1279,7 @@ export function CreateApplicationForm({
                 number="2"
                 title={t("form.detailsTitle")}
                 description={t("form.detailsHint")}
+                headingId="application-details-heading"
               />
               <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">
                 <FormField
@@ -1456,6 +1458,7 @@ export function CreateApplicationForm({
                           }
                           onChange={field.onChange}
                           placeholder={t("systemUserPlaceholder")}
+                          ariaLabel={t("systemUser")}
                           disabled={availableSystemUsers.length === 0}
                           disabledReason={t("form.needsSystemUser")}
                         />
@@ -1494,9 +1497,10 @@ export function CreateApplicationForm({
                     ? t("guided.configureHint")
                     : t("form.chooseTypeHint")
                 }
+                headingId="application-configure-heading"
               />
               {selected ? (
-                <div className="space-y-5" id="application-configure-heading">
+                <div className="space-y-5">
                   {isGit ? (
                     <div className="space-y-4 border-b pb-5">
                       <div>
@@ -1816,7 +1820,6 @@ export function CreateApplicationForm({
                 </div>
               ) : (
                 <p
-                  id="application-configure-heading"
                   className="rounded-lg border border-dashed bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground"
                 >
                   {t("form.chooseTypeHint")}
