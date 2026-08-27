@@ -832,7 +832,6 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
             saveLabel={t("saveAction")}
             note={t("saveNote")}
             showReason
-            quietWhenClean
             savingNote={t("savingNote")}
           />
         </Card>

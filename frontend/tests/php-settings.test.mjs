@@ -92,6 +92,11 @@ test("PHP directive names stay inline with their labels", () => {
   assert.doesNotMatch(PHP_PANEL_SOURCE, /<Directive\b/);
 });
 
+test("PHP save keeps the standard disabled button style", () => {
+  assert.match(PHP_PANEL_SOURCE, /<CardSaveFooter/);
+  assert.doesNotMatch(PHP_PANEL_SOURCE, /quietWhenClean/);
+});
+
 test("auto_prepend_file cannot climb out of the site", () => {
   const field = phpSettingsFormSchema.shape.auto_prepend_file;
   assert.equal(field.safeParse("prepend.php").success, true);
