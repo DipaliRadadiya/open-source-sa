@@ -32,7 +32,7 @@ function UsageCell({ value, tone, label, format }) {
         aria-valuenow={Math.round(n)}
         aria-valuemin={0}
         aria-valuemax={100}
-        className="h-1.5 w-28 overflow-hidden rounded-full bg-primary/15"
+        className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-primary/15 xl:block"
       >
         <span
           className={cn("block h-full rounded-full", tone)}
@@ -149,7 +149,10 @@ export function ProcessTable({
       accessorKey: "command",
       header: t("processes.command"),
       enableSorting: false,
-      meta: { className: "w-[22%]" },
+      // The command is the row's identity, so it owns every pixel left after
+      // the compact fact columns. A minimum keeps it useful before the table
+      // falls back to horizontal scrolling; max-w-0 lets its child ellipsize.
+      meta: { className: "w-full min-w-64 max-w-0" },
       cell: CommandCell,
     },
     {
@@ -158,13 +161,13 @@ export function ProcessTable({
       accessorFn: (row) => num(row.pid),
       sortingFn: "basic",
       header: t("processes.pid"),
-      meta: { className: "w-[12%]" },
+      meta: { className: "w-20" },
       cell: PidCell,
     },
     {
       accessorKey: "user",
       header: t("processes.user"),
-      meta: { className: "w-[14%]" },
+      meta: { className: "w-28 max-w-28 truncate" },
       cell: UserCell,
     },
     {
@@ -172,7 +175,7 @@ export function ProcessTable({
       accessorFn: (row) => num(row.cpu),
       sortingFn: "basic",
       header: t("processes.cpu"),
-      meta: { className: "w-[24%]" },
+      meta: { className: "w-32 xl:w-52" },
       cell: CpuCell,
     },
     {
@@ -180,14 +183,14 @@ export function ProcessTable({
       accessorFn: (row) => num(row.memory),
       sortingFn: "basic",
       header: t("processes.memory"),
-      meta: { className: "w-[24%]" },
+      meta: { className: "w-32 xl:w-52" },
       cell: MemoryCell,
     },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("processes.actions")}</span>,
       enableSorting: false,
-      meta: { className: "w-[4%] text-right" },
+      meta: { className: "w-12 text-right" },
       cell: ActionsCell,
     },
   ];
@@ -210,7 +213,7 @@ export function ProcessTable({
           processes the server reports. */}
       <div
         className={cn(
-          "overflow-auto rounded-xl border [scrollbar-gutter:stable] [&>div]:rounded-none [&>div]:border-0",
+          "overflow-auto rounded-xl border [scrollbar-gutter:stable] [&_table]:min-w-[48rem] [&>div]:rounded-none [&>div]:border-0",
           // Only the full table needs capping; three rows never reach it.
           !limit && "max-h-[26rem]",
         )}
