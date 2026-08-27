@@ -63,6 +63,15 @@ export function QueryChart({ metrics = [], timeZone }) {
   const clock = clockFormatter(format, timeZone);
   const decimal = (value) =>
     format.number(Number(value), { maximumFractionDigits: 2 });
+  const axisNumber = (value) => {
+    const number = Number(value);
+    const compact = Math.abs(number) >= 1000;
+
+    return format.number(number, {
+      notation: compact ? "compact" : "standard",
+      maximumFractionDigits: compact ? 1 : 2,
+    });
+  };
 
   if (data.length < 2) {
     return <ChartNotice message={t("collecting")} />;
@@ -135,7 +144,7 @@ export function QueryChart({ metrics = [], timeZone }) {
 
       <CardContent>
         <ChartContainer config={config} className="h-72 w-full">
-          <ComposedChart data={data} margin={{ left: -12, right: 4, top: 8 }}>
+          <ComposedChart data={data} margin={{ left: 8, right: 4, top: 8 }}>
             <defs>
               <linearGradient id="database-qps" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={config.qps.color} stopOpacity={0.28} />
@@ -162,7 +171,7 @@ export function QueryChart({ metrics = [], timeZone }) {
               width={48}
               tickCount={4}
               domain={[0, (max) => Math.max(1, Number(max) * 1.1)]}
-              tickFormatter={decimal}
+              tickFormatter={axisNumber}
             />
             <YAxis
               yAxisId="count"

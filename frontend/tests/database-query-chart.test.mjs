@@ -49,6 +49,10 @@ test("database chart uses the shared history and chart presentation contracts", 
   assert.match(chart, /<Area[\s\S]*dataKey="qps"/);
   assert.match(chart, /type="number"[\s\S]*scale="time"/);
   assert.match(chart, /tickCount=\{5\}/);
+  assert.match(chart, /margin=\{\{ left: 8, right: 4, top: 8 \}\}/);
+  assert.doesNotMatch(chart, /margin=\{\{ left: -/);
+  assert.match(chart, /notation: compact \? "compact" : "standard"/);
+  assert.match(chart, /tickFormatter=\{axisNumber\}/);
   assert.match(chart, /labelFormatter=\{timeLabel\(clock\)\}/);
   assert.match(chart, /<ChartLegend content=\{orderedLegend\(config\)\}/);
   assert.equal((chart.match(/isAnimationActive=\{false\}/g) ?? []).length, 3);
