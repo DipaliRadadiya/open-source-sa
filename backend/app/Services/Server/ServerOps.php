@@ -2,6 +2,7 @@
 
 namespace App\Services\Server;
 
+use App\Support\CommandRedactor;
 use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -283,45 +284,11 @@ class ServerOps
     /**
      * Render a command for logs without persisting command-line secrets.
      *
-     * Some third-party installers accept a password only as an argv option.
-     * The process must receive that original option, but retaining it in the
-     * server-ops log after the process exits turns a brief exposure into a
-     * permanent one. Support both --option=value and --option value forms.
-     *
      * @param  array<int, string>  $command
      */
-    /** The option names whose values never belong in a log. */
-    //  on its own, not just : Moodle takes `--adminpass` and
-    // Nextcloud `--admin-pass`, neither of which contains the word this used
-    // to look for — so a real admin password went to the log in clear on every
-    // Moodle install. Over-matching (`--passive`) costs a redacted value in a
-    // log; under-matching costs a credential.
-    private const SECRET_WORDS = '(?:pass(?:wd|word|phrase)?|secret|token|api[-_]?key|private[-_]?key)';
-
     private function loggableCommand(array $command): string
     {
-        $arguments = [];
-        $redactNext = false;
-
-        foreach ($command as $argument) {
-            if ($redactNext) {
-                $arguments[] = '[REDACTED]';
-                $redactNext = false;
-
-                continue;
-            }
-
-            if (preg_match('/^(--[a-z0-9_-]*'.self::SECRET_WORDS.'[a-z0-9_-]*)(?:=(.*))?$/i', $argument, $matches)) {
-                $arguments[] = isset($matches[2]) ? $matches[1].'=[REDACTED]' : $matches[1];
-                $redactNext = ! isset($matches[2]);
-
-                continue;
-            }
-
-            $arguments[] = $argument;
-        }
-
-        return implode(' ', $arguments);
+        return CommandRedactor::arguments($command);
     }
 
     /**
@@ -345,14 +312,7 @@ class ServerOps
             $output = '…'.mb_substr($output, -$limit);
         }
 
-        // The same option names, matched inside free text rather than across
-        // argv: a tool that echoes the command it was given prints them as one
-        // string, where the argument-by-argument pass above never looks.
-        return (string) preg_replace(
-            '/(--[a-z0-9_-]*'.self::SECRET_WORDS.'[a-z0-9_-]*[= ])\S+/i',
-            '$1[REDACTED]',
-            $output,
-        );
+        return CommandRedactor::line($output);
     }
 
     private function isTransient(string $stderr): bool

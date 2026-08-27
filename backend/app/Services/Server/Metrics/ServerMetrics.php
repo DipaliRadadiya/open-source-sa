@@ -4,6 +4,7 @@ namespace App\Services\Server\Metrics;
 
 use App\Services\Server\ServerOps;
 use App\Support\Bytes;
+use App\Support\CommandRedactor;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -139,7 +140,7 @@ class ServerMetrics
         $limit = (int) config('server.metrics.processes_limit', 25);
 
         $output = $this->serverOps->run(
-            ['ps', '-eo', 'pid,user:20,%cpu,%mem,comm', '--sort=-%cpu'],
+            ['ps', '-eo', 'pid,user:20,%cpu,%mem,args', '--sort=-%cpu'],
             ['feature' => 'dashboard', 'op' => 'processes'],
         )->output();
 
@@ -154,7 +155,9 @@ class ServerMetrics
                 'user' => $parts[1],
                 'cpu' => (float) $parts[2],
                 'memory' => (float) $parts[3],
-                'command' => $parts[4],
+                // Keep the complete argv for diagnosis, but never let a
+                // credential-bearing option cross the API boundary.
+                'command' => CommandRedactor::line($parts[4]),
             ];
             if (count($processes) >= $limit) {
                 break;
