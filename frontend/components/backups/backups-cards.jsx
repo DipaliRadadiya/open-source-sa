@@ -134,7 +134,7 @@ export function BackupsCards({
                 ) : (
                   <Button
                     size="sm"
-                    variant={blocker ? "outline" : "destructive"}
+                    variant="destructive"
                     disabled={Boolean(blocker)}
                     disabledReason={blocker}
                     onClick={() => onRestore(backup)}

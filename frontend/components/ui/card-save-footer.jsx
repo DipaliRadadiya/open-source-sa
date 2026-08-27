@@ -33,10 +33,6 @@ export function CardSaveFooter({
   // the tooltip. Worth it on a long form, where "why is Save grey" is asked
   // often enough that it should not need a hover to answer.
   showReason = false,
-  // Greys the button while there is nothing to save, instead of leaving a
-  // faded primary that still reads as the thing to press. The settings cards
-  // deliberately do NOT do this — only forms that opt in.
-  quietWhenClean = false,
   // A card that saves one named thing can say so — "Save PHP settings" rather
   // than a bare "Save" that could belong to anything on the page.
   saveLabel,
@@ -79,7 +75,6 @@ export function CardSaveFooter({
         <ReasonTooltip reason={saveReason}>
           <Button
             type={submit ? "submit" : "button"}
-            variant={quietWhenClean && !dirty && !saving ? "secondary" : "default"}
             onClick={submit ? undefined : onSave}
             disabled={Boolean(saveReason) || saving}
             // Save labels are named after what they save ("Turn on attack

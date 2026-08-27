@@ -374,7 +374,6 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
             note={t("saveNote")}
             savingNote={t("savingNote")}
             showReason
-            quietWhenClean
           />
         </Tabs>
       </Card>

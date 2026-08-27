@@ -226,7 +226,7 @@ function ActionsCell({ row, table }) {
       <ReasonTooltip reason={blocker}>
         <Button
           size="sm"
-          variant={blocker ? "outline" : "destructive"}
+          variant="destructive"
           className="min-w-28"
           disabled={Boolean(blocker)}
           onClick={() => onRestore(backup)}
