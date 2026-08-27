@@ -35,10 +35,19 @@ export async function ProtectionCard({ application, items }) {
     // of the sticky header cluster, whose height is measured and published as
     // `--app-chrome` — a fixed number would be wrong the moment the reboot
     // banner appears or the breadcrumb wraps.
-    <Card id="security" className="scroll-mt-[calc(var(--app-chrome,7rem)_+_1rem)]">
+    <Card
+      id="security"
+      tabIndex={-1}
+      aria-labelledby="security-heading"
+      className="relative scroll-mt-[calc(var(--app-chrome,7rem)_+_1rem)] focus:outline-none after:pointer-events-none after:absolute after:inset-0 after:rounded-xl after:border-2 after:border-primary/40 after:opacity-0 after:transition-opacity after:duration-200 data-[jump-highlight=true]:after:opacity-100 motion-reduce:after:transition-none"
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
         <div className="min-w-0 space-y-1">
-          <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
+          <CardTitle
+            id="security-heading"
+            as="h2"
+            className="flex items-center gap-2 text-lg font-semibold"
+          >
             <Shield className="size-4 text-primary" />
             {t("title")}
           </CardTitle>

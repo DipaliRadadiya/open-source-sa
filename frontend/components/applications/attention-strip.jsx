@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SectionJumpLink } from "@/components/ui/section-jump-link";
 
 /**
  * What is not right about this site, above everything that is.
@@ -62,13 +63,19 @@ export async function AttentionStrip({ items }) {
           wrap so a narrow screen puts them on one line rather than three full
           width rows — that stacking is what made this 166px tall on a phone. */}
       <div className="flex shrink-0 flex-wrap gap-1.5 sm:gap-2">
-        {items.map((item) => (
-          <Button key={item.key} asChild variant="outline" size="sm">
-            <Link href={item.href} prefetch={false}>
+        {items.map((item) =>
+          item.href.startsWith("#") ? (
+            <SectionJumpLink key={item.key} href={item.href}>
               {item.action}
-            </Link>
-          </Button>
-        ))}
+            </SectionJumpLink>
+          ) : (
+            <Button key={item.key} asChild variant="outline" size="sm">
+              <Link href={item.href} prefetch={false}>
+                {item.action}
+              </Link>
+            </Button>
+          ),
+        )}
       </div>
     </div>
   );
