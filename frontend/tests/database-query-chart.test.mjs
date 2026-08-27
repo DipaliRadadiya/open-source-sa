@@ -53,6 +53,12 @@ test("database chart uses the shared history and chart presentation contracts", 
   assert.doesNotMatch(chart, /margin=\{\{ left: -/);
   assert.match(chart, /notation: compact \? "compact" : "standard"/);
   assert.match(chart, /tickFormatter=\{axisNumber\}/);
+  assert.match(chart, /function ChartViewport/);
+  assert.match(chart, /new MutationObserver\(revealIfReady\)/);
+  assert.match(chart, /querySelector\("svg"\)/);
+  assert.match(chart, /className="relative h-72" aria-busy=\{!ready\}/);
+  assert.match(chart, /<Skeleton[\s\S]*aria-hidden="true"/);
+  assert.match(chart, /!ready && "invisible"/);
   assert.match(chart, /labelFormatter=\{timeLabel\(clock\)\}/);
   assert.match(chart, /<ChartLegend content=\{orderedLegend\(config\)\}/);
   assert.equal((chart.match(/isAnimationActive=\{false\}/g) ?? []).length, 3);

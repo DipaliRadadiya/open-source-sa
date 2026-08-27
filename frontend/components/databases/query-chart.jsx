@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Activity } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -27,8 +28,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { clockFormatter } from "@/lib/format/time";
 import { historySeries } from "@/lib/server/history-series";
+import { cn } from "@/lib/utils";
 
 function metricValue(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -53,6 +56,49 @@ function ChartNotice({ message }) {
         <p>{message}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function ChartViewport({ children, config }) {
+  const rootRef = useRef(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    let observer;
+    const revealIfReady = () => {
+      if (!root.querySelector("svg")) return;
+      setReady(true);
+      observer?.disconnect();
+    };
+
+    observer = new MutationObserver(revealIfReady);
+    observer.observe(root, { childList: true, subtree: true });
+    const frame = window.requestAnimationFrame(revealIfReady);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <div ref={rootRef} className="relative h-72" aria-busy={!ready}>
+      {!ready ? (
+        <Skeleton
+          className="absolute inset-0 z-10 h-full w-full rounded-lg"
+          aria-hidden="true"
+        />
+      ) : null}
+      <ChartContainer
+        config={config}
+        className={cn("h-72 w-full", !ready && "invisible")}
+      >
+        {children}
+      </ChartContainer>
+    </div>
   );
 }
 
@@ -143,7 +189,7 @@ export function QueryChart({ metrics = [], timeZone }) {
       </CardHeader>
 
       <CardContent>
-        <ChartContainer config={config} className="h-72 w-full">
+        <ChartViewport config={config}>
           <ComposedChart data={data} margin={{ left: 8, right: 4, top: 8 }}>
             <defs>
               <linearGradient id="database-qps" x1="0" y1="0" x2="0" y2="1">
@@ -227,7 +273,7 @@ export function QueryChart({ metrics = [], timeZone }) {
               isAnimationActive={false}
             />
           </ComposedChart>
-        </ChartContainer>
+        </ChartViewport>
       </CardContent>
     </Card>
   );
