@@ -370,7 +370,7 @@ Pass `?refresh=1` for the "check now" button — it bypasses the cached release 
 {"panel_update": {
   "installed": {
     "version": "1.0.0", "commit_hash": "a1b2c3d…", "commit_short": "a1b2c3d",
-    "branch": "main", "source": "git",
+    "branch": "main", "source": "tag",
     "is_git_checkout": true, "has_local_changes": false
   },
   "available": {
@@ -392,7 +392,9 @@ Pass `?refresh=1` for the "check now" button — it bypasses the cached release 
 }}
 ```
 
-Bind the update button to `preflight.ready` — the `checks` list is for explaining a "no". `is_git_checkout: false` means an in-place update is impossible on this box (a packaged install without `.git` cannot be moved by `git checkout`), and preflight will say so.
+Bind the update button to both `update_available` and `preflight.ready` — the `checks` list is for explaining a preflight "no". `update_available` is true only when the published version is strictly newer than the installed version; `POST` returns a localized `422` error on `version` rather than allowing a reinstall or downgrade. `is_git_checkout: false` means an in-place update is impossible on this box (a packaged install without `.git` cannot be moved by `git checkout`), and preflight will say so.
+
+`installed.source` is one of `tag | tag-ahead | file | env | unknown`. `tag-ahead` means HEAD is newer than its nearest reachable release tag; the reported version is that safe comparison baseline, so the latest release is not incorrectly offered as a downgrade.
 
 `latest_run` is `null` until an update has been started; afterwards it is the same object `POST` and the status endpoint return. It is reconciled against the on-disk state file before answering, so a run whose process died along with the panel restart is still reported correctly.
 
@@ -421,12 +423,13 @@ Deliberately cheap — poll this every few seconds while the progress bar moves.
   "from_commit": "a1b2c3d", "to_commit": "d4e5f6a",
   "reason": null, "reason_title": null,
   "rolled_back": false, "reference": null,
+  "output": "Running database migrations…", "output_truncated": false,
   "started_at": "12-08-2026 10:15:00", "started_at_human": "2 minutes ago",
   "finished_at": null, "finished_at_human": null
 }}
 ```
 
-Draw the progress bar from `step_number`/`total_steps` — don't hardcode the step list. On failure, `reason` is a classified key (never raw stderr) and `reason_title` is it localized; `reference` points at the log entry. `rolled_back` says whether the previous release was restored.
+Draw the progress bar from `step_number`/`total_steps` — don't hardcode the step list. `output` is the bounded, redacted tail of the detached update log; `output_truncated: true` means older bytes were omitted. Terminal controls, authorization headers, cookies, common secret assignments/query parameters, and private keys are removed before this admin-only field is returned. On failure, `reason` is a classified key and `reason_title` is it localized; `reference` points at the server log entry. `rolled_back` says whether the previous release was restored.
 
 ---
 
@@ -629,6 +632,8 @@ Create + queue provisioning. Poll `GET /applications/{id}` until `status` leaves
   "deploy_script": null
 }
 ```
+
+`domain` is trimmed, lowercased, and must be globally unique across every application domain — not only other primary domains. A duplicate returns the normal localized `422` validation response on `domain`. Creation is atomic even if two requests race for the same hostname: no partial application row is retained, so the same request can be corrected and retried safely.
 
 **Response `201`:**
 ```json
@@ -949,7 +954,9 @@ Re-check DNS for this domain. Returns the full domain object with `dns_verified`
 ### POST `/applications/{application}/domains/{domain}/primary`
 **Permission:** `app_domain` (manage)
 
-Promote this domain to primary (renames vhost + log files).
+Promote this domain to primary and synchronize the application's own canonical URL before applying the vhost. The canonical URL uses HTTPS only when the current certificate is servable **and covers the new hostname**; otherwise it uses HTTP, avoiding an application-level redirect to a name whose certificate is invalid.
+
+The transition is atomic from the caller's point of view. If URL synchronization or vhost application fails, the previous primary domain, application-domain mirror, canonical URL, and vhost are restored best-effort and the request fails; do not update the UI optimistically before the `200` response.
 
 **Response `200`:** `{"domains": [...updated list with type reordered...]}`
 
@@ -1072,7 +1079,9 @@ Force all HTTP traffic to HTTPS via a 301 redirect rule.
 ### DELETE `/applications/{application}/certificate`
 **Permission:** `app_domain` (manage)
 
-Remove the certificate and its redirect rule.
+Remove the certificate and its redirect rule. The application-native canonical URL is switched back to HTTP before the non-TLS vhost is applied. Physical certificate cleanup happens only after HTTP is live.
+
+If URL/vhost transition fails, the previous certificate status, canonical URL, and vhost are restored best-effort. If later physical cleanup fails, the API returns `500` with the normal server-operation reference and retains the certificate row as `pending`; retry **this same DELETE** to finish cleanup. A retry after success is also safe and returns `204` when no certificate remains.
 
 **Response `204`:** `null`
 
@@ -3657,11 +3666,11 @@ Stop a process.
 ### GET `/services`
 **Permission:** `service` (view)
 
-Live status of every managed systemd service.
+Live status of every managed systemd service. Compatibility aliases are collapsed by systemd's canonical unit ID, so one daemon produces one row. For example, when `mysql.service` is an alias of `mariadb.service`, the response contains only the canonical MariaDB catalog row; actions on a duplicate MySQL row are never offered.
 
 ```json
 {"services": [{
-  "key": "nginx", "label": "Nginx", "unit": "nginx.service",
+  "key": "nginx", "label": "Nginx", "unit": "nginx",
   "state": "installed",
   "status": "active", "enabled": true, "protected": true,
   "actions": ["start", "stop", "restart", "reload"],
@@ -3719,7 +3728,7 @@ Control a service. `{service}` = the service `key`.
 
 **Request:** `{"action": "start | stop | restart | reload | enable | disable"}`
 
-**Response `200`:** `{<service>: <refreshed service object>}`
+**Response `200`:** `{"service": {…refreshed service object…}}`
 
 `422` if the action is blocked for a protected service (`stop`/`disable`). `404` if the service key is unknown.
 
@@ -4691,9 +4700,11 @@ Unauthenticated.
 ---
 
 ### GET `/health`
-Unauthenticated. Health check for load balancers / uptime monitors.
+Unauthenticated. Health check for load balancers / uptime monitors. It has its own `60/min` limiter and does not consume the authenticated API polling bucket.
 
-**Response `200`:** `{"status": "ok"}`
+**Response `200`:** `{"health": {"status": "ok", "version": "1.0.14"}}`
+
+`version` is the version actually detected for the running checkout and may be `null` when it cannot be established. Panel updates use it after a release swap to verify that the new code is answering.
 
 ---
 
