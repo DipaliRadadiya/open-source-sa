@@ -10,24 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InstallConfirm } from "@/components/databases/install-confirm";
 import { ConnectionDialog } from "@/components/databases/connection-dialog";
+import { DatabaseInstallProgress } from "@/components/databases/database-install-progress";
 import { useEngineInstallPolling } from "@/components/databases/use-engine-install-polling";
 import {
+  engineInstallCanRetry,
   engineIsPresent,
   findPresentSqlEngine,
   isSqlEngine,
 } from "@/lib/databases/install-lifecycle";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
-
-/**
- * Retrying these can never change the outcome: the port belongs to the other
- * engine, or root cannot be reached at all. The fix is a decision, and the
- * API's message says what it is — so no button pretends otherwise.
- */
-const NOT_RETRYABLE = [
-  "port_in_use_by_mysql",
-  "port_in_use_by_mariadb",
-  "root_unreachable",
-];
 
 /**
  * The page when no engine is reachable yet: every engine and where it stands.
@@ -147,8 +138,9 @@ function EngineRow({
   const conflicted =
     isSqlEngine(engine) && sqlPresent && sqlPresent !== engine;
 
-  // Retrying these can only fail the same way, so the row offers nothing.
-  const deadEnd = failed && NOT_RETRYABLE.includes(engine.install_reason);
+  // The nested progress object is authoritative on current APIs. The helper
+  // retains the old reason-based fallback for servers not upgraded yet.
+  const deadEnd = failed && !engineInstallCanRetry(engine);
 
   /* No button at all when nothing could come of pressing it: an engine the
    * panel can't install, one already here, one whose failure retrying cannot
@@ -167,21 +159,23 @@ function EngineRow({
 
   // The explanation under the name: the server's own words for a failure, or
   // ours for a state it never reports.
-  const note = failed
-    ? engine.install_message
-    : installing && pollIssue
-      ? t("install.pollIssue")
-      : installing && slow
-        ? t("install.takingLonger")
-        : !engine.installable
-      ? t("install.notInstallable")
-      : conflicted
-        ? t("install.sqlConflict", {
-            other: t(`engines.${sqlPresent.engine}`),
-          })
-        : present
-          ? t("engineList.unreachableHint")
-          : null;
+  const note = engine.install_progress
+    ? null
+    : failed
+      ? engine.install_message
+      : installing && pollIssue
+        ? t("install.pollIssue")
+        : installing && slow
+          ? t("install.takingLonger")
+          : !engine.installable
+            ? t("install.notInstallable")
+            : conflicted
+              ? t("install.sqlConflict", {
+                  other: t(`engines.${sqlPresent.engine}`),
+                })
+              : present
+                ? t("engineList.unreachableHint")
+                : null;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3.5">
@@ -226,6 +220,16 @@ function EngineRow({
           </Button>
         </ReasonTooltip>
       )}
+
+      {engine.install_progress ? (
+        <DatabaseInstallProgress
+          progress={engine.install_progress}
+          label={name}
+          slow={slow}
+          pollIssue={pollIssue}
+          className="basis-full"
+        />
+      ) : null}
     </div>
   );
 }

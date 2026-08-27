@@ -2129,6 +2129,19 @@
     "failed": "Could not start the restart.",
     "options": "More options"
   },
+  "databaseInstallProgress": {
+    "queued": "Queued for installation",
+    "working": "Installing database engine",
+    "failed": "Database engine installation failed",
+    "started": "Started {when}",
+    "progressLabel": "{name} installation progress",
+    "safeToLeave": "Installation continues in the background. You can leave this page.",
+    "takingLonger": "This is taking longer than usual. It may still be working.",
+    "pollIssue": "We temporarily lost progress updates. Installation may still be running, and this page will keep checking.",
+    "failureFallback": "The installation did not finish. You can try again.",
+    "reference": "Support reference: {reference}",
+    "output": "Installation output"
+  },
   "databases": {
     "title": "Databases",
     "subtitle": "Create databases, manage who can connect to them, and download exports.",

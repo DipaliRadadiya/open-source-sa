@@ -7,11 +7,19 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { DatabaseInstallProgress } from "@/components/databases/database-install-progress";
 import { DatabaseOptions } from "@/components/setup/database-options";
 import { componentMeta } from "@/components/setup/component-meta";
 
 // PHP and Node install per-version, right here on the setup checklist.
 const RUNTIME_KEYS = new Set(["php", "node"]);
+
+// Setup marks the database component installing immediately after the 202. The
+// first poll will replace this honest queued placeholder with backend detail.
+const QUEUED_DATABASE_PROGRESS = {
+  status: "installing",
+  current_step: "queued",
+};
 
 function VersionInstall({ versions, action, disabled, disabledReason, onInstall }) {
   const t = useTranslations("setup");
@@ -343,12 +351,24 @@ function Body({
   onInstall,
   flush = false,
 }) {
+  const databaseProgress =
+    component.key === "database"
+      ? component.progress ??
+        (component.state === "installing" ? QUEUED_DATABASE_PROGRESS : null)
+      : null;
+
   return (
     <>
-      {/* A failed component shows a reason. The backend message can promise
-          a "reference" it didn't send, so we only trust it when a reference
-          actually came with it; otherwise fall back to self-contained copy. */}
-      {failed ? (
+      {databaseProgress ? (
+        <DatabaseInstallProgress
+          progress={databaseProgress}
+          label={component.title}
+          className={!flush ? "mt-3" : undefined}
+        />
+      ) : null}
+
+      {/* Legacy fallback for APIs that predate the database progress object. */}
+      {failed && !databaseProgress ? (
         <p className={cn("flex items-start gap-2 text-sm text-destructive", !flush && "mt-2.5")}>
               <CircleAlert className="mt-0.5 size-4 shrink-0" />
               <span>

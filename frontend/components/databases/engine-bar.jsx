@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallConfirm } from "@/components/databases/install-confirm";
+import { DatabaseInstallProgress } from "@/components/databases/database-install-progress";
 import { useEngineInstallPolling } from "@/components/databases/use-engine-install-polling";
 import {
   findInstallCandidate,
@@ -47,9 +48,16 @@ export function EngineBar({ engines = [], canManage, summary }) {
   // by `!engine.install_status`, so Retry vanished permanently whenever another
   // engine kept this populated page visible.
   const addable = findInstallCandidate(list);
-  const failureMessage = failed.find(
-    (engine) => engine.install_message,
-  )?.install_message;
+  // Only one apt install can run. Prefer its live lifecycle; otherwise retain
+  // the newest failed lifecycle so diagnostics do not disappear beside a
+  // healthy engine.
+  const progressEngine =
+    installing.find((engine) => engine.install_progress) ??
+    failed.find((engine) => engine.install_progress) ??
+    null;
+  const failureMessage = progressEngine
+    ? null
+    : failed.find((engine) => engine.install_message)?.install_message;
   const hasPresentSql = Boolean(findPresentSqlEngine(list));
   const choosingSql = isSqlEngine(pending) && !hasPresentSql;
 
@@ -135,7 +143,15 @@ export function EngineBar({ engines = [], canManage, summary }) {
         ) : null}
       </div>
 
-      {failureMessage ? (
+      {progressEngine ? (
+        <DatabaseInstallProgress
+          progress={progressEngine.install_progress}
+          label={t(`engines.${progressEngine.engine}`)}
+          slow={slow && installingEngine === progressEngine.engine}
+          pollIssue={pollIssue && installingEngine === progressEngine.engine}
+          className="basis-full"
+        />
+      ) : failureMessage ? (
         <p className="basis-full text-xs leading-relaxed text-destructive">
           {failureMessage}
         </p>

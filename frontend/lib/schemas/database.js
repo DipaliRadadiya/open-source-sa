@@ -25,6 +25,23 @@ export const DATABASE_NAME = /^[A-Za-z0-9_]{1,63}$/;
 export const CONNECTION_PREFERENCES = ["localhost", "remote", "anywhere"];
 
 /**
+ * Persistent lifecycle returned while a database engine is queued, installing,
+ * or failed. Titles/messages are already localized by Laravel for the viewer.
+ */
+export const databaseInstallProgressSchema = z.object({
+  status: z.string(),
+  started_at: z.string().nullish(),
+  started_at_human: z.string().nullish(),
+  reason: z.string().nullish(),
+  message: z.string().nullish(),
+  reference: z.string().nullish(),
+  current_step: z.string().nullish(),
+  current_step_title: z.string().nullish(),
+  output: z.string().nullish(),
+  retryable: z.boolean().optional(),
+});
+
+/**
  * `charsets` maps a charset to the collations it allows — a collation from the
  * wrong charset is a 422, so the second select is driven by the first.
  *
@@ -49,8 +66,8 @@ export const engineSchema = z.object({
   // present, the engine is there but we could not talk to it.
   version: z.string().nullable().optional(),
   charsets: charsetsSchema,
-  // False for mongodb, which needs its own apt repository — so it gets no
-  // install button rather than one that always fails.
+  // Config-driven capability. Never infer this from the engine name: MongoDB
+  // became installable once the backend gained repository provisioning.
   installable: z.boolean().nullable().optional().default(false),
   // `installing` | `failed` | null. Never "installed": a finished install
   // deletes its progress row so detection stays the single answer.
@@ -59,6 +76,7 @@ export const engineSchema = z.object({
   // The server's own sentence, in the caller's language. Ours would be a guess
   // about a failure we did not witness.
   install_message: z.string().nullable().optional(),
+  install_progress: databaseInstallProgressSchema.nullish(),
 });
 
 export const enginesResponseSchema = z.object({

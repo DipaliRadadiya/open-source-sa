@@ -2129,6 +2129,19 @@
     "failed": "No se pudo iniciar el reinicio.",
     "options": "Más opciones"
   },
+  "databaseInstallProgress": {
+    "queued": "En cola para instalarse",
+    "working": "Instalando el motor de base de datos",
+    "failed": "No se pudo instalar el motor de base de datos",
+    "started": "Iniciada {when}",
+    "progressLabel": "Progreso de instalación de {name}",
+    "safeToLeave": "La instalación continúa en segundo plano. Puedes salir de esta página.",
+    "takingLonger": "Está tardando más de lo habitual. Puede que siga funcionando.",
+    "pollIssue": "Hemos perdido temporalmente las actualizaciones de progreso. La instalación puede seguir en marcha y esta página continuará comprobándolo.",
+    "failureFallback": "La instalación no terminó. Puedes intentarlo de nuevo.",
+    "reference": "Referencia de soporte: {reference}",
+    "output": "Salida de la instalación"
+  },
   "databases": {
     "title": "Bases de datos",
     "subtitle": "Crea bases de datos, gestiona quién puede conectarse a ellas y descarga exportaciones.",

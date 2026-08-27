@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { databaseInstallProgressSchema } from "./database.js";
 
 // The endpoint to POST to install a component (or an option). `null` means the
-// panel cannot install it (Redis, MongoDB) — render no button.
+// current server configuration cannot install it — render no button.
 const actionSchema = z
   .object({ method: z.string(), endpoint: z.string() })
   .nullable();
@@ -35,6 +36,7 @@ const componentSchema = z
     reason: z.string().nullish(),
     message: z.string().nullish(),
     retryable: z.boolean().default(false),
+    progress: databaseInstallProgressSchema.nullish(),
   })
   .passthrough();
 
