@@ -574,6 +574,8 @@ Filters combine with each other and with `search` — all are AND, and all survi
 
 **Sort on the server, not in the table.** The list is paged, so an in-table sort orders the current page and nothing else — which looks correct and is not. An unlisted column is a **`422`**, including `owner`: it lives on a relation, so sorting by it would mean a join, and the list can already be searched by username.
 
+**Name sorting is case-insensitive.** Capitalization does not split the list into uppercase and lowercase groups: `alpha`, `apple`, `Banana`, `Zebra` is the ascending order. Names that differ only by case remain stable across pages through the row-ID tie-breaker.
+
 **Sorting by `directory_size_bytes` puts never-measured sites at the small end** — before a site of `0` bytes, not mixed in with it. A site nothing has walked yet is not an empty site, and the two must not be confused. Descending therefore reads "biggest first, unknown last". This is set explicitly rather than left to the database: SQLite and MySQL sort NULL first ascending, PostgreSQL sorts it last, and the panel supports all three.
 
 Note the value is the **last measured** size — `null` for a site created in the last minute, until the per-minute sweep reaches it. The row already says so.

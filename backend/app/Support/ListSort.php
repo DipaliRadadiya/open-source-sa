@@ -51,6 +51,7 @@ class ListSort
     /**
      * @param  array<int, string>  $columns  the whitelist, first entry used when nothing is asked for
      * @param  array<int, string>  $nullsSmallest  columns whose NULLs must sort below every value
+     * @param  array<int, string>  $caseInsensitive  text columns compared without regard to letter case
      */
     public static function apply(
         Builder $query,
@@ -58,6 +59,7 @@ class ListSort
         array $columns,
         string $defaultDirection = 'desc',
         array $nullsSmallest = [],
+        array $caseInsensitive = [],
     ): Builder {
         $requested = trim((string) $sort);
 
@@ -88,8 +90,19 @@ class ListSort
             );
         }
 
-        return $query
-            ->orderBy($column, $descending ? 'desc' : 'asc')
-            ->orderBy($query->getModel()->getQualifiedKeyName(), 'desc');
+        $direction = $descending ? 'desc' : 'asc';
+
+        // Raw text ordering can put every uppercase name before every
+        // lowercase one (SQLite's default), so `Banana` sorts before `apple`.
+        // LOWER is shared by SQLite, MySQL/MariaDB and PostgreSQL, unlike each
+        // engine's collation syntax. The column is still taken exclusively
+        // from the caller's whitelist, never from unchecked request input.
+        if (in_array($column, $caseInsensitive, true)) {
+            $query->orderByRaw('lower('.$query->getGrammar()->wrap($column).') '.$direction);
+        } else {
+            $query->orderBy($column, $direction);
+        }
+
+        return $query->orderBy($query->getModel()->getQualifiedKeyName(), 'desc');
     }
 }

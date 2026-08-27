@@ -60,6 +60,7 @@ class ApplicationController extends Controller
             $request->validated('sort'),
             IndexApplicationsRequest::SORTS,
             nullsSmallest: IndexApplicationsRequest::NULLS_SMALLEST,
+            caseInsensitive: ['name'],
         )->paginate($request->validated('per_page', IndexApplicationsRequest::PER_PAGE));
 
         // Sites that have never been measured get queued for it, capped and

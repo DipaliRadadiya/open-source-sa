@@ -206,6 +206,20 @@ describe('GET /applications', function () {
             ->toBe('alpha');
     });
 
+    it('sorts names without separating uppercase and lowercase letters', function () {
+        foreach (['Zebra', 'apple', 'Banana', 'alpha'] as $name) {
+            Application::factory()->create(['name' => $name]);
+        }
+
+        $ascending = collect($this->getJson('/api/applications?sort=name')->assertOk()->json('applications'))
+            ->pluck('name')->all();
+        $descending = collect($this->getJson('/api/applications?sort=-name')->assertOk()->json('applications'))
+            ->pluck('name')->all();
+
+        expect($ascending)->toBe(['alpha', 'apple', 'Banana', 'Zebra'])
+            ->and($descending)->toBe(['Zebra', 'Banana', 'apple', 'alpha']);
+    });
+
     it('refuses a sort column the table does not show', function () {
         // `owner` is a column on screen but lives on a relation, so it is
         // deliberately not sortable — a 422 says so rather than silently
