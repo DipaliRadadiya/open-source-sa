@@ -24,7 +24,7 @@ afterEach(function () {
  * Fake systemctl: `show` reports each unit's state from $units (default:
  * not-found → excluded); all other systemctl commands succeed.
  *
- * @param  array<string, array{load: string, active: string, file: string}>  $units
+ * @param  array<string, array{load: string, active: string, file: string, id?: string}>  $units
  */
 function fakeServices(array $units): void
 {
@@ -32,8 +32,9 @@ function fakeServices(array $units): void
         if (($process->command[1] ?? null) === 'show') {
             $unit = $process->command[2] ?? '';
             $s = $units[$unit] ?? ['load' => 'not-found', 'active' => 'inactive', 'file' => 'disabled'];
+            $id = $s['id'] ?? "{$unit}.service";
 
-            return Process::result(output: "LoadState={$s['load']}\nActiveState={$s['active']}\nUnitFileState={$s['file']}\n");
+            return Process::result(output: "Id={$id}\nLoadState={$s['load']}\nActiveState={$s['active']}\nUnitFileState={$s['file']}\n");
         }
 
         return Process::result(exitCode: 0);
@@ -62,6 +63,34 @@ it('lists only installed services with live status, protection and actions', fun
     $mariadb = collect($response->json('services'))->firstWhere('key', 'mariadb');
     expect($mariadb['protected'])->toBeFalse();
     expect($mariadb['actions'])->toContain('start', 'stop', 'disable');
+});
+
+it('shows only the canonical service when systemd exposes an alias', function () {
+    fakeServices([
+        'mysql' => [
+            'load' => 'loaded',
+            'active' => 'active',
+            'file' => 'enabled',
+            'id' => 'mariadb.service',
+        ],
+        'mariadb' => [
+            'load' => 'loaded',
+            'active' => 'active',
+            'file' => 'enabled',
+            'id' => 'mariadb.service',
+        ],
+    ]);
+
+    $services = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/services')
+        ->assertOk()
+        ->json('services');
+
+    $sqlServices = collect($services)->whereIn('key', ['mysql', 'mariadb']);
+
+    expect($sqlServices)->toHaveCount(1)
+        ->and($sqlServices->first()['key'])->toBe('mariadb')
+        ->and($sqlServices->first()['label'])->toBe('MariaDB');
 });
 
 it('auto-detects installed php-fpm versions from php_dir', function () {

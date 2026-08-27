@@ -128,15 +128,18 @@ it('reads state and usage in a single systemctl call per service', function () {
     servicesFor();
     $commands = [];
     Process::fake(function ($process) use (&$commands) {
-        $commands[] = $process->command;
+        if (($process->command[0] ?? null) === 'systemctl' && ($process->command[1] ?? null) === 'show') {
+            $commands[] = $process->command;
+        }
 
         return Process::result(output: unitState());
     });
 
     fetchServices();
 
-    // Usage must not cost a second process — it rides along on the call the
-    // list was already making.
+    // Usage must not cost a second systemctl probe — it rides along on the
+    // call the list was already making. Capability detection may run an
+    // unrelated `which` probe on a server without a stored capability row.
     expect($commands)->toHaveCount(1)
-        ->and($commands[0])->toContain('--property=LoadState,ActiveState,UnitFileState,MemoryCurrent,CPUUsageNSec,TasksCurrent');
+        ->and($commands[0])->toContain('--property=Id,LoadState,ActiveState,UnitFileState,MemoryCurrent,CPUUsageNSec,TasksCurrent');
 });

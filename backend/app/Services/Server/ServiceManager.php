@@ -37,10 +37,43 @@ class ServiceManager
      */
     public function list(): array
     {
-        return array_values(array_filter(array_map(
-            fn (array $service) => $this->describe($service),
-            $this->catalog(),
-        )));
+        $rows = [];
+        $unitIndexes = [];
+
+        foreach ($this->catalog() as $service) {
+            $state = $this->inspect($service['unit']);
+            $row = $this->describeState($service, $state);
+
+            if ($row === null) {
+                continue;
+            }
+
+            // Packages may expose compatibility aliases. MariaDB, for example,
+            // makes mysql.service an alias of mariadb.service, so both probes
+            // return loaded even though there is only one daemon. Systemd's Id
+            // is the canonical unit and is identical through every alias.
+            $unitId = $state['installed'] ? $state['id'] : null;
+
+            if ($unitId === null || ! isset($unitIndexes[$unitId])) {
+                $rows[] = $row;
+
+                if ($unitId !== null) {
+                    $unitIndexes[$unitId] = array_key_last($rows);
+                }
+
+                continue;
+            }
+
+            // Prefer the catalog entry that names the canonical unit. This is
+            // what turns mysql.service -> mariadb.service into one MariaDB row
+            // regardless of catalog order. If no configured entry is canonical,
+            // keeping the first alias is deterministic and still avoids duplicates.
+            if ($this->systemdId($service['unit']) === $unitId) {
+                $rows[$unitIndexes[$unitId]] = $row;
+            }
+        }
+
+        return array_values($rows);
     }
 
     /**
@@ -67,8 +100,16 @@ class ServiceManager
      */
     public function describe(array $service): ?array
     {
-        $state = $this->inspect($service['unit']);
+        return $this->describeState($service, $this->inspect($service['unit']));
+    }
 
+    /**
+     * @param  array{key: string, unit: string, label: string}  $service
+     * @param  array{installed: bool, id: ?string, status: string, enabled: bool, properties: array<string, string|null>}  $state
+     * @return array<string, mixed>|null
+     */
+    private function describeState(array $service, array $state): ?array
+    {
         if (! $state['installed']) {
             // Not on the box — but it may be on its way, or have tried and
             // failed. Either is something the user asked for and should be able
@@ -332,17 +373,18 @@ class ServiceManager
      * tree (a php-fpm master and all its workers) is counted correctly, and
      * why adding them costs nothing — the call was already being made.
      *
-     * @return array{installed: bool, status: string, enabled: bool, properties: array<string, string|null>}
+     * @return array{installed: bool, id: ?string, status: string, enabled: bool, properties: array<string, string|null>}
      */
     private function inspect(string $unit): array
     {
         $output = $this->serverOps->run(
-            ['systemctl', 'show', $unit, '--property=LoadState,ActiveState,UnitFileState,MemoryCurrent,CPUUsageNSec,TasksCurrent'],
+            ['systemctl', 'show', $unit, '--property=Id,LoadState,ActiveState,UnitFileState,MemoryCurrent,CPUUsageNSec,TasksCurrent'],
             ['feature' => 'service', 'op' => 'inspect', 'unit' => $unit],
         )->output();
 
         return [
             'installed' => $this->property($output, 'LoadState') === 'loaded',
+            'id' => $this->property($output, 'Id'),
             'status' => $this->property($output, 'ActiveState') ?: 'inactive',
             'enabled' => $this->property($output, 'UnitFileState') === 'enabled',
             'properties' => [
@@ -351,6 +393,11 @@ class ServiceManager
                 'TasksCurrent' => $this->property($output, 'TasksCurrent'),
             ],
         ];
+    }
+
+    private function systemdId(string $unit): string
+    {
+        return str_ends_with($unit, '.service') ? $unit : "{$unit}.service";
     }
 
     private function property(string $output, string $key): ?string
