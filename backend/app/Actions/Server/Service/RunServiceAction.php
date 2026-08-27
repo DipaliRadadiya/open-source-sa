@@ -35,11 +35,12 @@ class RunServiceAction
             abort(404, __('errors/service.not_found'));
         }
 
-        // Self-DoS guard: the panel's own web server + php-fpm can't be
-        // stopped or disabled.
-        if ($this->services->isProtected($service['unit']) && in_array($action, ['stop', 'disable'], true)) {
+        // Enforce the same per-service action list returned to clients. This
+        // covers protected services and service-specific exclusions such as
+        // database daemons not supporting a portable reload operation.
+        if (! in_array($action, $this->services->allowedActions($service), true)) {
             throw ValidationException::withMessages([
-                'action' => [__('errors/service.protected')],
+                'action' => [__('validation.in', ['attribute' => 'action'])],
             ]);
         }
 

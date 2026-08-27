@@ -62,7 +62,9 @@ it('lists only installed services with live status, protection and actions', fun
 
     $mariadb = collect($response->json('services'))->firstWhere('key', 'mariadb');
     expect($mariadb['protected'])->toBeFalse();
-    expect($mariadb['actions'])->toContain('start', 'stop', 'disable');
+    expect($mariadb['actions'])
+        ->toContain('start', 'stop', 'restart', 'disable')
+        ->not->toContain('reload');
 });
 
 it('shows only the canonical service when systemd exposes an alias', function () {
@@ -175,6 +177,30 @@ it('restarts a service via systemctl', function () {
 
     Process::assertRan(fn ($p) => $p->command === ['systemctl', 'restart', 'mariadb']);
 });
+
+it('does not offer or run reload for database services', function (string $key, string $unit) {
+    fakeServices([$unit => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
+
+    $services = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/services')
+        ->assertOk()
+        ->json('services');
+
+    $database = collect($services)->firstWhere('key', $key);
+    expect($database)->not->toBeNull()
+        ->and($database['actions'])->not->toContain('reload');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/services/{$key}", ['action' => 'reload'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('action');
+
+    Process::assertNotRan(fn ($p) => $p->command === ['systemctl', 'reload', $unit]);
+})->with([
+    'MySQL' => ['mysql', 'mysql'],
+    'MariaDB' => ['mariadb', 'mariadb'],
+    'MongoDB' => ['mongodb', 'mongod'],
+]);
 
 it('blocks stopping a protected service', function () {
     fakeServices(['nginx' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);

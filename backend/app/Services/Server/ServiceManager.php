@@ -21,6 +21,8 @@ class ServiceManager
      */
     public const ACTIONS = ['start', 'stop', 'restart', 'reload', 'enable', 'disable'];
 
+    private const DATABASE_SERVICES = ['mysql', 'mariadb', 'mongodb'];
+
     public function __construct(
         private ServerOps $serverOps,
         private ServiceUsage $usage,
@@ -133,7 +135,7 @@ class ServiceManager
             'status' => $state['status'],
             'enabled' => $state['enabled'],
             'protected' => $this->isProtected($service['unit']),
-            'actions' => $this->allowedActions($service['unit']),
+            'actions' => $this->allowedActions($service),
             // Whether this service can validate its own configuration, so the
             // UI only offers the button where it means something.
             'testable' => $this->tester->testable($service['key']),
@@ -291,13 +293,22 @@ class ServiceManager
     /**
      * @return array<int, string>
      */
-    public function allowedActions(string $unit): array
+    public function allowedActions(array $service): array
     {
         // Protected units keep restart/reload/enable but can't be stopped or
         // disabled (that would take the panel offline).
-        return $this->isProtected($unit)
+        $actions = $this->isProtected($service['unit'])
             ? ['restart', 'reload', 'enable']
             : self::ACTIONS;
+
+        // Database daemons do not have a portable, meaningful reload action.
+        // Some units reject it while others treat it differently, so only
+        // expose the predictable restart operation for re-reading state.
+        if (in_array($service['key'], self::DATABASE_SERVICES, true)) {
+            $actions = array_values(array_diff($actions, ['reload']));
+        }
+
+        return $actions;
     }
 
     /**
