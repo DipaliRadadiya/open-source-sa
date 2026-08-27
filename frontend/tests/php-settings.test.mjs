@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   budgetWith,
   memoryCeilingBytes,
@@ -8,6 +9,10 @@ import {
 } from "../lib/schemas/php-settings.js";
 
 const MB = 1024 * 1024;
+const PHP_PANEL_SOURCE = readFileSync(
+  new URL("../components/applications/php/php-panel.jsx", import.meta.url),
+  "utf8",
+);
 
 /** Mirrors `ApplicationPhpSettings::toBytes()`. */
 
@@ -78,6 +83,13 @@ test("disable_functions takes function names and nothing else", () => {
   const field = phpSettingsFormSchema.shape.disable_functions;
   assert.equal(field.safeParse("exec,passthru, shell_exec").success, true);
   assert.equal(field.safeParse("exec; rm -rf /").success, false);
+});
+
+test("PHP directive names stay inline with their labels", () => {
+  assert.match(PHP_PANEL_SOURCE, /function Label\(\{ label, name, directive \}\)/);
+  assert.match(PHP_PANEL_SOURCE, /\(\{directive\}\)/);
+  assert.doesNotMatch(PHP_PANEL_SOURCE, /function Directive\(/);
+  assert.doesNotMatch(PHP_PANEL_SOURCE, /<Directive\b/);
 });
 
 test("auto_prepend_file cannot climb out of the site", () => {

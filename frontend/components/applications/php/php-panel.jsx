@@ -695,7 +695,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   name="pm_type"
                   render={({ field }) => (
                     <FormItem>
-                      <Label label={t("fields.pmType")} />
+                      <Label label={t("fields.pmType")} directive="pm" />
                       <FormControl>
                         <Combobox
                           options={["ondemand", "dynamic", "static"].map((value) => ({
@@ -707,7 +707,6 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                           disabled={saving}
                         />
                       </FormControl>
-                      <Directive name="pm" />
                       <FormDescription>{t("hints.pmType")}</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -750,7 +749,11 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   name="php_timezone"
                   render={({ field }) => (
                     <FormItem>
-                      <Label label={t("fields.timezone")} name="php_timezone" />
+                      <Label
+                        label={t("fields.timezone")}
+                        name="php_timezone"
+                        directive="date.timezone"
+                      />
                       <FormControl>
                         <Combobox
                           options={timezones.map((zone) => ({ value: zone, label: zone }))}
@@ -760,7 +763,6 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                           placeholder={t("fields.timezonePlaceholder")}
                         />
                       </FormControl>
-                      <Directive name="date.timezone" />
                       <FormDescription>{t("hints.timezone")}</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -796,7 +798,11 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                 name="additional_directives"
                 render={({ field }) => (
                   <FormItem className="border-t pt-5">
-                    <Label label={t("fields.directives")} name="additional_directives" />
+                    <Label
+                      label={t("fields.directives")}
+                      name="additional_directives"
+                      directive="php_admin_value"
+                    />
                     <FormControl>
                       <Textarea
                         {...field}
@@ -807,7 +813,6 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                         placeholder={t("fields.directivesPlaceholder")}
                       />
                     </FormControl>
-                    <Directive name="php_admin_value" />
                     <FormDescription>{t("hints.directives")}</FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -1109,9 +1114,8 @@ function formatBytes(bytes) {
 function Stack({ label, name, directive, error, children }) {
   return (
     <FormItem>
-      <Label label={label} name={name} />
+      <Label label={label} name={name} directive={directive} />
       {children}
-      <Directive name={directive} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </FormItem>
   );
@@ -1123,10 +1127,17 @@ function Stack({ label, name, directive, error, children }) {
  */
 const OverrideContext = createContext(null);
 
-function Label({ label, name }) {
+function Label({ label, name, directive }) {
   return (
     <div className="flex min-h-5 items-center justify-between gap-2">
-      <FormLabel>{label}</FormLabel>
+      <FormLabel className="min-w-0 flex-wrap gap-1">
+        <span>{label}</span>
+        {directive ? (
+          <span className="font-mono text-xs font-normal text-muted-foreground">
+            ({directive})
+          </span>
+        ) : null}
+      </FormLabel>
       <ResetOverride name={name} />
     </div>
   );
@@ -1232,15 +1243,6 @@ const RESETTABLE = new Set([
   "allow_url_fopen",
 ]);
 
-/**
- * The php.ini name, under the field rather than beside the label.
- *
- * It has to stay visible — someone arriving from a Stack Overflow answer is
- * looking for `upload_max_filesize`, not for "biggest file someone can upload"
- * — but sitting next to every label it made the page read as a config file.
- * Not a tooltip: Radix tooltips do not open on touch, so a phone would never
- * see it.
- */
 function SectionTitle({ icon: Icon, title }) {
   return (
     <p className="flex items-center gap-2 text-sm font-semibold">
@@ -1250,13 +1252,6 @@ function SectionTitle({ icon: Icon, title }) {
   );
 }
 
-function Directive({ name }) {
-  if (!name) return null;
-  // Pulled up against the control it names — at the FormItem's own gap it
-  // floated between two fields and belonged to neither.
-  return <span className="-mt-1 font-mono text-[0.7rem] text-muted-foreground">{name}</span>;
-}
-
 function NumberField({ form, name, label, directive, hint, disabled, min, max }) {
   return (
     <FormField
@@ -1264,7 +1259,7 @@ function NumberField({ form, name, label, directive, hint, disabled, min, max })
       name={name}
       render={({ field }) => (
         <FormItem>
-          <Label label={label} name={name} />
+          <Label label={label} name={name} directive={directive} />
           <FormControl>
             <Input
               {...field}
@@ -1276,7 +1271,6 @@ function NumberField({ form, name, label, directive, hint, disabled, min, max })
               className="tabular-nums"
             />
           </FormControl>
-          <Directive name={directive} />
           <FormDescription>{hint}</FormDescription>
           <FormMessage />
         </FormItem>
@@ -1292,7 +1286,7 @@ function TextField({ form, name, label, directive, hint, disabled, mono = false 
       name={name}
       render={({ field }) => (
         <FormItem>
-          <Label label={label} name={name} />
+          <Label label={label} name={name} directive={directive} />
           <FormControl>
             <Input
               {...field}
@@ -1301,7 +1295,6 @@ function TextField({ form, name, label, directive, hint, disabled, mono = false 
               className={cn(mono && "font-mono text-xs")}
             />
           </FormControl>
-          <Directive name={directive} />
           <FormDescription>{hint}</FormDescription>
           <FormMessage />
         </FormItem>
@@ -1323,8 +1316,7 @@ function ToggleRow({ form, name, label, directive, hint, disabled }) {
               right-aligned like every other Reset on the page. The switch owns
               the far right, so Reset lands immediately left of it. */}
           <div className="min-w-0 flex-1 space-y-1">
-            <Label label={label} name={name} />
-            <Directive name={directive} />
+            <Label label={label} name={name} directive={directive} />
             {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
           </div>
           <FormControl>
@@ -1413,8 +1405,11 @@ function OpenBasedir({ form, php, disabled }) {
         render={({ field }) => (
           <FormItem className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <Label label={t("fields.openBasedir")} name="open_basedir_enabled" />
-              <Directive name="open_basedir" />
+              <Label
+                label={t("fields.openBasedir")}
+                name="open_basedir_enabled"
+                directive="open_basedir"
+              />
               <p className="text-xs text-muted-foreground">
                 {enabled ? t("hints.openBasedir") : tb("offHint")}
               </p>
@@ -1588,8 +1583,11 @@ function BlockedFunctions({ form, php, disabled }) {
       name="disable_functions"
       render={() => (
         <FormItem>
-          <Label label={t("fields.disableFunctions")} name="disable_functions" />
-          <Directive name="disable_functions" />
+          <Label
+            label={t("fields.disableFunctions")}
+            name="disable_functions"
+            directive="disable_functions"
+          />
           <p className="text-xs text-muted-foreground">{tb("description")}</p>
 
           {names.length ? (
