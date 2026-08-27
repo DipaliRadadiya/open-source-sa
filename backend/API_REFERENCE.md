@@ -2790,19 +2790,43 @@ Capability list for all three engines.
 {"engines": [{
   "engine": "mysql", "driver": "mysql", "running": false, "version": null,
   "installed": false, "installable": true,
-  "install_status": null, "install_reason": null, "install_message": null
+  "install_status": null, "install_reason": null, "install_message": null,
+  "install_progress": null
 }, {
   "engine": "mariadb", "driver": "mysql", "running": true, "version": "10.11.4",
   "installed": true, "installable": true,
-  "install_status": null, "install_reason": null, "install_message": null
+  "install_status": null, "install_reason": null, "install_message": null,
+  "install_progress": null
 }, {
   "engine": "mongodb", "driver": "mongodb", "running": false, "version": null,
   "installed": false, "installable": true,
-  "install_status": null, "install_reason": null, "install_message": null
+  "install_status": null, "install_reason": null, "install_message": null,
+  "install_progress": null
 }]}
 ```
 
 `install_status` is only ever `installing | failed | null` — never `installed`. A finished install removes its row.
+
+While an install is queued, running, or failed, `install_progress` carries the detailed lifecycle:
+
+```json
+{
+  "status": "installing",
+  "started_at": "27-08-2026 04:00:00",
+  "started_at_human": "a few seconds ago",
+  "reason": null,
+  "message": null,
+  "reference": null,
+  "current_step": "starting_service",
+  "current_step_title": "Starting the database service",
+  "output": "Setting up mariadb-server ...",
+  "retryable": false
+}
+```
+
+`current_step` is one of `queued`, `checking_conflicts`, `preparing_repository`, `updating_package_index`, `preparing`, `downloading`, `unpacking`, `configuring`, `starting_service`, `verifying_connection`, or `creating_panel_account`. MongoDB uses the repository steps; MySQL and MariaDB use the conflict check. Package phases are parsed from APT's real output rather than advanced on a timer. `output` is an 8 KB tail of APT output and contains no command arguments or credentials. `current_step_title` and failure `message` are localized for the viewer. On failure, the last real step remains in place and `retryable` becomes `true`.
+
+The database component returned by `GET /setup` exposes the same object as `progress`. Once installation succeeds, the transient row is deleted, both progress objects become `null`, and `installed`/`running` are derived from the server itself.
 
 ---
 

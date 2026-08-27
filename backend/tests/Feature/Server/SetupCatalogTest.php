@@ -111,7 +111,8 @@ it('shows an in-flight install as installing, naming it in the viewer locale', f
 
     RuntimeInstall::create([
         'runtime' => 'database', 'version' => 'mariadb', 'extension' => '',
-        'status' => 'installing', 'started_at' => now(),
+        'status' => 'installing', 'current_step' => 'starting_service',
+        'output' => 'Setting up mariadb-server', 'started_at' => now(),
     ]);
 
     $setup = fetchSetup();
@@ -121,6 +122,10 @@ it('shows an in-flight install as installing, naming it in the viewer locale', f
     expect($setup['status'])->toBe('installing');
     expect($setup['key'])->toBe('database');
     expect($setup['label'])->toContain('Database');
+    expect($database['progress']['current_step'])->toBe('starting_service')
+        ->and($database['progress']['current_step_title'])->toBe('Starting the database service')
+        ->and($database['progress']['output'])->toBe('Setting up mariadb-server')
+        ->and($database['progress']['retryable'])->toBeFalse();
 });
 
 it('surfaces a failure with a retry rather than hiding it', function () {

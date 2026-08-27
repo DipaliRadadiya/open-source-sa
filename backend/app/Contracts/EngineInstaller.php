@@ -43,5 +43,9 @@ interface EngineInstaller
      *
      * @throws EngineInstallException
      */
-    public function install(): void;
+    /**
+     * @param  callable(string): void|null  $onStep
+     * @param  callable(string): void|null  $onOutput
+     */
+    public function install(?callable $onStep = null, ?callable $onOutput = null): void;
 }

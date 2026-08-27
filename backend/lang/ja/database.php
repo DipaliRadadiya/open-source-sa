@@ -2,6 +2,20 @@
 
 return [
 
+    'install_steps' => [
+        'queued' => '待機中',
+        'checking_conflicts' => '競合するデータベースエンジンを確認しています',
+        'preparing_repository' => 'パッケージリポジトリを準備しています',
+        'updating_package_index' => 'パッケージインデックスを更新しています',
+        'preparing' => 'パッケージを準備しています',
+        'downloading' => 'パッケージをダウンロードしています',
+        'unpacking' => 'パッケージを展開しています',
+        'configuring' => 'パッケージを設定しています',
+        'starting_service' => 'データベースサービスを起動しています',
+        'verifying_connection' => 'データベース接続を確認しています',
+        'creating_panel_account' => 'パネル用データベースアカウントを作成しています',
+    ],
+
     /*
     | Why an export failed. Stored as a stable code on the row and worded here
     | at read time, so the sentence lands in the *viewer's* locale rather than

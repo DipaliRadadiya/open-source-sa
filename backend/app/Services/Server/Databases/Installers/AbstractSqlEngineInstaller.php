@@ -84,16 +84,19 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     /**
      * @throws EngineInstallException
      */
-    public function install(): void
+    public function install(?callable $onStep = null, ?callable $onOutput = null): void
     {
+        $this->report($onStep, 'checking_conflicts');
         $this->assertPortIsOurs();
 
         if (! $this->installed()) {
+            $this->report($onStep, 'preparing');
             $result = $this->serverOps->run(
                 array_merge(['apt-get', 'install', '-y', '--no-install-recommends'], $this->packages()),
                 ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'install'],
                 timeout: (int) config('server.databases.install_timeout', 900),
                 env: ['DEBIAN_FRONTEND' => 'noninteractive'],
+                onOutput: $onOutput,
             );
 
             if ($result->failed()) {
@@ -104,7 +107,8 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
             }
         }
 
-        $this->startService();
+        $this->startService($onStep);
+        $this->report($onStep, 'creating_panel_account');
         $this->provisionPanelAccount();
     }
 
@@ -130,8 +134,10 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     /**
      * @throws EngineInstallException
      */
-    private function startService(): void
+    private function startService(?callable $onStep): void
     {
+        $this->report($onStep, 'starting_service');
+
         foreach ([['enable', '--now'], ['restart']] as $args) {
             $this->serverOps->run(
                 array_merge(['systemctl'], $args, [$this->service()]),
@@ -142,6 +148,7 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
 
         // Proven, not assumed. A package that unpacked is not an engine that
         // answers, and every step after this one needs it to.
+        $this->report($onStep, 'verifying_connection');
         $ping = $this->socketQuery('SELECT 1;');
 
         if ($ping->failed()) {
@@ -261,5 +268,12 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
         }
 
         return 'unknown';
+    }
+
+    private function report(?callable $onStep, string $step): void
+    {
+        if ($onStep !== null) {
+            $onStep($step);
+        }
     }
 }

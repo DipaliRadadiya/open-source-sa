@@ -100,6 +100,25 @@ describe('a fresh install', function () {
             ->and($update)->toBeLessThan($install);
     });
 
+    it('reports repository, package and service stages in their real order', function () {
+        $seen = [];
+        $steps = [];
+        fakeMongoBox($seen);
+
+        mongoInstaller()->install(function (string $step) use (&$steps) {
+            $steps[] = $step;
+        });
+
+        expect($steps)->toBe([
+            'preparing_repository',
+            'updating_package_index',
+            'preparing',
+            'starting_service',
+            'verifying_connection',
+            'creating_panel_account',
+        ]);
+    });
+
     it('signs the repository with its own keyring, never the global trust store', function () {
         $seen = [];
         fakeMongoBox($seen);

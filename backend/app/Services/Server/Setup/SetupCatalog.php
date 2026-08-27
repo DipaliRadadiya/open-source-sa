@@ -4,6 +4,7 @@ namespace App\Services\Server\Setup;
 
 use App\Contracts\SetupComponent;
 use App\Enums\InstallStatus;
+use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
 
@@ -76,12 +77,13 @@ class SetupCatalog
     {
         $key = $component->key();
         $progress = $this->progressFor($key);
+        $state = $this->state($component, $progress);
 
         return [
             'key' => $key,
             'title' => __("setup.components.{$key}.title"),
             'description' => __("setup.components.{$key}.description"),
-            'state' => $this->state($component, $progress),
+            'state' => $state,
             'detail' => $component->detail(),
             'recommended' => $component->recommended(),
             'action' => $component->action(),
@@ -92,6 +94,9 @@ class SetupCatalog
             // no translation, so a missing key never reaches the user as text.
             'message' => $progress?->message(),
             'retryable' => $progress?->status === InstallStatus::Failed,
+            'progress' => $key === 'database' && $state !== 'installed' && $progress !== null
+                ? DatabaseInstallProgress::describe($progress)
+                : null,
         ];
     }
 

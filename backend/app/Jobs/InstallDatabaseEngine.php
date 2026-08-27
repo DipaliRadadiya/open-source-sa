@@ -6,6 +6,7 @@ use App\Exceptions\Server\Database\EngineInstallException;
 use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
@@ -66,9 +67,16 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
         ActivityLogger $log,
         ServerCapabilities $capabilities,
     ): void {
+        $row = $installs->current('database', $this->engine);
+        $progress = $row === null ? null : new DatabaseInstallProgress($row);
+
         try {
-            $installers->installer($this->engine)->install();
+            $installers->installer($this->engine)->install(
+                $progress === null ? null : fn (string $step) => $progress->step($step),
+                $progress === null ? null : fn (string $chunk) => $progress->output($chunk),
+            );
         } catch (EngineInstallException $e) {
+            $progress?->flushOutput();
             $installs->fail('database', $this->engine, null, $e->reason, $e->reference);
             $log->log('database.engine_install_failed', null, [
                 'engine' => $this->engine,
@@ -77,6 +85,7 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
 
             throw $e;
         } catch (Throwable $e) {
+            $progress?->flushOutput();
             $installs->fail('database', $this->engine, null, 'unknown');
             $log->log('database.engine_install_failed', null, [
                 'engine' => $this->engine,

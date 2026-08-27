@@ -82,7 +82,7 @@ class MongoDbInstaller implements EngineInstaller
     /**
      * @throws EngineInstallException
      */
-    public function install(): void
+    public function install(?callable $onStep = null, ?callable $onOutput = null): void
     {
         // Whether *this run* put MongoDB on the box. It decides whether the
         // config is ours to change: a server that already had one is a server
@@ -90,11 +90,14 @@ class MongoDbInstaller implements EngineInstaller
         $fresh = ! $this->installed();
 
         if ($fresh) {
-            $this->addRepository();
-            $this->installPackages();
+            $this->report($onStep, 'preparing_repository');
+            $this->addRepository($onStep);
+            $this->report($onStep, 'preparing');
+            $this->installPackages($onOutput);
         }
 
-        $this->startService();
+        $this->startService($onStep);
+        $this->report($onStep, 'creating_panel_account');
         $this->provisionPanelAccount($fresh);
     }
 
@@ -106,7 +109,7 @@ class MongoDbInstaller implements EngineInstaller
      *
      * @throws EngineInstallException
      */
-    private function addRepository(): void
+    private function addRepository(?callable $onStep): void
     {
         $series = $this->series();
         // MongoDB publishes an ASCII-armoured key. APT chooses the keyring
@@ -179,6 +182,7 @@ class MongoDbInstaller implements EngineInstaller
         // The list on disk is not the index. Without this, the very next
         // apt-get install fails with "Unable to locate package mongodb-org",
         // which reads as a broken panel rather than a stale index.
+        $this->report($onStep, 'updating_package_index');
         $this->must($this->serverOps->run(
             ['apt-get', 'update'],
             $this->context('repo_update'),
@@ -190,13 +194,14 @@ class MongoDbInstaller implements EngineInstaller
     /**
      * @throws EngineInstallException
      */
-    private function installPackages(): void
+    private function installPackages(?callable $onOutput): void
     {
         $result = $this->serverOps->run(
             array_merge(['apt-get', 'install', '-y', '--no-install-recommends'], $this->packages()),
             $this->context('install'),
             timeout: (int) config('server.databases.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
+            onOutput: $onOutput,
         );
 
         if ($result->failed()) {
@@ -210,8 +215,10 @@ class MongoDbInstaller implements EngineInstaller
     /**
      * @throws EngineInstallException
      */
-    private function startService(): void
+    private function startService(?callable $onStep): void
     {
+        $this->report($onStep, 'starting_service');
+
         foreach ([['enable', '--now'], ['restart']] as $args) {
             $this->serverOps->run(
                 array_merge(['systemctl'], $args, [$this->service()]),
@@ -225,6 +232,7 @@ class MongoDbInstaller implements EngineInstaller
         // rather than probed twice: the second call is a second round trip, and
         // if it happened to succeed the exception would carry a reference to a
         // command that worked.
+        $this->report($onStep, 'verifying_connection');
         $ping = $this->ping();
 
         if ($ping->failed()) {
@@ -512,6 +520,13 @@ class MongoDbInstaller implements EngineInstaller
     {
         if ($result->failed()) {
             throw EngineInstallException::because($reason, $result->reference);
+        }
+    }
+
+    private function report(?callable $onStep, string $step): void
+    {
+        if ($onStep !== null) {
+            $onStep($step);
         }
     }
 

@@ -103,6 +103,12 @@ class InstallProgress
         ])->save();
     }
 
+    /** Flush the output tail without replacing a later domain-specific step. */
+    public function persistOutput(): void
+    {
+        $this->install->forceFill(['output' => $this->buffer])->save();
+    }
+
     public function step(): string
     {
         return $this->step;

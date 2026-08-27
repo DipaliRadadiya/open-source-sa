@@ -2,6 +2,20 @@
 
 return [
 
+    'install_steps' => [
+        'queued' => 'कतार में',
+        'checking_conflicts' => 'परस्पर विरोधी डेटाबेस इंजन की जाँच की जा रही है',
+        'preparing_repository' => 'पैकेज रिपॉज़िटरी तैयार की जा रही है',
+        'updating_package_index' => 'पैकेज इंडेक्स अपडेट किया जा रहा है',
+        'preparing' => 'पैकेज तैयार किए जा रहे हैं',
+        'downloading' => 'पैकेज डाउनलोड किए जा रहे हैं',
+        'unpacking' => 'पैकेज अनपैक किए जा रहे हैं',
+        'configuring' => 'पैकेज कॉन्फ़िगर किए जा रहे हैं',
+        'starting_service' => 'डेटाबेस सेवा शुरू की जा रही है',
+        'verifying_connection' => 'डेटाबेस कनेक्शन की जाँच की जा रही है',
+        'creating_panel_account' => 'पैनल डेटाबेस खाता बनाया जा रहा है',
+    ],
+
     /*
     | Why an export failed. Stored as a stable code on the row and worded here
     | at read time, so the sentence lands in the *viewer's* locale rather than

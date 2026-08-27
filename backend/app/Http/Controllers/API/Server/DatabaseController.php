@@ -17,6 +17,7 @@ use App\Jobs\RunDatabaseExport;
 use App\Models\Database;
 use App\Models\DatabaseExport;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabaseSizes;
@@ -58,6 +59,7 @@ class DatabaseController extends Controller
                 // The model's own message, so the engine list and the setup page
                 // cannot word the same failure differently.
                 'install_message' => $row?->message(),
+                'install_progress' => $row === null ? null : DatabaseInstallProgress::describe($row),
             ];
         }, $manager->capabilities());
 
@@ -103,7 +105,7 @@ class DatabaseController extends Controller
         // The row is written here, before dispatch — inside the job it would
         // leave a blind window between this response and the worker picking it
         // up, during which the setup page would show nothing happening.
-        $installs->start('database', $engine);
+        $installs->start('database', $engine, initialStep: 'queued');
 
         InstallDatabaseEngine::dispatch($engine, Auth::id());
 

@@ -23,8 +23,12 @@ class InstallTracker
      * picking the job up where the install exists but nothing can see it —
      * which is the exact blindness this table is here to remove.
      */
-    public function start(string $runtime, string $version, ?string $extension = null): RuntimeInstall
-    {
+    public function start(
+        string $runtime,
+        string $version,
+        ?string $extension = null,
+        ?string $initialStep = null,
+    ): RuntimeInstall {
         $identity = ['runtime' => $runtime, 'version' => $version, 'extension' => (string) $extension];
         $now = now();
 
@@ -41,7 +45,7 @@ class InstallTracker
                 // Likewise the last run's progress: showing the previous
                 // attempt's output under a fresh spinner would have the
                 // operator reading a failure that has already been retried.
-                'current_step' => null,
+                'current_step' => $initialStep,
                 'output' => null,
                 'started_at' => $now,
                 'finished_at' => null,

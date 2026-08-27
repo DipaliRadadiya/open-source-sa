@@ -3,7 +3,9 @@
 use App\Exceptions\Server\Database\EngineInstallException;
 use App\Jobs\InstallDatabaseEngine;
 use App\Models\DatabaseConnection;
+use App\Models\RuntimeInstall;
 use App\Models\User;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
 use Database\Seeders\PermissionSeeder;
@@ -59,6 +61,24 @@ describe('installing', function () {
         $connection = DatabaseConnection::query()->where('engine', 'mariadb')->firstOrFail();
         expect($connection->username)->toMatch('/^panel_[a-z0-9]{10}$/');
         expect($connection->password)->not->toBeEmpty();
+    });
+
+    it('reports the SQL install stages in the order they actually happen', function () {
+        $seen = [];
+        $steps = [];
+        fakeCleanBox($seen);
+
+        installer('mariadb')->install(function (string $step) use (&$steps) {
+            $steps[] = $step;
+        });
+
+        expect($steps)->toBe([
+            'checking_conflicts',
+            'preparing',
+            'starting_service',
+            'verifying_connection',
+            'creating_panel_account',
+        ]);
     });
 
     it('never puts the password on a command line', function () {
@@ -235,8 +255,50 @@ describe('the endpoint', function () {
             ->getJson('/api/databases/engines')->assertOk()->json('engines');
 
         $mariadb = collect($body)->firstWhere('engine', 'mariadb');
-        expect($mariadb['install_status'])->toBe('installing');
-        expect($mariadb['installable'])->toBeTrue();
+        expect($mariadb['install_status'])->toBe('installing')
+            ->and($mariadb['installable'])->toBeTrue()
+            ->and($mariadb['install_progress']['status'])->toBe('installing')
+            ->and($mariadb['install_progress']['current_step'])->toBe('queued')
+            ->and($mariadb['install_progress']['current_step_title'])->toBe('Queued')
+            ->and($mariadb['install_progress']['started_at'])->not->toBeNull()
+            ->and($mariadb['install_progress']['retryable'])->toBeFalse();
+    });
+
+    it('returns the exact failed step, bounded output and support reference', function () {
+        $reference = '11111111-2222-3333-4444-555555555555';
+
+        RuntimeInstall::create([
+            'runtime' => 'database',
+            'version' => 'mariadb',
+            'extension' => '',
+            'status' => 'failed',
+            'reason' => 'unknown',
+            'reference' => $reference,
+            'current_step' => 'starting_service',
+            'output' => 'Setting up mariadb-server failed',
+            'started_at' => now()->subMinute(),
+            'finished_at' => now(),
+        ]);
+
+        Process::fake(fn ($process) => match ($process->command[0] ?? '') {
+            'mysql', 'mariadb' => Process::result(errorOutput: 'not running', exitCode: 1),
+            'dpkg-query' => Process::result(output: 'unknown ok not-installed'),
+            default => Process::result(exitCode: 0),
+        });
+
+        $body = $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+            ->getJson('/api/databases/engines')
+            ->assertOk()
+            ->json('engines');
+
+        $mariadb = collect($body)->firstWhere('engine', 'mariadb');
+
+        expect($mariadb['install_status'])->toBe('failed')
+            ->and($mariadb['install_progress']['current_step'])->toBe('starting_service')
+            ->and($mariadb['install_progress']['current_step_title'])->toBe('Starting the database service')
+            ->and($mariadb['install_progress']['output'])->toBe('Setting up mariadb-server failed')
+            ->and($mariadb['install_progress']['reference'])->toBe($reference)
+            ->and($mariadb['install_progress']['retryable'])->toBeTrue();
     });
 
     it('refuses an engine it has no installer for', function () {
@@ -325,6 +387,51 @@ describe('the job', function () {
         // becomes eligible for a second worker while the first is still running.
         expect((int) config('queue.connections.database.retry_after'))
             ->toBeGreaterThan((new InstallDatabaseEngine('mariadb'))->timeout);
+    });
+
+    it('keeps the exact step when account provisioning fails', function () {
+        $queries = 0;
+
+        Process::fake(function ($process) use (&$queries) {
+            $command = $process->command;
+
+            if (($command[0] ?? '') === 'dpkg-query') {
+                return Process::result(output: 'unknown ok not-installed');
+            }
+
+            if (in_array(($command[0] ?? ''), ['mysql', 'mariadb'], true)) {
+                $queries++;
+
+                return $queries === 2
+                    ? Process::result(errorOutput: 'grant denied', exitCode: 1)
+                    : Process::result(exitCode: 0);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        app(InstallTracker::class)->start('database', 'mariadb', initialStep: 'queued');
+
+        expect(fn () => app()->call([new InstallDatabaseEngine('mariadb'), 'handle']))
+            ->toThrow(EngineInstallException::class);
+
+        $install = RuntimeInstall::where('runtime', 'database')->where('version', 'mariadb')->firstOrFail();
+
+        expect($install->status->value)->toBe('failed')
+            ->and($install->current_step)->toBe('creating_panel_account')
+            ->and($install->reason)->toBe('grant_failed')
+            ->and($install->reference)->not->toBeNull();
+    });
+
+    it('removes transient progress after a successful install', function () {
+        $seen = [];
+        fakeCleanBox($seen);
+        app(InstallTracker::class)->start('database', 'mariadb', initialStep: 'queued');
+
+        app()->call([new InstallDatabaseEngine('mariadb'), 'handle']);
+
+        expect(RuntimeInstall::where('runtime', 'database')->where('version', 'mariadb')->exists())
+            ->toBeFalse();
     });
 });
 

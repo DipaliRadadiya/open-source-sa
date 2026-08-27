@@ -2,6 +2,7 @@
 
 use App\Enums\InstallStatus;
 use App\Models\RuntimeInstall;
+use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallProgress;
 use App\Services\Runtime\InstallTracker;
 
@@ -113,6 +114,29 @@ it('writes the step and the output to the row', function () {
 
     expect($this->install->fresh()->current_step)->toBe('configuring')
         ->and($this->install->fresh()->output)->toContain('Setting up php8.4-fpm');
+});
+
+it('keeps a later database step when flushing apt output after a failure', function () {
+    $install = RuntimeInstall::create([
+        'runtime' => 'database',
+        'version' => 'mariadb',
+        'extension' => '',
+        'status' => InstallStatus::Installing,
+        'current_step' => 'queued',
+        'started_at' => now(),
+    ]);
+    $progress = new DatabaseInstallProgress($install);
+
+    $progress->step('preparing');
+    $progress->output("Get:1 http://archive/ mariadb-server\n");
+    expect($install->fresh()->current_step)->toBe('downloading');
+
+    $progress->step('starting_service');
+    $progress->output("systemctl failed after apt completed\n");
+    $progress->flushOutput();
+
+    expect($install->fresh()->current_step)->toBe('starting_service')
+        ->and($install->fresh()->output)->toContain('systemctl failed after apt completed');
 });
 
 it('clears the last attempt\'s progress when an install is retried', function () {
