@@ -12,6 +12,7 @@ import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BackupStatusBadge, SafetyBadge } from "@/components/backups/backup-status-badge";
 import { DownloadBackupButton } from "@/components/backups/download-backup-button";
 import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
@@ -56,17 +57,33 @@ function SiteCell({ row }) {
 function StatusCell({ row }) {
   const t = useTranslations("backups.history");
   const backup = row.original;
+  const reason =
+    backup.status === "failed"
+      ? reasonText(backup.reason_title, t("unknownReason"))
+      : null;
 
   return (
-    <div className="min-w-0 space-y-1">
+    <div className="w-52 max-w-52 min-w-0 space-y-1">
       <BackupStatusBadge backup={backup} />
-      {/* The reason sits under the badge in muted text, not as large red
-          prose. A failed run should read as one row that went wrong, not as
-          the loudest thing on the screen. */}
-      {backup.status === "failed" ? (
-        <p className="truncate text-xs text-muted-foreground">
-          {reasonText(backup.reason_title, t("unknownReason"))}
-        </p>
+      {/* Bound the copy to the column before clamping it. `truncate` without a
+          real width let this no-wrap sentence participate in auto table layout,
+          so one detailed failure widened the whole table. Two lines keep the
+          reason useful in the row; the complete text remains reachable on
+          hover or keyboard focus. */}
+      {reason ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <p
+              tabIndex={0}
+              className="line-clamp-2 whitespace-normal break-words text-xs leading-4 text-muted-foreground"
+            >
+              {reason}
+            </p>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-80 whitespace-normal">
+            {reason}
+          </TooltipContent>
+        </Tooltip>
       ) : null}
     </div>
   );
