@@ -2482,6 +2482,7 @@
         "threads_running": "Consultas ejecutándose a la vez."
       },
       "collecting": "Aún no hay histórico. Las mediciones se toman cada 5 minutos.",
+      "noActivity": "No se registró actividad de la base de datos en las últimas 24 horas.",
       "processes": "Consultas en ejecución",
       "processesDescription": "Conexiones activas trabajando. Las inactivas se cuentan, no se listan.",
       "noProcesses": "Ahora mismo no se está ejecutando nada.",
@@ -2552,7 +2553,7 @@
       },
       "runningQueries": "Consultas en ejecución",
       "longRunningCount": "{count, plural, one {# de larga duración} other {# de larga duración}}",
-      "chartDescription": "Queries per second, connections, and running threads — 24 hours."
+      "chartDescription": "Consultas por segundo, conexiones e hilos en ejecución, medidos cada 5 minutos."
     },
     "tables": {
       "title": "Tablas",

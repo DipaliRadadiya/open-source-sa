@@ -2482,6 +2482,7 @@
         "threads_running": "Queries running at the same time."
       },
       "collecting": "No history yet. Measurements are taken every 5 minutes.",
+      "noActivity": "No database activity was recorded in the last 24 hours.",
       "processes": "Running queries",
       "processesDescription": "Live connections doing work. Idle ones are counted, not listed.",
       "noProcesses": "Nothing is running right now.",
@@ -2552,7 +2553,7 @@
       },
       "runningQueries": "Running queries",
       "longRunningCount": "{count, plural, one {# long-running} other {# long-running}}",
-      "chartDescription": "Queries per second, connections, and running threads — 24 hours."
+      "chartDescription": "Queries per second, connections, and running threads, sampled every 5 minutes."
     },
     "tables": {
       "title": "Tables",
