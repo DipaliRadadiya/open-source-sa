@@ -183,8 +183,8 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null }) 
 
         {/* Set expectations up front: a name does nothing until its DNS points
             here. Show the exact A-record target when we know it. */}
-        <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-          <Info className="mt-0.5 size-3.5 shrink-0" />
+        <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+          <Info className="size-3.5 shrink-0" />
           {serverIp ? (
             <p className="flex flex-wrap items-center gap-1.5">
               <span>{t("add.dnsNoteIp")}</span>

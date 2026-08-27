@@ -1405,8 +1405,8 @@ export function CreateApplicationForm({
                       {!temporary &&
                       serverIp &&
                       isValidApplicationDomain(domain) ? (
-                        <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
-                          <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                        <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
+                          <Info className="size-3.5 shrink-0" aria-hidden />
                           <p className="flex flex-wrap items-center gap-1.5">
                             <span>{t("form.dnsNote")}</span>
                             <code className="rounded bg-background px-1.5 py-0.5 font-mono text-foreground">
