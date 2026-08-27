@@ -22,10 +22,18 @@ class ApiErrorLogResource extends JsonResource
             'feature' => $this['context']['feature'] ?? null,
             'operation' => $this['context']['op'] ?? null,
             'exit_code' => $this['context']['exit_code'] ?? null,
-            'error' => isset($this['context']['stderr'])
-                ? $this->redactedSummary((string) $this['context']['stderr'])
-                : null,
+            'error' => $this->errorSummary(),
         ];
+    }
+
+    private function errorSummary(): ?string
+    {
+        $context = $this['context'] ?? [];
+        $stderr = trim((string) ($context['stderr'] ?? ''));
+        $stdout = trim((string) ($context['stdout'] ?? ''));
+        $error = $stderr !== '' ? $stderr : $stdout;
+
+        return $error !== '' ? $this->redactedSummary($error) : null;
     }
 
     private function redactedSummary(string $error): string

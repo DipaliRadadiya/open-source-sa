@@ -4761,7 +4761,7 @@ A disabled webhook and an identifier that never existed both answer `404`, ident
 
 **Response `200`:** `{"error_logs":[{"occurred_at":"…","status":500,"method":"POST","route":"api/applications/{application}","exception":"…","message":"Unexpected API error.","reference":"…","user_id":1,"feature":null,"operation":null,"exit_code":null,"error":null}],"meta":{"truncated":false}}`
 
-Server-operation records use `feature`, `operation`, `exit_code`, and a redacted, 1,000-character `error` summary to make a support reference actionable. API failures use the existing fields. Validation, authentication, authorization, and not-found responses are excluded. Entries never expose request bodies, credentials, cookies, tokens, SQL bindings, command output, or stack traces. The log rotates automatically and retains 30 days by default.
+Server-operation records use `feature`, `operation`, `exit_code`, and a redacted, 1,000-character `error` summary to make a support reference actionable. The summary uses non-empty stderr first and falls back to stdout because installers and other CLI tools often report failures there; it remains `null` when neither stream contains output. API failures use the existing fields. Validation, authentication, authorization, and not-found responses are excluded. Entries never expose request bodies, credentials, cookies, tokens, SQL bindings, unredacted command output, or stack traces. The log rotates automatically and retains 30 days by default.
 
 ---
 

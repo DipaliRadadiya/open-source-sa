@@ -101,6 +101,74 @@ it('shows failed server operations and filters them by reference', function () {
         ->assertJsonPath('error_logs.0.user_id', 7);
 });
 
+it('falls back to redacted stdout when a server operation has no stderr', function () {
+    $stdoutReference = '5c3cc1bb-3f01-4c2c-8c3c-9fe15b675b63';
+    $stderrReference = '9c01c412-493a-453c-8d91-70c6fa8f82e4';
+    $emptyReference = '13e01e85-4e82-40a5-9976-791d31486762';
+
+    File::put($this->logDir.'/server-ops.log', implode(PHP_EOL, [
+        json_encode([
+            'message' => 'server operation',
+            'context' => [
+                'reference' => $stdoutReference,
+                'feature' => 'application',
+                'op' => 'installer.install_app',
+                'exit_code' => 1,
+                'stderr' => '',
+                'stdout' => 'Moodle failed: password=secret-value token=abc123',
+            ],
+            'level_name' => 'ERROR',
+            'datetime' => '2026-08-27T13:00:00+00:00',
+        ]),
+        json_encode([
+            'message' => 'server operation',
+            'context' => [
+                'reference' => $stderrReference,
+                'feature' => 'application',
+                'op' => 'installer.install_app',
+                'exit_code' => 1,
+                'stderr' => 'The stderr reason',
+                'stdout' => 'The less specific stdout output',
+            ],
+            'level_name' => 'ERROR',
+            'datetime' => '2026-08-27T13:01:00+00:00',
+        ]),
+        json_encode([
+            'message' => 'server operation',
+            'context' => [
+                'reference' => $emptyReference,
+                'feature' => 'application',
+                'op' => 'installer.install_app',
+                'exit_code' => 1,
+                'stderr' => ' ',
+                'stdout' => '',
+            ],
+            'level_name' => 'ERROR',
+            'datetime' => '2026-08-27T13:02:00+00:00',
+        ]),
+        '',
+    ]));
+
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+    $headers = ['Authorization' => "Bearer {$token}"];
+
+    $this->withHeaders($headers)
+        ->getJson("/api/admin/error-logs?reference={$stdoutReference}")
+        ->assertOk()
+        ->assertJsonPath('error_logs.0.error', 'Moodle failed: password=*** token=***');
+
+    $this->withHeaders($headers)
+        ->getJson("/api/admin/error-logs?reference={$stderrReference}")
+        ->assertOk()
+        ->assertJsonPath('error_logs.0.error', 'The stderr reason');
+
+    $this->withHeaders($headers)
+        ->getJson("/api/admin/error-logs?reference={$emptyReference}")
+        ->assertOk()
+        ->assertJsonPath('error_logs.0.error', null);
+});
+
 it('rejects an invalid reference filter', function () {
     $admin = User::factory()->admin()->create();
     $token = $admin->createToken('test')->plainTextToken;
