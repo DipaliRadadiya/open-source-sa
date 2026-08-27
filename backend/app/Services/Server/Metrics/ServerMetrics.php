@@ -147,7 +147,7 @@ class ServerMetrics
         $processes = [];
         foreach (array_slice(preg_split('/\r?\n/', trim($output)) ?: [], 1) as $line) {
             $parts = preg_split('/\s+/', trim($line), 5);
-            if (count($parts) < 5) {
+            if (count($parts) < 5 || $this->isProcessProbe($parts[4])) {
                 continue;
             }
             $processes[] = [
@@ -165,6 +165,26 @@ class ServerMetrics
         }
 
         return $processes;
+    }
+
+    /**
+     * The short-lived command gathering this list is not a workload and must
+     * not appear as something the user can inspect or stop. Match the complete
+     * argv so an unrelated ps command remains visible.
+     */
+    private function isProcessProbe(string $command): bool
+    {
+        $arguments = preg_split('/\s+/', trim($command)) ?: [];
+
+        if (basename((string) ($arguments[0] ?? '')) !== 'ps') {
+            return false;
+        }
+
+        return array_slice($arguments, 1) === [
+            '-eo',
+            'pid,user:20,%cpu,%mem,args',
+            '--sort=-%cpu',
+        ];
     }
 
     // ---- usage breakdowns (total / used / free / percent) ----

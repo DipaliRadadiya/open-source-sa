@@ -50,7 +50,7 @@ function fakeDashboard(): void
             ($cmd[0] ?? '') === 'nginx' => Process::result(errorOutput: 'nginx version: nginx/1.24.0'),
             ($cmd[0] ?? '') === 'redis-server' => Process::result(output: 'Redis server v=7.2.4 sha=0'),
             ($cmd[0] ?? '') === 'mysql' => Process::result(output: 'mysql  Ver 8.0.36 for Linux'),
-            ($cmd[0] ?? '') === 'ps' => Process::result(output: "  PID USER  %CPU %MEM COMMAND\n 1234 root   5.0  2.1 /usr/sbin/nginx -g daemon off;\n 5678 mysql  3.0 10.5 /usr/sbin/mysqld --defaults-file=/etc/mysql/my.cnf --password=topsecret --api-key abc123\n"),
+            ($cmd[0] ?? '') === 'ps' => Process::result(output: "  PID USER  %CPU %MEM COMMAND\n 9999 panel 99.0  0.1 /usr/bin/ps -eo pid,user:20,%cpu,%mem,args --sort=-%cpu\n 1234 root   5.0  2.1 /usr/sbin/nginx -g daemon off;\n 5678 mysql  3.0 10.5 /usr/sbin/mysqld --defaults-file=/etc/mysql/my.cnf --password=topsecret --api-key abc123\n"),
             default => Process::result(exitCode: 0),
         };
     });
@@ -108,7 +108,8 @@ it('returns the server process table', function () {
         ->assertJsonPath(
             'processes.1.command',
             '/usr/sbin/mysqld --defaults-file=/etc/mysql/my.cnf --password=[REDACTED] --api-key [REDACTED]',
-        );
+        )
+        ->assertJsonMissing(['pid' => 9999]);
 
     Process::assertRan(fn ($process) => $process->command === [
         'ps', '-eo', 'pid,user:20,%cpu,%mem,args', '--sort=-%cpu',
