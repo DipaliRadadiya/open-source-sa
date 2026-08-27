@@ -21,8 +21,6 @@ class ServiceManager
      */
     public const ACTIONS = ['start', 'stop', 'restart', 'reload', 'enable', 'disable'];
 
-    private const DATABASE_SERVICES = ['mysql', 'mariadb', 'mongodb'];
-
     public function __construct(
         private ServerOps $serverOps,
         private ServiceUsage $usage,
@@ -107,7 +105,7 @@ class ServiceManager
 
     /**
      * @param  array{key: string, unit: string, label: string}  $service
-     * @param  array{installed: bool, id: ?string, status: string, enabled: bool, properties: array<string, string|null>}  $state
+     * @param  array{installed: bool, id: ?string, status: string, enabled: bool, can_reload: bool, properties: array<string, string|null>}  $state
      * @return array<string, mixed>|null
      */
     private function describeState(array $service, array $state): ?array
@@ -135,7 +133,7 @@ class ServiceManager
             'status' => $state['status'],
             'enabled' => $state['enabled'],
             'protected' => $this->isProtected($service['unit']),
-            'actions' => $this->allowedActions($service),
+            'actions' => $this->allowedActions($service, $state['can_reload']),
             // Whether this service can validate its own configuration, so the
             // UI only offers the button where it means something.
             'testable' => $this->tester->testable($service['key']),
@@ -293,7 +291,7 @@ class ServiceManager
     /**
      * @return array<int, string>
      */
-    public function allowedActions(array $service): array
+    public function allowedActions(array $service, bool $canReload): array
     {
         // Protected units keep restart/reload/enable but can't be stopped or
         // disabled (that would take the panel offline).
@@ -301,10 +299,9 @@ class ServiceManager
             ? ['restart', 'reload', 'enable']
             : self::ACTIONS;
 
-        // Database daemons do not have a portable, meaningful reload action.
-        // Some units reject it while others treat it differently, so only
-        // expose the predictable restart operation for re-reading state.
-        if (in_array($service['key'], self::DATABASE_SERVICES, true)) {
+        // systemd knows whether the unit implements reload. Do not offer a
+        // button that can only fail, regardless of what kind of service it is.
+        if (! $canReload) {
             $actions = array_values(array_diff($actions, ['reload']));
         }
 
@@ -384,12 +381,12 @@ class ServiceManager
      * tree (a php-fpm master and all its workers) is counted correctly, and
      * why adding them costs nothing — the call was already being made.
      *
-     * @return array{installed: bool, id: ?string, status: string, enabled: bool, properties: array<string, string|null>}
+     * @return array{installed: bool, id: ?string, status: string, enabled: bool, can_reload: bool, properties: array<string, string|null>}
      */
     private function inspect(string $unit): array
     {
         $output = $this->serverOps->run(
-            ['systemctl', 'show', $unit, '--property=Id,LoadState,ActiveState,UnitFileState,MemoryCurrent,CPUUsageNSec,TasksCurrent'],
+            ['systemctl', 'show', $unit, '--property=Id,LoadState,ActiveState,UnitFileState,CanReload,MemoryCurrent,CPUUsageNSec,TasksCurrent'],
             ['feature' => 'service', 'op' => 'inspect', 'unit' => $unit],
         )->output();
 
@@ -398,6 +395,7 @@ class ServiceManager
             'id' => $this->property($output, 'Id'),
             'status' => $this->property($output, 'ActiveState') ?: 'inactive',
             'enabled' => $this->property($output, 'UnitFileState') === 'enabled',
+            'can_reload' => $this->property($output, 'CanReload') === 'yes',
             'properties' => [
                 'MemoryCurrent' => $this->property($output, 'MemoryCurrent'),
                 'CPUUsageNSec' => $this->property($output, 'CPUUsageNSec'),

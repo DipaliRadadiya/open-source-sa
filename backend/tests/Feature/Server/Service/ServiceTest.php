@@ -24,7 +24,7 @@ afterEach(function () {
  * Fake systemctl: `show` reports each unit's state from $units (default:
  * not-found → excluded); all other systemctl commands succeed.
  *
- * @param  array<string, array{load: string, active: string, file: string, id?: string}>  $units
+ * @param  array<string, array{load: string, active: string, file: string, id?: string, reload?: bool}>  $units
  */
 function fakeServices(array $units): void
 {
@@ -33,8 +33,9 @@ function fakeServices(array $units): void
             $unit = $process->command[2] ?? '';
             $s = $units[$unit] ?? ['load' => 'not-found', 'active' => 'inactive', 'file' => 'disabled'];
             $id = $s['id'] ?? "{$unit}.service";
+            $canReload = ($s['reload'] ?? false) ? 'yes' : 'no';
 
-            return Process::result(output: "Id={$id}\nLoadState={$s['load']}\nActiveState={$s['active']}\nUnitFileState={$s['file']}\n");
+            return Process::result(output: "Id={$id}\nLoadState={$s['load']}\nActiveState={$s['active']}\nUnitFileState={$s['file']}\nCanReload={$canReload}\n");
         }
 
         return Process::result(exitCode: 0);
@@ -43,7 +44,7 @@ function fakeServices(array $units): void
 
 it('lists only installed services with live status, protection and actions', function () {
     fakeServices([
-        'nginx' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled'],
+        'nginx' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'reload' => true],
         'mariadb' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled'],
     ]);
 
@@ -117,7 +118,7 @@ it('protects Apache when it is the recorded web server', function () {
         'capabilities' => ['php' => true, 'node' => false],
         'source' => 'installer',
     ]);
-    fakeServices(['apache2' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
+    fakeServices(['apache2' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'reload' => true]]);
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->getJson('/api/services')
@@ -149,7 +150,7 @@ it('protects OpenLiteSpeed when it is the recorded web server', function () {
 });
 
 it('protects Redis because the panel depends on it', function () {
-    fakeServices(['redis-server' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
+    fakeServices(['redis-server' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'reload' => true]]);
 
     $response = $this->withHeader('Authorization', "Bearer {$this->token}")
         ->getJson('/api/services')
@@ -178,7 +179,24 @@ it('restarts a service via systemctl', function () {
     Process::assertRan(fn ($p) => $p->command === ['systemctl', 'restart', 'mariadb']);
 });
 
-it('does not offer or run reload for database services', function (string $key, string $unit) {
+it('offers and runs reload when systemd says the service can reload', function () {
+    fakeServices([
+        'nginx' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'reload' => true],
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/services')
+        ->assertOk()
+        ->assertJsonPath('services.0.actions', ['restart', 'reload', 'enable']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/nginx', ['action' => 'reload'])
+        ->assertOk();
+
+    Process::assertRan(fn ($p) => $p->command === ['systemctl', 'reload', 'nginx']);
+});
+
+it('does not offer or run reload when systemd says the service cannot reload', function (string $key, string $unit) {
     fakeServices([$unit => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
 
     $services = $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -200,6 +218,7 @@ it('does not offer or run reload for database services', function (string $key, 
     'MySQL' => ['mysql', 'mysql'],
     'MariaDB' => ['mariadb', 'mariadb'],
     'MongoDB' => ['mongodb', 'mongod'],
+    'Supervisor' => ['supervisor', 'supervisor'],
 ]);
 
 it('blocks stopping a protected service', function () {

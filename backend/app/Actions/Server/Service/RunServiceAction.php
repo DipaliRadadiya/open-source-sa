@@ -29,16 +29,16 @@ class RunServiceAction
     public function execute(string $key, string $action): array
     {
         $service = $this->services->find($key);
+        $description = $service ? $this->services->describe($service) : null;
 
         // Unknown key, or a managed unit that isn't installed on this box.
-        if (! $service || ! $this->services->describe($service)) {
+        if (! $service || ! $description) {
             abort(404, __('errors/service.not_found'));
         }
 
-        // Enforce the same per-service action list returned to clients. This
-        // covers protected services and service-specific exclusions such as
-        // database daemons not supporting a portable reload operation.
-        if (! in_array($action, $this->services->allowedActions($service), true)) {
+        // Enforce the same live per-service action list returned to clients.
+        // This covers protected services and units that cannot reload.
+        if (! in_array($action, $description['actions'], true)) {
             throw ValidationException::withMessages([
                 'action' => [__('validation.in', ['attribute' => 'action'])],
             ]);
