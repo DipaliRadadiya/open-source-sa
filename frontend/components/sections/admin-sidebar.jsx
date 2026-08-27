@@ -7,6 +7,7 @@ import { ADMIN_NAV, isAdminNavActive } from "@/lib/admin-nav";
 import { NAV_ITEM_CLASS } from "@/lib/navigation";
 import { Logo } from "@/components/logo";
 import { NavIcon } from "@/components/nav-icon";
+import { useUnsaved } from "@/components/ui/unsaved-guard";
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +25,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const t = useTranslations("admin");
   const { state, isMobile, setOpenMobile } = useSidebar();
+  const { guardNavigation } = useUnsaved();
   const iconOnly = state === "collapsed" && !isMobile;
 
   return (
@@ -53,7 +55,16 @@ export function AdminSidebar() {
                     isActive={active}
                     tooltip={title}
                     className={NAV_ITEM_CLASS}
-                    onClick={() => isMobile && setOpenMobile(false)}
+                    onClick={(event) => {
+                      if (
+                        !active &&
+                        guardNavigation(item.url, () => isMobile && setOpenMobile(false))
+                      ) {
+                        event.preventDefault();
+                        return;
+                      }
+                      if (isMobile) setOpenMobile(false);
+                    }}
                   >
                     <Link href={item.url}>
                       <NavIcon name={item.icon} />

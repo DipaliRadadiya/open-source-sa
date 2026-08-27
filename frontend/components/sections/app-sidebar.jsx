@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Globe2, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Globe2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   groupBySubLevel,
@@ -18,7 +17,6 @@ import { useApplicationNav } from "@/components/sections/application-nav";
 import { Logo } from "@/components/logo";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { NavIcon } from "@/components/nav-icon";
 import {
@@ -47,26 +45,14 @@ import {
 function MobileNavLink({ item, built, active, children, className }) {
   const { isMobile, setOpenMobile } = useSidebar()
   const t = useTranslations("common")
-  const router = useRouter()
-  const { hasUnsaved } = useUnsaved()
-  const [leavingTo, setLeavingTo] = useState(null)
-  const handleClick = (event) => {
-    // `asChild` merges this onto the anchor itself, so preventDefault is enough
-    // to stop Next from navigating.
-    if (hasUnsaved && !active && item.href) {
-      event.preventDefault()
-      setLeavingTo(item.href)
-      return
-    }
-    if (isMobile) setOpenMobile(false)
-  }
+  const { guardNavigation } = useUnsaved()
+
   if (!built) {
     return (
       <SidebarMenuButton
         asChild
         tooltip={`${navTitle(item, t)} · ${t("soon")}`}
         className={cn(NAV_ITEM_CLASS, "cursor-default text-muted-foreground/55 hover:bg-transparent hover:text-muted-foreground/55")}
-        onClick={handleClick}
       >
         <span aria-disabled="true">
           {children}
@@ -77,36 +63,31 @@ function MobileNavLink({ item, built, active, children, className }) {
       </SidebarMenuButton>
     )
   }
-  return (
-    <>
-      <SidebarMenuButton
-        asChild
-        isActive={active}
-        tooltip={navTitle(item, t)}
-        className={cn(NAV_ITEM_CLASS, className)}
-        onClick={handleClick}
-      >
-        {children}
-      </SidebarMenuButton>
 
-      <ConfirmDialog
-        open={leavingTo !== null}
-        onOpenChange={(open) => !open && setLeavingTo(null)}
-        icon={TriangleAlert}
-        tone="warning"
-        confirmVariant="destructive"
-        title={t("unsavedTitle")}
-        description={t("unsavedDescription")}
-        cancelLabel={t("unsavedStay")}
-        confirmLabel={t("unsavedLeave")}
-        onConfirm={() => {
-          const href = leavingTo
-          setLeavingTo(null)
-          if (isMobile) setOpenMobile(false)
-          router.push(href)
-        }}
-      />
-    </>
+  const handleClick = (event) => {
+    // `asChild` merges this onto the anchor itself, so preventing the click is
+    // enough to hold the route while the provider asks about dirty work.
+    if (
+      !active &&
+      item.href &&
+      guardNavigation(item.href, () => isMobile && setOpenMobile(false))
+    ) {
+      event.preventDefault()
+      return
+    }
+    if (isMobile) setOpenMobile(false)
+  }
+
+  return (
+    <SidebarMenuButton
+      asChild
+      isActive={active}
+      tooltip={navTitle(item, t)}
+      className={cn(NAV_ITEM_CLASS, className)}
+      onClick={handleClick}
+    >
+      {children}
+    </SidebarMenuButton>
   )
 }
 

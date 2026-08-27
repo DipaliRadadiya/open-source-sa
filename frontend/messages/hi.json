@@ -27,6 +27,7 @@
     "requiredField": "यह फ़ील्ड आवश्यक है।",
     "requiredFieldNamed": "{field} फ़ील्ड आवश्यक है।",
     "disabledControl": "यह नियंत्रण अभी उपलब्ध नहीं है।",
+    "skipToContent": "मुख्य सामग्री पर जाएँ",
     "breadcrumbServer": "सर्वर",
     "breadcrumbApplications": "ऐप्लिकेशन",
     "applicationContext": {
@@ -828,6 +829,7 @@
     "live": "लाइव",
     "historyLabel": "पिछले 24 घंटे",
     "offline": "लाइव मेट्रिक्स अनुपलब्ध",
+    "recovered": "लाइव मेट्रिक्स फिर उपलब्ध हैं",
     "updated": "{time} पर अपडेट किया गया",
     "of": "में से",
     "swapOff": "कॉन्फ़िगर नहीं है",

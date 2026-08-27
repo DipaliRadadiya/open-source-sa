@@ -8,6 +8,8 @@ import { AdminHeader } from "@/components/sections/admin-header";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarAutoCollapse } from "@/components/sections/sidebar-auto-collapse";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { UnsavedProvider } from "@/components/ui/unsaved-guard";
+import { PanelFocus } from "@/components/sections/panel-focus";
 import { RateLimited } from "@/components/sections/rate-limited";
 import { isRateLimited } from "@/lib/api/rate-limited";
 
@@ -32,6 +34,8 @@ export default async function AdminLayout({ children }) {
   return (
     <AuthProvider user={user}>
       <TooltipProvider delayDuration={0}>
+        <UnsavedProvider>
+        <PanelFocus />
         <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
           <SidebarAutoCollapse />
           <AdminSidebar />
@@ -46,13 +50,14 @@ export default async function AdminLayout({ children }) {
                 </div>
               </div>
             </div>
-            <main className="flex flex-1 flex-col">
+            <main id="main-content" tabIndex={-1} className="flex flex-1 flex-col">
               <div className="mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">
                 {children}
               </div>
             </main>
           </SidebarInset>
         </SidebarProvider>
+        </UnsavedProvider>
       </TooltipProvider>
     </AuthProvider>
   );

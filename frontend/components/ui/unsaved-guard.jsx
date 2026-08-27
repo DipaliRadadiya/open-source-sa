@@ -8,21 +8,29 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { TriangleAlert } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * Knows whether any settings card on the page has edits that were never saved.
+ * Knows whether any panel surface has edits that were never saved.
  *
- * Each card saves on its own, so nothing else on the page can tell. Without
- * this, typing a new hostname and then clicking another tab throws the edit
- * away silently — no warning, no trace, and the field is back to its old value
- * when you return.
+ * Cards and forms save independently, so the surrounding shell cannot infer
+ * their state. They register here, and every shell escape route asks this one
+ * provider before it navigates or changes the session.
  */
 const UnsavedContext = createContext(null);
 
 export function UnsavedProvider({ children }) {
+  const router = useRouter();
+  const t = useTranslations("common");
   // A set of ids rather than a boolean: two cards can be dirty at once, and one
   // of them saving must not clear the warning for the other.
   const [dirty, setDirty] = useState(() => new Set());
+  // One panel-wide confirmation, rather than a dialog mounted beside every
+  // sidebar, breadcrumb and tab link that can leave dirty work behind.
+  const [pendingAction, setPendingAction] = useState(null);
 
   const setSectionDirty = useCallback((id, isDirty) => {
     setDirty((prev) => {
@@ -34,9 +42,33 @@ export function UnsavedProvider({ children }) {
     });
   }, []);
 
+  const hasUnsaved = dirty.size > 0;
+
+  /**
+   * Hold an action until the reader confirms that unsaved changes can be lost.
+   * Returns true only when the caller must prevent its normal click/select.
+   */
+  const guardAction = useCallback(
+    (action) => {
+      if (!hasUnsaved) return false;
+      setPendingAction(() => action);
+      return true;
+    },
+    [hasUnsaved],
+  );
+
+  const guardNavigation = useCallback(
+    (href, afterConfirm) =>
+      guardAction(() => {
+        afterConfirm?.();
+        router.push(href);
+      }),
+    [guardAction, router],
+  );
+
   const value = useMemo(
-    () => ({ hasUnsaved: dirty.size > 0, setSectionDirty }),
-    [dirty, setSectionDirty],
+    () => ({ hasUnsaved, setSectionDirty, guardAction, guardNavigation }),
+    [guardAction, guardNavigation, hasUnsaved, setSectionDirty],
   );
 
   // Covers the browser's own exits — reload, close, back out of the app — which
@@ -54,17 +86,37 @@ export function UnsavedProvider({ children }) {
   }, [value.hasUnsaved]);
 
   return (
-    <UnsavedContext.Provider value={value}>{children}</UnsavedContext.Provider>
+    <UnsavedContext.Provider value={value}>
+      {children}
+      <ConfirmDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+        icon={TriangleAlert}
+        tone="warning"
+        confirmVariant="destructive"
+        title={t("unsavedTitle")}
+        description={t("unsavedDescription")}
+        cancelLabel={t("unsavedStay")}
+        confirmLabel={t("unsavedLeave")}
+        onConfirm={() => {
+          const action = pendingAction;
+          setPendingAction(null);
+          action?.();
+        }}
+      />
+    </UnsavedContext.Provider>
   );
 }
 
 export function useUnsaved() {
-  // Null outside the settings layout: the tab strip is the only consumer, but a
-  // missing provider should degrade to "nothing to lose" rather than throw.
+  // Outside a panel shell there is nothing registered to lose. Degrade to an
+  // unguarded action rather than forcing public/auth surfaces to mount this.
   return (
     useContext(UnsavedContext) ?? {
       hasUnsaved: false,
       setSectionDirty: () => {},
+      guardAction: () => false,
+      guardNavigation: () => false,
     }
   );
 }

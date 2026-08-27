@@ -27,6 +27,7 @@
     "requiredField": "This field is required.",
     "requiredFieldNamed": "The {field} field is required.",
     "disabledControl": "This control is unavailable right now.",
+    "skipToContent": "Skip to main content",
     "breadcrumbServer": "Server",
     "breadcrumbApplications": "Applications",
     "applicationContext": {
@@ -828,6 +829,7 @@
     "live": "Live",
     "historyLabel": "Last 24 hours",
     "offline": "Live metrics unavailable",
+    "recovered": "Live metrics restored",
     "updated": "Updated {time}",
     "of": "of",
     "swapOff": "Not configured",

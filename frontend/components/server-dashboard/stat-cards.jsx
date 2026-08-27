@@ -34,10 +34,10 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
 
   return (
     // 5 cards: 1 → 2 → 5. A 3-col step would strand a single card on its own row.
-    // aria-live=polite: values refresh every 3s, so announce changes without
-    // interrupting whatever the user is doing.
+    // These values refresh every three seconds, so the group deliberately is
+    // NOT a live region. Connection loss/recovery is announced once by the
+    // status above it; reading five changing metrics on every poll is noise.
     <div
-      aria-live="polite"
       aria-busy={loading}
       className={cn(
         "grid gap-4 transition-opacity sm:grid-cols-2 xl:grid-cols-5",

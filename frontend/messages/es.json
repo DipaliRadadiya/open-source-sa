@@ -27,6 +27,7 @@
     "requiredField": "Este campo es obligatorio.",
     "requiredFieldNamed": "El campo {field} es obligatorio.",
     "disabledControl": "Este control no está disponible en este momento.",
+    "skipToContent": "Saltar al contenido principal",
     "breadcrumbServer": "Servidor",
     "breadcrumbApplications": "Aplicaciones",
     "applicationContext": {
@@ -828,6 +829,7 @@
     "live": "En vivo",
     "historyLabel": "Últimas 24 horas",
     "offline": "Métricas en vivo no disponibles",
+    "recovered": "Métricas en vivo restablecidas",
     "updated": "Actualizado {time}",
     "of": "de",
     "swapOff": "No configurado",

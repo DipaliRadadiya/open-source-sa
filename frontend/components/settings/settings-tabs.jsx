@@ -1,19 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Server,
   ShieldCheck,
   Gauge,
   Wrench,
-  TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollFade } from "@/components/ui/scroll-fade";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 
 const SECTIONS = [
@@ -34,9 +31,7 @@ const TAB_ACTIVE =
 export function SettingsTabs({ badges = {} }) {
   const t = useTranslations("settings");
   const pathname = usePathname();
-  const router = useRouter();
-  const { hasUnsaved } = useUnsaved();
-  const [leavingTo, setLeavingTo] = useState(null);
+  const { guardNavigation } = useUnsaved();
 
   return (
     // Scrolls rather than wraps on a narrow phone — a tab bar that reflows to
@@ -57,9 +52,7 @@ export function SettingsTabs({ badges = {} }) {
               aria-current={active ? "page" : undefined}
               className={cn(TAB, active && TAB_ACTIVE)}
               onClick={(event) => {
-                if (!hasUnsaved || active) return;
-                event.preventDefault();
-                setLeavingTo(href);
+                if (!active && guardNavigation(href)) event.preventDefault();
               }}
             >
               <Icon />
@@ -81,22 +74,6 @@ export function SettingsTabs({ badges = {} }) {
         })}
       </nav>
 
-      <ConfirmDialog
-        open={leavingTo !== null}
-        onOpenChange={(open) => !open && setLeavingTo(null)}
-        icon={TriangleAlert}
-        tone="warning"
-        confirmVariant="destructive"
-        title={t("unsavedTitle")}
-        description={t("unsavedDescription")}
-        cancelLabel={t("unsavedStay")}
-        confirmLabel={t("unsavedLeave")}
-        onConfirm={() => {
-          const href = leavingTo;
-          setLeavingTo(null);
-          router.push(href);
-        }}
-      />
     </ScrollFade>
   );
 }

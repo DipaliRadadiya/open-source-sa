@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import {
   Card,
   CardContent,
@@ -77,17 +78,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
     !justSubmitted &&
     (form.formState.isDirty ||
       canonMatrix(matrix) !== canonMatrix(initialMatrix));
-
-  // Warn on hard navigation (tab close / refresh / external link) while dirty.
-  useEffect(() => {
-    if (!isDirty) return;
-    const handler = (e) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty]);
+  useWatchUnsaved("admin-role", isDirty);
 
   function handleCancel() {
     if (isDirty) {

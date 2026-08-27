@@ -19,6 +19,7 @@ import { isRateLimited } from "@/lib/api/rate-limited";
 import { ApplicationNavProvider } from "@/components/sections/application-nav";
 import { UnsavedProvider } from "@/components/ui/unsaved-guard";
 import { AppChromeHeight } from "@/components/sections/app-chrome-height";
+import { PanelFocus } from "@/components/sections/panel-focus";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export default async function AppLayout({ children }) {
         {/* Panel-wide, not settings-only. Any screen with its own Save can
             lose an edit to a sidebar click, and every one of them did. */}
         <UnsavedProvider>
+        <PanelFocus />
         <PageCrumbProvider>
           <ApplicationNavProvider>
             <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
@@ -103,7 +105,7 @@ export default async function AppLayout({ children }) {
                     </div>
                   </div>
                 </div>
-                <main className="flex flex-1 flex-col">
+                <main id="main-content" tabIndex={-1} className="flex flex-1 flex-col">
                   <div className="mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">
                     {children}
                   </div>

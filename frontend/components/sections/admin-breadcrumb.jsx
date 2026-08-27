@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ADMIN_NAV, isAdminNavActive } from "@/lib/admin-nav";
+import { useUnsaved } from "@/components/ui/unsaved-guard";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,6 +24,7 @@ import {
 export function AdminBreadcrumb() {
   const pathname = usePathname();
   const t = useTranslations("admin");
+  const { guardNavigation } = useUnsaved();
   const current = ADMIN_NAV.find((item) => isAdminNavActive(pathname, item.url));
   const atRoot = pathname === "/admin";
 
@@ -36,6 +38,9 @@ export function AdminBreadcrumb() {
             <BreadcrumbLink asChild>
               <Link
                 href="/admin"
+                onClick={(event) => {
+                  if (guardNavigation("/admin")) event.preventDefault();
+                }}
                 className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {t("breadcrumbRoot")}

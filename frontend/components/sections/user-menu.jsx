@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { apiMessage } from "@/lib/api/error-message";
 import { initials } from "@/lib/format/initials";
+import { useUnsaved } from "@/components/ui/unsaved-guard";
 
 /**
  * Avatar dropdown shared by both panels' headers. `extraItems` slots panel-
@@ -28,9 +29,10 @@ export function UserMenu({ extraItems, impersonating = false }) {
   const user = useUser();
   const t = useTranslations("common");
   const tImp = useTranslations("impersonation");
+  const { guardAction } = useUnsaved();
   const [leaving, setLeaving] = useState(false);
 
-  async function onLogout() {
+  async function performLogout() {
     try {
       await logout();
     } finally {
@@ -39,7 +41,11 @@ export function UserMenu({ extraItems, impersonating = false }) {
     }
   }
 
-  async function onBackToAccount() {
+  function onLogout() {
+    if (!guardAction(performLogout)) performLogout();
+  }
+
+  async function performBackToAccount() {
     setLeaving(true);
     try {
       await stopImpersonating();
@@ -49,6 +55,10 @@ export function UserMenu({ extraItems, impersonating = false }) {
       toast.error(apiMessage(error, tImp("banner.failed")));
       setLeaving(false);
     }
+  }
+
+  function onBackToAccount() {
+    if (!guardAction(performBackToAccount)) performBackToAccount();
   }
 
   return (

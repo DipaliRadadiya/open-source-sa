@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { findActiveNavItem, resolveNavItems } from "@/lib/navigation";
 import { usePageCrumb } from "@/components/sections/page-crumb";
+import { useUnsaved } from "@/components/ui/unsaved-guard";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -33,6 +34,7 @@ export function AppBreadcrumb({ items }) {
   const pathname = usePathname();
   const params = useParams();
   const t = useTranslations("common");
+  const { guardNavigation } = useUnsaved();
   const applicationId = params?.application;
   // Set by the application layout (the site name) or by a detail page (a record).
   const { crumb } = usePageCrumb();
@@ -114,6 +116,9 @@ export function AppBreadcrumb({ items }) {
                   <BreadcrumbLink asChild>
                     <Link
                       href={item.href}
+                      onClick={(event) => {
+                        if (guardNavigation(item.href)) event.preventDefault();
+                      }}
                       className={cn(
                         "truncate rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         item.mono && "font-mono",

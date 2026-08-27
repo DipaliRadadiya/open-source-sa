@@ -9,11 +9,13 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleSwitcher } from "@/components/sections/locale-switcher";
 import { UserMenu } from "@/components/sections/user-menu";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useUnsaved } from "@/components/ui/unsaved-guard";
 
 export function AppHeader({ impersonating = false }) {
   const user = useUser();
   const t = useTranslations("admin");
   const tAccount = useTranslations("account");
+  const { guardNavigation } = useUnsaved();
   const isAdmin = user?.is_admin;
 
   return (
@@ -38,14 +40,24 @@ export function AppHeader({ impersonating = false }) {
           extraItems={
             <>
               <DropdownMenuItem asChild>
-                <Link href="/account">
+                <Link
+                  href="/account"
+                  onClick={(event) => {
+                    if (guardNavigation("/account")) event.preventDefault();
+                  }}
+                >
                   <UserCog className="size-4" />
                   {tAccount("title")}
                 </Link>
               </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem asChild>
-                  <Link href="/admin">
+                  <Link
+                    href="/admin"
+                    onClick={(event) => {
+                      if (guardNavigation("/admin")) event.preventDefault();
+                    }}
+                  >
                     <Shield className="size-4" />
                     {t("switchToAdmin")}
                   </Link>

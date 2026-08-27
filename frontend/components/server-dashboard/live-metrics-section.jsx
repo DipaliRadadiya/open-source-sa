@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { CircleAlert, History } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,25 @@ import { ServerLoadChart } from "@/components/server-dashboard/server-load-chart
 import { ResourceUsageChart } from "@/components/server-dashboard/resource-usage-chart";
 import { NetworkIoChart } from "@/components/server-dashboard/network-io-chart";
 import { DiskIoChart } from "@/components/server-dashboard/disk-io-chart";
+
+/** Announce only meaningful connection transitions, never every metric poll. */
+function ConnectionAnnouncement({ failed }) {
+  const t = useTranslations("serverDashboard");
+  const previous = useRef(failed);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (previous.current === failed) return;
+    previous.current = failed;
+    setMessage(failed ? t("offline") : t("recovered"));
+  }, [failed, t]);
+
+  return (
+    <span className="sr-only" aria-live="polite" aria-atomic="true">
+      {message}
+    </span>
+  );
+}
 
 function LiveStatus({ failed, updatedAt, timeZone }) {
   const t = useTranslations("serverDashboard");
@@ -22,7 +42,7 @@ function LiveStatus({ failed, updatedAt, timeZone }) {
   });
 
   return (
-    <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <span
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
@@ -67,6 +87,7 @@ export function LiveMetricsSection({ timeZone, history = [] }) {
           the 3s poll; everything under the 24h label is the five-minute
           collector. Mixing the two under one "Live" badge is exactly the
           question this page kept being asked. */}
+      <ConnectionAnnouncement failed={failed} />
       <LiveStatus failed={failed} updatedAt={updatedAt} timeZone={timeZone} />
       <StatCards metrics={metrics} stale={stale} ratesReady={ratesReady} />
       <div className="grid gap-4 lg:grid-cols-2">

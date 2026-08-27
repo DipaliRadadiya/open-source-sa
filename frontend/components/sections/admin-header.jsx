@@ -10,10 +10,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleSwitcher } from "@/components/sections/locale-switcher";
 import { UserMenu } from "@/components/sections/user-menu";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useUnsaved } from "@/components/ui/unsaved-guard";
 
 export function AdminHeader() {
   const pathname = usePathname();
   const t = useTranslations("admin");
+  const { guardNavigation } = useUnsaved();
 
   const current = ADMIN_NAV.find((item) => isAdminNavActive(pathname, item.url));
 
@@ -28,7 +30,12 @@ export function AdminHeader() {
         <UserMenu
           extraItems={
             <DropdownMenuItem asChild>
-              <Link href="/dashboard">
+              <Link
+                href="/dashboard"
+                onClick={(event) => {
+                  if (guardNavigation("/dashboard")) event.preventDefault();
+                }}
+              >
                 <ArrowLeft className="size-4" />
                 {t("exitToPanel")}
               </Link>
