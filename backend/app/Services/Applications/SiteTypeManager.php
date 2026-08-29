@@ -91,6 +91,12 @@ class SiteTypeManager
                 // server does not support is not an "install a runtime" prompt.
                 'installable_runtime' => $blocked['runtime'] ?? null,
                 'has_installer' => $this->installers->installerForType($type->name()) !== null,
+                // So the version picker can offer only what this application
+                // runs on. The create endpoint refuses the rest either way —
+                // this is here so the form does not present a choice that is
+                // going to be rejected, the same rule the card grid follows by
+                // reporting `available` instead of failing at submit.
+                'node_version_range' => $type->supportedNodeRange(),
                 'fields' => $type->fields(),
             ];
         }, $this->all());

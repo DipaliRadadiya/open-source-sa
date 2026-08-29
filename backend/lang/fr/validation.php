@@ -176,6 +176,7 @@ return [
     'start_command_wrapper' => 'Démarrez l\'app avec son fichier d\'entrée, par exemple « node server.js », pas avec :binary. Un gestionnaire de paquets fork le vrai processus, donc les signaux ne l\'atteignent jamais.',
 
     'port_in_use_by_app' => 'Le port :port est déjà utilisé par une autre application sur ce serveur.',
+    'node_version_unsupported' => 'L\'application :type fonctionne avec Node :range. Choisissez une version dans cette plage : en dehors, l\'application refuse de démarrer et le site ne sert rien.',
     'web_root_fixed' => ':type est servi depuis :web_root et s\'installe autour de ce chemin : la racine web ne peut donc pas être modifiée ici. Toute autre valeur rend le site inaccessible et publie son code source.',
     'port_in_use' => 'Quelque chose écoute déjà sur le port :port de ce serveur. Choisissez-en un autre ou arrêtez ce qui l\'occupe.',
 

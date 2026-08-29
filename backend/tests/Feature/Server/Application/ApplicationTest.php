@@ -433,3 +433,81 @@ it('says which types actually install something', function () {
     // to make an unavailable card work. It is not about the app at all.
     expect($types['wordpress']['installable_runtime'])->toBeNull();
 });
+
+describe('node version constraints', function () {
+    /**
+     * The version picker offered every installed Node to every Node site type,
+     * because it is one shared `nodeFields()` select and nothing narrowed it.
+     * A version the application refuses to run on produced a site the panel
+     * reported as created and a domain that served nothing: n8n exits on an
+     * unsupported version, so the reverse proxy points at a dead port.
+     */
+    it('refuses a Node version below what the application supports', function () {
+        capableServer();
+
+        $this->withHeaders(appHeaders())->postJson('/api/applications', [
+            'site_type' => 'nodebb',
+            'name' => 'Forum',
+            'domain' => 'forum.example.com',
+            'system_user_id' => test()->su->id,
+            // NodeBB v4.x requires 22 or greater.
+            'node_version' => '20',
+            'admin_username' => 'admin',
+            'admin_email' => 'admin@example.com',
+            'admin_password' => 'sup3rs3cret!',
+        ])->assertStatus(422)->assertJsonValidationErrors('node_version');
+    });
+
+    it('refuses a Node version above the ceiling, which n8n has and NodeBB does not', function () {
+        capableServer();
+
+        // The ceiling is the half that is easy to forget: too *new* is just as
+        // fatal for n8n, which supports 20.19 through 24.x and refuses the rest.
+        $this->withHeaders(appHeaders())->postJson('/api/applications', [
+            'site_type' => 'n8n',
+            'name' => 'Flows',
+            'domain' => 'flows.example.com',
+            'system_user_id' => test()->su->id,
+            'node_version' => '25',
+        ])->assertStatus(422)->assertJsonValidationErrors('node_version');
+    });
+
+    it('accepts a version inside the range, including the top of the ceiling series', function () {
+        capableServer();
+
+        // 24.7 must pass against a ceiling written as `24`: the ceiling is a
+        // major series, not a point release, or it goes stale every patch.
+        $this->withHeaders(appHeaders())->postJson('/api/applications', [
+            'site_type' => 'n8n',
+            'name' => 'Flows',
+            'domain' => 'flows.example.com',
+            'system_user_id' => test()->su->id,
+            'node_version' => '24.7.0',
+        ])->assertCreated();
+    });
+
+    it('leaves types with no declared range alone', function () {
+        capableServer();
+        test()->account = GitAccount::create([
+            'provider' => 'github', 'label' => 'Work', 'identifier' => 'octocat', 'token' => 'ghp_x',
+        ]);
+
+        // A git site runs code the panel knows nothing about, so it has no
+        // business having an opinion about the version.
+        $this->withHeaders(appHeaders())
+            ->postJson('/api/applications', gitPayload(['node_version' => '18']))
+            ->assertCreated();
+    });
+
+    it('publishes the range in the catalog so the picker can filter', function () {
+        capableServer();
+
+        $response = $this->withHeaders(appHeaders())->getJson('/api/site-types')->assertOk();
+
+        $types = collect($response->json('site_types'))->keyBy('name');
+
+        expect($types['nodebb']['node_version_range'])->toBe(['min' => '22', 'max' => null])
+            ->and($types['n8n']['node_version_range'])->toBe(['min' => '20.19', 'max' => '24'])
+            ->and($types['wordpress']['node_version_range'])->toBeNull();
+    });
+});

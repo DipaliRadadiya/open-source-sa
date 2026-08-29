@@ -157,6 +157,27 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
+     * No constraint by default.
+     *
+     * Same shape of problem as {@see fixedWebRoot()}, and found the same way:
+     * the installers know what their application needs and nothing acted on
+     * it, so the panel would take a Node version the application refuses to
+     * run under, report the site as created, and serve a 502 from a process
+     * that exited on startup. n8n says so out loud — "Your Node.js version is
+     * currently not supported by n8n" — into a journal nobody was reading.
+     *
+     * A range rather than a list: these projects state their support as a
+     * floor and sometimes a ceiling, and a list would need editing every time
+     * a new Node is released, which is how it would end up wrong.
+     *
+     * @return array{min: ?string, max: ?string}|null
+     */
+    public function supportedNodeRange(): ?array
+    {
+        return null;
+    }
+
+    /**
      * No recipe by default — a type overrides this only once one has
      * actually been built for it, matching how `app_staging` itself only
      * ever appears in the feature list a type declares.

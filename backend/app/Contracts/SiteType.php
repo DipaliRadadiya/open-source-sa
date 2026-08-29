@@ -57,6 +57,17 @@ interface SiteType
     public function needsDatabase(): bool;
 
     /**
+     * The Node versions this application will actually run on.
+     *
+     * `['min' => '22', 'max' => null]` — either end may be null for open.
+     * Null means the type has no opinion (every PHP type, and a git site whose
+     * code we know nothing about).
+     *
+     * @return array{min: ?string, max: ?string}|null
+     */
+    public function supportedNodeRange(): ?array;
+
+    /**
      * The create-form fields, in display order.
      *
      * Each entry: name, label, type, required, plus optionally default,

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Server\Application;
 use App\Enums\DomainOrigin;
 use App\Rules\AvailablePort;
 use App\Rules\StartCommand;
+use App\Rules\SupportedNodeVersion;
 use App\Services\Applications\SiteTypeManager;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -94,6 +95,19 @@ class StoreApplicationRequest extends FormRequest
         // `nullable` stays: an omitted value still falls back to the default.
         if (($fixed = $type->fixedWebRoot()) !== null) {
             $rules['web_root'] = ['nullable', Rule::in([$fixed, ltrim($fixed, '/')])];
+        }
+
+        // Same reasoning, same place: the type knows which Node versions its
+        // application runs on, and until this existed nothing acted on that.
+        // Appended rather than replacing the base rules, so the shape checks
+        // above still run first — this rule answers "will it run", not "is
+        // this a version string".
+        if (($range = $type->supportedNodeRange()) !== null) {
+            $rules['node_version'][] = new SupportedNodeVersion(
+                $range['min'] ?? null,
+                $range['max'] ?? null,
+                __("application.types.{$type->name()}.title"),
+            );
         }
 
         return $rules;

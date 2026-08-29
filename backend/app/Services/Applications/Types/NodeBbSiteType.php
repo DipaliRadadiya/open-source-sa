@@ -42,6 +42,15 @@ class NodeBbSiteType extends AbstractSiteType
         return true;
     }
 
+    /**
+     * NodeBB v4.x — the branch `config/server.php` installs — requires Node 22
+     * or greater, per its own README. No ceiling is published.
+     */
+    public function supportedNodeRange(): ?array
+    {
+        return ['min' => '22', 'max' => null];
+    }
+
     public function fields(): array
     {
         return array_merge($this->commonFields(), [
