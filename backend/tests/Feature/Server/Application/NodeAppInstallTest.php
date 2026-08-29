@@ -255,11 +255,23 @@ describe('NodeBB asset build', function () {
         $app = oneClickApp('nodebb');
         $root = '/home/apps/nodebb/public_html';
 
-        // A healthy build leaves templates behind; the installer now looks.
+        // `cat config.json` has to answer with what setup wrote, because the
+        // installer now *patches* that file rather than overwriting it — the
+        // whole point being that setup's own keys survive.
         Process::fake(function ($process) {
             test()->ran->push($process);
+            $command = implode(' ', (array) $process->command);
 
-            return str_contains(implode(' ', (array) $process->command), '-name *.tpl')
+            if (str_contains($command, 'cat ') && str_contains($command, 'config.json')) {
+                return Process::result(output: json_encode([
+                    'url' => 'http://old.example', 'port' => 4567,
+                    'database' => 'mongo',
+                    // The key setup owns and the panel must not destroy.
+                    'mongo' => ['host' => '127.0.0.1', 'database' => 'nodebb'],
+                ]));
+            }
+
+            return str_contains($command, '-name *.tpl')
                 ? Process::result(output: '/home/apps/nodebb/public_html/build/public/templates/categories.tpl')
                 : Process::result(output: '');
         });
@@ -293,6 +305,49 @@ describe('NodeBB asset build', function () {
             ->and($build)->toBeGreaterThan($lastConfigWrite);
     });
 
+    it('patches the config setup wrote instead of replacing it', function () {
+        $app = oneClickApp('nodebb');
+
+        Process::fake(function ($process) {
+            test()->ran->push($process);
+            $command = implode(' ', (array) $process->command);
+
+            if (str_contains($command, 'cat ') && str_contains($command, 'config.json')) {
+                return Process::result(output: json_encode([
+                    'url' => 'http://old.example',
+                    'database' => 'mongo',
+                    // Written by `./nodebb setup`, not by this installer. The
+                    // old code replaced the file with its own six keys and
+                    // discarded anything like this — and `./nodebb build` reads
+                    // this file to reach the database and find the active
+                    // theme, then compiles nothing and still exits 0.
+                    'setup_only_key' => 'must survive',
+                ]));
+            }
+
+            return str_contains($command, '-name *.tpl')
+                ? Process::result(output: '/x/categories.tpl')
+                : Process::result(output: '');
+        });
+
+        app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
+            'db_host' => '127.0.0.1', 'db_port' => 27017,
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]);
+
+        // The *last* config write, not the first: one goes in before setup,
+        // and it is the one after setup that used to destroy setup's keys.
+        $written = test()->ran
+            ->map(fn ($p) => (string) $p->input)
+            ->filter(fn (string $i) => str_contains($i, '"url"'))
+            ->last();
+
+        expect($written)->toContain('setup_only_key')
+            ->and($written)->toContain('must survive')
+            // and the panel's own values still land
+            ->and($written)->toContain('nodebb.test');
+    });
+
     it('fails provisioning when the build claims success but compiles nothing', function () {
         $app = oneClickApp('nodebb');
 
@@ -303,6 +358,11 @@ describe('NodeBB asset build', function () {
         // the artifact is.
         Process::fake(function ($process) {
             test()->ran->push($process);
+            $command = implode(' ', (array) $process->command);
+
+            if (str_contains($command, 'cat ') && str_contains($command, 'config.json')) {
+                return Process::result(output: json_encode(['url' => 'http://old.example', 'database' => 'mongo']));
+            }
 
             // Everything succeeds, including the build. The templates
             // directory is simply empty.

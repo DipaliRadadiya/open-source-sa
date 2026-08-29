@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Str;
 
 /**
@@ -93,9 +94,41 @@ class NodeBbInstaller extends AbstractNodeInstaller
             'admin__password__confirm' => (string) ($settings['admin_password'] ?? ''),
         ]);
 
-        // Setup rewrote config.json. Put ours back, or the site loses the URL
-        // and port the panel gave it and starts answering on 4567.
-        $this->writeSecretFile($application, "{$documentRoot}/config.json", $config);
+        // Setup rewrote config.json, and the panel's URL and port have to
+        // survive that or the site answers on 4567. **Patched, not replaced.**
+        //
+        // Overwriting it wholesale put back exactly the six keys this class
+        // knows about and silently discarded anything `setup` had added for
+        // itself. The next command to run is `./nodebb build`, which reads
+        // this file to reach the database and find the active theme — and a
+        // build that cannot do that compiles no templates *and still exits 0*,
+        // which is the failure this installer has now produced twice.
+        //
+        // Whether that discarded key is the cause is unproven. Writing over a
+        // file the application just wrote, to restore values that could be
+        // edited in place, is indefensible either way — and the mutator that
+        // does it correctly was already here, used by syncUrl() below.
+        $this->configMutator->transform(
+            $application,
+            "{$documentRoot}/config.json",
+            function (string $contents) use ($application): string {
+                $current = json_decode($contents, true, flags: JSON_THROW_ON_ERROR);
+
+                if (! is_array($current)) {
+                    throw new \RuntimeException('NodeBB config is not an object.');
+                }
+
+                $current['url'] = $application->url();
+                $current['port'] = (int) ($application->app_port ?: 4567);
+                // Reached through the reverse proxy only.
+                $current['bind_address'] = '127.0.0.1';
+
+                return json_encode(
+                    $current,
+                    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+                )."\n";
+            },
+        );
 
         // `setup` builds the assets itself, so this looks redundant — and that
         // reasoning is exactly what left it out. `setup`'s build can fail
@@ -113,9 +146,9 @@ class NodeBbInstaller extends AbstractNodeInstaller
         // The usual reason it dies is memory — the build runs its targets in
         // parallel and will exhaust a small VPS — which is precisely the kind
         // of failure that must be reported rather than swallowed.
-        $this->runWithNode('build', $application, ['./nodebb', 'build'], $documentRoot);
+        $build = $this->runWithNode('build', $application, ['./nodebb', 'build'], $documentRoot);
 
-        $this->assertAssetsBuilt($application, $documentRoot);
+        $this->assertAssetsBuilt($application, $documentRoot, $build);
     }
 
     /**
@@ -139,7 +172,7 @@ class NodeBbInstaller extends AbstractNodeInstaller
      *
      * @throws ProvisioningFailedException
      */
-    private function assertAssetsBuilt(Application $application, string $documentRoot): void
+    private function assertAssetsBuilt(Application $application, string $documentRoot, ServerOpsResult $build): void
     {
         // `-quit` stops at the first hit: this asks "is there one?", and the
         // directory holds thousands of files on a healthy install.
@@ -158,9 +191,16 @@ class NodeBbInstaller extends AbstractNodeInstaller
             timeout: 60,
         );
 
-        if ($probe->failed() || trim($probe->output()) === '') {
-            throw new ProvisioningFailedException('build', $probe->reference);
+        if (! $probe->failed() && trim($probe->output()) !== '') {
+            return;
         }
+
+        // The *build's* reference, not the probe's. The probe found the
+        // problem; the build caused it, and the build's log entry is the one
+        // holding the output that says why — which the error log now surfaces.
+        // Reporting the probe here would hand the user a reference whose
+        // recorded output is an empty `find`.
+        throw new ProvisioningFailedException('build', $build->reference);
     }
 
     /**

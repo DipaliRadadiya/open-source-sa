@@ -9,6 +9,7 @@ use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
+use App\Services\Server\ServerOpsResult;
 
 /**
  * Shared machinery for the one-click Node applications.
@@ -93,7 +94,7 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
         array $command,
         string $cwd,
         array $environment = [],
-    ): void {
+    ): ServerOpsResult {
         $dir = $this->nodeDir($application);
         $path = ($dir === null ? '' : $dir.':').'/usr/local/bin:/usr/bin:/bin';
 
@@ -103,7 +104,7 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
             $prefix[] = "{$key}={$value}";
         }
 
-        $this->runAsSiteUser($step, $application, array_merge($prefix, $command), null, $cwd);
+        return $this->runAsSiteUser($step, $application, array_merge($prefix, $command), null, $cwd);
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisioningBudget;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\ServerOps;
+use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Str;
 
 /**
@@ -361,9 +362,9 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      *
      * @throws ProvisioningFailedException
      */
-    protected function runAsSiteUser(string $step, Application $application, array $command, ?string $input = null, ?string $cwd = null): void
+    protected function runAsSiteUser(string $step, Application $application, array $command, ?string $input = null, ?string $cwd = null): ServerOpsResult
     {
-        $this->run($step, array_merge(
+        return $this->run($step, array_merge(
             ['runuser', '-u', $application->systemUser->username, '--'],
             $command,
         ), $application, $input, $cwd);
@@ -374,7 +375,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      *
      * @throws ProvisioningFailedException
      */
-    protected function run(string $step, array $command, Application $application, ?string $input = null, ?string $cwd = null): void
+    protected function run(string $step, array $command, Application $application, ?string $input = null, ?string $cwd = null): ServerOpsResult
     {
         $result = $this->serverOps->run(
             $command,
@@ -403,5 +404,10 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // list, and none can forget to. Recorded after success: a step the user
         // is shown as done has to actually be done.
         $this->progress->record($step);
+
+        // Returned so a caller that has to *verify* the command's effect can
+        // report the failure against the command's own log entry, rather than
+        // against whatever probe discovered the problem afterwards.
+        return $result;
     }
 }
