@@ -215,11 +215,44 @@ it('assembles the part file inside the site tree so finalising is a rename', fun
         ->postJson(uploadsUrl(), ['path' => 'big.zip'])
         ->json('upload_id');
 
-    // The part file must sit under the document root, not in panel storage:
-    // a cross-filesystem move would copy every byte instead of renaming.
+    // The part file must sit under the application root — the same filesystem
+    // as the destination, so finalising renames instead of copying every byte.
+    // It used to sit under the *document root*, on the theory that only the
+    // served directory was "the site tree"; `{root}/.panel` and
+    // `{root}/public_html` are on the same filesystem, so the rename survives
+    // the move and the part file is no longer one deny rule away from being
+    // fetchable over HTTP.
     expect(ChunkedUploadFake::$ran)->toContain(
-        "runuser -u siteowner -- touch /home/siteowner/shop/public_html/.panel/uploads/{$id}.part"
+        "runuser -u siteowner -- touch /home/siteowner/shop/.panel/uploads/{$id}.part"
     );
+});
+
+it('keeps part files out of the served directory entirely', function () {
+    $this->actingAs($this->admin)
+        ->postJson(uploadsUrl(), ['path' => 'big.zip'])
+        ->assertOk();
+
+    // The guard, not a restatement of the path above: whatever the layout
+    // becomes, nothing an upload writes may land under public_html, where it
+    // is protected only by a per-web-server dotfile rule that OpenLiteSpeed
+    // did not apply to `.panel`.
+    expect(collect(ChunkedUploadFake::$ran)->filter(
+        fn (string $command) => str_contains($command, '/public_html/.panel')
+    ))->toBeEmpty();
+});
+
+it('creates the upload directory elevated and hands it to the site user', function () {
+    $this->actingAs($this->admin)
+        ->postJson(uploadsUrl(), ['path' => 'big.zip'])
+        ->assertOk();
+
+    // `.panel` is root-owned (the web server driver creates it through
+    // ServerOps, and provisioning's chown only descends the document root),
+    // so a `runuser` mkdir inside it is permission denied. Created elevated,
+    // then chowned — the site user owns its uploads directory and nothing else.
+    expect(ChunkedUploadFake::$ran)
+        ->toContain('mkdir -p /home/siteowner/shop/.panel/uploads')
+        ->toContain('chown siteowner:siteowner /home/siteowner/shop/.panel/uploads');
 });
 
 it('reports the running total from the server, not the client', function () {
@@ -260,7 +293,7 @@ it('moves the completed upload into place with a rename', function () {
         ->assertOk();
 
     expect(ChunkedUploadFake::$ran)->toContain(
-        "runuser -u siteowner -- mv -f /home/siteowner/shop/public_html/.panel/uploads/{$id}.part /home/siteowner/shop/public_html/big.zip"
+        "runuser -u siteowner -- mv -f /home/siteowner/shop/.panel/uploads/{$id}.part /home/siteowner/shop/public_html/big.zip"
     );
 
     // A rename, so no copy ever ran.
@@ -363,7 +396,7 @@ it('discards the part file on abort', function () {
         ->assertOk();
 
     expect(ChunkedUploadFake::$ran)->toContain(
-        "runuser -u siteowner -- rm -f /home/siteowner/shop/public_html/.panel/uploads/{$id}.part"
+        "runuser -u siteowner -- rm -f /home/siteowner/shop/.panel/uploads/{$id}.part"
     );
 });
 

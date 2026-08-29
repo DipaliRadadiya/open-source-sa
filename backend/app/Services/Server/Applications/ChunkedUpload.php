@@ -49,14 +49,25 @@ use App\Services\Server\ServerOpsResult;
 class ChunkedUpload
 {
     /**
-     * Where part files live, relative to the document root.
+     * Where part files live, under the application's `.panel` directory —
+     * which sits ABOVE the document root.
      *
-     * Inside the site's own tree so that finalising is a rename rather than a
-     * copy across filesystems. Dotted, because every vhost template already
-     * denies dotfiles — a partially uploaded file must never be reachable over
-     * HTTP. Shares the `.panel/` prefix with BasicAuthManager's htpasswd.
+     * This used to be relative to the document root, defended as "inside the
+     * site's own tree so that finalising is a rename rather than a copy across
+     * filesystems". The requirement is *same filesystem*, not *inside the
+     * served directory*, and `{home}/{slug}/.panel/uploads` and
+     * `{home}/{slug}/public_html/…` are both under `{home}/{slug}` — so `mv`
+     * is still a rename. The old comment reached the served directory from a
+     * premise that never required it.
+     *
+     * Being dotted was the only thing keeping a part file off the public
+     * internet, and that is one deny rule per web server — the same rule
+     * OpenLiteSpeed did not apply to `.panel`, which is why the credential
+     * file, the file backups and the session directory all moved above the
+     * webroot already. A part file holds whatever is being uploaded, so it
+     * belongs on the same side of that line.
      */
-    public const TEMP_DIR = '.panel/uploads';
+    public const TEMP_DIR = 'uploads';
 
     /**
      * Free space that must remain after a chunk is written, whichever is
@@ -160,7 +171,8 @@ class ChunkedUpload
 
         $id = bin2hex(random_bytes(16));
 
-        $this->run($application, ['mkdir', '-p', $this->tempDir($application)], 'upload_begin');
+        $this->ensureTempDir($application);
+
         // Create it empty, so `status` on a fresh upload reports 0 rather than
         // "not found" and the client has one less case to special-case.
         $this->run($application, ['touch', $this->partPath($application, $id)], 'upload_begin');
@@ -257,7 +269,44 @@ class ChunkedUpload
 
     private function tempDir(Application $application): string
     {
-        return rtrim($this->provisioner->documentRoot($application), '/').'/'.self::TEMP_DIR;
+        return $application->panelPath().'/'.self::TEMP_DIR;
+    }
+
+    /**
+     * Create the upload directory and hand it to the site user.
+     *
+     * Elevated, then chowned — not `runuser ... mkdir`. `.panel` is created by
+     * `AbstractWebServerDriver::ensurePanelDirectory()` through ServerOps,
+     * which means root owns it, and `set_ownership` at provision time only
+     * descends the *document root*. So the site user cannot create anything
+     * inside `.panel`, and a `mkdir` run as that user fails with permission
+     * denied — which is why this could not simply follow the part files' own
+     * `runuser` wrapper when the directory moved above the webroot.
+     *
+     * Only this subdirectory changes hands, not `.panel` itself: write
+     * permission on a directory is what allows unlinking the files in it, and
+     * `.panel` also holds the Basic Auth credential. The site user gets its
+     * own uploads directory and no say over its neighbours.
+     *
+     * Same shape as the git `.env` in ApplicationProvisioner — created
+     * elevated, chowned in the same breath, for the same reason.
+     */
+    private function ensureTempDir(Application $application): void
+    {
+        $directory = $this->tempDir($application);
+        $user = $application->systemUser->username;
+
+        $this->serverOps->run(
+            ['mkdir', '-p', $directory],
+            ['feature' => 'application', 'op' => 'file_upload_dir', 'application' => $application->id],
+            timeout: 15,
+        );
+
+        $this->serverOps->run(
+            ['chown', "{$user}:{$user}", $directory],
+            ['feature' => 'application', 'op' => 'file_upload_dir_chown', 'application' => $application->id],
+            timeout: 15,
+        );
     }
 
     private function partPath(Application $application, string $id): string
