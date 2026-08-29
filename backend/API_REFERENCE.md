@@ -1252,16 +1252,29 @@ The account used to be create-time only, which made a revoked token or a
 disconnected account permanent — the site kept its repository and branch and
 had no way back to a credential that could read them.
 
-**Request** — the same two mutually exclusive paths as creation:
+**The usual call is just an account id:**
 ```json
-{"git_source": "account", "git_account_id": 3, "repository": "octo/shop", "branch": "main"}
+{"git_account_id": 3}
+```
+
+That is the common case by a distance — a site that is deployed and correct and
+has simply lost its credential. Everything not sent is taken from the
+application as it already is, so the user never restates an `owner/repo` they
+did not change. **The account is still verified against the existing
+repository**; the short payload skips typing, not checking.
+
+The fuller forms still work, for actually moving a site:
+```json
+{"git_source": "account", "git_account_id": 3, "repository": "octo/other", "branch": "develop"}
 ```
 ```json
 {"git_source": "public_url", "repository_url": "https://github.com/octo/public.git"}
 ```
 
-`branch` is **optional** here (unlike on create): omit it to keep the current
-one, send it to switch branch in the same call.
+`git_source` is inferred when omitted: sending `git_account_id` means the
+account path, sending `repository_url` means the public one, and if neither is
+named the application's current mode decides. `repository`, `repository_url`
+and `branch` all default to what the application already holds.
 
 **Response `200`:** the full application resource.
 

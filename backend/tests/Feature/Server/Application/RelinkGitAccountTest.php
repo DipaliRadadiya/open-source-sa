@@ -81,6 +81,58 @@ it('re-links an application whose account was disconnected', function () {
         ->and($application->fresh()->branch)->toBe('main');
 });
 
+it('attaches an account with nothing but its id', function () {
+    // The common case by a distance: the site is deployed and correct, the URL
+    // and branch are right, and the only thing missing is a credential that can
+    // read the repository. Making the user restate `owner/repo` they never
+    // changed is friction and a chance to typo a working site into a broken one.
+    $application = relinkGitApp(['git_account_id' => null]);
+
+    $replacement = GitAccount::forceCreate([
+        'provider' => 'github', 'label' => 'New', 'identifier' => 'octo',
+        'token' => 'ghp_new', 'scopes' => ['repo'], 'last_verified_at' => now(),
+    ]);
+
+    relinkRepoBranches(['main']);
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$application->id}/git-account", [
+            'git_account_id' => $replacement->id,
+        ])
+        ->assertOk()
+        ->assertJsonPath('application.git_account_missing', false);
+
+    $fresh = $application->fresh();
+
+    // Everything the request did not mention is exactly as it was.
+    expect($fresh->git_account_id)->toBe($replacement->id)
+        ->and($fresh->repository)->toBe('octo/shop')
+        ->and($fresh->branch)->toBe('main');
+});
+
+it('still verifies the existing repository when only an account is sent', function () {
+    // The bare payload must not skip the check — "attach this account" is only
+    // safe because the account is asked whether it can read what this site
+    // already deploys.
+    $application = relinkGitApp(['git_account_id' => null]);
+
+    $useless = GitAccount::forceCreate([
+        'provider' => 'github', 'label' => 'Wrong', 'identifier' => 'someone',
+        'token' => 'ghp_no', 'scopes' => ['repo'], 'last_verified_at' => now(),
+    ]);
+
+    Http::fake(['*' => Http::response(['message' => 'Not Found'], 404)]);
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$application->id}/git-account", [
+            'git_account_id' => $useless->id,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('repository');
+
+    expect($application->fresh()->git_account_id)->toBeNull();
+});
+
 it('refuses a credential that cannot reach the repository, without storing it', function () {
     // Storing first would move the failure to the next deploy, where it reads
     // as a deployment problem — and would leave the site pointing at something

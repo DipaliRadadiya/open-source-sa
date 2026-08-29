@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Models\Application;
 use App\Rules\SafeProviderHost;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,6 +26,45 @@ class UpdateGitAccountRequest extends FormRequest
     public function authorize(): bool
     {
         return (bool) $this->user()?->canManage('app_deployment');
+    }
+
+    /**
+     * Fill in what the application already knows.
+     *
+     * The common case by a distance is a site that is deployed and correct and
+     * has simply lost its credential: the repository, the branch and the URL
+     * are all still right, and the only thing missing is an account that can
+     * read them. Requiring `git_source` and `repository` to be restated for
+     * that made the user retype an `owner/repo` they never changed — friction,
+     * and a chance to turn a working site into a broken one with a typo.
+     *
+     * So the payload can be `{"git_account_id": 5}` and nothing else. The
+     * fuller form still works unchanged; these are defaults, not overrides —
+     * anything the request states wins.
+     */
+    protected function prepareForValidation(): void
+    {
+        $application = $this->route('application');
+
+        if (! $application instanceof Application) {
+            return;
+        }
+
+        $this->merge([
+            // Named by what was sent, not by what the site is today: sending an
+            // account is choosing the account path even on a site that is
+            // currently a public URL, and vice versa. Only when neither is
+            // named does the site's own mode decide.
+            'git_source' => $this->input('git_source') ?? match (true) {
+                $this->filled('git_account_id') => 'account',
+                $this->filled('repository_url') => 'public_url',
+                $application->git_account_id !== null => 'account',
+                default => 'public_url',
+            },
+
+            'repository' => $this->input('repository') ?? $application->repository,
+            'repository_url' => $this->input('repository_url') ?? $application->repository_url,
+        ]);
     }
 
     /**

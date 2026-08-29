@@ -161,6 +161,37 @@ it('fetches and hard-resets an already-cloned repository', function () {
     expect($app->fresh()->steps)->toContain('fetch', 'checkout');
 });
 
+it('points the remote at the new url before fetching, not after', function () {
+    // Found when the git account became re-linkable. `remote add origin` is a
+    // no-op on an existing checkout, so when the remote changes it is
+    // `set-url` that moves it — and it used to run *after* `reset --hard`.
+    //
+    // The result was a deploy that fetched from the OLD remote, checked out the
+    // previous repository's code, then corrected the URL for next time. It
+    // reported success while serving the wrong repository, which is worse than
+    // failing, because nothing looks wrong.
+    $order = collect();
+
+    Process::fake(function ($process) use ($order) {
+        $order->push(implode(' ', (array) $process->command));
+
+        return match (true) {
+            $process->command[0] === 'test' => Process::result(exitCode: 0),
+            in_array('rev-parse', $process->command, true) => Process::result(output: "newsha\n"),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    runDeploy(gitApp());
+
+    $setUrl = $order->search(fn (string $c) => str_contains($c, 'remote set-url'));
+    $fetch = $order->search(fn (string $c) => str_contains($c, ' fetch '));
+
+    expect($setUrl)->not->toBeFalse()
+        ->and($fetch)->not->toBeFalse()
+        ->and($setUrl)->toBeLessThan($fetch);
+});
+
 it('needs no credential at all for a public repository', function () {
     fakeGit();
     $app = gitApp([

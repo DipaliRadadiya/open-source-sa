@@ -76,10 +76,28 @@ class GitDeployer
                 'git', 'init', '--quiet', '--initial-branch', $branch, $documentRoot,
             ]);
 
+            // Unchecked on purpose: on every deploy after the first, `origin`
+            // already exists and this fails. That is expected, not an error.
             $this->serverOps->run(
                 ['git', '-C', $documentRoot, 'remote', 'add', 'origin', $remote],
                 ['feature' => 'application', 'op' => 'git.remote_add'],
             );
+
+            // **Before the fetch, not after it.**
+            //
+            // `remote add` above is a no-op on an existing checkout, so when
+            // the remote changes it is this line that moves it. It used to run
+            // after `reset --hard`, which was harmless only while the URL could
+            // never change: the account was fixed at creation. Now that a site
+            // can be re-pointed at a different account, that ordering meant the
+            // first deploy fetched from the OLD remote and checked out the old
+            // repository's code, then corrected the URL for next time.
+            //
+            // Succeeding while serving the wrong repository is worse than
+            // failing, because nothing looks wrong.
+            $this->run('init', null, [
+                'git', '-C', $documentRoot, 'remote', 'set-url', 'origin', $remote,
+            ]);
 
             $this->run('fetch', $credentialFile, [
                 'git', '-C', $documentRoot, 'fetch', '--depth', '1', 'origin', $branch,
@@ -87,10 +105,6 @@ class GitDeployer
 
             $this->run('checkout', null, [
                 'git', '-C', $documentRoot, 'reset', '--hard', 'FETCH_HEAD',
-            ]);
-
-            $this->run('checkout', null, [
-                'git', '-C', $documentRoot, 'remote', 'set-url', 'origin', $remote,
             ]);
 
             $commit = $this->currentCommit($documentRoot);
