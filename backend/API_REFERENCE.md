@@ -2413,6 +2413,16 @@ Every clone across every application, newest first. For resuming a clone from a 
 
 Duplicate an application to a new domain. Runs async on the queue.
 
+**Not available on every site type.** Cloning copies the served files; a
+database-backed application needs a recipe on top of that (dump, load, rewrite
+the stored URL), and only WordPress has one. So `app_clone` is absent from the
+feature list of **Akaunting, CraftCMS, Joomla, Mautic, Moodle, Nextcloud,
+NodeBB, PrestaShop** — and from phpMyAdmin, which holds no content of its own.
+For those types this endpoint returns **`404`**, and `app_clone` is omitted
+from `GET /permissions?application_id=…`, so the sidebar item does not render.
+Types that need no database (static, plain PHP, git, Statamic, n8n, Node-RED,
+Uptime Kuma) clone generically and are unaffected.
+
 **Request:**
 ```json
 {"name": "shop-backup", "domain": "backup.example.com", "system_user_id": 1, "site_user_password": "…"}

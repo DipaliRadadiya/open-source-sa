@@ -3,6 +3,7 @@
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Applications\SiteTypeManager;
 use Database\Seeders\PermissionSeeder;
 
 beforeEach(function () {
@@ -92,6 +93,36 @@ it('does not offer backups or cloning for phpMyAdmin', function () {
         // Password protection stays: an exposed phpMyAdmin is a login page for
         // every database on the box.
         ->and($sidebar)->toContain('app_security');
+});
+
+it('offers cloning only where copying the files is the whole job', function () {
+    // A clone of a database-backed site that copies only files is a site
+    // pointing at the original's database — which is why `CloneManager`
+    // refuses one. WordPress is the single type with a recipe for the rest of
+    // it, so it is the single database-backed type that keeps the screen.
+    expect(sidebarFor(makeFeatureApp('wordpress')))->toContain('app_clone')
+        ->and(sidebarFor(makeFeatureApp('static', 'static')))->toContain('app_clone')
+        ->and(sidebarFor(makeFeatureApp('git')))->toContain('app_clone')
+        ->and(sidebarFor(makeFeatureApp('uptimekuma', 'node')))->toContain('app_clone')
+        ->and(sidebarFor(makeFeatureApp('moodle')))->not->toContain('app_clone')
+        ->and(sidebarFor(makeFeatureApp('nodebb', 'node')))->not->toContain('app_clone');
+});
+
+it('pins which site types offer cloning', function () {
+    // The list, not a rule about the list. A new type arriving with a
+    // database and no clone recipe must not quietly gain the screen, and a
+    // type that grows a `cloneStrategy()` must add `app_clone` in its own
+    // `features()` — which this fails until it does.
+    $offering = collect(app(SiteTypeManager::class)->all())
+        ->filter(fn ($type) => in_array('app_clone', $type->features(), true))
+        ->map(fn ($type) => $type->name())
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($offering)->toBe([
+        'git', 'n8n', 'nodered', 'php', 'statamic', 'static', 'uptimekuma', 'wordpress',
+    ]);
 });
 
 it('still returns every application permission for the role form', function () {

@@ -157,14 +157,45 @@ it('refuses to clone a database-needing type with no clone recipe', function () 
         'serving_profile' => 'node', 'status' => 'active', 'node_version' => '22', 'app_port' => 4000,
     ]);
 
-    // The refusal moved into the job with the 202: the request can no longer
-    // report it, so the record carries the failure instead.
-    $record = runClone($source, 'forum-clone.test');
+    // This used to assert the refusal arriving as a *failed record* after a
+    // 202 — the request accepted work it already knew it could not do, and
+    // the user watched a clone fail for a reason the panel had up front.
+    // `app_clone` is no longer among a database-backed type's features, so
+    // `CheckPermission` closes the route: 404, nothing created, nothing queued.
+    test()->withHeaders(cloneHeaders())
+        ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'forum-clone.test'])
+        ->assertNotFound();
 
-    expect($record->status->value)->toBe('failed')
-        ->and($record->target_application_id)->toBeNull()
-        ->and($record->finished_at)->not->toBeNull()
+    expect(SiteClone::count())->toBe(0)
         ->and(Application::where('domain', 'forum-clone.test')->exists())->toBeFalse();
+});
+
+it('still refuses inside the job if a strategy-less clone is ever reached directly', function () {
+    fakeCloneServer();
+
+    // Defense in depth. The route is closed above, but `CloneManager`'s own
+    // guard is what protects a clone dispatched by anything that is not that
+    // route — and it is the guard the feature list was derived from, so it
+    // stays covered rather than being trusted because the door is shut.
+    $source = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id,
+        'name' => 'Forum Direct',
+        'slug' => 'forum-direct', 'domain' => 'forum-direct.test', 'site_type' => 'nodebb',
+        'serving_profile' => 'node', 'status' => 'active', 'node_version' => '22', 'app_port' => 4001,
+    ]);
+
+    $clone = SiteClone::create([
+        'source_application_id' => $source->id,
+        'name' => 'Forum Copy',
+        'domain' => 'forum-copy.test',
+        'status' => 'pending',
+    ]);
+
+    app()->call([new RunClone($clone->id, $source->id), 'handle']);
+
+    expect($clone->fresh()->status->value)->toBe('failed')
+        ->and($clone->fresh()->target_application_id)->toBeNull()
+        ->and(Application::where('domain', 'forum-copy.test')->exists())->toBeFalse();
 });
 
 it('allocates a fresh port for a node clone rather than reusing the source port', function () {

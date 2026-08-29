@@ -99,7 +99,12 @@ class WordPressSiteType extends AbstractSiteType
      */
     public function features(): array
     {
-        return [...parent::features(), 'app_staging'];
+        // `app_clone` is re-added, not inherited: the base list withholds it
+        // from every database-backed type because copying the files alone
+        // leaves a site pointing at the original's database. WordPress is the
+        // one type with a `cloneStrategy()`, so it is the one type that gets
+        // the screen back.
+        return [...parent::features(), 'app_clone', 'app_staging'];
     }
 
     public function stagingStrategy(): ?StagingStrategy

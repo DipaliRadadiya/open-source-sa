@@ -22,8 +22,8 @@ abstract class AbstractSiteType implements SiteType
     public function features(): array
     {
         // True of every site: it has a name, it is served, it is logged, it
-        // can be backed up, cloned and protected. No `app_setting` — there is
-        // no dedicated Settings screen; enable/disable lives on the Dashboard.
+        // can be backed up and protected. No `app_setting` — there is no
+        // dedicated Settings screen; enable/disable lives on the Dashboard.
         $features = [
             'app_dashboard',
             'app_domain',
@@ -34,8 +34,31 @@ abstract class AbstractSiteType implements SiteType
             'app_firewall',
             'app_bot_blocker',
             'app_fail2ban',
-            'app_clone',
         ];
+
+        // Cloning copies the served files, which works for any type. A type
+        // holding its state in a database needs its own recipe on top —
+        // dumping it, loading it into the copy's database, and rewriting
+        // whatever the application stores its own URL in.
+        //
+        // `CloneManager` already refuses exactly that combination, but it does
+        // so *inside the queued job*, after the API has answered 202. So the
+        // sidebar offered Site Clone on eight database-backed types, the POST
+        // was accepted, and the refusal arrived later as a failed clone. The
+        // condition was right and only the timing was wrong.
+        //
+        // Asked as `cloneStrategy() !== null` this would read better and cost
+        // a container resolution of the whole strategy — `ApplicationProvisioner`
+        // and four services deep — on every permissions request, to answer a
+        // boolean. So the cheap half of the condition is asked here and a type
+        // that has built a recipe adds `app_clone` back in its own `features()`,
+        // exactly as `app_staging` is only ever added by the type that has a
+        // `stagingStrategy()`. `ApplicationFeaturesTest` pins the resulting
+        // set, so a recipe added without its feature fails rather than going
+        // unnoticed.
+        if (! $this->needsDatabase()) {
+            $features[] = 'app_clone';
+        }
 
         // Deployment is a git screen. A one-click install has no repository, no
         // branch and no commit history — the screen would have nothing on it.
