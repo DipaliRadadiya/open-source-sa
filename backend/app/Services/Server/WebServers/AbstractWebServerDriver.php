@@ -7,6 +7,7 @@ use App\Enums\AiBotPolicy;
 use App\Enums\DomainType;
 use App\Enums\WafMode;
 use App\Models\Application;
+use App\Services\Server\Applications\ApplicationLogDirectory;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\PoolManager;
@@ -20,6 +21,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         protected ServerOps $serverOps,
         protected ManagedFile $files,
         protected CertificateFiles $certificateFiles,
+        protected ApplicationLogDirectory $logDirectory,
     ) {}
 
     /**
@@ -38,6 +40,13 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         }
 
         $this->ensurePanelDirectory($application);
+
+        // Before the config is written, for the same reason the panel
+        // directory is: the vhost names `logs/access.log`, and a web server
+        // refuses to start when a log file's directory does not exist. A
+        // missing directory here would fail `nginx -t` on every site and read
+        // as a bad template rather than as an absent folder.
+        $this->logDirectory->ensure($application);
 
         $written = $this->files->put(
             $this->configPath($application),
@@ -175,6 +184,13 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // all three agree on one identifier, and a domain change doesn't
             // orphan the log history under a name nothing points to anymore.
             'logName' => $this->fileName($application),
+            // Where those files go. Handed to the template rather than built
+            // inside it, so the vhost and `logPaths()` cannot drift — they did
+            // not, but only because two separate places happened to spell the
+            // same string, and a driver whose template disagreed with its own
+            // `logPaths()` would point fail2ban and the Logs screen at a file
+            // nothing writes. {@see Application::logsPath()}
+            'logDir' => $application->logsPath(),
             // Every name the site answers to, primary first. Templates used to
             // hardcode `www.{domain}` alongside the primary; that guess is now
             // a row in application_domains, backfilled for existing sites so
@@ -285,7 +301,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'categories' => $categories,
             'exceptions' => $exceptions,
             'customRules' => $customRules,
-            'detectLogPath' => $application->panelPath().'/waf-detect.log',
+            'detectLogPath' => $application->wafDetectLogPath(),
         ];
     }
 

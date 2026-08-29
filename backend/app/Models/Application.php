@@ -486,4 +486,45 @@ class Application extends Model
     {
         return $this->rootPath().'/.panel';
     }
+
+    /**
+     * Every log this site produces, in one directory.
+     *
+     * They were in four places: the web server's access and error logs under
+     * `/var/log/nginx` or `/var/log/apache2`, the process logs already here,
+     * and the PHP error and WAF detect logs inside `.panel`. So the answer to
+     * "where are my logs" depended on which web server the server was built
+     * with and which kind of log was being asked about, and two of the four
+     * were readable only by root.
+     *
+     * Above the document root, like everything else the panel writes — an
+     * access log names every visitor's address and every URL they asked for,
+     * including whatever people put in query strings, and inside the served
+     * directory the only thing between that and the internet is a vhost deny
+     * rule.
+     *
+     * Not `.panel`: that directory is the panel's own bookkeeping and is
+     * deliberately unreadable by the site's owner, whereas a log is the one
+     * thing they most need to read. {@see ApplicationLogDirectory} for the
+     * ownership that makes both true at once.
+     */
+    public function logsPath(): string
+    {
+        return $this->rootPath().'/logs';
+    }
+
+    /**
+     * Where the WAF writes what it *would* have blocked, in detect mode.
+     *
+     * Defined once because the two places that needed it — the vhost template
+     * data and the Logs screen — each built the string themselves and drifted:
+     * the file the panel opened was not the file the web server wrote, so
+     * detect mode showed an empty log however much it had matched. That reads
+     * as "nothing would be blocked" and invites someone to switch a ruleset to
+     * enforcing without having actually checked it.
+     */
+    public function wafDetectLogPath(): string
+    {
+        return $this->logsPath().'/waf-detect.log';
+    }
 }

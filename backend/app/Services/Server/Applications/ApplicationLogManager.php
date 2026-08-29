@@ -198,7 +198,7 @@ class ApplicationLogManager
                 // showed an empty log no matter how much it had matched, which
                 // reads as "nothing would be blocked" and invites someone to
                 // enforce a ruleset they have not actually checked.
-                'path' => $application->panelPath().'/waf-detect.log',
+                'path' => $application->wafDetectLogPath(),
             ];
         }
 

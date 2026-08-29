@@ -35,12 +35,14 @@ class ApacheDriver extends AbstractWebServerDriver
      */
     public function logPaths(Application $application): array
     {
-        $dir = rtrim((string) config('server.web_server_drivers.apache.log_dir', '/var/log/apache2'), '/');
-        $name = $this->fileName($application);
+        // The application's own `logs/` directory, not ${APACHE_LOG_DIR} —
+        // one place per site, readable by the site's owner.
+        // {@see Application::logsPath()}
+        $dir = $application->logsPath();
 
         return [
-            'access' => "{$dir}/{$name}.access.log",
-            'error' => "{$dir}/{$name}.error.log",
+            'access' => "{$dir}/access.log",
+            'error' => "{$dir}/error.log",
         ];
     }
 }

@@ -182,7 +182,9 @@ it('hands the form a filled-in template, not one full of placeholders', function
         // The real values, so the user can see what will be written.
         ->and($jail)->toContain('[shop]')
         ->and($jail)->toContain('filter   = shop')
-        ->and($jail)->toContain('.access.log')
+        // The site's own log directory — fail2ban follows `logPaths()`, so
+        // moving the logs moved the jail with them for free.
+        ->and($jail)->toContain('/logs/access.log')
         ->and($filter)->not->toContain('{name}');
 });
 

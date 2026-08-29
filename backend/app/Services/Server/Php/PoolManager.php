@@ -347,9 +347,21 @@ class PoolManager
         return $this->appRoot($application).'/.panel/sessions';
     }
 
+    /**
+     * In `logs/`, not `.panel/`.
+     *
+     * `.panel` is the panel's own bookkeeping and is deliberately unreadable
+     * by the site's owner — which is right for the Basic Auth credential and
+     * wrong for the one file a developer whose site is throwing 500s most
+     * needs to read. It sits with every other log for this site instead.
+     *
+     * Still above the document root, and still opened by the php-fpm master
+     * before it drops to the pool user, so a root-owned log directory is not
+     * an obstacle. {@see ApplicationLogDirectory}
+     */
     public function errorLogPath(Application $application): string
     {
-        return $this->appRoot($application).'/.panel/php-error.log';
+        return $application->logsPath().'/php-error.log';
     }
 
     /**

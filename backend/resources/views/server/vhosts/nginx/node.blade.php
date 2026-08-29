@@ -146,8 +146,8 @@ server {
     }
 
 
-    access_log /var/log/nginx/{{ $logName }}.access.log;
-    error_log  /var/log/nginx/{{ $logName }}.error.log;
+    access_log {{ $logDir }}/access.log;
+    error_log  {{ $logDir }}/error.log;
 
     location / {
         proxy_pass http://127.0.0.1:{{ $appPort }};

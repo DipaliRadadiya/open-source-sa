@@ -149,8 +149,8 @@ server {
 
     index index.html;
 
-    access_log /var/log/nginx/{{ $logName }}.access.log;
-    error_log  /var/log/nginx/{{ $logName }}.error.log;
+    access_log {{ $logDir }}/access.log;
+    error_log  {{ $logDir }}/error.log;
 
     location / {
         try_files $uri $uri/ =404;

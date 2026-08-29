@@ -2292,7 +2292,12 @@ Applying is atomic: the config is written, tested and reloaded, and rolled back 
 
 ## Application — Per-site Fail2ban
 
-Per-application fail2ban watches one site's own access log. The jail and filter are raw INI files written verbatim to `/etc/fail2ban/{jail,filter}.d/<app-slug>.conf` and reloaded into the daemon. Any feature fail2ban's INI supports (custom regex, multiple logpaths, additional actions) is reachable from the form, not just the structured `maxretry/findtime/bantime` of the previous implementation.
+Per-application fail2ban watches one site's own access log, at
+`{app_root}/logs/access.log` — the **application root**, beside `public_html`
+and never inside it. Every log a site produces lives there whichever web server
+the box runs, so the jail's `logpath` does not depend on the stack. The
+directory is owned by root with the site's user as its group: the site's owner
+can read its logs, and cannot replace a file a root process is appending to. The jail and filter are raw INI files written verbatim to `/etc/fail2ban/{jail,filter}.d/<app-slug>.conf` and reloaded into the daemon. Any feature fail2ban's INI supports (custom regex, multiple logpaths, additional actions) is reachable from the form, not just the structured `maxretry/findtime/bantime` of the previous implementation.
 
 On `GET`, applications with the old structured columns still on disk are migrated to the new INI form on the first read, after which the structured columns are dropped on the next migration. New applications start with `fail2ban: null` and the templates below.
 
@@ -2310,7 +2315,7 @@ Response when configured — `fail2ban` carries the saved values, and the templa
 ```json
 {"fail2ban": {
   "jail_name": "shop",
-  "jail_content": "[shop]\nenabled  = true\nport     = http,https\nfilter   = shop\nlogpath  = /var/log/nginx/shop.access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
+  "jail_content": "[shop]\nenabled  = true\nport     = http,https\nfilter   = shop\nlogpath  = /home/siteowner/shop/logs/access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
   "filter_content": "[shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n"
 }, "jail_template": "[shop]\nenabled  = true\nport     = http,https\n...", "filter_template": "[shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n..."}
 ```
@@ -2322,7 +2327,7 @@ The jail file template:
 enabled  = true
 port     = http,https
 filter   = {slug}
-logpath  = {webroot}/logs/access.log
+logpath  = {app_root}/logs/access.log
 maxretry = 3
 bantime  = 3600
 findtime = 600

@@ -30,6 +30,7 @@ class ProcessSupervisor
         private ServerOps $serverOps,
         private ManagedFile $files,
         private NodeRuntime $node,
+        private ApplicationLogDirectory $logDirectory,
     ) {}
 
     public function runs(Application $application): bool
@@ -226,16 +227,21 @@ class ProcessSupervisor
      */
     private function ensureLogDirectory(Application $application): void
     {
-        $dir = self::logDir($application);
-        $user = $application->systemUser->username;
         $context = ['feature' => 'application', 'op' => 'unit_logs', 'application' => $application->id];
 
-        $this->serverOps->run(['mkdir', '-p', $dir], $context);
-        $this->serverOps->run(['chown', "{$user}:{$user}", $dir], $context);
-        // Readable by the owner only: an application's own log is as sensitive
-        // as whatever it decided to print, which is not a decision the panel
-        // gets to audit.
-        $this->serverOps->run(['chmod', '0750', $dir], $context);
+        // The directory itself is no longer this class's business. It used to
+        // `chown {user}:{user}` here, which was right while a process app's own
+        // stdout was the only thing in it — the unit runs as that user. It now
+        // also holds the web server's access and error logs, which root writes,
+        // and a directory the site user owns is a directory the site user can
+        // unlink from: delete access.log, symlink it at something of root's,
+        // and a root process appends attacker-chosen request text into it.
+        //
+        // `ApplicationLogDirectory` owns that decision for every writer at
+        // once. systemd opens `StandardOutput=append:` targets in PID 1, before
+        // any user is dropped to, so a root-owned directory costs this class
+        // nothing.
+        $this->logDirectory->ensure($application);
 
         $this->files->put($this->logrotatePath($application), $this->renderLogrotate($application), $context);
     }
@@ -283,7 +289,7 @@ class ProcessSupervisor
      */
     public static function logDir(Application $application): string
     {
-        return $application->rootPath().'/logs';
+        return $application->logsPath();
     }
 
     /** @return array<string, string> the log files this unit writes, by key. */

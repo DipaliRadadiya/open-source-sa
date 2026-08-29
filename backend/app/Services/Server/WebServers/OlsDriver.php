@@ -5,6 +5,7 @@ namespace App\Services\Server\WebServers;
 use App\Contracts\PhpStack;
 use App\Enums\DomainType;
 use App\Models\Application;
+use App\Services\Server\Applications\ApplicationLogDirectory;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
@@ -39,10 +40,11 @@ class OlsDriver extends AbstractWebServerDriver
         ServerOps $serverOps,
         ManagedFile $files,
         CertificateFiles $certificateFiles,
+        ApplicationLogDirectory $logDirectory,
         private OlsSharedConfig $shared,
         private PhpStack $stack,
     ) {
-        parent::__construct($serverOps, $files, $certificateFiles);
+        parent::__construct($serverOps, $files, $certificateFiles, $logDirectory);
     }
 
     /**
@@ -128,12 +130,19 @@ class OlsDriver extends AbstractWebServerDriver
         // goes live.
         $this->ensurePanelDirectory($application);
 
-        // The config directory, and the log directory the vhost names.
-        // OpenLiteSpeed does not create the latter — it silently falls back to
-        // the server-wide log, so a site's own errors go somewhere nobody
-        // thinks to look.
+        // The log directory the vhost names. OpenLiteSpeed does not create it —
+        // it silently falls back to the server-wide log, so a site's own errors
+        // go somewhere nobody thinks to look.
+        //
+        // Through the shared service rather than the `mkdir` that used to be
+        // folded into the line below: this directory now holds every log for
+        // the site and its ownership is what stops the site user replacing a
+        // file a root process appends to. A bare `mkdir` here would leave OLS
+        // the one web server whose log directory had the wrong owner.
+        $this->logDirectory->ensure($application);
+
         $directory = $this->serverOps->run(
-            ['mkdir', '-p', dirname($this->configPath($application)), $this->vhRoot($application).'/logs'],
+            ['mkdir', '-p', dirname($this->configPath($application))],
             $context,
         );
 
@@ -254,19 +263,26 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * OpenLiteSpeed keeps a site's logs inside the site's own directory
-     * (`$VH_ROOT/logs` in the vhost template) rather than under /var/log, so
-     * these are owned by the site's system user, not root.
+     * OpenLiteSpeed already kept a site's logs inside the site's own directory
+     * (`$VH_ROOT/logs` in the vhost template) rather than under /var/log —
+     * this is the layout nginx and Apache have now been moved to, so all three
+     * agree and `{@see Application::logsPath()}` is the only definition of it.
+     *
+     * The comment that used to sit here said these were "owned by the site's
+     * system user, not root". That was true and is no longer: the directory is
+     * root-owned with the site's group, so its owner can read the logs but not
+     * replace a file a root process is appending to.
+     * {@see ApplicationLogDirectory}
      *
      * @return array<string, string>
      */
     public function logPaths(Application $application): array
     {
-        $root = $this->vhRoot($application);
+        $dir = $application->logsPath();
 
         return [
-            'access' => "{$root}/logs/access.log",
-            'error' => "{$root}/logs/error.log",
+            'access' => "{$dir}/access.log",
+            'error' => "{$dir}/error.log",
         ];
     }
 }

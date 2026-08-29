@@ -29,12 +29,14 @@ beforeEach(function () {
         'web_root' => '/',
     ]);
 
+    // All four in one directory beside public_html, not under it: everything
+    // under the document root is a URL, and an access log names every visitor
+    // and every URL they asked for. The web server's two used to be under
+    // /var/log/nginx, where the site's owner could not read them and where the
+    // answer depended on which web server the box was built with.
     $this->files = [
-        '/var/log/nginx/logged-site.access.log' => "GET / 200\nGET /about 200\nGET /missing 404\n",
-        '/var/log/nginx/logged-site.error.log' => "PHP Warning: something\n",
-        // The unit writes stdout and stderr beside public_html, not under it:
-        // everything under the document root is a URL, and an error log is
-        // not something to publish.
+        '/home/logowner/logged-site/logs/access.log' => "GET / 200\nGET /about 200\nGET /missing 404\n",
+        '/home/logowner/logged-site/logs/error.log' => "PHP Warning: something\n",
         '/home/logowner/logged-site/logs/app.log' => "sv-app: listening on 3000\n",
         '/home/logowner/logged-site/logs/app-error.log' => "Error: connect ECONNREFUSED\n",
     ];
