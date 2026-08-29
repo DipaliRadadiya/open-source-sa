@@ -100,6 +100,11 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
             $application->update([
                 'status' => ApplicationStatus::Failed,
                 'failed_step' => $e->step,
+                // Null for most failures, and deliberately so: the step and
+                // the reference already say more than a guessed category
+                // would. Set where the exit status names the cause — chiefly
+                // an OOM kill, whose log entry is empty.
+                'failed_reason' => $e->reason,
                 'reference' => $e->reference,
             ]);
 

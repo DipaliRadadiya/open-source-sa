@@ -129,6 +129,15 @@ return [
         'set_password' => 'एडमिन पासवर्ड सेट किया जा रहा है',
         'worker' => 'बैकग्राउंड प्रोसेस रुक गई',
     ],
+    /*
+    | Why provisioning failed, keyed by the `failed_reason` code on the
+    | application. Only set where the exit status genuinely identifies
+    | the cause; most failures carry the step and reference instead.
+    */
+    'failure_reason' => [
+        'out_of_memory' => 'इस चरण के दौरान सर्वर की मेमोरी समाप्त हो गई और सिस्टम ने इसे रोक दिया। कुछ मेमोरी खाली करें, या स्वैप जोड़ें, और पुनः प्रयास करें।',
+    ],
+
     'port_free' => 'पोर्ट :port खाली है।',
 
     'rendering' => [

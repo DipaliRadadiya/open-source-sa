@@ -129,6 +129,15 @@ return [
         'set_password' => 'Estableciendo la contraseña de administrador',
         'worker' => 'El proceso en segundo plano se detuvo',
     ],
+    /*
+    | Why provisioning failed, keyed by the `failed_reason` code on the
+    | application. Only set where the exit status genuinely identifies
+    | the cause; most failures carry the step and reference instead.
+    */
+    'failure_reason' => [
+        'out_of_memory' => 'El servidor se quedó sin memoria durante este paso y el sistema lo detuvo. Libere memoria, o añada swap, e inténtelo de nuevo.',
+    ],
+
     'port_free' => 'El puerto :port está libre.',
 
     'rendering' => [

@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Applications\BuildMemoryBudget;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Str;
 
@@ -146,8 +147,30 @@ class NodeBbInstaller extends AbstractNodeInstaller
         // The usual reason it dies is memory — the build runs its targets in
         // parallel and will exhaust a small VPS — which is precisely the kind
         // of failure that must be reported rather than swallowed.
-        $build = $this->runWithNode('build', $application, ['./nodebb', 'build'], $documentRoot);
+        //
+        // Reporting it was not enough, and this is the third pass. On a 2 GB
+        // box the build was still failing, and the report said nothing,
+        // because the process was not failing — it was being **killed**. V8
+        // sizes its heap from a compiled-in default rather than from the
+        // machine, grows past what the box has, and the OOM killer takes it:
+        // SIGKILL, no stderr, exit 137, a reference pointing at an empty log.
+        //
+        // `BuildMemoryBudget` caps the heap to a share of what is actually
+        // available, which is upstream's own advice for small hosts. Under a
+        // cap V8 collects rather than allocates, so the build usually now
+        // finishes; and when it truly does not fit it says
+        // `JavaScript heap out of memory` and exits non-zero *with output*,
+        // instead of disappearing.
+        $build = $this->runWithNode(
+            'build',
+            $application,
+            ['./nodebb', 'build'],
+            $documentRoot,
+            app(BuildMemoryBudget::class)->nodeOptions(),
+        );
 
+        // A non-zero exit has already thrown by this point — `run()` does it
+        // for every step, and classifies an OOM kill while it is there.
         $this->assertAssetsBuilt($application, $documentRoot, $build);
     }
 

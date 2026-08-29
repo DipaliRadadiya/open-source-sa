@@ -129,6 +129,15 @@ return [
         'set_password' => '管理者パスワードを設定しています',
         'worker' => 'バックグラウンド処理が停止しました',
     ],
+    /*
+    | Why provisioning failed, keyed by the `failed_reason` code on the
+    | application. Only set where the exit status genuinely identifies
+    | the cause; most failures carry the step and reference instead.
+    */
+    'failure_reason' => [
+        'out_of_memory' => 'このステップ中にサーバーのメモリが不足し、システムによって停止されました。メモリを解放するか、スワップを追加してから再試行してください。',
+    ],
+
     'port_free' => 'ポート :port は空いています。',
 
     'rendering' => [

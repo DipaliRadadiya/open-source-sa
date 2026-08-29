@@ -396,7 +396,14 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         );
 
         if ($result->failed()) {
-            throw new ProvisioningFailedException($step, $result->reference);
+            // Classified here rather than at any one call site, because the
+            // failure this names is not specific to a command: any step can be
+            // chosen by the OOM killer on a small server, and every one of
+            // them reaches this line. Classifying in `NodeBbInstaller` — where
+            // the problem was found — would have fixed the build and left
+            // `npm install`, `composer create-project` and the rest reporting
+            // a reference to an empty log.
+            throw ProvisioningFailedException::fromResult($step, $result);
         }
 
         // Every command an installer runs arrives here, so this one line is

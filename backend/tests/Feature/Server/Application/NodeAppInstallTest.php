@@ -305,6 +305,50 @@ describe('NodeBB asset build', function () {
             ->and($build)->toBeGreaterThan($lastConfigWrite);
     });
 
+    it('caps the build heap so the kernel does not kill it', function () {
+        // The third pass at this bug. Adding the build step, then checking the
+        // build produced templates, both assumed the command would *fail* when
+        // it went wrong. On a 2 GB box it does not fail — it is **killed**: V8
+        // sizes its heap from a compiled-in default rather than from the
+        // machine, and the OOM killer takes it. SIGKILL, no stderr, exit 137,
+        // a reference pointing at an empty log.
+        //
+        // Under a cap V8 collects rather than allocates, which is what makes
+        // the build finish on a small server at all.
+        $dir = sys_get_temp_dir().'/panel-meminfo-'.bin2hex(random_bytes(6));
+        mkdir($dir, 0700, true);
+        file_put_contents($dir.'/meminfo', "MemTotal:        2035792 kB\nMemAvailable:    1228800 kB\n");
+        config(['server.proc_dir' => $dir]);
+
+        $app = oneClickApp('nodebb');
+
+        Process::fake(function ($process) {
+            test()->ran->push($process);
+            $command = implode(' ', (array) $process->command);
+
+            if (str_contains($command, 'cat ') && str_contains($command, 'config.json')) {
+                return Process::result(output: json_encode(['url' => 'http://old', 'database' => 'mongo']));
+            }
+
+            return str_contains($command, '-name *.tpl')
+                ? Process::result(output: '/x/categories.tpl')
+                : Process::result(output: '');
+        });
+
+        app(NodeBbInstaller::class)->install($app, $app->documentRoot(), [
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]);
+
+        $build = collect($this->ran)
+            ->map(fn ($p) => implode(' ', (array) $p->command))
+            ->first(fn (string $c) => str_contains($c, './nodebb build'));
+
+        // Asserted on the build specifically, not on "some command somewhere":
+        // the cap has to be on the process that actually compiles the assets.
+        expect($build)->not->toBeNull()
+            ->and($build)->toContain('NODE_OPTIONS=--max-old-space-size=900');
+    });
+
     it('patches the config setup wrote instead of replacing it', function () {
         $app = oneClickApp('nodebb');
 

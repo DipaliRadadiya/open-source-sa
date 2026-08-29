@@ -129,6 +129,15 @@ return [
         'set_password' => 'Administrator-Passwort wird gesetzt',
         'worker' => 'Der Hintergrundprozess wurde beendet',
     ],
+    /*
+    | Why provisioning failed, keyed by the `failed_reason` code on the
+    | application. Only set where the exit status genuinely identifies
+    | the cause; most failures carry the step and reference instead.
+    */
+    'failure_reason' => [
+        'out_of_memory' => 'Dem Server ging bei diesem Schritt der Speicher aus und das System hat ihn beendet. Geben Sie Speicher frei oder fügen Sie Swap hinzu und versuchen Sie es erneut.',
+    ],
+
     'port_free' => 'Port :port ist frei.',
 
     'rendering' => [

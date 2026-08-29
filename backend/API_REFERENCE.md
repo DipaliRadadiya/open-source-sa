@@ -740,6 +740,7 @@ They are equal for fifteen of the seventeen site types, because most application
 
   "settings": {},
   "steps": [], "failed_step": null,
+  "failed_reason": null, "failed_reason_title": null,
   "provisioning_started_at": null, "provisioning_started_at_human": null,
   "last_commit": null, "last_deployed_at": null, "last_deployed_at_human": null,
   "reference": null,
@@ -747,6 +748,19 @@ They are equal for fifteen of the seventeen site types, because most application
   "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
 }}
 ```
+
+**`failed_reason` is usually `null`, and that is not an omission.** For most
+failures `failed_step` says where it broke and `reference` points at the
+server-ops log entry holding the command's own output — together they say more
+than any category invented here would, and a wrong reason sends the user to fix
+something that was never broken.
+
+It is set only where the exit status genuinely identifies the cause. Today that
+is one code, `out_of_memory`: a step killed by the kernel's OOM killer exits
+137 having written **nothing at all**, so the reference names an empty log and
+the panel would otherwise have no way to explain what happened. Render
+`failed_reason_title` when present — it is localized in the viewer's locale —
+and fall back to `failed_step` + `reference` when it is `null`.
 
 **`status` is `pending` · `provisioning` · `active` · `failed`** — there is no `running`.
 

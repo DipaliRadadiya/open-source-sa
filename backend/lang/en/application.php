@@ -134,6 +134,15 @@ return [
         'set_password' => 'Setting the admin password',
         'worker' => 'The background worker stopped',
     ],
+    /*
+    | Why provisioning failed, keyed by the `failed_reason` code on the
+    | application. Only set where the exit status genuinely identifies
+    | the cause; most failures carry the step and reference instead.
+    */
+    'failure_reason' => [
+        'out_of_memory' => 'The server ran out of memory during this step and it was stopped by the system. Free some memory, or add swap, and try again.',
+    ],
+
     'port_free' => 'Port :port is free.',
 
     'rendering' => [

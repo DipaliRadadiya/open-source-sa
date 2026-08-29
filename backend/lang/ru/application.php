@@ -129,6 +129,15 @@ return [
         'set_password' => 'Установка пароля администратора',
         'worker' => 'Фоновый процесс остановлен',
     ],
+    /*
+    | Why provisioning failed, keyed by the `failed_reason` code on the
+    | application. Only set where the exit status genuinely identifies
+    | the cause; most failures carry the step and reference instead.
+    */
+    'failure_reason' => [
+        'out_of_memory' => 'На этом шаге серверу не хватило памяти, и система остановила его. Освободите память или добавьте swap и повторите попытку.',
+    ],
+
     'port_free' => 'Порт :port свободен.',
 
     'rendering' => [

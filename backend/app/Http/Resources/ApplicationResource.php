@@ -194,6 +194,15 @@ class ApplicationResource extends JsonResource
             // instead of a bare spinner.
             'steps' => $this->steps ?? [],
             'failed_step' => $this->failed_step,
+            // Why it failed, when the exit status could say. Usually null —
+            // the step and the reference are the answer for most failures,
+            // and a category invented to fill this field would be worse than
+            // an empty one. Titled at read time in the *viewer's* locale, the
+            // same as every other reason code in this API.
+            'failed_reason' => $this->failed_reason,
+            'failed_reason_title' => $this->failed_reason === null
+                ? null
+                : __('application.failure_reason.'.$this->failed_reason),
             // When the CURRENT run started, restamped on every retry —
             // `created_at` is the row's birthday and is wrong for elapsed
             // time the moment anyone retries. Null on a site that has

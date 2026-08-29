@@ -129,6 +129,15 @@ return [
         'set_password' => 'Définition du mot de passe administrateur',
         'worker' => 'Le processus en arrière-plan s\'est arrêté',
     ],
+    /*
+    | Why provisioning failed, keyed by the `failed_reason` code on the
+    | application. Only set where the exit status genuinely identifies
+    | the cause; most failures carry the step and reference instead.
+    */
+    'failure_reason' => [
+        'out_of_memory' => 'Le serveur a manqué de mémoire pendant cette étape et le système l\'a arrêtée. Libérez de la mémoire, ou ajoutez du swap, puis réessayez.',
+    ],
+
     'port_free' => 'Le port :port est libre.',
 
     'rendering' => [

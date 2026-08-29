@@ -26,7 +26,7 @@ use Illuminate\Support\Str;
     'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
     'build_command', 'deploy_script', 'start_command', 'package_manager',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
-    'steps', 'failed_step', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'directory_size_updated_at',
+    'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'directory_size_updated_at',
     'current_release_id', 'previous_release_path',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
     'webhook_last_delivered_at',
