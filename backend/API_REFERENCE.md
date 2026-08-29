@@ -778,6 +778,12 @@ a working application answering correctly. Applications served by the web
 server rather than by their own process (every PHP site) have no port to probe
 and skip this step entirely.
 
+When this step fails, **`reference` points at the application's own log**, not
+at the probe. The probe only ever recorded a status code, which says the site
+is broken without saying why; the journal captured at the moment of failure is
+where the reason is. If the journal could not be read or was empty, the
+reference falls back to the probe.
+
 **`status` is `pending` · `provisioning` · `active` · `failed`** — there is no `running`.
 
 **Use `provisioning_started_at` for elapsed time, never `created_at`.** It is

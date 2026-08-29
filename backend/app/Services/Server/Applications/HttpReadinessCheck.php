@@ -34,7 +34,10 @@ use App\Services\Server\ServerOps;
  */
 class HttpReadinessCheck
 {
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private ProcessSupervisor $processes,
+    ) {}
 
     /**
      * @throws ProvisioningFailedException
@@ -89,11 +92,65 @@ class HttpReadinessCheck
             }
         }
 
+        // The probe's own log entry records a status code and nothing else,
+        // which says the site is broken without saying anything about why.
+        // The application's journal is where the reason actually is — for the
+        // failure this was written for, NodeBB prints the view it could not
+        // find and the directory it looked in, which is the whole answer.
+        //
+        // So the journal is captured now, while the application is still in
+        // the state that failed, and the exception carries *that* entry's
+        // reference. Same rule as `assertAssetsBuilt`, which reports the
+        // build's reference rather than the probe's: hand the user the log
+        // that explains, not the one that noticed.
+        $diagnostic = $this->captureJournal($application);
+
         throw new ProvisioningFailedException(
             'verify_serving',
-            $last['reference'] ?? '',
+            $diagnostic ?? $last['reference'] ?? '',
             ($last['status'] ?? 0) >= 500 ? 'serving_error' : 'not_answering',
         );
+    }
+
+    /**
+     * Record the application's own log beside the failure, and return the
+     * reference of the entry holding it.
+     *
+     * Null when the journal could not be read at all — an unreadable journal
+     * is a worse reference than the probe's, because its recorded output is
+     * empty and the user would be quoting a log that says nothing.
+     *
+     * Deliberately swallows its own failure. A diagnostic that turns a clear
+     * "this site answers 500" into an error about journalctl has made the
+     * problem harder to see, which is the opposite of the point.
+     */
+    private function captureJournal(Application $application): ?string
+    {
+        try {
+            $result = $this->serverOps->run(
+                [
+                    'journalctl', '-u', $this->processes->unit($application),
+                    '-n', (string) config('server.applications.readiness.journal_lines', 100),
+                    '--no-pager',
+                ],
+                [
+                    'feature' => 'application',
+                    'op' => 'provision.verify_serving_journal',
+                    'application' => $application->id,
+                    'log_output' => true,
+                ],
+                timeout: 30,
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        // An application that logged nothing leaves an empty entry, which is
+        // no more use than the probe's. Only claim this reference when it
+        // actually holds something to read.
+        return $result->failed() || trim($result->output()) === ''
+            ? null
+            : $result->reference;
     }
 
     /**

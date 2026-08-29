@@ -684,6 +684,17 @@ return [
             'attempts' => (int) env('SERVER_READINESS_ATTEMPTS', 15),
             'delay' => (int) env('SERVER_READINESS_DELAY', 2),
             'timeout' => (int) env('SERVER_READINESS_TIMEOUT', 10),
+
+            /*
+            | How much of the application's own log to keep beside a failure.
+            |
+            | The probe records a status code, which says the site is broken
+            | without saying why. The journal is where the reason is — NodeBB
+            | prints the view it could not find and the directory it searched.
+            | Enough lines to include a startup that went wrong, few enough
+            | that the ops log stays readable.
+            */
+            'journal_lines' => (int) env('SERVER_READINESS_JOURNAL_LINES', 100),
         ],
 
         /*

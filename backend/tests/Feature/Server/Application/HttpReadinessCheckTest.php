@@ -61,9 +61,14 @@ it('fails provisioning when the application answers 500 on every request', funct
 });
 
 it('does not retry a 5xx, because it will still be broken in two seconds', function () {
-    $calls = 0;
-    Process::fake(function () use (&$calls) {
-        $calls++;
+    // Counts probes only. The journal capture that follows a failure is a
+    // different command with a different job, and counting it here would make
+    // this test about the wrong thing.
+    $probes = 0;
+    Process::fake(function ($process) use (&$probes) {
+        if (str_contains(implode(' ', (array) $process->command), 'curl')) {
+            $probes++;
+        }
 
         return Process::result(output: '500');
     });
@@ -76,7 +81,7 @@ it('does not retry a 5xx, because it will still be broken in two seconds', funct
 
     // Retrying an application that is answering "I am broken" only delays the
     // report by half a minute — the waiting is for a boot, not for a bug.
-    expect($calls)->toBe(1);
+    expect($probes)->toBe(1);
 });
 
 it('accepts a redirect to a login page', function () {
@@ -175,6 +180,57 @@ it('skips an application that has no port of its own', function () {
     app(HttpReadinessCheck::class)->verify($php);
 
     Process::assertNothingRan();
+});
+
+it('captures the application log beside the failure and points the reference at it', function () {
+    // The probe records a status code, which says the site is broken without
+    // saying why. NodeBB's own log names the view it could not find and the
+    // directory it searched — the whole answer, and the thing that could not
+    // be seen from here for a whole day of guessing.
+    $commands = collect();
+
+    Process::fake(function ($process) use ($commands) {
+        $command = implode(' ', (array) $process->command);
+        $commands->push($command);
+
+        return str_contains($command, 'journalctl')
+            ? Process::result(output: 'Failed to lookup view "500" in views directory "/home/x/build/public/templates"')
+            : Process::result(output: '500');
+    });
+
+    try {
+        app(HttpReadinessCheck::class)->verify(readinessApp());
+
+        test()->fail('A 5xx must fail provisioning.');
+    } catch (ProvisioningFailedException $e) {
+        // The reference has to point at the entry that *explains*, not the one
+        // that noticed — quoting the probe hands the user a log holding the
+        // number 500 and nothing else.
+        expect($e->reference)->not->toBeEmpty();
+    }
+
+    expect($commands->contains(fn (string $c) => str_contains($c, 'journalctl')))->toBeTrue();
+});
+
+it('does not let a broken journal hide the real failure', function () {
+    // A diagnostic that turns "this site answers 500" into an error about
+    // journalctl has made the problem harder to see.
+    Process::fake(function ($process) {
+        $command = implode(' ', (array) $process->command);
+
+        return str_contains($command, 'journalctl')
+            ? Process::result(exitCode: 1, errorOutput: 'No journal files were found.')
+            : Process::result(output: '500');
+    });
+
+    try {
+        app(HttpReadinessCheck::class)->verify(readinessApp());
+
+        test()->fail('A 5xx must fail provisioning even when the journal cannot be read.');
+    } catch (ProvisioningFailedException $e) {
+        expect($e->step)->toBe('verify_serving')
+            ->and($e->reason)->toBe('serving_error');
+    }
 });
 
 it('skips, without waiting, when no status was measured at all', function () {
