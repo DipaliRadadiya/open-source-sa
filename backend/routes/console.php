@@ -76,3 +76,10 @@ Schedule::command(sprintf(
 // the retention was written first and wired up second, which for a while meant
 // the API promised a sweep that never ran.
 Schedule::command('files:prune-trash')->daily()->withoutOverlapping();
+
+// Unfinished uploads, for the same reason and by the same oversight: a closed
+// laptop mid-upload leaves a part file behind, uploads have no size limit, and
+// `ChunkedUpload::reap()` was written when the feature shipped and never
+// called. The per-chunk free-space guard refuses new writes once the disk is
+// nearly full; this is what stops it filling.
+Schedule::command('uploads:reap')->daily()->withoutOverlapping();

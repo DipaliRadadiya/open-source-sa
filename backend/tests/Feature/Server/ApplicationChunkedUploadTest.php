@@ -5,6 +5,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ChunkedUpload;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -435,4 +436,47 @@ it('refuses to finalise onto a file that appeared during the upload', function (
         ->assertStatus(422);
 
     expect(ChunkedUploadFake::binaries())->not->toContain('mv');
+});
+
+describe('abandoned uploads', function () {
+    it('is actually scheduled, not merely written', function () {
+        // The reason this test exists, and it is the same reason the trash
+        // retention has one: reap() shipped with the feature and had zero call
+        // sites. The docblock described a slow disk leak ending in an outage,
+        // the code to prevent it was correct, and nothing ever ran it. A method
+        // nobody calls reads as done.
+        $events = collect(app(Schedule::class)->events())
+            ->map(fn ($event): string => (string) $event->command);
+
+        expect($events->contains(fn (string $c): bool => str_contains($c, 'uploads:reap')))->toBeTrue();
+    });
+
+    it('sweeps part files older than the window, across every application', function () {
+        // The site has an upload directory. Without one `reap()` returns before
+        // running anything, which is correct — and would make this assertion
+        // pass vacuously if it were left out.
+        ChunkedUploadFake::$sizes['/home/siteowner/shop/.panel/uploads'] = 4096;
+
+        $this->artisan('uploads:reap')->assertSuccessful();
+
+        // A find per site, scoped to part files and to the age window — never
+        // a blanket delete of the upload directory, which would take the
+        // upload somebody is in the middle of.
+        expect(collect(ChunkedUploadFake::$ran)->contains(
+            fn (string $c): bool => str_contains($c, '/home/siteowner/shop/.panel/uploads')
+                && str_contains($c, '*.part')
+                && str_contains($c, '-mmin')
+                && str_contains($c, '+1440')
+        ))->toBeTrue();
+    });
+
+    it('honours a custom window', function () {
+        ChunkedUploadFake::$sizes['/home/siteowner/shop/.panel/uploads'] = 4096;
+
+        $this->artisan('uploads:reap --hours=1')->assertSuccessful();
+
+        expect(collect(ChunkedUploadFake::$ran)->contains(
+            fn (string $c): bool => str_contains($c, '-mmin') && str_contains($c, '+60')
+        ))->toBeTrue();
+    });
 });
