@@ -82,7 +82,15 @@ class RedisSettings implements SettingGroup
         return [
             'maxmemory' => $this->configGet('maxmemory') ?: '0',
             'maxmemory_policy' => $this->configGet('maxmemory-policy') ?: 'noeviction',
-            'has_password' => $this->currentPassword() !== '',
+            // **Nullable.** `true` and `false` are answers; `null` means the
+            // panel could not ask — its stored credential does not open a
+            // connection to this Redis. Reporting `false` there claimed no
+            // password on a server that requires one, which is the reading
+            // most likely to make someone believe a change had been applied.
+            'has_password' => match ($current = $this->currentPassword()) {
+                null => null,
+                default => $current !== '',
+            },
             // Whether changing the password is even possible. If the panel
             // cannot record the new one, the control should be disabled rather
             // than offered and then refused.
@@ -131,8 +139,27 @@ class RedisSettings implements SettingGroup
             ]);
         }
 
-        $this->passwordChangePending = true;
         $previous = $this->currentPassword();
+
+        // Refuse here, for the same reason the writability check above does:
+        // everything past this point runs *after* the response, where the only
+        // way to report a failure is a log line nobody reads.
+        //
+        // A null `$previous` means the panel's own credential does not open a
+        // connection to this Redis, so the `CONFIG SET` below is already known
+        // to be about to fail with NOAUTH. Queueing it anyway answered 202 and
+        // "the Redis password is being applied", and then changed nothing —
+        // which is exactly the report this came in as.
+        //
+        // A 422 naming the cause is worth more than a success message that is
+        // not true.
+        if ($previous === null) {
+            throw ValidationException::withMessages([
+                'password' => [__('errors/setting.redis_credential_unusable')],
+            ]);
+        }
+
+        $this->passwordChangePending = true;
 
         App::terminating(function () use ($password, $previous): void {
             $this->applyPassword($password, $previous);
@@ -226,16 +253,51 @@ class RedisSettings implements SettingGroup
     }
 
     /**
-     * The password Redis currently requires, read from a connection that is
-     * already authorised by the panel's own credential.
+     * The password Redis currently requires, or **null when that cannot be
+     * determined** — read from a connection authorised by the panel's own
+     * stored credential.
+     *
+     * The null is the whole point. This used to return `''` for both "Redis
+     * requires no password" and "the command failed", which are opposite
+     * facts, and the failure is the likely one exactly when it matters: if
+     * `.env`'s REDIS_PASSWORD has drifted from the running server — a password
+     * set outside the panel, a restored redis.conf, an adopted server — then
+     * `CONFIG GET` answers NOAUTH, the output is empty, and `''` came back
+     * meaning "no password is set".
+     *
+     * Two things followed from that. `read()` reported `has_password: false`
+     * about a Redis that very much does require one; and `setPassword()` used
+     * `''` as the credential to authenticate the change, so the change was
+     * rejected — after the response had already told the user it was applied.
+     *
+     * Same shape as the storage-destination probe's nullable
+     * `last_test_success`: never-asked, asked-and-failed, and asked-and-true
+     * are three states, and collapsing any two of them tells the user
+     * something false.
      */
-    private function currentPassword(): string
+    private function currentPassword(): ?string
     {
         $result = $this->authenticated(['config', 'get', 'requirepass'], (string) config('database.redis.default.password'));
 
+        if ($result->failed()) {
+            return null;
+        }
+
         $lines = preg_split('/\r?\n/', trim($result->output())) ?: [];
 
-        return isset($lines[1]) ? trim($lines[1]) : '';
+        // `CONFIG GET` answers with the name and then the value. A server with
+        // no password answers with an *empty* value, and trimming the output
+        // eats that trailing blank line — so one line back is the real
+        // "no password" answer, not a short read.
+        //
+        // What tells the two apart is the name: a reply that does not begin
+        // with `requirepass` is not an answer to this question at all, and
+        // reading a password out of it would be a guess.
+        if (($lines[0] ?? '') !== 'requirepass') {
+            return null;
+        }
+
+        return trim($lines[1] ?? '');
     }
 
     /**

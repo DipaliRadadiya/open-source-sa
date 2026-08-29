@@ -3737,7 +3737,7 @@ Removes the `/etc/cron.d` file entry.
 {"facts": {
   "hostname": "srv1", "os": "Ubuntu 24.04 LTS", "kernel": "6.8.0-36-generic",
   "arch": "x86_64", "uptime": {"seconds": 1296000, "human": "15 days"},
-  "ip": "167.233.229.184",
+  "ip": "10.0.0.5", "public_ip": "167.233.229.184",
   "cpu": {"model": "AMD EPYC 7282", "cores": 8},
   "memory_total": 8589934592, "memory_total_human": "8 GB",
   "disk_total": 107374182400, "disk_total_human": "100 GB",
@@ -3745,6 +3745,14 @@ Removes the `/etc/cron.d` file entry.
   "runtimes": {"php": "8.4", "node": "20.11.0", "nginx": "1.24.0", "redis": "7.2.0", "mysql": null}
 }}
 ```
+
+**`public_ip` is the address the internet reaches this server on** — the one to
+point DNS at and the one a dashboard should show. Detected from the local route
+table, falling back to the cloud metadata service (link-local `169.254.169.254`,
+so nothing is disclosed to a third party) when the machine can only see a
+private address on its own interfaces. **`null`** when it genuinely cannot be
+determined — bare metal behind a hardware NAT — which callers must render as
+"could not determine" rather than as a blank.
 
 **`ip` is the machine's own first local interface address** (`hostname -I`), not
 necessarily its public one. On a VPS with a directly-attached public address —
@@ -4336,6 +4344,19 @@ Manual + scheduled run history, paginated.
   "security": {"port": 22, "permit_root_login": "prohibit-password", "password_authentication": false, "has_ssh_key": true},
   "updates": {"security_updates_enabled": true, "auto_reboot": false, "reboot_time": "06:00", "reboot_required": false, "updates_available": 3, "security_updates_available": 1, "lists_refreshed_at": "29-07-2026 04:00:00", "unattended_last_run_at": "27-07-2026 06:18:00", "unattended_last_result": "success"},
   "redis": {"maxmemory": "256mb", "maxmemory_policy": "allkeys-lru", "has_password": true, "password_manageable": true, "running": true, "memory_used": 8388608, "memory_used_human": "8 MB"}
+```
+
+**`redis.has_password` is nullable.** `true` and `false` are answers; **`null`
+means the panel could not ask** — its stored `REDIS_PASSWORD` does not open a
+connection to the running Redis. Reporting `false` there claimed no password on
+a server that requires one.
+
+In that state `PUT /settings/redis` refuses a password change with a **422**
+rather than accepting it: the change is applied after the response, so a
+credential the panel cannot authenticate with would fail silently having already
+told the user it worked.
+
+```json
 }, "last_changed": {"security": {"user": {"id": 1, "username": "admin"}, "at": "27-07-2026 10:00:00"}}}
 ```
 
@@ -4844,6 +4865,7 @@ Unauthenticated. The bootstrap call — safe to make before anyone is logged in,
 ```json
 {"basic_info": {
   "registration_open": false,
+  "password_policy": {"min_length": 10, "requires_mixed_case": true, "requires_number": true, "requires_symbol": false},
   "app_version": "1.0.0",
   "locales_available": ["en", "es", "de", "fr", "pt", "ja", "ru", "hi"],
   "cookie_auth_enabled": true

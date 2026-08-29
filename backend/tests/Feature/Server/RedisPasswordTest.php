@@ -326,3 +326,51 @@ it('clears the password only when explicitly asked', function () {
     expect(passwordWrites($runs)->first()['input'])->toBe('')
         ->and(app(EnvFile::class)->get('REDIS_PASSWORD'))->toBe('null');
 });
+
+it('refuses the change when the panel cannot reach Redis with its stored credential', function () {
+    // The reported bug. `.env`'s REDIS_PASSWORD drifts from the running server
+    // — a password set outside the panel, a restored redis.conf, an adopted
+    // server — so `CONFIG GET requirepass` answers NOAUTH.
+    //
+    // That used to read as `''`, i.e. "no password is set". The credential
+    // used to authenticate the change was therefore empty, Redis rejected it,
+    // and the whole apply runs after the response — so the user was told "the
+    // Redis password is being applied" and nothing changed, with the reason
+    // only in a log line.
+    $runs = fakeRedis(failing: ['config get requirepass']);
+
+    saveRedis(['password' => 'NewSecret123'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('password');
+
+    applyDeferred();
+
+    // Nothing was queued, so nothing was attempted: a refusal the user can see
+    // beats a success message that is not true.
+    expect(passwordWrites($runs))->toHaveCount(0);
+});
+
+it('does not claim Redis has no password when it cannot ask', function () {
+    // `has_password: false` about a server that does require one is the
+    // reading most likely to convince someone a change had been applied.
+    // Three states, three answers: true, false, and "could not ask".
+    fakeRedis(failing: ['config get requirepass']);
+
+    $response = test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')
+        ->assertOk();
+
+    expect($response->json('settings.redis.has_password'))->toBeNull();
+});
+
+it('still reports a password-less Redis as password-less', function () {
+    // The null must mean "could not ask" and nothing else — an empty
+    // requirepass is a real answer and has to stay `false`.
+    fakeRedis();
+
+    $response = test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')
+        ->assertOk();
+
+    expect($response->json('settings.redis.has_password'))->toBeFalse();
+});

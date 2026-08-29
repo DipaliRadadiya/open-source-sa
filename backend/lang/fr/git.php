@@ -32,4 +32,14 @@ return [
         'repository_unreachable' => 'Ce compte ne peut pas accéder à ce dépôt. Vérifiez que le jeton est toujours valide et y a accès.',
         'branch_missing' => 'La branche :branch n\'existe pas dans ce dépôt.',
     ],
+
+    /*
+    | Help for one field of one provider. Keyed per provider because `host`
+    | means a GitLab URL and nothing else; a shared key would end up
+    | describing two different fields at once.
+    */
+    'field_help' => [
+        'gitlab' => ['host' => 'Uniquement pour GitLab auto-hébergé — l\'URL de base de votre instance, par exemple https://git.example.com. Laissez vide pour gitlab.com.'],
+        'bitbucket' => ['workspace' => 'L\'identifiant d\'espace de travail figurant dans votre URL Bitbucket : bitbucket.org/<workspace>/<dépôt>. Ce n\'est pas votre nom affiché.'],
+    ],
 ];

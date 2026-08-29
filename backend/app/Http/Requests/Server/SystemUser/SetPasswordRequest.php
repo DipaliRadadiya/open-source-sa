@@ -18,7 +18,7 @@ class SetPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'password' => ['required', 'string', Password::min(10)->mixedCase()->numbers()],
+            'password' => ['required', 'string', Password::defaults()],
         ];
     }
 }

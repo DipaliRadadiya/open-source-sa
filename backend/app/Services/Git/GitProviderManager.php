@@ -57,8 +57,34 @@ class GitProviderManager
                     'label' => __("git.fields.{$field}"),
                     'required' => (bool) ($spec['required'] ?? false),
                     'type' => (string) ($spec['type'] ?? 'text'),
+                    // Per-field guidance, null when the field speaks for
+                    // itself. There was nowhere to put this, so what a
+                    // self-hosted GitLab URL should contain and where a
+                    // Bitbucket workspace name comes from were either absent
+                    // or buried inside the *token's* help string — text about
+                    // one field, describing another, next to neither.
+                    //
+                    // Keyed per provider and field: `host` means a GitLab URL
+                    // and nothing else, and a shared key would eventually be
+                    // asked to describe two different things at once.
+                    'help' => $this->fieldHelp($provider, $field),
                 ], array_keys($fields), array_values($fields)),
             ];
         }, $this->providerNames());
+    }
+
+    /**
+     * Help for one field of one provider, or null when there is none.
+     *
+     * Absent by default rather than falling back to the key: a missing
+     * translation surfacing as `git.field_help.github.token` in a form input's
+     * hint is worse than no hint at all.
+     */
+    private function fieldHelp(string $provider, string $field): ?string
+    {
+        $key = "git.field_help.{$provider}.{$field}";
+        $line = __($key);
+
+        return is_string($line) && $line !== $key ? $line : null;
     }
 }

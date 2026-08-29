@@ -32,4 +32,14 @@ return [
         'repository_unreachable' => 'Эта учётная запись не имеет доступа к репозиторию. Проверьте, что токен ещё действителен и имеет доступ.',
         'branch_missing' => 'Ветка :branch не существует в этом репозитории.',
     ],
+
+    /*
+    | Help for one field of one provider. Keyed per provider because `host`
+    | means a GitLab URL and nothing else; a shared key would end up
+    | describing two different fields at once.
+    */
+    'field_help' => [
+        'gitlab' => ['host' => 'Только для self-hosted GitLab — базовый URL вашего экземпляра, например https://git.example.com. Для gitlab.com оставьте пустым.'],
+        'bitbucket' => ['workspace' => 'Идентификатор рабочего пространства из вашего URL Bitbucket: bitbucket.org/<workspace>/<repository>. Это не отображаемое имя.'],
+    ],
 ];

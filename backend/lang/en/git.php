@@ -40,4 +40,14 @@ return [
         'repository_unreachable' => 'That account cannot reach this repository. Check the token is still valid and has access to it.',
         'branch_missing' => 'The branch :branch does not exist in this repository.',
     ],
+
+    /*
+    | Help for one field of one provider. Keyed per provider because `host`
+    | means a GitLab URL and nothing else; a shared key would end up
+    | describing two different fields at once.
+    */
+    'field_help' => [
+        'gitlab' => ['host' => 'Only for self-hosted GitLab — the base URL of your instance, for example https://git.example.com. Leave empty for gitlab.com.'],
+        'bitbucket' => ['workspace' => 'The workspace ID from your Bitbucket URL: bitbucket.org/<workspace>/<repository>. Not your display name.'],
+    ],
 ];

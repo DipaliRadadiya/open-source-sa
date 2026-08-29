@@ -32,4 +32,14 @@ return [
         'repository_unreachable' => 'Essa conta não consegue aceder a este repositório. Verifique se o token continua válido e tem acesso.',
         'branch_missing' => 'O ramo :branch não existe neste repositório.',
     ],
+
+    /*
+    | Help for one field of one provider. Keyed per provider because `host`
+    | means a GitLab URL and nothing else; a shared key would end up
+    | describing two different fields at once.
+    */
+    'field_help' => [
+        'gitlab' => ['host' => 'Apenas para GitLab auto-hospedado — o URL base da sua instância, por exemplo https://git.example.com. Deixe vazio para gitlab.com.'],
+        'bitbucket' => ['workspace' => 'O ID do espaço de trabalho no seu URL do Bitbucket: bitbucket.org/<workspace>/<repositório>. Não é o seu nome de exibição.'],
+    ],
 ];

@@ -1627,6 +1627,22 @@ return [
 
     'proc_dir' => env('SERVER_PROC_DIR', '/proc'),
 
+    /*
+    | The cloud metadata service, used only to learn this server's own public
+    | address when the machine cannot see it on any of its interfaces.
+    |
+    | 169.254.169.254 is link-local: the request never leaves the host's own
+    | network segment, so nothing is disclosed to a third party. The obvious
+    | alternative — an external "what is my IP" service — would send a request
+    | to somebody else's server on a dashboard load, which is not a thing a
+    | self-hosted panel should do without being asked.
+    |
+    | Bounded tightly. On bare metal nothing answers this address, and the
+    | timeout is paid on a dashboard request.
+    */
+    'metadata_base' => env('SERVER_METADATA_BASE', 'http://169.254.169.254'),
+    'metadata_timeout' => (int) env('SERVER_METADATA_TIMEOUT', 2),
+
     'os_release' => env('SERVER_OS_RELEASE', '/etc/os-release'),
 
     // Whole block devices live directly under here; partitions live beneath

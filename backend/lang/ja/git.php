@@ -32,4 +32,14 @@ return [
         'repository_unreachable' => 'このアカウントではこのリポジトリにアクセスできません。トークンが有効で、アクセス権があるか確認してください。',
         'branch_missing' => 'ブランチ :branch はこのリポジトリに存在しません。',
     ],
+
+    /*
+    | Help for one field of one provider. Keyed per provider because `host`
+    | means a GitLab URL and nothing else; a shared key would end up
+    | describing two different fields at once.
+    */
+    'field_help' => [
+        'gitlab' => ['host' => 'セルフホスト版GitLabの場合のみ — インスタンスのベースURL（例: https://git.example.com）。gitlab.com の場合は空のままにしてください。'],
+        'bitbucket' => ['workspace' => 'BitbucketのURLに含まれるワークスペースID: bitbucket.org/<workspace>/<repository>。表示名ではありません。'],
+    ],
 ];

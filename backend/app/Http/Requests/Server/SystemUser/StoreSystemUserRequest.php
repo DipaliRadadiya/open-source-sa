@@ -60,7 +60,7 @@ class StoreSystemUserRequest extends FormRequest
             'shell' => ['sometimes', 'string', Rule::in(ChangeShellRequest::shells())],
             'sudo' => ['sometimes', 'boolean'],
             'ssh_access' => ['sometimes', 'boolean'],
-            'password' => ['sometimes', 'string', Password::min(10)->mixedCase()->numbers()],
+            'password' => ['sometimes', 'string', Password::defaults()],
         ];
     }
 

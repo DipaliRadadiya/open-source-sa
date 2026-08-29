@@ -2,7 +2,9 @@
 
 namespace App\Services\Server\Metrics;
 
+use App\Services\Server\Applications\DnsVerifier;
 use App\Services\Server\ServerOps;
+use App\Services\Server\ServerPublicIp;
 use App\Support\Bytes;
 use App\Support\CommandRedactor;
 use Illuminate\Support\Facades\Cache;
@@ -25,7 +27,11 @@ class ServerMetrics
 
     private const COUNTER_CACHE_TTL = 600;
 
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private DnsVerifier $dns,
+        private ServerPublicIp $publicIp,
+    ) {}
 
     /**
      * Flat percent sample stored per 5-min tick (drives the CPU/Mem/Disk/Load
@@ -118,7 +124,15 @@ class ServerMetrics
             'kernel' => $this->cmd(['uname', '-r']),
             'arch' => $this->cmd(['uname', '-m']),
             'uptime' => $this->uptime(),
+            // What is on this machine's own interface. On a VPS with a
+            // directly attached address that is also the public one; behind
+            // NAT it is a 10.x/172.x and is *not* the address to point DNS at.
             'ip' => $this->primaryIp(),
+            // The address the internet actually reaches this server on, or
+            // null when the machine genuinely cannot know it. The dashboard
+            // showed `ip` and called it the server's address, so a NAT'd
+            // instance displayed a private address as the one to use.
+            'public_ip' => $this->publicIp->detect(fn () => $this->dns->serverIp()),
             'cpu' => ['model' => $this->cpuModel(), 'cores' => $this->cpuCores()],
             'memory_total' => $memory['total'],
             'memory_total_human' => Bytes::human((int) $memory['total']),

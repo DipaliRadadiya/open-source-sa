@@ -27,12 +27,14 @@ use App\Services\Server\Sync\Discoverers\SshKeyDiscoverer;
 use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
 use App\Services\Server\Sync\Discoverers\WorkerDiscoverer;
 use App\Services\Server\Sync\ServerSync;
+use App\Support\PasswordPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -104,6 +106,19 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('access-admin', fn (User $user): bool => $user->isAdmin());
+
+        // One definition of what a password has to be.
+        //
+        // The same `Password::min(10)->mixedCase()->numbers()` was spelled out
+        // in six FormRequests — registration, admin create, self-change, admin
+        // reset, and both system-user paths. Six copies of a rule is six places
+        // to change it and five places to forget, and nothing could *state*
+        // the policy to a caller, so the sign-up form had to hardcode its own
+        // description of a rule it could not read.
+        //
+        // `Password::defaults()` is what the requests use now, and
+        // `PasswordPolicy` describes the same numbers for the API.
+        Password::defaults(fn () => PasswordPolicy::rule());
 
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)
             ->by($request->string('username').'|'.$request->ip()));
