@@ -157,7 +157,22 @@ server {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
-    location ~ \.php$ {
+    {{-- `[^/]\.php(/|$)`, not `\.php$`. Several applications address their own
+         scripts with a path appended — Moodle's slash arguments are the loudest
+         case, where every stylesheet and script is requested as
+         `/theme/styles.php/boost/<rev>/all`. Anchored at the end, that URL does
+         not match this block at all: it falls through to `location /`, gets
+         handed to index.php by try_files, and the browser receives HTML where
+         it asked for CSS. The result is a Moodle that renders as unstyled
+         markup while looking, from the panel's side, like a perfectly healthy
+         site.
+
+         The leading `[^/]` keeps a request for a bare directory ending in
+         `.php` out, and the snippet's own `try_files $fastcgi_script_name =404`
+         still refuses to hand PHP-FPM a script that does not exist — which is
+         what stops the widened pattern becoming the arbitrary-execution hole
+         `.php$` was presumably guarding against. --}}
+    location ~ [^/]\.php(/|$) {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:{{ $phpSocket }};
     }
