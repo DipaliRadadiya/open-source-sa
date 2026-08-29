@@ -36,6 +36,7 @@ class ApplicationProvisioner
         private AutoIssueCertificate $autoCertificate,
         private PoolManager $pools,
         private ApplicationArtifacts $artifacts,
+        private HttpReadinessCheck $readiness,
     ) {}
 
     /**
@@ -279,6 +280,24 @@ class ApplicationProvisioner
         $this->supervisor->apply($application, $documentRoot, start: $ready);
 
         $this->progress->record($ready ? 'start_app' : 'write_unit');
+
+        // Started is not the same as working, and the difference is the whole
+        // reason this exists: a NodeBB whose assets never compiled runs, stays
+        // up and satisfies every check above, while answering `500 Failed to
+        // lookup view!` on every request. The panel called that site Active.
+        //
+        // Only for an application actually started here. A git checkout has no
+        // code yet and is deliberately not running, so asking it for a page
+        // would fail every time and mark a correct provision as broken.
+        // Not via `step()`: that helper takes a callable returning a
+        // `ServerOpsResult` and reads `failed()` on it. This check retries,
+        // so it owns its own result and throws — recording the step after it
+        // returns, which is the same rule `step()` follows.
+        if ($ready) {
+            $this->readiness->verify($application);
+
+            $this->progress->record('verify_serving');
+        }
     }
 
     /**

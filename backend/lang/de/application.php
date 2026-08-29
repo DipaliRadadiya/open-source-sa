@@ -127,6 +127,7 @@ return [
         'harden' => 'Sicherheitseinstellungen werden angewendet',
         'trust_domain' => 'Domain wird freigegeben',
         'set_password' => 'Administrator-Passwort wird gesetzt',
+        'verify_serving' => 'Prüfen, ob die Website antwortet',
         'worker' => 'Der Hintergrundprozess wurde beendet',
     ],
     /*
@@ -135,6 +136,8 @@ return [
     | the cause; most failures carry the step and reference instead.
     */
     'failure_reason' => [
+        'serving_error' => 'Die Anwendung wurde gestartet, beantwortet aber jede Anfrage mit einem Fehler. Wahrscheinlich wurden ihre Assets nicht vollständig gebaut — Einzelheiten im Anwendungsprotokoll.',
+        'not_answering' => 'Die Anwendung wurde gestartet, hat aber nie auf eine Anfrage geantwortet. Im Anwendungsprotokoll steht, warum sie nicht lauscht.',
         'out_of_memory' => 'Dem Server ging bei diesem Schritt der Speicher aus und das System hat ihn beendet. Geben Sie Speicher frei oder fügen Sie Swap hinzu und versuchen Sie es erneut.',
     ],
 

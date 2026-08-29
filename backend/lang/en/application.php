@@ -132,6 +132,7 @@ return [
         'harden' => 'Applying security settings',
         'trust_domain' => 'Trusting the domain',
         'set_password' => 'Setting the admin password',
+        'verify_serving' => 'Checking the site answers',
         'worker' => 'The background worker stopped',
     ],
     /*
@@ -140,6 +141,8 @@ return [
     | the cause; most failures carry the step and reference instead.
     */
     'failure_reason' => [
+        'serving_error' => 'The application started but answers every request with an error. Its assets were most likely not built completely — check the application log for details.',
+        'not_answering' => 'The application started but never answered a request. Check the application log for why it is not listening.',
         'out_of_memory' => 'The server ran out of memory during this step and it was stopped by the system. Free some memory, or add swap, and try again.',
     ],
 

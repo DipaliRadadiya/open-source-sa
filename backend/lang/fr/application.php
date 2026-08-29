@@ -127,6 +127,7 @@ return [
         'harden' => 'Application des réglages de sécurité',
         'trust_domain' => 'Autorisation du domaine',
         'set_password' => 'Définition du mot de passe administrateur',
+        'verify_serving' => 'Vérification que le site répond',
         'worker' => 'Le processus en arrière-plan s\'est arrêté',
     ],
     /*
@@ -135,6 +136,8 @@ return [
     | the cause; most failures carry the step and reference instead.
     */
     'failure_reason' => [
+        'serving_error' => 'L\'application a démarré mais répond à chaque requête par une erreur. Ses ressources n\'ont probablement pas été entièrement construites — voir le journal de l\'application.',
+        'not_answering' => 'L\'application a démarré mais n\'a jamais répondu à une requête. Consultez le journal de l\'application pour savoir pourquoi elle n\'écoute pas.',
         'out_of_memory' => 'Le serveur a manqué de mémoire pendant cette étape et le système l\'a arrêtée. Libérez de la mémoire, ou ajoutez du swap, puis réessayez.',
     ],
 

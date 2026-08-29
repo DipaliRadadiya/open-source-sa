@@ -755,12 +755,28 @@ server-ops log entry holding the command's own output — together they say more
 than any category invented here would, and a wrong reason sends the user to fix
 something that was never broken.
 
-It is set only where the exit status genuinely identifies the cause. Today that
-is one code, `out_of_memory`: a step killed by the kernel's OOM killer exits
-137 having written **nothing at all**, so the reference names an empty log and
-the panel would otherwise have no way to explain what happened. Render
+It is set only where the cause is genuinely identified. Render
 `failed_reason_title` when present — it is localized in the viewer's locale —
 and fall back to `failed_step` + `reference` when it is `null`.
+
+| `failed_reason` | Meaning |
+|---|---|
+| `out_of_memory` | The step was killed by the kernel's OOM killer — exit 137, **nothing written at all**, so the reference names an empty log. |
+| `serving_error` | The application started, but answers every request with a 5xx. Usually assets that did not build completely. |
+| `not_answering` | The application started but never answered a request at all. |
+
+The last two come from the `verify_serving` step, which is the final step of
+provisioning for any application that runs a process of its own. **Being
+started is not the same as working**: a forum whose assets never compiled runs,
+stays up, satisfies `systemctl is-active`, and answers `500` on every request.
+So after starting the process the panel requests a page from it on the loopback
+address and its own port — the same thing the reverse proxy in front of it does,
+so DNS, the certificate and the vhost are not involved.
+
+Only **5xx** fails. A `302` to a login page, a `401`, or a `404` at `/` are all
+a working application answering correctly. Applications served by the web
+server rather than by their own process (every PHP site) have no port to probe
+and skip this step entirely.
 
 **`status` is `pending` · `provisioning` · `active` · `failed`** — there is no `running`.
 

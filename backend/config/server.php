@@ -668,6 +668,25 @@ return [
         'systemd_dir' => env('SERVER_SYSTEMD_DIR', '/etc/systemd/system'),
 
         /*
+        | Asking a freshly started application for a page before calling it
+        | provisioned.
+        |
+        | `attempts` × `delay` has to outlast a cold boot: NodeBB compiles
+        | nothing at startup but still spends a while connecting to its
+        | database and loading plugins, and a connection refused one second
+        | after `systemctl start` means nothing at all. 15 × 2s ≈ 30 seconds,
+        | which is inside the provisioning budget and well past a normal boot.
+        |
+        | `timeout` bounds one request. A server this busy answering slowly is
+        | not the failure being looked for, so it is generous.
+        */
+        'readiness' => [
+            'attempts' => (int) env('SERVER_READINESS_ATTEMPTS', 15),
+            'delay' => (int) env('SERVER_READINESS_DELAY', 2),
+            'timeout' => (int) env('SERVER_READINESS_TIMEOUT', 10),
+        ],
+
+        /*
         | How long a file manager delete stays recoverable.
         |
         | The trash keeps a full copy of everything deleted, so without a
