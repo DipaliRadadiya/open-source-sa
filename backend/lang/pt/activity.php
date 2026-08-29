@@ -122,6 +122,7 @@ return [
     'application.deploy_settings_updated' => 'Atualizou as definições de implementação de :name',
     'application.deploy_failed' => 'Falha ao implantar a aplicação :name (etapa: :step)',
     'application.webhook_enabled' => 'Ativou o deploy automático de :name (:provider)',
+    'application.git_account_relinked' => 'Voltou a associar a conta git de :name',
     'application.webhook_disabled' => 'Desativou o deploy automático de :name',
     'application.webhook_rotated' => 'Substituiu o segredo de deploy automático de :name (:provider)',
     'application.webhook_deployed' => 'Implantou :name após um push para :branch',

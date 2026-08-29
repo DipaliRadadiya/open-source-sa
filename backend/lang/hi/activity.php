@@ -122,6 +122,7 @@ return [
     'application.deploy_settings_updated' => ':name के लिए डिप्लॉयमेंट सेटिंग्स अपडेट कीं',
     'application.deploy_failed' => 'एप्लिकेशन :name डिप्लॉय करने में विफल (चरण: :step)',
     'application.webhook_enabled' => ':name के लिए push पर डिप्लॉय चालू किया (:provider)',
+    'application.git_account_relinked' => ':name के लिए git खाता फिर से जोड़ा',
     'application.webhook_disabled' => ':name के लिए push पर डिप्लॉय बंद किया',
     'application.webhook_rotated' => ':name के लिए push पर डिप्लॉय का सीक्रेट बदला (:provider)',
     'application.webhook_deployed' => ':branch पर push के बाद :name डिप्लॉय किया',

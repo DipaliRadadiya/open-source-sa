@@ -122,6 +122,7 @@ return [
     'application.deploy_settings_updated' => 'Actualizó la configuración de despliegue de :name',
     'application.deploy_failed' => 'Error al desplegar la aplicación :name (paso: :step)',
     'application.webhook_enabled' => 'Activó el despliegue automático de :name (:provider)',
+    'application.git_account_relinked' => 'Volvió a vincular la cuenta de git de :name',
     'application.webhook_disabled' => 'Desactivó el despliegue automático de :name',
     'application.webhook_rotated' => 'Reemplazó el secreto de despliegue automático de :name (:provider)',
     'application.webhook_deployed' => 'Desplegó :name por un push a :branch',

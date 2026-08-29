@@ -32,4 +32,12 @@ return [
         'gitlab' => 'A personal access token with the "read_repository" and "read_api" scopes. Leave the URL empty for gitlab.com.',
         'bitbucket' => 'A scoped Access Token (workspace, project or repository level). A repository-scoped token will only list that repository.',
     ],
+
+    /*
+    | Re-pointing an existing application at a different account.
+    */
+    'relink' => [
+        'repository_unreachable' => 'That account cannot reach this repository. Check the token is still valid and has access to it.',
+        'branch_missing' => 'The branch :branch does not exist in this repository.',
+    ],
 ];

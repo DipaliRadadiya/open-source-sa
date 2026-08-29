@@ -121,6 +121,19 @@ Route::post('/applications/{application}/deployments/{deployment}/redeploy', [De
 Route::put('/applications/{application}/deployment-settings', [DeploymentController::class, 'updateSettings'])
     ->middleware('permission:app_deployment,manage');
 
+// Re-point the site at a different account, repository or public URL.
+//
+// Separate from `deployment-settings` because it is not a settings write: the
+// candidate credential is asked whether it can reach the repository before
+// anything is stored. Disconnecting a git account is allowed to succeed and
+// nulls this column on every site that used it, so without this endpoint a
+// deleted account left its applications permanently unbuildable — recoverable
+// only by deleting and recreating the site.
+//
+// Throttled: each call costs a request to the provider's API.
+Route::put('/applications/{application}/git-account', [DeploymentController::class, 'updateGitAccount'])
+    ->middleware(['permission:app_deployment,manage', 'throttle:30,1']);
+
 // Measuring is a read, but an expensive one — `du` walks every inode on the
 // site — so it is gated by view permission and throttled harder than the
 // screen around it. Nothing else recomputes this: not the listing, not a

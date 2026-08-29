@@ -24,4 +24,12 @@ return [
         'gitlab' => '「read_repository」と「read_api」スコープを持つパーソナルアクセストークン。gitlab.com の場合はURLを空のままにしてください。',
         'bitbucket' => 'スコープ付きアクセストークン（ワークスペース・プロジェクト・リポジトリ単位）。リポジトリ単位のトークンではそのリポジトリのみが表示されます。',
     ],
+
+    /*
+    | Re-pointing an existing application at a different account.
+    */
+    'relink' => [
+        'repository_unreachable' => 'このアカウントではこのリポジトリにアクセスできません。トークンが有効で、アクセス権があるか確認してください。',
+        'branch_missing' => 'ブランチ :branch はこのリポジトリに存在しません。',
+    ],
 ];

@@ -24,4 +24,12 @@ return [
         'gitlab' => '"read_repository" और "read_api" स्कोप वाला व्यक्तिगत एक्सेस टोकन। gitlab.com के लिए URL खाली छोड़ें।',
         'bitbucket' => 'स्कोप्ड एक्सेस टोकन (वर्कस्पेस, प्रोजेक्ट या रिपॉज़िटरी स्तर)। रिपॉज़िटरी तक सीमित टोकन केवल वही रिपॉज़िटरी दिखाएगा।',
     ],
+
+    /*
+    | Re-pointing an existing application at a different account.
+    */
+    'relink' => [
+        'repository_unreachable' => 'वह खाता इस रिपॉज़िटरी तक नहीं पहुँच सकता। जाँचें कि टोकन अब भी मान्य है और उसे पहुँच प्राप्त है।',
+        'branch_missing' => 'ब्रांच :branch इस रिपॉज़िटरी में मौजूद नहीं है।',
+    ],
 ];

@@ -156,6 +156,22 @@ class ApplicationResource extends JsonResource
             'repository_url' => $this->repository_url,
             'branch' => $this->branch,
 
+            // The account this site was built with has been disconnected.
+            //
+            // Deleting a git account is allowed to succeed and the foreign key
+            // is `nullOnDelete`, so its applications keep their repository and
+            // branch and lose the credential that could read them. Nothing
+            // said so: the site looked exactly like a public-repository one
+            // until the next deploy ran `git remote add origin ""` and failed.
+            //
+            // Derived, not stored — an account-sourced site is the one with a
+            // `repository` and no `repository_url`, so a public-URL site is
+            // never mistaken for a broken one.
+            'git_account_missing' => $this->site_type === 'git'
+                && $this->git_account_id === null
+                && $this->repository !== null
+                && $this->repository_url === null,
+
             // Deploy-on-push. The secret is shown because the user has to paste
             // it into their repository settings and will come back for it — the
             // same reasoning as the System User password. `url` is built here so

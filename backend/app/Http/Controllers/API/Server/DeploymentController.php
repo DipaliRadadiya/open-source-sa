@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Actions\Server\Application\RelinkGitAccount;
 use App\Enums\DeploymentTrigger;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\UpdateDeploySettingsRequest;
+use App\Http\Requests\Server\Application\UpdateGitAccountRequest;
+use App\Http\Resources\ApplicationResource;
 use App\Http\Resources\DeploymentResource;
 use App\Jobs\DeployApplication;
 use App\Models\Application;
@@ -81,6 +84,27 @@ class DeploymentController extends Controller
         return response()->json([
             'deployment' => DeploymentResource::make($fresh)->resolve(),
         ], 202);
+    }
+
+    /**
+     * Re-point the application at a different account, repository or URL.
+     *
+     * Its own endpoint rather than a field on the generic update, for the same
+     * reason the web root has one: this is not a column write. The candidate
+     * credential is asked whether it can actually reach the repository, and a
+     * rejection has to be a 422 the user can act on rather than a deployment
+     * that fails tomorrow.
+     */
+    public function updateGitAccount(
+        Application $application,
+        UpdateGitAccountRequest $request,
+        RelinkGitAccount $relink,
+    ): JsonResponse {
+        return response()->json([
+            'application' => ApplicationResource::make(
+                $relink->execute($application, $request->validated())->load('systemUser')
+            )->resolve(),
+        ]);
     }
 
     public function updateSettings(Application $application, UpdateDeploySettingsRequest $request, ActivityLogger $activityLogger): JsonResponse

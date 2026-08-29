@@ -1242,6 +1242,63 @@ Update branch, deploy script, auto-deploy toggle.
 
 ---
 
+### PUT `/applications/{application}/git-account`
+**Permission:** `app_deployment` (manage) | **Throttle:** 30/min
+
+Re-point an existing git application at a different account, repository or
+public URL. **404 on a non-git site**, like every other `app_deployment` route.
+
+The account used to be create-time only, which made a revoked token or a
+disconnected account permanent — the site kept its repository and branch and
+had no way back to a credential that could read them.
+
+**Request** — the same two mutually exclusive paths as creation:
+```json
+{"git_source": "account", "git_account_id": 3, "repository": "octo/shop", "branch": "main"}
+```
+```json
+{"git_source": "public_url", "repository_url": "https://github.com/octo/public.git"}
+```
+
+`branch` is **optional** here (unlike on create): omit it to keep the current
+one, send it to switch branch in the same call.
+
+**Response `200`:** the full application resource.
+
+**Verified before it is stored.** The candidate account is asked to list the
+repository's branches, and only a successful answer is persisted:
+
+| Status | When |
+|---|---|
+| `422` on `repository` | that account cannot reach that repository — bad, revoked or wrongly-scoped token |
+| `422` on `branch` | the branch does not exist in the repository |
+
+A rejected re-link leaves the application **exactly as it was**. Storing first
+would move the failure to the next deploy, where it reads as a deployment
+problem rather than a credential one.
+
+**Side effect:** changing to an account with a *different provider* disables
+deploy-on-push (`webhook_enabled` → `false`, secret cleared). A webhook
+verifies signatures against its provider's scheme, so a GitHub→GitLab move
+would leave it silently rejecting every delivery. `webhook_identifier` is kept
+— it is the public part of the delivery URL.
+
+---
+
+### `git_account_missing` on the application resource
+
+`true` when a git site's account has been disconnected: the FK is
+`nullOnDelete`, so deleting a git account leaves its applications with a
+repository, a branch, and no credential. Nothing said so before — the site
+looked exactly like a public-repository one until the next deploy ran
+`git remote add origin ""` and failed.
+
+Derived, never stored: an account-sourced site is the one with a `repository`
+and no `repository_url`, so a public-URL site is never flagged. Show a
+re-integrate prompt on this, pointing at the endpoint above.
+
+---
+
 ## Application — Webhooks (deploy-on-push)
 
 ### GET `/webhook-providers`

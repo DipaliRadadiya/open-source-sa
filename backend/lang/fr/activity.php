@@ -122,6 +122,7 @@ return [
     'application.deploy_settings_updated' => 'A mis à jour les réglages de déploiement de :name',
     'application.deploy_failed' => 'Échec du déploiement de l\'application :name (étape : :step)',
     'application.webhook_enabled' => 'A activé le déploiement automatique de :name (:provider)',
+    'application.git_account_relinked' => 'A relié le compte git de :name',
     'application.webhook_disabled' => 'A désactivé le déploiement automatique de :name',
     'application.webhook_rotated' => 'A remplacé le secret de déploiement automatique de :name (:provider)',
     'application.webhook_deployed' => 'A déployé :name après un push sur :branch',

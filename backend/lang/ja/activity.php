@@ -122,6 +122,7 @@ return [
     'application.deploy_settings_updated' => ':name のデプロイ設定を更新しました',
     'application.deploy_failed' => 'アプリケーション :name のデプロイに失敗しました (:step)',
     'application.webhook_enabled' => ':name のプッシュ時デプロイを有効にしました (:provider)',
+    'application.git_account_relinked' => ':name のGitアカウントを再連携しました',
     'application.webhook_disabled' => ':name のプッシュ時デプロイを無効にしました',
     'application.webhook_rotated' => ':name のプッシュ時デプロイのシークレットを再発行しました (:provider)',
     'application.webhook_deployed' => ':branch へのプッシュにより :name をデプロイしました',

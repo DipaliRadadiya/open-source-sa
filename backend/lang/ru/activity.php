@@ -122,6 +122,7 @@ return [
     'application.deploy_settings_updated' => 'Обновил настройки развёртывания для :name',
     'application.deploy_failed' => 'Не удалось развернуть приложение :name (шаг: :step)',
     'application.webhook_enabled' => 'Включил автодеплой по push для :name (:provider)',
+    'application.git_account_relinked' => 'Повторно привязал git-аккаунт для :name',
     'application.webhook_disabled' => 'Отключил автодеплой по push для :name',
     'application.webhook_rotated' => 'Заменил секрет автодеплоя для :name (:provider)',
     'application.webhook_deployed' => 'Развернул :name после push в :branch',
