@@ -145,11 +145,21 @@ class ApplicationFail2banManager
     /**
      * Default filter INI for new applications. Three rules — the standard
      * WordPress login/xmlrpc/admin regexes — and an empty ignore list.
+     *
+     * **`[Definition]`, not `[{name}]`.** A fail2ban *filter* names its
+     * section `Definition`; only a *jail* is named after itself. This emitted
+     * the jail name, so the file had no `Definition` section, fail2ban found
+     * no `failregex` in it, and the jail banned nobody — while the panel
+     * reported it enabled.
+     *
+     * The two filters this repository already ships,
+     * `resources/fail2ban/panel-app-generic.conf` and `panel-app-wplogin.conf`,
+     * both get this right; only the default generated here did not.
      */
     public function defaultFilterContent(): string
     {
         return <<<'INI'
-            [{name}]
+            [Definition]
             failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
                        ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
                        ^<HOST> .* "(POST|PUT|DELETE) .*wp-admin.*

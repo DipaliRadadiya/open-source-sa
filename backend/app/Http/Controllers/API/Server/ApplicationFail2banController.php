@@ -32,8 +32,24 @@ class ApplicationFail2banController extends Controller
     {
         $this->migrateFromStructured($application);
 
-        $jailTemplate = $manager->defaultJailContent();
-        $filterTemplate = $manager->defaultFilterContent();
+        // Rendered, not raw.
+        //
+        // `defaultJailContent()` is a template with `{name}`, `{filter}` and
+        // `{logpath}` in it, and this handed those straight to the form — so
+        // the user was shown, and invited to save, a config full of literal
+        // placeholders. The write path substitutes them, so the file on disk
+        // was right while the screen was wrong, which is the confusing half of
+        // the pair: nothing the user reads matches what the server has.
+        //
+        // `renderConfigs()` was built as a pure transform for precisely this,
+        // and its docblock says so — "so the controller can show the user
+        // exactly what would be written before it actually is". It was simply
+        // never called here.
+        $templates = $manager->renderConfigs(
+            $application,
+            $manager->defaultJailContent(),
+            $manager->defaultFilterContent(),
+        );
 
         if ($application->fail2ban_jail_content === null) {
             // Brand-new application, never configured: hand the caller the
@@ -42,10 +58,22 @@ class ApplicationFail2banController extends Controller
             // rather than echoing the template as a saved value.
             return response()->json([
                 'fail2ban' => null,
-                'jail_template' => $jailTemplate,
-                'filter_template' => $filterTemplate,
+                'jail_template' => $templates['jail'],
+                'filter_template' => $templates['filter'],
             ]);
         }
+
+        // Saved content goes through the same transform. It normally contains
+        // no placeholders and passes through untouched; when it does contain
+        // one — a user who pasted the template back, or an older saved config
+        // — the form shows what the server will actually write rather than the
+        // token. Display only: what is stored stays exactly as submitted,
+        // because silently rewriting someone's config is not this screen's job.
+        $saved = $manager->renderConfigs(
+            $application,
+            (string) $application->fail2ban_jail_content,
+            (string) $application->fail2ban_filter_content,
+        );
 
         return response()->json([
             'fail2ban' => [
@@ -54,9 +82,10 @@ class ApplicationFail2banController extends Controller
                 'filter_content' => $application->fail2ban_filter_content,
             ],
             // Echo the saved content as the template, so the form renders the
-            // user's last submission unchanged until they edit it.
-            'jail_template' => $application->fail2ban_jail_content,
-            'filter_template' => $application->fail2ban_filter_content,
+            // user's last submission until they edit it — with any placeholder
+            // resolved, so what is shown is what would be written.
+            'jail_template' => $saved['jail'],
+            'filter_template' => $saved['filter'],
         ]);
     }
 

@@ -158,6 +158,54 @@ it('returns null fail2ban with templates for a never-configured application', fu
         ->assertJsonStructure(['fail2ban', 'jail_template', 'filter_template']);
 });
 
+it('hands the form a filled-in template, not one full of placeholders', function () {
+    // This endpoint returned `defaultJailContent()` raw, so the form was
+    // pre-filled with `[{name}]`, `filter = {filter}` and `logpath =
+    // {logpath}` — and invited the user to save that. The write path
+    // substitutes them, so the file on disk was right while the screen was
+    // wrong: nothing the user read matched what the server had.
+    //
+    // The structure assertion above passed throughout, because a template
+    // made entirely of placeholders is still a string under the right key.
+    $this->application = createFail2banApp('Shop', 'shop.test');
+
+    $response = $this->withHeaders(appFail2banHeaders())
+        ->getJson(appFail2banUrl())
+        ->assertOk();
+
+    $jail = $response->json('jail_template');
+    $filter = $response->json('filter_template');
+
+    expect($jail)->not->toContain('{name}')
+        ->and($jail)->not->toContain('{filter}')
+        ->and($jail)->not->toContain('{logpath}')
+        // The real values, so the user can see what will be written.
+        ->and($jail)->toContain('[shop]')
+        ->and($jail)->toContain('filter   = shop')
+        ->and($jail)->toContain('.access.log')
+        ->and($filter)->not->toContain('{name}');
+});
+
+it('generates a filter fail2ban can actually read', function () {
+    // A fail2ban *filter* names its section `Definition`; only a *jail* is
+    // named after itself. This emitted `[{name}]`, so the file had no
+    // Definition section, fail2ban found no failregex, and the jail banned
+    // nobody — while the panel reported it enabled.
+    //
+    // The two filters this repository already ships get it right; only the
+    // generated default did not.
+    $this->application = createFail2banApp('Shop', 'shop.test');
+
+    $filter = $this->withHeaders(appFail2banHeaders())
+        ->getJson(appFail2banUrl())
+        ->assertOk()
+        ->json('filter_template');
+
+    expect($filter)->toContain('[Definition]')
+        ->and($filter)->not->toContain('[shop]')
+        ->and($filter)->toContain('failregex');
+});
+
 it('saves INI, tests it, and applies the configuration on success', function () {
     $this->application = createFail2banApp('Shop', 'shop.test');
 
