@@ -96,6 +96,24 @@ class NodeBbInstaller extends AbstractNodeInstaller
         // Setup rewrote config.json. Put ours back, or the site loses the URL
         // and port the panel gave it and starts answering on 4567.
         $this->writeSecretFile($application, "{$documentRoot}/config.json", $config);
+
+        // `setup` builds the assets itself, so this looks redundant — and that
+        // reasoning is exactly what left it out. `setup`'s build can fail
+        // **without failing setup**: the reported symptom was a forum that
+        // installed cleanly, reported active, and answered every request with
+        // "Internal server error. Failed to lookup view! Did you run
+        // `./nodebb build`?" — Express finding no `.tpl` files under
+        // build/public/templates because nothing had compiled them.
+        //
+        // Running it as its own step is therefore not a second build, it is
+        // the only one whose result is checked: `runWithNode` throws on a
+        // non-zero exit, so a failed build now fails provisioning with its
+        // output attached instead of producing a site that 500s on every page.
+        //
+        // The usual reason it dies is memory — the build runs its targets in
+        // parallel and will exhaust a small VPS — which is precisely the kind
+        // of failure that must be reported rather than swallowed.
+        $this->runWithNode('build', $application, ['./nodebb', 'build'], $documentRoot);
     }
 
     /**

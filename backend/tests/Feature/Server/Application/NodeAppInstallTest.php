@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
@@ -246,4 +247,59 @@ it('starts NodeBB in the foreground, so systemd keeps hold of it', function () {
     expect($installer->startCommand($app, '/home/apps/nodebb/public_html'))
         ->toBe('node /home/apps/nodebb/public_html/loader.js --no-daemon --no-silent')
         ->and($installer->acceptedEngines())->toBe(['mongodb']);
+});
+
+describe('NodeBB asset build', function () {
+    it('builds the assets after writing the final config, and checks the result', function () {
+        $app = oneClickApp('nodebb');
+        $root = '/home/apps/nodebb/public_html';
+
+        app(NodeBbInstaller::class)->install($app, $root, [
+            'db_host' => '127.0.0.1', 'db_port' => 27017,
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]);
+
+        $commands = test()->ran
+            ->map(fn ($process) => implode(' ', (array) $process->command))
+            ->values();
+
+        $build = $commands->search(fn (string $c) => str_contains($c, './nodebb build'));
+
+        // `setup` builds too, so the temptation is to call this redundant —
+        // and leaving it out is what produced a forum that installed cleanly
+        // and then answered "Failed to lookup view! Did you run `./nodebb
+        // build`?" on every request. setup's build can fail without failing
+        // setup; this one's exit code is checked.
+        expect($build)->not->toBeFalse();
+
+        // After the config rewrite, not before: the build has to see the URL
+        // and port the panel gave the site, not the ones setup left behind.
+        $lastConfigWrite = $commands->reduce(
+            fn (?int $carry, string $c, int $i) => str_contains($c, 'config.json') ? $i : $carry,
+            null,
+        );
+
+        expect($lastConfigWrite)->not->toBeNull()
+            ->and($build)->toBeGreaterThan($lastConfigWrite);
+    });
+
+    it('fails provisioning when the build fails, rather than serving a broken forum', function () {
+        $app = oneClickApp('nodebb');
+
+        // The build dying on a small box is the common case — it runs its
+        // targets in parallel and exhausts the RAM. Silence here is what put
+        // a 500 on every page instead of an error on the install screen.
+        Process::fake(function ($process) {
+            test()->ran->push($process);
+
+            return str_contains(implode(' ', (array) $process->command), './nodebb build')
+                ? Process::result(exitCode: 1, errorOutput: 'FATAL ERROR: heap out of memory')
+                : Process::result(output: '');
+        });
+
+        expect(fn () => app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
+            'db_host' => '127.0.0.1', 'db_port' => 27017,
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]))->toThrow(ProvisioningFailedException::class);
+    });
 });
