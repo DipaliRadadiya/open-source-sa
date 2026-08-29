@@ -255,6 +255,15 @@ describe('NodeBB asset build', function () {
         $app = oneClickApp('nodebb');
         $root = '/home/apps/nodebb/public_html';
 
+        // A healthy build leaves templates behind; the installer now looks.
+        Process::fake(function ($process) {
+            test()->ran->push($process);
+
+            return str_contains(implode(' ', (array) $process->command), '-name *.tpl')
+                ? Process::result(output: '/home/apps/nodebb/public_html/build/public/templates/categories.tpl')
+                : Process::result(output: '');
+        });
+
         app(NodeBbInstaller::class)->install($app, $root, [
             'db_host' => '127.0.0.1', 'db_port' => 27017,
             'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
@@ -282,6 +291,28 @@ describe('NodeBB asset build', function () {
 
         expect($lastConfigWrite)->not->toBeNull()
             ->and($build)->toBeGreaterThan($lastConfigWrite);
+    });
+
+    it('fails provisioning when the build claims success but compiles nothing', function () {
+        $app = oneClickApp('nodebb');
+
+        // The reported failure, exactly: a forum created *after* the build step
+        // was added still answered "Failed to lookup view!" on every request,
+        // with nothing wrong anywhere in provisioning. `./nodebb build` exits 0
+        // having compiled no templates, so the exit code is not the evidence —
+        // the artifact is.
+        Process::fake(function ($process) {
+            test()->ran->push($process);
+
+            // Everything succeeds, including the build. The templates
+            // directory is simply empty.
+            return Process::result(output: '');
+        });
+
+        expect(fn () => app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
+            'db_host' => '127.0.0.1', 'db_port' => 27017,
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]))->toThrow(ProvisioningFailedException::class);
     });
 
     it('fails provisioning when the build fails, rather than serving a broken forum', function () {

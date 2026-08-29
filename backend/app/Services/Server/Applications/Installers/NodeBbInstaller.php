@@ -114,6 +114,53 @@ class NodeBbInstaller extends AbstractNodeInstaller
         // parallel and will exhaust a small VPS — which is precisely the kind
         // of failure that must be reported rather than swallowed.
         $this->runWithNode('build', $application, ['./nodebb', 'build'], $documentRoot);
+
+        $this->assertAssetsBuilt($application, $documentRoot);
+    }
+
+    /**
+     * Prove the build produced templates, rather than believing its exit code.
+     *
+     * Checking the exit status was not enough, and this is the second pass at
+     * the same bug: a forum created *after* the build step was added still
+     * answered "Failed to lookup view! Did you run `./nodebb build`?" on every
+     * request, with no error anywhere in provisioning. So `./nodebb build`
+     * exited 0 having compiled nothing — which the NodeBB community reports
+     * too ("it seems build is failing silently", a webpack run logging
+     * `Module not found` and finishing anyway).
+     *
+     * `build/public/templates` is the directory Express is looking in when it
+     * raises that error, so it is the thing worth asserting: no `.tpl` file
+     * there means the forum is broken, whatever the build said about itself.
+     *
+     * The same detect-don't-trust rule the rest of the panel already follows —
+     * `php-fpm -t` before a reload, `systemctl is-active` after a start. A
+     * command's return value is a claim; the artifact is the evidence.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function assertAssetsBuilt(Application $application, string $documentRoot): void
+    {
+        // `-quit` stops at the first hit: this asks "is there one?", and the
+        // directory holds thousands of files on a healthy install.
+        $probe = $this->serverOps->run(
+            [
+                'runuser', '-u', $application->systemUser->username, '--',
+                'find', "{$documentRoot}/build/public/templates",
+                '-name', '*.tpl', '-print', '-quit',
+            ],
+            [
+                'feature' => 'application',
+                'op' => 'installer.build_check',
+                'application' => $application->id,
+                'log_output' => true,
+            ],
+            timeout: 60,
+        );
+
+        if ($probe->failed() || trim($probe->output()) === '') {
+            throw new ProvisioningFailedException('build', $probe->reference);
+        }
     }
 
     /**
