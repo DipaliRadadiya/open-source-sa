@@ -88,11 +88,34 @@ class NodeBbInstaller extends AbstractNodeInstaller
         // `nodebb setup` installs the dependencies itself before running, so
         // there is no separate npm step. The answers travel in a 0600 file —
         // the admin password and the database password are both in here.
+        //
+        // **The names matter, and getting them wrong installed nothing.** The
+        // previous set — `admin__username`, `admin__password`, `admin__email` —
+        // was a guess at a double-underscore-to-colon convention NodeBB does not
+        // apply here. `checkSetupFlagEnv()` in `src/install.js` does not walk
+        // `process.env` looking for a separator; it tests a **hardcoded map**
+        // (`NODEBB_ADMIN_USERNAME` → `admin:username`, and so on) and ignores
+        // every name outside it. So all four answers were invisible, the
+        // required-values check failed, and NodeBB called a bare
+        // `process.exit()` — which is **exit code 0**. The panel read success
+        // and carried on, leaving a forum with no `config` document, therefore
+        // no `theme:id`, therefore no theme templates, therefore
+        // "Failed to lookup view!" on every request.
+        //
+        // These names are read. `admin:password:confirm` is not passed because
+        // NodeBB derives it itself (`setupVal['admin:password:confirm'] =
+        // setupVal['admin:password']`), and there is no env name mapped to it —
+        // an unmapped `NODEBB_*` var lands on `setupVal[undefined]`.
+        //
+        // Upstream also accepts the whole answer set as positional JSON, which
+        // is the other documented path. It is deliberately not used: the
+        // argument holds the admin password, and anything on a command line is
+        // readable in `/proc/<pid>/cmdline` for as long as the command runs.
+        // That is the exact exposure `runWithSecretEnv` exists to avoid.
         $this->runWithSecretEnv('install_app', $application, ['./nodebb', 'setup'], $documentRoot, [
-            'admin__username' => (string) ($settings['admin_username'] ?? 'admin'),
-            'admin__email' => (string) ($settings['admin_email'] ?? ''),
-            'admin__password' => (string) ($settings['admin_password'] ?? ''),
-            'admin__password__confirm' => (string) ($settings['admin_password'] ?? ''),
+            'NODEBB_ADMIN_USERNAME' => (string) ($settings['admin_username'] ?? 'admin'),
+            'NODEBB_ADMIN_EMAIL' => (string) ($settings['admin_email'] ?? ''),
+            'NODEBB_ADMIN_PASSWORD' => (string) ($settings['admin_password'] ?? ''),
         ]);
 
         // Setup rewrote config.json, and the panel's URL and port have to
@@ -123,6 +146,42 @@ class NodeBbInstaller extends AbstractNodeInstaller
                 $current['port'] = (int) ($application->app_port ?: 4567);
                 // Reached through the reverse proxy only.
                 $current['bind_address'] = '127.0.0.1';
+                // Every app this panel provisions sits behind its nginx, and
+                // without this nobody can log in. `webserver.js` reads
+                // `trust_proxy` and **defaults it to `false`**, so Express sees
+                // `req.secure === false` on an https request that arrived over
+                // the proxy; express-session then refuses to set a `secure`
+                // session cookie, no session is established, and the login POST
+                // comes back `?error=csrf-invalid`. The forum renders fine,
+                // which is what makes it look like a login bug rather than a
+                // proxy one.
+                //
+                // Upstream ships `src/upgrades/4.14.3/trust_proxy.js` to
+                // backfill exactly this value, but an upgrade run against a
+                // database setup never populated marks every migration skipped,
+                // so the backfill did not happen either.
+                //
+                // Written here rather than in `config()` because `setup`
+                // rewrites `config.json` from its own answers; this patch runs
+                // after it and is the only place the value survives.
+                //
+                // `1`, not `true`, and the difference is a spoofable client IP.
+                // Upstream's own backfill writes `true`, and its startup warning
+                // says to enable this "only when NodeBB is behind a reverse
+                // proxy that **strips or overwrites** X-Forwarded-For" — this
+                // panel's nginx does neither. `node.blade.php` sends
+                // `X-Forwarded-For $proxy_add_x_forwarded_for`, which *appends*
+                // the real peer to whatever the client already sent. Under
+                // `true` Express trusts every hop and takes the **leftmost**
+                // entry, so a request carrying its own `X-Forwarded-For: 1.2.3.4`
+                // decides its own `req.ip` — and NodeBB rate limiting, IP bans
+                // and moderation logs all read that.
+                //
+                // `1` trusts exactly one hop, so Express takes the entry nginx
+                // itself appended: the real client, and not forgeable from
+                // outside. `req.secure` is satisfied either way — it reads
+                // `X-Forwarded-Proto`, which the vhost sets rather than appends.
+                $current['trust_proxy'] = 1;
 
                 return json_encode(
                     $current,
@@ -193,17 +252,32 @@ class NodeBbInstaller extends AbstractNodeInstaller
      * `php-fpm -t` before a reload, `systemctl is-active` after a start. A
      * command's return value is a claim; the artifact is the evidence.
      *
+     * **Counting `.tpl` files was not enough, and this is the third pass.** A
+     * forum whose `setup` never ran still passed this check: the core templates
+     * ship with the clone and compile without a database, so 266 `.tpl` files
+     * existed and "is there one?" answered yes. What was missing was everything
+     * the *theme* provides — with no `config` document there is no `theme:id`,
+     * so the theme's templates are never merged into the build.
+     *
+     * `header.tpl` and `footer.tpl` come from the theme and every single page
+     * render needs both, which makes them the honest test: their absence is
+     * precisely the state that produces "Failed to lookup view!". Asserting
+     * them also covers the setup failure upstream of it, because a database
+     * that setup never populated cannot yield a theme.
+     *
      * @throws ProvisioningFailedException
      */
     private function assertAssetsBuilt(Application $application, string $documentRoot, ServerOpsResult $build): void
     {
-        // `-quit` stops at the first hit: this asks "is there one?", and the
-        // directory holds thousands of files on a healthy install.
+        // Both names in one pass. No `-quit` here — unlike the old check this
+        // is not asking "is there any file?" but "are these two present?", and
+        // stopping at the first hit would accept a build that produced only one
+        // of them.
         $probe = $this->serverOps->run(
             [
                 'runuser', '-u', $application->systemUser->username, '--',
                 'find', "{$documentRoot}/build/public/templates",
-                '-name', '*.tpl', '-print', '-quit',
+                '(', '-name', 'header.tpl', '-o', '-name', 'footer.tpl', ')', '-print',
             ],
             [
                 'feature' => 'application',
@@ -214,7 +288,9 @@ class NodeBbInstaller extends AbstractNodeInstaller
             timeout: 60,
         );
 
-        if (! $probe->failed() && trim($probe->output()) !== '') {
+        $found = $probe->failed() ? '' : $probe->output();
+
+        if (str_contains($found, 'header.tpl') && str_contains($found, 'footer.tpl')) {
             return;
         }
 

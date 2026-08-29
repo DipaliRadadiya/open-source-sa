@@ -250,6 +250,41 @@ it('starts NodeBB in the foreground, so systemd keeps hold of it', function () {
         ->and($installer->acceptedEngines())->toBe(['mongodb']);
 });
 
+/**
+ * A `Process::fake` that answers `find` from a modelled template directory.
+ *
+ * The build check probes for named theme templates; an earlier version probed
+ * for any `.tpl` at all. Faking the *directory* rather than the *command* is
+ * what makes a test able to tell those two apart — a fake keyed on the command
+ * string returns nothing for whichever probe it was not written for, so a weak
+ * check appears to fail correctly when it would really have passed.
+ *
+ * @param  array<int, string>  $files
+ */
+function templateDir(array $files): Closure
+{
+    return function ($process) use ($files) {
+        test()->ran->push($process);
+        $command = implode(' ', (array) $process->command);
+
+        if (str_contains($command, 'cat ') && str_contains($command, 'config.json')) {
+            return Process::result(output: json_encode(['url' => 'http://old', 'database' => 'mongo']));
+        }
+
+        if (! str_contains($command, 'find') || ! str_contains($command, 'templates')) {
+            return Process::result(output: '');
+        }
+
+        // The theme probe names the two files it wants; the old probe asked for
+        // `*.tpl`. Both are answered from the same directory.
+        $matches = str_contains($command, 'header.tpl')
+            ? array_filter($files, fn (string $f) => str_ends_with($f, '/header.tpl') || str_ends_with($f, '/footer.tpl'))
+            : $files;
+
+        return Process::result(output: implode("\n", $matches));
+    };
+}
+
 describe('NodeBB asset build', function () {
     it('builds the assets after writing the final config, and checks the result', function () {
         $app = oneClickApp('nodebb');
@@ -271,8 +306,11 @@ describe('NodeBB asset build', function () {
                 ]));
             }
 
-            return str_contains($command, '-name *.tpl')
-                ? Process::result(output: '/home/apps/nodebb/public_html/build/public/templates/categories.tpl')
+            return str_contains($command, 'header.tpl')
+                ? Process::result(output: implode("\n", [
+                    '/home/apps/nodebb/public_html/build/public/templates/header.tpl',
+                    '/home/apps/nodebb/public_html/build/public/templates/footer.tpl',
+                ]))
                 : Process::result(output: '');
         });
 
@@ -330,8 +368,8 @@ describe('NodeBB asset build', function () {
                 return Process::result(output: json_encode(['url' => 'http://old', 'database' => 'mongo']));
             }
 
-            return str_contains($command, '-name *.tpl')
-                ? Process::result(output: '/x/categories.tpl')
+            return str_contains($command, 'header.tpl')
+                ? Process::result(output: "/x/header.tpl\n/x/footer.tpl")
                 : Process::result(output: '');
         });
 
@@ -369,8 +407,8 @@ describe('NodeBB asset build', function () {
                 ]));
             }
 
-            return str_contains($command, '-name *.tpl')
-                ? Process::result(output: '/x/categories.tpl')
+            return str_contains($command, 'header.tpl')
+                ? Process::result(output: "/x/header.tpl\n/x/footer.tpl")
                 : Process::result(output: '');
         });
 
@@ -435,6 +473,139 @@ describe('NodeBB asset build', function () {
 
         expect(fn () => app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
             'db_host' => '127.0.0.1', 'db_port' => 27017,
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]))->toThrow(ProvisioningFailedException::class);
+    });
+});
+
+describe('NodeBB setup answers', function () {
+    // The bug that made every forum on the box unusable, and the reason it was
+    // invisible: NodeBB never saw the admin answers, failed its required-values
+    // check, and called a bare `process.exit()` — exit code 0. Provisioning
+    // reported success and moved on.
+    $healthyBuild = templateDir(['/x/500.tpl', '/x/header.tpl', '/x/footer.tpl']);
+
+    it('passes the admin answers under the names NodeBB actually reads', function () use ($healthyBuild) {
+        $app = oneClickApp('nodebb', [
+            'admin_username' => 'forumadmin',
+            'admin_email' => 'admin@nodebb.test',
+            'admin_password' => 's3cret-pw',
+        ]);
+
+        Process::fake($healthyBuild);
+
+        app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
+            'db_host' => '127.0.0.1', 'db_port' => 27017,
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]);
+
+        $envFile = test()->ran
+            ->map(fn ($p) => (string) $p->input)
+            ->first(fn (string $i) => str_contains($i, 'ADMIN_USERNAME') || str_contains($i, 'admin__'));
+
+        expect($envFile)->not->toBeNull()
+            // `checkSetupFlagEnv()` matches a hardcoded map. These three names
+            // are in it.
+            ->and($envFile)->toContain('NODEBB_ADMIN_USERNAME')
+            ->and($envFile)->toContain('NODEBB_ADMIN_EMAIL')
+            ->and($envFile)->toContain('NODEBB_ADMIN_PASSWORD')
+            ->and($envFile)->toContain('forumadmin')
+            // The old names. Nothing upstream reads them, and passing them is
+            // what produced a forum with an empty database.
+            ->and($envFile)->not->toContain('admin__username')
+            ->and($envFile)->not->toContain('admin__password');
+    });
+
+    it('leaves the password confirmation to NodeBB rather than inventing a name', function () use ($healthyBuild) {
+        // NodeBB derives `admin:password:confirm` from `admin:password` itself,
+        // and there is no env name mapped to it — an unmapped `NODEBB_*` var
+        // would be assigned to `setupVal[undefined]`.
+        $app = oneClickApp('nodebb', ['admin_password' => 's3cret-pw']);
+
+        Process::fake($healthyBuild);
+
+        app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]);
+
+        $envFile = test()->ran
+            ->map(fn ($p) => (string) $p->input)
+            ->first(fn (string $i) => str_contains($i, 'NODEBB_ADMIN_USERNAME'));
+
+        expect($envFile)->not->toBeNull()
+            ->and($envFile)->not->toContain('CONFIRM');
+    });
+
+    it('keeps the admin password off the command line', function () use ($healthyBuild) {
+        // Upstream also accepts the answers as positional JSON. It is not used:
+        // an argument is readable in `/proc/<pid>/cmdline` for as long as the
+        // command runs, which is the exposure the secret-env file avoids.
+        $app = oneClickApp('nodebb', ['admin_password' => 'do-not-leak-me']);
+
+        Process::fake($healthyBuild);
+
+        app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]);
+
+        $commands = test()->ran->map(fn ($p) => implode(' ', (array) $p->command));
+
+        expect($commands->filter(fn (string $c) => str_contains($c, 'do-not-leak-me')))
+            ->toBeEmpty();
+    });
+
+    it('writes trust_proxy so the login form works behind the panel nginx', function () use ($healthyBuild) {
+        // Without it Express sees `req.secure === false`, express-session
+        // refuses the secure cookie, and every login returns
+        // `?error=csrf-invalid` on a forum that otherwise renders perfectly.
+        $app = oneClickApp('nodebb');
+
+        Process::fake($healthyBuild);
+
+        app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]);
+
+        // The *last* config write — the one after setup rewrote the file.
+        $written = test()->ran
+            ->map(fn ($p) => (string) $p->input)
+            ->filter(fn (string $i) => str_contains($i, '"url"'))
+            ->last();
+
+        // `1`, not `true`: nginx *appends* to X-Forwarded-For, so trusting
+        // every hop would let a request pick its own `req.ip` and defeat
+        // NodeBB's rate limiting and IP bans.
+        expect($written)->not->toBeNull()
+            ->and(json_decode($written, true)['trust_proxy'] ?? null)->toBe(1);
+    });
+
+    it('rejects a build that compiled core templates but no theme', function () {
+        // The state the old check passed and the forum still 500'd in: the core
+        // `.tpl` files ship with the clone and compile without a database, so
+        // "is there any .tpl?" answered yes while `header.tpl` and `footer.tpl`
+        // — which every page render needs — were absent because setup never
+        // populated the database, so there was no `theme:id`.
+        $app = oneClickApp('nodebb');
+
+        // Modelled as a directory, not as a command match: the point is that a
+        // *generic* `.tpl` probe finds plenty here and still describes a broken
+        // forum. Keying the fake off the command instead would let the old
+        // check pass this test for the wrong reason.
+        Process::fake(templateDir(['/x/500.tpl', '/x/partials/menu.tpl']));
+
+        expect(fn () => app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
+            'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+        ]))->toThrow(ProvisioningFailedException::class);
+    });
+
+    it('rejects a build that produced a header but no footer', function () {
+        // Half a theme is still a broken render, and `-quit` on the old probe
+        // would have stopped at the first hit and called it healthy.
+        $app = oneClickApp('nodebb');
+
+        Process::fake(templateDir(['/x/500.tpl', '/x/header.tpl']));
+
+        expect(fn () => app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
             'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
         ]))->toThrow(ProvisioningFailedException::class);
     });
