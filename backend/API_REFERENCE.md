@@ -491,15 +491,43 @@ Auth-gated. Check if the current user can perform an action.
 ### GET `/server/capabilities`
 **Permission:** `application` (view)
 
-What this server can run — drives which site types are offered.
+What this server is and what it can run — drives which site types are offered.
 
 ```json
 {"capabilities": {
-  "runtimes": {"php": ["8.4", "8.3"], "node": ["20", "18"]},
-  "web_servers": ["nginx", "apache"],
-  "database_engines": {"mysql": false, "mariadb": true, "mongodb": false}
+  "stack": "lemp",
+  "web_server": "nginx",
+  "capabilities": {"php": true, "node": false},
+  "source": "installer",
+  "verified_at": "29-07-2026 10:00:00",
+  "server_ip": "167.233.229.184",
+  "temporary_domain_suffixes": ["nip.io"]
 }}
 ```
+
+`stack` is how the box was **built** (`lemp|lamp|ols|mern`, or `null` for a
+server migrated in from another panel); the inner `capabilities` object is what
+it can run **now**. They diverge legitimately — installing Node on a LEMP box
+adds the capability without changing how the box was built — so **filter on
+`capabilities`, never on `stack`**.
+
+`source` is `installer` (our install script wrote the row) or `detected` (the
+row was missing and the panel probed the box once). `web_server` is
+`nginx|apache|openlitespeed`; `mern` is never a value here, because MERN uses
+nginx.
+
+**`server_ip` is the public IP, or `null`.** It is detected from the local
+route table and cached for an hour. It is deliberately `null` — not a private
+address — on a NAT'd instance (most of AWS, GCP, Azure, and anything with a
+floating IP), where the machine cannot see the address the world reaches it on.
+Callers must handle `null` and say "we could not determine this server's
+address" rather than offering a hostname that resolves nowhere. This is a
+*different value* from `facts.ip` on `GET /server/facts` — see that endpoint.
+
+`temporary_domain_suffixes` is every suffix on offer for the throwaway
+`<name>.<ip>.<suffix>` hostname the create form builds. The same list decides
+what counts as a temporary domain, so the frontend cannot invent a hostname the
+backend then mistakes for the user's own.
 
 ---
 
@@ -3606,6 +3634,19 @@ Removes the `/etc/cron.d` file entry.
   "runtimes": {"php": "8.4", "node": "20.11.0", "nginx": "1.24.0", "redis": "7.2.0", "mysql": null}
 }}
 ```
+
+**`ip` is the machine's own first local interface address** (`hostname -I`), not
+necessarily its public one. On a VPS with a directly-attached public address —
+Hetzner, DigitalOcean, Linode, Vultr — the two are the same, which is the usual
+case. Behind NAT (most of AWS, GCP, Azure, or with a floating IP) this is the
+**private** address, e.g. `10.0.0.5`.
+
+It is therefore **not** the same value as `capabilities.server_ip` on
+`GET /server/capabilities`, which is public-or-`null` and never reports a
+private address. Use `server_ip` when the answer has to be reachable from the
+internet (DNS, certificates, a hostname you hand to a user); use `facts.ip`
+only to show the operator what is on the box's own interface. The same server
+can legitimately report `facts.ip: "10.0.0.5"` and `server_ip: null`.
 
 ---
 
