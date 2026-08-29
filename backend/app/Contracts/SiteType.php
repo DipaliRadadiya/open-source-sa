@@ -57,6 +57,16 @@ interface SiteType
     public function needsDatabase(): bool;
 
     /**
+     * The unit's `MemoryMax` for this application, or null for the server
+     * default.
+     *
+     * A systemd cap is a kill, not a warning — a process over it is killed and,
+     * with `Restart=always` and the unit's start limit, ends up in `failed`
+     * with the site returning 502.
+     */
+    public function defaultMemoryMax(): ?string;
+
+    /**
      * The Node versions this application will actually run on.
      *
      * `['min' => '22', 'max' => null]` — either end may be null for open.

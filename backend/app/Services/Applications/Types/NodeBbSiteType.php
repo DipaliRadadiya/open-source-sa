@@ -43,6 +43,16 @@ class NodeBbSiteType extends AbstractSiteType
     }
 
     /**
+     * A forum plus its asset build. The build is the demanding half — it runs
+     * its webpack targets in parallel and is the step that dies first on a
+     * small box, taking the templates with it.
+     */
+    public function defaultMemoryMax(): ?string
+    {
+        return '1G';
+    }
+
+    /**
      * NodeBB v4.x — the branch `config/server.php` installs — requires Node 22
      * or greater, per its own README. No ceiling is published.
      */

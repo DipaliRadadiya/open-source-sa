@@ -157,6 +157,22 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
+     * The server default, for anything with no measured appetite of its own.
+     *
+     * `server.applications.memory_max` is 512M and its own note says it was
+     * "chosen from common practice, not measurement — revisit when there is
+     * real traffic". That figure is fine for a small Node service and is below
+     * what some of the one-click applications document as their *minimum*, and
+     * because `MemoryMax` kills rather than throttles, being under it is not a
+     * slow site — it is a unit that dies, hits its start limit, and leaves a
+     * 502 on a site the panel reports as installed.
+     */
+    public function defaultMemoryMax(): ?string
+    {
+        return null;
+    }
+
+    /**
      * No constraint by default.
      *
      * Same shape of problem as {@see fixedWebRoot()}, and found the same way:

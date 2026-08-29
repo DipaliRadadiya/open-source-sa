@@ -53,6 +53,17 @@ class N8nSiteType extends AbstractSiteType
     }
 
     /**
+     * n8n's own documented minimum is 2 GB of RAM. Under the server's 512M
+     * default the unit is killed on startup, restarts, hits its start limit
+     * and stops — which reaches the browser as a 502 on a site that installed
+     * without complaint.
+     */
+    public function defaultMemoryMax(): ?string
+    {
+        return '2G';
+    }
+
+    /**
      * n8n documents a closed range — Node 20.19 to 24.x inclusive — and it is
      * the ceiling that matters here: n8n refuses to start on a version outside
      * it rather than warning, so a too-new Node is as fatal as a too-old one.

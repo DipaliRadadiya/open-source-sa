@@ -9,6 +9,7 @@ use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\Installers\N8nInstaller;
 use App\Services\Server\Applications\Installers\NodeBbInstaller;
+use App\Services\Server\Applications\ProcessSupervisor;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -301,5 +302,44 @@ describe('NodeBB asset build', function () {
             'db_host' => '127.0.0.1', 'db_port' => 27017,
             'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
         ]))->toThrow(ProvisioningFailedException::class);
+    });
+});
+
+describe('unit memory ceiling', function () {
+    it('gives an application what it needs rather than one server-wide number', function () {
+        // 512M was applied to every Node app regardless of what it was.
+        // MemoryMax kills rather than throttles, so an app under its own
+        // documented minimum is not slow — it is killed at startup, restarts
+        // to its start limit, stops, and the site answers 502 while the panel
+        // reports it active.
+        config(['server.applications.memory_max' => '512M']);
+
+        $supervisor = app(ProcessSupervisor::class);
+
+        $n8n = oneClickApp('n8n');
+        $n8n->start_command = 'node x.js';
+        $supervisor->apply($n8n, '/home/apps/n8n/public_html', start: false);
+
+        $unit = test()->ran
+            ->map(fn ($p) => (string) $p->input)
+            ->first(fn (string $i) => str_contains($i, 'MemoryMax='));
+
+        // n8n's own docs ask for 2 GB.
+        expect($unit)->toContain('MemoryMax=2G');
+    });
+
+    it('falls back to the server default for a type with no opinion', function () {
+        config(['server.applications.memory_max' => '512M']);
+
+        $app = oneClickApp('nodered');
+        $app->start_command = 'node x.js';
+        app(ProcessSupervisor::class)
+            ->apply($app, '/home/apps/nodered/public_html', start: false);
+
+        $unit = test()->ran
+            ->map(fn ($p) => (string) $p->input)
+            ->first(fn (string $i) => str_contains($i, 'MemoryMax='));
+
+        expect($unit)->toContain('MemoryMax=512M');
     });
 });

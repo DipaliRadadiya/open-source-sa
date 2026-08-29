@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
@@ -302,7 +303,7 @@ class ProcessSupervisor
             'user' => $application->systemUser->username,
             'exec' => $this->execStart($application),
             'path' => $this->path($application),
-            'memoryMax' => (string) config('server.applications.memory_max', '512M'),
+            'memoryMax' => $this->memoryMax($application),
         ])->render();
     }
 
@@ -328,6 +329,32 @@ class ProcessSupervisor
         }
 
         return trim($binary.' '.implode(' ', $parts));
+    }
+
+    /**
+     * The unit's memory ceiling: what this application needs, else the
+     * server's default.
+     *
+     * Server-wide 512M was applied to every Node application regardless of
+     * what it was — including n8n, whose own documentation asks for 2 GB. A
+     * `MemoryMax` is enforced by killing the process, so an application under
+     * its own minimum does not run slowly, it is killed at startup, restarts
+     * until `StartLimitBurst`, and stops. The site then answers 502 while the
+     * panel reports it installed and active, which is the least debuggable
+     * shape a failure can take.
+     *
+     * The site type answers because it is the only thing that knows what it
+     * installed. An operator who wants a different figure still sets
+     * `server.applications.memory_max`, which remains the default for
+     * everything with no opinion.
+     */
+    private function memoryMax(Application $application): string
+    {
+        $default = (string) config('server.applications.memory_max', '512M');
+
+        return app(SiteTypeManager::class)
+            ->find((string) $application->site_type)
+            ?->defaultMemoryMax() ?? $default;
     }
 
     /**
