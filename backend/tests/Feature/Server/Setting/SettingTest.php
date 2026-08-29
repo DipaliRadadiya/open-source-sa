@@ -331,6 +331,54 @@ it('writes the unattended-upgrades drop-in', function () {
         ->toContain('Automatic-Reboot-Time "03:30"');
 });
 
+// The write above only ever proved the file was correct on disk. Nothing read
+// it back, and the parser could not: every apt key it writes contains a hyphen
+// and the key pattern excluded one, so the whole group read as its defaults and
+// the toggle forgot itself on every reload.
+it('reads the updates group back exactly as it was saved', function () {
+    fakeSettings();
+
+    $saved = [
+        'security_updates_enabled' => true,
+        'auto_reboot' => true,
+        'reboot_time' => '03:30',
+        'reboot_with_users' => true,
+    ];
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/updates', $saved)->assertOk();
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/settings')->assertOk();
+
+    foreach ($saved as $field => $value) {
+        $response->assertJsonPath("settings.updates.{$field}", $value);
+    }
+});
+
+// The all-true pass alone would also pass against a parser that lost the file
+// and happened to default the other way, so the off state is asserted too.
+it('reads the updates group back when everything is switched off', function () {
+    fakeSettings();
+
+    $saved = [
+        'security_updates_enabled' => false,
+        'auto_reboot' => false,
+        'reboot_time' => '02:00',
+        'reboot_with_users' => false,
+    ];
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/updates', $saved)->assertOk();
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/settings')->assertOk();
+
+    foreach ($saved as $field => $value) {
+        $response->assertJsonPath("settings.updates.{$field}", $value);
+    }
+});
+
 it('applies redis settings via redis-cli', function () {
     fakeSettings();
 

@@ -246,6 +246,14 @@ class UpdateSettings implements SettingGroup
     /**
      * Parse our managed drop-in (`key "value";`) into a map.
      *
+     * The hyphen in the key class is load-bearing, not tidying: `\w` does not
+     * include one, and every key `apply()` writes has at least one
+     * (`APT::Periodic::Unattended-Upgrade`, `Unattended-Upgrade::Automatic-Reboot`).
+     * Without it no line ever matched, this returned an empty map, and `read()`
+     * fell through to its own defaults — so the whole group reported itself off
+     * however it was actually configured, and the toggle forgot its state on
+     * every reload while the file on disk was correct the entire time.
+     *
      * @return array<string, string>
      */
     private function currentConfig(): array
@@ -258,7 +266,7 @@ class UpdateSettings implements SettingGroup
 
         $config = [];
         foreach (preg_split('/\r?\n/', (string) File::get($path)) ?: [] as $line) {
-            if (preg_match('/^\s*([\w:]+)\s+"([^"]*)"\s*;/', $line, $m)) {
+            if (preg_match('/^\s*([\w:-]+)\s+"([^"]*)"\s*;/', $line, $m)) {
                 $config[$m[1]] = $m[2];
             }
         }
