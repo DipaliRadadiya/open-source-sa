@@ -374,3 +374,38 @@ it('still reports a password-less Redis as password-less', function () {
 
     expect($response->json('settings.redis.has_password'))->toBeFalse();
 });
+
+it('makes the panel itself use the new password', function () {
+    // Writing `.env` is not applying it. install.sh runs `config:cache`, so the
+    // old password is compiled into bootstrap/cache/config.php — the file the
+    // panel actually reads — and `queue:work` loaded its configuration once at
+    // start. The installer points sessions, cache and the queue at Redis
+    // together, so without this the panel keeps offering the old password to
+    // all of them and Redis answers NOAUTH: a successful password change that
+    // takes the panel down.
+    $runs = fakeRedis();
+
+    saveRedis(['password' => 'NewSecret123'])->assertAccepted();
+    applyDeferred();
+
+    $commands = collect($runs)->map(fn (array $r) => implode(' ', $r['command']));
+
+    // The worker holds its config from when it started; a restart is the only
+    // way it learns anything.
+    expect($commands->contains(fn (string $c) => str_contains($c, 'systemctl restart')
+        && str_contains($c, (string) config('panel_update.services.queue'))))->toBeTrue();
+});
+
+it('does not refresh the panel for a change that did not stick', function () {
+    // Ordered strictly after the verify-and-record step: rebuilding the config
+    // cache around a credential Redis rejected would replace a working value
+    // with a broken one.
+    $runs = fakeRedis(failing: ['ping']);
+
+    saveRedis(['password' => 'NewSecret123'])->assertAccepted();
+    applyDeferred();
+
+    $commands = collect($runs)->map(fn (array $r) => implode(' ', $r['command']));
+
+    expect($commands->contains(fn (string $c) => str_contains($c, 'systemctl restart')))->toBeFalse();
+});

@@ -4356,6 +4356,16 @@ rather than accepting it: the change is applied after the response, so a
 credential the panel cannot authenticate with would fail silently having already
 told the user it worked.
 
+A successful change also **refreshes the panel itself** — it rebuilds the config
+cache (only if one exists) and restarts the queue worker. Writing `.env` alone
+would not be enough: `install.sh` runs `config:cache`, so the old password stays
+compiled into the file the panel reads, and `queue:work` loaded its
+configuration when it started. Since the installer points sessions, cache and
+the queue at Redis together, a change the panel had not picked up would make all
+of them answer NOAUTH — a successful password change that takes the panel down.
+The queue restart means a short gap in background work; nothing is lost, as jobs
+stay queued.
+
 ```json
 }, "last_changed": {"security": {"user": {"id": 1, "username": "admin"}, "at": "27-07-2026 10:00:00"}}}
 ```

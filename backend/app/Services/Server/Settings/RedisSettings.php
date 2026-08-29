@@ -53,6 +53,7 @@ class RedisSettings implements SettingGroup
     public function __construct(
         private ServerOps $serverOps,
         private EnvFile $env,
+        private PanelCredentialRefresh $refresh,
     ) {}
 
     /**
@@ -227,7 +228,31 @@ class RedisSettings implements SettingGroup
             // leave behind a server the panel cannot reach.
             $this->rollback($previous, $password);
             $this->logFailure('redis password recorded nowhere: '.$e->getMessage(), (string) Str::uuid());
+
+            return;
         }
+
+        // Writing `.env` is not applying it. `install.sh` runs
+        // `config:cache`, so the old password is compiled into
+        // `bootstrap/cache/config.php` and that is the file the panel reads;
+        // and `queue:work` loaded its configuration once, when it started.
+        //
+        // The installer points sessions, the cache and the queue at Redis
+        // together, so without this the panel keeps offering the old password
+        // to all of them and Redis answers NOAUTH to every one — a successful
+        // password change that takes the panel down.
+        //
+        // Last, and only on the path where the new credential has already been
+        // proven to work: nothing here should run for a change that did not
+        // stick.
+        // Failures are logged, not returned: this runs after the response, so
+        // there is no caller left to tell. They are not invisible either — the
+        // next `read()` authenticates with whatever the config cache now holds,
+        // so a refresh that did not happen makes `has_password` come back
+        // `null`, which is precisely "the panel cannot reach Redis with the
+        // credential it has". The failure reports itself through the field
+        // that already exists to say so.
+        $this->refresh->apply();
     }
 
     private function logFailure(string $message, string $reference): void
