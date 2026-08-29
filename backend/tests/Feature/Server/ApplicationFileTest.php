@@ -2235,3 +2235,57 @@ describe('trash retention', function () {
         ))->toBeTrue();
     });
 });
+
+describe('panel directory ownership', function () {
+    beforeEach(function () {
+        FileBrowserFake::reset();
+        FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'content' => '<?php echo "hi";'];
+    });
+
+    it('creates the backup directory elevated and hands it to the site user', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'new content'])
+            ->assertOk();
+
+        // `.panel` belongs to root: the web server driver creates it through
+        // ServerOps, which elevates, and provisioning's chown only descends the
+        // document root. So `runuser -u siteowner -- mkdir` inside it is
+        // permission denied, and file backups failed on every real server while
+        // this suite stayed green — Process is faked, and a fake never returns
+        // EACCES.
+        expect(collect(FileBrowserFake::$ran)->contains(
+            fn (string $c): bool => $c === 'chown siteowner:siteowner /home/siteowner/shop/.panel/file-backups'
+        ))->toBeTrue();
+    });
+
+    it('creates the trash directory elevated and hands it to the site user', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'index.php', 'confirm' => true])
+            ->assertOk();
+
+        expect(collect(FileBrowserFake::$ran)->contains(
+            fn (string $c): bool => $c === 'chown siteowner:siteowner /home/siteowner/shop/.panel/trash'
+        ))->toBeTrue();
+    });
+
+    it('never hands over .panel itself, only the directory in use', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'index.php', 'confirm' => true])
+            ->assertOk();
+
+        // Write permission on a directory is what allows unlinking the files
+        // in it, and `.panel` holds the Basic Auth credential. A system user
+        // with SSH access must not be able to delete the `.htpasswd` an
+        // administrator put in front of its site.
+        expect(collect(FileBrowserFake::$ran)->contains(
+            fn (string $c): bool => str_starts_with($c, 'chown')
+                && str_ends_with($c, '/home/siteowner/shop/.panel')
+        ))->toBeFalse();
+    });
+});

@@ -74,6 +74,7 @@ class FileBrowser
     public function __construct(
         private ServerOps $serverOps,
         private ApplicationProvisioner $provisioner,
+        private PanelDirectory $panelDirectory,
     ) {}
 
     /**
@@ -594,6 +595,10 @@ class FileBrowser
             return;
         }
 
+        // The top of the tree is root's to give away (see PanelDirectory); the
+        // per-file subdirectory below it is then the site user's to create.
+        $this->panelDirectory->ensure($application, 'file-backups');
+
         $directory = $this->backupsDirectory($application, $target);
         $this->run($application, ['mkdir', '-p', $directory], 'backup_dir');
 
@@ -827,6 +832,7 @@ class FileBrowser
     {
         $destination = $this->trashDirectory($application).'/'.now()->format('Ymd-His').'/'.ltrim($relative, '/');
 
+        $this->panelDirectory->ensure($application, 'trash');
         $this->run($application, ['mkdir', '-p', dirname($destination)], 'trash_dir');
         $this->run($application, ['mv', $target, $destination], 'trash');
     }
@@ -1473,6 +1479,8 @@ class FileBrowser
         // twelve folders a second apart.
         if (! $permanent) {
             $stamp = now()->format('Ymd-His');
+
+            $this->panelDirectory->ensure($application, 'trash');
 
             foreach (array_keys($found) as $relative) {
                 $destination = $this->trashDirectory($application).'/'.$stamp.'/'.ltrim($relative, '/');

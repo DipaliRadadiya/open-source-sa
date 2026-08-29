@@ -93,6 +93,7 @@ class ChunkedUpload
     public function __construct(
         private ServerOps $serverOps,
         private ApplicationProvisioner $provisioner,
+        private PanelDirectory $panelDirectory,
     ) {}
 
     /**
@@ -275,38 +276,14 @@ class ChunkedUpload
     /**
      * Create the upload directory and hand it to the site user.
      *
-     * Elevated, then chowned — not `runuser ... mkdir`. `.panel` is created by
-     * `AbstractWebServerDriver::ensurePanelDirectory()` through ServerOps,
-     * which means root owns it, and `set_ownership` at provision time only
-     * descends the *document root*. So the site user cannot create anything
-     * inside `.panel`, and a `mkdir` run as that user fails with permission
-     * denied — which is why this could not simply follow the part files' own
-     * `runuser` wrapper when the directory moved above the webroot.
-     *
-     * Only this subdirectory changes hands, not `.panel` itself: write
-     * permission on a directory is what allows unlinking the files in it, and
-     * `.panel` also holds the Basic Auth credential. The site user gets its
-     * own uploads directory and no say over its neighbours.
-     *
-     * Same shape as the git `.env` in ApplicationProvisioner — created
-     * elevated, chowned in the same breath, for the same reason.
+     * Elevated, then chowned — not `runuser ... mkdir`, which is permission
+     * denied inside root-owned `.panel`. The reasoning lives in
+     * PanelDirectory, which the file browser needs for exactly the same
+     * reason.
      */
     private function ensureTempDir(Application $application): void
     {
-        $directory = $this->tempDir($application);
-        $user = $application->systemUser->username;
-
-        $this->serverOps->run(
-            ['mkdir', '-p', $directory],
-            ['feature' => 'application', 'op' => 'file_upload_dir', 'application' => $application->id],
-            timeout: 15,
-        );
-
-        $this->serverOps->run(
-            ['chown', "{$user}:{$user}", $directory],
-            ['feature' => 'application', 'op' => 'file_upload_dir_chown', 'application' => $application->id],
-            timeout: 15,
-        );
+        $this->panelDirectory->ensure($application, self::TEMP_DIR);
     }
 
     private function partPath(Application $application, string $id): string
