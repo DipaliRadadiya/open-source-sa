@@ -1528,6 +1528,8 @@ Browse a directory.
 
 **Query:** `?path=/wp-content/plugins` (defaults to `/`)
 
+**`/` is the site's code root — `{home}/{slug}/public_html` — not its document root.** They are the same directory for a site with no web root. For Statamic (`/public`), Craft (`/web`) or any git site serving from a subdirectory they are not, and rooting here is what lets the file manager show the application itself: its `.env`, `composer.json`, `vendor/` and config, rather than only the served folder. Every path in this section is relative to that root, and nothing above it is reachable — `.panel/` (Basic Auth hash, PHP sessions, pre-push database dumps) is a sibling of `public_html`, which is precisely why the panel writes there.
+
 **Response `200`:**
 ```json
 {"path": "/wp-content/plugins", "files": [

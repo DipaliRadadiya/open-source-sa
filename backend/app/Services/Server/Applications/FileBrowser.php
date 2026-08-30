@@ -73,7 +73,6 @@ class FileBrowser
 
     public function __construct(
         private ServerOps $serverOps,
-        private ApplicationProvisioner $provisioner,
         private PanelDirectory $panelDirectory,
     ) {}
 
@@ -186,7 +185,7 @@ class FileBrowser
 
         // Trailing slashes on either side, as everywhere else in this class
         // that compares against the root.
-        $isRoot = rtrim($target, '/') === rtrim($this->provisioner->documentRoot($application), '/');
+        $isRoot = rtrim($target, '/') === $this->root($application);
 
         // Only the site's own root is cached, and only that is served from the
         // cache. `directory_size_bytes` is the *application's* size: asking for
@@ -527,7 +526,7 @@ class FileBrowser
      */
     private function backupsDirectory(Application $application, string $target): string
     {
-        $root = rtrim($this->provisioner->documentRoot($application), '/');
+        $root = $this->root($application);
         $relative = trim(str_starts_with(dirname($target), $root)
             ? substr(dirname($target), strlen($root))
             : '', '/');
@@ -1211,7 +1210,7 @@ class FileBrowser
         abort_if($entries === [], 422, __('errors/application.archive_empty'));
         abort_if(count($entries) > self::MAX_ARCHIVE_ENTRIES, 422, __('errors/application.archive_too_many_entries'));
 
-        $appRoot = rtrim($this->provisioner->documentRoot($application), '/');
+        $appRoot = $this->root($application);
         $totalBytes = 0;
 
         foreach ($entries as $entry) {
@@ -1303,9 +1302,31 @@ class FileBrowser
         return $entries;
     }
 
+    /**
+     * The directory this browser is confined to: the site's `public_html`.
+     *
+     * The **code root, not the document root.** They are the same thing for a
+     * site with no web root, and for Statamic, Craft or any git site serving
+     * from `public/` they are not: the document root is a subdirectory, and
+     * rooting here meant the file manager could show neither the application's
+     * `.env` nor its `composer.json`, `vendor/` or config — only the small
+     * served folder. There is no path a user could type to reach the rest,
+     * because the traversal guard refuses anything climbing out of the root,
+     * correctly.
+     *
+     * Still the *site's* directory and not its home: `.panel/` is a sibling of
+     * `public_html`, so the Basic Auth hash and the pre-push database dumps
+     * stay out of reach exactly as before. That is the whole reason the panel
+     * writes them one level up.
+     */
+    private function root(Application $application): string
+    {
+        return rtrim($application->publicHtmlPath(), '/');
+    }
+
     private function resolve(Application $application, string $path): string
     {
-        $root = rtrim($this->provisioner->documentRoot($application), '/');
+        $root = $this->root($application);
 
         return $path === '' ? $root : "{$root}/{$path}";
     }
@@ -1320,7 +1341,7 @@ class FileBrowser
      */
     private function assertRootExists(Application $application): void
     {
-        $root = rtrim($this->provisioner->documentRoot($application), '/');
+        $root = $this->root($application);
 
         $result = $this->serverOps->probe(
             $this->asUser($application, ['test', '-d', $root]),
@@ -1412,7 +1433,7 @@ class FileBrowser
             return [];
         }
 
-        $root = rtrim($this->provisioner->documentRoot($application), '/');
+        $root = $this->root($application);
         $targets = array_map(fn (string $path): string => $this->resolve($application, $path), $paths);
 
         $result = $this->serverOps->run(

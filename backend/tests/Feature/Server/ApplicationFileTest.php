@@ -2295,3 +2295,57 @@ describe('panel directory ownership', function () {
         ))->toBeFalse();
     });
 });
+
+describe('the directory the browser is rooted at', function () {
+    beforeEach(function () {
+        $systemUser = SystemUser::create(['username' => 'statamic', 'home_path' => '/home/statamic']);
+
+        $this->webRooted = Application::forceCreate([
+            'system_user_id' => $systemUser->id,
+            'name' => 'Statamic', 'slug' => 'statamic', 'domain' => 'statamic.test',
+            'site_type' => 'statamic', 'serving_profile' => 'php',
+            'status' => 'active', 'web_root' => '/public', 'php_version' => '8.4',
+        ]);
+    });
+
+    it('browses the code root, not the served subdirectory', function () {
+        // Statamic and Craft always serve from a subdirectory, and so does any
+        // git site with a web root. Rooted at the document root, the file
+        // manager could show neither the .env the Environment screen edits nor
+        // composer.json, vendor/ or the site's config — only the small served
+        // folder, with no path a user could type to reach the rest.
+        $ran = new ArrayObject;
+
+        Process::fake(function ($process) use ($ran) {
+            $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $ran[] = $command;
+
+            // `stat` asks find for the type; without an answer the browser
+            // 404s before it ever lists anything.
+            return in_array('-maxdepth', $command, true) && in_array('0', $command, true)
+                ? Process::result(output: "d\t4096")
+                : Process::result(output: '');
+        });
+
+        app(FileBrowser::class)->list($this->webRooted->load('systemUser'), '');
+
+        // Wrapped in `runuser -u <site user> -- find <target> …`, so the
+        // target is the argument after `find`, not a fixed index.
+        $find = collect($ran)->first(fn (array $c): bool => in_array('-mindepth', $c, true));
+        $target = $find[array_search('find', $find, true) + 1] ?? '';
+
+        expect($target)->toBe('/home/statamic/statamic/public_html')
+            ->not->toEndWith('/public');
+    });
+
+    it('still cannot reach the panel directory from that root', function () {
+        // The reason .panel sits above public_html rather than inside it: it
+        // holds the Basic Auth hash and the pre-push database dump, and the
+        // browser's traversal guard confines every path to the root below.
+        // Moving the root up one level must not have moved it inside.
+        $application = $this->webRooted->load('systemUser');
+
+        expect($application->panelPath())->not->toStartWith($application->publicHtmlPath().'/')
+            ->and($application->publicHtmlPath())->toStartWith($application->rootPath().'/');
+    });
+});
