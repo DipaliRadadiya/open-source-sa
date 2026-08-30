@@ -4,6 +4,7 @@ return [
     'not_installed' => 'fail2ban ist auf diesem Server nicht installiert.',
     'already_installed' => 'fail2ban ist bereits installiert.',
     'not_running' => 'fail2ban ist installiert, läuft aber nicht.',
+    'foreign_jail_local' => 'Das Panel hat :path nicht geschrieben und überschreibt die Datei daher nicht. Fail2ban ist dort bereits von Hand oder von einem anderen Panel konfiguriert — verschieben oder löschen Sie die Datei, wenn das Panel diese Einstellungen verwalten soll.',
     'jail_not_active' => 'Das Jail :jail ist nicht aktiv.',
     'not_banned' => 'Diese IP-Adresse ist derzeit nicht gesperrt.',
     'lockout_risk' => 'Das Aktivieren des SSH-Jails kann Sie von diesem Server aussperren. Fügen Sie Ihre IP-Adresse zur Ausnahmeliste hinzu oder bestätigen Sie, dass Sie das Risiko akzeptieren.',

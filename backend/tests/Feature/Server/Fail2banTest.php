@@ -4,6 +4,7 @@ use App\Jobs\InstallFail2ban;
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Fail2ban\Fail2banManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -52,6 +53,26 @@ function fakeFail2ban(bool $installed = true, array $bans = ['sshd' => []], bool
         // the next read parses — otherwise the round trip is never exercised.
         if ($command[0] === 'tee') {
             File::put($command[1], (string) $process->input);
+
+            return Process::result(exitCode: 0);
+        }
+
+        // The panel now asks whose file jail.local is before replacing it, so
+        // the fake has to answer from the same disk `tee` above writes to —
+        // otherwise every save looks like it is about to clobber a stranger's
+        // configuration.
+        if ($command[0] === 'test' && ($command[1] ?? '') === '-f') {
+            return Process::result(exitCode: File::exists($command[2] ?? '') ? 0 : 1);
+        }
+
+        if ($command[0] === 'cat') {
+            return File::exists($command[1] ?? '')
+                ? Process::result(output: File::get($command[1]))
+                : Process::result(errorOutput: 'No such file or directory', exitCode: 1);
+        }
+
+        if ($command[0] === 'rm') {
+            File::delete(array_slice($command, 1));
 
             return Process::result(exitCode: 0);
         }
@@ -169,15 +190,61 @@ it('always ignores loopback, whatever the user submits', function () {
     f2b('GET', '/api/fail2ban')->assertJsonPath('fail2ban.settings.ignore_ips', ['203.0.113.5']);
 });
 
-it('writes to a jail.d drop-in and never touches jail.local', function () {
+it('owns jail.local, and says so in the file', function () {
     fakeFail2ban(bans: []);
 
     f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])->assertOk();
 
-    // A server migrated from another panel probably owns jail.local already.
-    expect(File::exists("{$this->jailD}/panel.local"))->toBeTrue()
+    // Server-level settings live in jail.local (operator decision, 2026-08-30:
+    // existing installations already have one there). The header is not a
+    // courtesy — it is how the panel recognises its own file before replacing
+    // it, so it is asserted rather than assumed.
+    expect(dropIn())->toStartWith(Fail2banManager::MANAGED_HEADER)
         ->and(dropIn())->toContain('bantime = 7200')
         ->and(dropIn())->toContain('backend = systemd');
+});
+
+it('refuses to overwrite a jail.local it did not write', function () {
+    // A server migrated from another panel, or an administrator who set
+    // fail2ban up by hand, owns this file — and this feature replaces it
+    // wholesale. Losing someone's brute-force configuration silently is worse
+    // than declining to save a setting.
+    fakeFail2ban(bans: []);
+
+    $theirs = "[DEFAULT]\nbantime = 99999\nignoreip = 198.51.100.7\n";
+    File::put("{$this->jailD}/jail.local", $theirs);
+
+    f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])
+        ->assertStatus(409);
+
+    // Untouched, byte for byte. The point of the test.
+    expect(dropIn())->toBe($theirs);
+});
+
+it('refuses rather than guessing when it cannot read jail.local', function () {
+    // Unreadable is not "there was nothing here". Read as absent, the write
+    // goes ahead and the file is gone; the rollback path had the same bug in
+    // reverse and would `rm -f` the file it was restoring.
+    fakeFail2ban(bans: []);
+    File::put("{$this->jailD}/jail.local", "[DEFAULT]\n");
+
+    Process::fake(function ($process) {
+        $command = $process->command;
+
+        if (($command[0] ?? null) === 'which') {
+            return Process::result(output: "/usr/bin/fail2ban-client\n");
+        }
+
+        // `cat` refused: the panel cannot tell whose file this is.
+        return ($command[0] ?? null) === 'cat'
+            ? Process::result(errorOutput: 'cat: Permission denied', exitCode: 1)
+            : Process::result(exitCode: 0);
+    });
+
+    f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])
+        ->assertStatus(500);
+
+    expect(dropIn())->toBe("[DEFAULT]\n");
 });
 
 it('reloads rather than restarts, so active bans survive a settings change', function () {
@@ -253,7 +320,10 @@ it('bans an address by hand and records it', function () {
 
 it('refuses to ban an address that is on the ignore list', function () {
     fakeFail2ban(bans: ['sshd' => []]);
-    File::put("{$this->jailD}/panel.local", "[DEFAULT]\nignoreip = 127.0.0.1/8 ::1 203.0.113.5\n");
+    File::put(
+        "{$this->jailD}/jail.local",
+        Fail2banManager::MANAGED_HEADER."\n[DEFAULT]\nignoreip = 127.0.0.1/8 ::1 203.0.113.5\n",
+    );
 
     // fail2ban would drop the ban at the next reload, so accepting it here
     // would be promising something that quietly stops being true.

@@ -27,6 +27,16 @@ class Fail2banManager
     /** Always ignored: banning the machine from itself helps nobody. */
     public const ALWAYS_IGNORED = ['127.0.0.1/8', '::1'];
 
+    /**
+     * The first line of every file this panel writes to `jail.local`.
+     *
+     * It is how the panel recognises its own work. `jail.local` is a file the
+     * distribution does not ship and an administrator may well have written by
+     * hand, and this class replaces it wholesale — so before overwriting, it
+     * has to know whose file it is looking at.
+     */
+    public const MANAGED_HEADER = '# Managed by the control panel — do not edit by hand';
+
     public function __construct(private ServerOps $serverOps) {}
 
     public function installed(): bool
@@ -240,7 +250,7 @@ class Fail2banManager
     {
         $ignore = implode(' ', array_unique([...self::ALWAYS_IGNORED, ...$ignoreIps]));
 
-        $body = "# Managed by the control panel — do not edit by hand\n"
+        $body = self::MANAGED_HEADER."\n"
             ."[DEFAULT]\n"
             ."bantime = {$settings['bantime']}\n"
             ."findtime = {$settings['findtime']}\n"
@@ -260,7 +270,13 @@ class Fail2banManager
         }
 
         $path = $this->dropInPath();
-        $previous = is_file($path) ? file_get_contents($path) : null;
+
+        // Whose file is this? Answered before a single byte is written, and
+        // read through ServerOps rather than PHP's own filesystem calls: the
+        // panel account is unprivileged, so `file_get_contents` on a
+        // root-owned file returns false — indistinguishable, to the code that
+        // used to be here, from "there was nothing to keep".
+        $previous = $this->currentDropIn($path);
 
         $result = $this->serverOps->run(
             ['tee', $path],
@@ -290,9 +306,57 @@ class Fail2banManager
         }
     }
 
-    private function restoreDropIn(string $path, string|false|null $previous): void
+    /**
+     * What is at `jail.local` now, or null when nothing is.
+     *
+     * Refuses rather than guessing in the two cases that matter. A file the
+     * panel did not write is somebody's configuration — a server migrated from
+     * another panel very likely owns `jail.local` already — and replacing it
+     * with ours would be a silent, unrecoverable deletion of their work. A
+     * file that cannot be read is the same situation with less information,
+     * which is a reason for more caution and not less.
+     *
+     * @throws Fail2banException
+     */
+    private function currentDropIn(string $path): ?string
     {
-        if ($previous === null || $previous === false) {
+        $present = $this->serverOps->probe(
+            ['test', '-f', $path],
+            ['feature' => 'fail2ban', 'op' => 'config_exists'],
+            timeout: 15,
+        );
+
+        if (! $present->answered) {
+            throw Fail2banException::operationFailed($present->reference);
+        }
+
+        if (! $present->ok) {
+            return null;
+        }
+
+        $current = $this->serverOps->run(
+            ['cat', $path],
+            ['feature' => 'fail2ban', 'op' => 'config_read'],
+            timeout: 30,
+        );
+
+        if ($current->failed()) {
+            throw Fail2banException::operationFailed($current->reference);
+        }
+
+        if (! str_starts_with(ltrim($current->output()), self::MANAGED_HEADER)) {
+            throw Fail2banException::foreignJailLocal($path);
+        }
+
+        return $current->output();
+    }
+
+    private function restoreDropIn(string $path, ?string $previous): void
+    {
+        // Only when we established there was nothing here before. `false` used
+        // to arrive from an unreadable file and land in this branch, so the
+        // rollback deleted the very file it was restoring.
+        if ($previous === null) {
             $this->serverOps->run(['rm', '-f', $path], ['feature' => 'fail2ban', 'op' => 'restore_config']);
 
             return;

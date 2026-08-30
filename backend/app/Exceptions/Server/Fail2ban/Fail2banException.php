@@ -27,6 +27,20 @@ class Fail2banException extends Exception
         return new self('errors/fail2ban.not_installed', 422);
     }
 
+    /**
+     * `jail.local` exists and the panel did not write it.
+     *
+     * Refused rather than overwritten: a server migrated from another panel,
+     * or an administrator who configured fail2ban by hand, owns that file, and
+     * this class replaces it wholesale. 409 rather than 422 — nothing the user
+     * typed is wrong; the server is in a state that conflicts with the request,
+     * and the fix is a decision about a file rather than a corrected field.
+     */
+    public static function foreignJailLocal(string $path): self
+    {
+        return new self('errors/fail2ban.foreign_jail_local', 409, replace: ['path' => $path]);
+    }
+
     public static function notRunning(): self
     {
         return new self('errors/fail2ban.not_running', 422);
