@@ -17,6 +17,7 @@ return [
     'not_disabled' => 'このアプリケーションは無効になっていません。',
     'availability_failed' => 'アプリケーションの可用性の変更がサーバーで失敗しました。',
     'basic_auth_failed' => 'パスワード保護の変更がサーバーで失敗しました。',
+    'environment_failed' => 'サーバー上でアプリケーションの環境ファイルを確認できなかったため、あるともないとも報告しません。',
     'bot_blocker_failed' => 'AIボットブロッカーのポリシー変更がサーバーで失敗しました。',
     'bot_agent_invalid' => 'GPTBot や SemrushBot のようなボット名を1つ入力してください（英数字、ドット、ハイフンのみ）。',
     'bot_agent_too_broad' => '指定が大まかすぎます。Google や Bing などの検索エンジンもブロックされます。ボットの正式名称を使用してください。',

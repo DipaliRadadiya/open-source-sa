@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Exceptions\Server\Application\EnvironmentOperationException;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
 use RuntimeException;
@@ -69,13 +70,7 @@ class ApplicationEnvironment
             return $preferred;
         }
 
-        $exists = $this->serverOps->run(
-            ['test', '-f', $beside],
-            $this->context($application, 'env_locate'),
-            timeout: 15,
-        )->ok;
-
-        return $exists ? $beside : $preferred;
+        return $this->present($application, $beside, 'env_locate') ? $beside : $preferred;
     }
 
     /**
@@ -95,11 +90,37 @@ class ApplicationEnvironment
     {
         $this->migrateLegacy($application);
 
-        return $this->serverOps->run(
-            ['test', '-f', $this->path($application)],
-            $this->context($application, 'env_exists'),
+        return $this->present($application, $this->path($application), 'env_exists');
+    }
+
+    /**
+     * Is that file there?
+     *
+     * `test -f` exits 1 for a file that is absent **and** for a command that
+     * never ran — a sudoers grant that predates this build, a home directory
+     * the panel cannot traverse. Both look identical from the exit code, and
+     * reading the second as the first is how this screen offered to create a
+     * `.env` for a site that already had one, with the user looking at its
+     * contents in the file manager on the next tab.
+     *
+     * `test` prints nothing on either outcome, so anything on stderr came from
+     * whatever refused to run it. That is the difference between "no file" and
+     * "no answer", and the second is worth a 500 with a reference rather than
+     * a silent, confident lie.
+     */
+    private function present(Application $application, string $path, string $op): bool
+    {
+        $result = $this->serverOps->run(
+            ['test', '-f', $path],
+            $this->context($application, $op),
             timeout: 15,
-        )->ok;
+        );
+
+        if ($result->failed() && trim($result->errorOutput()) !== '') {
+            throw new EnvironmentOperationException($result->reference);
+        }
+
+        return $result->ok;
     }
 
     /**
@@ -122,23 +143,11 @@ class ApplicationEnvironment
             return;
         }
 
-        $hasLegacy = $this->serverOps->run(
-            ['test', '-f', $legacy],
-            $this->context($application, 'env_legacy_check'),
-            timeout: 15,
-        )->ok;
-
-        if (! $hasLegacy) {
+        if (! $this->present($application, $legacy, 'env_legacy_check')) {
             return;
         }
 
-        $hasCurrent = $this->serverOps->run(
-            ['test', '-f', $current],
-            $this->context($application, 'env_legacy_check'),
-            timeout: 15,
-        )->ok;
-
-        if ($hasCurrent) {
+        if ($this->present($application, $current, 'env_legacy_check')) {
             return;
         }
 

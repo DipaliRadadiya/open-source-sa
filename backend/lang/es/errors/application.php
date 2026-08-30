@@ -17,6 +17,7 @@ return [
     'not_disabled' => 'Esta aplicación no está deshabilitada.',
     'availability_failed' => 'No se pudo cambiar la disponibilidad de la aplicación en el servidor.',
     'basic_auth_failed' => 'No se pudo cambiar la protección con contraseña en el servidor.',
+    'environment_failed' => 'El panel no pudo comprobar el archivo de entorno de la aplicación en el servidor, así que no informará de nada en un sentido ni en otro.',
     'bot_blocker_failed' => 'No se pudo cambiar la política del bloqueador de bots de IA en el servidor.',
     'bot_agent_invalid' => 'Introduce un único nombre de bot, como GPTBot o SemrushBot: solo letras, números, puntos y guiones.',
     'bot_agent_too_broad' => 'Eso es demasiado general: también bloquearía buscadores como Google y Bing. Usa el nombre completo del bot.',

@@ -17,6 +17,7 @@ return [
     'not_disabled' => 'Diese Anwendung ist nicht deaktiviert.',
     'availability_failed' => 'Das Ändern der Verfügbarkeit der Anwendung ist auf dem Server fehlgeschlagen.',
     'basic_auth_failed' => 'Das Ändern des Passwortschutzes ist auf dem Server fehlgeschlagen.',
+    'environment_failed' => 'Das Panel konnte die Umgebungsdatei der Anwendung auf dem Server nicht prüfen und meldet daher weder das eine noch das andere.',
     'bot_blocker_failed' => 'Das Ändern der KI-Bot-Blocker-Richtlinie ist auf dem Server fehlgeschlagen.',
     'bot_agent_invalid' => 'Geben Sie einen einzelnen Bot-Namen ein, z. B. GPTBot oder SemrushBot – nur Buchstaben, Zahlen, Punkte und Bindestriche.',
     'bot_agent_too_broad' => 'Das ist zu allgemein – damit würden auch Suchmaschinen wie Google und Bing blockiert. Verwenden Sie den vollständigen Bot-Namen.',

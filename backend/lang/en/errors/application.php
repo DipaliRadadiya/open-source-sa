@@ -17,6 +17,7 @@ return [
     'not_disabled' => 'This application is not disabled.',
     'availability_failed' => 'Changing the application\'s availability failed on the server.',
     'basic_auth_failed' => 'Changing password protection failed on the server.',
+    'environment_failed' => 'The panel could not check the application\'s environment file on the server, so it will not report one either way.',
     'bot_blocker_failed' => 'Changing the AI Bot Blocker policy failed on the server.',
     'bot_agent_invalid' => 'Enter a single bot name, like GPTBot or SemrushBot — letters, numbers, dots and dashes only.',
     'bot_agent_too_broad' => 'That is too general — it would also block search engines like Google and Bing. Use the bot\'s full name.',

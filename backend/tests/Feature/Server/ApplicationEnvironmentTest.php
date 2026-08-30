@@ -339,3 +339,38 @@ describe('which file the screen opens', function () {
             ->and($paths->count())->toBeGreaterThan(0);
     });
 });
+
+describe('when the panel cannot tell', function () {
+    it('refuses to report "no environment file" when the check itself failed', function () {
+        // `test -f` exits 1 for a file that is not there AND for a command
+        // that never ran — a sudoers grant older than this build is the
+        // common one. Read as the first, the screen shows an empty editor and
+        // offers to create a .env for a site whose .env the user is looking
+        // at in the file manager. `test` prints nothing on either outcome, so
+        // stderr means something refused to run it.
+        Process::fake(fn () => Process::result(
+            errorOutput: 'sudo: a password is required',
+            exitCode: 1,
+        ));
+
+        $response = $this->actingAs($this->admin)->getJson(envUrl())->assertStatus(500);
+
+        // A reference the user can quote, not a bare 500 — the server-ops log
+        // holds the command and the stderr under this id.
+        expect($response->json('reference'))->not->toBeEmpty();
+    });
+
+    it('still reports a genuinely absent file as absent', function () {
+        // The other half: exit 1 and nothing on stderr is a real answer, and
+        // a site with no .env yet is an ordinary state this screen exists to
+        // fix. Turning that into an error would break every new site.
+        $this->disk = [];
+        $this->present = [];
+        fakeSite();
+
+        $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
+
+        expect($response->json('environment.exists'))->toBeFalse()
+            ->and($response->json('environment.raw'))->toBe('');
+    });
+});

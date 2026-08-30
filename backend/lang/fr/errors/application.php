@@ -17,6 +17,7 @@ return [
     'not_disabled' => 'Cette application n\'est pas désactivée.',
     'availability_failed' => 'La modification de la disponibilité de l\'application a échoué sur le serveur.',
     'basic_auth_failed' => 'La modification de la protection par mot de passe a échoué sur le serveur.',
+    'environment_failed' => 'Le panneau n’a pas pu vérifier le fichier d’environnement de l’application sur le serveur ; il ne se prononce donc ni dans un sens ni dans l’autre.',
     'bot_blocker_failed' => 'La modification de la politique du bloqueur de robots IA a échoué sur le serveur.',
     'bot_agent_invalid' => 'Saisissez un seul nom de robot, comme GPTBot ou SemrushBot — lettres, chiffres, points et tirets uniquement.',
     'bot_agent_too_broad' => 'C\'est trop général — cela bloquerait aussi des moteurs de recherche comme Google et Bing. Utilisez le nom complet du robot.',
