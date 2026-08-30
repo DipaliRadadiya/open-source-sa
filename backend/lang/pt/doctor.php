@@ -36,6 +36,7 @@ return [
         'web_server_missing' => 'Nenhum servidor web suportado encontrado. Instale o nginx ou o Apache.',
         'web_server_undrivable' => 'O painel não consegue escrever configuração para este servidor web, por isso não é possível criar sites. Mude para nginx ou Apache.',
         'web_server_config' => 'A configuração do servidor web é inválida. Execute o teste de configuração — o próximo reload vai falhar até ser corrigido.',
+        'web_server_untestable' => 'O painel não tem permissão para executar o teste de configuração do servidor web, portanto ela não pôde ser verificada. Execute o install.sh novamente para atualizar a permissão do sudo; a causa está na verificação de privilégios.',
         'queue_stalled' => 'Há tarefas em fila mas nada as processa. Reinicie o serviço de fila; aprovisionamentos, deploys e instalações não terminarão.',
         'drivers_on_sqlite' => 'A fila ou as sessões estão em SQLite, que só permite um escritor — daí os erros intermitentes "database is locked". O Redis está disponível: execute `php artisan panel:configure-services` e reinicie o php-fpm e o worker da fila.',
         'drivers_no_redis' => 'A fila ou as sessões estão em SQLite, que só permite um escritor — daí os erros intermitentes "database is locked". Instale e inicie o Redis e execute `php artisan panel:configure-services`.',

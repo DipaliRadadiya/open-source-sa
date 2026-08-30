@@ -336,6 +336,66 @@ describe('the checks added for "routes error after setup"', function () {
 
         expect(app(Doctor::class)->run()['checks'][0]['status'])->toBe('fail');
     });
+
+    it('warns rather than blaming the config when it is not allowed to test it', function () {
+        // The state of a panel deployed without install.sh: sudo refuses, so
+        // `nginx -t` never runs and exits non-zero anyway. This used to report
+        // "the web server configuration is invalid" on a box where `nginx -t`
+        // passed and all 18 vhosts were fine — doctor is what you read when
+        // something is already broken, and it was inventing a second, false
+        // problem out of the first real one.
+        Process::fake(fn () => Process::result(
+            errorOutput: 'sudo: a password is required',
+            exitCode: 1,
+        ));
+
+        config()->set('server.web_servers', ['nginx' => ['/etc']]);
+        config()->set('server.doctor.checks', [WebServerCheck::class]);
+
+        $report = app(Doctor::class)->run();
+
+        // Warn, not fail: the missing grant is PrivilegeCheck's finding to
+        // report, and one problem should light up one check.
+        expect($report['checks'][0]['status'])->toBe('warn')
+            ->and($report['healthy'])->toBeTrue()
+            ->and($report['checks'][0]['detail'])->toContain('not permitted');
+    });
+
+    it('still fails when the config test is permitted and the config is bad', function () {
+        Process::fake(function ($process) {
+            $command = implode(' ', (array) $process->command);
+
+            // sudo confirms the grant exists, so the non-zero exit below is
+            // nginx's own verdict and nothing else.
+            if (str_contains($command, 'sudo -n -l')) {
+                return Process::result(output: '(root) NOPASSWD: /usr/sbin/nginx');
+            }
+
+            return Process::result(
+                errorOutput: "nginx: [emerg] unknown directive \"lisen\" in /etc/nginx/sites-enabled/demo:4\nnginx: configuration file test failed",
+                exitCode: 1,
+            );
+        });
+
+        config()->set('server.web_servers', ['nginx' => ['/etc']]);
+        config()->set('server.doctor.checks', [WebServerCheck::class]);
+
+        $report = app(Doctor::class)->run();
+
+        // The evidence travels with the verdict — the check used to assert the
+        // config was invalid and show nothing to back it up.
+        expect($report['checks'][0]['status'])->toBe('fail')
+            ->and($report['checks'][0]['detail'])->toContain('sites-enabled/demo:4');
+    });
+
+    it('has a fix for an untestable config in every locale', function () {
+        foreach (config('app.available_locales') as $locale) {
+            app()->setLocale($locale);
+
+            expect(__('doctor.fixes.web_server_untestable'))
+                ->not->toBe('doctor.fixes.web_server_untestable');
+        }
+    });
 });
 
 describe('the stale account-lock check', function () {

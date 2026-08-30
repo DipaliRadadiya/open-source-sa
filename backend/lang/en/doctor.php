@@ -36,6 +36,7 @@ return [
         'web_server_missing' => 'No supported web server was found. Install nginx or Apache.',
         'web_server_undrivable' => 'The panel cannot write configuration for this web server, so sites cannot be created. Switch to nginx or Apache.',
         'web_server_config' => 'The web server configuration is invalid. Run its own config test to see why — the next reload will fail until it is fixed.',
+        'web_server_untestable' => 'The panel is not permitted to run the web server\'s config test, so it could not be checked. Re-run install.sh to refresh the sudo grant; see the privilege check for the cause.',
         'queue_stalled' => 'Jobs are queued but nothing is processing them. Restart the queue service; provisioning, deploys and installs will not finish until it runs.',
         'drivers_on_sqlite' => 'The queue or sessions are stored in SQLite, which allows only one writer — this is what causes intermittent "database is locked" errors. Redis is available: run `php artisan panel:configure-services`, then restart php-fpm and the queue worker.',
         'drivers_no_redis' => 'The queue or sessions are stored in SQLite, which allows only one writer — this is what causes intermittent "database is locked" errors. Install and start Redis, then run `php artisan panel:configure-services`.',

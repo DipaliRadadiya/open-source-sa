@@ -36,6 +36,7 @@ return [
         'web_server_missing' => '対応するウェブサーバーが見つかりません。nginx か Apache をインストールしてください。',
         'web_server_undrivable' => 'このウェブサーバー用の設定をパネルが書き出せないため、サイトを作成できません。nginx か Apache に切り替えてください。',
         'web_server_config' => 'ウェブサーバーの設定が不正です。設定テストを実行してください — 修正するまで次のリロードは失敗します。',
+        'web_server_untestable' => 'パネルにウェブサーバーの設定テストを実行する権限がないため、設定を確認できませんでした。install.sh を再実行して sudo 権限を更新してください。原因は権限チェックに表示されます。',
         'queue_stalled' => 'ジョブがキューにありますが処理されていません。キューサービスを再起動してください。プロビジョニング・デプロイ・インストールは完了しません。',
         'drivers_on_sqlite' => 'キューまたはセッションが SQLite に保存されています。SQLite は同時に1つしか書き込めないため、断続的な "database is locked" が発生します。Redis が利用可能です: `php artisan panel:configure-services` を実行し、php-fpm とキューワーカーを再起動してください。',
         'drivers_no_redis' => 'キューまたはセッションが SQLite に保存されています。SQLite は同時に1つしか書き込めないため、断続的な "database is locked" が発生します。Redis をインストールして起動し、`php artisan panel:configure-services` を実行してください。',

@@ -36,6 +36,7 @@ return [
         'web_server_missing' => 'Aucun serveur web pris en charge trouvé. Installez nginx ou Apache.',
         'web_server_undrivable' => 'Le panneau ne peut pas écrire de configuration pour ce serveur web, donc aucun site ne peut être créé. Passez à nginx ou Apache.',
         'web_server_config' => 'La configuration du serveur web est invalide. Lancez son propre test de configuration — le prochain rechargement échouera tant que ce n’est pas corrigé.',
+        'web_server_untestable' => 'Le panneau n’est pas autorisé à lancer le test de configuration du serveur web, elle n’a donc pas pu être vérifiée. Relancez install.sh pour actualiser l’autorisation sudo ; la cause figure dans la vérification des privilèges.',
         'queue_stalled' => 'Des tâches sont en file mais rien ne les traite. Redémarrez le service de file ; les provisionnements, déploiements et installations ne se termineront pas.',
         'drivers_on_sqlite' => 'La file ou les sessions sont stockées dans SQLite, qui n\'accepte qu\'un seul écrivain — d\'où les erreurs intermittentes "database is locked". Redis est disponible : lancez `php artisan panel:configure-services`, puis redémarrez php-fpm et le worker.',
         'drivers_no_redis' => 'La file ou les sessions sont stockées dans SQLite, qui n\'accepte qu\'un seul écrivain — d\'où les erreurs intermittentes "database is locked". Installez et démarrez Redis, puis lancez `php artisan panel:configure-services`.',
