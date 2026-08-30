@@ -10,6 +10,7 @@ use App\Models\Worker;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\WorkerPresets;
 use App\Services\Server\Applications\WorkerSupervisor;
+use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -23,11 +24,12 @@ class WorkerController extends Controller
 {
     public function index(Application $application, WorkerPresets $presets): JsonResponse
     {
-        $workers = Worker::query()
-            ->with('application.systemUser')
-            ->where('application_id', $application->id)
-            ->orderBy('name')
-            ->get();
+        $workers = ListSort::caseInsensitive(
+            Worker::query()
+                ->with('application.systemUser')
+                ->where('application_id', $application->id),
+            'name',
+        )->get();
 
         return response()->json([
             'workers' => WorkerResource::collection($workers)->resolve(),
@@ -77,6 +79,8 @@ class WorkerController extends Controller
         WorkerSupervisor $supervisor,
         ActivityLogger $activity,
     ): JsonResponse {
+        $this->assertBelongsTo($worker, $application);
+
         $worker->update($request->validated());
 
         $supervisor->apply($worker->load('application.systemUser'));
@@ -97,6 +101,8 @@ class WorkerController extends Controller
         WorkerSupervisor $supervisor,
         ActivityLogger $activity,
     ): JsonResponse {
+        $this->assertBelongsTo($worker, $application);
+
         // Units removed before the row: deleting the row first would leave
         // processes running that nothing in the panel knows about, still
         // consuming the queue.
@@ -112,6 +118,24 @@ class WorkerController extends Controller
         return response()->json(null, 204);
     }
 
+    /**
+     * The worker in the URL must be this application's.
+     *
+     * Route model binding resolves `{worker}` from the whole table, so without
+     * this `PUT /applications/1/workers/99` edits site 2's worker while the
+     * activity log records the action against site 1 — an audit trail naming
+     * the wrong site is worse than none, because it is believed.
+     *
+     * 404 rather than 403, like the deployment, domain and SSH-key routes that
+     * already check this: from where the caller stands that worker does not
+     * exist under that application, and saying "forbidden" would confirm it
+     * exists somewhere else.
+     */
+    private function assertBelongsTo(Worker $worker, Application $application): void
+    {
+        abort_unless($worker->application_id === $application->id, 404);
+    }
+
     /** start | stop | restart. */
     public function control(
         Request $request,
@@ -121,6 +145,8 @@ class WorkerController extends Controller
         WorkerSupervisor $supervisor,
         ActivityLogger $activity,
     ): JsonResponse {
+        $this->assertBelongsTo($worker, $application);
+
         abort_unless(in_array($action, ['start', 'stop', 'restart'], true), 404);
         abort_unless($request->user()?->canManage('app_worker') ?? false, 403);
 

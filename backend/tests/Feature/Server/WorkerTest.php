@@ -140,6 +140,24 @@ it('offers presets for the framework it finds, not a blank box', function () {
         ->and($presets->firstWhere('key', 'queue')['title'])->toBe('Queue worker');
 });
 
+it('orders workers without case bias', function () {
+    fakeWorkerSystemd();
+
+    foreach (['Case Zebra', 'case apple', 'CASE Banana'] as $name) {
+        Worker::create([
+            'application_id' => $this->application->id,
+            'name' => $name,
+            'command' => 'php8.4 artisan queue:work',
+            'kind' => 'custom',
+        ]);
+    }
+
+    $names = collect($this->actingAs($this->admin)->getJson(workerUrl())->assertOk()->json('workers'))
+        ->pluck('name')->all();
+
+    expect($names)->toBe(['case apple', 'CASE Banana', 'Case Zebra']);
+});
+
 it('finds Craft above its served web directory and runs the worker there', function () {
     $this->application->update(['site_type' => 'craftcms', 'web_root' => '/web']);
     WorkerFake::$present = ['/home/workerowner/queued-site/public_html/craft'];
@@ -450,5 +468,48 @@ describe('permissions', function () {
         // Its own test: an earlier actingAs in the same test leaves the guard
         // resolved, and the request would answer for that user instead.
         $this->getJson(workerUrl())->assertUnauthorized();
+    });
+});
+
+describe('a worker id from another application', function () {
+    it('is not editable, deletable or controllable through the wrong application', function () {
+        // Route model binding resolves {worker} from the whole table. Without a
+        // scope check, PUT /applications/1/workers/99 edits site 2's worker and
+        // logs it against site 1 — an audit trail naming the wrong site, which
+        // is worse than none because it is believed. The deployment, domain and
+        // SSH-key routes all check this already; workers were the gap.
+        fakeWorkerSystemd();
+
+        $other = Application::forceCreate([
+            'system_user_id' => $this->application->system_user_id,
+            'name' => 'Other Site', 'slug' => 'other-site', 'domain' => 'other.test',
+            'site_type' => 'git', 'serving_profile' => 'php', 'status' => 'active',
+            'web_root' => '/', 'php_version' => '8.4',
+        ]);
+
+        $foreign = Worker::create([
+            'application_id' => $other->id,
+            'name' => 'Someone else\'s worker',
+            'command' => 'php8.4 artisan queue:work',
+            'kind' => 'custom',
+        ]);
+
+        // 404, not 403: from here that worker does not exist under this
+        // application, and "forbidden" would confirm it exists somewhere else.
+        $this->actingAs($this->admin)
+            ->putJson(workerUrl('/'.$foreign->id), workerPayload(['name' => 'Renamed']))
+            ->assertNotFound();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl('/'.$foreign->id.'/restart'))
+            ->assertNotFound();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(workerUrl('/'.$foreign->id))
+            ->assertNotFound();
+
+        // Untouched, and still there.
+        expect($foreign->fresh())->not->toBeNull()
+            ->and($foreign->fresh()->name)->toBe('Someone else\'s worker');
     });
 });
