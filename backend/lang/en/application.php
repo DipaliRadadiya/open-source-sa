@@ -118,6 +118,7 @@ return [
         'init' => 'Setting up the repository',
         'fetch' => 'Fetching the latest code',
         'checkout' => 'Checking out the branch',
+        'seed_env' => 'Preparing the environment file',
         'build' => 'Running the build command',
         'write_credential' => 'Preparing git access',
         'create_directory' => 'Creating the directory',

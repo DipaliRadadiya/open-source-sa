@@ -113,6 +113,7 @@ return [
         'init' => 'Configurando el repositorio',
         'fetch' => 'Descargando el código más reciente',
         'checkout' => 'Cambiando a la rama',
+        'seed_env' => 'Preparando el archivo de entorno',
         'build' => 'Ejecutando el comando de compilación',
         'write_credential' => 'Preparando el acceso a git',
         'create_directory' => 'Creando el directorio',

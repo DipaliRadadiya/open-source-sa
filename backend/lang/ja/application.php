@@ -113,6 +113,7 @@ return [
         'init' => 'リポジトリを設定中',
         'fetch' => '最新のコードを取得中',
         'checkout' => 'ブランチをチェックアウト中',
+        'seed_env' => '環境ファイルを準備しています',
         'build' => 'ビルドコマンドを実行中',
         'write_credential' => 'gitアクセスを準備中',
         'create_directory' => 'ディレクトリを作成中',

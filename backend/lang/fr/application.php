@@ -113,6 +113,7 @@ return [
         'init' => 'Configuration du dépôt',
         'fetch' => 'Récupération du code le plus récent',
         'checkout' => 'Basculement sur la branche',
+        'seed_env' => 'Préparation du fichier d’environnement',
         'build' => 'Exécution de la commande de build',
         'write_credential' => 'Préparation de l\'accès git',
         'create_directory' => 'Création du répertoire',

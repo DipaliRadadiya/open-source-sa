@@ -117,6 +117,10 @@ class GitDeployer
                 $documentRoot,
             ]);
 
+            // Before the deploy script, which is where `php artisan migrate`
+            // lives: it reads the file this seeds.
+            $this->seedEnvironment($application, $documentRoot);
+
             if (filled($this->script($application))) {
                 $this->runScript($application, $documentRoot);
             }
@@ -361,6 +365,50 @@ class GitDeployer
      *
      * @throws ProvisioningFailedException
      */
+    /**
+     * Give a fresh checkout a `.env` with something in it.
+     *
+     * Provisioning `touch`es an empty file so the path exists and belongs to
+     * the site user. Nothing then filled it, and a repository does not carry
+     * its own `.env` — it is gitignored, by every framework's own instruction.
+     * So a git-deployed Laravel site arrived with a zero-byte environment
+     * file, no APP_KEY, and a panel screen correctly reporting exactly that
+     * while looking, to the user, like the screen had failed to load.
+     *
+     * Three guards, because this runs on every deploy and not just the first:
+     * a file with anything in it is never touched, a repository with no
+     * `.env.example` is left alone rather than guessed at, and `key:generate`
+     * runs only when it would write to the same file we just seeded — it
+     * targets `base_path('.env')` and would otherwise create a second one.
+     *
+     * As the site user: the file must stay theirs, and a root-owned `.env` is
+     * one their own process cannot write.
+     */
+    private function seedEnvironment(Application $application, string $codeRoot): void
+    {
+        $php = 'php'.($application->php_version ?: '');
+
+        $script = implode("\n", [
+            'set -e',
+            'env='.escapeshellarg($application->envPath()),
+            'root='.escapeshellarg($codeRoot),
+            // `if`, not `[ … ] && exit 0` — under `set -e` a false test at the
+            // head of an && list ends the script with its exit code, so the
+            // "nothing to do" path would report a failed deploy.
+            'if [ -s "$env" ]; then exit 0; fi',
+            'if [ ! -f "$root/.env.example" ]; then exit 0; fi',
+            'cp "$root/.env.example" "$env"',
+            'if [ -f "$root/artisan" ] && [ "$env" = "$root/.env" ] && ! grep -q "^APP_KEY=base64:." "$env"; then',
+            '  '.$php.' "$root/artisan" key:generate --force --no-interaction',
+            'fi',
+        ]);
+
+        $this->run('seed_env', null, [
+            'runuser', '-u', $application->systemUser->username, '--',
+            'sh', '-c', $script,
+        ]);
+    }
+
     private function runScript(Application $application, string $documentRoot): void
     {
         // `set -e` so the script stops at the first failing line. Without it a

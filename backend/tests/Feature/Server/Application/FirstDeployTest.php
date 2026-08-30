@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\DeploymentTrigger;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\DeployApplication;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
@@ -351,4 +352,43 @@ describe('a deploy script given at creation', function () {
             ->contains(fn ($a) => is_string($a) && str_contains($a, 'composer install --no-dev'))))
             ->toBeTrue();
     });
+});
+
+it('seeds a fresh checkout .env from the repository .env.example', function () {
+    // Provisioning touches an empty file so the path exists and belongs to the
+    // site user; nothing filled it, and no repository carries its own .env —
+    // every framework gitignores it. So a git-deployed Laravel site arrived
+    // with a zero-byte environment file and no APP_KEY, and the panel screen
+    // reporting exactly that looked like a screen that had failed to load.
+    $app = firstDeployApp();
+    $ran = fakeFirstDeploy();
+
+    // The deploy ends by curling the deployed URL, and the faked curl answers
+    // with no status code at all, so it throws at `verify`. Irrelevant here:
+    // seeding happens well before that, and what this asserts is the command.
+    try {
+        app(GitDeployer::class)->deploy($app->load('systemUser'), $app->codePath());
+    } catch (ProvisioningFailedException) {
+        // Expected — see above.
+    }
+
+    $seed = collect($ran)->first(fn (array $args): bool => ($args[0] ?? '') === 'runuser'
+        && str_contains((string) ($args[6] ?? ''), '.env.example'));
+
+    expect($seed)->not->toBeNull();
+
+    $script = (string) $seed[6];
+
+    expect($script)
+        // Never over a file with anything in it: this runs on every deploy,
+        // not just the first, and the user's settings are not ours to replace.
+        ->toContain('if [ -s "$env" ]; then exit 0; fi')
+        // A repository with no example is left alone rather than guessed at.
+        ->toContain('if [ ! -f "$root/.env.example" ]; then exit 0; fi')
+        ->toContain('key:generate')
+        // key:generate writes to base_path('.env'). Where the panel keeps the
+        // file somewhere else, running it would create a second one.
+        ->toContain('[ "$env" = "$root/.env" ]')
+        // As the site user — a root-owned .env is one the site cannot write.
+        ->and($seed[1] ?? '')->toBe('-u');
 });

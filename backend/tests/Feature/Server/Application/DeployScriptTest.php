@@ -57,7 +57,13 @@ function scriptCommand(): ?string
     Process::assertRan(function ($process) use (&$found) {
         $command = $process->command;
 
-        if (in_array('runuser', $command, true) && str_contains(end($command), 'set -e')) {
+        // `set -e` alone is no longer enough to identify it: seeding the .env
+        // from the repository's .env.example is also a `set -e` script run
+        // through runuser, and it runs first. The `cd` into the checkout is
+        // what makes this one the deploy script.
+        if (in_array('runuser', $command, true)
+            && str_contains(end($command), 'set -e')
+            && str_contains(end($command), "\ncd ")) {
             $found = end($command);
 
             return true;
@@ -135,7 +141,12 @@ it('runs nothing extra when neither is set', function () {
 
     deployNow();
 
-    Process::assertNotRan(fn ($process) => in_array('runuser', $process->command, true));
+    // "Nothing extra" means nothing of the *user's*. Seeding the .env from the
+    // repository's own .env.example runs on every deploy by design, and is
+    // also a runuser script — so the test for the absence of a deploy script
+    // has to name the deploy script rather than the mechanism it shares.
+    Process::assertNotRan(fn ($process) => in_array('runuser', $process->command, true)
+        && str_contains((string) end($process->command), "\ncd "));
 });
 
 it('saves a script and reports what will run', function () {

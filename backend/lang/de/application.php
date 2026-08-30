@@ -113,6 +113,7 @@ return [
         'init' => 'Repository wird eingerichtet',
         'fetch' => 'Neuester Code wird geholt',
         'checkout' => 'Branch wird ausgecheckt',
+        'seed_env' => 'Umgebungsdatei wird vorbereitet',
         'build' => 'Build-Befehl wird ausgeführt',
         'write_credential' => 'Git-Zugang wird vorbereitet',
         'create_directory' => 'Verzeichnis wird erstellt',
