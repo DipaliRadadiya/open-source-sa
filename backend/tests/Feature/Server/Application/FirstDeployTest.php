@@ -386,6 +386,12 @@ it('seeds a fresh checkout .env from the repository .env.example', function () {
         // A repository with no example is left alone rather than guessed at.
         ->toContain('if [ ! -f "$root/.env.example" ]; then exit 0; fi')
         ->toContain('key:generate')
+        // The example's APP_URL is the framework's development default. Only
+        // replaced, never appended: a repository whose example has no APP_URL
+        // is not a Laravel-shaped one, and adding the key would be guessing at
+        // somebody else's config format.
+        ->toContain('if grep -q "^APP_URL=" "$env"; then')
+        ->toContain('APP_URL='.$app->url())
         // key:generate writes to base_path('.env'). Where the panel keeps the
         // file somewhere else, running it would create a second one.
         ->toContain('[ "$env" = "$root/.env" ]')

@@ -12,6 +12,7 @@ use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Shared machinery for marketplace installers: fetching an archive, writing a
@@ -57,6 +58,30 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     public function syncUrl(Application $application, string $url): void
     {
         // Deliberate no-op.
+    }
+
+    /**
+     * Set one `KEY=value` line in a dotenv-style file, replacing or appending.
+     *
+     * Appending when the key is absent, rather than failing: a framework may
+     * drop a key from its own example file between releases, and a site whose
+     * URL silently stayed at `localhost` is the failure this exists to stop.
+     *
+     * Returns whether anything changed, so a caller can skip the cache clear
+     * that usually follows.
+     */
+    protected function setEnvValue(Application $application, string $path, string $key, string $value): bool
+    {
+        return $this->configMutator->transform($application, $path, function (string $contents) use ($key, $value): string {
+            $line = "{$key}={$value}";
+            $updated = preg_replace('/^'.preg_quote($key, '/').'=.*$/m', $line, $contents, 1, $count);
+
+            if (! is_string($updated)) {
+                throw new RuntimeException("{$key} could not be updated.");
+            }
+
+            return $count === 1 ? $updated : rtrim($contents, "\n")."\n{$line}\n";
+        });
     }
 
     /**

@@ -55,6 +55,16 @@ class StatamicInstaller extends AbstractPhpInstaller
             '--no-interaction', '--no-progress',
         ]);
 
+        // `composer create-project` copies Statamic's `.env.example`, which
+        // ships `APP_URL=http://localhost:8000`. Left alone it stays there: it
+        // is the one value in that file only the panel knows, and Laravel
+        // builds password resets, queued mail, sitemaps and Statamic's own
+        // asset and control-panel URLs from it — all pointing at a port on the
+        // visitor's own machine.
+        //
+        // Before `make:user`, so the first login lands on the real site.
+        $this->setEnvValue($application, $application->envPath(), 'APP_URL', $application->url());
+
         // The email argument selects the non-interactive path. `--password` is
         // on the command line because Statamic offers no other way in — see
         // the class note.
@@ -64,5 +74,29 @@ class StatamicInstaller extends AbstractPhpInstaller
             '--super',
             '--password='.($settings['admin_password'] ?? ''),
         ]), null, $projectRoot);
+    }
+
+    /**
+     * Keep `APP_URL` on the domain the site is actually reached at.
+     *
+     * Called when the primary domain changes and when a certificate makes the
+     * site `https` — the same two events Craft's own sync answers. Without it
+     * the file is right once, at install, and wrong from the first domain
+     * change onwards.
+     *
+     * The config cache is cleared afterwards and only when something changed:
+     * a compiled `bootstrap/cache/config.php` is read *instead of* `.env`, so
+     * a site with one would go on serving the old URL from a file that no
+     * longer says it.
+     */
+    public function syncUrl(Application $application, string $url): void
+    {
+        $changed = $this->setEnvValue($application, $application->envPath(), 'APP_URL', $url);
+
+        if ($changed) {
+            $this->runAsSiteUser('sync_url', $application, [
+                $this->phpBinary($application), 'artisan', 'config:clear',
+            ], null, $application->codePath());
+        }
     }
 }

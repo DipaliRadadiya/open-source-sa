@@ -398,6 +398,14 @@ class GitDeployer
             'if [ -s "$env" ]; then exit 0; fi',
             'if [ ! -f "$root/.env.example" ]; then exit 0; fi',
             'cp "$root/.env.example" "$env"',
+            // The example's APP_URL is the framework's development default —
+            // `http://localhost` in Laravel's, a port on the visitor's own
+            // machine. Replaced, never appended: a repository whose example
+            // has no APP_URL is not a Laravel-shaped one, and inventing a key
+            // for it would be guessing at somebody else's config format.
+            'if grep -q "^APP_URL=" "$env"; then',
+            '  sed -i '.escapeshellarg('s|^APP_URL=.*|APP_URL='.$application->url().'|').' "$env"',
+            'fi',
             'if [ -f "$root/artisan" ] && [ "$env" = "$root/.env" ] && ! grep -q "^APP_KEY=base64:." "$env"; then',
             '  '.$php.' "$root/artisan" key:generate --force --no-interaction',
             'fi',

@@ -92,16 +92,9 @@ class CraftCmsInstaller extends AbstractPhpInstaller
         $projectRoot = $application->codePath();
         $path = $projectRoot.'/.env';
 
-        $changed = $this->configMutator->transform($application, $path, function (string $contents) use ($url): string {
-            $line = 'PRIMARY_SITE_URL='.$url;
-            $updated = preg_replace('/^PRIMARY_SITE_URL=.*$/m', $line, $contents, 1, $count);
-
-            if (! is_string($updated)) {
-                throw new \RuntimeException('Craft site URL could not be updated.');
-            }
-
-            return $count === 1 ? $updated : rtrim($contents, "\n")."\n{$line}\n";
-        });
+        // Shared with Statamic's `APP_URL`, which is the same edit against a
+        // different key — Craft had the only copy of it.
+        $changed = $this->setEnvValue($application, $path, 'PRIMARY_SITE_URL', $url);
 
         if ($changed) {
             $this->runAsSiteUser('sync_url', $application, [

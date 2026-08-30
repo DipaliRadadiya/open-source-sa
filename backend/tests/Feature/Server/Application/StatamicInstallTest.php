@@ -6,6 +6,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\InstallerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -129,4 +130,57 @@ it('runs make:user from the project root as the site user', function () {
 
     expect($install['path'])->toBe($this->projectRoot)
         ->and(array_slice($install['command'], 0, 4))->toBe(['runuser', '-u', 'statuser', '--']);
+});
+
+it('points APP_URL at the site, not the example file\'s localhost', function () {
+    // `composer create-project` copies Statamic's .env.example, which ships
+    // APP_URL=http://localhost:8000. It is the one value in that file only the
+    // panel knows, and Laravel builds password resets, queued mail, sitemaps
+    // and Statamic's own asset and control-panel URLs from it.
+    $runs = installStatamic();
+
+    $written = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'tee'
+        && str_contains($run['input'], 'APP_URL='));
+
+    expect($written)->not->toBeNull()
+        ->and($written['input'])->toContain('APP_URL=http://stat.example.com')
+        ->and($written['input'])->not->toContain('localhost:8000');
+});
+
+it('sets it before the first user is made, so the first login lands on the site', function () {
+    $runs = collect(installStatamic())->values();
+
+    $urlWrite = $runs->search(fn ($run) => ($run['command'][0] ?? '') === 'tee'
+        && str_contains($run['input'], 'APP_URL='));
+    $makeUser = $runs->search(fn ($run) => in_array('make:user', $run['command'], true));
+
+    expect($urlWrite)->not->toBeFalse()
+        ->and($makeUser)->not->toBeFalse()
+        ->and($urlWrite)->toBeLessThan($makeUser);
+});
+
+it('follows the domain when it changes, and clears the config cache that would outlive it', function () {
+    // A compiled bootstrap/cache/config.php is read *instead of* .env, so
+    // without the clear the site serves the old URL from a file that no longer
+    // says it.
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
+
+        return ($process->command[0] ?? '') === 'cat'
+            ? Process::result(output: "APP_NAME=Statamic\nAPP_URL=http://stat.example.com\n")
+            : Process::result(exitCode: 0);
+    });
+
+    app(InstallerManager::class)->syncUrl($this->application, 'https://new.example.com');
+
+    $written = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'tee');
+
+    expect($written['input'])->toContain('APP_URL=https://new.example.com')
+        // The rest of the file is the user's and is not rebuilt from parsed
+        // pairs — comments and ordering would not survive that.
+        ->and($written['input'])->toContain('APP_NAME=Statamic');
+
+    expect(collect($runs)->contains(fn ($run) => in_array('config:clear', $run['command'], true)))->toBeTrue();
 });
