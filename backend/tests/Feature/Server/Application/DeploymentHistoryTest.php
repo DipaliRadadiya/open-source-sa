@@ -58,6 +58,13 @@ it('records a deploy that succeeded, with its commit', function () {
         return match (true) {
             in_array('rev-parse', $process->command, true) => Process::result(output: 'a1b2c3d4e5f6'),
             in_array('log', $process->command, true) => Process::result(output: "Fix the checkout bug\nAda Lovelace"),
+            // A deploy now ends by curling the deployed URL and treating a
+            // non-2xx as failure — "deployed" and "working" are the same thing
+            // to the user. `--write-out %{http_code}` means the status code is
+            // the command's entire stdout, and a fake that returns nothing
+            // reads as HTTP 0: this test recorded a *failed* deploy for
+            // reasons that had nothing to do with what it was testing.
+            ($process->command[0] ?? '') === 'curl' => Process::result(output: '200'),
             default => Process::result(exitCode: 0),
         };
     });

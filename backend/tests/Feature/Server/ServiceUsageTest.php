@@ -141,5 +141,9 @@ it('reads state and usage in a single systemctl call per service', function () {
     // call the list was already making. Capability detection may run an
     // unrelated `which` probe on a server without a stored capability row.
     expect($commands)->toHaveCount(1)
-        ->and($commands[0])->toContain('--property=Id,LoadState,ActiveState,UnitFileState,MemoryCurrent,CPUUsageNSec,TasksCurrent');
+        // `CanReload` rides along too: whether the panel offers Reload or only
+        // Restart is decided from it (ServiceManager::allowedActions), and
+        // asking systemd a second time for one boolean is the cost this test
+        // exists to prevent.
+        ->and($commands[0])->toContain('--property=Id,LoadState,ActiveState,UnitFileState,CanReload,MemoryCurrent,CPUUsageNSec,TasksCurrent');
 });

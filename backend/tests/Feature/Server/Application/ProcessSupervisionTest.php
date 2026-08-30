@@ -181,13 +181,19 @@ it('logs a missing unit as an expected probe, not an error', function () {
         return Process::result(output: '');
     });
 
-    $supervisor = app(ProcessSupervisor::class);
+    // Through `remove()`, which is what actually asks the question — the probe
+    // itself is private, and reaching past that to call it was the only reason
+    // this test failed. A site with no unit (WordPress, static) is the common
+    // case, so removal has to be a no-op rather than an error.
+    app(ProcessSupervisor::class)->remove(nodeApp());
 
-    // Exists returns false without throwing.
-    expect($supervisor->exists(nodeApp()))->toBeFalse();
-
-    // The exit-1 probe call was made, logged at info level.
+    // The exit-1 probe call was made, and logged at info level rather than
+    // error: "there is no unit here" is an answer, not a failed operation.
     expect($logs)->not()->toBeEmpty();
+
+    // And nothing was torn down on the strength of a negative answer.
+    Process::assertNotRan(fn ($p) => in_array('stop', (array) $p->command, true));
+    Process::assertNotRan(fn ($p) => in_array('disable', (array) $p->command, true));
 });
 
 describe('the start command', function () {
