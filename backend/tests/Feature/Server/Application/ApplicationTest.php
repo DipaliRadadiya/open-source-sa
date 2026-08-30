@@ -511,3 +511,20 @@ describe('node version constraints', function () {
             ->and($types['wordpress']['node_version_range'])->toBeNull();
     });
 });
+
+it('refuses an application name that would be two systemd directives', function () {
+    // A Node application's name is rendered into its unit's `Description=`,
+    // in a file the panel writes and systemd executes. A newline there is a
+    // directive of the caller's choosing.
+    capableServer();
+    $this->account = GitAccount::create([
+        'provider' => 'github', 'label' => 'Work', 'identifier' => 'octocat', 'token' => 'ghp_x',
+    ]);
+
+    $this->withHeaders(appHeaders())
+        ->postJson('/api/applications', gitPayload([
+            'name' => "My shop\nExecStartPre=/bin/sh -c 'id > /tmp/pwned'",
+        ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('name');
+});

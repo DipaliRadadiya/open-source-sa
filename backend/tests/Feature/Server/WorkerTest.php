@@ -513,3 +513,25 @@ describe('a worker id from another application', function () {
             ->and($foreign->fresh()->name)->toBe('Someone else\'s worker');
     });
 });
+
+it('refuses a name or directory that would be two systemd directives', function () {
+    // The name is rendered into `Description=` and the directory into
+    // `WorkingDirectory=`, in a file the panel writes and systemd executes.
+    // A newline there is a directive of the caller's choosing — the same
+    // hazard the cron rule was written for, one file format over.
+    fakeWorkerSystemd();
+
+    $this->actingAs($this->admin)
+        ->postJson(workerUrl(), workerPayload([
+            'name' => "Queue\nExecStartPre=/bin/sh -c 'id > /tmp/pwned'",
+        ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('name');
+
+    $this->actingAs($this->admin)
+        ->postJson(workerUrl(), workerPayload(['directory' => "/srv/app\nUser=root"]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('directory');
+
+    expect(Worker::count())->toBe(0);
+});

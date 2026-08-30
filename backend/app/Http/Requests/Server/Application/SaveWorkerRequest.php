@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\Application;
 
 use App\Models\Application;
 use App\Models\Worker;
+use App\Rules\SingleLine;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -30,6 +31,11 @@ class SaveWorkerRequest extends FormRequest
         return [
             'name' => [
                 'required', 'string', 'max:60',
+                // The name is rendered into the systemd unit's `Description=`.
+                // A newline there is a directive of the caller's choosing in a
+                // file the panel writes and systemd executes — the same hazard
+                // the cron rule exists for, one file format over.
+                new SingleLine,
                 Rule::unique('workers', 'name')
                     ->where('application_id', $application->id)
                     ->ignore($worker),
@@ -43,7 +49,10 @@ class SaveWorkerRequest extends FormRequest
             'command' => ['required', 'string', 'max:500', 'regex:/^[^\n\r;|&`$<>()]+$/'],
 
             'kind' => ['sometimes', Rule::in([Worker::KIND_QUEUE, Worker::KIND_HORIZON, Worker::KIND_CUSTOM])],
-            'directory' => ['sometimes', 'nullable', 'string', 'max:255', 'not_regex:/\.\./'],
+            // `WorkingDirectory=` in the same unit, so the same rule applies:
+            // the traversal guard stops it pointing elsewhere, and this stops
+            // it being two directives instead of one.
+            'directory' => ['sometimes', 'nullable', 'string', 'max:255', 'not_regex:/\.\./', new SingleLine],
             'processes' => ['sometimes', 'integer', 'min:1', 'max:'.self::MAX_PROCESSES],
             'stop_wait_seconds' => ['sometimes', 'integer', 'min:1', 'max:600'],
             'auto_restart' => ['sometimes', 'boolean'],

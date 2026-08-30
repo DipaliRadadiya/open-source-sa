@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\Application;
 
 use App\Enums\DomainOrigin;
 use App\Rules\AvailablePort;
+use App\Rules\SingleLine;
 use App\Rules\StartCommand;
 use App\Rules\SupportedNodeVersion;
 use App\Services\Applications\SiteTypeManager;
@@ -38,7 +39,10 @@ class StoreApplicationRequest extends FormRequest
             // Unique because it names the web-server config file. Two sites
             // sharing a name shared a file, and the second silently replaced
             // the first with nothing anywhere saying so.
-            'name' => ['required', 'string', 'max:255', Rule::unique('applications', 'name')],
+            // `SingleLine` because the name reaches the systemd unit's
+            // `Description=` for a Node application: a newline there injects a
+            // directive into a file the panel writes and systemd runs.
+            'name' => ['required', 'string', 'max:255', new SingleLine, Rule::unique('applications', 'name')],
             'domain' => [
                 'required', 'string', 'max:255',
                 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',
