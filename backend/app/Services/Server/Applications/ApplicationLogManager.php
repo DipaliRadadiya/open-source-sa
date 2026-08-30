@@ -258,11 +258,21 @@ class ApplicationLogManager
 
     private function fileExists(Application $application, string $path): bool
     {
-        return $this->serverOps->run(
+        $result = $this->serverOps->probe(
             ['test', '-f', $path],
             $this->context($application, 'app_log_exists'),
             timeout: 15,
-        )->ok;
+        );
+
+        // "There is no log file" and "I was not allowed to look" are different
+        // answers, and this screen exists for people whose site is misbehaving
+        // — the worst possible audience for a confident wrong one. The class
+        // already has an exception carrying a reference for exactly this.
+        if (! $result->answered) {
+            throw new LogOperationException($result->reference);
+        }
+
+        return $result->ok;
     }
 
     /**

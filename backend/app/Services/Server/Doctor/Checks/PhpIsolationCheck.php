@@ -67,9 +67,26 @@ class PhpIsolationCheck implements DoctorCheck
         // A site the panel believes is isolated but whose pool file is gone.
         // It is still being served — by the shared pool, as www-data, with
         // none of its settings — and nothing else would ever report it.
-        $missing = $isolated
-            ->reject(fn (Application $a): bool => $this->pools->exists($a))
-            ->map(fn (Application $a): string => $a->domain)
+        $states = $isolated->map(fn (Application $a): array => ['app' => $a, 'exists' => $this->pools->exists($a)]);
+
+        // Null is "could not look", and it must not be reported as "gone".
+        // Every probe fails at once on a server whose sudo grant is out of
+        // date, so reading null as false announced a missing pool for every
+        // isolated site on the box — a false alarm at its loudest, in the tool
+        // someone opens when something is already wrong. The missing grant is
+        // PrivilegeCheck's finding and it fails there; this one says only what
+        // it knows.
+        $unknown = $states
+            ->filter(fn (array $s): bool => $s['exists'] === null)
+            ->map(fn (array $s): string => (string) $s['app']->domain)
+            ->values();
+
+        // `===`, because Collection::where() compares loosely and `null == false`
+        // is true — which would have folded every could-not-check straight back
+        // into "missing", the exact bug this is fixing.
+        $missing = $states
+            ->filter(fn (array $s): bool => $s['exists'] === false)
+            ->map(fn (array $s): string => (string) $s['app']->domain)
             ->values();
 
         if ($missing->isNotEmpty()) {
@@ -77,6 +94,16 @@ class PhpIsolationCheck implements DoctorCheck
                 'status' => 'fail',
                 'detail' => 'pool file missing for '.$missing->implode(', '),
                 'fix' => 'doctor.fixes.php_isolation_missing',
+            ];
+        }
+
+        // After the real failure, so a genuinely missing pool is never buried
+        // under "could not check the others".
+        if ($unknown->isNotEmpty()) {
+            return [
+                'status' => 'warn',
+                'detail' => 'could not check the pool file for '.$unknown->implode(', '),
+                'fix' => 'doctor.fixes.php_isolation_unknown',
             ];
         }
 

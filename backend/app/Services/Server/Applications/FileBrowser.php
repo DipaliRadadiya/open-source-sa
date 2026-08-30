@@ -1349,7 +1349,15 @@ class FileBrowser
             timeout: 15,
         );
 
-        abort_if($result->failed(), 422, __('errors/application.web_root_not_found'));
+        // A 422 telling someone to check their web root is advice, and advice
+        // about the wrong thing wastes the time of the person least able to
+        // spare it. When the probe itself never ran, say so with a reference
+        // instead — the directory may be perfectly fine.
+        if (! $result->answered) {
+            throw new FileOperationException($result->reference);
+        }
+
+        abort_unless($result->ok, 422, __('errors/application.web_root_not_found'));
     }
 
     /**

@@ -40,6 +40,13 @@ class ChunkedUploadFake
     /** Whether the destination directory exists. */
     public static bool $directoryExists = true;
 
+    /**
+     * Whether `test` is refused before it runs — a sudoers grant older than
+     * the running build, which is the state of every server that updated the
+     * panel without re-running install.sh.
+     */
+    public static bool $probeRefused = false;
+
     public static function reset(): void
     {
         self::$ran = [];
@@ -48,6 +55,7 @@ class ChunkedUploadFake
         self::$totalBlocks = 300 * 1024 * 1024;
         self::$directoryExists = true;
         self::$existing = [];
+        self::$probeRefused = false;
     }
 
     /** @return array<int, string> */
@@ -115,6 +123,10 @@ function fakeUploadServer(): void
                     ChunkedUploadFake::$availableBlocks,
                 ),
             ]));
+        }
+
+        if ($binary === 'test' && ChunkedUploadFake::$probeRefused) {
+            return Process::result(errorOutput: 'sudo: a password is required', exitCode: 1);
         }
 
         if ($binary === 'test' && ($inner[1] ?? '') === '-d') {
@@ -435,6 +447,29 @@ it('refuses to finalise onto a file that appeared during the upload', function (
         ->postJson(uploadsUrl().'/'.$id.'/finalize', ['path' => 'big.zip'])
         ->assertStatus(422);
 
+    expect(ChunkedUploadFake::binaries())->not->toContain('mv');
+});
+
+it('refuses to finalise when it could not check whether a file is already there', function () {
+    // The guard above is the only thing between `mv -f` and a file the user
+    // never agreed to lose, and `test -e` exits 1 both for "nothing there" and
+    // for a command that was refused before it ran. Read as the first, the
+    // guard opens exactly when the server is least healthy — and the only
+    // trace left is that a file's contents changed.
+    $id = $this->actingAs($this->admin)
+        ->postJson(uploadsUrl(), ['path' => 'big.zip'])
+        ->json('upload_id');
+
+    // `test` is silent on both of its real answers, so anything on stderr came
+    // from whatever refused to run it.
+    ChunkedUploadFake::$probeRefused = true;
+
+    $this->actingAs($this->admin)
+        ->postJson(uploadsUrl().'/'.$id.'/finalize', ['path' => 'big.zip'])
+        ->assertStatus(500)
+        ->assertJsonStructure(['message', 'reference']);
+
+    // The point of the test: nothing was moved.
     expect(ChunkedUploadFake::binaries())->not->toContain('mv');
 });
 

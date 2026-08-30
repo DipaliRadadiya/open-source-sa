@@ -325,24 +325,42 @@ class ChunkedUpload
      */
     private function assertAbsent(Application $application, string $target): void
     {
-        $result = $this->serverOps->run(
+        $result = $this->serverOps->probe(
             $this->asUser($application, ['test', '-e', $target]),
             ['feature' => 'application', 'op' => 'file_upload_exists_check', 'application' => $application->id],
             timeout: 15,
         );
+
+        // Fail closed. `test -e` exits 1 for "nothing there" and sudo exits 1
+        // for "you may not ask", and reading the second as the first turns the
+        // next line — `mv -f` — into a silent delete of whatever was already
+        // at this path. Of everything that reads a probe in this codebase,
+        // this is the one that must never guess: the whole reason the guard
+        // exists is that its failure leaves no trace but changed contents.
+        if (! $result->answered) {
+            throw new FileOperationException($result->reference);
+        }
 
         abort_if($result->ok, 422, __('errors/application.upload_exists', ['name' => basename($target)]));
     }
 
     private function assertDirectoryExists(Application $application, string $directory): void
     {
-        $result = $this->serverOps->run(
+        $result = $this->serverOps->probe(
             $this->asUser($application, ['test', '-d', $directory]),
             ['feature' => 'application', 'op' => 'file_upload_dir_check', 'application' => $application->id],
             timeout: 15,
         );
 
-        abort_if($result->failed(), 422, __('errors/application.upload_directory_missing'));
+        // This one already failed closed — but it told the user their
+        // directory was missing when the truth was that the panel could not
+        // look. Sending someone to create a directory that is already there is
+        // its own kind of wrong answer.
+        if (! $result->answered) {
+            throw new FileOperationException($result->reference);
+        }
+
+        abort_unless($result->ok, 422, __('errors/application.upload_directory_missing'));
     }
 
     /**

@@ -18,6 +18,7 @@ return [
     'fixes' => [
         'php_pool_orphaned' => 'Un pool PHP-FPM désigne un compte Linux qui n\'existe plus — en général un site supprimé avant son pool, dont l\'utilisateur a ensuite été effacé. PHP-FPM refuse de démarrer avec lui : tout nouveau site PHP échoue au provisionnement et en porte le blâme. Supprimez les fichiers de pool listés, puis lancez `php-fpm -t` et redémarrez php-fpm.',
         'php_isolation_missing' => 'Un site que le panneau croit isolé n\'a pas de fichier de pool. Il est toujours servi depuis le pool partagé, en www-data, sans aucun de ses réglages. Ouvrez l\'écran PHP du site et isolez-le à nouveau.',
+        'php_isolation_unknown' => 'Le panneau n’a pas pu vérifier si ces sites ont toujours leur fichier de pool PHP ; leur isolation n’a donc pas été vérifiée. Relancez install.sh pour actualiser l’autorisation sudo ; voir la vérification des privilèges.',
         'php_isolation_memory' => 'L\'ensemble des sites isolés pourrait utiliser plus de mémoire que le serveur n\'en a. Réduisez le nombre de processus ou la limite mémoire des sites les plus chargés.',
         'php_isolation_shared' => 'Ces sites tournent encore en www-data aux côtés de tous les autres. Ouvrez l\'écran PHP d\'un site et isolez-le pour lui donner son propre utilisateur.',
         'privilege' => 'Le panneau ne peut pas exécuter de commandes en root. Vérifiez que /etc/sudoers.d/ contient l’autorisation et que le fichier passe visudo -c.',

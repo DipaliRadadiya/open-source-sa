@@ -249,15 +249,32 @@ class PoolManager
         $this->reload($version);
     }
 
-    public function exists(Application $application): bool
+    /**
+     * Whether this application has a pool file on disk.
+     *
+     * **Null means the panel could not find out** — not "no". The only caller
+     * is the doctor, which reports a missing pool as a site silently running
+     * under the shared account with none of its settings. That is a serious,
+     * actionable finding, and on a server whose sudo grant predates the build
+     * every probe fails, so a bare `false` made the doctor announce it for
+     * every isolated site at once. A diagnostic that cries wolf about all of
+     * them is worth less than one that admits it cannot see.
+     */
+    public function exists(Application $application): ?bool
     {
         $path = $this->poolPath($application);
 
-        return $path !== null && $this->serverOps->probe(
+        if ($path === null) {
+            return false;
+        }
+
+        $result = $this->serverOps->probe(
             ['test', '-f', $path],
             $this->context($application, 'pool_exists'),
             timeout: 15,
-        )->ok;
+        );
+
+        return $result->answered ? $result->ok : null;
     }
 
     /**

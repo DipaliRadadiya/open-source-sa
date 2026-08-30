@@ -195,6 +195,9 @@ class ServerOps
             // means "wait" while someone holds the lock and "this is broken"
             // once nobody does.
             staleLock: ! $ok && $this->isStaleLock($stderr),
+            // Computed here, once, because every caller that worked it out for
+            // itself got it wrong the same way. See ServerOpsResult::$answered.
+            answered: $ok || ($expectedExit && trim($stderr) === ''),
         );
     }
 

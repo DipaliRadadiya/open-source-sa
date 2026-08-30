@@ -1,10 +1,14 @@
 <?php
 
+use App\Models\Application;
+use App\Models\ServerCapability;
+use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
 use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
+use App\Services\Server\Doctor\Checks\PhpIsolationCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
 use App\Services\Server\Doctor\Checks\QueueCheck;
 use App\Services\Server\Doctor\Checks\ServicesCheck;
@@ -475,4 +479,52 @@ it('checks the panel account rather than the operator running it as root', funct
     // Whatever it asked about, it must have asked as somebody other than root.
     expect($probes)->not->toBeEmpty()
         ->and(collect($probes)->every(fn (array $command): bool => $command[0] === 'runuser'))->toBeTrue();
+});
+
+describe('the PHP isolation check', function () {
+    it('warns rather than announcing every pool file missing when it cannot look', function () {
+        // A missing pool file means a site is silently being served by the
+        // shared account with none of its own settings — serious, and worth a
+        // fail. But `test -f` is refused for EVERY site at once on a server
+        // whose sudo grant predates the build, so reading that as "gone"
+        // announced it for all of them: the loudest possible false alarm, in
+        // the tool someone opens when something is already wrong.
+        // php-fpm, or there are no pools to have an opinion about.
+        ServerCapability::query()->delete();
+        ServerCapability::query()->create([
+            'stack' => 'lemp', 'web_server' => 'nginx', 'capabilities' => [],
+            'source' => 'detected', 'verified_at' => now(),
+        ]);
+
+        $su = SystemUser::create(['username' => 'poolowner', 'home_path' => '/home/poolowner']);
+
+        Application::forceCreate([
+            'system_user_id' => $su->id, 'name' => 'Shop', 'slug' => 'shop',
+            'domain' => 'shop.example.com', 'site_type' => 'wordpress',
+            'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
+            'php_version' => '8.4', 'isolated_at' => now(),
+        ]);
+
+        Process::fake(fn () => Process::result(
+            errorOutput: 'sudo: a password is required',
+            exitCode: 1,
+        ));
+
+        config()->set('server.doctor.checks', [PhpIsolationCheck::class]);
+
+        $report = app(Doctor::class)->run();
+
+        expect($report['checks'][0]['status'])->toBe('warn')
+            ->and($report['healthy'])->toBeTrue()
+            ->and($report['checks'][0]['detail'])->toContain('could not check');
+    });
+
+    it('has a fix for the unknown case in every locale', function () {
+        foreach (config('app.available_locales') as $locale) {
+            app()->setLocale($locale);
+
+            expect(__('doctor.fixes.php_isolation_unknown'))
+                ->not->toBe('doctor.fixes.php_isolation_unknown');
+        }
+    });
 });

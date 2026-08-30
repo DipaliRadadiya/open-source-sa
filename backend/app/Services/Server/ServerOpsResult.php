@@ -29,6 +29,27 @@ class ServerOpsResult
          * `panel:doctor` names the exact files.
          */
         public readonly bool $staleLock = false,
+        /**
+         * The command ran and gave its own answer.
+         *
+         * `ok` is two questions collapsed into one: `test -f` exits 1 for "the
+         * file is not there", and sudo exits 1 for "you may not run this" —
+         * before the binary runs at all. Callers that read `ok` as the answer
+         * therefore report "no" for a question that was never asked, which is
+         * how the panel told a user their `.env` did not exist while they were
+         * reading it in the file manager, and how an upload's
+         * does-this-file-exist guard lets `mv -f` destroy a file.
+         *
+         * True when the command succeeded, or when it exited with a code the
+         * caller declared as a real answer AND printed nothing on stderr —
+         * `test`, `grep` and friends are silent when the answer is simply no,
+         * so anything on stderr came from whatever refused to run them.
+         *
+         * A caller reads this FIRST and decides what "I could not find out"
+         * means for it: a guard must refuse, a screen should say so, and a
+         * diagnostic should warn rather than assert.
+         */
+        public readonly bool $answered = false,
     ) {}
 
     public function failed(): bool

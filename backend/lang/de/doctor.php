@@ -18,6 +18,7 @@ return [
     'fixes' => [
         'php_pool_orphaned' => 'Ein PHP-FPM-Pool nennt ein Linux-Konto, das nicht mehr existiert — meist eine Seite, die vor ihrem Pool gelöscht wurde und deren Benutzer danach entfernt wurde. PHP-FPM startet damit nicht, daher scheitert jede neue PHP-Seite bei der Bereitstellung und bekommt die Schuld. Löschen Sie die genannten Pool-Dateien, führen Sie dann `php-fpm -t` aus und starten Sie php-fpm neu.',
         'php_isolation_missing' => 'Eine Seite, die das Panel für isoliert hält, hat keine Pool-Datei. Sie wird weiterhin aus dem gemeinsamen Pool als www-data ausgeliefert, ohne ihre eigenen Einstellungen. Öffnen Sie die PHP-Seite und isolieren Sie sie erneut.',
+        'php_isolation_unknown' => 'Das Panel konnte nicht prüfen, ob diese Sites ihre PHP-Pool-Datei noch haben; ihre Isolation wurde daher nicht verifiziert. Führen Sie install.sh erneut aus, um die sudo-Berechtigung zu aktualisieren; siehe die Rechteprüfung.',
         'php_isolation_memory' => 'Alle isolierten Seiten zusammen könnten mehr Speicher belegen, als der Server hat. Senken Sie die Worker-Anzahl oder das Speicherlimit der stärksten Seiten.',
         'php_isolation_shared' => 'Diese Seiten laufen weiterhin als www-data neben allen anderen. Öffnen Sie die PHP-Seite einer Site und isolieren Sie sie.',
         'privilege' => 'Das Panel kann keine Befehle als root ausführen. Prüfen Sie, ob /etc/sudoers.d/ die Panel-Berechtigung enthält und die Datei visudo -c besteht.',
