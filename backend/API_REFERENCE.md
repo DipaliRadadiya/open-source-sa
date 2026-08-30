@@ -306,6 +306,8 @@ Twelve checks: `privilege`, `binaries`, `services`, `web_server`, `driver_conten
 
 `status` is `pass`, `warn` or `fail`. **`healthy` counts failures only** — a warning is worth showing and not worth blocking on, so don't derive health from `warnings`. `title` and `fix` arrive localized; `fix` is `null` when there is nothing to do. A check that throws is reported as a `fail` rather than aborting the run.
 
+**`warn` also means "this check could not be run".** `web_server` reports it when the panel is not permitted to run the config test — `sudo -n nginx -t` exits non-zero identically for a sudo refusal and a broken config, and calling that second one invalid was a false alarm raised at precisely the moment someone is debugging something else. The missing grant is `privilege`'s finding, and it fails there. When `web_server` does `fail`, `detail` carries the config test's own first line, which names the file and line number.
+
 ---
 
 ## Admin — Activity Log (admin-wide)
@@ -1197,7 +1199,7 @@ Newest first.
   "commit_short": "a1b2c3d",
   "commit_message": "Fix payment redirect",
   "commit_author": "Priya Nair",
-  "steps": ["init", "fetch", "checkout", "set_ownership", "script"],
+  "steps": ["init", "fetch", "checkout", "set_ownership", "seed_env", "script"],
   "failed_step": null,
   "reference": null,
   "duration": 90,
@@ -1223,7 +1225,7 @@ Newest first.
 
 `user` is **null for a webhook deploy** — nobody pressed anything, and inventing an actor would be a lie. Render it as "System". On `POST …/deployments` and `…/redeploy` the key is **absent entirely** (the relation is not loaded there); it is present on this list and on the single-deployment view.
 
-`steps` accumulates step names in the order they completed — `init`, `fetch`, `checkout`, `set_ownership`, `script` — so the UI can show which stage a running deploy reached instead of a bare spinner. On a failure, `failed_step` names the one that broke and `reference` is the id to quote to support; the technical detail lives in the server-ops log under that id, never in the response.
+`steps` accumulates step names in the order they completed — `init`, `fetch`, `checkout`, `set_ownership`, `seed_env`, `script` — so the UI can show which stage a running deploy reached instead of a bare spinner. Don't hardcode the list; `seed_env` was added after the others and more may follow. It copies the repository's `.env.example` into place and generates a Laravel key, and it does nothing at all when the file already has contents or the repository ships no example. On a failure, `failed_step` names the one that broke and `reference` is the id to quote to support; the technical detail lives in the server-ops log under that id, never in the response.
 
 `duration` is whole seconds, and null until the deploy has both started and finished.
 
@@ -1422,12 +1424,13 @@ All health signals for this application in one call.
 ### GET `/applications/{application}/environment`
 **Permission:** `app_environment` (view)
 
-`403` for site types that don't use a `.env` (e.g. WordPress — it uses `wp-config.php`).
+**`404`**, not `403`, for site types that don't use a `.env` (e.g. WordPress — it uses `wp-config.php`). The screen does not exist there, which is a different statement from "you may not have it"; `403` is reserved for a caller who lacks the permission on a site that does have the screen.
 
 ```json
 {"environment": {
   "exists": true,
-  "path": "/home/siteowner/shop.example.com/.env",
+  "path": "/home/siteowner/shop/public_html/.env",
+  "exposed": false,
   "framework": "laravel", "framework_title": "Laravel",
   "requires_restart": false,
   "requires_apply": true,
@@ -1439,13 +1442,23 @@ All health signals for this application in one call.
   "checks": [
     {"code": "app_debug_enabled", "severity": "danger", "key": "APP_DEBUG", "value": "true", "title": "…", "detail": "…"}
   ],
-  "backups": ["2026-07-28-141530", "2026-07-27-093000"]
+  "backups": [
+    {"name": ".env.bak-20260728-141530", "created_at": "28-07-2026 14:15:30"}
+  ]
 }}
 ```
 
 All of this comes from **one read** of the file. A raw endpoint plus a parsed endpoint plus a checks endpoint would read it three times and can return three different answers if someone saves in between.
 
 `exists: false` is a normal state (nothing written yet), not an error — `raw` is then `""` and `checks` is empty.
+
+**`exists: true` with an empty `raw` is also a real answer**, and it means the file is there and empty. Every git checkout used to arrive that way: provisioning creates the file and no repository ships a `.env`. A deploy now seeds it from the repository's `.env.example` and generates the key for Laravel, so this should only be seen on a repository that has no example to copy.
+
+**`500` with a `reference` when the panel could not find out.** `test -f` exits non-zero both for a file that is absent and for a command that never ran (a sudoers grant older than the running build is the usual cause), and reporting the second as `exists: false` gives the user an empty editor for a file full of their settings. The two are told apart by stderr; quote the `reference` to find the exact command in the server-ops log.
+
+**`path` is where the file is, which is not always where a new one would be created.** The rule is *beside the code, but never inside a file-served directory*: a Laravel checkout at `public_html` serving from `public_html/public` keeps its `.env` at `public_html/.env`, where the framework reads it and no URL reaches it. Where the code root **is** the served directory, a new file is created one level up instead — but an existing `.env` beside the code is opened and saved in place, because that is the one the application loads and hiding it would not unexpose it.
+
+**`exposed: true`** says that file is reachable over the web, and adds a `file_exposed` check at `error` severity. The fix is to set a web root, not to move the file: in that state the whole source tree is served. A proxied application (Node) is never `exposed` — nothing under its document root is fetchable by path.
 
 **A secret's `value` is `null`, not a masked string.** Don't render dots from the API; render them from `secret: true`.
 
@@ -1457,7 +1470,7 @@ All of this comes from **one read** of the file. A raw endpoint plus a parsed en
 
 `checks` are lint results on the file's contents, each with a `code`, a `severity`, the offending `key`/`value`, and a localised `title`/`detail`.
 
-`backups` — timestamped automatic snapshots before each save.
+`backups` — timestamped automatic snapshots before each save, newest first, five kept. Each is `{name, created_at}`: `name` is the on-disk filename (`.env.bak-YYYYMMDD-HHMMSS`) and is what the restore endpoint takes; `created_at` is the same instant formatted for display. Sorting by name sorts by time, so the list costs no `stat` per file.
 
 ---
 
@@ -1473,7 +1486,7 @@ Replace the entire `.env` file. Optionally restart the app's process after save.
 
 **Response `200`:**
 ```json
-{"environment": {"path": "…", "raw": "…", "backups": ["2026-07-28-141530","2026-07-28-150000"], "variables": [...]}, "applied": true, "restarted": true}
+{"environment": {"path": "…", "exists": true, "exposed": false, "raw": "…", "backups": [{"name": ".env.bak-20260728-150000", "created_at": "28-07-2026 15:00:00"}], "variables": [...]}, "applied": true, "restarted": true}
 ```
 
 `applied: true` — config cache was cleared (Laravel apps). `restarted: true` — the app's process was restarted.
@@ -1487,7 +1500,9 @@ Syntax errors return `422` with `errors.raw` listing the problem.
 
 Restore a previous snapshot.
 
-**Request:** `{"backup": "2026-07-28-141530", "restart": true}`
+**Request:** `{"backup": ".env.bak-20260728-141530", "restart": true}`
+
+`backup` is the `name` from the list, verbatim. It reaches a path, so anything not matching `.env.bak-YYYYMMDD-HHMMSS` exactly is refused rather than sanitised. The current file is backed up first, so restoring the wrong snapshot is itself undoable.
 
 **Response `200`:** `{"environment": {...}}`
 
