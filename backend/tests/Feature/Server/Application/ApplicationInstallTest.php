@@ -99,8 +99,13 @@ it('installs wordpress end to end after the site is serving', function () {
     // `create_database` is in this list now. It was always in the documented
     // one and never emitted, because the step lists were assembled by hand in
     // each installer and the database is created by the manager above them.
+    // `create_php_pool` sits between ownership and the vhost: a PHP site gets
+    // its own FPM pool, running as its own Linux user, before anything is
+    // served from it. Without that step every PHP site ran as the shared
+    // www-data and could read every other site's configuration.
     expect($app->steps)->toBe([
-        'create_directory', 'placeholder', 'set_ownership', 'write_config', 'test_config', 'reload',
+        'create_directory', 'placeholder', 'set_ownership', 'create_php_pool',
+        'write_config', 'test_config', 'reload',
         'create_database', 'download', 'extract', 'configure', 'install_app',
     ]);
 

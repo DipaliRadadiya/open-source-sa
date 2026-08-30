@@ -24,14 +24,30 @@ beforeEach(function () {
         'source' => 'installer', 'verified_at' => now(),
     ]);
 
-    config(['server.web_server_drivers.nginx.sites_dir' => '/etc/nginx/sites-enabled']);
+    config([
+        'server.web_server_drivers.nginx.sites_dir' => '/etc/nginx/sites-enabled',
+        // The real file lives here; sites-enabled holds a symlink to it.
+        // Unset, every assertion about the written config compared against a
+        // path beginning with a bare slash and quietly matched nothing.
+        'server.web_server_drivers.nginx.sites_available_dir' => '/etc/nginx/sites-available',
+    ]);
 });
 
 function makeApp(array $overrides = []): Application
 {
-    return Application::create(array_merge([
+    // `forceCreate`, because `slug` is not fillable — the create action
+    // assigns it. Through `create()` the slug was silently dropped and every
+    // path in this file came out as `{home}/public_html`, which is the
+    // pre-slug layout no server has used since August.
+    return Application::forceCreate(array_merge([
         'system_user_id' => test()->su->id,
         'name' => 'Shop',
+        // Named by slug, never domain. Every real application has one — the
+        // create action assigns it — and `rootPath()` only falls back to the
+        // home directory for rows written before the column existed. Without
+        // it here the fixture described a layout the panel stopped using in
+        // August, and these assertions pinned the old one.
+        'slug' => 'shop',
         'domain' => 'shop.example.com',
         'site_type' => 'php',
         'serving_profile' => 'php',
@@ -61,12 +77,21 @@ it('creates the directory, writes a tested config and reloads', function () {
         'create_directory', 'placeholder', 'set_ownership', 'create_php_pool', 'write_config', 'test_config', 'reload',
     ]);
 
-    Process::assertRan(fn ($p) => $p->command === ['mkdir', '-p', '/home/deploy/shop.example.com']);
-    Process::assertRan(fn ($p) => $p->command === ['chown', '-R', 'deploy:deploy', '/home/deploy/shop.example.com']);
-    Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/nginx/sites-enabled/shop.example.com.conf']
+    // `{home}/{slug}/public_html` — the document root, not the site directory:
+    // `.panel`, the logs and the `.env` live beside it and must not be served.
+    Process::assertRan(fn ($p) => $p->command === ['mkdir', '-p', '/home/deploy/shop/public_html']);
+    Process::assertRan(fn ($p) => $p->command === ['chown', '-R', 'deploy:deploy', '/home/deploy/shop/public_html']);
+    // Named by slug, and written to sites-available — sites-enabled gets the
+    // symlink. The domain-named file is what a row predating the slug column
+    // falls back to, not what a current site produces.
+    Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/nginx/sites-available/shop.conf']
         && str_contains($p->input, 'server_name shop.example.com')
-        && str_contains($p->input, 'root /home/deploy/shop.example.com;')
-        && str_contains($p->input, 'php8.4-fpm.sock'));
+        && str_contains($p->input, 'root /home/deploy/shop/public_html;')
+        // Its OWN pool socket, named for the slug — not the server-wide
+        // php8.4-fpm.sock. That is the whole point of per-site isolation: a
+        // vhost still pointing at the shared socket is a site running as
+        // www-data with none of its own settings.
+        && str_contains($p->input, '/run/php/shop.sock'));
     Process::assertRan(fn ($p) => $p->command === ['nginx', '-t']);
     Process::assertRan(fn ($p) => $p->command === ['systemctl', 'reload', 'nginx']);
 });
@@ -90,7 +115,7 @@ it('removes the config and does not reload when the config test fails', function
     expect($app->reference)->not->toBeEmpty();
 
     // Our config is taken back out, and nothing is reloaded.
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/nginx/sites-enabled/shop.example.com.conf']);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/nginx/sites-enabled/shop.conf']);
     Process::assertNotRan(fn ($p) => $p->command === ['systemctl', 'reload', 'nginx']);
 });
 
@@ -253,7 +278,7 @@ it('removes the site config on delete but keeps the files by default', function 
         ->deleteJson("/api/applications/{$app->id}")
         ->assertOk();
 
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/nginx/sites-enabled/shop.example.com.conf']);
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/nginx/sites-enabled/shop.conf']);
     // Someone's code must never disappear as a side effect of removing a record.
     Process::assertNotRan(fn ($p) => $p->command[0] === 'rm' && ($p->command[1] ?? '') === '-rf');
     expect(Application::count())->toBe(0);
@@ -267,7 +292,8 @@ it('removes the files only when explicitly asked', function () {
         ->deleteJson("/api/applications/{$app->id}?remove_files=true")
         ->assertOk();
 
-    Process::assertRan(fn ($p) => $p->command === ['rm', '-rf', '/home/deploy/shop.example.com']);
+    // The whole site directory, not just what was served.
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-rf', '/home/deploy/shop']);
 });
 
 it('touches nothing on the server when deleting an app that was never provisioned', function () {

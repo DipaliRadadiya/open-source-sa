@@ -91,6 +91,11 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
     // purpose, not something that arrived with a copied line.
     expect(array_values(array_unique($exempt)))->toEqualCanonicalizing([
         'api/webhooks/deploy/{identifier}',
+        // Unauthenticated liveness probe with its own 60/min bucket: an update
+        // calls it on localhost after switching releases, and sharing the
+        // global bucket with browser polling would make the check fail exactly
+        // when it is needed. Deliberate — see routes/api/health.php.
+        'api/health',
         'api/applications/{application}/files/uploads/space',
         'api/applications/{application}/files/uploads',
         'api/applications/{application}/files/uploads/{uploadId}',

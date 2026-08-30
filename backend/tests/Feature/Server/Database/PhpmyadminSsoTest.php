@@ -127,6 +127,11 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
         Certificate::factory()->create([
             'application_id' => $this->pmaApp->id,
             'status' => CertificateStatus::Active,
+            // Covering this site's own hostname. `scheme()` asks both
+            // questions — is the certificate servable, and is it for *this*
+            // name — because an active certificate for another domain served
+            // over https is a browser warning, not a working site.
+            'domains' => [$this->pmaApp->domain],
             'certificate_path' => '/etc/letsencrypt/live/pma.example.com/fullchain.pem',
             'private_key_path' => '/etc/letsencrypt/live/pma.example.com/privkey.pem',
         ]);

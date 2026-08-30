@@ -24,32 +24,47 @@ beforeEach(function () {
     ]);
 });
 
-it('returns only app-level permissions the user has', function () {
-    // A user with no app-level roles gets an empty sidebar.
-    // A panel login with no app-level grants — not a SystemUser, which is
-    // the Linux account that owns the site and cannot log in at all.
-    $viewer = User::factory()->create();
-    Sanctum::actingAs($viewer);
+it('refuses a user who cannot see applications at all', function () {
+    // The route is gated on the server-level `application` permission, so a
+    // panel login with no grants never reaches the sidebar. 403 rather than an
+    // empty list: "you may not ask" and "there is nothing here" are different
+    // answers, and this endpoint is the wrong place to blur them.
+    Sanctum::actingAs(User::factory()->create());
 
-    $response = $this->getJson("/api/applications/{$this->application->id}/sidebar");
-
-    $response->assertOk()
-        ->assertJson(['items' => []]);
+    $this->getJson("/api/applications/{$this->application->id}/sidebar")
+        ->assertForbidden();
 });
 
-it('returns items for a user with app permissions', function () {
-    $response = $this->getJson("/api/applications/{$this->application->id}/sidebar");
+it('offers a WordPress site the screens it actually has, and no others', function () {
+    // The sidebar is filtered by the site type's own feature list, so this
+    // asserts the gating rather than a union no single type can satisfy. A
+    // WordPress install keeps its configuration in wp-config.php, has no
+    // repository and runs no worker of its own — offering those screens would
+    // be offering something that cannot work.
+    $names = collect($this->getJson("/api/applications/{$this->application->id}/sidebar")
+        ->assertOk()->json('items'))->pluck('name');
 
-    $response->assertOk();
+    expect($names)->toContain('app_dashboard', 'app_domain', 'app_file', 'app_log',
+        'app_backup', 'app_php', 'app_staging')
+        ->and($names)->not->toContain('app_deployment')
+        ->and($names)->not->toContain('app_environment')
+        ->and($names)->not->toContain('app_worker');
+});
 
-    $items = $response->json('items');
-    $names = collect($items)->pluck('name')->values();
+it('offers a git site deployment, environment and workers, but not staging', function () {
+    // The other half of the same rule. Staging is a WordPress recipe — URL
+    // rewriting inside serialised data, wp-cron disabled — and exists for
+    // nothing else yet, so a git site is not offered it.
+    $git = Application::factory()->create([
+        'system_user_id' => $this->systemUser->id,
+        'site_type' => 'git',
+    ]);
 
-    // A WordPress git app should include deployment, environment, workers,
-    // files, logs, backups, php settings, staging, and its own dashboard.
-    expect($names)->toContain('app_dashboard', 'app_domain', 'app_deployment',
-        'app_environment', 'app_worker', 'app_file', 'app_log', 'app_backup',
-        'app_php', 'app_staging');
+    $names = collect($this->getJson("/api/applications/{$git->id}/sidebar")
+        ->assertOk()->json('items'))->pluck('name');
+
+    expect($names)->toContain('app_deployment', 'app_environment', 'app_worker')
+        ->and($names)->not->toContain('app_staging');
 });
 
 it('returns correct relative URLs', function () {
@@ -58,10 +73,12 @@ it('returns correct relative URLs', function () {
     $items = $response->json('items');
     $byName = collect($items)->keyBy('name');
 
-    expect($byName['app_dashboard']['url'])->toBe('/dashboard')
+    // The dashboard's url is empty on purpose: it is the application's own
+    // root, so the frontend appends nothing. Asserted rather than assumed —
+    // a stray '/dashboard' here would send every sidebar one level too deep.
+    expect($byName['app_dashboard']['url'])->toBe('')
         ->and($byName['app_domain']['url'])->toBe('/domains')
-        ->and($byName['app_deployment']['url'])->toBe('/deployment')
-        ->and($byName['app_worker']['url'])->toBe('/workers')
+        ->and($byName['app_file']['url'])->toBe('/files')
         ->and($byName['app_log']['url'])->toBe('/logs');
 });
 
