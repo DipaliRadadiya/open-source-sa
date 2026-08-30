@@ -110,6 +110,14 @@
         Require all denied
     </DirectoryMatch>
 
+    {{-- And dotfiles, which the rule above does not cover: DirectoryMatch
+         matches directories, so `.git/` was refused while `.env` beside it was
+         served as a plain text file. Filenames only, so `.well-known` is
+         unaffected -- its own files are not dotfiles. --}}
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+
     ErrorLog  {{ $logDir }}/error.log
     CustomLog {{ $logDir }}/access.log combined
 @if ($waf && $waf['mode'] === 'detect')

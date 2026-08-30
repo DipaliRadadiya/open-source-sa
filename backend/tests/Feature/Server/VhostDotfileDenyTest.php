@@ -12,10 +12,17 @@ use Illuminate\Support\Facades\Process;
  *
  * `.panel/` holds the Basic-Auth credential file, and it lives *inside* the
  * served directory — so the only thing keeping the password hash off the
- * public internet is the vhost denying dotfile paths. nginx and Apache deny
- * every dotfile; OpenLiteSpeed cannot use a lookahead and denies an explicit
- * list, which named `.git`, `.svn`, `.hg`, `.bzr` and `.env` but not
- * `.panel` — so on OLS the file was downloadable.
+ * public internet is the vhost denying dotfile paths. nginx denies every
+ * dotfile; OpenLiteSpeed cannot use a lookahead and denies an explicit list,
+ * which named `.git`, `.svn`, `.hg`, `.bzr` and `.env` but not `.panel` — so
+ * on OLS the file was downloadable.
+ *
+ * Apache needed two rules and shipped with one. `DirectoryMatch` matches
+ * directories, so `.git/` was refused while a `.env` sitting beside it was
+ * served as plain text — on every Apache site, for as long as the driver has
+ * existed. Which is also why the environment file is kept above the document
+ * root wherever the layout allows it: this rule is the last line, not the
+ * first.
  *
  * Rendered templates rather than a live server, because the question is what
  * the config says, and that is answerable without the daemon.
@@ -88,6 +95,29 @@ it('denies the panel directory in every OpenLiteSpeed template that filters dotf
     }
 
     expect($withFilter)->toBeGreaterThan(0);
+});
+
+it('denies dotfile files in Apache, not just dotfile directories', function () {
+    // `<DirectoryMatch "/\.">` refuses `.git/` and says nothing at all about
+    // `.env`, which Apache then hands out as a text file. The panel writes an
+    // application's `.env` beside its code whenever the code root is served,
+    // so this is the rule that stops it being one request away.
+    $bodies = array_filter(
+        glob(base_path('resources/views/server/vhosts/apache/*.blade.php')) ?: [],
+        fn (string $path): bool => str_contains((string) file_get_contents($path), '<DirectoryMatch'),
+    );
+
+    expect($bodies)->not->toBeEmpty();
+
+    foreach ($bodies as $path) {
+        $source = (string) file_get_contents($path);
+
+        expect($source)->toContain('<FilesMatch "^\.">');
+
+        // Filenames only: an ACME challenge token is not a dotfile, so this
+        // must not have grown a lookahead that only appears to be needed.
+        expect($source)->not->toContain('<FilesMatch "^\.(?!well-known)">');
+    }
 });
 
 it('keeps the ACME challenge path reachable while denying dotfiles', function () {
