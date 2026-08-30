@@ -33,22 +33,89 @@ class ApplicationEnvironment
         private ApplicationProvisioner $provisioner,
     ) {}
 
+    /**
+     * Where this application's `.env` lives.
+     *
+     * The rule itself is {@see Application::envPath()} — beside the code, but
+     * never inside the served directory. It sits on the model because
+     * provisioning needs the same answer when it creates the file, and this
+     * class already depends on `ApplicationProvisioner`, so it cannot be the
+     * source without a container cycle.
+     */
     public function path(Application $application): string
     {
-        // .env lives at the app root, deliberately *outside* the document root:
-        // it holds the application's own secrets, and anything under the served
-        // directory is a URL somebody can fetch. `documentRoot()` resolves
-        // inside `public_html`, so it is the wrong anchor for this.
+        return $application->envPath();
+    }
+
+    /**
+     * Where the file used to be, before it moved beside the code.
+     *
+     * Sites deployed before that change have their `.env` at the app root, and
+     * the panel would otherwise open a different, empty file and offer to
+     * create one — quietly stranding the real settings one directory up.
+     * {@see migrateLegacy()}
+     */
+    private function legacyPath(Application $application): string
+    {
         return $application->rootPath().'/.env';
     }
 
     public function exists(Application $application): bool
     {
+        $this->migrateLegacy($application);
+
         return $this->serverOps->run(
             ['test', '-f', $this->path($application)],
             $this->context($application, 'env_exists'),
             timeout: 15,
         )->ok;
+    }
+
+    /**
+     * Move a pre-existing `.env` beside the code, once.
+     *
+     * A move rather than a copy, and only when the new location is empty:
+     * leaving both would give the site two `.env` files whose contents drift,
+     * and the one the panel showed would not be the one the application read —
+     * which is the bug this whole change exists to remove.
+     *
+     * Silent when there is nothing to move, which is every site created after
+     * this shipped.
+     */
+    private function migrateLegacy(Application $application): void
+    {
+        $legacy = $this->legacyPath($application);
+        $current = $this->path($application);
+
+        if ($legacy === $current) {
+            return;
+        }
+
+        $hasLegacy = $this->serverOps->run(
+            ['test', '-f', $legacy],
+            $this->context($application, 'env_legacy_check'),
+            timeout: 15,
+        )->ok;
+
+        if (! $hasLegacy) {
+            return;
+        }
+
+        $hasCurrent = $this->serverOps->run(
+            ['test', '-f', $current],
+            $this->context($application, 'env_legacy_check'),
+            timeout: 15,
+        )->ok;
+
+        if ($hasCurrent) {
+            return;
+        }
+
+        $this->serverOps->run(
+            ['mv', $legacy, $current],
+            $this->context($application, 'env_legacy_move'),
+            timeout: 15,
+        );
     }
 
     public function read(Application $application): string

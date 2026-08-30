@@ -922,6 +922,32 @@ Change the served directory (creates it if missing, rewrites vhost, tests + relo
 
 **Response `200`:** `{"application": {"id": 1, "web_root": "/public"}}`
 
+**`web_root` selects what the web server serves; it does not move the code.**
+A git checkout always lands at `{app_root}/public_html`, and the web root
+chooses a directory *inside* it. So a Laravel repository is deployed with
+`web_root: "/public"`:
+
+```
+/home/owner/shop/
+├── public_html/        ← the checkout: artisan, app/, .env
+│   └── public/         ← served
+└── logs/
+```
+
+This used to move the checkout down with the web root, which left a repository
+whose front controller lives in `public/` with no working configuration at all
+— empty web root and the served directory has no index; `/public` and the
+application's own `public/` lands one level too deep. Both 403, and both
+published the source.
+
+The application's **`.env` follows the code**: `{app_root}/public_html/.env`
+when a web root separates code from served directory, so the framework reads
+the same file the Environment screen edits. When there is no web root the code
+root *is* the served directory, and the file stays at `{app_root}/.env` instead
+— beside the code, but never inside what is served. A site in that state
+publishes its whole source anyway; the answer is a web root, not a different
+place to hide one file.
+
 ---
 
 ### DELETE `/applications/{application}`

@@ -405,10 +405,25 @@ class Application extends Model
      * resource or a form request can ask an application where it lives without
      * resolving a service to find out.
      */
+    /**
+     * The fixed base every site's files live under, whatever `web_root` says.
+     *
+     * `web_root` selects what the web server serves *inside* this directory;
+     * it does not move the directory. Those are two different questions and
+     * conflating them is what made a git-deployed Laravel application
+     * impossible to configure: the checkout landed wherever the served path
+     * pointed, so changing `web_root` moved the code along with it and the
+     * front controller was never at the root being served.
+     */
+    public function publicHtmlPath(): string
+    {
+        return $this->rootPath().'/public_html';
+    }
+
     public function documentRoot(): string
     {
         $webRoot = trim((string) $this->web_root, '/');
-        $base = $this->rootPath().'/public_html';
+        $base = $this->publicHtmlPath();
 
         return $webRoot === '' ? $base : "{$base}/{$webRoot}";
     }
@@ -427,14 +442,23 @@ class Application extends Model
      *    `web/`, `public/` — and their `craft` and `please` binaries sit one
      *    level above it. That is exactly where their installers `cd` to run
      *    them.
-     *  - A git site has its repository cloned *into* the document root, so
-     *    whatever the checkout contains is there, `web_root` notwithstanding.
+     *  - **A git site's checkout always lands at `public_html`**, whatever
+     *    `web_root` says. This used to read "cloned into the document root, so
+     *    whatever the checkout contains is there, `web_root` notwithstanding" —
+     *    which described the bug rather than the intent. A repository whose
+     *    front controller sits in `public/` has no valid configuration under
+     *    that rule: leave `web_root` empty and the served directory has no
+     *    index; set it to `/public` and the checkout moves down with it, so
+     *    the application's own `public/` ends up one level too deep. Either
+     *    way the site 403s and its source is published.
      *
-     * Derived from the type's {@see SiteType::fixedWebRoot()} rather than by
-     * pattern-matching on `web_root`, because that method is already the
-     * codebase's answer to "does this type's installer build a layout around
-     * the web root" — and a second, independent guess at the same question is
-     * a second thing to get wrong later.
+     * The first two are derived from the type's {@see SiteType::fixedWebRoot()}
+     * rather than by pattern-matching on `web_root`, because that method is
+     * already the codebase's answer to "does this type's installer build a
+     * layout around the web root". The git case asks
+     * {@see SiteType::method()} instead — a different question with a
+     * different answer: not "what layout does the installer build" but "how
+     * did the code get here", and a checkout always arrives in one place.
      *
      * This is the value `{path}` expands to in a cron command preset. A cron
      * job pointed at the wrong one of these directories does not fail — it runs
@@ -442,11 +466,15 @@ class Application extends Model
      */
     public function codePath(): string
     {
+        $type = app(SiteTypeManager::class)->find((string) $this->site_type);
+
+        if ($type?->method() === 'git') {
+            return $this->publicHtmlPath();
+        }
+
         $documentRoot = $this->documentRoot();
 
-        $fixed = app(SiteTypeManager::class)->find((string) $this->site_type)?->fixedWebRoot();
-
-        return $fixed === null ? $documentRoot : dirname($documentRoot);
+        return $type?->fixedWebRoot() === null ? $documentRoot : dirname($documentRoot);
     }
 
     /**
@@ -485,6 +513,37 @@ class Application extends Model
     public function panelPath(): string
     {
         return $this->rootPath().'/.panel';
+    }
+
+    /**
+     * The application's own `.env`.
+     *
+     * One rule: **beside the code, but never inside the served directory.**
+     *
+     * Those coincide wherever a web root separates the two — a checkout at
+     * `public_html` served from `public_html/public` gets its `.env` exactly
+     * where the framework reads it *and* out of reach over HTTP. They conflict
+     * only when the code root *is* the served directory, and safety wins
+     * there.
+     *
+     * nginx does deny dotfiles, but this codebase already decided not to rely
+     * on that: it is why `.panel` sits above the document root, after
+     * OpenLiteSpeed turned out not to apply its own dotfile rule to it.
+     *
+     * On the model rather than in `ApplicationEnvironment`, because
+     * provisioning needs the same answer when it creates the file and
+     * `ApplicationEnvironment` already depends on `ApplicationProvisioner` —
+     * so the service cannot be the source without a container cycle. Two
+     * places computing this independently is precisely how the panel ended up
+     * opening a `.env` the application never read.
+     */
+    public function envPath(): string
+    {
+        $code = $this->codePath();
+
+        return $code === $this->documentRoot()
+            ? $this->rootPath().'/.env'
+            : $code.'/.env';
     }
 
     /**

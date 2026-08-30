@@ -95,7 +95,14 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
         $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'reference' => null]);
 
         try {
-            $result = $deployer->deploy($application, $provisioner->documentRoot($application));
+            // The code root, not the document root. A checkout always lands at
+            // `public_html`; `web_root` selects what the web server serves
+            // *inside* it. Passing the document root here moved the checkout
+            // down with the web root, so a repository whose front controller
+            // lives in `public/` had no working configuration at all — empty
+            // web root and the served directory has no index, `/public` and
+            // the application's own `public/` lands one level too deep.
+            $result = $deployer->deploy($application, $application->codePath());
 
             $application->update([
                 'status' => ApplicationStatus::Active,

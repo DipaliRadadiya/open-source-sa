@@ -118,16 +118,22 @@ class ApplicationProvisioner
                 return $result;
             }
 
-            // The shared `.env`, at the app root rather than inside the served
-            // directory — it holds the application's own secrets, and anything
-            // under the document root is a URL. `ApplicationEnvironment::path()`
-            // reads the same location.
+            // The shared `.env`, beside the application's own code and outside
+            // the served directory — it holds the application's secrets, and
+            // anything under the document root is a URL.
+            //
+            // Asked of `Application` rather than spelled out again. The comment
+            // here used to say "`ApplicationEnvironment::path()` reads the same
+            // location", which was true only for as long as two separate
+            // strings happened to agree — and the WAF detect log, which had the
+            // same arrangement, had already drifted into the panel opening a
+            // file nothing wrote.
             //
             // Owned here rather than by `set_ownership` below, which only
             // descends the document root: `touch` runs elevated, and a
             // root-owned `.env` is one the site's own process cannot write and
             // the File Manager cannot edit.
-            $env = $application->rootPath().'/.env';
+            $env = $application->envPath();
 
             $result = $this->serverOps->run(
                 ['touch', $env],
