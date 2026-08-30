@@ -15,8 +15,12 @@ WorkingDirectory={{ $directory }}
 
 {{-- The dash means "if it exists". A worker reads the same environment as the
      application it belongs to — a queue worker with different credentials from
-     the site that queued the job is a long afternoon. --}}
-EnvironmentFile=-{{ $projectRoot }}/.env
+     the site that queued the job is a long afternoon.
+
+     Which means literally the same file the Environment screen edits, so it
+     comes from the model rather than being rebuilt from the project root
+     here. Three copies of this path had already drifted apart. --}}
+EnvironmentFile=-{{ $envPath }}
 Environment=PATH={{ $path }}
 
 ExecStart={{ $exec }}

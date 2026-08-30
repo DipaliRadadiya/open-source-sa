@@ -14,8 +14,13 @@ Group={{ $user }}
 WorkingDirectory={{ $documentRoot }}
 
 {{-- The dash means "if it exists". A site that keeps its configuration in the
-     environment rather than a file must still be able to start. --}}
-EnvironmentFile=-{{ $documentRoot }}/.env
+     environment rather than a file must still be able to start.
+
+     From the model, not spelled out again here: this unit and the panel's
+     Environment screen have to name the same file, and when they each built
+     the path themselves they stopped agreeing — the screen edited one `.env`
+     while systemd loaded another. --}}
+EnvironmentFile=-{{ $envPath }}
 Environment=NODE_ENV=production
 Environment=PATH={{ $path }}
 @if ($application->app_port)

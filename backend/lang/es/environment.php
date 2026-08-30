@@ -12,6 +12,10 @@ return [
     ],
 
     'checks' => [
+        'file_exposed' => [
+            'title' => 'El archivo de entorno es accesible desde la web',
+            'detail' => 'Este sitio sirve el directorio donde está su .env, así que el archivo queda a una URL de distancia y Apache no bloquea los archivos ocultos por nombre. Define una raíz web (una app Laravel sirve public/), lo que sitúa el directorio servido por debajo del archivo.',
+        ],
         'app_debug_on' => [
             'title' => 'El modo de depuración está activado',
             'detail' => 'Quien provoque un error verá la traza completa, incluidas las credenciales de la base de datos. Pon APP_DEBUG en false en un sitio en producción.',

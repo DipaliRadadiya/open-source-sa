@@ -36,10 +36,21 @@ class ApplicationEnvironmentResource extends JsonResource
         $framework = $detector->detect($application);
         $exists = $files->exists($application);
         $raw = $exists ? $files->read($application) : '';
+        $path = $files->path($application);
+
+        // The file is where the framework reads it, and that happens to be
+        // inside a directory the web server hands out by path. Reported rather
+        // than quietly relocated: moving it would break the application, and
+        // Apache's dotfile rule is a DirectoryMatch, which does not cover a
+        // `.env` file at all.
+        $exposed = $exists
+            && $application->servesFiles()
+            && str_starts_with($path, $application->documentRoot().'/');
 
         return [
             'exists' => $exists,
-            'path' => $files->path($application),
+            'path' => $path,
+            'exposed' => $exposed,
 
             'framework' => $framework,
             'framework_title' => __('environment.frameworks.'.$framework),
@@ -52,7 +63,7 @@ class ApplicationEnvironmentResource extends JsonResource
 
             'raw' => $raw,
             'variables' => $inspector->variables($raw),
-            'checks' => $exists ? $inspector->checks($raw, $framework) : [],
+            'checks' => $exists ? $inspector->checks($raw, $framework, $exposed) : [],
 
             'backups' => $files->backups($application),
         ];

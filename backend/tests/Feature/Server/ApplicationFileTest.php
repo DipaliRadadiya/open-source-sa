@@ -76,7 +76,13 @@ function fakeFileServer(): void
         FixPermissionsFake::$ran[] = implode(' ', $args);
 
         if ($binary === 'test' && ($args[1] ?? '') === '-f') {
-            return Process::result(exitCode: FixPermissionsFake::$envExists ? 0 : 1);
+            // Named, not "yes to everything": the panel asks about more than
+            // one candidate path now — a `.env` beside the code is the file
+            // the framework reads, and answering yes to all of them made this
+            // fake describe a site with two.
+            return Process::result(
+                exitCode: FixPermissionsFake::$envExists && ($args[2] ?? '') === '/home/siteowner/shop/.env' ? 0 : 1,
+            );
         }
 
         return Process::result(

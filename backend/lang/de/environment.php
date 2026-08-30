@@ -12,6 +12,10 @@ return [
     ],
 
     'checks' => [
+        'file_exposed' => [
+            'title' => 'Die Umgebungsdatei ist über das Web erreichbar',
+            'detail' => 'Diese Site liefert das Verzeichnis aus, in dem ihre .env liegt — die Datei ist also nur eine URL entfernt, und Apache sperrt Dotfiles nicht namentlich. Legen Sie ein Web-Root fest (eine Laravel-App liefert public/ aus); damit liegt das ausgelieferte Verzeichnis unterhalb der Datei.',
+        ],
         'app_debug_on' => [
             'title' => 'Der Debug-Modus ist aktiv',
             'detail' => 'Wer einen Fehler auslöst, sieht die vollständige Fehlerausgabe samt Datenbank-Zugangsdaten. Setzen Sie APP_DEBUG auf einer Live-Seite auf false.',

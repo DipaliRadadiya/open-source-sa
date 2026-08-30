@@ -305,6 +305,7 @@ class ProcessSupervisor
         return View::make('server.units.node', [
             'application' => $application,
             'documentRoot' => $documentRoot,
+            'envPath' => $application->envPath(),
             'logDir' => self::logDir($application),
             'user' => $application->systemUser->username,
             'exec' => $this->execStart($application),

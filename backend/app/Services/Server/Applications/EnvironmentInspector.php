@@ -67,7 +67,7 @@ class EnvironmentInspector
      *
      * @return array<int, array{key: string|null, value: string|null, severity: string, code: string, title: string, detail: string, suggested: string|null}>
      */
-    public function checks(string $raw, string $framework): array
+    public function checks(string $raw, string $framework, bool $exposed = false): array
     {
         // Read from the raw text, not from variables(), which blanks secret
         // values before they leave the server. APP_KEY matches the secret
@@ -76,6 +76,10 @@ class EnvironmentInspector
         $values = $this->rawValues($raw);
 
         return array_merge(
+            // First, because it is about the file rather than a line in it, and
+            // because no value inside the file matters as much as the file
+            // being fetchable.
+            $exposed ? [$this->check('file_exposed', 'error', null, null, null)] : [],
             $this->syntaxChecks($raw, $framework),
             $this->frameworkChecks($raw, $framework, $values),
         );

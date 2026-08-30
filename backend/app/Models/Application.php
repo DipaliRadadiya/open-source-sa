@@ -541,9 +541,29 @@ class Application extends Model
     {
         $code = $this->codePath();
 
-        return $code === $this->documentRoot()
+        return $code === $this->documentRoot() && $this->servesFiles()
             ? $this->rootPath().'/.env'
             : $code.'/.env';
+    }
+
+    /**
+     * Does this application's document root hand out files, or is it proxied?
+     *
+     * The distinction matters to {@see envPath()} and nowhere else yet. A Node
+     * application is reached through a reverse proxy: nothing under its
+     * document root is fetchable by path, and the vhost denies dotfiles ahead
+     * of the proxy besides. Treating that directory as "served" moved the
+     * `.env` a level up for safety it did not need — while the systemd unit
+     * went on loading `EnvironmentFile` from the code root, so the panel
+     * offered an editor for a file the service never read.
+     *
+     * `php` and `static` genuinely serve what is in the directory, and there
+     * the rule holds: Apache's dotfile rule is a `DirectoryMatch`, which does
+     * not cover a `.env` *file* at all.
+     */
+    public function servesFiles(): bool
+    {
+        return $this->serving_profile !== 'node';
     }
 
     /**

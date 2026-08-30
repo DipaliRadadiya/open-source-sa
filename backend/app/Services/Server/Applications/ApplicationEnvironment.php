@@ -34,17 +34,48 @@ class ApplicationEnvironment
     ) {}
 
     /**
+     * Resolved paths by application id, so one request does not re-stat.
+     *
+     * @var array<int, string>
+     */
+    private array $resolved = [];
+
+    /**
      * Where this application's `.env` lives.
      *
-     * The rule itself is {@see Application::envPath()} — beside the code, but
-     * never inside the served directory. It sits on the model because
-     * provisioning needs the same answer when it creates the file, and this
-     * class already depends on `ApplicationProvisioner`, so it cannot be the
-     * source without a container cycle.
+     * Two rules, because they answer different questions. **Create where it is
+     * safe** — {@see Application::envPath()}, beside the code but never inside
+     * a file-served directory. **Read where it actually is**: if a `.env`
+     * already sits beside the code, that is the file the framework loads, and
+     * that is the one this screen must open.
+     *
+     * Without the second rule the panel reported "no environment file" for a
+     * site whose `.env` was plainly visible in the file manager, and a save
+     * would have written a second copy one directory up that nothing reads.
+     * Declining to show an already-exposed file does not unexpose it; it only
+     * hides it from the one person who could move it.
      */
     public function path(Application $application): string
     {
-        return $application->envPath();
+        return $this->resolved[$application->id] ??= $this->resolve($application);
+    }
+
+    private function resolve(Application $application): string
+    {
+        $preferred = $application->envPath();
+        $beside = $application->codePath().'/.env';
+
+        if ($beside === $preferred) {
+            return $preferred;
+        }
+
+        $exists = $this->serverOps->run(
+            ['test', '-f', $beside],
+            $this->context($application, 'env_locate'),
+            timeout: 15,
+        )->ok;
+
+        return $exists ? $beside : $preferred;
     }
 
     /**

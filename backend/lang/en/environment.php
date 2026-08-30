@@ -20,6 +20,10 @@ return [
     ],
 
     'checks' => [
+        'file_exposed' => [
+            'title' => 'The environment file can be reached over the web',
+            'detail' => 'This site serves the directory its .env sits in, so the file is one URL away and Apache does not deny dotfiles by name. Set a web root (a Laravel app serves public/), which moves the served directory below the file.',
+        ],
         'app_debug_on' => [
             'title' => 'Debug mode is on',
             'detail' => 'Visitors who trigger an error see a full stack trace, including database credentials. Set APP_DEBUG to false on a live site.',

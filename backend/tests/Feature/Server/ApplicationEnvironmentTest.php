@@ -264,3 +264,78 @@ describe('permissions', function () {
         $this->getJson(envUrl())->assertUnauthorized();
     });
 });
+
+describe('which file the screen opens', function () {
+    it('opens the .env beside the code when one is already there', function () {
+        // This site's code root is also its served directory, so the panel
+        // creates a .env one level above it. The framework does not look
+        // there: it reads the one beside its own code — which git put there,
+        // which the file manager shows, and which the screen used to report as
+        // "no environment file", offering to create a second copy that nothing
+        // would ever read.
+        $beside = '/home/envowner/deployed-site/public_html/.env';
+        $this->disk = [$beside => "APP_ENV=production\nAPP_KEY=base64:real\n"];
+        fakeSite();
+
+        $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
+
+        expect($response->json('environment.exists'))->toBeTrue()
+            ->and($response->json('environment.path'))->toBe($beside)
+            ->and($response->json('environment.raw'))->toContain('base64:real');
+    });
+
+    it('says so when that file is reachable over the web', function () {
+        $this->disk = ['/home/envowner/deployed-site/public_html/.env' => "APP_KEY=base64:real\n"];
+        fakeSite();
+
+        $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
+
+        // Reported, not silently relocated. Moving it would break the site,
+        // and Apache's dotfile rule is a DirectoryMatch — it does not cover a
+        // `.env` file at all, so this is a live disclosure and not a theory.
+        expect($response->json('environment.exposed'))->toBeTrue()
+            ->and(collect($response->json('environment.checks'))->pluck('code'))
+            ->toContain('file_exposed');
+    });
+
+    it('does not cry exposure for a file the panel put out of reach', function () {
+        // The default fixture: .env above public_html, which is where the
+        // panel creates one and where it stays for a site with a web root.
+        fakeSite();
+
+        $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
+
+        expect($response->json('environment.exposed'))->toBeFalse()
+            ->and(collect($response->json('environment.checks'))->pluck('code'))
+            ->not->toContain('file_exposed');
+    });
+
+    it('writes to the file it opened, not the one policy would create', function () {
+        $beside = '/home/envowner/deployed-site/public_html/.env';
+        $this->disk = [$beside => "APP_ENV=production\n"];
+        fakeSite();
+
+        $paths = new ArrayObject;
+        Process::fake(function ($process) use ($paths, $beside) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'tee') {
+                $paths[] = (string) ($args[1] ?? '');
+            }
+
+            if (($args[0] ?? '') === 'cat') {
+                return Process::result(output: "APP_ENV=production\n");
+            }
+
+            return Process::result(exitCode: ($args[0] ?? '') === 'test' && ($args[2] ?? '') !== $beside ? 1 : 0);
+        });
+
+        $this->actingAs($this->admin)
+            ->putJson(envUrl(), ['raw' => "APP_ENV=production\nMAIL_FROM=hi@x.test\n"])
+            ->assertOk();
+
+        // A save that lands anywhere else is the same bug from the other end.
+        expect(collect($paths)->every(fn (string $p): bool => str_starts_with($p, $beside)))->toBeTrue()
+            ->and($paths->count())->toBeGreaterThan(0);
+    });
+});

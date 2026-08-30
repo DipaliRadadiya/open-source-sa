@@ -12,6 +12,10 @@ return [
     ],
 
     'checks' => [
+        'file_exposed' => [
+            'title' => 'Le fichier d’environnement est accessible depuis le web',
+            'detail' => 'Ce site sert le répertoire où se trouve son .env : le fichier est donc à une URL près, et Apache ne refuse pas les fichiers cachés par leur nom. Définissez une racine web (une app Laravel sert public/), ce qui place le répertoire servi sous le fichier.',
+        ],
         'app_debug_on' => [
             'title' => 'Le mode débogage est activé',
             'detail' => 'Quiconque déclenche une erreur voit la trace complète, y compris les identifiants de base de données. Mettez APP_DEBUG à false sur un site en production.',

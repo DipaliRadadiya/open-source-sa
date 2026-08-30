@@ -12,6 +12,10 @@ return [
     ],
 
     'checks' => [
+        'file_exposed' => [
+            'title' => 'O arquivo de ambiente pode ser acessado pela web',
+            'detail' => 'Este site serve o diretório onde está o seu .env, então o arquivo fica a uma URL de distância e o Apache não bloqueia dotfiles pelo nome. Defina uma raiz web (uma app Laravel serve public/), o que coloca o diretório servido abaixo do arquivo.',
+        ],
         'app_debug_on' => [
             'title' => 'O modo de depuração está ligado',
             'detail' => 'Quem provocar um erro vê o rastreio completo, incluindo as credenciais da base de dados. Defina APP_DEBUG como false num site em produção.',

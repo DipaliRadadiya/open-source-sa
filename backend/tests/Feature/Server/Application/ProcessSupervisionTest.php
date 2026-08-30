@@ -89,6 +89,41 @@ describe('the unit', function () {
             ->toContain('MemoryMax=512M');
     });
 
+    it('loads the same .env the Environment screen edits', function () {
+        // These were two independent path calculations, and they disagreed for
+        // every Node application: the unit read `{documentRoot}/.env` while the
+        // screen edited one a directory above it. The user saw their file in
+        // the file manager, an empty editor in the panel, and a service that
+        // read neither of the two the panel could name.
+        $written = new ArrayObject;
+        Process::fake(function ($p) use ($written) {
+            if (($p->command[0] ?? '') === 'tee') {
+                $written[] = (string) $p->input;
+            }
+
+            return Process::result(output: '');
+        });
+
+        $application = nodeApp(['serving_profile' => 'node']);
+
+        app(ProcessSupervisor::class)->apply($application, '/home/appuser/api.test');
+
+        $unit = collect($written)->first(fn (string $body): bool => str_contains($body, '[Unit]')) ?? '';
+
+        expect($unit)->toContain('EnvironmentFile=-'.$application->envPath());
+    });
+
+    it('keeps a proxied app\'s .env at its code root', function () {
+        // Nothing under a Node app's document root is fetchable by path — the
+        // vhost proxies, and denies dotfiles ahead of the proxy besides. The
+        // "never inside the served directory" rule was written for a directory
+        // the web server hands out, and moving the file for a proxied app only
+        // put it where the application does not look.
+        $application = nodeApp(['serving_profile' => 'node']);
+
+        expect($application->envPath())->toBe($application->codePath().'/.env');
+    });
+
     it('checks the app is actually up, not just that start returned zero', function () {
         // `systemctl start` succeeds for a unit that starts and immediately
         // dies — which is exactly what a bad start command does.

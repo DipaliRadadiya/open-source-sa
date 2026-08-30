@@ -278,6 +278,7 @@ class WorkerSupervisor
             'application' => $application,
             'user' => $application->systemUser->username,
             'projectRoot' => $projectRoot,
+            'envPath' => $application->envPath(),
             'directory' => $worker->directory ?: $projectRoot,
             'exec' => $this->execStart($worker),
             'path' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
