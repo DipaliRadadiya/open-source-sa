@@ -84,6 +84,10 @@ export function SslSection({
     try {
       const updated = await setForceHttps(appId, next);
       setCert(updated);
+      // Named per direction, not a generic "Saved". The switch moves under the
+      // cursor either way, so the useful confirmation is which state it landed
+      // in — and turning this ON changes what every visitor gets.
+      toast.success(next ? t("ssl.forceHttpsEnabled") : t("ssl.forceHttpsDisabled"));
     } catch (error) {
       toast.error(apiMessage(error, t("ssl.forceHttpsFailed")));
     } finally {
