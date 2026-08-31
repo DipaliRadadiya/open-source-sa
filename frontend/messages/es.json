@@ -2718,9 +2718,9 @@
       "rejected": "{provider} rechazó este token. Comprueba que lo copiaste completo y que tiene acceso a tus repositorios.",
       "nextStep": "Cuenta conectada. Ve a Aplicaciones → Crear para elegir esta cuenta como origen.",
       "placeholders": {
-        "token_github": "ghp_… o github_pat_…",
-        "token_gitlab": "glpat-…",
-        "token_bitbucket": "Tu contraseña de aplicación de Bitbucket",
+        "token_github": "Token de acceso personal — ghp_… o github_pat_…",
+        "token_gitlab": "Token de acceso personal — glpat-…",
+        "token_bitbucket": "Token de API con permisos",
         "host": "https://gitlab.example.com",
         "workspace": "tu-workspace-id"
       }

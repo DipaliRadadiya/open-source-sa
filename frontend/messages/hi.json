@@ -2718,9 +2718,9 @@
       "rejected": "{provider} ने यह टोकन अस्वीकार कर दिया। देखें कि वह पूरा कॉपी हुआ है और उसे आपकी रिपॉज़िटरी तक पहुँच है।",
       "nextStep": "खाता जुड़ गया। ऐप्लिकेशन → बनाएँ पर जाएँ और इस खाते को स्रोत के रूप में चुनें।",
       "placeholders": {
-        "token_github": "ghp_… या github_pat_…",
-        "token_gitlab": "glpat-…",
-        "token_bitbucket": "आपका Bitbucket ऐप पासवर्ड",
+        "token_github": "पर्सनल एक्सेस टोकन — ghp_… या github_pat_…",
+        "token_gitlab": "पर्सनल एक्सेस टोकन — glpat-…",
+        "token_bitbucket": "स्कोप्स वाला API टोकन",
         "host": "https://gitlab.example.com",
         "workspace": "your-workspace-id"
       }

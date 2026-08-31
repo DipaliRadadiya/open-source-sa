@@ -19,6 +19,11 @@ export const providerFieldSchema = z.object({
   label: z.string(),
   required: z.boolean().default(false),
   type: z.string().default("text"),
+  // Per-field guidance, written and localized by the backend — what a
+  // self-hosted GitLab URL should contain, where a Bitbucket workspace id comes
+  // from. It was being sent all along and stripped here, so two fields that had
+  // an explanation rendered without one. Null when the field speaks for itself.
+  help: z.string().nullish(),
 });
 
 export const providerSchema = z.object({

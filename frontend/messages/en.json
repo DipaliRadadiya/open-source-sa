@@ -2718,9 +2718,9 @@
       "rejected": "{provider} rejected this token. Check it was copied in full and has access to your repositories.",
       "nextStep": "You're connected. Go to Applications → Create to choose this account as your source.",
       "placeholders": {
-        "token_github": "ghp_… or github_pat_…",
-        "token_gitlab": "glpat-…",
-        "token_bitbucket": "Your Bitbucket app password",
+        "token_github": "Personal access token — ghp_… or github_pat_…",
+        "token_gitlab": "Personal access token — glpat-…",
+        "token_bitbucket": "API token with scopes",
         "host": "https://gitlab.example.com",
         "workspace": "your-workspace-id"
       }

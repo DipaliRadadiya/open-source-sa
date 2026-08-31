@@ -223,11 +223,16 @@ export function ConnectForm({
                 </FormControl>
                 {isSecret(spec) ? (
                   <TokenHelp
-                    help={provider.token_help}
+                    help={spec.help ?? provider.token_help}
                     url={tokenUrl}
                     value={field.value}
                     provider={provider}
                   />
+                ) : spec.help ? (
+                  // The backend's own words for this field. Everything else
+                  // here is generated from the field list, so a form control
+                  // that needs explaining had nowhere to say so.
+                  <FormDescription>{spec.help}</FormDescription>
                 ) : null}
                 <FormMessage field={spec.label} />
               </FormItem>
