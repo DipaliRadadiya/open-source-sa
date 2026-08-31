@@ -262,11 +262,17 @@ export function RedisForm({ redis, canManage, changedBy }) {
                 <Row
                   label={t("redis.password")}
                   hint={
-                    redis?.password_manageable === false
-                      ? t("redis.passwordLocked")
-                      : changing
-                        ? t("redis.passwordHint")
-                        : t("redis.currentPasswordHint")
+                    // The full sentence lives here, where it has the width to
+                    // be read. It was the placeholder too, in a 224px box.
+                    passwordUnreadable
+                      ? t("redis.passwordUnknown")
+                      : redis?.password_manageable === false
+                        ? t("redis.passwordLocked")
+                        : changing
+                          ? t("redis.passwordHint")
+                          : showStored
+                            ? t("redis.currentPasswordHint")
+                            : t("redis.passwordHintNone")
                   }
                   error={validationMessage(
                     tv,
@@ -283,8 +289,8 @@ export function RedisForm({ redis, canManage, changedBy }) {
                             autoComplete="new-password"
                             autoFocus={changing}
                             placeholder={
-                              redis?.has_password === null
-                                ? t("redis.passwordUnknown")
+                              passwordUnreadable
+                                ? t("redis.passwordUnknownShort")
                                 : t("redis.newPasswordPlaceholder")
                             }
                             disabled={passwordLocked}
