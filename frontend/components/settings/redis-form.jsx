@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordReveal } from "@/components/system-users/password-reveal";
 import {
   Select,
   SelectContent,
@@ -35,7 +36,13 @@ import {
 export function RedisForm({ redis, canManage, changedBy }) {
   // Changing the password also rewrites the panel's own REDIS_PASSWORD, so an
   // install that cannot write its .env cannot do this at all.
-  const passwordLocked = !canManage || redis?.password_manageable === false;
+  // `has_password === null` means the panel's stored credential does not open
+  // a connection, and the API answers 422 to a password change in that state —
+  // it is applied after the response, so accepting one would report success for
+  // something that could not work. Offering the field would be inviting that.
+  const passwordUnreadable = redis?.has_password === null;
+  const passwordLocked =
+    !canManage || redis?.password_manageable === false || passwordUnreadable;
   const t = useTranslations("settings.performance");
   const tv = useTranslations("settings.validation");
   const router = useRouter();
@@ -47,6 +54,9 @@ export function RedisForm({ redis, canManage, changedBy }) {
   // says what was submitted and offers a re-read, and never claims a result it
   // did not observe.
   const [applying, setApplying] = useState(false);
+  // Swapped in only when someone asks to replace the password, so the row
+  // normally reads as the credential it holds rather than an empty form field.
+  const [changing, setChanging] = useState(false);
 
   // One automatic re-read, so the common case settles without being asked.
   // Not a poll: with nothing to poll for, repeating the request would only
@@ -56,6 +66,11 @@ export function RedisForm({ redis, canManage, changedBy }) {
     const timer = setTimeout(() => router.refresh(), 5000);
     return () => clearTimeout(timer);
   }, [applying, router]);
+
+  // Show the stored value unless the reader has asked to replace it. Falls
+  // through to the input when there is nothing stored to show — a server with
+  // no password, or a caller the API will not give it to.
+  const showStored = Boolean(redis?.password) && !changing;
 
   const defaults = {
     maxmemory: redis?.maxmemory ?? "0",
@@ -105,12 +120,14 @@ export function RedisForm({ redis, canManage, changedBy }) {
       // what "the password was not updated" looks like.
       if (response?.status === 202) {
         form.reset({ ...values, password: "" });
+        setChanging(false);
         setApplying(true);
         return;
       }
 
       toast.success(t("redis.saved"));
       form.reset({ ...values, password: "" });
+      setChanging(false);
       router.refresh();
     } catch (error) {
       handleValidationError(error, form);
@@ -234,6 +251,10 @@ export function RedisForm({ redis, canManage, changedBy }) {
               )}
             />
   
+            {/* One row, not two. A permanent second password box read as a
+                form asking for two passwords; nobody is changing this often
+                enough to keep an input on screen for it. The stored value is
+                what the row shows, and replacing it is a deliberate step. */}
             <FormField
               control={form.control}
               name="password"
@@ -243,7 +264,9 @@ export function RedisForm({ redis, canManage, changedBy }) {
                   hint={
                     redis?.password_manageable === false
                       ? t("redis.passwordLocked")
-                      : t("redis.passwordHint")
+                      : changing
+                        ? t("redis.passwordHint")
+                        : t("redis.currentPasswordHint")
                   }
                   error={validationMessage(
                     tv,
@@ -251,39 +274,80 @@ export function RedisForm({ redis, canManage, changedBy }) {
                   )}
                 >
                   <div className="space-y-1.5">
-                    <FormControl>
-                      <PasswordInput
-                        autoComplete="new-password"
-                        placeholder={
-                          redis?.has_password
-                            ? t("redis.passwordSet")
-                            : t("redis.passwordNone")
-                        }
-                        disabled={passwordLocked}
-              disabledReason={
-                !canManage
-                  ? t("noPermission")
-                  : t("passwordNotManageable")
-              }
-                        {...field}
-                      />
-                    </FormControl>
-  
+                    {showStored ? (
+                      <PasswordReveal password={redis.password} className="text-left" />
+                    ) : (
+                      <>
+                        <FormControl>
+                          <PasswordInput
+                            autoComplete="new-password"
+                            autoFocus={changing}
+                            placeholder={
+                              redis?.has_password === null
+                                ? t("redis.passwordUnknown")
+                                : t("redis.newPasswordPlaceholder")
+                            }
+                            disabled={passwordLocked}
+                            disabledReason={
+                              !canManage
+                                ? t("noPermission")
+                                : passwordUnreadable
+                                  ? t("redis.passwordUnknown")
+                                  : t("passwordNotManageable")
+                            }
+                            {...field}
+                          />
+                        </FormControl>
+
+                        {/* Only when there is something to go back to. */}
+                        {changing ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => {
+                              setChanging(false);
+                              form.resetField("password");
+                            }}
+                          >
+                            {t("redis.changeCancel")}
+                          </Button>
+                        ) : null}
+                      </>
+                    )}
+
                     {/* Setting a password was possible; clearing one was not, so
                         a password could only ever be replaced. The API has taken
                         `remove_password` all along. Its own action rather than a
                         magic empty value — the API needs the distinction too,
                         because Laravel rewrites "" to null before validation. */}
-                    {redis?.has_password && !passwordLocked ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setRemoving(true)}
-                      >
-                        {t("redis.removePassword")}
-                      </Button>
+                    {!passwordLocked && !changing ? (
+                      <div className="flex flex-wrap items-center gap-1">
+                        {showStored ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7"
+                            onClick={() => setChanging(true)}
+                          >
+                            {t("redis.changePassword")}
+                          </Button>
+                        ) : null}
+
+                        {redis?.has_password === true ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => setRemoving(true)}
+                          >
+                            {t("redis.removePassword")}
+                          </Button>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 </Row>
@@ -291,7 +355,8 @@ export function RedisForm({ redis, canManage, changedBy }) {
             />
           </Section>
         </form>
-  
+
+
         <ConfirmDialog
           open={removing}
           onOpenChange={(open) => !open && setRemoving(false)}

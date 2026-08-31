@@ -114,7 +114,21 @@ export const rebootSchedulePresetsSchema = z.object({
 export const redisSettingsSchema = z.object({
   maxmemory: z.string(),
   maxmemory_policy: z.string(),
-  has_password: z.boolean(),
+  /*
+   * Three states, not two. `null` means the panel could not read the config to
+   * tell — which is NOT "no password is set", and drawing it as such would
+   * invite someone to set one on a server that already has one.
+   *
+   * This was `z.boolean()`, so a server answering null failed the whole
+   * settings response and every tab on the page — Server, Access, Memory,
+   * Updates — rendered "This part could not be loaded". One unreadable Redis
+   * config took down a page that is mostly about neither Redis nor passwords.
+   */
+  has_password: z.boolean().nullable(),
+  // Sent since 2026-08-31, and only to a caller with `setting` manage. Null
+  // when none is set, when the panel could not read it, or when the caller is
+  // not allowed it — `has_password` is what tells those apart.
+  password: z.string().nullable().optional(),
   // False when the panel cannot write its own .env. The docs are explicit that
   // the control should be disabled rather than offered and then refused.
   password_manageable: z.boolean().optional().default(true),
