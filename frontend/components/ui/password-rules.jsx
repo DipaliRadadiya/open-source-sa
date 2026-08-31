@@ -12,12 +12,12 @@ import { passwordRules } from "@/lib/auth/password-rules";
  * thing you need while you are inventing the password, not after it has been
  * rejected.
  */
-export function PasswordRules({ value, className }) {
+export function PasswordRules({ value, policy, className }) {
   const t = useTranslations("common.passwordRules");
 
   return (
     <ul className={cn("space-y-1 pt-0.5", className)}>
-      {passwordRules(value).map((rule) => (
+      {passwordRules(value, policy).map((rule) => (
         <li
           key={rule.key}
           className={cn(
@@ -30,7 +30,7 @@ export function PasswordRules({ value, className }) {
           ) : (
             <Circle className="size-3.5 text-muted-foreground/50" />
           )}
-          {t(rule.key)}
+          {t(rule.key, { min: rule.min })}
         </li>
       ))}
     </ul>

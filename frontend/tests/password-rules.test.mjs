@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { passwordRules, passwordMeetsRules } from "../lib/auth/password-rules.js";
+import {
+  passwordRules,
+  passwordMeetsRules,
+  DEFAULT_PASSWORD_POLICY,
+} from "../lib/auth/password-rules.js";
 import { registerSchema } from "../lib/schemas/auth.js";
 import { changePasswordSchema } from "../lib/schemas/account.js";
 
@@ -58,4 +62,36 @@ test("the checklist agrees with both schemas it describes", () => {
     });
     assert.equal(change.success, expected, `change disagreed on ${JSON.stringify(password)}`);
   }
+});
+
+// --- policy-driven (the server publishes it on GET /basic-info) -------------
+
+test("only the rules the policy asks for are shown", () => {
+  const relaxed = { min_length: 8, requires_mixed_case: false, requires_number: false, requires_symbol: false };
+  assert.deepEqual(passwordRules("abcdefgh", relaxed).map((r) => r.key), ["length"]);
+  // A line that can never fail is noise; one the server does not enforce is a lie.
+  assert.equal(passwordMeetsRules("abcdefgh", relaxed), true);
+});
+
+test("a symbol requirement appears only when the policy sets it", () => {
+  const strict = { min_length: 10, requires_mixed_case: true, requires_number: true, requires_symbol: true };
+  assert.equal(passwordRules("CorrectHorse1", strict).some((r) => r.key === "symbol"), true);
+  assert.equal(passwordMeetsRules("CorrectHorse1", strict), false);
+  assert.equal(passwordMeetsRules("CorrectHorse1!", strict), true);
+  // Default policy has it off, so the same password passes there.
+  assert.equal(passwordMeetsRules("CorrectHorse1"), true);
+});
+
+test("the length rule carries the number it is checking", () => {
+  const [length] = passwordRules("", { ...DEFAULT_PASSWORD_POLICY, min_length: 16 });
+  assert.equal(length.min, 16);
+  assert.equal(passwordMeetsRules("Abcdefghijklmno1", { ...DEFAULT_PASSWORD_POLICY, min_length: 16 }), true);
+  assert.equal(passwordMeetsRules("Abcdefghi1", { ...DEFAULT_PASSWORD_POLICY, min_length: 16 }), false);
+});
+
+test("a missing or partial policy falls back rather than showing nothing", () => {
+  // An older backend sends no password_policy at all.
+  assert.deepEqual(passwordRules("", null).map((r) => r.key), ["length", "case", "number"]);
+  assert.deepEqual(passwordRules("", {}).map((r) => r.key), ["length", "case", "number"]);
+  assert.equal(passwordRules("", { min_length: undefined })[0].min, DEFAULT_PASSWORD_POLICY.min_length);
 });

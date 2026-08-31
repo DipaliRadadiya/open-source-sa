@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-export function RegisterForm() {
+export function RegisterForm({ policy }) {
   const router = useRouter();
   const t = useTranslations("auth");
   const form = useForm({
@@ -103,7 +103,7 @@ export function RegisterForm() {
                   {...field}
                 />
               </FormControl>
-              <PasswordRules value={field.value} />
+              <PasswordRules value={field.value} policy={policy} />
               <FormMessage field={t('fields.password')} />
             </FormItem>
           )}

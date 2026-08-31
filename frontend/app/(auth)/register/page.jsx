@@ -35,7 +35,7 @@ export default async function RegisterPage() {
         <CardDescription>{t("registerSubtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
-        <RegisterForm />
+        <RegisterForm policy={basicInfo.password_policy} />
         <p className="text-center text-sm text-muted-foreground">
           {t("haveAccount")}{" "}
           <Link href="/login" className="font-medium text-primary hover:underline">
