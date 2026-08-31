@@ -11,6 +11,7 @@ import {
   Search,
   Sparkles,
   TriangleAlert,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ function TypeIcon({ type, className }) {
  */
 export function SiteTypePicker({ types = [], value, onChange }) {
   const t = useTranslations("applications");
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   // The sticky header is not empty space, whatever the positioning engine
   // thinks — see hooks/use-chrome-offset.js.
@@ -137,6 +139,23 @@ export function SiteTypePicker({ types = [], value, onChange }) {
             className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
             aria-label={t("form.typeSearch")}
           />
+          {/* Inline rather than absolutely positioned: this input is
+              borderless inside the row, so there is no box to sit inside.
+              Focus returns to the field — clearing is almost always followed
+              by typing something else. */}
+          {query ? (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                searchRef.current?.focus();
+              }}
+              aria-label={tc("clearSearch")}
+              className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
         </div>
         <div className="max-h-80 min-h-0 flex-1 overflow-y-auto p-1">
           {filtered.length ? (

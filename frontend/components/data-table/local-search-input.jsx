@@ -2,6 +2,7 @@
 
 import { Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
 /**
@@ -10,10 +11,10 @@ import { Input } from "@/components/ui/input";
  * lists. Owns no state: the parent holds `value` and filters its own data.
  * Renders the search icon and a clear (×) button when non-empty.
  */
-export function LocalSearchInput({ value, onChange, placeholder }) {
+export function LocalSearchInput({ value, onChange, placeholder, className }) {
   const tc = useTranslations("common");
   return (
-    <div className="relative w-full sm:max-w-xs">
+    <div className={cn("relative w-full sm:max-w-xs", className)}>
       <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         value={value}

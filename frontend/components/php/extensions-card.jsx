@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ChevronDown, Loader2, SearchX, TriangleAlert } from "lucide-react";
 import { setPhpExtension } from "@/lib/api/php";
-import { Input } from "@/components/ui/input";
+import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -136,15 +136,14 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
 
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Input
+          {/* The shared box, not a bare Input: it brings the search icon and
+              the clear (×), which this had neither of — a mistyped filter could
+              only be undone by selecting the text and deleting it. */}
+          <LocalSearchInput
             value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-            }}
+            onChange={setQuery}
             placeholder={t("extensions.search")}
             className="sm:max-w-64"
-            autoComplete="off"
-            spellCheck={false}
           />
           <ToggleGroup
             type="single"
