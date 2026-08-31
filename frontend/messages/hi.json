@@ -213,6 +213,8 @@
     "invalidPath": "एक मान्य पथ दर्ज करें",
     "invalidMode": "ठीक 3 ऑक्टल अंक दर्ज करें, जैसे 644",
     "required_bucket": "बकेट ज़रूरी है",
+    "required_endpoint": "एंडपॉइंट ज़रूरी है",
+    "required_region": "रीजन ज़रूरी है",
     "required_accessKey": "एक्सेस की ज़रूरी है",
     "required_secretKey": "सीक्रेट की ज़रूरी है",
     "max100": "100 अक्षर या उससे कम होने चाहिए",
@@ -2106,6 +2108,7 @@
       "failed": "सफ़ाई पूरी नहीं हो सकी।"
     },
     "schedule": {
+      "saving": "सहेजा जा रहा है…",
       "title": "स्वचालित सफ़ाई",
       "on": "चालू",
       "summaryOn": "{frequency} चलती है · {count, plural, one {# चीज़} other {# चीज़ें}}",
@@ -3222,7 +3225,9 @@
         "missingDomains": "ये नाम अभी प्रमाणपत्र पर नहीं हैं: {domains}. इन्हें शामिल करने के लिए फिर से जारी करें।",
         "forceHttps": "HTTPS अनिवार्य करें",
         "forceHttpsHint": "हर आगंतुक को HTTP से HTTPS पर रीडायरेक्ट करें।",
-        "forceHttpsFailed": "HTTPS रीडायरेक्ट नहीं बदला जा सका।",
+        "forceHttpsEnabled": "अब विज़िटर HTTPS पर रीडायरेक्ट होंगे।",
+          "forceHttpsDisabled": "HTTPS रीडायरेक्ट बंद। साइट HTTP पर भी जवाब देगी।",
+          "forceHttpsFailed": "HTTPS रीडायरेक्ट नहीं बदला जा सका।",
         "deleteFailed": "प्रमाणपत्र नहीं हटाया जा सका।",
         "removeTitle": "प्रमाणपत्र हटाएँ?",
         "removeBody": "साइट बिना एन्क्रिप्शन के HTTP पर वापस आ जाएगी और स्वतः नवीनीकरण रुक जाएगा। इसे पूर्ववत नहीं किया जा सकता।",

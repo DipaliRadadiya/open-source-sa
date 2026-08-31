@@ -213,6 +213,8 @@
     "invalidPath": "Introduce una ruta válida",
     "invalidMode": "Introduce exactamente 3 dígitos octales, p. ej. 644",
     "required_bucket": "El bucket es obligatorio",
+    "required_endpoint": "El endpoint es obligatorio",
+    "required_region": "La región es obligatoria",
     "required_accessKey": "La clave de acceso es obligatoria",
     "required_secretKey": "La clave secreta es obligatoria",
     "max100": "Debe tener 100 caracteres o menos",
@@ -2106,6 +2108,7 @@
       "failed": "No se pudo completar la limpieza."
     },
     "schedule": {
+      "saving": "Guardando…",
       "title": "Limpieza automática",
       "on": "Activa",
       "summaryOn": "Se ejecuta {frequency} · {count, plural, one {# elemento} other {# elementos}}",
@@ -3222,7 +3225,9 @@
         "missingDomains": "Estos nombres aún no están en el certificado: {domains}. Reemítelo para incluirlos.",
         "forceHttps": "Forzar HTTPS",
         "forceHttpsHint": "Redirige a todos los visitantes de HTTP a HTTPS.",
-        "forceHttpsFailed": "No se pudo cambiar la redirección de HTTPS.",
+        "forceHttpsEnabled": "Los visitantes ahora se redirigen a HTTPS.",
+          "forceHttpsDisabled": "Redirección a HTTPS desactivada. El sitio también responde por HTTP.",
+          "forceHttpsFailed": "No se pudo cambiar la redirección de HTTPS.",
         "deleteFailed": "No se pudo eliminar el certificado.",
         "removeTitle": "¿Eliminar el certificado?",
         "removeBody": "El sitio volverá a HTTP sin cifrar y se detendrá la renovación automática. Esto no se puede deshacer.",
