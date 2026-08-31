@@ -371,17 +371,24 @@ it('refuses the change when the panel cannot reach Redis with its stored credent
     expect(passwordWrites($runs))->toHaveCount(0);
 });
 
-it('does not claim Redis has no password when it cannot ask', function () {
-    // `has_password: false` about a server that does require one is the
-    // reading most likely to convince someone a change had been applied.
-    // Three states, three answers: true, false, and "could not ask".
-    fakeRedis(failing: ['config get requirepass']);
+it('does not present a stale credential as a working one', function () {
+    // The property this has always protected: the screen must never read as
+    // "all is well" about a Redis the panel cannot actually open. What moved
+    // is where it is said. `has_password` now answers "is the panel configured
+    // with one", which .env can always answer; whether that value still opens
+    // Redis is `password_out_of_sync`, and it is the field that must not lie.
+    config(['database.redis.default.password' => 'stale-value']);
+    fakeRedis(failing: ['ping']);
 
-    $response = test()->withHeader('Authorization', 'Bearer '.test()->token)
+    $redis = test()->withHeader('Authorization', 'Bearer '.test()->token)
         ->getJson('/api/settings')
-        ->assertOk();
+        ->assertOk()
+        ->json('settings.redis');
 
-    expect($response->json('settings.redis.has_password'))->toBeNull();
+    expect($redis['password_out_of_sync'])->toBeTrue()
+        // And the value is still shown: it is what the panel is using, and
+        // seeing it is how someone notices it is not what Redis wants.
+        ->and($redis['has_password'])->toBeTrue();
 });
 
 it('still reports a password-less Redis as password-less', function () {

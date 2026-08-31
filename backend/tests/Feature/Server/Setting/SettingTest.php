@@ -686,24 +686,40 @@ describe('a scheduled restart', function () {
 });
 
 describe('the Redis password in the settings response', function () {
-    /** A Redis that answers `CONFIG GET requirepass` with a real password. */
-    function fakeRedisWithPassword(string $password = 's3cr3t-redis'): void
+    /**
+     * A panel configured with a Redis password, and a Redis that accepts it.
+     *
+     * The value now comes from the panel's own config rather than from
+     * `CONFIG GET`, so that is what the fixture sets; the ping is what decides
+     * whether it is still true.
+     */
+    function fakeRedisWithPassword(string $password = 's3cr3t-redis', bool $accepted = true): void
     {
+        config(['database.redis.default.password' => $password]);
+
         $redis = test()->redisCli;
 
-        Process::fake(function ($process) use ($redis, $password) {
+        Process::fake(function ($process) use ($redis, $accepted) {
             $cmd = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
-            if (($cmd[0] ?? '') === $redis && ($cmd[1] ?? '') === 'config' && ($cmd[2] ?? '') === 'get') {
+            if (($cmd[0] ?? '') !== $redis) {
+                return Process::result(exitCode: 0);
+            }
+
+            if (($cmd[1] ?? '') === 'ping') {
+                return $accepted
+                    ? Process::result(output: 'PONG')
+                    : Process::result(errorOutput: 'NOAUTH Authentication required.', exitCode: 1);
+            }
+
+            if (($cmd[1] ?? '') === 'config' && ($cmd[2] ?? '') === 'get') {
                 $key = $cmd[3] ?? '';
-                $value = match ($key) {
-                    'requirepass' => $password,
+
+                return Process::result(output: $key."\n".match ($key) {
                     'maxmemory' => '0',
                     'maxmemory-policy' => 'noeviction',
                     default => '',
-                };
-
-                return Process::result(output: "{$key}\n{$value}");
+                });
             }
 
             return Process::result(exitCode: 0);
@@ -737,10 +753,43 @@ describe('the Redis password in the settings response', function () {
             ->assertJsonPath('settings.redis.password', null);
     });
 
+    it('says when the stored password no longer opens Redis', function () {
+        // Someone changed `requirepass` on the server. The panel's copy is
+        // stale, and until now nothing said so: the field simply went blank,
+        // on the screen you would open to work out what was wrong. The value
+        // is still shown -- it is what the panel is using, and seeing it is
+        // how you notice it is not what Redis wants.
+        fakeRedisWithPassword('stale-value', accepted: false);
+
+        $redis = $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings')->assertOk()->json('settings.redis');
+
+        expect($redis['password_out_of_sync'])->toBeTrue()
+            ->and($redis['has_password'])->toBeTrue()
+            ->and($redis['password'])->toBe('stale-value')
+            // Rejecting a credential is still an answer: Redis is up.
+            ->and($redis['running'])->toBeTrue();
+    });
+
+    it('leaves the sync question unanswered when Redis is not running', function () {
+        // Nothing to compare against, so the credential is unverified rather
+        // than wrong. Null, not false — a false here would say "checked, fine".
+        config(['database.redis.default.password' => 'whatever']);
+
+        Process::fake(fn () => Process::result(errorOutput: 'Could not connect', exitCode: 1));
+
+        $redis = $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings')->assertOk()->json('settings.redis');
+
+        expect($redis['running'])->toBeFalse()
+            ->and($redis['password_out_of_sync'])->toBeNull();
+    });
+
     it('sends null when no password is set, not an empty string', function () {
         // `has_password: false` is the answer; an empty string in a password
         // field renders as a password that is blank.
         fakeRedisWithPassword('');
+        config(['database.redis.default.password' => '']);
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
             ->getJson('/api/settings')->assertOk()

@@ -4390,10 +4390,20 @@ Manual + scheduled run history, paginated.
   "swap": {"enabled": true, "path": "/swapfile", "size": 2147483648, "size_human": "2 GB", "used": 0, "used_human": "0 B", "free": 2147483648, "free_human": "2 GB"},
   "security": {"port": 22, "permit_root_login": "prohibit-password", "password_authentication": false, "has_ssh_key": true},
   "updates": {"security_updates_enabled": true, "auto_reboot": false, "reboot_time": "06:00", "reboot_required": false, "updates_available": 3, "security_updates_available": 1, "lists_refreshed_at": "29-07-2026 04:00:00", "unattended_last_run_at": "27-07-2026 06:18:00", "unattended_last_result": "success"},
-  "redis": {"maxmemory": "256mb", "maxmemory_policy": "allkeys-lru", "has_password": true, "password": "s3cr3t-redis", "password_manageable": true, "running": true, "memory_used": 8388608, "memory_used_human": "8 MB"}
+  "redis": {"maxmemory": "256mb", "maxmemory_policy": "allkeys-lru", "has_password": true, "password": "s3cr3t-redis", "password_out_of_sync": false, "password_manageable": true, "running": true, "memory_used": 8388608, "memory_used_human": "8 MB"}
 ```
 
-**`redis.password` is the real value**, sent so the panel can show and copy it (operator decision, 2026-08-31). It is `null` in three different situations, and **`has_password` is what tells them apart**: no password is set (`false`), the panel could not ask (`null`), or the caller holds `setting` view without manage (`true`).
+**`redis.password` is the real value**, sent so the panel can show and copy it (operator decision, 2026-08-31). It comes from the panel's own configuration — the value `install.sh` generated, wrote to `redis.conf` and recorded in `.env` — not from `CONFIG GET requirepass`. Reading it back from Redis required authenticating with that same value first, so a successful answer only echoed it, a failed one left the field blank on the very screen someone opens to investigate, and `CONFIG GET` can be renamed or disabled on a hardened Redis.
+
+**`redis.password_out_of_sync`** answers the separate question of whether that stored value still works:
+
+| value | meaning |
+|---|---|
+| `false` | verified — the panel authenticated with it |
+| `true` | Redis is up and **rejected** it: `requirepass` was changed outside the panel, so its copy is stale and every session, cache read and queued job is failing behind the same rejection |
+| `null` | Redis is not running, so there is nothing to verify against — unverified, not wrong |
+
+`has_password` is now a plain boolean: whether the **panel** is configured with a password. It is no longer nullable; "could not ask" moved to `password_out_of_sync`, which is a different question. `password` is `null` when none is configured, or when the caller holds `setting` view without manage.
 
 Only a caller who could change it receives it — `setting` **manage**, not view. This is not equivalent to a system user's password: Redis backs the panel's own sessions, cache and queue, so the credential unlocks the panel rather than one customer's account, and a read-only role can already see that a password exists without being able to act on the value.
 

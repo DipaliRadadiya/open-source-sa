@@ -98,24 +98,30 @@ class RedisSettings implements SettingGroup
      */
     public function read(): array
     {
-        $current = $this->currentPassword();
+        // Read from the panel's own configuration, not from `CONFIG GET`.
+        //
+        // install.sh generates this password, writes it to redis.conf and to
+        // the panel's .env, and proves it works before pointing the panel at
+        // Redis at all -- so .env is the record of what the panel uses. Asking
+        // Redis for it required authenticating with this very value first, so
+        // a successful answer only ever echoed it back; a failed one left the
+        // field blank in exactly the situation someone opens the screen to
+        // investigate. `CONFIG GET` can also be renamed or disabled on a
+        // hardened Redis, where AUTH and PING still work.
+        //
+        // Whether it is still *true* is a separate question, answered by
+        // `password_out_of_sync` below.
+        $stored = (string) config('database.redis.default.password');
 
         return [
             'maxmemory' => $this->configGet('maxmemory') ?: '0',
             'maxmemory_policy' => $this->configGet('maxmemory-policy') ?: 'noeviction',
-            // **Nullable.** `true` and `false` are answers; `null` means the
-            // panel could not ask — its stored credential does not open a
-            // connection to this Redis. Reporting `false` there claimed no
-            // password on a server that requires one, which is the reading
-            // most likely to make someone believe a change had been applied.
-            'has_password' => match ($current) {
-                null => null,
-                default => $current !== '',
-            },
-            // The value itself. Null covers three different situations, and
-            // `has_password` is what tells them apart: no password is set, the
-            // panel could not ask, or the caller may not have it.
-            'password' => $this->readablePassword($current),
+            // Whether the panel is configured with one. No longer nullable:
+            // "could not ask Redis" is now reported by `password_out_of_sync`,
+            // which is a different question and deserved its own field.
+            'has_password' => $stored !== '',
+            // The value itself, when the caller could change it anyway.
+            'password' => $this->readablePassword($stored === '' ? null : $stored),
             // Whether changing the password is even possible. If the panel
             // cannot record the new one, the control should be disabled rather
             // than offered and then refused.
@@ -385,11 +391,29 @@ class RedisSettings implements SettingGroup
     private function liveState(): array
     {
         $ping = $this->cli(['ping']);
-        $running = $ping->ok || str_contains($ping->output().$ping->errorOutput(), 'NOAUTH');
+        // Redis answered *something*, so it is up: either it accepted the
+        // panel's credential, or it rejected it — and a rejection is still a
+        // reply. Only silence means "not running".
+        $reachable = $ping->output().$ping->errorOutput();
+        $running = $ping->ok || str_contains($reachable, 'NOAUTH') || str_contains($reachable, 'WRONGPASS')
+            || str_contains($reachable, 'without any password');
 
         if (! $running) {
-            return ['running' => false, 'memory_used' => null, 'memory_used_human' => null];
+            // Nothing to compare against, so the credential is unverified
+            // rather than wrong. Null, not false.
+            return [
+                'running' => false,
+                'password_out_of_sync' => null,
+                'memory_used' => null,
+                'memory_used_human' => null,
+            ];
         }
+
+        // Redis is up and the panel's stored credential did not open it. That
+        // is the state nothing used to report: someone changed `requirepass`
+        // on the server, the panel's copy is stale, and every session, cache
+        // read and queued job is failing behind this same rejection.
+        $outOfSync = ! $ping->ok;
 
         $info = $this->cli(['info', 'memory']);
 
@@ -408,7 +432,12 @@ class RedisSettings implements SettingGroup
             }
         }
 
-        return ['running' => true, 'memory_used' => $used, 'memory_used_human' => $human];
+        return [
+            'running' => true,
+            'password_out_of_sync' => $outOfSync,
+            'memory_used' => $used,
+            'memory_used_human' => $human,
+        ];
     }
 
     private function configGet(string $key): string
