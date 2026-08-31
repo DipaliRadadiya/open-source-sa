@@ -10,6 +10,7 @@ import { getFileContent, saveFileContent, fileDownloadUrl } from "@/lib/api/file
 import { fileContentSchema } from "@/lib/schemas/file";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ShortcutHint } from "@/components/ui/shortcut-hint";
 import { CopyButton } from "@/components/ui/copy-button";
 import {
@@ -45,6 +46,7 @@ const CodeEditor = dynamic(
  */
 export function FileEditorDialog({ appId, file, canManage, open, onOpenChange }) {
   const t = useTranslations("applications.files");
+  const tc = useTranslations("common");
   const router = useRouter();
   // Mounted fresh per file (see files-panel.jsx), so these start at the
   // "about to load" state directly rather than being reset by an effect.
@@ -215,6 +217,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             {t("cancel")}
           </Button>
           {canEdit && !blocked ? (
+            <ReasonTooltip reason={!dirty && !saving && !loading ? tc("nothingToSave") : null}>
             <Button onClick={save} disabled={!dirty || saving || loading}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("editor.save")}
@@ -226,6 +229,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
                 <ShortcutHint letter="S" className="ms-1 border-primary-foreground/25 bg-primary-foreground/15 text-primary-foreground/80" />
               )}
             </Button>
+            </ReasonTooltip>
           ) : null}
         </DialogFooter>
       </DialogContent>

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormModal } from "@/components/ui/form-modal";
@@ -57,6 +58,7 @@ export function TargetPathDialog({
   validate,
 }) {
   const t = useTranslations("applications.files");
+  const tc = useTranslations("common");
   const router = useRouter();
   // Mounted fresh per file (see files-panel.jsx), so the pre-filled default
   // is the initial state directly rather than something an effect resets.
@@ -131,10 +133,12 @@ export function TargetPathDialog({
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>
             {t("cancel")}
           </Button>
+          <ReasonTooltip reason={!busy && !value.trim() && !allowEmpty ? tc("enterAValue") : null}>
           <Button type="submit" disabled={busy || (!value.trim() && !allowEmpty)}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
             {busy ? savingLabel : submitLabel}
           </Button>
+          </ReasonTooltip>
         </>
       }
     >

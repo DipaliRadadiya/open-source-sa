@@ -11,6 +11,7 @@ import { updateDatabaseUser } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { PasswordInput } from "@/components/ui/password-input";
 import { randomPassword } from "@/lib/databases/random";
 import { FormModal } from "@/components/ui/form-modal";
@@ -33,6 +34,7 @@ import { UserFields } from "@/components/databases/user-fields";
  */
 export function EditUserDialog({ database, user, open, onOpenChange }) {
   const t = useTranslations("databases.users");
+  const tc = useTranslations("common");
   const router = useRouter();
   const isMongo = database?.driver === "mongo";
 
@@ -109,13 +111,27 @@ export function EditUserDialog({ database, user, open, onOpenChange }) {
             >
               {t("cancel")}
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !form.formState.isDirty || needsPassword}
+            {/* Two different reasons, and the password one is the surprising
+                half: a Mongo rename drops and recreates the user. */}
+            <ReasonTooltip
+              reason={
+                isSubmitting
+                  ? null
+                  : needsPassword
+                    ? tc("mongoRenameNeedsPassword")
+                    : !form.formState.isDirty
+                      ? tc("nothingToSave")
+                      : null
+              }
             >
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              {isSubmitting ? t("saving") : t("save")}
-            </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting || !form.formState.isDirty || needsPassword}
+              >
+                {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+                {isSubmitting ? t("saving") : t("save")}
+              </Button>
+            </ReasonTooltip>
           </>
         }
       >

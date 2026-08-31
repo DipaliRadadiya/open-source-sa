@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -98,6 +99,7 @@ function Instructions({ label, text, placeholder }) {
  */
 export function WebhookCard({ application, providers, canManage, onChange }) {
   const t = useTranslations("applications.deployment");
+  const tc = useTranslations("common");
   const webhook = application.webhook ?? { enabled: false };
   const enabled = Boolean(webhook.enabled);
   // Disabling retains the URL + secret + provider, so a hook that has ever been
@@ -256,14 +258,18 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                       autoComplete="off"
                       className="w-full max-w-xs font-mono text-xs"
                     />
-                    <Button
-                      size="sm"
-                      onClick={applyToken}
-                      disabled={!gitlabToken.trim() || busy}
+                    <ReasonTooltip
+                      reason={!gitlabToken.trim() && !busy ? tc("enterAValue") : null}
                     >
-                      {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-                      {t("webhook.saveToken")}
-                    </Button>
+                      <Button
+                        size="sm"
+                        onClick={applyToken}
+                        disabled={!gitlabToken.trim() || busy}
+                      >
+                        {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+                        {t("webhook.saveToken")}
+                      </Button>
+                    </ReasonTooltip>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -379,14 +385,16 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                 </div>
               ) : null}
 
-              <Button onClick={enable} disabled={!providerName || busy}>
-                {busy ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Webhook className="size-4" />
-                )}
-                {t("webhook.enable")}
-              </Button>
+              <ReasonTooltip reason={!providerName && !busy ? tc("chooseAnOption") : null}>
+                <Button onClick={enable} disabled={!providerName || busy}>
+                  {busy ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Webhook className="size-4" />
+                  )}
+                  {t("webhook.enable")}
+                </Button>
+              </ReasonTooltip>
             </div>
 
             <Instructions

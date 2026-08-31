@@ -16,6 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 
 const SQL_ENGINES = [
@@ -49,6 +50,7 @@ export function InstallConfirm(props) {
 
 function InstallConfirmSession({ engine, open, onOpenChange, choosing = false, onSuccess }) {
   const t = useTranslations("databases");
+  const tc = useTranslations("common");
 
   // phase tracks which step the dialog is on:
   //   "picker"  — choosing between MySQL / MariaDB
@@ -102,6 +104,7 @@ function InstallConfirmSession({ engine, open, onOpenChange, choosing = false, o
             <Button variant="outline" onClick={() => onOpenChange?.(false)}>
               {t("cancel")}
             </Button>
+            <ReasonTooltip reason={!picked && !pending ? tc("chooseAnOption") : null}>
             <Button
               disabled={!picked || pending}
               onClick={() => {
@@ -111,6 +114,7 @@ function InstallConfirmSession({ engine, open, onOpenChange, choosing = false, o
             >
               {t("confirmInstall.chooseEngine.submit")}
             </Button>
+            </ReasonTooltip>
           </DialogFooter>
         </DialogContent>
       </Dialog>

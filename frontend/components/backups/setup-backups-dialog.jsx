@@ -13,6 +13,7 @@ import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Form } from "@/components/ui/form";
 import { FormModal } from "@/components/ui/form-modal";
 import { BackupSettingsFields } from "@/components/backups/backup-settings-fields";
@@ -188,10 +189,15 @@ export function SetupBackupsDialog({
             <Button type="button" variant="outline" onClick={close} disabled={submitting}>
               {t("cancel")}
             </Button>
+            {/* The blocker is already printed above the button; the tooltip
+                repeats it for anyone who reaches the control by keyboard and
+                never sees the paragraph. */}
+            <ReasonTooltip reason={!submitting && blocker ? blocker : null}>
             <Button type="submit" disabled={submitting || Boolean(blocker)}>
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
               {submitting ? t("saving") : target ? t("saveChanges") : t("submit")}
             </Button>
+            </ReasonTooltip>
           </>
         }
       >

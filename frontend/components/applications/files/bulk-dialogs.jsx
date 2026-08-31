@@ -23,6 +23,7 @@ import { bulkResult } from "@/lib/files/bulk-result";
 import { apiMessage } from "@/lib/api/error-message";
 import { dirname, joinPath } from "@/lib/files/path-helpers";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PermissionModeField } from "@/components/applications/files/permission-mode-field";
@@ -42,6 +43,7 @@ import { PermanentDeleteField } from "@/components/applications/files/permanent-
  */
 export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult }) {
   const t = useTranslations("applications.files");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [target, setTarget] = useState(() =>
@@ -178,12 +180,14 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
           >
             {t("cancel")}
           </Button>
+          <ReasonTooltip reason={!busy && !isPermissions && !target.trim() ? tc("enterAValue") : null}>
           <Button type="submit" disabled={busy || (!isPermissions && !target.trim())}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
             {/* "Permissions" is the name of the job, not something you can do —
                 the single-file dialog says Save here, and so does this one. */}
             {isPermissions ? t("permissionsDialog.submit") : t(`bulk.${action}`)}
           </Button>
+          </ReasonTooltip>
         </>
       }
     >

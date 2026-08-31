@@ -12,6 +12,7 @@ import { updateCronjob } from "@/lib/api/cronjobs";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { FormModal } from "@/components/ui/form-modal";
@@ -41,6 +42,7 @@ export function EditCronjobDialog({
   timezone,
 }) {
   const t = useTranslations("cronJobs");
+  const tc = useTranslations("common");
   const router = useRouter();
 
   const form = useForm({
@@ -108,10 +110,12 @@ export function EditCronjobDialog({
             >
               {t("cancel")}
             </Button>
-            <Button type="submit" disabled={isSubmitting || !isDirty}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              {isSubmitting ? t("saving") : t("edit.submit")}
-            </Button>
+            <ReasonTooltip reason={!isDirty && !isSubmitting ? tc("nothingToSave") : null}>
+              <Button type="submit" disabled={isSubmitting || !isDirty}>
+                {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+                {isSubmitting ? t("saving") : t("edit.submit")}
+              </Button>
+            </ReasonTooltip>
           </>
         }
       >

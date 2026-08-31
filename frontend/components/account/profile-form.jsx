@@ -12,6 +12,7 @@ import { updateProfile } from "@/lib/auth/auth-actions";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -32,6 +33,7 @@ import {
 
 export function ProfileForm({ user, onDirtyChange }) {
   const t = useTranslations("account");
+  const tc = useTranslations("common");
   const router = useRouter();
 
   const form = useForm({
@@ -112,10 +114,14 @@ export function ProfileForm({ user, onDirtyChange }) {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting || !isDirty}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            {isSubmitting ? t("profile.saving") : t("profile.submit")}
-          </Button>
+          {/* A disabled Save explains nothing by itself, and "no changes yet"
+              is the reason nobody guesses — they look for the broken field. */}
+          <ReasonTooltip reason={!isDirty && !isSubmitting ? tc("nothingToSave") : null}>
+            <Button type="submit" disabled={isSubmitting || !isDirty}>
+              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+              {isSubmitting ? t("profile.saving") : t("profile.submit")}
+            </Button>
+          </ReasonTooltip>
         </div>
       </form>
     </Form>

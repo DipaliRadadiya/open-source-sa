@@ -6,6 +6,7 @@ import { History, PlayCircle, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
@@ -20,6 +21,7 @@ import { COVERAGE_STATE } from "@/components/backups/status-meta";
 
 export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId }) {
   const t = useTranslations("backups.coverage");
+  const tc = useTranslations("common");
 
   if (rows.length === 0) {
     return (
@@ -113,15 +115,17 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
                   ) : (
                     <>
                       {canManage ? (
+                        <ReasonTooltip reason={!target && busyId !== application.id ? tc("needsBackupTarget") : null}>
                         <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busyId === application.id || !target}
-                          onClick={() => onBackUpNow(application.id, application.name)}
-                        >
-                          <PlayCircle className="size-4" />
-                          {t("runBackup")}
-                        </Button>
+                            size="sm"
+                            variant="outline"
+                            disabled={busyId === application.id || !target}
+                            onClick={() => onBackUpNow(application.id, application.name)}
+                          >
+                            <PlayCircle className="size-4" />
+                            {t("runBackup")}
+                          </Button>
+                        </ReasonTooltip>
                       ) : null}
                       <Button size="sm" variant="ghost" asChild>
                         <Link href={`/backups/history?application=${application.id}`}>

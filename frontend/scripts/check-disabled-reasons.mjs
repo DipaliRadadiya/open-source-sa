@@ -10,7 +10,9 @@
  *
  * Only two kinds of `disabled` are exempt:
  *   - mid-action (`isSubmitting`, `pending`, `busy`…). The spinner is the
- *     answer; "why is this disabled" is not the question being asked.
+ *     answer; "why is this disabled" is not the question being asked. EVERY
+ *     operand has to be in-flight for this: a mixed `isSubmitting || !isDirty`
+ *     is a real precondition wearing a spinner as a disguise.
  *   - literal `disabled` / `disabled || x` pass-through props, where the parent
  *     owns the reason and supplies it through DisabledReasonProvider.
  *
@@ -52,11 +54,19 @@ for (const root of ROOTS) {
       if (!match) return;
       const expr = match[1].trim();
       if (!expr) return;
-      if (IN_FLIGHT.test(expr)) return;
+      // Only exempt when EVERY operand is in-flight. `isSubmitting || !isDirty`
+      // used to pass on its first operand alone, which is how three Save
+      // buttons ended up disabled by "no changes yet" and never saying so —
+      // the exact class of silence this script exists to prevent.
+      const operands = expr.split("||").map((part) => part.trim()).filter(Boolean);
+      if (operands.length && operands.every((part) => IN_FLIGHT.test(part))) return;
       if (/^disabled$/.test(expr) || /^disabled\s*\|\|/.test(expr)) return;
       // First/last page on a pager. The control sits between two arrows and a
       // page number; a sentence saying "you are on the first page" is noise.
-      if (/^page\s*===?\s*0$/.test(expr) || /pageCount\s*-\s*1$/.test(expr)) return;
+      if (/\bpage\s*(<=|>=|===?)\s*(0|1|lastPage|pageCount\s*-\s*1)\b/.test(expr)) return;
+      // A pass-through the caller owns, same as bare `disabled`: the reason
+      // lives with whoever decided to switch it off.
+      if (/\bconfirmDisabled\b/.test(expr)) return;
 
       // The whole enclosing component, not a fixed window: a control can be
       // declared near the top and wrapped in its tooltip forty lines later.

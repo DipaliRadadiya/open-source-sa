@@ -6,6 +6,7 @@ import { History, MoreHorizontal, PlayCircle, Settings2, ShieldCheck } from "luc
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
 import {
@@ -182,6 +183,7 @@ function BackupStatusDot({ status }) {
  */
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.coverage");
+  const tc = useTranslations("common");
   const { canManage, onSetUp, onBackUpNow, busyId } = table.options.meta;
   const { application, target, state } = row.original;
 
@@ -206,15 +208,19 @@ function ActionsCell({ row, table }) {
   return (
     <div className="flex items-center justify-end gap-1">
       {canManage ? (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onBackUpNow(application.id, application.name)}
-          disabled={busyId === application.id || !target}
+        <ReasonTooltip
+          reason={!target && busyId !== application.id ? tc("needsBackupTarget") : null}
         >
-          <PlayCircle className="size-4" />
-          {t("runBackup")}
-        </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onBackUpNow(application.id, application.name)}
+            disabled={busyId === application.id || !target}
+          >
+            <PlayCircle className="size-4" />
+            {t("runBackup")}
+          </Button>
+        </ReasonTooltip>
       ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

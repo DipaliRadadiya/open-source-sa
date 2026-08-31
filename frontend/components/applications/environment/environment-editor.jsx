@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { saveEnvironment } from "@/lib/api/environment";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ShortcutHint } from "@/components/ui/shortcut-hint";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +37,7 @@ function applySuggestion(text, key, suggested) {
 
 export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const t = useTranslations("applications.environment");
+  const tc = useTranslations("common");
   const [env, setEnv] = useState(initialEnv);
   const [contents, setContents] = useState(initialEnv.raw ?? "");
   const [saving, setSaving] = useState(false);
@@ -251,10 +253,13 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
         <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 py-4">
           <p className="text-xs text-muted-foreground">{footerNote}</p>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={revert} disabled={!dirty || saving}>
-              <Undo2 className="size-4" />
-              {t("revert")}
-            </Button>
+            <ReasonTooltip reason={!dirty && !saving ? tc("nothingToRevert") : null}>
+              <Button variant="ghost" onClick={revert} disabled={!dirty || saving}>
+                <Undo2 className="size-4" />
+                {t("revert")}
+              </Button>
+            </ReasonTooltip>
+            <ReasonTooltip reason={!dirty && !saving ? tc("nothingToSave") : null}>
             <Button onClick={onSave} disabled={!dirty || saving}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {saveLabel}
@@ -262,6 +267,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
                 <ShortcutHint letter="S" className="ms-1 border-primary-foreground/25 bg-primary-foreground/15 text-primary-foreground/80" />
               )}
             </Button>
+            </ReasonTooltip>
           </div>
         </CardFooter>
       ) : null}
