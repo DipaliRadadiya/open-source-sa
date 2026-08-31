@@ -105,4 +105,25 @@ class ListSort
 
         return $query->orderBy($query->getModel()->getQualifiedKeyName(), 'desc');
     }
+
+    /**
+     * Order an internally-selected text column without case bias.
+     *
+     * Unlike {@see apply()}, this is for fixed backend ordering rather than a
+     * client-selected `?sort=` value. Callers must pass a column declared in
+     * code, never request input. The primary-key tie-breaker keeps equal names
+     * stable across repeated responses.
+     */
+    public static function caseInsensitive(Builder $query, string $column, string $direction = 'asc'): Builder
+    {
+        $direction = strtolower($direction);
+
+        if (! in_array($direction, ['asc', 'desc'], true)) {
+            $direction = 'asc';
+        }
+
+        return $query
+            ->orderByRaw('lower('.$query->getGrammar()->wrap($column).') '.$direction)
+            ->orderBy($query->getModel()->getQualifiedKeyName(), 'desc');
+    }
 }
