@@ -1698,6 +1698,8 @@
         "save": "स्वैप सहेजें"
       },
       "redis": {
+        "passwordApplying": "पासवर्ड बदलने का अनुरोध भेजा गया। Redis और पैनल अपडेट हो रहे हैं — इसमें कुछ सेकंड लगते हैं।",
+        "passwordApplyingCheck": "अभी जाँचें",
         "title": "Redis",
         "maxmemory": "मेमोरी सीमा",
         "maxmemoryHint": "जैसे 256mb या 1gb। 0 यानी कोई सीमा नहीं।",

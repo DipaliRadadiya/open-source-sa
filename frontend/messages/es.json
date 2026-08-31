@@ -1698,6 +1698,8 @@
         "save": "Guardar swap"
       },
       "redis": {
+        "passwordApplying": "Cambio de contraseña enviado. Redis y el panel se están actualizando — tarda unos segundos.",
+        "passwordApplyingCheck": "Comprobar ahora",
         "title": "Redis",
         "maxmemory": "Límite de memoria",
         "maxmemoryHint": "Como 256mb o 1gb. 0 significa sin límite.",

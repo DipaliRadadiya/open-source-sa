@@ -1698,6 +1698,8 @@
         "save": "Save swap"
       },
       "redis": {
+        "passwordApplying": "Password change submitted. Redis and the panel are being updated — this takes a few seconds.",
+        "passwordApplyingCheck": "Check now",
         "title": "Redis",
         "maxmemory": "Memory limit",
         "maxmemoryHint": "Like 256mb or 1gb. 0 means no limit.",

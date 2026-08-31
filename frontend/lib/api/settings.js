@@ -38,6 +38,15 @@ export function updateRebootSchedule(payload) {
 }
 
 /** `404` when redis isn't installed — the group is simply absent from the read. */
+/**
+ * Memory settings apply immediately. A password change does not: the credential
+ * the panel is currently using is the one being replaced, so the server applies
+ * it AFTER answering and returns **202**, not 200.
+ *
+ * Callers must tell the two apart. Treating 202 as done reports success for
+ * something still in flight and re-reads state that has not changed yet — which
+ * reads exactly like "the password was not updated".
+ */
 export function updateRedisSettings(payload) {
   return api.put("/settings/redis", payload);
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
-import { CircleAlert, Database, KeyRound } from "lucide-react";
+import { CircleAlert, Database, KeyRound, Loader2 } from "lucide-react";
 import { redisFormSchema, REDIS_POLICIES } from "@/lib/schemas/settings";
 import { updateRedisSettings } from "@/lib/api/settings";
 import { apiMessage } from "@/lib/api/error-message";
@@ -41,6 +41,21 @@ export function RedisForm({ redis, canManage, changedBy }) {
   const router = useRouter();
   const [removing, setRemoving] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState(false);
+  // A password change is in flight (HTTP 202). There is no endpoint that
+  // reports when it lands, and `has_password` cannot answer it either — it is
+  // already true when one password is being replaced by another. So this state
+  // says what was submitted and offers a re-read, and never claims a result it
+  // did not observe.
+  const [applying, setApplying] = useState(false);
+
+  // One automatic re-read, so the common case settles without being asked.
+  // Not a poll: with nothing to poll for, repeating the request would only
+  // redraw the same page.
+  useEffect(() => {
+    if (!applying) return undefined;
+    const timer = setTimeout(() => router.refresh(), 5000);
+    return () => clearTimeout(timer);
+  }, [applying, router]);
 
   const defaults = {
     maxmemory: redis?.maxmemory ?? "0",
@@ -81,7 +96,19 @@ export function RedisForm({ redis, canManage, changedBy }) {
       const payload = { ...values };
       if (!payload.password) delete payload.password;
 
-      await updateRedisSettings(payload);
+      const response = await updateRedisSettings(payload);
+
+      // 202: the password is applied AFTER this response, because the
+      // credential the panel is using is the one being replaced. Saying
+      // "Saved" and refreshing here reported success for something still in
+      // flight and re-read state that had not changed yet — which is exactly
+      // what "the password was not updated" looks like.
+      if (response?.status === 202) {
+        form.reset({ ...values, password: "" });
+        setApplying(true);
+        return;
+      }
+
       toast.success(t("redis.saved"));
       form.reset({ ...values, password: "" });
       router.refresh();
@@ -110,6 +137,32 @@ export function RedisForm({ redis, canManage, changedBy }) {
               />
             }
           >
+            {/* Said where the change was made, and it stays until the reader
+                dismisses it. A toast would have faded well before the change
+                landed, which is how this looked like nothing happened. */}
+            {applying ? (
+              <div
+                role="status"
+                className="mt-3.5 flex flex-wrap items-start justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3.5 py-2.5 text-sm"
+              >
+                <span className="flex items-start gap-2">
+                  <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-warning motion-reduce:animate-none" />
+                  {t("redis.passwordApplying")}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setApplying(false);
+                    router.refresh();
+                  }}
+                >
+                  {t("redis.passwordApplyingCheck")}
+                </Button>
+              </div>
+            ) : null}
+
             {redis?.running === false ? (
               <p className="mt-3.5 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
                 <CircleAlert className="size-4 shrink-0" />
