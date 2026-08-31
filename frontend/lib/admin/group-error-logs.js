@@ -57,9 +57,11 @@ export function entryKind(entry) {
  * `php`/`install` failing with 100 is one problem, and `php`/`install` failing
  * with 1 is a different one.
  *
- * Not grouped by message (still near-constant) and not by reference: it is
- * unique per entry, so grouping on it would produce one group per occurrence —
- * the flat list this function exists to avoid.
+ * Still not grouped by message, though it stopped being a constant on
+ * 2026-08-31: the same fault carries a different message per occurrence once it
+ * quotes an id or a path, so keying on it would split one problem into as many
+ * rows as it has variations. Not by reference either — that is unique per
+ * entry, and would produce the flat list this function exists to avoid.
  *
  * Returns groups newest-last-seen first, each with its occurrences in the same
  * order the API sent them (newest first).

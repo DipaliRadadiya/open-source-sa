@@ -202,6 +202,22 @@ export function ErrorGroupRow({ group, now }) {
                   </span>
                 </div>
 
+                {/* The exception's own message. Was a fixed string until
+                    2026-08-31, which is why this screen used to lead with the
+                    class name; older entries still carry the constant, so it
+                    is shown when present rather than assumed. */}
+                {entry.message ? (
+                  <p className="text-sm leading-5">{entry.message}</p>
+                ) : null}
+
+                {/* The command line that failed. For an operation this is the
+                    answer — "log / exists / exit 1" says nothing on its own. */}
+                {entry.command ? (
+                  <pre className="overflow-x-auto rounded-md border bg-zinc-950 p-2 font-mono text-[11px] leading-4 text-zinc-100">
+                    {entry.command}
+                  </pre>
+                ) : null}
+
                 {/* The command's own stderr, already redacted and truncated to
                     1000 characters by the backend. This is the only field that
                     says what broke — everything else says where. Kept as
@@ -218,6 +234,37 @@ export function ErrorGroupRow({ group, now }) {
                     reference is a uuid minted at log time that never reached
                     anyone, so offering it for a lookup would be inviting a
                     search that cannot succeed. */}
+                {/* Where it threw, then the frames. Vendor frames are already
+                    dropped by the backend, so every line here is our code. */}
+                {entry.file ? (
+                  <p className="font-mono text-[11px] break-all text-muted-foreground">
+                    {entry.file}
+                  </p>
+                ) : null}
+
+                {entry.trace?.length ? (
+                  <ul className="space-y-0.5 border-s ps-2 font-mono text-[11px] text-muted-foreground/80">
+                    {entry.trace.map((frame, i) => (
+                      <li key={`${frame}-${i}`} className="break-all">
+                        {frame}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
+                {/* Three attempts over twelve seconds is a lock; one failure in
+                    40ms is not. The timestamps cannot tell those apart. */}
+                {entry.attempts != null || entry.duration_ms != null ? (
+                  <p className="text-[11px] tabular-nums text-muted-foreground/70">
+                    {[
+                      entry.attempts != null ? t("attempts", { count: entry.attempts }) : null,
+                      entry.duration_ms != null ? t("duration", { ms: entry.duration_ms }) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                ) : null}
+
                 {isOperation && entry.reference ? (
                   <p className="font-mono text-[11px] text-muted-foreground/70">
                     {t("reference", { reference: entry.reference })}

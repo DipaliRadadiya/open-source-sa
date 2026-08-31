@@ -27,8 +27,21 @@ import { z } from "zod";
  * ApiErrorLogWriter still mints a fresh uuid at log time that is never sent to
  * the client — so a reference search finds operations, not exceptions.
  *
- * `message` is near-constant on both sides ("Unexpected API error." /
- * "Server operation failed.") and so is still not rendered as a column.
+ * `message` USED to be near-constant ("Unexpected API error." / "Server
+ * operation failed.") and was deliberately not rendered. Since 2026-08-31 it is
+ * the exception's own message, redacted and capped at 500 characters, and it is
+ * the first thing worth reading. Entries written before that carry the old
+ * constant, so the screen has to survive both.
+ *
+ * `file` (`path:line`, relative to the install) and `trace` (up to five
+ * application frames, vendor dropped) arrived with it and are absent on older
+ * entries — hence nullish rather than defaulted.
+ *
+ * `command` is the command line that failed, redacted where it was written.
+ * It is the field an operation entry was missing: "log / exists / exit 1" says
+ * nothing, `sudo -n test -f /var/log/…` says everything. `attempts` and
+ * `duration_ms` separate a lock retried three times over twelve seconds from
+ * something that died once in 40ms — a distinction the timestamps cannot make.
  *
  * `occurred_at` is Monolog's ISO-8601 datetime, NOT the "DD-MM-YYYY HH:mm:ss"
  * every other endpoint sends — parseApiDate() returns null for it.
@@ -47,6 +60,14 @@ export const errorLogEntrySchema = z
     operation: z.string().nullish(),
     exit_code: z.number().int().nullish(),
     error: z.string().nullish(),
+    file: z.string().nullish(),
+    // PHP's empty array serialises as [] rather than an object, and older
+    // entries omit it entirely — both have to parse, or one legacy row would
+    // reject the whole page.
+    trace: z.array(z.string()).nullish().catch(null),
+    command: z.string().nullish(),
+    duration_ms: z.number().nullish(),
+    attempts: z.number().int().nullish(),
   })
   .passthrough();
 
