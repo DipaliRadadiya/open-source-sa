@@ -7,6 +7,7 @@ use App\Actions\Server\Firewall\DeleteFirewallRule;
 use App\Actions\Server\Firewall\ToggleFirewall;
 use App\Actions\Server\Firewall\UpdateFirewallRule;
 use App\Contracts\Firewall;
+use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Firewall\IndexFirewallRulesRequest;
 use App\Http\Requests\Server\Firewall\StoreFirewallRuleRequest;
@@ -17,6 +18,7 @@ use App\Models\FirewallRule;
 use App\Services\Server\Firewall\ListeningPorts;
 use App\Services\Server\Firewall\RiskyPorts;
 use App\Support\FirewallPresets;
+use App\Support\ListSearch;
 use App\Support\ListSort;
 use App\Support\SshPort;
 use Illuminate\Http\JsonResponse;
@@ -33,11 +35,35 @@ class FirewallController extends Controller
         ListeningPorts $listening,
         RiskyPorts $risky,
     ): JsonResponse {
-        $status = $firewall->status();
+        // `status()` throws when it cannot read ufw, and for every other
+        // caller that is right: the guards decide whether a rule is safe to
+        // remove from `enabled`, so "I could not ask" must stop them rather
+        // than read as "nothing is being blocked".
+        //
+        // This one is a screen. Failing the whole request meant that on a
+        // server whose sudo grant is out of date -- which is exactly when
+        // someone opens the firewall page -- there was nothing to look at at
+        // all: no rules, no listening ports, no SSH port. Undetermined is
+        // reported as a third state instead, and every other field on the
+        // page still renders.
+        try {
+            $status = $firewall->status();
+            $reference = null;
+        } catch (FirewallOperationException $exception) {
+            $status = ['enabled' => null, 'default_policy' => null];
+            $reference = $exception->reference;
+        }
 
         return response()->json([
+            // **Nullable.** `true` and `false` are answers; `null` means the
+            // panel could not read the firewall's state. A client must not
+            // treat it as `false`: "off" invites turning it on, and this one
+            // needs a fix on the server first.
             'enabled' => $status['enabled'],
             'default_policy' => $status['default_policy'],
+            // Present only when the state could not be read, so the screen can
+            // show a reference alongside the banner.
+            'status_reference' => $reference,
             'rules' => FirewallRuleResource::collection(FirewallRule::query()->latest()->get())->resolve(),
             // The caller's own address, so "only my IP" is one click. Without
             // it people leave ports open to everyone rather than go and look
@@ -87,15 +113,11 @@ class FirewallController extends Controller
                 fn ($query) => $query->where('enabled', (bool) $filter['enabled']))
             ->when($filter['action'] ?? null, fn ($query, $action) => $query->where('action', $action))
             ->when($filter['origin'] ?? null, fn ($query, $origin) => $query->where('origin', $origin))
-            ->when($search !== '', function ($query) use ($search) {
-                $like = '%'.$search.'%';
-
-                $query->where(fn ($q) => $q
-                    ->where('port_from', 'like', $like)
-                    ->orWhere('port_to', 'like', $like)
-                    ->orWhere('source_ip', 'like', $like)
-                    ->orWhere('description', 'like', $like));
-            });
+            ->when($search !== '', fn ($query) => ListSearch::apply(
+                $query,
+                $search,
+                ['port_from', 'port_to', 'source_ip', 'description'],
+            ));
 
         $rules = ListSort::apply($rules, $request->validated('sort'), IndexFirewallRulesRequest::SORTS)
             ->paginate($request->validated('per_page', IndexFirewallRulesRequest::PER_PAGE));

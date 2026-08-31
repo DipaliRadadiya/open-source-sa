@@ -278,16 +278,47 @@ it('rejects a source that matches every address', function () {
         ->assertJsonValidationErrors('source_ip');
 });
 
-it('reports an unreadable firewall state as a failure, not as disabled', function () {
+it('reports an unreadable firewall state as unknown, never as disabled', function () {
+    // The rule this has always protected: `false` would read as "nothing is
+    // being blocked". What changed is the audience -- this is a screen, and
+    // failing the whole request left nothing to look at on precisely the
+    // server someone opens it to investigate. Third state instead.
+    Process::fake(fn ($process) => in_array('status', $process->command, true)
+        ? Process::result(exitCode: 1, errorOutput: 'ERROR: could not read /etc/ufw')
+        : Process::result(exitCode: 0));
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/firewall')
+        ->assertOk();
+
+    expect($response->json('enabled'))->toBeNull()
+        ->and($response->json('enabled'))->not->toBeFalse()
+        // A reference to quote, since something on this server is wrong.
+        ->and($response->json('status_reference'))->not->toBeEmpty()
+        // And the rest of the page still renders.
+        ->and($response->json('ssh_port'))->not->toBeNull()
+        ->and($response->json())->toHaveKey('rules');
+});
+
+it('still refuses to delete a protected rule when the state cannot be read', function () {
+    // The half that must not move. `DeleteFirewallRule` asks whether the
+    // firewall is on before letting a protected rule go, and an unreadable
+    // state has to stop it rather than be read as "off, so deleting is safe".
+    // The screen degrades; the guard does not.
+    $rule = FirewallRule::create([
+        'port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow',
+        'source_ip' => null, 'origin' => 'system', 'enabled' => true,
+    ]);
+
     Process::fake(fn ($process) => in_array('status', $process->command, true)
         ? Process::result(exitCode: 1, errorOutput: 'ERROR: could not read /etc/ufw')
         : Process::result(exitCode: 0));
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
-        ->getJson('/api/firewall')
-        ->assertStatus(500)
-        ->assertJsonPath('code', 'server_operation_failed')
-        ->assertJsonStructure(['message', 'reference']);
+        ->deleteJson("/api/firewall/rules/{$rule->id}")
+        ->assertStatus(500);
+
+    expect(FirewallRule::find($rule->id))->not->toBeNull();
 });
 
 it('denies a viewer without manage from adding a rule', function () {
