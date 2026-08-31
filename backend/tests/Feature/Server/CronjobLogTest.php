@@ -154,7 +154,27 @@ it('installs a rotation policy alongside the very first job', function () {
 });
 
 it('exposes the log through the existing logs endpoints once it has output', function () {
-    Process::fake(['*' => Process::result(exitCode: 0)]);
+    // A cron log is 0640 owned by the job's user, so the panel reads it
+    // through sudo rather than opening it directly. The fake serves `tail`
+    // from the same file the test wrote, or this asserts nothing about the
+    // round trip — only that a fake returns what it was told to.
+    Process::fake(function ($process) {
+        $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($command[0] ?? '') === 'tail') {
+            $path = end($command);
+
+            return File::exists($path)
+                ? Process::result(output: File::get($path))
+                : Process::result(errorOutput: 'No such file or directory', exitCode: 1);
+        }
+
+        if (($command[0] ?? '') === 'test' && ($command[1] ?? '') === '-f') {
+            return Process::result(exitCode: File::exists($command[2] ?? '') ? 0 : 1);
+        }
+
+        return Process::result(exitCode: 0);
+    });
     createCronjob()->assertCreated();
 
     // Nothing has run yet, so there is nothing to look at.

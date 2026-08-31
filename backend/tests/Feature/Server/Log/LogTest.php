@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ActivityLog;
+use App\Models\Cronjob;
 use App\Models\User;
 use App\Services\Server\LogManager;
 use Database\Seeders\PermissionSeeder;
@@ -43,6 +44,31 @@ it('lists only log sources whose file exists, with metadata', function () {
     expect($nginx['group'])->toBe('web');
     expect($nginx['readable'])->toBeTrue();
     expect($nginx['size'])->toBeGreaterThan(0);
+});
+
+it('orders cronjob log sources without case bias', function () {
+    config(['server.cronjob_log_dir' => $this->logDir]);
+
+    foreach ([
+        ['name' => 'Case Zebra', 'slug' => 'case-zebra'],
+        ['name' => 'case apple', 'slug' => 'case-apple'],
+        ['name' => 'CASE Banana', 'slug' => 'case-banana'],
+    ] as $job) {
+        Cronjob::create($job + [
+            'username' => 'root',
+            'command' => 'echo test',
+            'expression' => '* * * * *',
+        ]);
+        File::put($this->logDir.'/'.$job['slug'].'.log', "output\n");
+    }
+
+    $logs = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/logs')
+        ->assertOk()
+        ->json('logs');
+
+    expect(collect($logs)->where('group', 'cronjob')->pluck('label')->all())
+        ->toBe(['Cron — case apple', 'Cron — CASE Banana', 'Cron — Case Zebra']);
 });
 
 it('tails the last N lines of a source', function () {
@@ -315,5 +341,69 @@ describe('sources the panel cannot open itself', function () {
             ->getJson('/api/logs')->assertOk()->json('logs'))->pluck('key');
 
         expect($keys)->not->toContain('letsencrypt');
+    });
+});
+
+describe('a cron job log', function () {
+    it('is read through sudo, because the panel account cannot open it', function () {
+        // The file is 0640 owned by the account the job runs as, and its group
+        // is that user's own — so `adm`, which is what lets the panel read
+        // nginx and syslog, does not help. Read as the panel account this is
+        // the one source on the screen that always comes back empty.
+        config(['server.cronjob_log_dir' => '/var/log/cronjobs']);
+
+        Cronjob::create([
+            'name' => 'Nightly report', 'slug' => 'nightly-report',
+            'username' => 'deploy', 'command' => 'php artisan report',
+            'expression' => '0 3 * * *',
+        ]);
+
+        $ran = new ArrayObject;
+
+        Process::fake(function ($process) use ($ran) {
+            $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $ran[] = $command;
+
+            return ($command[0] ?? '') === 'tail'
+                ? Process::result(output: "job output line\n")
+                : Process::result(exitCode: 0);
+        });
+
+        $body = $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/cronjob_nightly-report')
+            ->assertOk()
+            ->json('log');
+
+        expect($body['lines'])->toContain('job output line');
+
+        // Through `tail`, against the job's own log — not PHP's file(), which
+        // is what every other source uses and what fails here.
+        expect(collect($ran)->contains(fn (array $c): bool => ($c[0] ?? '') === 'tail'
+            && in_array('/var/log/cronjobs/nightly-report.log', $c, true)))->toBeTrue();
+    });
+
+    it('says a privileged source cannot be followed or downloaded', function () {
+        // Both need a handle the panel does not have: byte-offset following
+        // needs a stable file it can stat, and streaming through sudo would
+        // pin a worker for the whole transfer. Reported so the UI offers
+        // refresh rather than a follow that silently never advances.
+        config(['server.cronjob_log_dir' => '/var/log/cronjobs']);
+
+        Cronjob::create([
+            'name' => 'Nightly report', 'slug' => 'nightly-report',
+            'username' => 'deploy', 'command' => 'php artisan report',
+            'expression' => '0 3 * * *',
+        ]);
+
+        Process::fake(fn () => Process::result(exitCode: 0));
+
+        $source = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs'))
+            ->firstWhere('key', 'cronjob_nightly-report');
+
+        expect($source)->not->toBeNull()
+            ->and($source['kind'])->toBe('privileged')
+            ->and($source['follow'])->toBeFalse()
+            ->and($source['downloadable'])->toBeFalse();
     });
 });

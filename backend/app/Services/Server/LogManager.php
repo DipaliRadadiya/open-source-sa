@@ -5,6 +5,7 @@ namespace App\Services\Server;
 use App\Contracts\PhpStack;
 use App\Exceptions\Server\Log\LogOperationException;
 use App\Models\Cronjob;
+use App\Support\ListSort;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -115,7 +116,10 @@ class LogManager
     private function exists(array $source): bool
     {
         return match ($source['kind'] ?? 'file') {
-            'privileged' => $this->serverOps->run(
+            // `probe`, not `run`: exit 1 here means "no such log", which is an
+            // ordinary answer for a job that has not run yet — not a failed
+            // server operation worth an error in the admin log.
+            'privileged' => $this->serverOps->probe(
                 ['test', '-f', $source['path']],
                 ['feature' => 'log', 'op' => 'exists', 'source' => $source['key']],
                 timeout: 15,
@@ -291,15 +295,30 @@ class LogManager
     {
         $dir = rtrim((string) config('server.cronjob_log_dir', '/var/log/cronjobs'), '/');
 
-        return Cronjob::query()
-            ->whereNotNull('slug')
-            ->orderBy('name')
-            ->get(['name', 'slug'])
+        return ListSort::caseInsensitive(
+            Cronjob::query()->whereNotNull('slug'),
+            'name',
+        )->get(['name', 'slug'])
             ->map(fn (Cronjob $cronjob) => [
                 'key' => "cronjob_{$cronjob->slug}",
                 'label' => "Cron — {$cronjob->name}",
                 'group' => 'cronjob',
                 'path' => "{$dir}/{$cronjob->slug}.log",
+                // Read through sudo, unlike every other source here.
+                //
+                // install.sh puts the panel account in `adm`, which is what
+                // makes the system logs readable: they are root:adm 0640. A
+                // cron log is 0640 too, but `chown {username}` leaves the group
+                // as that user's own — deliberately, because `nobody`'s group
+                // is `nogroup` and naming one would fail for it. So `adm` does
+                // not help here, the panel is neither owner nor group, and the
+                // file it offers on the Logs screen is the one file there it
+                // cannot open.
+                //
+                // Privileged rather than widening the mode: a job's output can
+                // contain anything it printed, and 0640 was chosen to keep that
+                // off other accounts.
+                'kind' => 'privileged',
             ])
             ->all();
     }
