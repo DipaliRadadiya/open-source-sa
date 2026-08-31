@@ -320,14 +320,70 @@ describe('sources the panel cannot open itself', function () {
     });
 
     it('reports a failed privileged read as a failure, not an empty log', function () {
-        Process::fake(fn ($process) => in_array('tail', $process->command, true)
-            ? Process::result(exitCode: 1, errorOutput: 'sudo: a password is required')
-            : Process::result(output: "4096 1755264000\n"));
+        // Broken, not refused: sudo permits `tail` and the read still fails.
+        // That is a fault on this server, so it gets a reference to quote.
+        Process::fake(function ($process) {
+            $command = (array) $process->command;
+
+            if (($command[0] ?? '') === 'sudo' && in_array('-l', $command, true)) {
+                return Process::result(output: '(root) NOPASSWD: /usr/bin/tail');
+            }
+
+            return in_array('tail', $command, true)
+                ? Process::result(exitCode: 1, errorOutput: 'tail: error reading: Input/output error')
+                : Process::result(output: "4096 1755264000\n");
+        });
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
             ->getJson('/api/logs/letsencrypt')
             ->assertStatus(500)
             ->assertJsonStructure(['message', 'reference']);
+    });
+
+    it('answers 403, not 500, when sudo refuses the reader', function () {
+        // The difference that matters to whoever is looking at the screen: a
+        // grant that predates the binary this needs is a known state with a
+        // known remedy (re-run install.sh), not a crash. Reported like the
+        // unprivileged branch already reports a file it cannot open, so one
+        // unreadable source does not read as a broken page.
+        Process::fake(function ($process) {
+            $command = (array) $process->command;
+
+            // sudo permits nothing — an out-of-date sudoers file.
+            if (($command[0] ?? '') === 'sudo' && in_array('-l', $command, true)) {
+                return Process::result(errorOutput: 'sorry, user may not run sudo', exitCode: 1);
+            }
+
+            return in_array('tail', $command, true)
+                ? Process::result(exitCode: 1, errorOutput: 'sudo: a password is required')
+                : Process::result(output: "4096 1755264000\n");
+        });
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/letsencrypt')
+            ->assertStatus(403)
+            ->assertJsonPath('code', 'log_not_permitted');
+    });
+
+    it('says up front that a privileged source is not readable when sudo refuses', function () {
+        // So the screen can grey the entry instead of offering something that
+        // fails on click. `readable` used to be hardcoded true for these.
+        Process::fake(function ($process) {
+            $command = (array) $process->command;
+
+            if (($command[0] ?? '') === 'sudo' && in_array('-l', $command, true)) {
+                return Process::result(errorOutput: 'sorry, user may not run sudo', exitCode: 1);
+            }
+
+            return Process::result(output: "4096 1755264000\n");
+        });
+
+        $source = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs'))
+            ->firstWhere('key', 'letsencrypt');
+
+        expect($source)->not->toBeNull()
+            ->and($source['readable'])->toBeFalse();
     });
 
     it('hides one the server does not have', function () {

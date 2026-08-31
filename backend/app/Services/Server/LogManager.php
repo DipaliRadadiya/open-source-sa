@@ -96,7 +96,13 @@ class LogManager
             // A privileged source is read through sudo, so "can the panel
             // account open it" is the wrong question — it never can, and it
             // does not need to.
-            'readable' => $kind === 'file' ? is_readable($source['path']) : true,
+            // For a privileged source the question is not whether this process
+            // can open the file — it never can — but whether sudo will run the
+            // reader. Hardcoding `true` here told the screen a source was
+            // readable right up until opening it returned a 500.
+            'readable' => $kind === 'file'
+                ? is_readable($source['path'])
+                : ($kind === 'journal' || $this->permitted('tail')),
             // Following by byte offset needs bytes and a stable file. The
             // journal has neither, and re-reading a privileged file through
             // sudo on every poll costs more than it saves — those re-tail.
@@ -141,6 +147,27 @@ class LogManager
      * @param  array<string, mixed>  $source
      * @return array{size: int|null, modified: int|null}
      */
+    /**
+     * May the panel run this binary at all?
+     *
+     * Memoised: `list()` describes every source in one request, and asking
+     * sudo the same question per cron job would be a process each. Only ever
+     * reached on a failure or when describing a privileged source, so a
+     * healthy server pays for it once.
+     *
+     * @var array<string, bool>
+     */
+    private array $permitted = [];
+
+    private function permitted(string $binary): bool
+    {
+        return $this->permitted[$binary] ??= $this->serverOps->probe(
+            ['sudo', '-n', '-l', $binary],
+            ['feature' => 'log', 'op' => 'permitted'],
+            timeout: 10,
+        )->ok;
+    }
+
     private function remoteStat(array $source): array
     {
         if (($source['kind'] ?? 'file') === 'journal') {
@@ -249,6 +276,16 @@ class LogManager
         );
 
         if ($result->failed()) {
+            // Refused and broken are different answers, and only one of them
+            // is worth a support reference. A grant that predates the binary
+            // this needs is a known state with a known remedy, and answering
+            // it with a 500 turns one unreadable source into a page that looks
+            // crashed. Asked of sudo rather than by matching its refusal
+            // prose, which differs per refusal kind and is translated.
+            if (! $this->permitted($command[0])) {
+                throw LogOperationException::refused();
+            }
+
             // Same rule as everywhere else here: a read that did not happen is
             // not an empty log.
             throw new LogOperationException($result->reference);
