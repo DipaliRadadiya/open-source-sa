@@ -11,6 +11,13 @@
  */
 const GITLAB_PATH = "/-/user_settings/personal_access_tokens";
 
+// Atlassian removed Bitbucket app passwords on 2026-07-28, taking
+// /account/settings/app-passwords with them — the old link 404'd for everyone.
+// Tokens now live on the Atlassian account, not on Bitbucket, and are created
+// through "Create API token with scopes" rather than a prefilled form, so
+// unlike GitHub there is no scope to pass in the URL.
+const BITBUCKET_TOKENS = "https://id.atlassian.com/manage-profile/security/api-tokens";
+
 export function createTokenUrl(provider, host, brand) {
   switch (provider) {
     case "github":
@@ -22,7 +29,7 @@ export function createTokenUrl(provider, host, brand) {
     case "gitlab":
       return `${base(host, "https://gitlab.com")}${GITLAB_PATH}`;
     case "bitbucket":
-      return "https://bitbucket.org/account/settings/app-passwords/new";
+      return BITBUCKET_TOKENS;
     default:
       return null;
   }
@@ -35,7 +42,7 @@ export function revokeTokenUrl(provider, host) {
     case "gitlab":
       return `${base(host, "https://gitlab.com")}${GITLAB_PATH}`;
     case "bitbucket":
-      return "https://bitbucket.org/account/settings/app-passwords/";
+      return BITBUCKET_TOKENS;
     default:
       return null;
   }
