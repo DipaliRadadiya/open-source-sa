@@ -11,6 +11,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { dirname } from "@/lib/files/path-helpers";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { fileIconFor, isImageFile } from "@/lib/files/file-icon";
+import { canOpenFile } from "@/lib/files/openable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
@@ -104,13 +105,20 @@ export function SiteSearchResults({ appId, query, onAction }) {
                     <TooltipContent className="max-w-60">{t("symlinkHint")}</TooltipContent>
                   </Tooltip>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
-                    className="block w-full truncate text-left font-medium hover:underline"
-                  >
-                    {file.name}
-                  </button>
+                  // Nothing to open — see the note in files-table.
+                  !canOpenFile(file.name) ? (
+                    <span className="block w-full truncate font-medium" title={file.name}>
+                      {file.name}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
+                      className="block w-full truncate text-left font-medium hover:underline"
+                    >
+                      {file.name}
+                    </button>
+                  )
                 )}
                 <p className="truncate text-xs text-muted-foreground">
                   {isDir ? (

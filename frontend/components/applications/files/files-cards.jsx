@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FileRowActions } from "@/components/applications/files/file-row-actions";
 import { FileThumb } from "@/components/applications/files/file-thumb";
 import { isImageFile } from "@/lib/files/file-icon";
+import { canOpenFile } from "@/lib/files/openable";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 
 export function FilesCards({ appId, data, canManage, onAction, busyPath, highlightPath, selected = [], onToggle }) {
@@ -76,13 +77,20 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
                   // so `truncate` was clipping at the button's width — which was
                   // already wider than the column — and the name spilled across
                   // the row's action icons instead of ellipsing.
-                  <button
-                    type="button"
-                    onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
-                    className="block w-full truncate text-left font-medium hover:underline"
-                  >
-                    {file.name}
-                  </button>
+                  // Nothing to open — see the note in files-table.
+                  !canOpenFile(file.name) ? (
+                    <span className="block w-full truncate font-medium" title={file.name}>
+                      {file.name}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
+                      className="block w-full truncate text-left font-medium hover:underline"
+                    >
+                      {file.name}
+                    </button>
+                  )
                 )}
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   {/* The card is the narrow-screen view of the same row, so it

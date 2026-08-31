@@ -12,6 +12,7 @@ import { FileRowActions } from "@/components/applications/files/file-row-actions
 import { FileActionItems } from "@/components/applications/files/file-actions-menu";
 import { FileThumb } from "@/components/applications/files/file-thumb";
 import { isImageFile } from "@/lib/files/file-icon";
+import { canOpenFile } from "@/lib/files/openable";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 
 // Cells are module-level so flexRender's identity stays stable across
@@ -138,6 +139,21 @@ function NameCell({ row, table }) {
           {file.link_broken ? t("symlinkBrokenHint") : t("symlinkHint")}
         </TooltipContent>
       </Tooltip>
+    );
+  }
+
+  // An archive or a binary has nowhere to go: the editor answers "this file
+  // isn't text" and the preview cannot decode it. Offering the click and then
+  // refusing it is a worse answer than not offering it — download and extract
+  // are still on the row's menu.
+  if (!canOpenFile(file.name)) {
+    return (
+      <span className="flex w-full min-w-0 items-center gap-2 font-medium">
+        <FileThumb file={file} appId={appId} className="size-5" />
+        <span className="truncate" title={file.name}>
+          {file.name}
+        </span>
+      </span>
     );
   }
 
