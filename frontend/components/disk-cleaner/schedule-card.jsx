@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveCleanerSchedule } from "@/lib/api/disk-cleaner";
 import { apiMessage } from "@/lib/api/error-message";
@@ -194,8 +194,13 @@ export function ScheduleCard({ schedule, categories, canManage }) {
             <ReasonTooltip
               reason={enabled && picked.size === 0 ? t("schedule.pickSomething") : null}
             >
+              {/* Disabled is not feedback: the dialog stays open while the
+                  write happens, so a button that only greys out reads as a
+                  click that did not land. Same spinner-and-label as every
+                  other save in the panel. */}
               <Button onClick={save} disabled={pending || (enabled && picked.size === 0)}>
-                {t("schedule.save")}
+                {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+                {pending ? t("schedule.saving") : t("schedule.save")}
               </Button>
             </ReasonTooltip>
           </>
