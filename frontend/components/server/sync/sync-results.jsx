@@ -47,6 +47,7 @@ export function SyncResults({
   pendingKey,
 }) {
   const t = useTranslations("sync");
+  const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [types, setTypes] = useState([]);
   const [expanded, setExpanded] = useState(() => new Set());
@@ -123,6 +124,19 @@ export function SyncResults({
           icon={SearchX}
           title={t("results.noMatches")}
           description={t("results.noMatchesHint")}
+          action={
+            search || types.length ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearch("");
+                  setTypes([]);
+                }}
+              >
+                {tc("clearFilters")}
+              </Button>
+            ) : null
+          }
         />
       ) : (
         <div className="overflow-x-auto rounded-xl border">

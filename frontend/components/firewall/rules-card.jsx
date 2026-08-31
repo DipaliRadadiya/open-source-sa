@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ShieldX, Trash2, Pencil } from "lucide-react";
+import { SearchX, ShieldX, Trash2, Pencil } from "lucide-react";
 import { deleteFirewallRule, updateFirewallRule } from "@/lib/api/firewall";
 import { unreachablePorts } from "@/lib/firewall/listening";
 import { PendingSwitch } from "@/components/ui/pending-switch";
@@ -14,6 +14,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
+import { useSetQuery } from "@/hooks/use-set-query";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import {
   Card,
@@ -126,6 +127,8 @@ export function RulesCard({
   const t = useTranslations("firewall");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const tc = useTranslations("common");
+  const setQuery = useSetQuery();
   const hasFilters = ["search", "enabled", "action", "origin", "sort"].some((key) => searchParams.has(key));
   const [pending, setPending] = useState(null);
   const [confirming, setConfirming] = useState(null);
@@ -340,7 +343,32 @@ export function RulesCard({
 
         {rules.length === 0 ? (
           hasFilters ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">{t("rules.noMatches")}</p>
+            // A line of grey text and no way out: five filters live in the URL
+            // here, so someone who narrowed with two of them has to remember
+            // which two. The button clears all of them, including sort.
+            <EmptyState
+              icon={SearchX}
+              title={t("rules.noMatches")}
+              action={
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setQuery(
+                      {
+                        search: undefined,
+                        enabled: undefined,
+                        action: undefined,
+                        origin: undefined,
+                        sort: undefined,
+                      },
+                      { resetPage: true },
+                    )
+                  }
+                >
+                  {tc("clearFilters")}
+                </Button>
+              }
+            />
           ) : (
             <EmptyState
               icon={ShieldX}

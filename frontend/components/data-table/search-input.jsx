@@ -25,8 +25,29 @@ export function SearchInput({
   const setQuery = useSetQuery();
   const pending = useNavPending();
   const tc = useTranslations("common");
-  const [value, setValue] = useState(searchParams.get(paramKey) ?? "");
+  const urlValue = searchParams.get(paramKey) ?? "";
+  const [value, setValue] = useState(urlValue);
   const first = useRef(true);
+
+  /*
+   * Follow the URL when something else changes it.
+   *
+   * This box seeded itself from the URL once and then owned its own value, so
+   * anything that cleared `search` elsewhere — "Clear filters" on the
+   * no-matches state, the back button, a link with its own query — emptied the
+   * table and left the term sitting in the input. The list then said "no
+   * matches" for a search that was no longer being applied.
+   *
+   * Synced during render rather than in an effect: an effect would paint the
+   * stale term for a frame first, and setting state in one is the cascading
+   * render the lint rule refuses. Typing is unaffected — the URL only catches
+   * up after the debounce below, and by then the two already agree.
+   */
+  const [seenUrlValue, setSeenUrlValue] = useState(urlValue);
+  if (seenUrlValue !== urlValue) {
+    setSeenUrlValue(urlValue);
+    if (urlValue !== value.trim()) setValue(urlValue);
+  }
 
   useEffect(() => {
     // Don't fire on mount — only on user edits.

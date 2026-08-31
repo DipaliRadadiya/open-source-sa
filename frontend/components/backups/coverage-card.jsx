@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ShieldAlert, ShieldCheck } from "lucide-react";
+import { SearchX, ShieldAlert, ShieldCheck } from "lucide-react";
 import { BACKUP_IN_FLIGHT, BACKUP_TYPES } from "@/lib/schemas/backup";
 import { runBackupNow } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FilterSelect } from "@/components/data-table/filter-select";
 import { DestinationHealth } from "@/components/backups/destination-health";
@@ -27,6 +28,7 @@ import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
  */
 export function CoverageCard({ coverage, applications, destinations, canManage }) {
   const t = useTranslations("backups.coverage");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [setupFor, setSetupFor] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -172,12 +174,36 @@ export function CoverageCard({ coverage, applications, destinations, canManage }
           </span>
         </div>
 
-        <div className="lg:hidden">
-          <CoverageCards {...listProps} />
-        </div>
-        <div className="hidden lg:block">
-          <CoverageTable {...listProps} />
-        </div>
+        {/* Three filters live here and none of them is in the URL, so a
+            narrowed-to-nothing list showed an empty table with no hint of
+            which one did it. */}
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={SearchX}
+            title={t("noMatches")}
+            action={
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearch("");
+                  setState("all");
+                  setType("all");
+                }}
+              >
+                {tc("clearFilters")}
+              </Button>
+            }
+          />
+        ) : (
+          <>
+            <div className="lg:hidden">
+              <CoverageCards {...listProps} />
+            </div>
+            <div className="hidden lg:block">
+              <CoverageTable {...listProps} />
+            </div>
+          </>
+        )}
       </div>
 
       <SetupBackupsDialog

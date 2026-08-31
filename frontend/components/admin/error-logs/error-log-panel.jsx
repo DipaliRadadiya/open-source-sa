@@ -7,6 +7,7 @@ import { groupMatches } from "@/lib/admin/group-error-logs";
 import { LINE_OPTIONS } from "@/lib/schemas/error-log";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { Button } from "@/components/ui/button";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ErrorGroupRow } from "@/components/admin/error-logs/error-group-row";
@@ -38,6 +39,7 @@ import {
  */
 export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
   const t = useTranslations("errorLogs");
+  const tc = useTranslations("common");
   const setQuery = useSetQuery();
   const [search, setSearch] = useState("");
 
@@ -121,6 +123,13 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
           icon={SearchX}
           title={t("noMatchesTitle")}
           description={t("noMatchesDescription")}
+          action={
+            search ? (
+              <Button variant="outline" onClick={() => setSearch("")}>
+                {tc("clearFilters")}
+              </Button>
+            ) : null
+          }
         />
       ) : (
         <div className="space-y-3">
