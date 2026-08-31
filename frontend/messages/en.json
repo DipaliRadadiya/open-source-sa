@@ -1,9 +1,10 @@
 {
   "common": {
     "passwordRules": {
-      "length": "At least 10 characters",
+      "length": "At least {min, number} characters",
       "case": "Upper & lowercase letters",
-      "number": "A number"
+      "number": "A number",
+      "symbol": "A symbol"
     },
     "saveFooter": {
       "save": "Save",
@@ -64,6 +65,7 @@
     "clearSearch": "Clear search",
     "columns": {
       "username": "Username",
+      "password": "Password",
       "home": "Home",
       "shell": "Shell",
       "access": "Access",
@@ -1761,6 +1763,13 @@
         "confirmCancel": "Cancel",
         "confirmSubmit": "Restart",
         "scheduled": "Restart scheduled in {minutes} minutes.",
+        "pendingAt": "A restart is scheduled for {at}.",
+        "pendingUnknownTime": "A restart is scheduled.",
+        "pendingUnknown": "Could not check whether a restart is scheduled.",
+        "cancel": "Cancel restart",
+        "cancelled": "Scheduled restart cancelled.",
+        "cancelFailed": "Could not cancel the restart.",
+        "scheduledAt": "Restart scheduled for {at}.",
         "failed": "The restart couldn't be started.",
         "summary": "Restart this server now, or after a short delay."
       },
@@ -2709,6 +2718,7 @@
       "optional": "optional",
       "createToken": "Create a token on {provider}",
       "looksLikeUrl": "That looks like a web address rather than a token.",
+      "bitbucketToken": "On the scopes step, tick only <scope>read:repository:bitbucket</scope> — \"View your repositories\". Nothing else is needed.",
       "bitbucketScope": "A token scoped to one repository will connect and then show only that repository. That is the access you granted, not an error.",
       "back": "Back",
       "cancel": "Cancel",
@@ -2834,6 +2844,8 @@
     "showAdvanced": "Show advanced settings",
     "hideAdvanced": "Hide advanced settings",
     "source": {
+        "accountMissing": "The Git account this site used has been disconnected. Deploys will fail until it is linked to another account.",
+        "relink": {"action": "Reconnect", "title": "Reconnect this site to a Git account", "description": "The repository and branch stay as they are — {repository}. The account chosen here is checked against it before anything is saved.", "choose": "Choose an account", "cancel": "Cancel", "submit": "Reconnect", "done": "Site reconnected.", "failed": "Could not reconnect the site."},
       "title": "Source and deployment",
       "repository": "Repository",
       "branch": "Branch",
@@ -4507,7 +4519,9 @@
     "unknownOperation": "unnamed operation",
     "unknownFeature": "unknown feature",
     "exitCode": "Exit {code}",
-    "reference": "Reference {reference}",
+    "attempts": "{count, plural, one {# attempt} other {# attempts}}",
+      "duration": "{ms, number}ms",
+      "reference": "Reference {reference}",
     "referenceLabel": "Look up a reference",
     "referencePlaceholder": "Paste a reference",
     "referenceSubmit": "Look up",

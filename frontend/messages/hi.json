@@ -1,9 +1,10 @@
 {
   "common": {
     "passwordRules": {
-      "length": "कम से कम 10 अक्षर",
+      "length": "कम से कम {min, number} अक्षर",
       "case": "बड़े और छोटे अक्षर",
-      "number": "एक संख्या"
+      "number": "एक संख्या",
+      "symbol": "एक चिह्न"
     },
     "saveFooter": {
       "save": "सेव करें",
@@ -611,6 +612,7 @@
     "clearSearch": "खोज साफ़ करें",
     "columns": {
       "username": "उपयोगकर्ता नाम",
+      "password": "पासवर्ड",
       "home": "होम",
       "shell": "शेल",
       "access": "पहुँच",
@@ -1748,6 +1750,13 @@
         "lastRun": "पिछली बार {when}"
       },
       "reboot": {
+        "pendingAt": "{at} पर रीस्टार्ट शेड्यूल है।",
+        "pendingUnknownTime": "एक रीस्टार्ट शेड्यूल है।",
+        "pendingUnknown": "जाँच नहीं हो सकी कि कोई रीस्टार्ट शेड्यूल है या नहीं।",
+        "cancel": "रीस्टार्ट रद्द करें",
+        "cancelled": "शेड्यूल किया गया रीस्टार्ट रद्द हो गया।",
+        "cancelFailed": "रीस्टार्ट रद्द नहीं हो सका।",
+        "scheduledAt": "{at} पर रीस्टार्ट शेड्यूल किया गया।",
         "title": "मैनुअल रीस्टार्ट",
         "description": "वापस आने तक सभी होस्ट की गई साइटें पहुँच से बाहर रहती हैं, आमतौर पर एक मिनट से कम।",
         "requiredDescription": "एक रीस्टार्ट लंबित है। सर्वर वापस आने तक होस्ट की गई साइटें अनुपलब्ध रहती हैं, आमतौर पर एक मिनट से कम।",
@@ -2709,6 +2718,7 @@
       "optional": "वैकल्पिक",
       "createToken": "{provider} पर टोकन बनाएँ",
       "looksLikeUrl": "यह टोकन नहीं, वेब पता लग रहा है।",
+      "bitbucketToken": "स्कोप्स वाले चरण में सिर्फ़ <scope>read:repository:bitbucket</scope> — \"View your repositories\" चुनें। और कुछ ज़रूरी नहीं है।",
       "bitbucketScope": "किसी एक रिपॉज़िटरी तक सीमित टोकन जुड़ जाएगा और केवल वही रिपॉज़िटरी दिखाएगा। यह आपकी दी हुई पहुँच है, कोई गड़बड़ी नहीं।",
       "back": "पीछे",
       "cancel": "रद्द करें",
@@ -2834,6 +2844,8 @@
     "showAdvanced": "उन्नत सेटिंग्स दिखाएँ",
     "hideAdvanced": "उन्नत सेटिंग्स छिपाएँ",
     "source": {
+        "accountMissing": "इस साइट का Git अकाउंट डिस्कनेक्ट हो गया है। किसी दूसरे अकाउंट से जोड़ने तक डिप्लॉय विफल रहेंगे।",
+        "relink": {"action": "फिर से जोड़ें", "title": "इस साइट को Git अकाउंट से फिर जोड़ें", "description": "रिपॉज़िटरी और ब्रांच वैसे ही रहेंगे — {repository}। चुना गया अकाउंट सेव करने से पहले जाँचा जाता है।", "choose": "अकाउंट चुनें", "cancel": "रद्द करें", "submit": "फिर से जोड़ें", "done": "साइट फिर से जुड़ गई।", "failed": "साइट फिर से नहीं जुड़ सकी।"},
       "title": "स्रोत और डिप्लॉयमेंट",
       "repository": "रिपॉज़िटरी",
       "branch": "ब्रांच",
@@ -4507,7 +4519,9 @@
     "unknownOperation": "बिना नाम का ऑपरेशन",
     "unknownFeature": "अज्ञात सुविधा",
     "exitCode": "एग्ज़िट {code}",
-    "reference": "संदर्भ {reference}",
+    "attempts": "{count, plural, one {# प्रयास} other {# प्रयास}}",
+      "duration": "{ms, number} ms",
+      "reference": "संदर्भ {reference}",
     "referenceLabel": "संदर्भ से खोजें",
     "referencePlaceholder": "संदर्भ पेस्ट करें",
     "referenceSubmit": "खोजें",

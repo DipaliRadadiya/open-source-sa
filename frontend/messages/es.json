@@ -1,9 +1,10 @@
 {
   "common": {
     "passwordRules": {
-      "length": "Al menos 10 caracteres",
+      "length": "Al menos {min, number} caracteres",
       "case": "Mayúsculas y minúsculas",
-      "number": "Un número"
+      "number": "Un número",
+      "symbol": "Un símbolo"
     },
     "saveFooter": {
       "save": "Guardar",
@@ -611,6 +612,7 @@
     "clearSearch": "Borrar búsqueda",
     "columns": {
       "username": "Usuario",
+      "password": "Contraseña",
       "home": "Directorio",
       "shell": "Shell",
       "access": "Acceso",
@@ -1748,6 +1750,13 @@
         "lastRun": "Última ejecución {when}"
       },
       "reboot": {
+        "pendingAt": "Hay un reinicio programado para {at}.",
+        "pendingUnknownTime": "Hay un reinicio programado.",
+        "pendingUnknown": "No se pudo comprobar si hay un reinicio programado.",
+        "cancel": "Cancelar reinicio",
+        "cancelled": "Reinicio programado cancelado.",
+        "cancelFailed": "No se pudo cancelar el reinicio.",
+        "scheduledAt": "Reinicio programado para {at}.",
         "title": "Reinicio manual",
         "description": "Todos los sitios alojados quedan inaccesibles hasta que vuelva, normalmente menos de un minuto.",
         "requiredDescription": "Hay un reinicio pendiente. Los sitios alojados quedan inaccesibles hasta que el servidor vuelva, normalmente menos de un minuto.",
@@ -2709,6 +2718,7 @@
       "optional": "opcional",
       "createToken": "Crear un token en {provider}",
       "looksLikeUrl": "Eso parece una dirección web, no un token.",
+      "bitbucketToken": "En el paso de permisos, marca solo <scope>read:repository:bitbucket</scope> — \"View your repositories\". No hace falta nada más.",
       "bitbucketScope": "Un token limitado a un repositorio se conectará y mostrará solo ese repositorio. Ese es el acceso que concediste, no un error.",
       "back": "Atrás",
       "cancel": "Cancelar",
@@ -2834,6 +2844,8 @@
     "showAdvanced": "Mostrar ajustes avanzados",
     "hideAdvanced": "Ocultar ajustes avanzados",
     "source": {
+        "accountMissing": "La cuenta de Git que usaba este sitio se ha desconectado. Los despliegues fallarán hasta que se vincule a otra cuenta.",
+        "relink": {"action": "Reconectar", "title": "Reconectar este sitio a una cuenta de Git", "description": "El repositorio y la rama no cambian — {repository}. La cuenta elegida se comprueba contra ellos antes de guardar nada.", "choose": "Elige una cuenta", "cancel": "Cancelar", "submit": "Reconectar", "done": "Sitio reconectado.", "failed": "No se pudo reconectar el sitio."},
       "title": "Origen y despliegue",
       "repository": "Repositorio",
       "branch": "Rama",
@@ -4507,7 +4519,9 @@
     "unknownOperation": "operación sin nombre",
     "unknownFeature": "función desconocida",
     "exitCode": "Salida {code}",
-    "reference": "Referencia {reference}",
+    "attempts": "{count, plural, one {# intento} other {# intentos}}",
+      "duration": "{ms, number} ms",
+      "reference": "Referencia {reference}",
     "referenceLabel": "Buscar una referencia",
     "referencePlaceholder": "Pega una referencia",
     "referenceSubmit": "Buscar",
