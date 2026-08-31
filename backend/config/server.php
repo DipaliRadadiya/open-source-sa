@@ -433,6 +433,15 @@ return [
     */
 
     'cronjob_log_dir' => env('SERVER_CRONJOB_LOG_DIR', '/var/log/cronjobs'),
+
+    /*
+    | Where systemd records a pending shutdown. Written when one is scheduled,
+    | removed when it is cancelled or fires — so its presence is the answer to
+    | "is a restart pending", and its USEC key is when.
+    */
+    'reboot' => [
+        'scheduled_file' => env('SERVER_REBOOT_SCHEDULED_FILE', '/run/systemd/shutdown/scheduled'),
+    ],
     'cronjob_logrotate_file' => env('SERVER_CRONJOB_LOGROTATE', '/etc/logrotate.d/panel-cronjobs'),
     'cronjob_log_keep_days' => (int) env('SERVER_CRONJOB_LOG_KEEP_DAYS', 14),
     'cronjob_log_max_size' => env('SERVER_CRONJOB_LOG_MAX_SIZE', '10M'),

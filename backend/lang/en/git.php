@@ -29,7 +29,7 @@ return [
 
     'token_help' => [
         'github' => 'A personal access token with the "repo" scope.',
-        'gitlab' => 'A personal access token with the "read_repository" and "read_api" scopes. Leave the URL empty for gitlab.com.',
+        'gitlab' => 'A personal access token with the "read_repository" and "read_api" scopes.',
         'bitbucket' => 'A scoped Access Token (workspace, project or repository level). A repository-scoped token will only list that repository.',
     ],
 

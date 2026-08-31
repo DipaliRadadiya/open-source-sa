@@ -10,6 +10,13 @@ Route::get('/settings', [SettingController::class, 'index'])->middleware('permis
 Route::put('/settings/general', [SettingController::class, 'updateGeneral'])->middleware('permission:setting,manage');
 Route::put('/settings/swap', [SettingController::class, 'updateSwap'])->middleware('permission:setting,manage');
 Route::post('/settings/reboot', [SettingController::class, 'reboot'])->middleware('permission:setting,manage');
+// Read before write: whether a restart is already pending, and for when. Read
+// from systemd rather than remembered, so a reboot scheduled from a shell is
+// not invisible to the panel.
+Route::get('/settings/reboot', [SettingController::class, 'rebootStatus'])->middleware('permission:setting');
+// `shutdown -c`. Without this a restart scheduled an hour out could be watched
+// and not stopped.
+Route::delete('/settings/reboot', [SettingController::class, 'cancelReboot'])->middleware('permission:setting,manage');
 Route::put('/settings/security', [SettingController::class, 'updateSecurity'])->middleware('permission:setting,manage');
 Route::put('/settings/updates', [SettingController::class, 'updateUpdates'])->middleware('permission:setting,manage');
 Route::put('/settings/redis', [SettingController::class, 'updateRedis'])->middleware('permission:setting,manage');

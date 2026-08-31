@@ -20,6 +20,7 @@ use App\Services\Server\Settings\SettingChangeLog;
 use App\Services\Server\Settings\SettingsManager;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 
 class SettingController extends Controller
 {
@@ -148,7 +149,93 @@ class SettingController extends Controller
 
         $log->log('setting.reboot_requested', null, ['when' => $when]);
 
-        return response()->json(['reboot' => ['scheduled' => true, 'when' => $when]], 202);
+        return response()->json([
+            'reboot' => [
+                'scheduled' => true,
+                'when' => $when,
+                // The absolute moment, computed from the server's own clock.
+                // `when` is `+60`, and a client turning that into a time with
+                // its own clock is wrong by however far the two have drifted —
+                // on the one number where being wrong means someone schedules
+                // a restart for the wrong hour. `shutdown` obeys this clock,
+                // so this clock is the one that answers.
+                'at' => now()->addMinutes($delay)->format('d-m-Y H:i:s'),
+                'delay_minutes' => $delay,
+            ],
+        ], 202);
+    }
+
+    /**
+     * Whether a restart is already scheduled, and for when.
+     *
+     * systemd writes `/run/systemd/shutdown/scheduled` when one is pending —
+     * an ini file whose USEC key is the wall-clock microsecond it fires. Read
+     * rather than remembered: a reboot can be scheduled from a shell without
+     * the panel, and a panel that only knows about its own would confidently
+     * report "none" while the machine counts down.
+     */
+    public function rebootStatus(ServerOps $ops): JsonResponse
+    {
+        $path = (string) config('server.reboot.scheduled_file', '/run/systemd/shutdown/scheduled');
+
+        $probe = $ops->probe(
+            ['test', '-f', $path],
+            ['feature' => 'setting', 'group' => 'reboot', 'op' => 'reboot_status'],
+            timeout: 15,
+        );
+
+        // Could not look. Not the same as "nothing is scheduled", and this is
+        // the screen someone opens to find out whether to cancel one.
+        if (! $probe->answered) {
+            throw new SettingOperationException($probe->reference);
+        }
+
+        if (! $probe->ok) {
+            return response()->json(['reboot' => ['scheduled' => false, 'at' => null]]);
+        }
+
+        $read = $ops->run(
+            ['cat', $path],
+            ['feature' => 'setting', 'group' => 'reboot', 'op' => 'reboot_status'],
+            timeout: 15,
+        );
+
+        if ($read->failed()) {
+            throw new SettingOperationException($read->reference);
+        }
+
+        preg_match('/^USEC=(\d+)/m', $read->output(), $matches);
+
+        return response()->json([
+            'reboot' => [
+                'scheduled' => true,
+                // Microseconds since the epoch, per systemd's own format.
+                'at' => isset($matches[1])
+                    ? Carbon::createFromTimestamp((int) ($matches[1] / 1_000_000))->format('d-m-Y H:i:s')
+                    : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Call off a scheduled restart.
+     *
+     * `shutdown -c` is the counterpart of the `-r +N` above, and there was no
+     * way to reach it: a restart scheduled an hour out could be watched but
+     * not stopped. Cancelling one that is not scheduled is not an error --
+     * the user wanted no pending restart and there is none.
+     */
+    public function cancelReboot(ServerOps $ops, ActivityLogger $log): JsonResponse
+    {
+        $result = $ops->run(['shutdown', '-c'], ['feature' => 'setting', 'group' => 'reboot', 'op' => 'reboot_cancel']);
+
+        if ($result->failed()) {
+            throw new SettingOperationException($result->reference);
+        }
+
+        $log->log('setting.reboot_cancelled', null, []);
+
+        return response()->json(['reboot' => ['scheduled' => false, 'at' => null]]);
     }
 
     private function save(string $key, FormRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse

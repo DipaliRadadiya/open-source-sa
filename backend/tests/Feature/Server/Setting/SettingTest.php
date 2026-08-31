@@ -595,3 +595,92 @@ it('never rewrites the hosts file from a read that came back empty', function ()
 
     expect(File::get($this->dir.'/hosts'))->toContain('localhost');
 });
+
+describe('a scheduled restart', function () {
+    it('answers when it will happen, from the server\'s own clock', function () {
+        // `when` is "+60". A client turning that into a time with its own clock
+        // is wrong by however far the two have drifted — on the one number
+        // where being wrong means somebody expects a restart at the wrong hour.
+        // `shutdown` obeys the server's clock, so the server answers.
+        fakeSettings();
+
+        $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/settings/reboot', ['delay_minutes' => 30])
+            ->assertStatus(202);
+
+        expect($response->json('reboot.delay_minutes'))->toBe(30)
+            ->and($response->json('reboot.at'))
+            ->toBe(now()->addMinutes(30)->format('d-m-Y H:i:s'));
+    });
+
+    it('reports one that is already pending, read from systemd', function () {
+        // Read rather than remembered: a reboot can be scheduled from a shell
+        // without the panel, and a panel that only knew about its own would
+        // report "none" while the machine counts down.
+        $at = now()->addHour()->startOfSecond();
+
+        Process::fake(function ($process) use ($at) {
+            $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            return match ($command[0] ?? '') {
+                'test' => Process::result(exitCode: 0),
+                'cat' => Process::result(output: 'USEC='.($at->getTimestamp() * 1_000_000)."\nWARN_WALL=1\nMODE=reboot\n"),
+                default => Process::result(exitCode: 0),
+            };
+        });
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings/reboot')
+            ->assertOk()
+            ->assertJsonPath('reboot.scheduled', true)
+            ->assertJsonPath('reboot.at', $at->format('d-m-Y H:i:s'));
+    });
+
+    it('reports none when systemd has no pending shutdown', function () {
+        Process::fake(fn () => Process::result(exitCode: 1));
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings/reboot')
+            ->assertOk()
+            ->assertJsonPath('reboot.scheduled', false)
+            ->assertJsonPath('reboot.at', null);
+    });
+
+    it('does not report "none" when it could not look', function () {
+        // The screen someone opens to decide whether to cancel a restart is
+        // the worst place to answer a question that was never asked.
+        Process::fake(fn () => Process::result(
+            errorOutput: 'sudo: a password is required',
+            exitCode: 1,
+        ));
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings/reboot')
+            ->assertStatus(500)
+            ->assertJsonStructure(['message', 'reference']);
+    });
+
+    it('can be cancelled', function () {
+        // `shutdown -c`, which had no route at all: a restart scheduled an
+        // hour out could be watched and not stopped.
+        fakeSettings();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->deleteJson('/api/settings/reboot')
+            ->assertOk()
+            ->assertJsonPath('reboot.scheduled', false);
+
+        Process::assertRan(fn ($p) => $p->command === ['shutdown', '-c']);
+        $this->assertDatabaseHas('activity_logs', ['type' => 'setting', 'action' => 'reboot_cancelled']);
+    });
+
+    it('refuses to cancel for a viewer without manage', function () {
+        fakeSettings();
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'setting', view: true, manage: false);
+
+        $this->withHeader('Authorization', 'Bearer '.$viewer->createToken('t')->plainTextToken)
+            ->deleteJson('/api/settings/reboot')
+            ->assertForbidden();
+    });
+});

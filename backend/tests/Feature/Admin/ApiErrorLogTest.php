@@ -211,6 +211,46 @@ it('falls back to redacted stdout when a server operation has no stderr', functi
         ->assertJsonPath('error_logs.0.error', null);
 });
 
+it('sends the command that failed, with how long it ran and how often it was tried', function () {
+    // Recorded since the feature shipped and never sent, so the screen showed
+    // that something broke without ever showing what. The command was already
+    // redacted where it was written -- ServerOps puts every command line
+    // through CommandRedactor before logging it -- so this is the same text an
+    // operator would read on the box, without having to go to the box.
+    File::put($this->logDir.'/server-ops.log', json_encode([
+        'message' => 'server operation',
+        'context' => [
+            'reference' => 'c0ffee00-0000-4000-8000-000000000001',
+            'feature' => 'application',
+            'op' => 'create_database',
+            'command' => 'mysql --user=root --password=[REDACTED] -e CREATE DATABASE shop',
+            'exit_code' => 1,
+            'stderr' => 'ERROR 2002 (HY000): Can\'t connect to local MySQL server',
+            'duration_ms' => 12043,
+            'attempts' => 3,
+        ],
+        'level_name' => 'ERROR',
+        'datetime' => '2026-08-31T07:00:00+00:00',
+    ]).PHP_EOL);
+
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $entry = collect($this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/error-logs')->assertOk()->json('error_logs'))
+        ->firstWhere('reference', 'c0ffee00-0000-4000-8000-000000000001');
+
+    expect($entry)->not->toBeNull()
+        ->and($entry['command'])->toContain('CREATE DATABASE shop')
+        // Redacted at the point it was written, and still redacted here.
+        ->and($entry['command'])->not->toContain('hunter2')
+        ->and($entry['duration_ms'])->toBe(12043)
+        // Three attempts and twelve seconds is a lock being retried; one
+        // attempt and 40ms is something else entirely, and the timestamps
+        // alone cannot tell those apart.
+        ->and($entry['attempts'])->toBe(3);
+});
+
 it('rejects an invalid reference filter', function () {
     $admin = User::factory()->admin()->create();
     $token = $admin->createToken('test')->plainTextToken;

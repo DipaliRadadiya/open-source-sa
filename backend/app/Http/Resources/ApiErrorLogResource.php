@@ -26,6 +26,16 @@ class ApiErrorLogResource extends JsonResource
             'feature' => $this['context']['feature'] ?? null,
             'operation' => $this['context']['op'] ?? null,
             'exit_code' => $this['context']['exit_code'] ?? null,
+            // The command itself. Already redacted where it was written --
+            // ServerOps runs every command line through CommandRedactor before
+            // logging it -- so this is the same text an operator would read in
+            // the server-ops log, without having to open it on the box.
+            'command' => $this['context']['command'] ?? null,
+            // How long it ran and how many times it was tried. A lock retried
+            // three times and a command that died in 40ms are different
+            // failures, and the timestamps alone cannot tell them apart.
+            'duration_ms' => $this['context']['duration_ms'] ?? null,
+            'attempts' => $this['context']['attempts'] ?? null,
             'error' => $this->errorSummary(),
         ];
     }

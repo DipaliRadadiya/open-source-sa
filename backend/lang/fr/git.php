@@ -21,7 +21,7 @@ return [
 
     'token_help' => [
         'github' => 'Un jeton d\'accès personnel avec la portée « repo ».',
-        'gitlab' => 'Un jeton d\'accès personnel avec les portées « read_repository » et « read_api ». Laissez l\'URL vide pour gitlab.com.',
+        'gitlab' => 'Un jeton d\'accès personnel avec les portées « read_repository » et « read_api ».',
         'bitbucket' => 'Un jeton d\'accès à portée limitée (espace de travail, projet ou dépôt). Un jeton limité à un dépôt n\'affichera que ce dépôt.',
     ],
 
