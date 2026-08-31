@@ -12,6 +12,7 @@ import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordRules } from "@/components/ui/password-rules";
 import {
   Form,
   FormField,
@@ -102,6 +103,7 @@ export function RegisterForm() {
                   {...field}
                 />
               </FormControl>
+              <PasswordRules value={field.value} />
               <FormMessage field={t('fields.password')} />
             </FormItem>
           )}

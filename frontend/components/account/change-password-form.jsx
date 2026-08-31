@@ -4,14 +4,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, Check, Circle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 import { changePasswordSchema } from "@/lib/schemas/account";
 import { changePassword } from "@/lib/auth/auth-actions";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordRules } from "@/components/ui/password-rules";
 import {
   Card,
   CardContent,
@@ -50,12 +50,6 @@ export function ChangePasswordForm() {
   }
 
   const isSubmitting = form.formState.isSubmitting;
-
-  const rules = (value = "") => [
-    { key: "reqLength", ok: value.length >= 10 },
-    { key: "reqCase", ok: /[a-z]/.test(value) && /[A-Z]/.test(value) },
-    { key: "reqNumber", ok: /[0-9]/.test(value) },
-  ];
 
   return (
     <Form {...form}>
@@ -101,24 +95,7 @@ export function ChangePasswordForm() {
                         {...field}
                       />
                     </FormControl>
-                    <ul className="space-y-1 pt-0.5">
-                      {rules(field.value).map((r) => (
-                        <li
-                          key={r.key}
-                          className={cn(
-                            "flex items-center gap-1.5 text-xs",
-                            r.ok ? "text-foreground" : "text-muted-foreground",
-                          )}
-                        >
-                          {r.ok ? (
-                            <Check className="size-3.5 text-success" />
-                          ) : (
-                            <Circle className="size-3.5 text-muted-foreground/50" />
-                          )}
-                          {t(`password.${r.key}`)}
-                        </li>
-                      ))}
-                    </ul>
+                    <PasswordRules value={field.value} />
                     <FormMessage field={t('password.new')} />
                   </FormItem>
                 )}
