@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Power, RotateCcw } from "lucide-react";
@@ -10,6 +9,7 @@ import { rebootServer } from "@/lib/api/settings";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useServerRestart } from "@/components/sections/server-restart-overlay";
 
 /**
  * "This server is waiting on a restart", on every page — and the restart.
@@ -30,7 +30,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  */
 export function RebootRequiredBanner({ canManage }) {
   const t = useTranslations("rebootBanner");
-  const router = useRouter();
+  const { start } = useServerRestart();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -40,10 +40,15 @@ export function RebootRequiredBanner({ canManage }) {
       // `0` = now. The API answers 202 and the machine goes away shortly after,
       // so this response is an acknowledgement, not a completion.
       await rebootServer(0);
-      toast.success(t("started"));
       setConfirming(false);
-      router.refresh();
+      // Not a toast: it would fade while the server was still going down, and
+      // there would be nothing left saying why the panel had stopped
+      // answering. router.refresh() was worse — a render request aimed at a
+      // server that is shutting down.
+      start();
     } catch (error) {
+      // The restart never began, so there is nothing to watch. A curtain here
+      // would report progress on something that did not happen.
       toast.error(apiMessage(error, t("failed")));
     } finally {
       setPending(false);

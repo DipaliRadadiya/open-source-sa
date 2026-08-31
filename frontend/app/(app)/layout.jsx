@@ -18,6 +18,7 @@ import { RateLimited } from "@/components/sections/rate-limited";
 import { isRateLimited } from "@/lib/api/rate-limited";
 import { ApplicationNavProvider } from "@/components/sections/application-nav";
 import { UnsavedProvider } from "@/components/ui/unsaved-guard";
+import { ServerRestartProvider } from "@/components/sections/server-restart-overlay";
 import { AppChromeHeight } from "@/components/sections/app-chrome-height";
 import { PanelFocus } from "@/components/sections/panel-focus";
 
@@ -60,6 +61,10 @@ export default async function AppLayout({ children }) {
         {/* Panel-wide, not settings-only. Any screen with its own Save can
             lose an edit to a sidebar click, and every one of them did. */}
         <UnsavedProvider>
+        {/* Above the shell, not inside a page: a restart takes the sidebar and
+            header down with everything else, so the curtain has to cover them
+            too. */}
+        <ServerRestartProvider>
         <PanelFocus />
         <PageCrumbProvider>
           <ApplicationNavProvider>
@@ -114,6 +119,7 @@ export default async function AppLayout({ children }) {
             </SidebarProvider>
           </ApplicationNavProvider>
         </PageCrumbProvider>
+        </ServerRestartProvider>
         </UnsavedProvider>
       </TooltipProvider>
     </AuthProvider>

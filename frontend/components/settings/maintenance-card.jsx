@@ -34,6 +34,7 @@ import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { validationMessage } from "@/lib/settings/validation-message";
 import { apiMessage } from "@/lib/api/error-message";
+import { useServerRestart } from "@/components/sections/server-restart-overlay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -543,6 +544,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
 function ManualSection({ canManage, rebootRequired }) {
   const t = useTranslations("settings.maintenance");
   const router = useRouter();
+  const { start } = useServerRestart();
   const [delay, setDelay] = useState("0");
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
@@ -550,14 +552,19 @@ function ManualSection({ canManage, rebootRequired }) {
   async function confirm() {
     setPending(true);
     try {
-      await rebootServer(Number(delay));
-      toast.success(
-        Number(delay) === 0
-          ? t("reboot.startedNow")
-          : t("reboot.scheduled", { minutes: Number(delay) }),
-      );
+      const minutes = Number(delay);
+      await rebootServer(minutes);
       setConfirming(false);
-      router.refresh();
+
+      // Only an immediate restart gets the curtain. A scheduled one has not
+      // started — there is nothing to watch yet, and covering the panel for
+      // the next hour would be absurd.
+      if (minutes === 0) {
+        start();
+      } else {
+        toast.success(t("reboot.scheduled", { minutes }));
+        router.refresh();
+      }
     } catch (error) {
       toast.error(apiMessage(error, t("reboot.failed")));
     } finally {
