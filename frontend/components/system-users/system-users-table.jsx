@@ -18,6 +18,7 @@ import { RefreshButton } from "@/components/data-table/refresh-button";
 import { AccessSwitch } from "@/components/system-users/access-switch";
 import { ShellSelect } from "@/components/system-users/shell-select";
 import { AppsCell } from "@/components/system-users/apps-cell";
+import { PasswordReveal } from "@/components/system-users/password-reveal";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
 import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
 import { SystemUsersCards } from "@/components/system-users/system-users-cards";
@@ -33,16 +34,34 @@ import { SystemUsersCards } from "@/components/system-users/system-users-cards";
  * `canManage` reaches them through `table.options.meta`.
  * ------------------------------------------------------------------------- */
 
-function UsernameCell({ row }) {
+function UsernameCell({ row, table }) {
   const t = useTranslations("systemUsers");
+  // The badge and the password column answer the same question. A manager has
+  // the column, which says "Not set" in the place they are already looking, so
+  // the badge would only repeat it. A viewer has no column, and this is then
+  // the only thing telling them the account cannot be logged into.
+  const showBadge = !table.options.meta.canManage && !row.original.password;
+
   return (
     <div className="flex items-center gap-2">
       <span className="font-medium">{row.original.username}</span>
-      {!row.original.password ? (
+      {showBadge ? (
         <Badge variant="warning" className="font-normal">
           {t("noPassword")}
         </Badge>
       ) : null}
+    </div>
+  );
+}
+
+// Managers only — a viewer's row carries a redacted placeholder rather than the
+// password, so the same control would offer to reveal something that is not
+// there. Masked until asked for: the point is copying it when you need it, not
+// having every account's password on screen while you scroll past.
+function PasswordCell({ row }) {
+  return (
+    <div className="w-56 max-w-[14rem]">
+      <PasswordReveal password={row.original.password} />
     </div>
   );
 }
@@ -114,6 +133,9 @@ function SystemUsersList({ data, meta, shells = [], canManage = false }) {
 
   const columns = [
     { accessorKey: "username", header: t("columns.username"), cell: UsernameCell },
+    ...(canManage
+      ? [{ id: "password", header: t("columns.password"), cell: PasswordCell }]
+      : []),
     { accessorKey: "home_path", header: t("columns.home"), cell: HomeCell },
     { accessorKey: "shell", header: t("columns.shell"), cell: ShellCell },
     { id: "sudo", header: t("sudo"), cell: SudoCell },

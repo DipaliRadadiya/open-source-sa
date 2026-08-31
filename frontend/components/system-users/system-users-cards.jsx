@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { AccessSwitch } from "@/components/system-users/access-switch";
 import { ShellSelect } from "@/components/system-users/shell-select";
+import { PasswordReveal } from "@/components/system-users/password-reveal";
 import { AppsCell } from "@/components/system-users/apps-cell";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
 
@@ -34,7 +35,10 @@ export function SystemUsersCards({ users, shells = [], canManage = false }) {
                     losing its tail. Without it a long one pushed the row menu
                     off the card. */}
                 <span className="min-w-0 font-medium break-all">{user.username}</span>
-                {!user.password ? (
+                {/* Same rule as the table: the Password fact below already
+                    says "Not set" for a manager, and only a viewer — who has
+                    no such fact — needs the badge. */}
+                {!canManage && !user.password ? (
                   <Badge variant="warning" className="font-normal">
                     {t("noPassword")}
                   </Badge>
@@ -63,6 +67,17 @@ export function SystemUsersCards({ users, shells = [], canManage = false }) {
             <CardFact label={t("columns.shell")}>
               <ShellSelect user={user} shells={shells} canManage={canManage} className="w-full" />
             </CardFact>
+            {/* Last, and full width: it is the longest value here and the one
+                you came to copy. Managers only — a viewer holds a redacted
+                placeholder, not the password. */}
+            {canManage ? (
+              <CardFact label={t("columns.password")}>
+                {/* CardFact right-aligns its value, which pushed the masked
+                    dots to the far end of their own box. A credential reads
+                    left-to-right like the mono values above it. */}
+                <PasswordReveal password={user.password} className="text-left" />
+              </CardFact>
+            ) : null}
           </CardFacts>
         </CardListItem>
       ))}
