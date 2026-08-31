@@ -42,7 +42,31 @@ export function updateRedisSettings(payload) {
   return api.put("/settings/redis", payload);
 }
 
-/** `delay_minutes` 0–60; `0` = now. Returns 202, the server goes away shortly after. */
+/**
+ * `delay_minutes` 0–60; `0` = now. Returns 202, the server goes away shortly
+ * after. The response carries `at` — the absolute moment, from the SERVER's
+ * clock. Use it rather than adding the delay to `Date.now()`: the two clocks
+ * drift, and this is the one value where being wrong means somebody expects a
+ * restart at the wrong hour.
+ */
 export function rebootServer(delayMinutes = 0) {
   return api.post("/settings/reboot", { delay_minutes: delayMinutes });
+}
+
+/**
+ * Whether a restart is already pending, and for when.
+ *
+ * Read from systemd rather than from anything the panel remembers, so a reboot
+ * scheduled from a shell is not invisible here. A `500` means the panel could
+ * not look, which is NOT `scheduled: false` — this is the endpoint someone
+ * opens to decide whether to cancel a restart, and "no" and "I could not ask"
+ * must not read alike.
+ */
+export function getRebootStatus() {
+  return api.get("/settings/reboot");
+}
+
+/** `shutdown -c`. Cancelling when nothing is pending is a success, not a 404. */
+export function cancelReboot() {
+  return api.delete("/settings/reboot");
 }

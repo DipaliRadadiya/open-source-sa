@@ -79,6 +79,28 @@ export const rebootScheduleSchema = z.object({
   next_run_human: z.string().nullable().optional(),
 });
 
+/**
+ * A restart that is already counting down (`GET /settings/reboot`), and what
+ * `POST` and `DELETE` answer with.
+ *
+ * `at` is the absolute moment on the server's clock, "DD-MM-YYYY HH:mm:ss". It
+ * is null on the rare pending shutdown whose systemd record carries no USEC —
+ * `scheduled` is still the answer to act on, so the UI must not treat a missing
+ * time as "nothing pending".
+ */
+export const rebootStatusSchema = z.object({
+  scheduled: z.boolean().default(false),
+  at: z.string().nullable().optional(),
+  // Only on the POST response — the literal `shutdown` argument, and the delay
+  // as asked for. Kept because they explain `at`, never used to compute it.
+  when: z.string().nullable().optional(),
+  delay_minutes: z.number().int().nullable().optional(),
+});
+
+export const rebootStatusResponseSchema = z.object({
+  reboot: rebootStatusSchema,
+});
+
 // Dropdown options, localized by the API — never hardcoded here, same rule as
 // the permission sub-level titles and the activity scopes.
 const presetOption = (value) => z.object({ value, label: z.string() });

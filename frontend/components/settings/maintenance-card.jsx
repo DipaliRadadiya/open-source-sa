@@ -29,6 +29,7 @@ import {
   updateUpdateSettings,
   updateRebootSchedule,
   rebootServer,
+  cancelReboot,
 } from "@/lib/api/settings";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -72,6 +73,8 @@ export function MaintenanceCard({
   presets,
   presetsFailed,
   canManage,
+  pendingReboot,
+  pendingRebootFailed,
 }) {
   const tc = useTranslations("settings.common");
 
@@ -99,7 +102,12 @@ export function MaintenanceCard({
         canManage={canManage}
       />
 
-      <ManualSection canManage={canManage} rebootRequired={rebootRequired} />
+      <ManualSection
+        canManage={canManage}
+        rebootRequired={rebootRequired}
+        pendingReboot={pendingReboot}
+        pendingRebootFailed={pendingRebootFailed}
+      />
     </div>
     </DisabledReasonProvider>
   );
@@ -541,19 +549,33 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
  * No Save: this section has nothing to persist. Its only action happens now,
  * behind a confirmation that says what goes offline.
  */
-function ManualSection({ canManage, rebootRequired }) {
+function ManualSection({ canManage, rebootRequired, pendingReboot, pendingRebootFailed }) {
   const t = useTranslations("settings.maintenance");
   const router = useRouter();
   const { start } = useServerRestart();
   const [delay, setDelay] = useState("0");
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  async function cancelPending() {
+    setCancelling(true);
+    try {
+      await cancelReboot();
+      toast.success(t("reboot.cancelled"));
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("reboot.cancelFailed")));
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   async function confirm() {
     setPending(true);
     try {
       const minutes = Number(delay);
-      await rebootServer(minutes);
+      const { data } = await rebootServer(minutes);
       setConfirming(false);
 
       // Only an immediate restart gets the curtain. A scheduled one has not
@@ -562,7 +584,14 @@ function ManualSection({ canManage, rebootRequired }) {
       if (minutes === 0) {
         start();
       } else {
-        toast.success(t("reboot.scheduled", { minutes }));
+        // `at` is the server's own clock. Falling back to "in N minutes" only
+        // when it is absent, because adding the delay to the browser's clock
+        // is wrong by whatever the two have drifted — on the one value where
+        // wrong means expecting a restart at the wrong hour.
+        const at = data?.reboot?.at;
+        toast.success(
+          at ? t("reboot.scheduledAt", { at }) : t("reboot.scheduled", { minutes }),
+        );
         router.refresh();
       }
     } catch (error) {
@@ -596,6 +625,40 @@ function ManualSection({ canManage, rebootRequired }) {
         </Button>
       }
     >
+      {/* A restart already counting down outranks everything else on this
+          card — including the reason you might want another one. Read from
+          systemd, so one scheduled from a shell shows up here too. */}
+      {pendingReboot?.scheduled ? (
+        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+          <span className="flex items-start gap-2">
+            <CalendarClock className="mt-0.5 size-4 shrink-0 text-warning" />
+            {/* `at` comes from the server's clock. It can be null on a pending
+                shutdown whose systemd record has no timestamp — still pending,
+                just unable to say when. */}
+            {pendingReboot.at
+              ? t("reboot.pendingAt", { at: pendingReboot.at })
+              : t("reboot.pendingUnknownTime")}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!canManage || cancelling}
+            onClick={cancelPending}
+          >
+            {cancelling ? <Loader2 className="size-4 animate-spin" /> : null}
+            {t("reboot.cancel")}
+          </Button>
+        </div>
+      ) : pendingRebootFailed ? (
+        // Not the same as "nothing scheduled", and this is the card someone
+        // opens to decide whether to stop one.
+        <p className="mt-3.5 flex items-start gap-2 rounded-lg border p-3 text-sm text-muted-foreground">
+          <CircleAlert className="mt-0.5 size-4 shrink-0" />
+          {t("reboot.pendingUnknown")}
+        </p>
+      ) : null}
+
       {/* The one explanation kept inline: you need it BEFORE you press, not
           after. */}
       {rebootRequired ? (
