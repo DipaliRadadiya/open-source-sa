@@ -10,7 +10,6 @@ import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { useSearchParams } from "next/navigation";
@@ -112,9 +111,7 @@ function RolesList({ data, meta }) {
         </div>
       </div>
 
-      {filtered.length === 0 && (meta?.current_page ?? 1) > 1 ? (
-        <PageOutOfRange lastPage={meta?.last_page ?? 1} />
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         isFiltered ? (
           <EmptyState
             icon={SearchX}

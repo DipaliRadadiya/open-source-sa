@@ -51,11 +51,6 @@
     "unsavedDescription": "Los cambios de esta página no se han guardado. Se perderán.",
     "unsavedStay": "Quedarme en esta página",
     "unsavedLeave": "Salir y perder los cambios",
-    "pageOutOfRange": {
-      "title": "Esa página no existe",
-      "description": "{lastPage, plural, one {Solo hay una página de resultados.} other {Solo hay # páginas de resultados.}}",
-      "action": "Volver a la primera página"
-    },
     "sortBy": "Ordenar por esta columna",
     "navTitles": {
       "app_firewall": "Firewall web"

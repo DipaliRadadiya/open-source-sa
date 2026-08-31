@@ -14,6 +14,7 @@ import { withTimeout } from "@/lib/api/with-timeout";
 import { CronjobsPanel } from "@/components/cronjobs/cronjobs-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,10 @@ export default async function CronjobsPage({ searchParams }) {
 
   const timezone = facts?.timezone;
 
+
+  // Before anything renders: a page past the end sends the reader to the
+  // last real page instead of painting an error for it.
+  redirectOutOfRange("/cron-jobs", sp, meta, failed);
   return (
     <div className="space-y-6">
       <div className="space-y-1">

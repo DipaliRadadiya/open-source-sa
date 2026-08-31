@@ -17,6 +17,7 @@ import { EngineState } from "@/components/databases/engine-state";
 import { UntrackedBanner } from "@/components/databases/untracked-banner";
 import { DatabasesTable } from "@/components/databases/databases-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +96,10 @@ export default async function DatabasesPage({ searchParams }) {
         .join(" · ")
     : null;
 
+
+  // Before anything renders: a page past the end sends the reader to the
+  // last real page instead of painting an error for it.
+  redirectOutOfRange("/databases", sp, dbMeta, dbFailed);
   return (
     <div className="space-y-6">
       <div className="space-y-1">

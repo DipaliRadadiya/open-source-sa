@@ -51,11 +51,6 @@
     "unsavedDescription": "Your changes on this page have not been saved. They will be lost.",
     "unsavedStay": "Stay on this page",
     "unsavedLeave": "Leave and lose changes",
-    "pageOutOfRange": {
-      "title": "That page does not exist",
-      "description": "{lastPage, plural, one {There is only one page of results.} other {There are only # pages of results.}}",
-      "action": "Back to the first page"
-    },
     "sortBy": "Sort by this column",
     "navTitles": {
       "app_firewall": "Web Firewall"

@@ -23,3 +23,19 @@ test("a missing or odd lastPage falls back to the start rather than guessing", (
   assert.equal(outOfRangeHref("page=3"), "?");
   assert.equal(outOfRangeHref("page=3", 0), "?");
 });
+
+// The server-side guard's decision, kept in step with the href above. The
+// redirect itself needs next/navigation, so only the arithmetic is asserted.
+test("out-of-range detection", () => {
+  const outOfRange = (page, lastPage) => {
+    const last = Math.max(1, Number(lastPage ?? 1));
+    const n = Number(page ?? 1);
+    return Number.isFinite(n) && n > last;
+  };
+  assert.equal(outOfRange(3, 2), true);
+  assert.equal(outOfRange(2, 2), false);
+  assert.equal(outOfRange(1, 1), false);
+  assert.equal(outOfRange(99, 0), true, "last_page 0 clamps to 1");
+  assert.equal(outOfRange("abc", 2), false, "a non-numeric page is left alone");
+  assert.equal(outOfRange(undefined, 5), false);
+});

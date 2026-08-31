@@ -51,11 +51,6 @@
     "unsavedDescription": "इस पेज पर किए बदलाव सहेजे नहीं गए हैं। वे चले जाएँगे।",
     "unsavedStay": "इसी पेज पर रहें",
     "unsavedLeave": "बाहर जाएँ और बदलाव खोएँ",
-    "pageOutOfRange": {
-      "title": "वह पेज मौजूद नहीं है",
-      "description": "{lastPage, plural, one {परिणामों का केवल एक पेज है।} other {परिणामों के केवल # पेज हैं।}}",
-      "action": "पहले पेज पर वापस जाएँ"
-    },
     "sortBy": "इस कॉलम से क्रमबद्ध करें",
     "navTitles": {
       "app_firewall": "वेब फ़ायरवॉल"

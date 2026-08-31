@@ -4,8 +4,8 @@ import { getAllApplications } from "@/lib/applications/get-applications";
 import { RestoresList } from "@/components/backups/restores-list";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
-import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -30,16 +30,15 @@ export default async function RestoresPage({ searchParams }) {
   // matches these filters" are different facts, and only one of them is
   // solved by changing a dropdown.
   const hasFilters = Boolean(sp.application || sp.status || sp.type || sp.period);
-  const pageOutOfRange = meta.total > 0 && meta.current_page > meta.last_page;
 
+
+  // Before anything renders: a page past the end sends the reader to the
+  // last real page instead of painting an error for it.
+  redirectOutOfRange("/backups/restores", sp, meta, failed);
   return (
     <NavTransitionProvider>
       <div className="space-y-4">
-        {pageOutOfRange ? (
-          <PageOutOfRange lastPage={meta.last_page} />
-        ) : (
-          <RestoresList restores={restores} applications={applications} hasFilters={hasFilters} />
-        )}
+        <RestoresList restores={restores} applications={applications} hasFilters={hasFilters} />
         {restores.length > 0 ? <DataTablePagination meta={meta} /> : null}
       </div>
     </NavTransitionProvider>

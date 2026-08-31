@@ -14,7 +14,6 @@ import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { SortHeader } from "@/components/data-table/sort-header";
@@ -279,15 +278,6 @@ function ApplicationsList({ applications = [], meta, siteTypes = [], canManage =
   // this page just is not one of them — and the pager only renders when there
   // are rows, so without this the screen that says nothing is here also removes
   // the control that would take you back.
-  if (!applications.length && (meta?.current_page ?? 1) > 1) {
-    return (
-      <div className="space-y-4">
-        {toolbar}
-        <PageOutOfRange lastPage={meta?.last_page ?? 1} />
-      </div>
-    );
-  }
-
   // No rows AND nothing asked for: this server genuinely has no sites.
   if (!applications.length && !filtering) return <ApplicationEmptyState canManage={canManage} />;
 

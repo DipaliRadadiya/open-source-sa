@@ -6,6 +6,7 @@ import { UsersView } from "@/components/admin/users/users-view";
 import { UsersToolbar } from "@/components/admin/users/users-toolbar";
 import { UsersTable } from "@/components/admin/users/users-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,10 @@ export default async function AdminUsersPage({ searchParams }) {
 
   const hasFilters = Boolean(sp.search || sp.is_admin);
 
+
+  // Before anything renders: a page past the end sends the reader to the
+  // last real page instead of painting an error for it.
+  redirectOutOfRange("/admin/users", sp, meta);
   return (
     <div className="space-y-6">
       <div className="space-y-1">

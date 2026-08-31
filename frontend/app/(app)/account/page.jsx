@@ -4,6 +4,7 @@ import { getMyActivity } from "@/lib/account/get-my-activity";
 import { getMyActivityFilters } from "@/lib/activity/get-activity-filters";
 import { AccountTabs } from "@/components/account/account-tabs";
 import { PageCrumb } from "@/components/sections/page-crumb";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,10 @@ export default async function AccountPage({ searchParams }) {
     getTranslations("account"),
   ]);
 
+
+  // Read-only, so a delete cannot strand anyone here — but a typed or
+  // bookmarked ?page=99 still would, and it must not read as an empty log.
+  redirectOutOfRange("/account", sp, meta, failed);
   return (
     <div className="space-y-6">
       {/* Reached from the user menu, not the sidebar, so it names its own trail. */}

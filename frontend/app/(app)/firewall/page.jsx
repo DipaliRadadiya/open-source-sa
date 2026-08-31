@@ -10,7 +10,7 @@ import { QuickAddCard } from "@/components/firewall/quick-add-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
-import { PageOutOfRange } from "@/components/data-table/page-out-of-range";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +41,11 @@ export default async function FirewallPage({ searchParams }) {
     canManage ? getFirewallPresets() : Promise.resolve([]),
     getFirewallRules(sp),
   ]);
-  const pageOutOfRange = meta.total > 0 && meta.current_page > meta.last_page;
 
+
+  // Before anything renders: a page past the end sends the reader to the
+  // last real page instead of painting an error for it.
+  redirectOutOfRange("/firewall", sp, meta, rulesFailed);
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -82,8 +85,6 @@ export default async function FirewallPage({ searchParams }) {
 
             {rulesFailed ? (
               <LoadFailed description={t("rules.loadFailed")} />
-            ) : pageOutOfRange ? (
-              <PageOutOfRange lastPage={meta.last_page} />
             ) : (
               <RulesCard
                 rules={rules}
@@ -98,7 +99,7 @@ export default async function FirewallPage({ searchParams }) {
               />
             )}
 
-            {!rulesFailed && !pageOutOfRange && rules.length > 0 ? (
+            {!rulesFailed && rules.length > 0 ? (
               <DataTablePagination meta={meta} />
             ) : null}
           </div>

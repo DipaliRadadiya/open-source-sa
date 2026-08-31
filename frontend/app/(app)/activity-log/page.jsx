@@ -10,6 +10,7 @@ import { MyActivityTable } from "@/components/activity/my-activity-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,10 @@ export default async function ActivityLogPage({ searchParams }) {
 
   const isFiltered = Boolean(sp.search || sp.type || sp.action);
 
+
+  // Read-only, so a delete cannot strand anyone here — but a typed or
+  // bookmarked ?page=99 still would, and it must not read as an empty log.
+  redirectOutOfRange("/activity-log", sp, meta, failed);
   return (
     <div className="space-y-6">
       <div className="space-y-1">

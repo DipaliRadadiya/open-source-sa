@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions/can";
 import { getApplications, getSiteTypes } from "@/lib/applications/get-applications";
 import { ApplicationsTable } from "@/components/applications/applications-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,10 @@ export default async function ApplicationsPage({ searchParams }) {
   if (!can(permissions, "application", "view")) redirect("/dashboard");
   if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
 
+
+  // Before anything renders: a page past the end sends the reader to the
+  // last real page instead of painting an error for it.
+  redirectOutOfRange("/applications", sp, result.meta, result.failed);
   return (
     <div className="space-y-6">
       <div className="space-y-1">

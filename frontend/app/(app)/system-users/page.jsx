@@ -6,6 +6,7 @@ import { getSystemUsersPage } from "@/lib/system-users/get-system-users";
 import { getShells } from "@/lib/system-users/get-shells";
 import { SystemUsersTable } from "@/components/system-users/system-users-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,10 @@ export default async function SystemUsersPage({ searchParams }) {
         password: user.password ? REDACTED : user.password,
       }));
 
+
+  // Before anything renders: a page past the end sends the reader to the
+  // last real page instead of painting an error for it.
+  redirectOutOfRange("/system-users", sp, usersPage.meta, usersPage.failed);
   return (
     <div className="space-y-6">
       <div className="space-y-1">

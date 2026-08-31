@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { getRolesPage } from "@/lib/roles/get-roles";
 import { RolesTable } from "@/components/admin/roles/roles-table";
+import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,10 @@ export default async function AdminRolesPage({ searchParams }) {
 
   const [rolesPage, t] = await Promise.all([getRolesPage(query), getTranslations("roles")]);
 
+
+  // Before anything renders: a page past the end sends the reader to the
+  // last real page instead of painting an error for it.
+  redirectOutOfRange("/admin/roles", sp, rolesPage.meta, rolesPage.failed);
   return (
     <div className="space-y-6">
       <div className="space-y-1">
