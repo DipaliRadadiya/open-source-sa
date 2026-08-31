@@ -1705,6 +1705,8 @@
         "save": "Guardar swap"
       },
       "redis": {
+        "passwordUnknownShort": "No se puede comprobar",
+        "passwordHintNone": "No hay contraseña. Cualquiera que llegue a Redis puede usarlo.",
         "changePassword": "Cambiar",
         "changeCancel": "Cancelar",
         "currentPassword": "Contraseña actual",

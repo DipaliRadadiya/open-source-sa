@@ -1705,6 +1705,8 @@
         "save": "Save swap"
       },
       "redis": {
+        "passwordUnknownShort": "Cannot check",
+        "passwordHintNone": "No password is set. Anyone who can reach Redis can use it.",
         "changePassword": "Change",
         "changeCancel": "Cancel",
         "currentPassword": "Current password",

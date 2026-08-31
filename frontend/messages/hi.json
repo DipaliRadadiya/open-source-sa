@@ -1705,6 +1705,8 @@
         "save": "स्वैप सहेजें"
       },
       "redis": {
+        "passwordUnknownShort": "जाँच नहीं हो सकी",
+        "passwordHintNone": "कोई पासवर्ड सेट नहीं है। जो भी Redis तक पहुँच सके, उसे इस्तेमाल कर सकता है।",
         "changePassword": "बदलें",
         "changeCancel": "रद्द करें",
         "currentPassword": "मौजूदा पासवर्ड",
