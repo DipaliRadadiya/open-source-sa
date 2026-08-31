@@ -430,17 +430,24 @@ resolve_hostnames() {
 # server its own installer built fine can never update.
 BUILD_MEMORY_MB=3072
 
+# Every box gets swap, including ones with RAM to spare. The build is not the
+# only reason to have it: a swapless server has no margin at all, so the first
+# unexpected spike -- a backup, a restore, a customer's own build, a burst of
+# php-fpm children -- is answered by the OOM killer instead of by paging, and
+# what it picks is not necessarily the process that grew. A gigabyte of disk
+# is a cheap way to turn a hard kill into a slow minute.
+MINIMUM_SWAP_MB=1024
+
 configure_swap() {
     step "Checking memory"
 
-    local ram_mb swap_mb total_mb deficit_mb
+    local ram_mb swap_mb wanted_mb add_mb
     ram_mb=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
 
     # Existing swap is counted, not treated as a reason to stop looking. The
     # old check bailed the moment *any* swap existed, so a box that came with a
     # 256 MB swapfile got nothing added and failed the build anyway.
     swap_mb=$(awk '/SwapTotal/ {printf "%d", $2/1024}' /proc/meminfo)
-    total_mb=$(( ram_mb + swap_mb ))
 
     # PANEL_SWAP_MB is the escape hatch: `0` skips this entirely (for a box
     # whose swap the operator manages), any other number forces that size.
@@ -450,20 +457,32 @@ configure_swap() {
     fi
 
     if [[ -n "${PANEL_SWAP_MB:-}" ]]; then
-        deficit_mb="$PANEL_SWAP_MB"
-        say "     adding ${deficit_mb} MB of swap (PANEL_SWAP_MB)"
+        add_mb="$PANEL_SWAP_MB"
+        say "     adding ${add_mb} MB of swap (PANEL_SWAP_MB)"
     else
-        if (( total_mb >= BUILD_MEMORY_MB )); then
-            ok "${ram_mb} MB RAM + ${swap_mb} MB swap, enough to build"
+        # Two independent requirements, and the box has to satisfy both:
+        #
+        #   1. RAM + swap must clear BUILD_MEMORY_MB, or `next build` is killed
+        #      with a bare "Killed" and no mention of memory. On a 1 GB box
+        #      this is the binding one.
+        #   2. There must be at least MINIMUM_SWAP_MB of swap regardless, so
+        #      that even a large server has somewhere to page rather than
+        #      reaching for the OOM killer at the first spike.
+        #
+        # A 4 GB box already clears (1) on RAM alone and still gets a
+        # gigabyte from (2); a 1 GB box needs 2 GB for (1), which covers (2)
+        # on its own.
+        wanted_mb=$(( BUILD_MEMORY_MB - ram_mb ))
+        (( wanted_mb < MINIMUM_SWAP_MB )) && wanted_mb=$MINIMUM_SWAP_MB
+
+        add_mb=$(( wanted_mb - swap_mb ))
+
+        if (( add_mb <= 0 )); then
+            ok "${ram_mb} MB RAM + ${swap_mb} MB swap, nothing to add"
             return
         fi
 
-        # The frontend build is what dies here: `next build` peaks well above
-        # what a 1-2 GB box has, and the OOM killer reports it as a bare
-        # "Killed" with no mention of memory. Swap turns a mysterious failure
-        # into a slow success.
-        deficit_mb=$(( BUILD_MEMORY_MB - total_mb ))
-        say "     ${ram_mb} MB RAM + ${swap_mb} MB swap — adding ${deficit_mb} MB so the frontend build can finish"
+        say "     ${ram_mb} MB RAM + ${swap_mb} MB swap — adding ${add_mb} MB (want ${wanted_mb} MB of swap)"
     fi
 
     # A second file rather than resizing the first: /swapfile may not be ours,
@@ -476,12 +495,12 @@ configure_swap() {
         run rm -f "$swapfile"
     fi
 
-    run fallocate -l "${deficit_mb}M" "$swapfile"
+    run fallocate -l "${add_mb}M" "$swapfile"
     run chmod 600 "$swapfile"
     run mkswap "$swapfile"
     run swapon "$swapfile"
     grep -q "^${swapfile} " /etc/fstab || printf '%s none swap sw 0 0\n' "$swapfile" >>/etc/fstab
-    ok "${deficit_mb} MB swap active"
+    ok "${add_mb} MB swap active"
 }
 
 # ─── Packages ────────────────────────────────────────────────────────────────
