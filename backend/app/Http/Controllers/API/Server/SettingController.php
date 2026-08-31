@@ -174,37 +174,23 @@ class SettingController extends Controller
      * the panel, and a panel that only knows about its own would confidently
      * report "none" while the machine counts down.
      */
-    public function rebootStatus(ServerOps $ops): JsonResponse
+    public function rebootStatus(): JsonResponse
     {
         $path = (string) config('server.reboot.scheduled_file', '/run/systemd/shutdown/scheduled');
 
-        $probe = $ops->probe(
-            ['test', '-f', $path],
-            ['feature' => 'setting', 'group' => 'reboot', 'op' => 'reboot_status'],
-            timeout: 15,
-        );
-
-        // Could not look. Not the same as "nothing is scheduled", and this is
-        // the screen someone opens to find out whether to cancel one.
-        if (! $probe->answered) {
-            throw new SettingOperationException($probe->reference);
-        }
-
-        if (! $probe->ok) {
+        // Read directly, not through ServerOps.
+        //
+        // systemd writes this into `/run/systemd/shutdown`, which is 0755
+        // root: world readable, no elevation required. Routing it through sudo
+        // — as the first version of this did, out of habit — made a page-load
+        // endpoint depend on a privilege it never needed, and returned 500 on
+        // any server whose grant was out of date. The cheapest way to not
+        // mishandle a permission is not to need one.
+        if (! is_file($path)) {
             return response()->json(['reboot' => ['scheduled' => false, 'at' => null]]);
         }
 
-        $read = $ops->run(
-            ['cat', $path],
-            ['feature' => 'setting', 'group' => 'reboot', 'op' => 'reboot_status'],
-            timeout: 15,
-        );
-
-        if ($read->failed()) {
-            throw new SettingOperationException($read->reference);
-        }
-
-        preg_match('/^USEC=(\d+)/m', $read->output(), $matches);
+        preg_match('/^USEC=(\d+)/m', (string) @file_get_contents($path), $matches);
 
         return response()->json([
             'reboot' => [

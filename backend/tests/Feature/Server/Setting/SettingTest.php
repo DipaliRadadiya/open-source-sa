@@ -618,16 +618,9 @@ describe('a scheduled restart', function () {
         // without the panel, and a panel that only knew about its own would
         // report "none" while the machine counts down.
         $at = now()->addHour()->startOfSecond();
-
-        Process::fake(function ($process) use ($at) {
-            $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-
-            return match ($command[0] ?? '') {
-                'test' => Process::result(exitCode: 0),
-                'cat' => Process::result(output: 'USEC='.($at->getTimestamp() * 1_000_000)."\nWARN_WALL=1\nMODE=reboot\n"),
-                default => Process::result(exitCode: 0),
-            };
-        });
+        $file = $this->dir.'/shutdown-scheduled';
+        File::put($file, 'USEC='.($at->getTimestamp() * 1_000_000)."\nWARN_WALL=1\nMODE=reboot\n");
+        config(['server.reboot.scheduled_file' => $file]);
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
             ->getJson('/api/settings/reboot')
@@ -637,7 +630,7 @@ describe('a scheduled restart', function () {
     });
 
     it('reports none when systemd has no pending shutdown', function () {
-        Process::fake(fn () => Process::result(exitCode: 1));
+        config(['server.reboot.scheduled_file' => $this->dir.'/no-such-file']);
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
             ->getJson('/api/settings/reboot')
@@ -646,9 +639,16 @@ describe('a scheduled restart', function () {
             ->assertJsonPath('reboot.at', null);
     });
 
-    it('does not report "none" when it could not look', function () {
-        // The screen someone opens to decide whether to cancel a restart is
-        // the worst place to answer a question that was never asked.
+    it('needs no elevated privilege to answer', function () {
+        // The first version of this asked sudo, which it never needed:
+        // /run/systemd/shutdown is 0755 root. On a server whose grant was out
+        // of date that returned 500 -- from an endpoint the settings screen
+        // calls on load, so the whole page broke over a file anyone can read.
+        $file = $this->dir.'/shutdown-scheduled';
+        File::put($file, 'USEC='.(now()->addHour()->getTimestamp() * 1_000_000)."\n");
+        config(['server.reboot.scheduled_file' => $file]);
+
+        // Every command refused. The answer must not depend on one.
         Process::fake(fn () => Process::result(
             errorOutput: 'sudo: a password is required',
             exitCode: 1,
@@ -656,8 +656,8 @@ describe('a scheduled restart', function () {
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
             ->getJson('/api/settings/reboot')
-            ->assertStatus(500)
-            ->assertJsonStructure(['message', 'reference']);
+            ->assertOk()
+            ->assertJsonPath('reboot.scheduled', true);
     });
 
     it('can be cancelled', function () {
