@@ -65,6 +65,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
+import { timezoneOptions } from "@/lib/settings/timezone-options";
 import {
   Form,
   FormControl,
@@ -370,20 +371,15 @@ function ConfigField({
     ? (options.find((option) => option.is_default)?.value ?? options[0]?.value)
     : undefined;
   // Timezones: flatten the grouped API response into a flat option list.
-  const timezoneOptions = useMemo(() => {
-    if (!isTimezone || !timezones?.length) return [];
-    return timezones.flatMap((group) =>
-      group.zones.map((zone) => ({
-        value: zone.value,
-        label: zone.offset ? `${zone.label} (${zone.offset})` : zone.label,
-      })),
-    );
-  }, [isTimezone, timezones]);
+  const timezoneChoices = useMemo(
+    () => (isTimezone ? timezoneOptions(timezones) : []),
+    [isTimezone, timezones],
+  );
   const isChooser =
     options.length > 0 || isRuntime || isChoice || isTimezone;
   // Long enumerations (countries ~250, timezones ~400, languages) get a
   // searchable Combobox per the house rule; short lists stay a plain Select.
-  const useCombobox = (isTimezone ? timezoneOptions.length : options.length) > 10;
+  const useCombobox = (isTimezone ? timezoneChoices.length : options.length) > 10;
   const label = fieldLabel(config);
   const placeholder =
     config.placeholder ?? t("form.fieldPlaceholder", { field: label });
@@ -455,11 +451,11 @@ function ConfigField({
                 ))}
               </SelectContent>
             </Select>
-          ) : isTimezone && timezoneOptions.length ? (
+          ) : isTimezone && timezoneChoices.length ? (
             useCombobox ? (
               <FormControl>
                 <Combobox
-                  options={timezoneOptions}
+                  options={timezoneChoices}
                   value={field.value ? String(field.value) : ""}
                   onChange={field.onChange}
                   placeholder={t("form.fieldSelectPlaceholder", {
@@ -482,7 +478,7 @@ function ConfigField({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="max-h-64">
-                  {timezoneOptions.map((option) => (
+                  {timezoneChoices.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { Combobox } from "@/components/ui/combobox";
+import { timezoneOptionsWith } from "@/lib/settings/timezone-options";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -756,7 +757,11 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                       />
                       <FormControl>
                         <Combobox
-                          options={timezones.map((zone) => ({ value: zone, label: zone }))}
+                          // `timezones` is grouped by region, not a flat list of
+                          // strings — mapping it directly put the region object
+                          // where the label goes and took the page down as soon
+                          // as the list opened.
+                          options={timezoneOptionsWith(timezones, field.value)}
                           value={field.value}
                           onChange={field.onChange}
                           disabled={saving}
