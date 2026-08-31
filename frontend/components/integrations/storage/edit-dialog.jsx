@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil } from "lucide-react";
 import { editStorageDestinationSchema } from "@/lib/schemas/storage";
+import { editRequirements } from "@/lib/storage/requirements";
 import { updateDestination } from "@/lib/api/storage";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -26,9 +28,16 @@ import { DestinationFormFields } from "@/components/integrations/storage/destina
 export function EditDestinationDialog({ destination, open, onOpenChange }) {
   const t = useTranslations("storage.edit");
   const router = useRouter();
+  // There is no provider field here, so requiredness is read off the stored
+  // destination: keep what it already relies on, demand nothing new.
+  const required = editRequirements(destination);
+  const schema = useMemo(
+    () => editStorageDestinationSchema(destination),
+    [destination],
+  );
 
   const form = useForm({
-    resolver: zodResolver(editStorageDestinationSchema),
+    resolver: zodResolver(schema),
     mode: "onSubmit",
     reValidateMode: "onChange",
     values: {
@@ -89,7 +98,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange }) {
           </>
         }
       >
-        <DestinationFormFields form={form} disabled={submitting} />
+        <DestinationFormFields form={form} disabled={submitting} required={required} />
         <p className="text-xs text-muted-foreground">{t("credentialsUntouched")}</p>
       </FormModal>
     </Form>

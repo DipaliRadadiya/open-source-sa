@@ -23,8 +23,18 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
  * endpoint contains something only the account owner knows (an account id, a
  * region) — pre-filling a template would just hand back a value that fails
  * validation.
+ *
+ * `required` says which of endpoint and region this particular destination
+ * needs; it comes from lib/storage/requirements and differs between create and
+ * edit, so the asterisk is a claim about this form rather than decoration.
  */
-export function DestinationFormFields({ form, provider, onProviderChange, disabled }) {
+export function DestinationFormFields({
+  form,
+  provider,
+  onProviderChange,
+  disabled,
+  required = {},
+}) {
   const t = useTranslations("storage.form");
   const hint = STORAGE_PROVIDERS.find((p) => p.value === provider)?.endpointHint ?? "";
 
@@ -92,7 +102,7 @@ export function DestinationFormFields({ form, provider, onProviderChange, disabl
           name="region"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("region")}</FormLabel>
+              <FormLabel required={Boolean(required.region)}>{t("region")}</FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("regionPlaceholder")}
@@ -114,7 +124,7 @@ export function DestinationFormFields({ form, provider, onProviderChange, disabl
         name="endpoint"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("endpoint")}</FormLabel>
+            <FormLabel required={Boolean(required.endpoint)}>{t("endpoint")}</FormLabel>
             <FormControl>
               <Input
                 placeholder={hint || t("endpointPlaceholder")}

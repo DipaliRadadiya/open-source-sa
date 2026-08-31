@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { HardDrive, Loader2 } from "lucide-react";
 import { createStorageDestinationSchema } from "@/lib/schemas/storage";
+import { createRequirements } from "@/lib/storage/requirements";
 import { createDestination } from "@/lib/api/storage";
 import { probeDestination } from "@/lib/storage/probe";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
@@ -31,7 +31,6 @@ import { DestinationFormFields } from "@/components/integrations/storage/destina
 export function ConnectDestinationDialog({ open, onOpenChange }) {
   const t = useTranslations("storage.connect");
   const router = useRouter();
-  const [provider, setProvider] = useState("aws");
 
   const form = useForm({
     resolver: zodResolver(createStorageDestinationSchema),
@@ -65,7 +64,6 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
       toast.success(t("added"));
       onOpenChange?.(false);
       form.reset();
-      setProvider("aws");
       router.refresh();
 
       // Saved is not the same as working. The check runs after the dialog
@@ -82,11 +80,21 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
   }
 
   const submitting = form.formState.isSubmitting;
+  // The provider is a form field rather than local state so the schema can see
+  // it: which of endpoint and region is required depends on it.
+  const provider = useWatch({ control: form.control, name: "provider" });
+
+  function handleProviderChange(next) {
+    form.setValue("provider", next);
+    // Requiredness moves with the provider, so an error raised under the old
+    // one has to be re-judged — otherwise "Endpoint is required" stays on
+    // screen after switching to AWS, where it is not.
+    if (form.formState.isSubmitted) form.trigger(["endpoint", "region"]);
+  }
 
   function handleOpenChange(next) {
     if (!next) {
       form.reset();
-      setProvider("aws");
     }
     onOpenChange?.(next);
   }
@@ -121,8 +129,9 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
         <DestinationFormFields
           form={form}
           provider={provider}
-          onProviderChange={setProvider}
+          onProviderChange={handleProviderChange}
           disabled={submitting}
+          required={createRequirements(provider)}
         />
 
         {/* Said BEFORE the key is created, not after the test fails. The probe

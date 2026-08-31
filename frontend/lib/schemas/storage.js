@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createRequirements, editRequirements } from "@/lib/storage/requirements";
 
 // Endpoint shapes for the S3-compatible providers people actually use. These
 // are HINTS, not auto-filled values: every one of them contains a part only
@@ -111,27 +112,56 @@ const endpointField = z
   ])
   .optional();
 
-export const createStorageDestinationSchema = z.object({
-  provider: z.string().default("other"),
-  name: nameField,
-  endpoint: endpointField,
-  region: regionField,
-  bucket: bucketField,
-  prefix: prefixField,
-  access_key: z.string().trim().min(1, "required_accessKey").max(255, "max255"),
-  secret_key: z.string().trim().min(1, "required_secretKey").max(512, "max512"),
-});
+export const createStorageDestinationSchema = z
+  .object({
+    provider: z.string().default("other"),
+    name: nameField,
+    endpoint: endpointField,
+    region: regionField,
+    bucket: bucketField,
+    prefix: prefixField,
+    access_key: z.string().trim().min(1, "required_accessKey").max(255, "max255"),
+    secret_key: z.string().trim().min(1, "required_secretKey").max(512, "max512"),
+  })
+  // Checked here rather than on the field, because whether these are required
+  // depends on the provider chosen in the same form. See createRequirements —
+  // the API cannot enforce this, it has no idea which provider you picked.
+  .superRefine((values, ctx) => {
+    const need = createRequirements(values.provider);
+    if (need.endpoint && !values.endpoint?.trim()) {
+      ctx.addIssue({ code: "custom", path: ["endpoint"], message: "required_endpoint" });
+    }
+    if (need.region && !values.region?.trim()) {
+      ctx.addIssue({ code: "custom", path: ["region"], message: "required_region" });
+    }
+  });
 
 // No credentials here at all. PATCH treats a present key as "rotate", so the
 // only safe way to rename a destination is to never send them — rotation is
 // its own dialog.
-export const editStorageDestinationSchema = z.object({
-  name: nameField,
-  endpoint: endpointField,
-  region: regionField,
-  bucket: bucketField,
-  prefix: prefixField,
-});
+export function editStorageDestinationSchema(destination) {
+  const need = editRequirements(destination);
+
+  return z
+    .object({
+      name: nameField,
+      endpoint: endpointField,
+      region: regionField,
+      bucket: bucketField,
+      prefix: prefixField,
+    })
+    // Only what this destination already relies on. Clearing the endpoint of a
+    // Wasabi bucket points it at AWS and every backup fails, so the edit form
+    // refuses to empty a field that was set — it does not invent new ones.
+    .superRefine((values, ctx) => {
+      if (need.endpoint && !values.endpoint?.trim()) {
+        ctx.addIssue({ code: "custom", path: ["endpoint"], message: "required_endpoint" });
+      }
+      if (need.region && !values.region?.trim()) {
+        ctx.addIssue({ code: "custom", path: ["region"], message: "required_region" });
+      }
+    });
+}
 
 export const replaceCredentialsSchema = z.object({
   access_key: z.string().trim().min(1, "required_accessKey").max(255, "max255"),
