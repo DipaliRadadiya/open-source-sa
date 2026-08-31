@@ -1,5 +1,12 @@
 {
   "common": {
+    "clearFilters": "Borrar filtros",
+    "nothingToRevert": "Nada que deshacer — aún no hay cambios.",
+    "enterAValue": "Introduce un valor primero.",
+    "chooseAnOption": "Elige una opción primero.",
+    "needsBackupTarget": "Configura primero las copias de seguridad de este sitio.",
+    "nothingToSave": "Nada que guardar — haz un cambio primero.",
+    "mongoRenameNeedsPassword": "Renombrar un usuario de MongoDB lo recrea, por lo que hace falta una contraseña.",
     "passwordRules": {
       "length": "Al menos {min, number} caracteres",
       "case": "Mayúsculas y minúsculas",
@@ -1698,6 +1705,13 @@
         "save": "Guardar swap"
       },
       "redis": {
+        "changePassword": "Cambiar",
+        "changeCancel": "Cancelar",
+        "currentPassword": "Contraseña actual",
+        "currentPasswordHint": "Cópiala para conectar una herramienta o una app a Redis.",
+        "newPassword": "Nueva contraseña",
+        "newPasswordPlaceholder": "Escribe una nueva contraseña",
+        "passwordUnknown": "Puede haber una contraseña — el panel no pudo leer la configuración para saberlo",
         "passwordApplying": "Cambio de contraseña enviado. Redis y el panel se están actualizando — tarda unos segundos.",
         "passwordApplyingCheck": "Comprobar ahora",
         "title": "Redis",

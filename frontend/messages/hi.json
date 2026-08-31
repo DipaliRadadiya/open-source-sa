@@ -1,5 +1,12 @@
 {
   "common": {
+    "clearFilters": "फ़िल्टर हटाएँ",
+    "nothingToRevert": "पूर्ववत करने के लिए कुछ नहीं — अभी कोई बदलाव नहीं।",
+    "enterAValue": "पहले कोई मान दर्ज करें।",
+    "chooseAnOption": "पहले एक विकल्प चुनें।",
+    "needsBackupTarget": "पहले इस साइट के लिए बैकअप सेट करें।",
+    "nothingToSave": "सहेजने के लिए कुछ नहीं — पहले कोई बदलाव करें।",
+    "mongoRenameNeedsPassword": "MongoDB उपयोगकर्ता का नाम बदलने पर वह दोबारा बनता है, इसलिए पासवर्ड ज़रूरी है।",
     "passwordRules": {
       "length": "कम से कम {min, number} अक्षर",
       "case": "बड़े और छोटे अक्षर",
@@ -1698,6 +1705,13 @@
         "save": "स्वैप सहेजें"
       },
       "redis": {
+        "changePassword": "बदलें",
+        "changeCancel": "रद्द करें",
+        "currentPassword": "मौजूदा पासवर्ड",
+        "currentPasswordHint": "किसी टूल या ऐप को Redis से जोड़ने के लिए इसे कॉपी करें।",
+        "newPassword": "नया पासवर्ड",
+        "newPasswordPlaceholder": "नया पासवर्ड लिखें",
+        "passwordUnknown": "पासवर्ड सेट हो सकता है — पैनल कॉन्फ़िग नहीं पढ़ सका",
         "passwordApplying": "पासवर्ड बदलने का अनुरोध भेजा गया। Redis और पैनल अपडेट हो रहे हैं — इसमें कुछ सेकंड लगते हैं।",
         "passwordApplyingCheck": "अभी जाँचें",
         "title": "Redis",
