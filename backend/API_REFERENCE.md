@@ -4265,7 +4265,11 @@ size or last-write time, and a zero would read as an empty log last touched in
 
 **The list is what exists on this server, not a fixed set.** Every source is filtered by whether it is really there — a file check, a privileged file check, or asking `journalctl` for one line — so a box with no MTA has no `mail` entry, a box running Apache has no `nginx_*` entries, and a box without certbot has no `letsencrypt`. Render whatever comes back rather than expecting fixed keys. System sources currently registered: `syslog`, `auth`, `kernel`, `mail`, `journal`.
 
-`readable: false` — file exists but panel can't read it (needs elevated access). Disable the open action.
+**A source is omitted only when the server answered "not there".** If the panel could not run the check at all — an out-of-date sudo grant is the usual reason — the source is **kept**, with `readable: false`. Those are opposite statements: dropping the second would say this server has no such log, and someone would reasonably conclude their cron jobs never wrote anything.
+
+**Cron job logs are `privileged`.** They are `0640` owned by the account the job runs as, whose group is that account's own — so the `adm` membership that makes `nginx`, `mysql` and `syslog` readable does not apply, and the panel reads them through the system like Let's Encrypt. `follow` and `downloadable` are therefore `false` for them.
+
+`readable: false` — the panel cannot open this source: the file exists but is not readable by its account, or the elevated reader it would need is not permitted. Disable the open action; opening it anyway answers `403` with `code: log_not_permitted` rather than an empty log.
 
 ---
 
@@ -4444,7 +4448,35 @@ Schedule a server reboot.
 
 **Request:** `{"delay_minutes": 5}` — optional, 0–60, defaults to `0`. `0` = now.
 
-**Response `202`:** `{"reboot": {"scheduled": true, "when": "+5"}}`
+**Response `202`:** `{"reboot": {"scheduled": true, "when": "+5", "at": "31-08-2026 08:05:00", "delay_minutes": 5}}`
+
+**Use `at`, not `when`.** `when` is the literal `shutdown` argument (`now` or `+N`); `at` is the absolute moment, computed from **the server's clock**. Deriving a time from `when` in the browser uses the client's clock instead, and is wrong by whatever the two have drifted — on the one value where being wrong means somebody expects a restart at the wrong hour.
+
+---
+
+### GET `/settings/reboot`
+**Permission:** `setting` (view)
+
+Whether a restart is already pending, and when.
+
+**Response `200`:** `{"reboot": {"scheduled": true, "at": "31-08-2026 08:05:00"}}` — or `{"reboot": {"scheduled": false, "at": null}}`.
+
+Read from systemd's `/run/systemd/shutdown/scheduled`, **not** from anything the panel remembers: a reboot can be scheduled from a shell, and a panel that only knew about its own would report `false` while the machine counts down.
+
+`at` is `null` on the rare pending shutdown whose record carries no `USEC` — `scheduled` is still the answer to act on.
+
+**`500` with a `reference` when the panel could not look.** Not the same as `scheduled: false`, and this is the endpoint someone calls to decide whether to cancel a restart.
+
+---
+
+### DELETE `/settings/reboot`
+**Permission:** `setting` (manage)
+
+Cancel a pending restart (`shutdown -c`).
+
+**Response `200`:** `{"reboot": {"scheduled": false, "at": null}}`
+
+Cancelling when nothing is scheduled is **not** an error: the caller wanted no pending restart, and there is none. Activity: `setting.reboot_cancelled`.
 
 ---
 
@@ -4996,9 +5028,11 @@ A disabled webhook and an identifier that never existed both answer `404`, ident
 
 **Query:** `lines` integer, optional, `1–500` (default `100`); `reference` UUID, optional (exact lookup).
 
-**Response `200`:** `{"error_logs":[{"occurred_at":"…","status":500,"method":"POST","route":"api/applications/{application}","exception":"…","message":"Unexpected API error.","reference":"…","user_id":1,"feature":null,"operation":null,"exit_code":null,"error":null}],"meta":{"truncated":false}}`
+**Response `200`:** `{"error_logs":[{"occurred_at":"…","status":500,"method":"POST","route":"api/applications/{application}","exception":"…","message":"Undefined method foo() on App\\Models\\Application","file":"app/Services/Server/Foo.php:212","trace":["app/Http/Controllers/API/Server/Bar.php:44"],"reference":"…","user_id":1,"feature":null,"operation":null,"exit_code":null,"command":null,"duration_ms":null,"attempts":null,"error":null}],"meta":{"truncated":false}}`
 
-Server-operation records use `feature`, `operation`, `exit_code`, and a redacted, 1,000-character `error` summary to make a support reference actionable. The summary uses non-empty stderr first and falls back to stdout because installers and other CLI tools often report failures there; it remains `null` when neither stream contains output. API failures use the existing fields. Validation, authentication, authorization, and not-found responses are excluded. Entries never expose request bodies, credentials, cookies, tokens, SQL bindings, unredacted command output, or stack traces. The log rotates automatically and retains 30 days by default.
+`message` is the exception's own message, redacted and capped at 500 characters — **not** a fixed string. `file` is `path:line` relative to the install, and `trace` is up to five frames inside the application with vendor frames dropped. Entries written before this shipped have neither field.
+
+Server-operation records use `feature`, `operation`, `exit_code`, `command`, `duration_ms`, `attempts`, and a redacted, 1,000-character `error` summary to make a support reference actionable. `command` is the command line that failed, redacted where it was written rather than here. `attempts` and `duration_ms` separate a lock retried three times over twelve seconds from something that died once in 40ms — a distinction the timestamps cannot make. The summary uses non-empty stderr first and falls back to stdout because installers and other CLI tools often report failures there; it remains `null` when neither stream contains output. API failures use the existing fields. Validation, authentication, authorization, and not-found responses are excluded. Entries never expose request bodies, credentials, cookies, tokens, SQL bindings, unredacted command output, or stack traces. The log rotates automatically and retains 30 days by default.
 
 ---
 
@@ -5021,5 +5055,5 @@ Activity entries are written for every mutation. `type` and `action` are separat
 | `firewall` | rule_added, rule_updated, rule_removed, rule_enabled, rule_disabled, enabled, disabled |
 | `git_account` | connected, updated, test_passed, test_failed, disconnected |
 | `node` | install_started, uninstalled, npm_updated, default_changed |
-| `setting` | updated, reboot_requested, reboot_scheduled, reboot_schedule_removed |
+| `setting` | updated, reboot_requested, reboot_cancelled, reboot_scheduled, reboot_schedule_removed |
 | `panel_update` | started, completed, failed |
