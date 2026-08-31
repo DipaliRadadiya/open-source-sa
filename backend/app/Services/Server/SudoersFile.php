@@ -87,8 +87,24 @@ class SudoersFile
     /**
      * The complete file content, newline-terminated.
      *
-     * `!requiretty` because php-fpm has no terminal; without it every
-     * privileged operation fails on distributions that default it on.
+     * **One grant line and nothing else — no `Defaults`.** This file used to
+     * open with `Defaults:<user> !requiretty`, on the reasoning that php-fpm
+     * has no terminal and would be refused where `requiretty` is on. Both
+     * halves of that were wrong for this panel:
+     *
+     * - `requiretty` is a Red Hat default. Ubuntu has never set it, and
+     *   install.sh installs on Ubuntu only. So the line was inert on every
+     *   platform it ever shipped to.
+     * - sudo has since removed the option outright (gone by 1.9.17, which
+     *   Ubuntu 26.04 ships). An unknown `Defaults` setting is a parse error,
+     *   not a warning, so the line turned the whole file invalid and every
+     *   26.04 install died at `visudo -cqf` with the grant refused.
+     *
+     * The lesson generalises past this one keyword: a `Defaults` entry is
+     * matched against the sudo build on the *target* server, which is newer
+     * than ours as often as not. Anything added here has to be a setting we
+     * positively need, not one added defensively — a defensive line cannot
+     * help on a platform that never had the problem, and can still break it.
      */
     public function render(): string
     {
@@ -102,7 +118,6 @@ class SudoersFile
             '# Edits to this file are lost on the next update. To grant a new',
             '# binary, add it to that config list — it is the only copy, and',
             '# install.sh renders this file from it rather than repeating it.',
-            'Defaults:'.$user.' !requiretty',
             $user.' ALL=(root) NOPASSWD: '.implode(', ', $this->entries()),
             '',
         ]);

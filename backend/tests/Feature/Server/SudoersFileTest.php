@@ -84,14 +84,23 @@ it('renders one grant line the panel account can be matched on', function () {
         fn (string $line): bool => $line !== '' && ! str_starts_with($line, '#'),
     ));
 
-    // php-fpm has no terminal; without !requiretty every privileged operation
-    // fails on distributions that default it on.
-    expect($lines)->toHaveCount(2)
-        ->and($lines[0])->toBe('Defaults:panel !requiretty')
-        ->and($lines[1])->toStartWith('panel ALL=(root) NOPASSWD: /')
+    expect($lines)->toHaveCount(1)
+        ->and($lines[0])->toStartWith('panel ALL=(root) NOPASSWD: /')
         // Trailing newline: sudoers requires the last line terminated, and a
         // file that ends mid-line is a file visudo rejects.
         ->and($content)->toEndWith("\n");
+});
+
+it('sets no Defaults option, so a newer sudo cannot reject the whole file', function () {
+    // `Defaults:panel !requiretty` shipped here until sudo removed the option
+    // (gone by 1.9.17, which Ubuntu 26.04 ships). An unknown setting is a parse
+    // error rather than a warning, so one inert line invalidated the entire
+    // grant and every 26.04 install failed at `visudo -cqf`. This asserts the
+    // absence rather than the old content: any Defaults entry is matched
+    // against the target server's sudo, which is routinely newer than ours.
+    expect(sudoers()->render())
+        ->not->toContain('requiretty')
+        ->not->toContain('Defaults');
 });
 
 it('writes beside the account the services run as', function () {
