@@ -1,14 +1,57 @@
 "use client";
 
-import { ChevronDown, CircleX, TriangleAlert } from "lucide-react";
+import { Braces, ChevronDown, CircleX, TriangleAlert } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+
+/**
+ * The entry exactly as the API returned it.
+ *
+ * The row above is a reading of the payload — shortened class name, relative
+ * time, the two fields worth a headline. When that reading is not enough, this
+ * is the payload itself, with nothing selected out and nothing renamed, so a
+ * field the panel has no opinion about is still findable. Collapsed by default:
+ * it answers a question most readers are not asking yet.
+ */
+function RawEntry({ entry }) {
+  const t = useTranslations("errorLogs");
+  const json = JSON.stringify(entry, null, 2);
+
+  return (
+    <Collapsible className="group/raw pt-1">
+      <div className="flex items-center gap-1">
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="-ml-2 h-7 gap-1.5 px-2 text-xs">
+            <Braces className="size-3.5" />
+            {t("rawTitle")}
+            <ChevronDown className="size-3.5 transition-transform group-data-[state=open]/raw:rotate-180" />
+          </Button>
+        </CollapsibleTrigger>
+        {/* Outside the trigger: nesting it would make copying toggle the
+            panel, and the usual reason to copy this is to paste it to someone
+            who needs it. */}
+        <CopyButton value={json} label={t("rawCopy")} />
+      </div>
+      <CollapsibleContent className="pt-1.5">
+        {/* No cap of its own. The occurrence list above already scrolls, and a
+            scroll area nested inside one is a trap — the wheel fights over
+            which box it belongs to. Lines wrap, so there is no sideways
+            overflow to catch either. */}
+        <pre className="whitespace-pre-wrap break-words rounded-md border bg-zinc-950 p-3 font-mono text-[11px] leading-4 text-zinc-100">
+          {json}
+        </pre>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 /**
  * 503 is the panel refusing work because something is already running — a
@@ -132,8 +175,14 @@ export function ErrorGroupRow({ group, now }) {
           {/* Capped with its own scroll. One fault can account for every entry
               on the page — expanding it unbounded pushed the four other groups
               a screen and a half down, so opening the busiest one hid the rest
-              of the answer. */}
-          <ul className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
+              of the answer.
+
+              30rem, not the original 18: one occurrence with its raw payload
+              open measures 369px, so the old cap showed the response through a
+              288px letterbox and hid the last 81px of it. This fits that, plus
+              room for the fields the backend does not send yet, and is still
+              under half a laptop viewport — the reason for the cap survives. */}
+          <ul className="max-h-[30rem] space-y-1.5 overflow-y-auto pr-1">
             {group.occurrences.map((entry, index) => (
               <li
                 key={`${entry.reference ?? "entry"}-${index}`}
@@ -174,6 +223,8 @@ export function ErrorGroupRow({ group, now }) {
                     {t("reference", { reference: entry.reference })}
                   </p>
                 ) : null}
+
+                <RawEntry entry={entry.raw ?? entry} />
               </li>
             ))}
           </ul>

@@ -97,7 +97,12 @@ export function groupErrorLogs(entries = []) {
     }
 
     group.count += 1;
-    group.occurrences.push({ ...entry, at });
+    // `raw` is the entry exactly as the API sent it, kept beside the grouped
+    // copy so the raw view shows the response rather than our shape — the
+    // spread above adds a parsed `at` Date that never came from the backend.
+    // It also carries the schema's passthrough fields, so anything the backend
+    // starts sending appears there without a change here.
+    group.occurrences.push({ ...entry, at, raw: entry });
     // An entry with an unparseable timestamp still counts; it just cannot move
     // the group's first/last, which would otherwise become Invalid Date.
     if (at) {
