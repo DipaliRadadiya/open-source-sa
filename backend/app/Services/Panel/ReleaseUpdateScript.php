@@ -195,6 +195,13 @@ class ReleaseUpdateScript
         # Built as the panel's own user, exactly as install.sh does. A build run
         # as root leaves node_modules and .next owned by root under a service
         # that is not, and Next.js cannot write its cache at runtime.
+        #
+        # BUILD_HEAP_MB caps V8's old space and is kept in step with
+        # install.sh's build_frontend(). It is not what keeps a small box
+        # alive: Next 16 builds with Turbopack, whose working set is a Rust
+        # heap NODE_OPTIONS cannot bound. Swap and the build-worker cap in
+        # frontend/next.config.mjs do that, and UpdatePreflight refuses the
+        # update before this runs if the box cannot clear the measured floor.
         note frontend_build
         BUILD_RAM_MB=\$(awk '/MemTotal/ {printf "%d", \$2/1024}' /proc/meminfo)
         if [ "\$BUILD_RAM_MB" -ge 7500 ]; then BUILD_HEAP_MB=4096

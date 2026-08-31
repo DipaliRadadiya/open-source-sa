@@ -136,6 +136,12 @@ class UpdatePreflight
      * `npm run build` is the step that OOMs on small VPSes. Available memory
      * (not "free") is the number that matters — page cache is reclaimable.
      *
+     * Swap counts. That is not a concession: it is the whole reason a 1 GB box
+     * can build the panel at all, and install.sh adds a swapfile at install
+     * time for exactly this step. Judging the box on MemAvailable alone would
+     * refuse an update on the very servers the installer prepared to survive
+     * one — a build that finishes slowly is still a build that finishes.
+     *
      * @return array{key: string, passed: bool, detail: string|null}
      */
     private function freeMemory(): array
@@ -147,14 +153,44 @@ class UpdatePreflight
             return ['key' => 'free_memory', 'passed' => false, 'detail' => 'unknown'];
         }
 
+        return $this->memoryVerdict($availableMb, $this->freeSwapMb(), $required);
+    }
+
+    /**
+     * Public and pure, so the arithmetic is tested without a fake `/proc`.
+     *
+     * @return array{key: string, passed: bool, detail: string|null}
+     */
+    public function memoryVerdict(int $availableMb, ?int $swapMb, int $requiredMb): array
+    {
+        $swapMb ??= 0;
+
         return [
             'key' => 'free_memory',
-            'passed' => $availableMb >= $required,
-            'detail' => $availableMb.'MB available, '.$required.'MB required',
+            'passed' => $availableMb + $swapMb >= $requiredMb,
+            // Broken out rather than summed into one number: an admin who is
+            // 400 MB short needs to know whether the answer is "close a
+            // process" or "add a swapfile", and those are different fixes.
+            'detail' => $availableMb.'MB available + '.$swapMb.'MB swap, '.$requiredMb.'MB required',
         ];
     }
 
     private function availableMemoryMb(): ?int
+    {
+        return $this->meminfoMb('MemAvailable');
+    }
+
+    /**
+     * Free swap, or null when /proc/meminfo has no SwapFree line at all — a
+     * kernel built without swap support. Treated as zero by the caller, since
+     * "no swap" and "no swap left" constrain the build identically.
+     */
+    private function freeSwapMb(): ?int
+    {
+        return $this->meminfoMb('SwapFree');
+    }
+
+    private function meminfoMb(string $field): ?int
     {
         if (! is_readable('/proc/meminfo')) {
             return null;
@@ -162,7 +198,7 @@ class UpdatePreflight
 
         $contents = (string) @file_get_contents('/proc/meminfo');
 
-        if (preg_match('/^MemAvailable:\s+(\d+) kB$/m', $contents, $matches) !== 1) {
+        if (preg_match('/^'.preg_quote($field, '/').':\s+(\d+) kB$/m', $contents, $matches) !== 1) {
             return null;
         }
 

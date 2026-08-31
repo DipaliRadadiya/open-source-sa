@@ -199,6 +199,50 @@ it('caps the blocking list rather than pasting a whole git status', function () 
         ->and(substr_count($detail, 'file-'))->toBe(5);
 });
 
+it('counts swap toward the memory the frontend build can use', function () {
+    // install.sh adds a swapfile precisely so a 1 GB box can finish `next
+    // build`. Judging that box on MemAvailable alone would refuse an update on
+    // the very servers the installer prepared to survive one -- a build that
+    // finishes slowly is still a build that finishes.
+    $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
+
+    // A 1 GB box with install.sh's swapfile: short on RAM, fine in total.
+    expect($preflight->memoryVerdict(700, 2400, 2560)['passed'])->toBeTrue();
+
+    // The same box without the swapfile is not fine, and must be told so
+    // before the update starts rather than by the OOM killer partway through.
+    expect($preflight->memoryVerdict(700, 0, 2560)['passed'])->toBeFalse();
+});
+
+it('reports memory and swap separately so the fix is obvious', function () {
+    // "2560MB required" alone does not tell an admin whether to close a
+    // process or add a swapfile, and those are different fixes.
+    $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
+
+    expect($preflight->memoryVerdict(700, 300, 2560)['detail'])
+        ->toBe('700MB available + 300MB swap, 2560MB required');
+});
+
+it('treats a kernel with no swap support as having no swap', function () {
+    // /proc/meminfo has no SwapFree line at all on such a kernel. "No swap"
+    // and "no swap left" constrain the build identically, so null must not
+    // become a pass by accident.
+    $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
+    $verdict = $preflight->memoryVerdict(700, null, 2560);
+
+    expect($verdict['passed'])->toBeFalse()
+        ->and($verdict['detail'])->toContain('0MB swap');
+});
+
+it('requires enough memory for a build that was measured, not guessed', function () {
+    // 2000MB is OOM-killed during compilation and 2500MB during static
+    // generation; the shipped floor must sit above both. The old 768MB default
+    // passed on boxes where the build was certain to die minutes later, which
+    // is the worst thing a preflight check can do.
+    expect(config('panel_update.preflight.min_free_memory_mb'))
+        ->toBeGreaterThanOrEqual(2560);
+});
+
 it('still fails closed when git cannot answer', function () {
     // Unknown is not clean. If we cannot prove the tree is safe we do not get
     // to run `git checkout --force` over whatever is in it.

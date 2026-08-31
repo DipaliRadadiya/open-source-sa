@@ -265,6 +265,13 @@ class UpdateScript
         # while the box still has RAM spare. Sized from RAM the same way
         # install.sh's build_frontend() does; the two must not disagree, or an
         # update fails on a box its own installer built fine.
+        #
+        # This cap is not what saves a small box, though. Next 16 builds with
+        # Turbopack, whose working set is a Rust heap NODE_OPTIONS does not
+        # bound -- a 1.5 GB cgroup kills the native process with this set. The
+        # memory headroom comes from swap and from the build-worker cap in
+        # frontend/next.config.mjs; UpdatePreflight refuses the update before
+        # this line runs if the box cannot clear the measured floor.
         note frontend_build
         BUILD_RAM_MB=\$(awk '/MemTotal/ {printf "%d", \$2/1024}' /proc/meminfo)
         if [ "\$BUILD_RAM_MB" -ge 7500 ]; then BUILD_HEAP_MB=4096

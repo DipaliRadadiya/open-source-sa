@@ -28,6 +28,20 @@ return [
      * Preflight thresholds for an in-place update. The frontend build (npm ci
      * + next build) is by far the heaviest step: install.sh calls it "the slow
      * part" and it is what fails first on a small VPS.
+     *
+     * The memory floor is measured, not chosen. Building this frontend (725
+     * files, 58 routes) inside a memory cgroup on 2 vCPUs: 2000 MB is killed
+     * during compilation, 2500 MB compiles and is then killed during static
+     * generation, 3000 MB succeeds in 43s. 2560 MB is the lowest figure that
+     * passes with the build-worker cap now set in next.config.mjs, and it is
+     * checked against available memory *plus free swap* — see
+     * UpdatePreflight::freeMemory(), and install.sh's configure_swap(), which
+     * sizes the swapfile to clear this same number.
+     *
+     * The old default of 768 MB was not a floor at all: it passed on boxes
+     * where the build was certain to be OOM-killed minutes later, which is the
+     * worst thing a preflight check can do. PANEL_UPDATE_MIN_MEMORY_MB is the
+     * escape hatch if this proves too strict on a real server.
      */
     /*
      * Where the runner's script and state file live. Outside the repository
@@ -82,6 +96,6 @@ return [
 
     'preflight' => [
         'min_free_disk_mb' => (int) env('PANEL_UPDATE_MIN_DISK_MB', 2048),
-        'min_free_memory_mb' => (int) env('PANEL_UPDATE_MIN_MEMORY_MB', 768),
+        'min_free_memory_mb' => (int) env('PANEL_UPDATE_MIN_MEMORY_MB', 2560),
     ],
 ];

@@ -417,33 +417,71 @@ resolve_hostnames() {
 
 # ─── Swap ────────────────────────────────────────────────────────────────────
 
+# The memory the frontend build needs, measured rather than assumed. Building
+# the panel frontend inside a memory cgroup on 2 vCPUs: 2000 MB is killed
+# during compilation, 2500 MB compiles and is then killed during static
+# generation, 3000 MB succeeds. 3072 is that figure plus nothing -- the build
+# is not the only thing on the box, but it is the only thing sized here,
+# because everything else was already running when the number was measured.
+#
+# Kept in step with panel_update.preflight.min_free_memory_mb, which the
+# in-place updater checks against RAM + swap. If a box clears this at install
+# time it clears the updater's check later; letting the two drift means a
+# server its own installer built fine can never update.
+BUILD_MEMORY_MB=3072
+
 configure_swap() {
     step "Checking memory"
 
-    local ram_mb
+    local ram_mb swap_mb total_mb deficit_mb
     ram_mb=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
 
-    if (( $(swapon --show=NAME --noheadings 2>/dev/null | wc -l) > 0 )); then
-        skip "swap is already configured (${ram_mb} MB RAM)"
+    # Existing swap is counted, not treated as a reason to stop looking. The
+    # old check bailed the moment *any* swap existed, so a box that came with a
+    # 256 MB swapfile got nothing added and failed the build anyway.
+    swap_mb=$(awk '/SwapTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+    total_mb=$(( ram_mb + swap_mb ))
+
+    # PANEL_SWAP_MB is the escape hatch: `0` skips this entirely (for a box
+    # whose swap the operator manages), any other number forces that size.
+    if [[ "${PANEL_SWAP_MB:-}" == "0" ]]; then
+        skip "swap management disabled (PANEL_SWAP_MB=0)"
         return
     fi
 
-    if (( ram_mb >= 2048 )); then
-        ok "${ram_mb} MB RAM, no swap needed"
-        return
+    if [[ -n "${PANEL_SWAP_MB:-}" ]]; then
+        deficit_mb="$PANEL_SWAP_MB"
+        say "     adding ${deficit_mb} MB of swap (PANEL_SWAP_MB)"
+    else
+        if (( total_mb >= BUILD_MEMORY_MB )); then
+            ok "${ram_mb} MB RAM + ${swap_mb} MB swap, enough to build"
+            return
+        fi
+
+        # The frontend build is what dies here: `next build` peaks well above
+        # what a 1-2 GB box has, and the OOM killer reports it as a bare
+        # "Killed" with no mention of memory. Swap turns a mysterious failure
+        # into a slow success.
+        deficit_mb=$(( BUILD_MEMORY_MB - total_mb ))
+        say "     ${ram_mb} MB RAM + ${swap_mb} MB swap — adding ${deficit_mb} MB so the frontend build can finish"
     fi
 
-    # Below 2 GB the frontend build is the thing that dies: `next build` peaks
-    # well above what a 1 GB box has, and the OOM killer reports it as a bare
-    # "Killed" with no mention of memory. Swap turns a mysterious failure into
-    # a slow success.
-    say "     ${ram_mb} MB RAM — adding 2 GB of swap so the frontend build can finish"
-    run fallocate -l 2G /swapfile
-    run chmod 600 /swapfile
-    run mkswap /swapfile
-    run swapon /swapfile
-    grep -q '^/swapfile ' /etc/fstab || printf '/swapfile none swap sw 0 0\n' >>/etc/fstab
-    ok "2 GB swap active"
+    # A second file rather than resizing the first: /swapfile may not be ours,
+    # and swapoff-ing a file the box is actively paging into is a far worse
+    # failure than using a little more disk.
+    local swapfile=/swapfile-panel
+
+    if [[ -e "$swapfile" ]]; then
+        swapoff "$swapfile" 2>/dev/null || true
+        run rm -f "$swapfile"
+    fi
+
+    run fallocate -l "${deficit_mb}M" "$swapfile"
+    run chmod 600 "$swapfile"
+    run mkswap "$swapfile"
+    run swapon "$swapfile"
+    grep -q "^${swapfile} " /etc/fstab || printf '%s none swap sw 0 0\n' "$swapfile" >>/etc/fstab
+    ok "${deficit_mb} MB swap active"
 }
 
 # ─── Packages ────────────────────────────────────────────────────────────────
@@ -1115,6 +1153,15 @@ build_frontend() {
     # it are exactly the small ones the panel is meant to run on. Sized from
     # RAM rather than hardcoded: a fixed 4 GB on a 1 GB box invites the OOM
     # killer instead, trading a clear V8 error for a bare "Killed".
+    #
+    # But do not mistake this for the thing that keeps a small box alive any
+    # more. Next 16 builds with Turbopack by default, and Turbopack's working
+    # set lives in a Rust heap that NODE_OPTIONS cannot reach: on a 1.5 GB
+    # cgroup the kernel kills the native `MainThread` at 1.4 GB anon-rss, with
+    # this cap set and V8 nowhere near it. The cap is kept because it is still
+    # correct for the `--webpack` fallback and costs nothing; what actually
+    # buys headroom now is configure_swap() above and the build-worker cap in
+    # frontend/next.config.mjs.
     local ram_mb heap_mb
     ram_mb=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
     if (( ram_mb >= 7500 )); then
