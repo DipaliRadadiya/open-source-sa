@@ -5,6 +5,8 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getLogSources } from "@/lib/logs/get-log-sources";
 import { getLog } from "@/lib/logs/get-log";
+import { cookies } from "next/headers";
+import { FOLLOW_COOKIE } from "@/lib/logs/follow-preference";
 import { LogsPanel } from "@/components/logs/logs-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -20,10 +22,16 @@ export async function generateMetadata() {
 
 export default async function LogsPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t] = await Promise.all([
+  const [permissions, t, cookieStore] = await Promise.all([
     getPermissions(),
     getTranslations("logs"),
+    cookies(),
   ]);
+
+  // Read here rather than in the client: the panel would otherwise start the
+  // tail, then stop it once it read the preference, which is the flicker this
+  // is meant to remove.
+  const followPreference = cookieStore.get(FOLLOW_COOKIE)?.value ?? null;
 
   if (!can(permissions, "logs", "view")) redirect("/dashboard");
 
@@ -69,6 +77,7 @@ export default async function LogsPage({ searchParams }) {
           selected={selected}
           initial={initial}
           initialLines={DEFAULT_LINES}
+          followPreference={followPreference}
         />
       )}
     </div>

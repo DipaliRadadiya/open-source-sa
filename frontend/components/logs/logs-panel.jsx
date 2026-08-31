@@ -10,6 +10,7 @@ import { matchesSeverity } from "@/lib/logs/severity";
 import { LogSourceList } from "@/components/logs/log-source-list";
 import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
+import { FOLLOW_COOKIE, resolveFollow } from "@/lib/logs/follow-preference";
 import { apiMessage } from "@/lib/api/error-message";
 
 const POLL_MS = 3000;
@@ -17,7 +18,7 @@ const POLL_MS = 3000;
 const MAX_BUFFER = 10000;
 // Tail by default only for logs small enough that "live" is useful rather than
 // a firehose; big access logs open paused.
-const AUTO_FOLLOW_MAX_BYTES = 2 * 1024 * 1024;
+
 // One blip is noise; three in a row means the tail isn't working.
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
 // The rail's sizes and "written just now" dots are only true at fetch time;
@@ -25,7 +26,13 @@ const TAIL_FAILURES_BEFORE_PAUSE = 3;
 // picture of ten minutes ago.
 const CATALOG_MS = 30000;
 
-export function LogsPanel({ sources: initialSources, selected, initial, initialLines }) {
+export function LogsPanel({
+  sources: initialSources,
+  selected,
+  initial,
+  initialLines,
+  followPreference,
+}) {
   const t = useTranslations("logs");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,10 +58,20 @@ export function LogsPanel({ sources: initialSources, selected, initial, initialL
   const [debouncedTerm, setDebouncedTerm] = useState("");
   const [severity, setSeverity] = useState("all");
   const [wrap, setWrap] = useState(false);
-  const [follow, setFollow] = useState(
-    Boolean(source?.readable) && (source?.size ?? 0) <= AUTO_FOLLOW_MAX_BYTES,
-  );
+  const [follow, setFollow] = useState(() => resolveFollow(followPreference, source));
   const [busy, setBusy] = useState(false);
+
+  // Remembered across refreshes and across log sources. A cookie rather than
+  // localStorage so the server render already knows — read after mount, the
+  // tail would start, then stop, which is the flicker this exists to remove.
+  const changeFollow = useCallback((next) => {
+    setFollow(next);
+    try {
+      document.cookie = `${FOLLOW_COOKIE}=${next ? "on" : "off"}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    } catch {
+      // A blocked cookie costs the preference, nothing else.
+    }
+  }, []);
   // "reconnecting" after a blip, "paused" once we stop trying — a tail that
   // silently stops is indistinguishable from a log that went quiet.
   const [tailState, setTailState] = useState("idle");
@@ -88,9 +105,7 @@ export function LogsPanel({ sources: initialSources, selected, initial, initialL
     setStatus(initial?.status ?? "ok");
     setTruncated(Boolean(initial?.log?.truncated));
     setTailState("idle");
-    setFollow(
-      Boolean(source?.readable) && (source?.size ?? 0) <= AUTO_FOLLOW_MAX_BYTES,
-    );
+    setFollow(resolveFollow(followPreference, source));
   }
 
   // The cursor moves with them, but a ref cannot be written during render and
@@ -311,7 +326,7 @@ export function LogsPanel({ sources: initialSources, selected, initial, initialL
           lines={lineCount}
           onLinesChange={setLineCount}
           follow={follow}
-          onFollowChange={setFollow}
+          onFollowChange={changeFollow}
           wrap={wrap}
           onWrapChange={setWrap}
           onReload={() => load()}
