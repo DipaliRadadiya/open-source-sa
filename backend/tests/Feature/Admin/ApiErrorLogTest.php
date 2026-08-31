@@ -7,6 +7,12 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+/** A throwable whose trace starts in this file rather than in the framework. */
+function throwFromHelper(): RuntimeException
+{
+    return new RuntimeException('boom');
+}
+
 beforeEach(function () {
     $this->logDir = storage_path('logs/server-ops-tests-'.getmypid());
     File::deleteDirectory($this->logDir);
@@ -46,17 +52,53 @@ it('returns safe API errors to an administrator', function () {
 });
 
 it('records API failures through the server operations channel', function () {
+    // The message is the exception's own — this screen exists to identify an
+    // error, and it used to record the same seven words for every one of them.
+    // But it is still redacted: an exception message carries whatever was in
+    // scope when it was thrown, which is how a connection string ends up in a
+    // log read by more people than the file it came from.
     $logger = Mockery::mock();
     $logger->shouldReceive('error')
         ->once()
-        ->with('api.error', Mockery::on(fn (array $context) => $context['status'] === 500
-            && $context['message'] === 'Unexpected API error.'));
+        ->with('api.error', Mockery::on(function (array $context): bool {
+            expect($context['status'])->toBe(500)
+                ->and($context['message'])->toContain('password=')
+                ->and($context['message'])->not->toContain('hunter2')
+                // Enough to open the file without publishing the deploy path.
+                ->and($context['file'])->toStartWith('tests/Feature/Admin/ApiErrorLogTest.php:');
+
+            return true;
+        }));
     Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
 
     app(ApiErrorLogWriter::class)->record(
-        new RuntimeException('password=secret'),
+        new RuntimeException('password=hunter2'),
         Request::create('/api/test/{secret}', 'POST'),
     );
+});
+
+it('records where the exception came from, in application frames only', function () {
+    // The top of a Laravel stack is the same handler chain every time and says
+    // nothing about this failure; the first frames inside the application are
+    // what identify it.
+    $captured = null;
+
+    $logger = Mockery::mock();
+    $logger->shouldReceive('error')->once()->with('api.error', Mockery::on(function (array $context) use (&$captured): bool {
+        $captured = $context;
+
+        return true;
+    }));
+    Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
+
+    app(ApiErrorLogWriter::class)->record(
+        throwFromHelper(),
+        Request::create('/api/test', 'GET'),
+    );
+
+    expect($captured['trace'])->not->toBeEmpty()
+        ->and(collect($captured['trace'])->every(fn (string $f): bool => ! str_contains($f, '/vendor/')))->toBeTrue()
+        ->and($captured['trace'][0])->toContain('ApiErrorLogTest.php');
 });
 
 it('shows failed server operations and filters them by reference', function () {

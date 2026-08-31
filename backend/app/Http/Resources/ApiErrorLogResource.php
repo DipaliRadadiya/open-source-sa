@@ -17,6 +17,10 @@ class ApiErrorLogResource extends JsonResource
             'route' => $this['context']['route'] ?? null,
             'exception' => $this['context']['exception'] ?? null,
             'message' => $this['context']['message'] ?? 'Server operation failed.',
+            // Where it was thrown and the first frames inside the application.
+            // Absent on older entries, which recorded neither.
+            'file' => $this['context']['file'] ?? null,
+            'trace' => $this['context']['trace'] ?? [],
             'reference' => $this['context']['reference'] ?? null,
             'user_id' => $this['context']['user_id'] ?? $this['context']['actor_id'] ?? null,
             'feature' => $this['context']['feature'] ?? null,
