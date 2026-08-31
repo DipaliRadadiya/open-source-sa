@@ -273,6 +273,22 @@ function TokenHelp({ help, url, value, provider }) {
           <ExternalLink className="size-3" />
         </a>
       ) : null}
+
+      {/* GitHub gets its scopes ticked by the link and GitLab's help names
+          them, but Atlassian's page is a searchable list of 45 checkboxes with
+          nothing marked and no indication which one an integration needs. We
+          call two read endpoints and clone; that is one scope. Naming it
+          exactly — id and label — is what makes it findable in their search
+          box. */}
+      {provider.name === "bitbucket" ? (
+        <FormDescription>
+          {t.rich("bitbucketToken", {
+            scope: (chunks) => (
+              <code className="rounded bg-muted px-1 py-0.5 font-mono">{chunks}</code>
+            ),
+          })}
+        </FormDescription>
+      ) : null}
       {/* Asking someone to paste a credential without saying what will be done
           with it is the whole objection this answers. */}
       <FormDescription>{t("readOnly", { brand })}</FormDescription>
