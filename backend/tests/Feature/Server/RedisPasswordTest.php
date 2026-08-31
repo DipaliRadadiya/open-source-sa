@@ -241,19 +241,40 @@ it('leaves the password alone when the field is absent', function () {
 
     saveRedisAndApply([])->assertOk();
 
-    // Saving the memory settings must not clear the password — the read side
-    // never returns it, so an unchanged form has nothing to send back.
+    // Saving the memory settings must not clear the password: an unchanged
+    // form sends no `password` field, and absent must mean "leave it" rather
+    // than "set it to nothing".
     expect(passwordWrites($runs))->toBeEmpty()
         ->and(app(EnvFile::class)->get('REDIS_PASSWORD'))->toBe('null');
 });
 
-it('never returns the password itself', function () {
+it('returns the password to a caller who could change it', function () {
+    // Reversed by operator decision on 2026-08-31: the panel shows and copies
+    // this the way it already shows a system user's password. The objection is
+    // recorded in RedisSettings' class note -- Redis backs this panel's
+    // sessions, cache and queue, so the credential unlocks the panel rather
+    // than one customer's account.
     fakeRedis();
 
     $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
         ->getJson('/api/settings')->json('settings.redis');
 
-    expect($settings)->not->toHaveKey('password')
+    expect(array_keys($settings))->toContain('has_password', 'password');
+});
+
+it('withholds it from a role that can only look', function () {
+    // The half of the old behaviour worth keeping. A viewer cannot change the
+    // password, so handing it the value gives it nothing it can act on --
+    // `has_password` already tells it everything it can use.
+    fakeRedis();
+
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'setting', view: true, manage: false);
+
+    $settings = $this->withHeader('Authorization', 'Bearer '.$viewer->createToken('t')->plainTextToken)
+        ->getJson('/api/settings')->json('settings.redis');
+
+    expect($settings['password'])->toBeNull()
         ->and(array_keys($settings))->toContain('has_password');
 });
 

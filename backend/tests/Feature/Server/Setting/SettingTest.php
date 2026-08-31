@@ -684,3 +684,67 @@ describe('a scheduled restart', function () {
             ->assertForbidden();
     });
 });
+
+describe('the Redis password in the settings response', function () {
+    /** A Redis that answers `CONFIG GET requirepass` with a real password. */
+    function fakeRedisWithPassword(string $password = 's3cr3t-redis'): void
+    {
+        $redis = test()->redisCli;
+
+        Process::fake(function ($process) use ($redis, $password) {
+            $cmd = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($cmd[0] ?? '') === $redis && ($cmd[1] ?? '') === 'config' && ($cmd[2] ?? '') === 'get') {
+                $key = $cmd[3] ?? '';
+                $value = match ($key) {
+                    'requirepass' => $password,
+                    'maxmemory' => '0',
+                    'maxmemory-policy' => 'noeviction',
+                    default => '',
+                };
+
+                return Process::result(output: "{$key}\n{$value}");
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    it('sends the value to someone who could change it anyway', function () {
+        // Operator decision, 2026-08-31: the panel shows and copies this the
+        // way it already shows a system user's password.
+        fakeRedisWithPassword();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings')->assertOk()
+            ->assertJsonPath('settings.redis.has_password', true)
+            ->assertJsonPath('settings.redis.password', 's3cr3t-redis');
+    });
+
+    it('withholds it from a read-only role, which still learns one is set', function () {
+        // This is not a system user's password: Redis backs the panel's
+        // sessions, cache and queue, so it unlocks the panel rather than one
+        // customer's account. A viewer can already see that a password exists
+        // and cannot act on the value, so it does not travel.
+        fakeRedisWithPassword();
+
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'setting', view: true, manage: false);
+
+        $this->withHeader('Authorization', 'Bearer '.$viewer->createToken('t')->plainTextToken)
+            ->getJson('/api/settings')->assertOk()
+            ->assertJsonPath('settings.redis.has_password', true)
+            ->assertJsonPath('settings.redis.password', null);
+    });
+
+    it('sends null when no password is set, not an empty string', function () {
+        // `has_password: false` is the answer; an empty string in a password
+        // field renders as a password that is blank.
+        fakeRedisWithPassword('');
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings')->assertOk()
+            ->assertJsonPath('settings.redis.has_password', false)
+            ->assertJsonPath('settings.redis.password', null);
+    });
+});

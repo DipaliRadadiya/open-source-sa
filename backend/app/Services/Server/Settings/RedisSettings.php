@@ -8,6 +8,7 @@ use App\Services\Server\EnvFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -15,8 +16,25 @@ use Throwable;
 
 /**
  * Redis memory + auth settings via redis-cli CONFIG SET/REWRITE. Detect-gated
- * (only surfaces when redis-cli is present). The password is never returned —
- * only whether one is set.
+ * (only surfaces when redis-cli is present).
+ *
+ * **The password is returned** — operator decision, 2026-08-31, so the panel
+ * can show and copy it the way it already shows a system user's. The objection
+ * is recorded here because it is not the same secret as a system user's, and
+ * whoever reads this next should know what was traded:
+ *
+ * Redis backs this panel's sessions, cache and queue. Its queue payloads carry
+ * database credentials, git tokens and storage keys while jobs are pending, and
+ * its session store is what authenticates every logged-in admin. Every hosted
+ * site runs PHP as its own user on the same machine and can open 127.0.0.1:6379
+ * — so this password is the only thing between a compromised WordPress install
+ * and the panel's own sessions. A system user's password unlocks one customer's
+ * account; this one unlocks the panel.
+ *
+ * It is therefore returned only to a caller who could change it anyway
+ * (`setting` **manage**, not view). A read-only role still gets `has_password`
+ * and no value: nothing it can act on is hidden from it, and the credential
+ * does not travel to someone who has no use for it.
  *
  * Setting the password is the delicate part, and it used to be wrong in three
  * ways.
@@ -80,6 +98,8 @@ class RedisSettings implements SettingGroup
      */
     public function read(): array
     {
+        $current = $this->currentPassword();
+
         return [
             'maxmemory' => $this->configGet('maxmemory') ?: '0',
             'maxmemory_policy' => $this->configGet('maxmemory-policy') ?: 'noeviction',
@@ -88,16 +108,36 @@ class RedisSettings implements SettingGroup
             // connection to this Redis. Reporting `false` there claimed no
             // password on a server that requires one, which is the reading
             // most likely to make someone believe a change had been applied.
-            'has_password' => match ($current = $this->currentPassword()) {
+            'has_password' => match ($current) {
                 null => null,
                 default => $current !== '',
             },
+            // The value itself. Null covers three different situations, and
+            // `has_password` is what tells them apart: no password is set, the
+            // panel could not ask, or the caller may not have it.
+            'password' => $this->readablePassword($current),
             // Whether changing the password is even possible. If the panel
             // cannot record the new one, the control should be disabled rather
             // than offered and then refused.
             'password_manageable' => $this->env->writable(),
             ...$this->liveState(),
         ];
+    }
+
+    /**
+     * The password, when the caller is one who could change it anyway.
+     *
+     * `setting` **manage**, not view: a read-only role can already see that a
+     * password exists, and handing it the panel's own Redis credential gives
+     * it nothing it can act on. See the class note for what this secret opens.
+     */
+    private function readablePassword(?string $current): ?string
+    {
+        if ($current === null || $current === '') {
+            return null;
+        }
+
+        return (Auth::user()?->canManage('setting') ?? false) ? $current : null;
     }
 
     /**
