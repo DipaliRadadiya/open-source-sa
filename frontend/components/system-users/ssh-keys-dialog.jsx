@@ -89,8 +89,12 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
     try {
       await addSystemUserSshKey(user.id, values);
       toast.success(t("toast.keyAdded"));
-      form.reset();
-      await load();
+      // Closed on success. It used to stay open on the theory that you might
+      // add a second key, but the form was already empty and the list already
+      // updated, so the dialog just sat there looking like the save had not
+      // gone through. handleOpenChange clears the form and the loaded list, so
+      // reopening starts clean.
+      handleOpenChange(false);
     } catch (error) {
       handleValidationError(error, form);
     }
