@@ -365,6 +365,37 @@ describe('sources the panel cannot open itself', function () {
             ->assertJsonPath('code', 'log_not_permitted');
     });
 
+    it('keeps a source it could not check, rather than hiding it', function () {
+        // Absent and "could not ask" lead to opposite conclusions: one says
+        // this server has no such log, the other says the panel could not
+        // look. Hiding the second reads as the first — an empty Logs screen on
+        // a server whose sudo grant is out of date, and a user concluding
+        // their cron jobs never wrote anything.
+        Process::fake(fn () => Process::result(
+            errorOutput: 'sudo: a password is required',
+            exitCode: 1,
+        ));
+
+        $keys = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs'))->pluck('key');
+
+        expect($keys)->toContain('letsencrypt');
+    });
+
+    it('still hides a source the server genuinely does not have', function () {
+        // The other half. `test -f` exiting 1 with nothing on stderr is the
+        // command answering "no such file" — certbot was never installed here,
+        // and offering a log that does not exist is its own kind of wrong.
+        Process::fake(fn ($process) => in_array('test', (array) $process->command, true)
+            ? Process::result(exitCode: 1)
+            : Process::result(exitCode: 0));
+
+        $keys = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs'))->pluck('key');
+
+        expect($keys)->not->toContain('letsencrypt');
+    });
+
     it('says up front that a privileged source is not readable when sudo refuses', function () {
         // So the screen can grey the entry instead of offering something that
         // fails on click. `readable` used to be hardcoded true for these.

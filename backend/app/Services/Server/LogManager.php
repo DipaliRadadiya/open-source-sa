@@ -34,6 +34,20 @@ class LogManager
     /** Lines pulled through a privileged read before filtering in PHP. */
     private const PRIVILEGED_WINDOW = 5000;
 
+    private const PRESENT = 'present';
+
+    private const ABSENT = 'absent';
+
+    /**
+     * Asked, and not answered.
+     *
+     * A refusal or a timeout, never "no". Kept apart from ABSENT because the
+     * two lead the reader to opposite conclusions: one says this server has no
+     * such log, the other says this panel could not look — and only the first
+     * is a reason to hide the source.
+     */
+    private const UNKNOWN = 'unknown';
+
     public function __construct(
         private PhpStack $stack,
         private ServerOps $serverOps,
@@ -77,12 +91,17 @@ class LogManager
     public function describe(array $source): ?array
     {
         $kind = $source['kind'] ?? 'file';
+        $presence = $this->presence($source);
 
-        if (! $this->exists($source)) {
+        // Absent is the only reason to hide a source. "I could not find out"
+        // is not the same answer, and dropping it silently is how a server
+        // with an out-of-date sudo grant shows an empty Logs screen and lets
+        // the user conclude their cron jobs never wrote anything.
+        if ($presence === self::ABSENT) {
             return null;
         }
 
-        $stat = $kind === 'file'
+        $stat = $kind === 'file' && $presence === self::PRESENT
             ? ['size' => (int) (filesize($source['path']) ?: 0), 'modified' => filemtime($source['path']) ?: 0]
             : $this->remoteStat($source);
 
@@ -100,9 +119,15 @@ class LogManager
             // can open the file — it never can — but whether sudo will run the
             // reader. Hardcoding `true` here told the screen a source was
             // readable right up until opening it returned a 500.
-            'readable' => $kind === 'file'
-                ? is_readable($source['path'])
-                : ($kind === 'journal' || $this->permitted('tail')),
+            'readable' => match (true) {
+                // Asked and not answered: the screen should show the source
+                // greyed with a reason, not offer something that fails on
+                // click and not pretend it does not exist.
+                $presence === self::UNKNOWN => false,
+                $kind === 'file' => is_readable($source['path']),
+                $kind === 'journal' => true,
+                default => $this->permitted('tail'),
+            },
             // Following by byte offset needs bytes and a stable file. The
             // journal has neither, and re-reading a privileged file through
             // sudo on every poll costs more than it saves — those re-tail.
@@ -119,25 +144,37 @@ class LogManager
      *
      * @param  array<string, mixed>  $source
      */
-    private function exists(array $source): bool
+    private function presence(array $source): string
     {
-        return match ($source['kind'] ?? 'file') {
-            // `probe`, not `run`: exit 1 here means "no such log", which is an
-            // ordinary answer for a job that has not run yet — not a failed
-            // server operation worth an error in the admin log.
-            'privileged' => $this->serverOps->probe(
-                ['test', '-f', $source['path']],
-                ['feature' => 'log', 'op' => 'exists', 'source' => $source['key']],
-                timeout: 15,
-            )->ok,
+        $kind = $source['kind'] ?? 'file';
+
+        if ($kind === 'file') {
+            return is_file($source['path']) ? self::PRESENT : self::ABSENT;
+        }
+
+        $result = $kind === 'journal'
             // Asking journalctl for one line is the cheapest way to learn both
             // that it is installed and that the panel may read it.
-            'journal' => $this->serverOps->run(
+            ? $this->serverOps->probe(
                 ['journalctl', '-n', '1', '--no-pager'],
                 ['feature' => 'log', 'op' => 'exists', 'source' => $source['key']],
                 timeout: 15,
-            )->ok,
-            default => is_file($source['path']),
+            )
+            // `probe`, not `run`: exit 1 here means "no such log", which is an
+            // ordinary answer for a job that has not run yet — not a failed
+            // server operation worth an error in the admin log.
+            : $this->serverOps->probe(
+                ['test', '-f', $source['path']],
+                ['feature' => 'log', 'op' => 'exists', 'source' => $source['key']],
+                timeout: 15,
+            );
+
+        return match (true) {
+            $result->ok => self::PRESENT,
+            // The command ran and said no. Anything else — a refusal, a
+            // timeout — never asked the question.
+            $result->answered => self::ABSENT,
+            default => self::UNKNOWN,
         };
     }
 
