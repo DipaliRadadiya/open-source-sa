@@ -267,3 +267,75 @@ it('refuses a user without manage permission', function () {
 
     expect($this->application->fresh()->botRules)->toHaveCount(0);
 });
+
+describe('the rules a reload has to survive', function () {
+    it('returns the saved rules from the application endpoint', function () {
+        // `ApplicationResource` exposes these through `whenLoaded`, so an
+        // unloaded relation means the keys are *absent* rather than empty —
+        // and the screen that reads them cannot tell those apart.
+        fakeBotRuleServer();
+
+        $this->withHeaders(botRuleHeaders())
+            ->putJson(botRuleUrl(), [
+                'policy' => 'block_training',
+                'blocked' => ['ScraperBot'],
+                'allowed' => ['GPTBot'],
+            ])->assertOk();
+
+        $application = $this->withHeaders(botRuleHeaders())
+            ->getJson('/api/applications/'.$this->application->id)
+            ->assertOk()
+            ->json('application');
+
+        expect($application['bot_blocked'])->toBe(['ScraperBot'])
+            ->and($application['bot_allowed'])->toBe(['GPTBot']);
+    });
+
+    it('returns them on the list too, so both endpoints agree', function () {
+        // A field that exists on one and not the other is how a client ends up
+        // believing a site has no rules.
+        fakeBotRuleServer();
+
+        $this->withHeaders(botRuleHeaders())
+            ->putJson(botRuleUrl(), ['policy' => 'block_training', 'blocked' => ['ScraperBot']])
+            ->assertOk();
+
+        $row = collect($this->withHeaders(botRuleHeaders())
+            ->getJson('/api/applications')->assertOk()->json('applications'))
+            ->firstWhere('id', $this->application->id);
+
+        expect($row['bot_blocked'])->toBe(['ScraperBot']);
+    });
+
+    it('survives the reload-then-save that used to delete every rule', function () {
+        // The whole chain, in one test. Save rules, reload the page, save
+        // again with exactly what the reload returned. Before the relation was
+        // loaded the reload returned nothing, the screen sent `[]`, and the
+        // API — correctly, since absent means "leave alone" and empty means
+        // "none" — deleted them all.
+        fakeBotRuleServer();
+
+        $this->withHeaders(botRuleHeaders())
+            ->putJson(botRuleUrl(), [
+                'policy' => 'block_training',
+                'blocked' => ['ScraperBot'],
+                'allowed' => ['GPTBot'],
+            ])->assertOk();
+
+        $reloaded = $this->withHeaders(botRuleHeaders())
+            ->getJson('/api/applications/'.$this->application->id)
+            ->assertOk()
+            ->json('application');
+
+        // Exactly what a form would send back after that reload.
+        $this->withHeaders(botRuleHeaders())
+            ->putJson(botRuleUrl(), [
+                'policy' => $reloaded['ai_bot_policy'],
+                'blocked' => $reloaded['bot_blocked'],
+                'allowed' => $reloaded['bot_allowed'],
+            ])->assertOk();
+
+        expect($this->application->botRules()->pluck('value')->sort()->values()->all())
+            ->toBe(['GPTBot', 'ScraperBot']);
+    });
+});

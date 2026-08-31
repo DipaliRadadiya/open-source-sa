@@ -27,6 +27,7 @@ use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\VisiblePermissions;
+use App\Support\ListSearch;
 use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,20 +41,19 @@ class ApplicationController extends Controller
         $filter = (array) $request->validated('filter', []);
 
         $applications = Application::query()
-            ->with('systemUser')
+            // Eager, not lazy: `ApplicationResource` reads `botRules` for
+            // every row, and the alternative to loading it here is a query per
+            // application. Loaded on the list as well as `show()` so the two
+            // cannot disagree about whether the field exists.
+            ->with('systemUser', 'botRules')
             // Exact matches on indexed columns; the enum and the site-type list
             // are validated in the request, so anything reaching here is real.
             ->when($filter['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filter['site_type'] ?? null, fn ($query, $type) => $query->where('site_type', $type))
-            ->when($search !== '', function ($query) use ($search) {
-                // Name or domain — the two things somebody has in mind when
-                // they go looking for a site. Grouped so the search does not
-                // escape into an OR across the whole query if a filter is
-                // added here later.
-                $like = '%'.$search.'%';
-
-                $query->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('domain', 'like', $like));
-            });
+            // Name or domain — the two things somebody has in mind when they
+            // go looking for a site. The helper groups the OR and makes the
+            // comparison case-insensitive on every supported database.
+            ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name', 'domain']));
 
         $applications = ListSort::apply(
             $applications,
@@ -96,8 +96,18 @@ class ApplicationController extends Controller
 
     public function show(Application $application): JsonResponse
     {
+        // `botRules` as well as the system user, because the resource exposes
+        // `bot_blocked` / `bot_allowed` through `whenLoaded` -- so without the
+        // relation those keys are simply **absent**, not empty.
+        //
+        // That absence was load-bearing in the worst way. The Bot Blocker
+        // screen read no rules, rendered two empty lists, and the next save
+        // sent them back as `[]` -- which the API correctly reads as "clear
+        // them", because absent means "leave alone" and empty means "none".
+        // So reloading the page and pressing save deleted every custom rule
+        // the site had.
         return response()->json([
-            'application' => ApplicationResource::make($application->load('systemUser'))->resolve(),
+            'application' => ApplicationResource::make($application->load('systemUser', 'botRules'))->resolve(),
         ]);
     }
 
