@@ -6,6 +6,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
+import { getGitAccounts } from "@/lib/git/get-git";
 import {
   getApplicationDomains,
   getApplicationCertificate,
@@ -67,6 +68,13 @@ export default async function ApplicationDetailPage({ params }) {
   // Only a serving site has domains, a certificate or a running process. While
   // it is still being built, saying anything about them would be invention.
   const settled = application.status === "active";
+
+  // Only when the site has lost its account: this is the list the repair
+  // dialog picks from, and fetching it for every healthy site would be a
+  // request per page view for a dialog nobody opens.
+  const gitAccounts = application.git_account_missing
+    ? await getGitAccounts().then((r) => r.data?.git_accounts ?? []).catch(() => [])
+    : [];
 
   const [domainList, certificate, backup, backupRuns] = await Promise.all([
     settled && canSeeDomains
@@ -331,6 +339,7 @@ export default async function ApplicationDetailPage({ params }) {
           {isGit ? (
             <SourceCard
               application={application}
+              gitAccounts={gitAccounts}
               canDeploy={canDeploy}
               className={
                 application.has_process

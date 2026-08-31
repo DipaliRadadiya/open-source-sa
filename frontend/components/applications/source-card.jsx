@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { GitBranch, Loader2, Rocket, Settings2, TriangleAlert, Webhook } from "lucide-react";
+import { GitBranch, Loader2, Rocket, Settings2, TriangleAlert, Unlink, Webhook } from "lucide-react";
 import { deployApplication } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
+import { RelinkGitAccountDialog } from "@/components/applications/relink-git-account-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,10 +20,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  * rather than behind the ⋯ menu. A failed redeploy leaves the old code serving,
  * so the card reports the last successful deploy, not "broken".
  */
-export function SourceCard({ application, canDeploy = false, className }) {
+export function SourceCard({ application, gitAccounts = [], canDeploy = false, className }) {
   const t = useTranslations("applications.source");
   const router = useRouter();
   const [deploying, setDeploying] = useState(false);
+  const [relinking, setRelinking] = useState(false);
 
   const commit =
     typeof application.last_commit === "string"
@@ -98,6 +100,27 @@ export function SourceCard({ application, canDeploy = false, className }) {
           foot, which read as a rendering fault on any site with little to
           report. */}
       <CardContent className="flex flex-1 flex-col gap-3">
+        {/* The account this site deployed with was deleted. It keeps its
+            repository and branch and has no credential, so it looks like a
+            public-repository site right up until the next deploy fails. Said
+            here, with the repair beside it. */}
+        {application.git_account_missing ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+          >
+            <span className="flex items-start gap-2">
+              <Unlink className="mt-0.5 size-4 shrink-0" />
+              {t("accountMissing")}
+            </span>
+            {canDeploy && gitAccounts.length ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setRelinking(true)}>
+                {t("relink.action")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         {deployFailed ? (
           <div
             role="alert"
@@ -138,6 +161,12 @@ export function SourceCard({ application, canDeploy = false, className }) {
           ) : null}
         </div>
 
+        <RelinkGitAccountDialog
+          application={application}
+          accounts={gitAccounts}
+          open={relinking}
+          onOpenChange={setRelinking}
+        />
       </CardContent>
     </Card>
   );

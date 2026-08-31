@@ -168,6 +168,18 @@ export const applicationSchema = z.object({
   last_deployed_at_human: z.string().nullish(),
   steps: z.array(z.string()).default([]),
   failed_step: z.string().nullish(),
+  // Set only where the cause is genuinely identified — usually null, and the
+  // doc is explicit that this is not an omission: for most failures the step
+  // plus the reference say more than an invented category would. Render the
+  // title when present (already localized by the server), fall back to the
+  // step otherwise.
+  // True when a git site's account was deleted: the FK is nullOnDelete, so the
+  // site keeps a repository and a branch and loses its credential. Nothing said
+  // so — it looked exactly like a public-repository site until the next deploy
+  // ran `git remote add origin ""` and failed.
+  git_account_missing: z.boolean().nullish(),
+  failed_reason: z.string().nullish(),
+  failed_reason_title: z.string().nullish(),
   reference: z.string().nullish(),
   // The sites list shows these, so they have to be declared — this object does
   // not passthrough, and an undeclared field the API is sending is dropped

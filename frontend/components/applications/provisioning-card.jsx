@@ -85,7 +85,11 @@ export function ProvisioningCard({ application, canManage = false }) {
       : t("settingUp");
 
   const body = failed
-    ? t("failedAt", { step: stepLabel(application.failed_step) })
+    // The server's own reason when it identified one — already localized, and
+    // it names the cause rather than the step the cause happened to stop at.
+    // Null for most failures by design, so the step remains the fallback.
+    ? (application.failed_reason_title ??
+       t("failedAt", { step: stepLabel(application.failed_step) }))
     : stalled
       ? t("stalledBody")
       : application.status === "provisioning"

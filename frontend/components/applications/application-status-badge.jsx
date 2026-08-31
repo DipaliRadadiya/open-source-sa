@@ -118,7 +118,14 @@ export function ApplicationStatusNotes({ application, className }) {
            worse than the id it replaced: the id was merely unhelpful, that is
            nonsense. Caught by rendering it, not by reading it.
         */
-        PROVISION_STEPS.has(application.failed_step) ? (
+        // The server named the cause. It is localized already and it is a
+        // better answer than the step: "Killed — the server ran out of memory"
+        // tells someone what to do, "Stopped at: Installing" does not.
+        application.failed_reason_title ? (
+          <p className="max-w-52 truncate text-xs text-destructive">
+            {application.failed_reason_title}
+          </p>
+        ) : PROVISION_STEPS.has(application.failed_step) ? (
           <p className="max-w-52 truncate text-xs text-destructive">
             {/* The detail page's own string, not a second one that means the
                 same thing — the two screens describe one failure. */}

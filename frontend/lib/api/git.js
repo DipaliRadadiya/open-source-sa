@@ -47,6 +47,21 @@ export function disconnectAccount(id) {
  * to get the total count; fetching the full list would be slow for someone
  * with hundreds of repos.
  */
+/**
+ * Point an application at a different git account (`PUT .../git-account`).
+ *
+ * Everything omitted is taken from the application as it stands, so repairing a
+ * site that merely lost its credential is `{git_account_id}` and nothing else —
+ * the user never restates an owner/repo they did not change.
+ *
+ * Verified before it is stored: the candidate account is asked to list the
+ * repository's branches, and a rejected re-link leaves the application exactly
+ * as it was. A `422` on `repository` means that account cannot reach it.
+ */
+export function relinkGitAccount(applicationId, payload) {
+  return api.put(`/applications/${applicationId}/git-account`, payload);
+}
+
 export function getRepositories(accountId, params = {}) {
   return api.get(`${BASE}/accounts/${accountId}/repositories`, { params });
 }
