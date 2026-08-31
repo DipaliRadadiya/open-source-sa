@@ -1,5 +1,10 @@
 {
   "common": {
+    "passwordRules": {
+      "length": "Al menos 10 caracteres",
+      "case": "Mayúsculas y minúsculas",
+      "number": "Un número"
+    },
     "saveFooter": {
       "save": "Guardar",
       "saving": "Guardando…",
@@ -114,10 +119,7 @@
       "success": "Contraseña actualizada.",
       "currentPlaceholder": "Introduce tu contraseña actual",
       "confirmPlaceholder": "Vuelve a introducir la nueva contraseña",
-      "requirements": "Al menos 10 caracteres, con mayúsculas, minúsculas y un número.",
-      "reqLength": "Al menos 10 caracteres",
-      "reqCase": "Mayúsculas y minúsculas",
-      "reqNumber": "Un número"
+      "requirements": "Al menos 10 caracteres, con mayúsculas, minúsculas y un número."
     },
     "activity": {
       "title": "Tu actividad",
@@ -1758,7 +1760,6 @@
         "confirmDelayed": "El servidor se reiniciará dentro de {minutes} minutos. Todos los sitios, bases de datos y servicios se detendrán hasta que vuelva.",
         "confirmCancel": "Cancelar",
         "confirmSubmit": "Reiniciar",
-        "startedNow": "Reinicio iniciado. El servidor volverá en breve.",
         "scheduled": "Reinicio programado dentro de {minutes} minutos.",
         "failed": "No se pudo iniciar el reinicio.",
         "summary": "Reinicia este servidor ahora o tras una breve espera."
@@ -2127,9 +2128,37 @@
     "confirmDescription": "Todos los sitios alojados quedan inaccesibles hasta que vuelva, normalmente menos de un minuto.",
     "confirmCancel": "Cancelar",
     "confirmSubmit": "Reiniciar servidor",
-    "started": "Reinicio iniciado.",
     "failed": "No se pudo iniciar el reinicio.",
     "options": "Más opciones"
+  },
+  "serverRestart": {
+    "goingDown": {
+      "title": "Reiniciando el servidor",
+      "body": "Tus sitios estarán sin conexión hasta que vuelva. Normalmente tarda menos de un minuto."
+    },
+    "offline": {
+      "title": "Esperando al servidor",
+      "body": "Se ha desconectado para reiniciarse. Esta página volverá por sí sola."
+    },
+    "comingBack": {
+      "title": "Casi listo",
+      "body": "El servidor vuelve a responder. Esperando a que el panel termine de iniciarse."
+    },
+    "takingLonger": {
+      "body": "Está tardando más de lo habitual. Seguimos intentándolo."
+    },
+    "back": {
+      "title": "El servidor ha vuelto",
+      "body": "Recargando el panel."
+    },
+    "gaveUp": {
+      "title": "No se puede conectar con el servidor",
+      "body": "Todavía no ha vuelto. Revisa la consola de tu proveedor de hosting y vuelve a intentarlo."
+    },
+    "reconnect": "Reintentar",
+    "dismiss": "Cerrar",
+    "elapsedSeconds": "{seconds} s transcurridos",
+    "elapsedMinutes": "{minutes} min {seconds} s transcurridos"
   },
   "databaseInstallProgress": {
     "queued": "En cola para instalarse",
@@ -4450,6 +4479,8 @@
     "copyFailed": "No se pudo copiar el informe"
   },
   "errorLogs": {
+    "rawTitle": "Respuesta original",
+    "rawCopy": "Copiar respuesta original",
     "title": "Registro de errores de la API",
     "subtitle": "Fallos inesperados en la propia API del panel, del más reciente al más antiguo.",
     "summary": {

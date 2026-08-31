@@ -1,5 +1,10 @@
 {
   "common": {
+    "passwordRules": {
+      "length": "At least 10 characters",
+      "case": "Upper & lowercase letters",
+      "number": "A number"
+    },
     "saveFooter": {
       "save": "Save",
       "saving": "Saving…",
@@ -570,10 +575,7 @@
       "success": "Password updated.",
       "currentPlaceholder": "Enter your current password",
       "confirmPlaceholder": "Re-enter the new password",
-      "requirements": "At least 10 characters, with upper- and lower-case and a number.",
-      "reqLength": "At least 10 characters",
-      "reqCase": "Upper & lowercase letters",
-      "reqNumber": "A number"
+      "requirements": "At least 10 characters, with upper- and lower-case and a number."
     },
     "activity": {
       "title": "Your activity",
@@ -1758,7 +1760,6 @@
         "confirmDelayed": "The server restarts in {minutes} minutes. Every site, database and service on it stops until it is back.",
         "confirmCancel": "Cancel",
         "confirmSubmit": "Restart",
-        "startedNow": "Restart started. The server will be back shortly.",
         "scheduled": "Restart scheduled in {minutes} minutes.",
         "failed": "The restart couldn't be started.",
         "summary": "Restart this server now, or after a short delay."
@@ -2127,9 +2128,37 @@
     "confirmDescription": "All hosted sites are unreachable until it returns, typically under a minute.",
     "confirmCancel": "Cancel",
     "confirmSubmit": "Restart server",
-    "started": "Restart started.",
     "failed": "Could not start the restart.",
     "options": "More options"
+  },
+  "serverRestart": {
+    "goingDown": {
+      "title": "Restarting the server",
+      "body": "Your sites are offline until it comes back. This usually takes under a minute."
+    },
+    "offline": {
+      "title": "Waiting for the server",
+      "body": "It has gone offline to restart. This page will come back on its own."
+    },
+    "comingBack": {
+      "title": "Almost there",
+      "body": "The server is answering again. Waiting for the panel to finish starting."
+    },
+    "takingLonger": {
+      "body": "This is taking longer than usual. Still trying."
+    },
+    "back": {
+      "title": "The server is back",
+      "body": "Reloading the panel."
+    },
+    "gaveUp": {
+      "title": "Can't reach the server",
+      "body": "It hasn't come back yet. Check your hosting provider's console, then try again."
+    },
+    "reconnect": "Try again",
+    "dismiss": "Close",
+    "elapsedSeconds": "{seconds}s elapsed",
+    "elapsedMinutes": "{minutes}m {seconds}s elapsed"
   },
   "databaseInstallProgress": {
     "queued": "Queued for installation",
@@ -4450,6 +4479,8 @@
     "copyFailed": "Couldn't copy the report"
   },
   "errorLogs": {
+    "rawTitle": "Raw response",
+    "rawCopy": "Copy raw response",
     "title": "API Error Log",
     "subtitle": "Unexpected failures inside the panel's own API, newest first.",
     "summary": {
