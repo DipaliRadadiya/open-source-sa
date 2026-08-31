@@ -108,10 +108,14 @@ export async function ServerInfoCard({ facts, health }) {
                 the width it needs to be readable. */}
           </div>
 
+          {/* public_ip first: `ip` is whatever the machine sees on its own
+              interfaces, which on a cloud host is a private address nobody can
+              point DNS at — and pointing DNS at it is what this field is
+              copied for. Falls back when the server could not determine one. */}
           <Field
             icon={Network}
             label={t("info.ip")}
-            value={facts.ip}
+            value={facts.public_ip ?? facts.ip}
             mono
             copyLabel={t("info.copyIp")}
           />

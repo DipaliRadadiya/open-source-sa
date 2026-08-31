@@ -13,6 +13,12 @@ export const serverFactsSchema = z.object({
     .nullable()
     .optional(),
   ip: nullableString,
+  // The address the internet reaches this server on — what DNS points at, and
+  // what a dashboard should show. `ip` is whatever the machine sees on its own
+  // interfaces, which on any cloud host is a private 10.x nobody can use.
+  // Null when it genuinely cannot be determined (bare metal behind a hardware
+  // NAT), which is why the card falls back rather than assuming.
+  public_ip: nullableString,
   cpu: z
     .object({ model: nullableString, cores: nullableNumber })
     .nullable()
