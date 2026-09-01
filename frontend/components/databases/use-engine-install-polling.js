@@ -130,11 +130,17 @@ export function useEngineInstallPolling(initialEngines = []) {
     });
   }
 
+  // Guarded on `installingEngine` because both sides are null when nothing is
+  // installing, and `null === null` is true — so a server with no install
+  // running rendered "we temporarily lost progress updates" permanently, about
+  // an install that did not exist. Neither flag means anything without one.
+  const installing = Boolean(installingEngine);
+
   return {
     engines,
     installingEngine,
-    slow: slowEngine === installingEngine,
-    pollIssue: pollIssueEngine === installingEngine,
+    slow: installing && slowEngine === installingEngine,
+    pollIssue: installing && pollIssueEngine === installingEngine,
     markStarted,
   };
 }
