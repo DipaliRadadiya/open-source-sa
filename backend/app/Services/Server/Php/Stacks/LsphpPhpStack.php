@@ -155,7 +155,7 @@ class LsphpPhpStack implements PhpStack
     /**
      * The nearest honest equivalent of `php-fpm -t`, which is not very near.
      *
-     * There is no LSPHP command that validates a php.ini. `lswsctrl config_test`
+     * There is no LSPHP command that validates a php.ini. `openlitespeed -t`
      * checks the *web server's* configuration and would happily pass a php.ini
      * we had just broken, so using it here would be a check that lies.
      *

@@ -385,7 +385,12 @@ class OlsSharedConfig
     public function test(): ServerOpsResult
     {
         return $this->serverOps->run(
-            (array) config('server.web_server_drivers.openlitespeed.test_command', ['/usr/local/lsws/bin/lswsctrl', 'config_test']),
+            // `openlitespeed -t`, not `lswsctrl config_test`: lswsctrl has no
+            // such verb. It prints its usage and exits non-zero for anything
+            // outside start|stop|restart|reload|status, so the old default
+            // failed exactly the way a rejected config fails — every write
+            // through this class would have rolled itself back.
+            (array) config('server.web_server_drivers.openlitespeed.test_command', ['/usr/local/lsws/bin/openlitespeed', '-t']),
             ['feature' => 'application', 'op' => 'ols_config_test'],
         );
     }

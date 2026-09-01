@@ -69,7 +69,11 @@ it('uses the OpenLiteSpeed configuration validator', function () {
         ->assertOk()
         ->assertJsonPath('config_test.ok', true);
 
-    Process::assertRan(fn ($p) => $p->command === ['/usr/local/lsws/bin/lswsctrl', 'config_test']);
+    // `openlitespeed -t`, which is the only thing OpenLiteSpeed ships that
+    // validates a config. This used to assert `lswsctrl config_test` — a verb
+    // lswsctrl does not have. It prints its usage and exits non-zero, so the
+    // assertion pinned a check that could only ever report failure.
+    Process::assertRan(fn ($p) => $p->command === ['/usr/local/lsws/bin/openlitespeed', '-t']);
     Process::assertNotRan(fn ($p) => $p->command === ['/usr/local/lsws/bin/lswsctrl', 'status']);
 });
 

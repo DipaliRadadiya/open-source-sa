@@ -160,7 +160,12 @@ return [
             // Encrypt issuance ran unprivileged and could not have worked.
             'certbot',
             'runuser', 'sh', 'env', 'rsync',
-            'nginx', 'apachectl', 'lswsctrl',
+            // `openlitespeed` alongside `lswsctrl` because they do different
+            // jobs: lswsctrl restarts, and only `openlitespeed -t` validates a
+            // config. Granting the control script but not the binary would
+            // leave the panel able to restart OpenLiteSpeed but not to check
+            // what it is about to restart it into.
+            'nginx', 'apachectl', 'lswsctrl', 'openlitespeed',
             'phpenmod', 'phpdismod', 'update-alternatives',
             // The dump/restore clients belong here as much as the shells do:
             // backups run `dump_client` from the engines list below, and a
@@ -197,6 +202,10 @@ return [
             'runuser' => ['/usr/sbin/runuser', '/usr/bin/runuser'],
             'nginx' => ['/usr/sbin/nginx'],
             'apachectl' => ['/usr/sbin/apachectl'],
+            // Not /usr/bin: OpenLiteSpeed installs under /usr/local/lsws,
+            // so without this the grant would name a path that does not exist.
+            'lswsctrl' => ['/usr/local/lsws/bin/lswsctrl'],
+            'openlitespeed' => ['/usr/local/lsws/bin/openlitespeed'],
             'phpenmod' => ['/usr/sbin/phpenmod'],
             'phpdismod' => ['/usr/sbin/phpdismod'],
             'ufw' => ['/usr/sbin/ufw'],
@@ -572,7 +581,7 @@ return [
             // A box that has never had TLS legitimately has no such listener,
             // and registration skips it rather than failing.
             'ssl_listener' => env('SERVER_OLS_SSL_LISTENER', 'Defaultssl'),
-            'test_command' => ['/usr/local/lsws/bin/lswsctrl', 'config_test'],
+            'test_command' => ['/usr/local/lsws/bin/openlitespeed', '-t'],
             // Restart, not reload: nothing lighter picks up a new virtual host,
             // and it is graceful — old workers drain rather than being cut off.
             'reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],
@@ -1279,7 +1288,7 @@ return [
     'config_tests' => [
         'nginx' => ['nginx', '-t'],
         'apache' => ['apachectl', 'configtest'],
-        'openlitespeed' => ['/usr/local/lsws/bin/lswsctrl', 'config_test'],
+        'openlitespeed' => ['/usr/local/lsws/bin/openlitespeed', '-t'],
     ],
 
     'services' => [

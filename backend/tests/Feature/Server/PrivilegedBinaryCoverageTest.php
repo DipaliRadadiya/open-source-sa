@@ -145,6 +145,81 @@ it('elevates the binaries that come from config too', function () {
 });
 
 /**
+ * The same blind spot again, for config values that are whole *commands*.
+ *
+ * The check above reads a config key as a single binary path. These keys hold
+ * an argv array instead, so `basename()` on them yields nothing useful and they
+ * slipped through both scans — the source scan cannot see them either, because
+ * the driver runs `config(...)` rather than a literal.
+ *
+ * That is not hypothetical: `lswsctrl` was in the allowlist but had no entry in
+ * `privilege.paths`, so the grant named `/usr/bin/lswsctrl` while OpenLiteSpeed
+ * installs at `/usr/local/lsws/bin/lswsctrl`. Every restart the panel issued on
+ * that stack ran unprivileged. Elevation is matched on the basename, so the
+ * assertion below is deliberately paired with the path one that follows it.
+ *
+ * `config_tests` is read from config rather than listed, so a service added
+ * there is covered without anybody remembering this file.
+ */
+const COMMAND_CONFIG_KEYS = [
+    'server.web_server_drivers.openlitespeed.test_command',
+    'server.web_server_drivers.openlitespeed.reload_command',
+    'server.php_stacks.lsphp.reload_command',
+];
+
+it('elevates the binaries that come from config as whole commands', function () {
+    $allowed = (array) config('server.privilege.binaries', []);
+
+    $commands = [];
+
+    foreach (COMMAND_CONFIG_KEYS as $key) {
+        $commands[$key] = (array) config($key, []);
+    }
+
+    foreach ((array) config('server.config_tests', []) as $service => $command) {
+        $commands["server.config_tests.{$service}"] = (array) $command;
+    }
+
+    $missing = [];
+
+    foreach ($commands as $key => $command) {
+        $path = (string) ($command[0] ?? '');
+
+        if ($path === '') {
+            continue;
+        }
+
+        $binary = basename($path);
+
+        if (! in_array($binary, $allowed, true) && ! str_starts_with($binary, 'php-fpm')) {
+            $missing[$key] = $binary;
+            continue;
+        }
+
+        // An absolute path in the command has to be one the grant actually
+        // names, or sudo refuses a command it was never given. Binaries with no
+        // `paths` entry default to /usr/bin, which is the rule elsewhere too.
+        if (! str_contains($path, '/')) {
+            continue;
+        }
+
+        $granted = (array) (config('server.privilege.paths')[$binary] ?? ['/usr/bin/'.$binary]);
+
+        if (! in_array($path, $granted, true)) {
+            $missing[$key] = $binary.' at '.$path.' (granted: '.implode(', ', $granted).')';
+        }
+    }
+
+    $detail = implode(', ', array_map(
+        fn (string $key, string $binary) => "{$binary} ({$key})",
+        array_keys($missing),
+        $missing,
+    ));
+
+    expect($missing)->toBe([], "config names a command the panel will not elevate: {$detail}");
+});
+
+/**
  * The allowlist the panel checks and the sudoers rule the installer writes have
  * to agree, or the panel asks for a privilege the server never granted — and
  * `sudo` answers "a password is required" to a process that cannot supply one.

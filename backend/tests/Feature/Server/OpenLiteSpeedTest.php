@@ -113,7 +113,11 @@ function fakeOls(string $config, bool $testPasses = true): ArrayObject
             return Process::result(output: '');
         }
 
-        if (str_contains((string) ($command[0] ?? ''), 'lswsctrl')) {
+        // Matches the config test (`openlitespeed -t`) and the restart
+        // (`lswsctrl restart`) alike — both live under lsws/bin, and the fake
+        // has to follow the real command names or a passing test only proves
+        // that nothing ran.
+        if (str_contains((string) ($command[0] ?? ''), '/lsws/bin/')) {
             return $testPasses
                 ? Process::result(output: 'ok')
                 : Process::result(output: '', errorOutput: 'config error', exitCode: 1);
@@ -654,10 +658,10 @@ describe('the lsphp stack', function () {
             ->toBe(['8.4', '8.3']);
     });
 
-    it('validates an ini with that version own binary, not with lswsctrl', function () {
+    it('validates an ini with that version own binary, not with the web server', function () {
         $stack = app(LsphpPhpStack::class);
 
-        // `lswsctrl config_test` checks the web server's config and would pass
+        // `openlitespeed -t` checks the web server's config and would pass
         // a php.ini we had just broken.
         expect($stack->configTestCommand('8.4'))->toBe([
             $this->lsws.'/lsphp84/bin/php',

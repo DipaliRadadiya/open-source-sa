@@ -1432,7 +1432,14 @@ configure_ols() {
     # Tested before restarting, exactly as with nginx and Apache: a broken
     # config that reaches a restart takes the web server down, and on this box
     # that includes the panel you would use to fix it.
-    if ! /usr/local/lsws/bin/lswsctrl config_test >>"$LOG_FILE" 2>&1; then
+    #
+    # `openlitespeed -t` is what OpenLiteSpeed documents for this, and the only
+    # thing that does it. lswsctrl has NO config-test verb -- it takes
+    # start|stop|restart|reload|status and prints its usage for anything else,
+    # exiting non-zero. So `lswsctrl config_test` never tested anything: it
+    # failed exactly the way a rejected config fails, and this function then
+    # restored the original and aborted every single --stack=ols install.
+    if ! /usr/local/lsws/bin/openlitespeed -t >>"$LOG_FILE" 2>&1; then
         warn "the generated OpenLiteSpeed config failed its own test — restoring the original"
         run cp -f "${conf}.preinstall" "$conf"
         die "OpenLiteSpeed rejected the generated config; the original has been restored — see $LOG_FILE"
@@ -2414,7 +2421,7 @@ CONF
         ' "$conf" >"$tmp" && mv -f "$tmp" "$conf"
     fi
 
-    if ! /usr/local/lsws/bin/lswsctrl config_test >>"$LOG_FILE" 2>&1; then
+    if ! /usr/local/lsws/bin/openlitespeed -t >>"$LOG_FILE" 2>&1; then
         warn "OpenLiteSpeed rejected the TLS config — the panel stays on HTTP"
         warn "the certificate was issued; install it by hand from ${cert}"
         SCHEME="http"
