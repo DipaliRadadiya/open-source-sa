@@ -113,7 +113,10 @@ export const CUSTOM_PRESET = "custom";
 export const createFirewallRuleSchema = z
   .object({
     preset: z.string().default(CUSTOM_PRESET),
-    ports: z.string().min(1, { message: "requiredField" }),
+    // "required", not "requiredField": add-rule-dialog translates a fixed list
+    // of keys and passes anything else through untouched, so the wrong spelling
+    // rendered the literal word "requiredField" under the Port field.
+    ports: z.string().min(1, { message: "required" }),
     protocol: z.enum(["all", "tcp", "udp"]),
     action: z.enum(["allow", "deny"]),
     source_ip: z.string().optional(),
