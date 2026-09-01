@@ -213,8 +213,11 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
                   {t("restore.action")}
                 </Button>
               ) : null}
+              {/* Trimmed: CopyButton already hides itself on an empty string, but
+                  a file holding only a newline is just as empty to the reader,
+                  and offering to copy it ticks "copied" over nothing. */}
               <CopyButton
-                value={contents}
+                value={contents.trim() ? contents : ""}
                 label={t("copy")}
                 className="text-console-muted hover:bg-console-foreground/10 hover:text-console-foreground"
               />
