@@ -3212,6 +3212,7 @@
         "remove": "Eliminar certificado",
         "active": "HTTPS está activo",
         "expired": "Este certificado ha caducado.",
+        "expiredTitle": "HTTPS no está funcionando",
         "expiresRenew": "Se renueva automáticamente · caduca {when} ({days} días)",
         "expiresManual": "Caduca {when} ({days} días) — no se renovará automáticamente",
         "missingDomains": "Estos nombres aún no están en el certificado: {domains}. Reemítelo para incluirlos.",

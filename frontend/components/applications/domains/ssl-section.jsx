@@ -211,18 +211,32 @@ export function SslSection({
     }
 
     // --- Active ---
-    const expiryTone = cert.expired
+    // An expired certificate is not a healthy one with a footnote. Browsers
+    // refuse the site outright, so the card carries the failure treatment —
+    // it used to be green, headed "HTTPS is active", with the expiry in small
+    // red text underneath, and the reassuring half was the loud half.
+    const expired = cert.expired;
+    const expiryTone = expired
       ? "text-destructive"
       : cert.expiring_soon
         ? "text-warning"
         : "text-muted-foreground";
     return (
-      <div className="space-y-4 rounded-xl border border-success/30 bg-success/5 p-4">
+      <div
+        className={cn(
+          "space-y-4 rounded-xl border p-4",
+          expired ? "border-destructive/30 bg-destructive/5" : "border-success/30 bg-success/5",
+        )}
+      >
         <div className="flex flex-wrap items-start gap-3">
-          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-success" />
+          {expired ? (
+            <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
+          ) : (
+            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-success" />
+          )}
           <div className="min-w-40 flex-1">
-            <p className="text-sm font-medium">
-              {t("ssl.active")}
+            <p className={cn("text-sm font-medium", expired && "text-destructive")}>
+              {expired ? t("ssl.expiredTitle") : t("ssl.active")}
               {cert.type_title ? (
                 <span className="ml-1 font-normal text-muted-foreground">
                   · {cert.type_title}
@@ -283,7 +297,12 @@ export function SslSection({
         ) : null}
 
         {canManage ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-success/20 pt-3">
+          <div
+            className={cn(
+              "flex flex-wrap items-center justify-between gap-3 border-t pt-3",
+              expired ? "border-destructive/20" : "border-success/20",
+            )}
+          >
             <div className="flex items-center gap-3">
               <Switch
                 id="force-https"
@@ -305,14 +324,28 @@ export function SslSection({
                 control, sitting beside a switch on the one card that decides
                 whether this site serves HTTPS at all. Removing the certificate
                 takes the site back to plain http. */}
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2 className="size-4" />
-              {t("ssl.remove")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="size-4" />
+                {t("ssl.remove")}
+              </Button>
+              {/* The way back. Reissue lived only inside the missing-domains
+                  warning, so an expired certificate whose domains were all
+                  present offered nothing but Remove — delete it and start
+                  again was the only route out of a site that had stopped
+                  serving HTTPS. The endpoint is the same POST; it replaces an
+                  existing certificate by design. */}
+              {expired ? (
+                <Button size="sm" onClick={() => setIssueOpen(true)}>
+                  <RefreshCw className="size-4" />
+                  {t("ssl.reissue")}
+                </Button>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>

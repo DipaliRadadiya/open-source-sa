@@ -3212,6 +3212,7 @@
         "remove": "Remove certificate",
         "active": "HTTPS is active",
         "expired": "This certificate has expired.",
+        "expiredTitle": "HTTPS is not working",
         "expiresRenew": "Renews automatically · expires {when} ({days} days)",
         "expiresManual": "Expires {when} ({days} days) — won't renew automatically",
         "missingDomains": "These names aren't on the certificate yet: {domains}. Reissue to cover them.",
