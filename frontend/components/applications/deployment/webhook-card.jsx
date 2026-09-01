@@ -161,8 +161,12 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   }
 
   async function rotate() {
+    // The endpoint validates the whole webhook, not just the change: `enabled`
+    // is required on every call and `provider` whenever it is true. Sending
+    // only `{ rotate: true }` came back 422 "The enabled field is required."
+    // Rotating is only offered on a live webhook, so both are known here.
     const ok = await save(
-      { rotate: true },
+      { enabled: true, provider: webhook.provider, rotate: true },
       { successKey: "webhook.rotated", failKey: "webhook.rotateFailed" },
     );
     if (ok) setRotateOpen(false);
