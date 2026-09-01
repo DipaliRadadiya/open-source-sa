@@ -137,14 +137,20 @@ export function PreflightList({ checks }) {
       {rows.length ? (
         <ul className={FILL}>
           {rows.map((c) => (
+            // `shrink-0` on the detail meant a sentence the parser did not
+            // recognise could not shrink OR wrap, so it ran straight out of the
+            // card and printed over the one beside it. The backend adding a
+            // term to a detail string is enough to cause that — it did, with
+            // "+ 0MB swap" — so the row wraps rather than trusting the text to
+            // be short.
             <li
               key={c.key}
-              className="flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm"
+              className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl border px-4 py-3 text-sm"
             >
               <StatusIcon passed={c.passed} advisory={c.advisory} />
-              <span className="min-w-0">{name(c.key)}</span>
+              <span className="min-w-0 flex-1">{name(c.key)}</span>
               {isUnknownDetail(c.detail) ? null : c.detail ? (
-                <span className="ml-auto shrink-0 font-mono text-xs text-muted-foreground">
+                <span className="min-w-0 basis-full font-mono text-xs break-words text-muted-foreground sm:ml-auto sm:basis-auto">
                   {c.detail}
                 </span>
               ) : null}
