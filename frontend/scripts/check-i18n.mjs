@@ -8,16 +8,23 @@
  * it was caught only because someone happened to run a check by hand. A check
  * that depends on remembering to run it is not a check.
  *
- * Two things are verified:
+ * Three things are verified:
  *   1. Every literal `t("…")` resolves in one of the file's own namespaces.
  *   2. Every locale has exactly the same key set as English — no missing keys
  *      falling back silently, no orphans left behind after a rename.
+ *   3. No key is defined twice in the same object. `JSON.parse` keeps the last
+ *      one and discards the rest without a word, so the edit you just made can
+ *      be dead on arrival and every other check still passes: the key set is
+ *      identical, it resolves, the build is green. `validation.max500` sat
+ *      duplicated in all three locales until a round-trip happened to show it.
  *
  * Dynamic keys (`t(\`add.errors.${x}\`)`) are skipped: they can't be resolved
  * statically, so they stay a human responsibility.
  */
 import fs from "node:fs";
 import path from "node:path";
+
+import { duplicateKeys } from "./duplicate-keys.mjs";
 
 const MESSAGES = "messages";
 const SOURCE_DIRS = ["app", "components", "lib"];
@@ -68,6 +75,19 @@ for (const file of fs.readdirSync(MESSAGES).filter((f) => f.endsWith(".json") &&
   const other = new Set(flatten(JSON.parse(fs.readFileSync(path.join(MESSAGES, file), "utf8"))));
   for (const key of base) if (!other.has(key)) problems.push(`${locale}: missing ${key}`);
   for (const key of other) if (!base.has(key)) problems.push(`${locale}: orphan ${key}`);
+}
+
+// 3 — a key defined twice in the same object
+for (const file of fs.readdirSync(MESSAGES).filter((f) => f.endsWith(".json"))) {
+  const locale = path.basename(file, ".json");
+  for (const { name, line, first } of duplicateKeys(
+    fs.readFileSync(path.join(MESSAGES, file), "utf8"),
+  )) {
+    problems.push(
+      `${locale}: "${name}" is defined twice in the same object ` +
+        `(lines ${first} and ${line}) — line ${first} is silently discarded`,
+    );
+  }
 }
 
 if (problems.length) {
