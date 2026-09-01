@@ -2,6 +2,7 @@
 
 use App\Models\ServerCapability;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
@@ -138,6 +139,26 @@ describe('reconciling a wrong record', function () {
             ->and(ServerCapability::query()->value('web_server'))->toBe('apache');
     });
 
+    it('never overrules the installer', function () {
+        // `source: installer` is a statement of what was built. A filesystem
+        // check is a weaker signal, and silently overriding it would write
+        // vhosts for a web server nobody chose — a worse version of the bug
+        // this repairs. panel:doctor reports the disagreement instead.
+        ServerCapability::query()->create([
+            'stack' => 'ols',
+            'web_server' => 'openlitespeed',
+            'capabilities' => ['php' => true, 'node' => true],
+            'source' => 'installer',
+            'verified_at' => now(),
+        ]);
+
+        fakeDetectedWebServer(running: ['nginx'], dirs: ['/etc/nginx']);
+
+        expect(app(ServerCapabilities::class)->reconcileWebServer())
+            ->toBeNull()
+            ->and(ServerCapability::query()->value('web_server'))->toBe('openlitespeed');
+    });
+
     it('does not guess when two others are running', function () {
         ServerCapability::query()->create([
             'stack' => null,
@@ -154,4 +175,46 @@ describe('reconciling a wrong record', function () {
             ->toBeNull()
             ->and(ServerCapability::query()->value('web_server'))->toBe('apache');
     });
+});
+
+it('repairs the record at the moment a feature asks for the driver', function () {
+    // The point of the whole exercise. Leaving the repair to `panel:doctor`
+    // means the panel knows it is wrong, keeps writing vhosts into a directory
+    // that is not there, and waits to be asked — which on the real server
+    // showed up as site creation failing, then WAF failing differently, then
+    // every other vhost write, all of them one stored value.
+    ServerCapability::query()->create([
+        'stack' => null,
+        'web_server' => 'apache',
+        'capabilities' => ['php' => true, 'node' => true],
+        'source' => 'detected',
+        'verified_at' => now(),
+    ]);
+
+    fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/usr/local/lsws']);
+
+    expect(app(WebServerManager::class)->driver()->name())
+        ->toBe('openlitespeed');
+});
+
+it('does not re-probe once it has looked', function () {
+    ServerCapability::query()->create([
+        'stack' => 'ols',
+        'web_server' => 'openlitespeed',
+        'capabilities' => ['php' => true, 'node' => true],
+        'source' => 'installer',
+        'verified_at' => now(),
+    ]);
+
+    fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/usr/local/lsws']);
+
+    $manager = app(WebServerManager::class);
+    $manager->driver();
+    $manager->driver();
+    $manager->driver();
+
+    // A healthy record costs a directory check and nothing else: it never
+    // reaches the systemd probe, and resolving the driver repeatedly — which
+    // several features do — must not turn into repeated subprocesses.
+    Process::assertNothingRan();
 });

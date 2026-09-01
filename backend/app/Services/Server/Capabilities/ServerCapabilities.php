@@ -33,6 +33,9 @@ class ServerCapabilities
         'mern' => ['web_server' => 'nginx', 'capabilities' => ['php' => false, 'node' => true]],
     ];
 
+    /** Whether reconcileWebServer() has already run for this request. */
+    private bool $reconciled = false;
+
     public function __construct(private ServerOps $serverOps) {}
 
     /**
@@ -141,9 +144,33 @@ class ServerCapabilities
      */
     public function reconcileWebServer(): ?string
     {
-        $recorded = $this->recordedWebServer();
+        // Once per request. `WebServerManager::driver()` calls this on every
+        // resolution and several features resolve the driver more than once,
+        // so without this the cheap directory check becomes a needless repeat
+        // and the systemd probe on a broken box becomes many.
+        if ($this->reconciled) {
+            return null;
+        }
+
+        $this->reconciled = true;
+
+        $record = ServerCapability::query()->first();
+        $recorded = $record?->web_server;
 
         if ($recorded === null) {
+            return null;
+        }
+
+        // Never overrule the installer. `source: installer` is a statement of
+        // what was actually built, and a filesystem check is a weaker signal
+        // than that — quietly overriding it would write vhosts for a web server
+        // nobody chose, which is a worse version of the bug this repairs. When
+        // those two disagree the honest move is to say so, and `panel:doctor`
+        // does, with the command that settles it.
+        //
+        // What is left is exactly the case that produces a wrong value in the
+        // first place: a record that came from detection guessing.
+        if ($record->source === 'installer') {
             return null;
         }
 
