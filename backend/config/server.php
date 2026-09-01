@@ -528,9 +528,23 @@ return [
         | `vhost_root` *and* two entries in `shared_config` — see OlsSharedConfig
         | for why that file is edited by marked region rather than appended to.
         |
-        | Every value here is unverified against a real OLS box; they come from
-        | LiteSpeed's docs. They are config precisely so a wrong one is an edit
-        | rather than a patch.
+        | The paths below were checked against the actual openlitespeed 1.9.2
+        | package for Ubuntu 26.04 (2026-09-01) rather than only LiteSpeed's
+        | docs: `vhost_root`, `shared_config` and both halves of `test_command`
+        | exist in the .deb, `bin/lswsctrl` being a symlink to `lswsctrl.open`.
+        |
+        | Two are still assumptions, and both are load-bearing:
+        |
+        |  - `listener` — the shipped config writes `listener Default{`, with no
+        |    space before the brace. insertInListener()'s `\s*` already tolerates
+        |    that; a stricter match would find nothing. Do not "tidy" it.
+        |  - `ssl_listener` — a fresh install has NO Defaultssl listener at all,
+        |    only Default on *:8088. That is the case OlsListenerNotFoundException
+        |    exists for, and why registration skips SSL maps rather than failing.
+        |
+        | Still unverified: that any of this behaves correctly once running. A
+        | path existing is not the same as a config being right. They are config
+        | precisely so a wrong one is an edit rather than a patch.
         */
         'openlitespeed' => [
             'driver' => OlsDriver::class,

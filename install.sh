@@ -1603,11 +1603,33 @@ register_ols_panel_vhost() {
     # A `map` is only legal inside a listener block, so the listener has to
     # exist. OLS ships a `Default` one; a box where it has been renamed is a
     # refusal rather than a guess at which address we are meant to answer on.
-    if ! grep -q '^listener Default {' "$conf"; then
+    #
+    # Matched with no space required before the brace. The config OpenLiteSpeed
+    # actually ships writes `listener Default{`, and an exact 'listener Default {'
+    # match finds nothing — so this died on every fresh install until the shipped
+    # file was read rather than assumed. The panel's own OlsSharedConfig already
+    # gets this right with \s*; this is the installer catching up to it.
+    if ! grep -qE '^listener[[:space:]]+Default[[:space:]]*\{' "$conf"; then
         die "no 'listener Default' block in ${conf} — cannot map the panel vhost.
      This installer does not invent a listener: which address and port the
      server should answer on is not something it can guess."
     fi
+
+    # OpenLiteSpeed ships its Default listener on *:8088, not *:80 — the panel
+    # would be registered correctly and still answer on nothing. Moved to 80,
+    # and the shipped `map Example *` catch-all dropped: left in place it
+    # answers for our hostname too, exactly as Ubuntu's default nginx site and
+    # Apache's 000-default do, both of which this installer already removes.
+    local tmp80="${conf}.panel-tmp"
+    awk '
+        /^listener[[:space:]]+Default[[:space:]]*\{/ { inlistener = 1 }
+        inlistener && /^[[:space:]]*address[[:space:]]/ {
+            sub(/address[[:space:]]+.*/, "address                  *:80")
+        }
+        inlistener && /^[[:space:]]*map[[:space:]]+Example[[:space:]]/ { next }
+        inlistener && /\}/ { inlistener = 0 }
+        { print }
+    ' "$conf" >"$tmp80" && mv -f "$tmp80" "$conf"
 
     cat >>"$conf" <<CONF
 
@@ -1629,7 +1651,7 @@ CONF
     # came next, where it is illegal and fails the config test.
     local tmp="${conf}.panel-tmp"
     awk -v slug="${PANEL_SLUG}" -v host="${PANEL_HOST}" '
-        /^listener Default \{/ { inlistener = 1; depth = 0 }
+        /^listener[[:space:]]+Default[[:space:]]*\{/ { inlistener = 1; depth = 0 }
         inlistener {
             n = gsub(/\{/, "{"); depth += n
             n = gsub(/\}/, "}"); depth -= n
@@ -2257,7 +2279,7 @@ CONF
 
     # The secure listener, and the panel mapped into it. Created only if absent:
     # a box that already has one has it for a reason.
-    if ! grep -q '^listener Defaultssl {' "$conf"; then
+    if ! grep -qE '^listener[[:space:]]+Defaultssl[[:space:]]*\{' "$conf"; then
         cat >>"$conf" <<CONF
 
 listener Defaultssl {
@@ -2270,10 +2292,10 @@ listener Defaultssl {
   map                     ${PANEL_SLUG} ${PANEL_HOST}
 }
 CONF
-    elif ! awk '/^listener Defaultssl \{/,/^\}/' "$conf" | grep -q "map .*${PANEL_SLUG} "; then
+    elif ! awk '/^listener[[:space:]]+Defaultssl[[:space:]]*\{/,/^\}/' "$conf" | grep -q "map .*${PANEL_SLUG} "; then
         local tmp="${conf}.panel-tmp"
         awk -v slug="${PANEL_SLUG}" -v host="${PANEL_HOST}" '
-            /^listener Defaultssl \{/ { inlistener = 1; depth = 0 }
+            /^listener[[:space:]]+Defaultssl[[:space:]]*\{/ { inlistener = 1; depth = 0 }
             inlistener {
                 n = gsub(/\{/, "{"); depth += n
                 n = gsub(/\}/, "}"); depth -= n
