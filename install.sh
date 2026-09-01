@@ -78,11 +78,21 @@ DRY_RUN=0          # --dry-run
 # server — and the web server serves the panel itself, so it cannot be changed
 # from inside the panel later without the panel going down with it.
 #
-# `ols` is deliberately absent. The panel's OpenLiteSpeed support has never run
-# on real hardware, and offering it here would make it the first thing a new user
-# can pick *and* the thing serving the panel they would use to recover. It
-# becomes a fourth option once it has been proven on a box.
-STACK=""           # --stack=lemp|lamp|mern  (prompted, or lemp)
+# `ols` was deliberately absent until 2026-09-01: the panel's OpenLiteSpeed
+# support had never run on real hardware, and offering it made it both the first
+# thing a new user can pick *and* the thing serving the panel they would use to
+# recover. It is offered now by operator decision, before that proof exists, so
+# the risk is managed instead of avoided:
+#
+#   * It is labelled experimental at the prompt. A user picking it is told.
+#   * The panel's own PHP stays on PHP-FPM, the same as every other stack, so
+#     the panel does not also depend on the lsphp packages it has never used.
+#   * The panel's own vhost is written OUTSIDE the panel-managed markers in
+#     httpd_config.conf — see configure_ols() for why that is load-bearing.
+#
+# What is still unproven is listed at the top of configure_ols(). Read it before
+# assuming a failure here is the user's fault.
+STACK=""           # --stack=lemp|lamp|mern|ols  (prompted, or lemp)
 WEB_SERVER=""      # derived from STACK
 
 # ─── Output ──────────────────────────────────────────────────────────────────
@@ -313,7 +323,8 @@ resolve_stack() {
             printf '\n     Which stack should this server run?\n\n'
             printf '       1) lemp   nginx + PHP     %s(default)%s\n' "$DIM" "$RESET"
             printf '       2) lamp   Apache + PHP\n'
-            printf '       3) mern   nginx + Node\n\n'
+            printf '       3) mern   nginx + Node\n'
+            printf '       4) ols    OpenLiteSpeed + PHP   %sexperimental%s\n\n' "$YELLOW" "$RESET"
             printf '     Choice [1]: '
 
             local answer=""
@@ -324,6 +335,7 @@ resolve_stack() {
                 1|lemp|'') STACK="lemp" ;;
                 2|lamp)    STACK="lamp" ;;
                 3|mern)    STACK="mern" ;;
+                4|ols)     STACK="ols" ;;
                 *) die "not one of the options: ${answer}" ;;
             esac
         else
@@ -336,15 +348,14 @@ resolve_stack() {
         lemp|mern) WEB_SERVER="nginx" ;;
         lamp)      WEB_SERVER="apache" ;;
         ols)
-            # Refused rather than attempted. The panel's OpenLiteSpeed support has
-            # never run on hardware, and here it would be serving the panel
-            # itself — so a wrong path leaves a server with no working panel and
-            # no UI to recover from.
-            die "the openlitespeed stack is not available from this installer yet.
-     Its support in the panel has never been verified on a real server, and
-     here it would be serving the panel itself. Use lemp, lamp or mern."
+            WEB_SERVER="openlitespeed"
+            # Said once, plainly, to whoever is watching the install rather than
+            # only to whoever reads the source. This stack has not been proven on
+            # real hardware; the other three have.
+            warn "the openlitespeed stack is experimental and has not been verified on a real server"
+            warn "if the panel does not come up, re-run with --stack=lemp"
             ;;
-        *) die "unknown stack: ${STACK}  (expected lemp, lamp or mern)" ;;
+        *) die "unknown stack: ${STACK}  (expected lemp, lamp, mern or ols)" ;;
     esac
 
     # PHP and Node are installed regardless of the stack: the panel's API is PHP
@@ -1235,6 +1246,18 @@ configure_fpm() {
     # master too, racing the dedicated master for the same socket.
     run rm -f "/etc/php/${PHP_VERSION}/fpm/pool.d/${PANEL_SLUG}.conf"
 
+    # Whoever connects to the socket has to be able to write to it, and that is
+    # the web server, not the pool's own user. nginx and Apache both run as
+    # www-data; OpenLiteSpeed runs as nobody:nogroup. Getting this wrong is not
+    # a warning — the web server simply cannot open the socket, and every PHP
+    # request answers 502 while php-fpm itself looks perfectly healthy.
+    local socket_owner="www-data"
+    local socket_group="www-data"
+    if [[ "$WEB_SERVER" == "openlitespeed" ]]; then
+        socket_owner="nobody"
+        socket_group="nogroup"
+    fi
+
     # Its own pool on its own socket, owned by the panel's user. `ondemand`
     # because a control panel is idle most of the time and a 1 GB box has
     # better uses for the memory than parked PHP workers.
@@ -1243,8 +1266,8 @@ configure_fpm() {
 user = ${APP_USER}
 group = ${APP_USER}
 listen = /run/php/${PANEL_SLUG}-fpm.sock
-listen.owner = www-data
-listen.group = www-data
+listen.owner = ${socket_owner}
+listen.group = ${socket_group}
 pm = ondemand
 pm.max_children = 10
 pm.process_idle_timeout = 30s
@@ -1316,9 +1339,334 @@ UNIT
 
 configure_web_server() {
     case "$WEB_SERVER" in
-        nginx)  configure_nginx ;;
-        apache) configure_apache ;;
+        nginx)         configure_nginx ;;
+        apache)        configure_apache ;;
+        openlitespeed) configure_ols ;;
     esac
+}
+
+# ─── OpenLiteSpeed ───────────────────────────────────────────────────────────
+#
+# UNPROVEN. Everything below is written from LiteSpeed's documentation and the
+# panel's own OLS templates; none of it has run on real hardware. If you are
+# debugging a failed --stack=ols install, start here:
+#
+#   * lsphp extension coverage. A Nov-2025 forum report says lsphp84-gd, -xml,
+#     -zip and -mbstring have no installation candidate in the Debian/Ubuntu
+#     repo, with the extensions folded into lsphp84-common instead. The panel
+#     itself does not care (it runs on PHP-FPM, below), but hosted WordPress /
+#     Nextcloud / Moodle sites do. `apt-cache search lsphp` on the box settles it.
+#   * The panel on PHP-FPM over an `fcgi` external app. OLS's WebAdmin offers
+#     "Fast CGI" as an external app type, so this should work — but the panel's
+#     own php.blade.php template asserts "OpenLiteSpeed cannot talk to PHP-FPM
+#     at all". One of the two is wrong and only a box can say which. If this is
+#     the broken part, the fallback is an lsphp extprocessor for the panel too,
+#     at the cost of the panel depending on a second PHP build.
+#
+# The choice to keep the panel on PHP-FPM is deliberate. `/usr/bin/php8.4` from
+# ondrej is what composer, artisan and the queue worker already run; pointing the
+# web SAPI at lsphp84 would give the panel two different PHP builds with two
+# different extension sets, and the failure mode is the API 500ing on a missing
+# extension while the CLI that installed it works fine.
+configure_ols() {
+    step "Configuring OpenLiteSpeed"
+
+    install_ols_packages
+
+    local conf="/usr/local/lsws/conf/httpd_config.conf"
+    local vhost_dir="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}"
+
+    [[ -f "$conf" ]] || die "OpenLiteSpeed installed but ${conf} is missing — see $LOG_FILE"
+
+    # Back up before touching the file every future site also depends on. The
+    # panel does the same on every edit (see OlsSharedConfig); the installer is
+    # the one write that happens before the panel exists to do it.
+    [[ -f "${conf}.preinstall" ]] || run cp -f "$conf" "${conf}.preinstall"
+
+    run mkdir -p "$vhost_dir" "/usr/local/lsws/conf/vhosts" "${vhost_dir}/logs"
+
+    write_ols_vhost "$vhost_dir"
+    register_ols_panel_vhost "$conf" "$vhost_dir"
+    harden_ols_webadmin
+
+    # Tested before restarting, exactly as with nginx and Apache: a broken
+    # config that reaches a restart takes the web server down, and on this box
+    # that includes the panel you would use to fix it.
+    if ! /usr/local/lsws/bin/lswsctrl config_test >>"$LOG_FILE" 2>&1; then
+        warn "the generated OpenLiteSpeed config failed its own test — restoring the original"
+        run cp -f "${conf}.preinstall" "$conf"
+        die "OpenLiteSpeed rejected the generated config; the original has been restored — see $LOG_FILE"
+    fi
+
+    run systemctl enable lshttpd
+    run systemctl restart lshttpd
+    ok "OpenLiteSpeed serving ${PANEL_HOST}"
+}
+
+# The LiteSpeed apt repository, pinned rather than bootstrapped.
+#
+# LiteSpeed's documented one-liner is `wget -O - https://repo.litespeed.sh |
+# sudo bash`, which drops its keys into /etc/apt/trusted.gpg.d/ — trusting them
+# for *every* repository on the box, not just theirs. That is the old apt-key
+# model and it is not a trade this installer should make on someone else's
+# server. Same treatment the MongoDB source already gets: one keyring, scoped to
+# one source with signed-by.
+install_ols_packages() {
+    local keyring=/usr/share/keyrings/litespeed.gpg
+    local list=/etc/apt/sources.list.d/litespeed.list
+
+    if [[ ! -f "$keyring" ]]; then
+        run curl -fsSL -o /tmp/litespeed.gpg http://rpms.litespeedtech.com/debian/lst_debian_repo.gpg
+        run gpg --dearmor --yes -o "$keyring" /tmp/litespeed.gpg 2>/dev/null \
+            || run cp -f /tmp/litespeed.gpg "$keyring"
+        run rm -f /tmp/litespeed.gpg
+        run chmod 644 "$keyring"
+    fi
+
+    # LiteSpeed publish one suite per Debian/Ubuntu codename under debian/.
+    printf 'deb [signed-by=%s] http://rpms.litespeedtech.com/debian/ %s main\n' \
+        "$keyring" "$OS_CODENAME" >"$list"
+
+    export DEBIAN_FRONTEND=noninteractive
+    wait_for_apt_lock
+    run_progress "Refreshing package lists from the LiteSpeed repository" apt-get update -qq
+
+    run apt-get install -y openlitespeed
+
+    # lsphp is for the *hosted sites*, not the panel. Installed here so the
+    # first site created does not have to wait for it, and so a box that cannot
+    # provide it fails now — during an install the user is watching — rather
+    # than later inside a queued job.
+    #
+    # Not `run`: the extension packages are the known-shaky part (see the note
+    # on configure_ols). A missing -gd should not abort an otherwise good
+    # install, because the panel can install PHP packages itself afterwards.
+    local lsphp="lsphp${PHP_VERSION//./}"
+    if ! apt-get install -y "${lsphp}" "${lsphp}-common" "${lsphp}-mysql" >>"$LOG_FILE" 2>&1; then
+        warn "could not install all of ${lsphp} — hosted PHP sites may be missing extensions"
+        warn "check with: apt-cache search lsphp"
+    fi
+}
+
+# The panel's own vhconf.conf.
+#
+# Deliberately NOT built from the panel's php.blade.php template: that one is
+# for hosted sites and runs them on lsphp with per-site suEXEC. The panel is a
+# different animal — PHP-FPM over an fcgi external app, plus a proxy to Next.
+write_ols_vhost() {
+    local vhost_dir="$1"
+    local api_context proxy_context
+
+    # `context /api` and `context /sanctum` before `context /`: OLS matches the
+    # most specific context, but Sanctum's CSRF route is top-level rather than
+    # under /api, and without its own context the catch-all proxy sends the
+    # SPA's very first request to Next, which 404s and login never starts. The
+    # same trap the nginx and Apache blocks each call out.
+    read -r -d '' api_context <<CONF || true
+extprocessor ${PANEL_SLUG}-fpm {
+  type                    fcgi
+  address                 uds://run/php/${PANEL_SLUG}-fpm.sock
+  maxConns                10
+  initTimeout             60
+  retryTimeout            0
+  persistConn             1
+  respBuffer              0
+  autoStart               0
+}
+
+scripthandler {
+  add                     fcgi:${PANEL_SLUG}-fpm php
+}
+CONF
+
+    read -r -d '' proxy_context <<CONF || true
+extprocessor ${PANEL_SLUG}-next {
+  type                    proxy
+  address                 127.0.0.1:${FRONTEND_PORT}
+  maxConns                20
+  initTimeout             60
+  retryTimeout            0
+  respBuffer              0
+}
+
+# Hashed immutable assets straight off disk: Next's standalone output does
+# not serve them and routing them through Node is wasted work.
+context /_next/static {
+  location                ${APP_DIR}/frontend/.next/static
+  allowBrowse             1
+  enableExpires           1
+  expiresByType           *=A31536000
+}
+CONF
+
+    cat >"${vhost_dir}/vhconf.conf" <<CONF
+# Managed by the Control panel installer.
+docRoot                   ${APP_DIR}/backend/public
+vhDomain                  ${PANEL_HOST}
+enableGzip                1
+
+errorlog \$VH_ROOT/logs/error.log {
+  useServer               0
+  logLevel                WARN
+  rollingSize             10M
+}
+
+accesslog \$VH_ROOT/logs/access.log {
+  useServer               0
+  rollingSize             10M
+  keepDays                30
+}
+
+index {
+  useServer               0
+  indexFiles              index.php
+}
+
+${api_context}
+
+${proxy_context}
+
+# Served from the backend's public/ so certbot --webroot has somewhere to drop
+# its token. Its own context so the front-controller rewrite below cannot
+# swallow it and answer Laravel's 404 page, which Let's Encrypt reads as
+# unauthorized.
+context /.well-known/acme-challenge {
+  location                ${APP_DIR}/backend/public/.well-known/acme-challenge
+  allowBrowse             1
+  addDefaultCharset       off
+}
+
+# Everything that is not the API goes to Next. Declared before the rewrite so
+# the front controller only ever sees API paths.
+context / {
+  type                    proxy
+  handler                 ${PANEL_SLUG}-next
+  addDefaultCharset       off
+}
+
+context /api {
+  location                ${APP_DIR}/backend/public/
+  allowBrowse             1
+  enableScript            1
+}
+
+context /sanctum {
+  location                ${APP_DIR}/backend/public/
+  allowBrowse             1
+  enableScript            1
+}
+
+# Version control and dotfiles must never be served: a .git inside a web root
+# is a full source disclosure. "exp:" is OLS's regex context — nginx's "~" is
+# not valid here and fails the config test.
+# (No backticks in this heredoc: it is unquoted, so they would be run as
+# command substitution rather than written to the file.)
+context exp:^/\.(git|svn|hg|bzr|env|panel) {
+  allowBrowse             0
+}
+
+rewrite {
+  enable                  1
+  # Apache's mod_rewrite, which OLS implements — not nginx's try_files. At
+  # vhost level OLS does NOT strip the leading slash before matching, so the
+  # loop guard is ^/index\.php\$ rather than ^index\.php\$; without the slash
+  # the rule rewrites index.php to itself.
+  RewriteRule ^/index\.php\$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.php [L]
+}
+CONF
+
+    run chown -R lsadm:lsadm "$vhost_dir"
+    ok "panel vhost written to ${vhost_dir}/vhconf.conf"
+}
+
+# Register the panel's vhost in the shared httpd_config.conf.
+#
+# **Outside the panel-managed markers, on purpose.** OlsSharedConfig owns the
+# region between its BEGIN/END comments and *rebuilds* it from what it reads —
+# add, replace and remove are all "parse the region, change one entry, render it
+# back". A panel vhost written inside that region would be treated as an
+# ordinary site and regenerated from vhostBlock()'s generic template the first
+# time any real site was provisioned, losing the fcgi and proxy contexts above
+# and taking the panel down with it. Written outside, the panel's own entry is
+# copied through untouched exactly like a user's hand-written config.
+register_ols_panel_vhost() {
+    local conf="$1" vhost_dir="$2"
+
+    if grep -q "^virtualHost ${PANEL_SLUG} " "$conf" 2>/dev/null; then
+        skip "panel vhost already registered in httpd_config.conf"
+        return
+    fi
+
+    # A `map` is only legal inside a listener block, so the listener has to
+    # exist. OLS ships a `Default` one; a box where it has been renamed is a
+    # refusal rather than a guess at which address we are meant to answer on.
+    if ! grep -q '^listener Default {' "$conf"; then
+        die "no 'listener Default' block in ${conf} — cannot map the panel vhost.
+     This installer does not invent a listener: which address and port the
+     server should answer on is not something it can guess."
+    fi
+
+    cat >>"$conf" <<CONF
+
+virtualHost ${PANEL_SLUG} {
+  vhRoot                  ${vhost_dir}/
+  configFile              ${vhost_dir}/vhconf.conf
+  allowSymbolLink         1
+  enableScript            1
+  # NOT restrained: unlike a hosted site, the panel's document root
+  # (${APP_DIR}/backend/public) and its Next build live outside vhRoot, and
+  # "restrained 1" confines the vhost to vhRoot — every request would 404.
+  restrained              0
+}
+CONF
+
+    # The map goes just inside the Default listener's closing brace. Inserted
+    # with awk on brace depth rather than "the next line starting with }" — a
+    # hand-indented closing brace would otherwise put the map in whatever block
+    # came next, where it is illegal and fails the config test.
+    local tmp="${conf}.panel-tmp"
+    awk -v slug="${PANEL_SLUG}" -v host="${PANEL_HOST}" '
+        /^listener Default \{/ { inlistener = 1; depth = 0 }
+        inlistener {
+            n = gsub(/\{/, "{"); depth += n
+            n = gsub(/\}/, "}"); depth -= n
+            if (depth == 0) {
+                print "  map                     " slug " " host
+                inlistener = 0
+            }
+        }
+        { print }
+    ' "$conf" >"$tmp" && mv -f "$tmp" "$conf"
+
+    ok "panel vhost registered for ${PANEL_HOST}"
+}
+
+# OpenLiteSpeed ships a second control panel of its own on :7080, and a default
+# vhost on :8088. Neither is something this installer should leave running
+# unattended on someone's server.
+harden_ols_webadmin() {
+    # A random WebAdmin password, printed nowhere. The operator can set their
+    # own with /usr/local/lsws/admin/misc/admpass.sh; what matters here is that
+    # the shipped default does not survive the install.
+    local admin_pass
+    admin_pass="$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 20)"
+
+    if [[ -x /usr/local/lsws/admin/misc/admpass.sh ]]; then
+        if printf '%s\n%s\n%s\n' admin "$admin_pass" "$admin_pass" \
+            | /usr/local/lsws/admin/misc/admpass.sh >>"$LOG_FILE" 2>&1; then
+            ok "OpenLiteSpeed WebAdmin password randomised"
+        else
+            warn "could not set the WebAdmin password — do it with /usr/local/lsws/admin/misc/admpass.sh"
+        fi
+    fi
+
+    # 7080 is left off the firewall allow-list on purpose (configure_firewall
+    # opens 22/80/443 only), so on a box with ufw enabled it is unreachable
+    # from outside regardless of the password above.
+    ok "WebAdmin console on :7080 is not opened in the firewall"
 }
 
 configure_nginx() {
@@ -1830,6 +2178,126 @@ self_signed_apache() {
     fi
 }
 
+# The OpenLiteSpeed half of TLS.
+#
+# Two things differ from the other stacks and both are structural, not cosmetic:
+#
+#   * There is no certbot plugin, so `--webroot` issues the certificate and
+#     nothing installs it. We write the paths into the vhost ourselves.
+#   * OLS binds certificates to a *listener*, not to a vhost. A site answers on
+#     443 only if a secure listener exists AND the site is mapped into it — so
+#     the certificate alone is not enough, which is the trap this function is
+#     mostly here to avoid.
+configure_tls_ols() {
+    local conf="/usr/local/lsws/conf/httpd_config.conf"
+    local vhconf="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}/vhconf.conf"
+    local cert key
+
+    local args=(certonly --webroot -w "${APP_DIR}/backend/public"
+                --non-interactive --agree-tos -d "$PANEL_HOST")
+    (( SINGLE_HOST )) || args+=(-d "$API_HOST")
+
+    if [[ -n "$ADMIN_EMAIL" ]]; then
+        args+=(-m "$ADMIN_EMAIL")
+    else
+        args+=(--register-unsafely-without-email)
+    fi
+
+    if certbot "${args[@]}" >>"$LOG_FILE" 2>&1; then
+        cert="/etc/letsencrypt/live/${PANEL_HOST}/fullchain.pem"
+        key="/etc/letsencrypt/live/${PANEL_HOST}/privkey.pem"
+        TLS_STATE="letsencrypt"
+        SCHEME="https"
+        ok "Let's Encrypt certificate issued"
+    else
+        # Same reasoning as the nginx path: nip.io shares one Let's Encrypt rate
+        # limit globally, so failing here is common and must not fail the
+        # install. Encrypted with a self-signed certificate beats plaintext.
+        warn "could not get a Let's Encrypt certificate (see $LOG_FILE)"
+        if [[ -z "$DOMAIN" ]]; then
+            warn "nip.io shares one certificate rate limit globally, so this is common"
+            warn "re-run later, or use --domain=your.own.domain for a reliable certificate"
+        fi
+        say "     falling back to a self-signed certificate so traffic is still encrypted"
+
+        mkdir -p /etc/ssl/${PANEL_SLUG}
+        run openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+            -keyout /etc/ssl/${PANEL_SLUG}/key.pem \
+            -out /etc/ssl/${PANEL_SLUG}/cert.pem \
+            -subj "/CN=${PANEL_HOST}"
+
+        cert="/etc/ssl/${PANEL_SLUG}/cert.pem"
+        key="/etc/ssl/${PANEL_SLUG}/key.pem"
+        TLS_STATE="self-signed"
+        SCHEME="https"
+    fi
+
+    install_ols_certificate "$conf" "$vhconf" "$cert" "$key"
+}
+
+install_ols_certificate() {
+    local conf="$1" vhconf="$2" cert="$3" key="$4"
+
+    # The certificate on the vhost. Without this a second site on the box would
+    # be served the panel's certificate and every visitor gets a name mismatch.
+    if ! grep -q '^vhssl {' "$vhconf"; then
+        cat >>"$vhconf" <<CONF
+
+vhssl {
+  keyFile                 ${key}
+  certFile                ${cert}
+  certChain               1
+  # TLS 1.2 as the floor. OLS spells the version set as a bitmask-style list;
+  # 1.0 and 1.1 are deprecated, fail PCI checks, and buy compatibility only
+  # with browsers that stopped getting security updates years ago.
+  sslProtocol             24
+}
+CONF
+    fi
+
+    # The secure listener, and the panel mapped into it. Created only if absent:
+    # a box that already has one has it for a reason.
+    if ! grep -q '^listener Defaultssl {' "$conf"; then
+        cat >>"$conf" <<CONF
+
+listener Defaultssl {
+  address                 *:443
+  secure                  1
+  keyFile                 ${key}
+  certFile                ${cert}
+  certChain               1
+  sslProtocol             24
+  map                     ${PANEL_SLUG} ${PANEL_HOST}
+}
+CONF
+    elif ! awk '/^listener Defaultssl \{/,/^\}/' "$conf" | grep -q "map .*${PANEL_SLUG} "; then
+        local tmp="${conf}.panel-tmp"
+        awk -v slug="${PANEL_SLUG}" -v host="${PANEL_HOST}" '
+            /^listener Defaultssl \{/ { inlistener = 1; depth = 0 }
+            inlistener {
+                n = gsub(/\{/, "{"); depth += n
+                n = gsub(/\}/, "}"); depth -= n
+                if (depth == 0) {
+                    print "  map                     " slug " " host
+                    inlistener = 0
+                }
+            }
+            { print }
+        ' "$conf" >"$tmp" && mv -f "$tmp" "$conf"
+    fi
+
+    if ! /usr/local/lsws/bin/lswsctrl config_test >>"$LOG_FILE" 2>&1; then
+        warn "OpenLiteSpeed rejected the TLS config — the panel stays on HTTP"
+        warn "the certificate was issued; install it by hand from ${cert}"
+        SCHEME="http"
+        TLS_STATE="none"
+        return
+    fi
+
+    run systemctl restart lshttpd
+    ok "OpenLiteSpeed serving HTTPS for ${PANEL_HOST}"
+}
+
 configure_tls() {
     step "Setting up HTTPS"
 
@@ -1844,7 +2312,16 @@ configure_tls() {
     case "$WEB_SERVER" in
         nginx)  run apt-get install -y certbot python3-certbot-nginx ;;
         apache) run apt-get install -y certbot python3-certbot-apache ;;
+        # No certbot plugin exists for OpenLiteSpeed. --webroot instead: certbot
+        # drops its token in the document root and never touches the config, so
+        # installing the certificate is our job (see install_ols_certificate).
+        openlitespeed) run apt-get install -y certbot ;;
     esac
+
+    if [[ "$WEB_SERVER" == "openlitespeed" ]]; then
+        configure_tls_ols
+        return
+    fi
 
     # certbot's plugin has to match the web server it is editing.
     local plugin="--nginx"
