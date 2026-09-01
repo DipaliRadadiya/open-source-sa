@@ -202,7 +202,7 @@ export async function getBackupCoverage() {
     },
     target: entry.backup_target,
     lastBackup: entry.last_backup,
-    state: classify(entry.backup_target),
+    state: classify(entry.backup_target, entry.last_backup),
   }));
 
   const meta = result.data?.meta;
@@ -219,6 +219,7 @@ export async function getBackupCoverage() {
     protected: rows.filter((row) => row.state === "protected").length,
     unprotected: rows.filter((row) => row.state === "unprotected").length,
     paused: rows.filter((row) => row.state === "paused").length,
+    failing: rows.filter((row) => row.state === "failing").length,
     total: meta?.total ?? rows.length,
     failed: result.failed,
     status: result.status,
@@ -232,9 +233,13 @@ export async function getBackupCoverage() {
  * configured on every screen that only asks "is there a target?", and backs up
  * nothing. It gets its own state so the UI can say so.
  */
-function classify(target) {
+function classify(target, lastBackup) {
   if (!target) return "unprotected";
   if (!target.enabled || target.frequency === "manual") return "paused";
+  // A schedule that is running and failing protects nothing, and this screen
+  // exists to answer "could I get this site back". The last run is the only
+  // evidence there is; if it failed, the answer is no.
+  if (lastBackup?.status === "failed") return "failing";
   return "protected";
 }
 

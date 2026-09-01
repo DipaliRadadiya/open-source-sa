@@ -63,6 +63,11 @@ export function outcomeOf(map, status) {
  */
 export const COVERAGE_STATE = {
   protected: { icon: ShieldCheck, variant: "success" },
+  // A schedule that runs and fails is not protection. It read `protected`,
+  // green, with a six-pixel red dot beside the timestamp as the only sign —
+  // the badge said the site was safe while its newest evidence said the
+  // opposite.
+  failing: { icon: CircleAlert, variant: "destructive" },
   paused: { icon: PauseCircle, variant: "warning" },
   unprotected: { icon: CircleSlash, variant: "destructive" },
   unknown: { icon: ShieldQuestion, variant: "outline" },

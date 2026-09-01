@@ -28,10 +28,12 @@ import {
  * time the parent renders.
  * ------------------------------------------------------------------------- */
 
-// Protected first. The placeholders below are what make this work: an
-// unprotected row now states its state in every column instead of showing four
+// Failing first — it is the only row that needs someone today; a site that was
+// never set up has been unprotected for weeks and can wait a minute longer.
+// Then protected. The placeholders below are what make the rest work: an
+// unprotected row states its state in every column instead of showing four
 // blanks, so it stays legible without needing to be at the top of the list.
-const STATE_ORDER = { protected: 0, paused: 1, unknown: 2, unprotected: 3 };
+const STATE_ORDER = { failing: 0, protected: 1, paused: 2, unknown: 3, unprotected: 4 };
 
 export function sortCoverage(rows) {
   return [...rows].sort(
@@ -141,7 +143,12 @@ function RunsCell({ row }) {
   return (
     <div className="min-w-0">
       <div className="flex min-w-0 items-center gap-1.5">
-        {lastBackup ? <BackupStatusDot status={lastBackup.status} /> : null}
+        {lastBackup ? (
+          <BackupStatusDot
+            status={lastBackup.status}
+            label={lastBackup.status_title ?? lastBackup.status}
+          />
+        ) : null}
         {/* The backup's own timestamp is the fallback, not "Never".
             `last_run_at` is written by the runner, and its crash path does not
             write it — so a site whose every run has crashed reported "Never"
@@ -166,15 +173,28 @@ function RunsCell({ row }) {
   );
 }
 
-/** Outcome of the last run, at a glance, without a second badge in the row. */
-function BackupStatusDot({ status }) {
+/**
+ * Outcome of the last run, at a glance, without a second badge in the row.
+ *
+ * Named as well as coloured. It was a six-pixel dot, `aria-hidden`, with no
+ * title — so "your last backup failed" was carried entirely by a colour a
+ * screen reader never announced and a reader had to already know.
+ */
+function BackupStatusDot({ status, label }) {
   const tone =
     status === "verified"
       ? "bg-success"
       : status === "failed"
         ? "bg-destructive"
         : "bg-primary";
-  return <span className={cn("size-1.5 shrink-0 rounded-full", tone)} aria-hidden />;
+  return (
+    <span
+      className={cn("size-1.5 shrink-0 rounded-full", tone)}
+      role="img"
+      aria-label={label}
+      title={label}
+    />
+  );
 }
 
 /**

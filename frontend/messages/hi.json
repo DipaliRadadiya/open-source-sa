@@ -4764,6 +4764,7 @@
       },
       "status": {
         "protected": "सुरक्षित",
+        "failing": "विफल हो रहा",
         "paused": "रुका हुआ",
         "unprotected": "कोई नहीं",
         "unknown": "अज्ञात"

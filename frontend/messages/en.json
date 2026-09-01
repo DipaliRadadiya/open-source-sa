@@ -4764,6 +4764,7 @@
       },
       "status": {
         "protected": "Protected",
+        "failing": "Failing",
         "paused": "Paused",
         "unprotected": "None",
         "unknown": "Unknown"
