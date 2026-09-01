@@ -1347,21 +1347,27 @@ configure_web_server() {
 
 # ─── OpenLiteSpeed ───────────────────────────────────────────────────────────
 #
-# UNPROVEN. Everything below is written from LiteSpeed's documentation and the
-# panel's own OLS templates; none of it has run on real hardware. If you are
-# debugging a failed --stack=ols install, start here:
+# NOT YET RUN ON REAL HARDWARE, but no longer guesswork: the config syntax and
+# every path below were checked on 2026-09-01 against the openlitespeed 1.9.2
+# package for Ubuntu 26.04 (resolute), by extracting the .deb rather than
+# trusting LiteSpeed's docs. Settled that way:
 #
-#   * lsphp extension coverage. A Nov-2025 forum report says lsphp84-gd, -xml,
-#     -zip and -mbstring have no installation candidate in the Debian/Ubuntu
-#     repo, with the extensions folded into lsphp84-common instead. The panel
-#     itself does not care (it runs on PHP-FPM, below), but hosted WordPress /
-#     Nextcloud / Moodle sites do. `apt-cache search lsphp` on the box settles it.
-#   * The panel on PHP-FPM over an `fcgi` external app. OLS's WebAdmin offers
-#     "Fast CGI" as an external app type, so this should work — but the panel's
-#     own php.blade.php template asserts "OpenLiteSpeed cannot talk to PHP-FPM
-#     at all". One of the two is wrong and only a box can say which. If this is
-#     the broken part, the fallback is an lsphp extprocessor for the panel too,
-#     at the cost of the panel depending on a second PHP build.
+#   * `fcgi` IS a valid external-app type. OLS's own admin definitions list
+#     lsapi|proxy|fcgi|fcgiauth|scgi|servlet|uwsgi, so running the panel on
+#     PHP-FPM is supported. (The panel's php.blade.php used to claim otherwise;
+#     that comment was wrong and has been corrected.)
+#   * `add fcgi:<name> php` takes ONE colon, matching the shipped
+#     `add lsapi:lsphp php`. The `type::name` form with two colons is only for
+#     a load balancer's worker list.
+#   * A proxy context is `type proxy` + `handler <extprocessor name>`, per the
+#     OLS-specific attribute definition.
+#   * lsphp extensions are NOT missing. There are no -gd/-xml/-zip/-mbstring
+#     packages because they are compiled statically into lsphp84 — its Depends
+#     carry libfreetype6/libjpeg8/libpng16/libwebp7 (gd), libonig5 (mbstring)
+#     and libxml2-16 (xml), and the .deb ships no .so files at all.
+#
+# What is still unproven is behaviour: that these files, being syntactically
+# right, actually serve the panel. A path existing is not a config working.
 #
 # The choice to keep the panel on PHP-FPM is deliberate. `/usr/bin/php8.4` from
 # ondrej is what composer, artisan and the queue worker already run; pointing the

@@ -83,9 +83,22 @@ index {
   indexFiles              index.php, index.html
 }
 
-{{-- LSPHP over LSAPI. OpenLiteSpeed cannot talk to PHP-FPM at all, so there is
-     no socket here to match the nginx and Apache templates — the version is
-     chosen by which lsphp binary this handler points at. --}}
+{{-- LSPHP over LSAPI, which is why there is no socket here to match the nginx
+     and Apache templates: the version is chosen by which lsphp binary this
+     handler points at.
+
+     This used to say OpenLiteSpeed "cannot talk to PHP-FPM at all". That is
+     false, and it was checked (2026-09-01) against the openlitespeed 1.9.2
+     package rather than argued about: `fcgi` is a documented external-app type
+     in OLS's own admin definitions (Product/WebServer/DTblDefBase.php lists
+     lsapi|proxy|fcgi|fcgiauth|scgi|servlet|uwsgi), and the installer uses
+     exactly that to run the panel itself on PHP-FPM.
+
+     LSAPI is still the right choice *here*, for hosted sites — it is faster,
+     it is what suEXEC per-site isolation is built around on this server, and
+     LiteSpeed Cache needs it. But the reason is preference, not incapability,
+     so do not let this comment talk you out of an fcgi handler where one is
+     warranted. --}}
 extprocessor lsphp{{ $lsphpVersion }} {
   type                    lsapi
   address                 uds://tmp/lshttpd/lsphp{{ $lsphpVersion }}-{{ $domain }}.sock
