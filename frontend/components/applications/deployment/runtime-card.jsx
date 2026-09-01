@@ -11,7 +11,13 @@ import { runtimeFormSchema } from "@/lib/schemas/deploy-history";
 import { updateApplicationRuntime } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { Input } from "@/components/ui/input";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -82,52 +88,62 @@ export function RuntimeCard({ application, canManage }) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(save)}>
         <Card className="gap-0 overflow-hidden py-0">
-          <CardContent className="space-y-4 p-5">
-            <FormField
-              control={form.control}
-              name="start_command"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>{t("startCommand")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      className="font-mono"
-                      autoComplete="off"
-                      spellCheck={false}
-                      placeholder="node index.js"
-                      disabled={!canManage || saving}
-                    />
-                  </FormControl>
-                  <FormDescription>{t("startCommandHint")}</FormDescription>
-                  <FormMessage field={t("startCommand")} />
-                </FormItem>
-              )}
-            />
+          <CardHeader className="px-5 pt-5 pb-0">
+            <CardTitle className="text-base font-semibold">{t("title")}</CardTitle>
+            <CardDescription>{t("subtitle")}</CardDescription>
+          </CardHeader>
 
-            <FormField
-              control={form.control}
-              name="app_port"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("appPort")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      inputMode="numeric"
-                      className="w-full font-mono sm:max-w-40"
-                      autoComplete="off"
-                      placeholder={t("appPortPlaceholder")}
-                      disabled={!canManage || saving}
-                    />
-                  </FormControl>
-                  <FormDescription>{t("appPortHint")}</FormDescription>
-                  <FormMessage field={t("appPort")} />
-                </FormItem>
-              )}
-            />
+          <CardContent className="@container p-5">
+            {/* The same grid the create form gives these two fields, so they
+                do not look like different controls in the two places they
+                appear: equal columns, container query rather than viewport, and
+                `items-start` so the two hints — different lengths — do not
+                stretch each other. */}
+            <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="start_command"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel required>{t("startCommand")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="font-mono"
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder="node index.js"
+                        disabled={!canManage || saving}
+                      />
+                    </FormControl>
+                    <FormDescription>{t("startCommandHint")}</FormDescription>
+                    <FormMessage field={t("startCommand")} />
+                  </FormItem>
+                )}
+              />
 
-            <p className="text-xs text-muted-foreground">{t("appliesOnDeploy")}</p>
+              <FormField
+                control={form.control}
+                name="app_port"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("appPort")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        inputMode="numeric"
+                        className="font-mono"
+                        autoComplete="off"
+                        placeholder={t("appPortPlaceholder")}
+                        disabled={!canManage || saving}
+                      />
+                    </FormControl>
+                    <FormDescription>{t("appPortHint")}</FormDescription>
+                    <FormMessage field={t("appPort")} />
+                  </FormItem>
+                )}
+              />
+            </div>
           </CardContent>
 
           <CardSaveFooter
@@ -140,6 +156,7 @@ export function RuntimeCard({ application, canManage }) {
                   ? t("nothingToSave")
                   : null
             }
+            note={t("appliesOnDeploy")}
             saveLabel={t("save")}
             submit
             onDiscard={() => form.reset(defaults)}
