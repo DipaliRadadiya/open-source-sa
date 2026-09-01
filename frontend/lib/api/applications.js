@@ -52,6 +52,17 @@ export function deleteApplication(id, { removeFiles = false } = {}) {
   });
 }
 
+/**
+ * The runtime settings a process-backed site actually runs with.
+ *
+ * The API has taken these on `PUT /applications/{id}` all along; only the
+ * create form ever offered them, so a site started with the wrong entry file
+ * could not be corrected — the site had to be deleted and made again.
+ */
+export function updateApplicationRuntime(id, { start_command, app_port }) {
+  return api.put(`/applications/${id}`, { start_command, app_port });
+}
+
 export function checkApplicationPort(port) {
   return api.get("/applications/port-check", { params: { port } });
 }

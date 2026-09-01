@@ -10,6 +10,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { DeployCard } from "@/components/applications/deployment/deploy-card";
 import { WebhookCard } from "@/components/applications/deployment/webhook-card";
 import { DeploySettingsCard } from "@/components/applications/deployment/deploy-settings-card";
+import { RuntimeCard } from "@/components/applications/deployment/runtime-card";
 import { DeployHistoryCard } from "@/components/applications/deployment/deploy-history-card";
 
 // A deploy flips status to "provisioning" while it runs; poll the resource so
@@ -94,6 +95,12 @@ export function DeploymentPanel({
           settings={settings}
           canManage={canManage}
         />
+      ) : null}
+
+      {/* Only a site that runs a process has one to start, and the fields are
+          meaningless on a static or PHP site — the API nulls them there. */}
+      {application.has_process ? (
+        <RuntimeCard application={application} canManage={canManage} />
       ) : null}
 
       <WebhookCard

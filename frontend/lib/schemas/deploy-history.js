@@ -82,6 +82,29 @@ export const deploymentResponseSchema = z.object({ deployment: deploymentSchema 
  * `deploy_script` and `webhook_enabled`, so posting `auto_deploy` (as the API
  * reference's example does) is silently dropped.
  */
+/**
+ * How the process is started. Mirrors `UpdateApplicationRequest` plus the
+ * backend's StartCommand rule: systemd execs `ExecStart` directly, so a shell
+ * construct does not fail here — it fails at start time with an error naming
+ * none of it.
+ */
+export const runtimeFormSchema = z.object({
+  start_command: z
+    .string()
+    .trim()
+    .min(1, "requiredField")
+    .max(500, "max500")
+    .refine((v) => !/(&&|\|\||[|;<>`&]|\$\()/.test(v), "shellInStartCommand"),
+  // Blank means "pick a free one", which is a real answer rather than a
+  // missing one — so an empty string passes and only a typed value is checked.
+  app_port: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^\d+$/.test(v), "portNumber")
+    .refine((v) => v === "" || (Number(v) >= 1024 && Number(v) <= 65535), "portRange1024")
+    .default(""),
+});
+
 export const deploySettingsFormSchema = z.object({
   // A git ref, not free text: it lands in `git fetch origin <ref>`. Same
   // charset the backend allows.

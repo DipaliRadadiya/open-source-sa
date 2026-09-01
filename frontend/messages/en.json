@@ -705,6 +705,10 @@
     "linuxUsername": "Lowercase letters, digits, - and _; must start with a letter or _",
     "sshKey": "Enter a valid SSH public key",
     "max255": "Must be 255 characters or fewer",
+    "shellInStartCommand": "Use a plain command — no pipes, &&, ; or $( ). It is run directly, not through a shell.",
+    "portNumber": "Enter a port number.",
+    "portRange1024": "Use a port between 1024 and 65535.",
+    "max500": "Keep this under 500 characters.",
     "noLineBreaks": "Line breaks are not allowed",
     "required_command": "Command is required",
     "max1000": "Must be 1000 characters or fewer",
@@ -3327,6 +3331,19 @@
         "offBody": "Auto-deploy is off. Turn it on to deploy on every push to {branch} — your webhook URL and secret are kept."
       },
       "cancel": "Cancel",
+      "runtime": {
+        "startCommand": "Start command",
+        "startCommandHint": "The entry file, for example \"node index.js\". Not \"npm start\" — a package manager forks the real process, so shutdown signals never reach it.",
+        "appPort": "App port",
+        "appPortPlaceholder": "Chosen for you",
+        "appPortHint": "Left empty, the panel picks a free one and tells the process which to use.",
+        "appliesOnDeploy": "Saved now, applied on the next deploy — that is when the service file is rewritten.",
+        "save": "Save runtime settings",
+        "saved": "Runtime settings saved.",
+        "saveFailed": "Couldn't save the runtime settings.",
+        "noPermission": "You do not have permission to change this.",
+        "nothingToSave": "Nothing has changed"
+      },
       "settings": {
         "branch": "Branch",
         "branchHint": "The branch each deploy checks out.",

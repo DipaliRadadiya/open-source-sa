@@ -176,6 +176,10 @@
     "linuxUsername": "Letras minúsculas, dígitos, - y _; debe empezar con una letra o _",
     "sshKey": "Introduce una clave pública SSH válida",
     "max255": "Debe tener 255 caracteres o menos",
+    "shellInStartCommand": "Usa un comando simple: sin tuberías, &&, ; ni $( ). Se ejecuta directamente, no en un shell.",
+    "portNumber": "Introduce un número de puerto.",
+    "portRange1024": "Usa un puerto entre 1024 y 65535.",
+    "max500": "Máximo 500 caracteres.",
     "noLineBreaks": "No se permiten saltos de línea",
     "required_command": "El comando es obligatorio",
     "max1000": "Debe tener 1000 caracteres o menos",
@@ -3327,6 +3331,19 @@
         "offBody": "El despliegue automático está desactivado. Actívalo para desplegar con cada push a {branch}: se conservan tu URL de webhook y el secreto."
       },
       "cancel": "Cancelar",
+      "runtime": {
+        "startCommand": "Comando de inicio",
+        "startCommandHint": "El archivo de entrada, por ejemplo \"node index.js\". No \"npm start\": un gestor de paquetes bifurca el proceso real, así que las señales de apagado nunca le llegan.",
+        "appPort": "Puerto de la aplicación",
+        "appPortPlaceholder": "Elegido por ti",
+        "appPortHint": "Si lo dejas vacío, el panel elige uno libre y se lo indica al proceso.",
+        "appliesOnDeploy": "Se guarda ahora y se aplica en el próximo despliegue: es cuando se reescribe el archivo de servicio.",
+        "save": "Guardar configuración de ejecución",
+        "saved": "Configuración de ejecución guardada.",
+        "saveFailed": "No se pudo guardar la configuración de ejecución.",
+        "noPermission": "No tienes permiso para cambiar esto.",
+        "nothingToSave": "No ha cambiado nada"
+      },
       "settings": {
         "branch": "Rama",
         "branchHint": "La rama que descarga cada despliegue.",
