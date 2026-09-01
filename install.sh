@@ -1628,6 +1628,32 @@ install_ols_packages() {
 # Deliberately NOT built from the panel's php.blade.php template: that one is
 # for hosted sites and runs them on lsphp with per-site suEXEC. The panel is a
 # different animal — PHP-FPM over an fcgi external app, plus a proxy to Next.
+# Every hostname the panel's OpenLiteSpeed vhost answers for.
+#
+# nginx and Apache give the API its own server block on ${API_HOST}; OpenLiteSpeed
+# routes by listener `map`, and the map only ever named ${PANEL_HOST}. So on this
+# stack the API hostname resolved to the box and matched no virtual host at all
+# -- and since the installer also drops the shipped `map Example *` catch-all,
+# there was nothing left to answer it. The panel would install, load, and fail
+# every request it made.
+#
+# One vhost for both names rather than a second vhost, because the vhost already
+# routes by path: /api and /sanctum reach the backend, everything else reaches
+# Next. What that does not reproduce is nginx serving the *whole* backend at the
+# API host's root -- ${API_HOST}/docs/api-reference goes to Next here and 404s.
+# Recorded rather than hidden: it wants a second virtual host, and that is a
+# bigger change than the one that makes the panel work.
+#
+# Comma-separated with no space: the manual (Listeners_General_Help, "Domains")
+# specifies a comma-separated list, and a space is not documented as tolerated.
+ols_vhost_domains() {
+    if (( SINGLE_HOST )); then
+        printf '%s' "$PANEL_HOST"
+    else
+        printf '%s,%s' "$PANEL_HOST" "$API_HOST"
+    fi
+}
+
 write_ols_vhost() {
     local vhost_dir="$1"
     local api_context proxy_context
@@ -1677,7 +1703,7 @@ CONF
     cat >"${vhost_dir}/vhconf.conf" <<CONF
 # Managed by the Control panel installer.
 docRoot                   ${APP_DIR}/backend/public
-vhDomain                  ${PANEL_HOST}
+vhDomain                  $(ols_vhost_domains)
 enableGzip                1
 
 errorlog \$VH_ROOT/logs/error.log {
@@ -1846,7 +1872,7 @@ CONF
     # hand-indented closing brace would otherwise put the map in whatever block
     # came next, where it is illegal and fails the config test.
     local tmp="${conf}.panel-tmp"
-    awk -v slug="${PANEL_SLUG}" -v host="${PANEL_HOST}" '
+    awk -v slug="${PANEL_SLUG}" -v host="$(ols_vhost_domains)" '
         /^listener[[:space:]]+Default[[:space:]]*\{/ { inlistener = 1; depth = 0 }
         inlistener {
             n = gsub(/\{/, "{"); depth += n
@@ -2485,12 +2511,12 @@ listener Defaultssl {
   certFile                ${cert}
   certChain               1
   sslProtocol             24
-  map                     ${PANEL_SLUG} ${PANEL_HOST}
+  map                     ${PANEL_SLUG} $(ols_vhost_domains)
 }
 CONF
     elif ! awk '/^listener[[:space:]]+Defaultssl[[:space:]]*\{/,/^\}/' "$conf" | grep -q "map .*${PANEL_SLUG} "; then
         local tmp="${conf}.panel-tmp"
-        awk -v slug="${PANEL_SLUG}" -v host="${PANEL_HOST}" '
+        awk -v slug="${PANEL_SLUG}" -v host="$(ols_vhost_domains)" '
             /^listener[[:space:]]+Defaultssl[[:space:]]*\{/ { inlistener = 1; depth = 0 }
             inlistener {
                 n = gsub(/\{/, "{"); depth += n

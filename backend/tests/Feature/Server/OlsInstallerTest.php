@@ -209,6 +209,33 @@ it('takes the shipped Example site out of the config, not just off the listener'
         ->and($result)->toContain('conf/templates/ccl.conf');
 });
 
+it('answers for the API hostname as well as the panel one', function () {
+    // nginx and Apache give the API its own server block on ${API_HOST}.
+    // OpenLiteSpeed routes by listener `map`, and every map the installer wrote
+    // named only ${PANEL_HOST} — so with the shipped `map Example *` catch-all
+    // also removed, nothing on the box answered for the API hostname and the
+    // panel would have installed, loaded, and failed every request it made.
+    $source = installerSource();
+
+    // Both listeners: the plain one register_ols_panel_vhost() maps into, and
+    // the TLS one install_ols_certificate() creates. Getting one and not the
+    // other means the panel works until the certificate lands.
+    expect(substr_count($source, 'awk -v slug="${PANEL_SLUG}" -v host="$(ols_vhost_domains)"'))->toBe(2)
+        ->and($source)->toContain('map                     ${PANEL_SLUG} $(ols_vhost_domains)')
+        ->and($source)->not->toContain('-v host="${PANEL_HOST}"');
+
+    // Comma-separated with no space. The manual's Listeners "Domains" field
+    // specifies a comma-separated list; a space is not documented as tolerated,
+    // and a listener map that parses as one long hostname fails silently — it
+    // matches nothing rather than erroring.
+    $helper = implode("\n", installerFunction('ols_vhost_domains'));
+
+    expect($helper)->toContain('printf \'%s,%s\' "$PANEL_HOST" "$API_HOST"')
+        // Single-host installs put both roles on one name; mapping it twice
+        // would be a duplicate domain, which OpenLiteSpeed rejects outright.
+        ->and($helper)->toContain('if (( SINGLE_HOST ))');
+});
+
 it('converges when the installer is re-run', function () {
     $once = applyOlsRewrite(OLS_SHIPPED_CONFIG);
 
