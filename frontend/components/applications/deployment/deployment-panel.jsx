@@ -7,6 +7,7 @@ import { deployApplication } from "@/lib/api/applications";
 import { readApplication } from "@/lib/api/deployment";
 import { applicationSchema } from "@/lib/schemas/application";
 import { apiMessage } from "@/lib/api/error-message";
+import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { DeployCard } from "@/components/applications/deployment/deploy-card";
 import { WebhookCard } from "@/components/applications/deployment/webhook-card";
 import { DeploySettingsCard } from "@/components/applications/deployment/deploy-settings-card";
@@ -25,6 +26,9 @@ export function DeploymentPanel({
   settings = null,
 }) {
   const t = useTranslations("applications.deployment");
+  // Step labels live under `details` — the namespace of the first screen that
+  // needed them — and a raw `verify` in a toast is as unreadable as in a card.
+  const ts = useTranslations("applications.details");
   const [application, setApplication] = useState(initial);
   const [deploying, setDeploying] = useState(false);
   const pollRef = useRef(null);
@@ -68,7 +72,9 @@ export function DeploymentPanel({
           stopPoll();
           setDeploying(false);
           if (next.failed_step) {
-            toast.error(t("deploy.failedAt", { step: next.failed_step }));
+            toast.error(
+              t("deploy.failedAt", { step: provisionStepLabel(next.failed_step, ts) }),
+            );
           } else if (next.last_deployed_at !== before) {
             toast.success(t("deploy.done"));
           }
@@ -78,7 +84,7 @@ export function DeploymentPanel({
       setDeploying(false);
       toast.error(apiMessage(error, t("deploy.failed")));
     }
-  }, [application.id, application.last_deployed_at, refresh, stopPoll, t]);
+  }, [application.id, application.last_deployed_at, refresh, stopPoll, t, ts]);
 
   return (
     <div className="space-y-6">

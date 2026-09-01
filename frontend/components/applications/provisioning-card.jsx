@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Check, CircleAlert, Loader2, RotateCw } from "lucide-react";
+import { CircleAlert, Loader2, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { retryProvisioning } from "@/lib/api/applications";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
+import { StepList } from "@/components/applications/step-list";
 
 const POLL_MS = 4000;
 
@@ -137,40 +138,15 @@ export function ProvisioningCard({ application, canManage = false }) {
           </div>
         ) : null}
 
-        <ol className="space-y-2.5">
-          {steps.map((step, index) => (
-            <li key={`${step}-${index}`} className="flex items-center gap-3 text-sm">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-success bg-success/10 text-success">
-                <Check className="size-3" />
-              </span>
-              <span className="text-muted-foreground">{stepLabel(step)}</span>
-            </li>
-          ))}
-
-          {/* An unnamed row rather than the next step: the API reports what
-              finished, never what started. */}
-          {working && !stalled ? (
-            <li className="flex items-center gap-3 text-sm">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-primary bg-primary/10 text-primary">
-                <Loader2 className="size-3 animate-spin" />
-              </span>
-              <span className="font-medium">
-                {steps.length ? t("working") : t("starting")}
-              </span>
-            </li>
-          ) : null}
-
-          {failed ? (
-            <li className="flex items-center gap-3 text-sm">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-destructive bg-destructive/10 text-destructive">
-                <CircleAlert className="size-3" />
-              </span>
-              <span className="font-medium text-destructive">
-                {stepLabel(application.failed_step)}
-              </span>
-            </li>
-          ) : null}
-        </ol>
+        {/* An unnamed working row rather than the next step: the API reports
+            what finished, never what started. */}
+        <StepList
+          steps={steps}
+          working={working && !stalled}
+          workingLabel={steps.length ? t("working") : t("starting")}
+          failedStep={failed ? application.failed_step : null}
+          label={stepLabel}
+        />
 
         {/* No percentage and no elapsed timer: the step count varies by site
             type, and the only timestamp available is created_at, which is

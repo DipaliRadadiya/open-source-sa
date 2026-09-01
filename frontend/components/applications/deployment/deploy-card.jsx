@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import {
-  CheckCircle2,
   GitBranch,
   GitCommitHorizontal,
   Info,
@@ -19,16 +18,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { Progress } from "@/components/ui/progress";
+import { StepList } from "@/components/applications/step-list";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
-// Backend writes raw step keys ("set_ownership"); no frontend catalog exists for
-// them, so humanise rather than risk a missing-message throw.
-function humanizeStep(step) {
-  const words = String(step).replace(/[._]+/g, " ").trim();
-  return words ? words.charAt(0).toUpperCase() + words.slice(1) : step;
-}
 
 // Best-effort link to the commit on the provider, built from a public repo URL.
 // Only the hosts whose commit paths we actually know; anything else falls back
@@ -61,6 +56,11 @@ function Fact({ label, children }) {
 
 export function DeployCard({ application, deploying, canManage, onDeploy }) {
   const t = useTranslations("applications.deployment");
+  // A deploy records into the same `steps[]` as provisioning, so it reads the
+  // same catalog of labels — which lives under `details` because that is where
+  // the first screen to need them was.
+  const ts = useTranslations("applications.details");
+  const stepLabel = (step) => provisionStepLabel(step, ts);
   const commit =
     typeof application.last_commit === "string" ? application.last_commit : null;
   const repository = application.repository ?? application.repository_url;
@@ -105,7 +105,7 @@ export function DeployCard({ application, deploying, canManage, onDeploy }) {
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <div className="space-y-0.5">
-              <p>{t("deploy.failedAt", { step: application.failed_step })}</p>
+              <p>{t("deploy.failedAt", { step: stepLabel(application.failed_step) })}</p>
               {application.reference ? (
                 <p className="font-mono text-xs opacity-90">
                   {t("deploy.reference", { reference: application.reference })}
@@ -194,25 +194,26 @@ export function DeployCard({ application, deploying, canManage, onDeploy }) {
           </Fact>
         </dl>
 
+        {/* The same shape as the "setting up your site" screen — two screens
+            answering "is my thing being built?" should not look like two
+            products. No percentage: which steps run depends on the site, so
+            there is no denominator that would not be invented. */}
         {deploying ? (
-          <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+          <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
             <p className="flex items-center gap-2 text-sm font-medium">
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" aria-hidden />
               {t("deploy.inProgress")}
             </p>
-            {steps.length ? (
-              <ol className="grid gap-1.5 sm:grid-cols-2">
-                {steps.map((step) => (
-                  <li
-                    key={step}
-                    className="flex items-center gap-2 text-sm text-muted-foreground"
-                  >
-                    <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>{humanizeStep(step)}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : null}
+            <Progress indeterminate className="h-1.5" />
+            <StepList
+              steps={steps}
+              working
+              workingLabel={steps.length ? ts("working") : ts("starting")}
+              label={stepLabel}
+            />
+            <p className="border-t pt-3 text-xs text-muted-foreground">
+              {t("deploy.keepsRunning")}
+            </p>
           </div>
         ) : null}
 

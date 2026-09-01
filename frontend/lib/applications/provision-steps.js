@@ -7,7 +7,9 @@
  * on this list falls back to a generic phrase rather than leaking an
  * identifier the moment the backend adds a step.
  *
- * Sources: ApplicationProvisioner::step() and the installers' run() calls.
+ * Sources: ApplicationProvisioner::step(), the installers' run() calls, and
+ * GitDeployer — a deploy records into the same `steps[]` field, so the two
+ * screens share one catalog rather than one of them humanising raw keys.
  * The list is unordered on purpose — which steps run, and in what order,
  * depends on the site type, so the API's own sequence is the only truth.
  */
@@ -24,6 +26,13 @@ export const PROVISION_STEPS = new Set([
   "script",
   "restart_app",
   "restart_workers",
+  // Git deploys. `verify` never appears in steps[] — it is only ever written
+  // to failed_step, because a site that answers is not worth a row of its own.
+  "init",
+  "fetch",
+  "checkout",
+  "seed_env",
+  "verify",
   // One-click installers.
   "download",
   "extract",
