@@ -358,6 +358,11 @@ function ConfigField({
       : runtimeVersions.map((version) => ({
           value: version.version,
           label: version.version,
+          // Carried through, or `runtimeDefault` below finds nothing and falls
+          // back to the first entry — which is the NEWEST version, not the
+          // server's default. On a box defaulting to Node 24 that preselected
+          // an end-of-life Node 25 for every new site.
+          is_default: version.is_default,
         }));
     const seen = new Set();
     return raw.filter((option) => {
