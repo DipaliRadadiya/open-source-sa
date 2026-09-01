@@ -552,6 +552,7 @@ One entry per installable site type. Each carries its own field schema — the f
   "needs_database": true,
   "available": true,
   "unavailable_reason": null,
+  "unavailable_code": null,
   "installable_runtime": null,
   "has_installer": true,
   "fields": [
@@ -580,7 +581,18 @@ That distinction now matters for the locale and country pickers. They used to la
 
 `value` is unchanged and still the exact code the installer takes — nothing about the create request changes. Two consequences for the UI: the lists are **sorted by label in the viewer's language** (so `Åland Islands` sorts before `Albania`, which byte order gets wrong), and they are no longer grouped with the common defaults first — rely on the field's `default` for pre-selection rather than on position.
 
-`available: false` → card is greyed. `installable_runtime` names the missing runtime that would fix it.
+`available: false` → card is greyed. `unavailable_reason` is the sentence to show;
+`unavailable_code` is the value to branch on, and they must not be read the other
+way round — the sentence is translated and gets reworded.
+
+| `unavailable_code` | Meaning | Way out |
+|---|---|---|
+| `runtime` | The server has no PHP / no Node | Install it — `installable_runtime` names which |
+| `database` | The type takes an engine this server hasn't got (only NodeBB, which is MongoDB-only) | The Databases screen |
+| `web_server` | This web server does not offer the type | None — do not offer an action |
+
+`installable_runtime` is set only for `runtime`, and is null for the other two:
+nothing installable fixes them, so a card must not offer a button that cannot work.
 
 ---
 

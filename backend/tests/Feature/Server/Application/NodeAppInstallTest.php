@@ -235,6 +235,9 @@ it('greys NodeBB on a server with no MongoDB, rather than offering MySQL', funct
     // the one database that cannot help.
     expect($nodebb['available'])->toBeFalse()
         ->and($nodebb['unavailable_reason'])->toContain('MongoDB')
+        // Distinguishable from a runtime or web-server block without parsing
+        // prose: the way out of this one is the Databases screen.
+        ->and($nodebb['unavailable_code'])->toBe('database')
         // Nothing the runtime installer offers would fix this.
         ->and($nodebb['installable_runtime'])->toBeNull();
 });

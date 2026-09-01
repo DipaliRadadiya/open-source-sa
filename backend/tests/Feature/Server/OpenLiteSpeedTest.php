@@ -699,6 +699,9 @@ describe('the site type catalog', function () {
             // Greyed with a reason, not hidden — hiding reads as a missing
             // feature rather than a deliberate limit.
             ->and($joomla['unavailable_reason'])->toBe('This application is not available on OpenLiteSpeed servers yet.')
+            // The one block with no way out, and the only one the card grid
+            // could previously not tell apart from a missing database.
+            ->and($joomla['unavailable_code'])->toBe('web_server')
             // Nothing installable fixes a web-server block, so the card must
             // not offer an action that cannot work.
             ->and($joomla['installable_runtime'])->toBeNull();

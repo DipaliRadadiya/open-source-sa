@@ -58,6 +58,20 @@ class SiteTypeManager
      *
      * @return array<int, array<string, mixed>>
      */
+    /**
+     * Why a card is greyed, as a value the UI can branch on.
+     *
+     * Deliberately three separate codes rather than one "blocked": each has a
+     * different way out. A runtime can be installed from the card itself, a
+     * database from the Databases screen, and a web server's refusal has no way
+     * out at all — offering one would be a lie.
+     */
+    public const BLOCKED_RUNTIME = 'runtime';
+
+    public const BLOCKED_DATABASE = 'database';
+
+    public const BLOCKED_WEB_SERVER = 'web_server';
+
     public function catalog(): array
     {
         return array_map(function (SiteType $type) {
@@ -78,6 +92,11 @@ class SiteTypeManager
                 'needs_database' => $type->needsDatabase(),
                 'available' => $available,
                 'unavailable_reason' => $blocked['reason'] ?? null,
+                // The same block as a stable value: 'runtime' | 'database' |
+                // 'web_server', null when available. `unavailable_reason` is
+                // the sentence to show; this is the one to branch on, and the
+                // two must never be read the other way round.
+                'unavailable_code' => $blocked['code'] ?? null,
                 // The runtime that would have to be installed to make this card
                 // usable, so an unavailable card can offer to fix itself rather
                 // than just being greyed out. Null when the card is available.
@@ -109,20 +128,33 @@ class SiteTypeManager
      * endpoint both need this answer and must not be able to disagree — a card
      * shown as available that then fails validation is worse than either.
      *
-     * @return array{reason: string, runtime: ?string}|null
+     * Carries a `code` as well as the sentence. The sentence is for reading and
+     * is translated; anything deciding what to *do* about the block needs
+     * something stable to match on. Without one the card grid was inferring the
+     * database case from `needs_database` plus the absence of an installable
+     * runtime — which its own comment notes would misread a web-server refusal
+     * as a missing database, and `site_types` exists precisely so a driver can
+     * refuse one.
+     *
+     * @return array{code: string, reason: string, runtime: ?string}|null
      */
     public function unavailable(SiteType $type): ?array
     {
         $runtime = $this->requiredRuntime($type->servingProfile());
 
         if ($runtime !== null && ! $this->capabilities->supports($runtime)) {
-            return ['reason' => __("application.unavailable.{$runtime}"), 'runtime' => $runtime];
+            return [
+                'code' => self::BLOCKED_RUNTIME,
+                'reason' => __("application.unavailable.{$runtime}"),
+                'runtime' => $runtime,
+            ];
         }
 
         $missing = $this->missingEngines($type);
 
         if ($missing !== null) {
             return [
+                'code' => self::BLOCKED_DATABASE,
                 'reason' => __('application.unavailable.database', ['engines' => $missing]),
                 'runtime' => null,
             ];
@@ -136,6 +168,7 @@ class SiteTypeManager
         // when it supports some and not others.
         if ($allowed !== [] && ! in_array($type->name(), $allowed, true)) {
             return [
+                'code' => self::BLOCKED_WEB_SERVER,
                 'reason' => __('application.unavailable.web_server', [
                     'web_server' => (string) config("server.web_server_drivers.{$webServer}.label", $webServer),
                 ]),

@@ -96,10 +96,14 @@ it('greys out types this server cannot run, with a reason and what to install', 
     expect($types['wordpress']['available'])->toBeFalse();
     expect($types['wordpress']['unavailable_reason'])->toBe('This server does not have PHP installed.');
     expect($types['wordpress']['installable_runtime'])->toBe('php');
+    // The code, not the sentence. The sentence is translated and will be
+    // reworded; anything branching on it breaks the day somebody improves it.
+    expect($types['wordpress']['unavailable_code'])->toBe('runtime');
 
     // ...and a type needing no runtime is always available.
     expect($types['static']['available'])->toBeTrue();
     expect($types['static']['unavailable_reason'])->toBeNull();
+    expect($types['static']['unavailable_code'])->toBeNull();
 });
 
 it('detects and stores the server record when the installer never ran', function () {

@@ -67,10 +67,11 @@ no terminal to ask on, so pass the flag.
 
 **On `--stack=ols`:** the web server the installer picks is the one serving the
 panel itself, so if it misbehaves there is no working panel left to fix it from.
-OpenLiteSpeed is the one stack that has not yet been proven on real hardware, and
-it is labelled experimental for that reason — the other three are the safe choice
-if you have no preference. The panel's own PHP runs on PHP-FPM on every stack
-including this one; hosted sites on OLS get LSAPI (`lsphp`) as usual.
+A `--stack=ols` install has now come up and run on real hardware, but only once,
+and no site has yet been created on one — so it stays labelled experimental until
+that has been done too. The other three stacks are the safe choice if you have no
+preference. The panel's own PHP runs on PHP-FPM on every stack including this one;
+hosted sites on OLS get LSAPI (`lsphp`) as usual.
 
 | Option | |
 |---|---|
@@ -87,6 +88,38 @@ going rather than failing. Pass `--domain=` for a certificate that works reliabl
 
 The installer is **re-runnable**: if it fails partway, fix the cause and run it
 again rather than rebuilding the server.
+
+## What runs where
+
+Every application type works on every stack. The web server is not what decides
+it — **the runtime and the database are**, and the installer puts both PHP and
+Node on every server because the panel itself needs them.
+
+| Application | Runtime | Database |
+|---|---|---|
+| WordPress, Nextcloud, Joomla, Moodle, Mautic, Craft CMS, Akaunting, PrestaShop | PHP | MySQL or MariaDB |
+| Statamic, phpMyAdmin, git deploy, plain PHP | PHP | — |
+| Uptime Kuma, n8n, Node-RED | Node | — |
+| NodeBB | Node | **MongoDB only** |
+| Static site | — | — |
+
+NodeBB is the only one that can be greyed out on an otherwise working server: it
+takes MongoDB and nothing else, so on a MySQL-only box the card says so rather
+than failing halfway through its setup. Everything else needs either no database
+or the MySQL/MariaDB pair, which the panel can install for you.
+
+Databases are independent of the web server — MySQL, MariaDB and MongoDB install
+the same way on all four stacks.
+
+**One OpenLiteSpeed caveat.** Hosted PHP sites there run LiteSpeed's own `lsphp`
+build, and LiteSpeed publishes a smaller extension set than `ppa:ondrej/php`. Most
+of the difference is not real — `gd`, `mbstring`, `xml` and `zip` are compiled into
+`lsphp` rather than shipped as separate packages — but there is genuinely **no
+`lsphp*-mongodb`**, so a PHP application that needs the MongoDB *driver* would have
+to build it with pecl. Nothing shipped here needs it; NodeBB is a Node application
+and talks to MongoDB directly. The panel's extension screen lists what your server
+can actually install rather than a fixed list, so it will not offer you something
+apt would then refuse.
 
 ## Built with
 
@@ -107,9 +140,9 @@ Honest about what has and has not been exercised:
 | | |
 |---|---|
 | Backend features | 2,567 passing tests (6 known failures, all in rollback) |
-| `install.sh` | real-server runs started 2026-09-01 on 26.04; two blocking bugs found and fixed, **not yet confirmed end to end** |
+| `install.sh` | confirmed end to end on real hardware 2026-09-01, on the OpenLiteSpeed stack |
 | nginx / Apache / MERN stacks | exercised by the installer |
-| OpenLiteSpeed | ⚠️ selectable since 2026-09-01, **never run on hardware** — see the note under Installing |
+| OpenLiteSpeed | installs and serves the panel (2026-09-01); ⚠️ **no site created on one yet** |
 | MongoDB | installable from the panel |
 | Licence | ⚠️ **not chosen yet** — see below |
 
