@@ -1,5 +1,5 @@
 {{-- Managed by the panel. Manual edits are overwritten when the worker is saved. --}}
-{{-- A template unit: one file, N instances (sv-worker-{id}@1 … @N). systemd
+{{-- A template unit: one file, N instances (sv-worker-{slug}@1 … @N). systemd
      owns the instances so the panel stores only the number it asked for, and
      "3 of 4 running" stays a question the OS answers rather than one we cache. --}}
 [Unit]
@@ -60,7 +60,7 @@ ReadWritePaths={{ $projectRoot }}
 
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=sv-worker-{{ $worker->id }}
+SyslogIdentifier=sv-worker-{{ $worker->slug }}
 
 [Install]
 WantedBy=multi-user.target

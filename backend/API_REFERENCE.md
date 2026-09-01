@@ -2507,7 +2507,7 @@ Workers are systemd units. The old supervisor-style field names (`numprocs`, `au
   "enabled": true,
   "running": 3,
   "state": "degraded", "state_title": "Degraded",
-  "log_identifier": "sv-worker-1",
+  "log_identifier": "sv-worker-shop-email-queue",
   "created_at": "28-07-2026 11:00:00", "created_at_human": "3 days ago"
 }], "presets": [
   {"key": "queue", "kind": "queue", "title": "Queue worker", "description": "…", "command": "php8.4 artisan queue:work --sleep=3 --tries=3 --max-time=3600"},
@@ -2527,6 +2527,14 @@ Workers are systemd units. The old supervisor-style field names (`numprocs`, `au
 `restart_on_deploy` makes the worker pick up new code after a deploy; without it a deploy leaves the site on new code and the queue on old code, with nothing anywhere connecting the two.
 
 `log_identifier` is the journal identifier, so the logs screen can be linked to without the frontend assembling a unit name.
+
+It is `sv-worker-{slug}`, where the slug is derived once from the application's
+slug and the worker's name — **not from the id, and not from the name.** Not the
+id, because `sv-worker-3` says nothing to whoever reads it in `journalctl`; not
+the name, because renaming a worker would then have to stop, disable, delete,
+rewrite and restart a running process, and a half-failure leaves an orphan unit
+still consuming the queue. **Renaming a worker does not change it.** Treat it as
+opaque and use what the API sends.
 
 `presets` are starting points for the detected framework — key/kind/command, already localised. Craft returns `queue` + `custom`; Statamic returns `queue` + `horizon` + `custom`; Node applications without a recognised queue framework (including n8n and Node-RED) return only `custom`. Detection follows the application's actual project root rather than assuming its served directory contains the CLI, so Craft's `craft`, Statamic's `please`/`artisan`, and brownfield Laravel layouts with `artisan` beside `public/` are found correctly. When `directory` is null, the worker uses that same detected project root as its working and writable directory.
 
@@ -4279,7 +4287,7 @@ size or last-write time, and a zero would read as an empty log last touched in
 
 **A source is omitted only when the server answered "not there".** If the panel could not run the check at all — an out-of-date sudo grant is the usual reason — the source is **kept**, with `readable: false`. Those are opposite statements: dropping the second would say this server has no such log, and someone would reasonably conclude their cron jobs never wrote anything.
 
-**Worker logs are `journal`, one source per worker, keyed `sv-worker-{id}`.** A
+**Worker logs are `journal`, one source per worker, keyed `sv-worker-{slug}`.** A
 worker writes no file — its unit sends stdout and stderr to journald under that
 identifier, which is why nothing has to rotate or clean up after it. The source
 is **scoped to its own identifier**, so it shows that worker rather than every

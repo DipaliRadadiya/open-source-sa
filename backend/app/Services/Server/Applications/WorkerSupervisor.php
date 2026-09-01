@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\View;
  * supervises *the* application process, exactly one, whose command lives on
  * the application row. A worker is one of many, has its own row, and can be
  * asked for in multiples — which systemd expresses as a template unit
- * (`sv-worker-3@.service`) instantiated per copy (`@1`, `@2`, …).
+ * (`sv-worker-shop-queue@.service`) instantiated per copy (`@1`, `@2`, …).
  *
  * The multiple is why the instances are systemd's and not ours. Storing four
  * rows for "four copies of the same worker" would make the panel responsible
@@ -31,16 +31,28 @@ class WorkerSupervisor
         private FrameworkDetector $frameworks,
     ) {}
 
-    /** `sv-worker-3@.service` — the template. */
+    /** `sv-worker-shop-queue@.service` — the template. */
     public function template(Worker $worker): string
     {
-        return 'sv-worker-'.$worker->id.'@.service';
+        return $this->unitName($worker).'@.service';
     }
 
-    /** `sv-worker-3@2.service` — one instance of it. */
+    /** `sv-worker-shop-queue@2.service` — one instance of it. */
     public function instance(Worker $worker, int $number): string
     {
-        return 'sv-worker-'.$worker->id.'@'.$number.'.service';
+        return $this->unitName($worker).'@'.$number.'.service';
+    }
+
+    /**
+     * The unit's name, and the journal identifier that goes with it.
+     *
+     * The slug rather than the id, so the name says what it is when read on
+     * the box — and the slug rather than the *name*, so renaming a worker
+     * relabels it without stopping and recreating a running process.
+     */
+    public function unitName(Worker $worker): string
+    {
+        return 'sv-worker-'.$worker->slug;
     }
 
     public function unitPath(Worker $worker): string

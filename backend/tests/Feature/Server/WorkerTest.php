@@ -183,7 +183,7 @@ it('finds Craft above its served web directory and runs the worker there', funct
 
     expect(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, 'artisan queue:restart')))
         ->toBeFalse()
-        ->and(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, "restart sv-worker-{$worker->id}@1")))
+        ->and(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, "restart sv-worker-{$worker->slug}@1")))
         ->toBeTrue();
 });
 
@@ -259,7 +259,7 @@ it('creates a worker and starts as many copies as asked for', function () {
 
     $worker = Worker::first();
     foreach ([1, 2, 3] as $number) {
-        expect(WorkerFake::$active)->toContain("sv-worker-{$worker->id}@{$number}.service");
+        expect(WorkerFake::$active)->toContain("sv-worker-{$worker->slug}@{$number}.service");
     }
 });
 
@@ -271,7 +271,7 @@ it('reports a partly-running pool as its own state', function () {
 
     // One instance died. A green dot would hide this, and a half-dead worker
     // pool is exactly the state nobody notices until the queue backs up.
-    WorkerFake::$active = array_values(array_diff(WorkerFake::$active, ["sv-worker-{$worker->id}@2.service"]));
+    WorkerFake::$active = array_values(array_diff(WorkerFake::$active, ["sv-worker-{$worker->slug}@2.service"]));
 
     $status = app(WorkerSupervisor::class)->status($worker->load('application.systemUser'));
 
@@ -289,9 +289,9 @@ it('stops the surplus when the process count is lowered', function () {
 
     // Instances 3 and 4 must actually stop. Nothing else in the system would
     // ever notice they were still consuming the queue.
-    expect(WorkerFake::$active)->toContain("sv-worker-{$worker->id}@1.service")
-        ->and(WorkerFake::$active)->not->toContain("sv-worker-{$worker->id}@3.service")
-        ->and(WorkerFake::$active)->not->toContain("sv-worker-{$worker->id}@4.service");
+    expect(WorkerFake::$active)->toContain("sv-worker-{$worker->slug}@1.service")
+        ->and(WorkerFake::$active)->not->toContain("sv-worker-{$worker->slug}@3.service")
+        ->and(WorkerFake::$active)->not->toContain("sv-worker-{$worker->slug}@4.service");
 });
 
 it('refuses a worker whose unit will not stay up', function () {
@@ -348,7 +348,7 @@ describe('restarting', function () {
         WorkerFake::$ran = [];
         $this->actingAs($this->admin)->postJson(workerUrl("/{$worker->id}/restart"));
 
-        expect(collect(WorkerFake::$ran)->contains(fn (string $c) => str_contains($c, "restart sv-worker-{$worker->id}@1")))
+        expect(collect(WorkerFake::$ran)->contains(fn (string $c) => str_contains($c, "restart sv-worker-{$worker->slug}@1")))
             ->toBeTrue();
     });
 });
@@ -534,4 +534,59 @@ it('refuses a name or directory that would be two systemd directives', function 
         ->assertJsonValidationErrors('directory');
 
     expect(Worker::count())->toBe(0);
+});
+
+describe('the unit name', function () {
+    it('is the slug, so it says what it is when read on the box', function () {
+        fakeWorkerSystemd();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload(['name' => 'Email Queue']))->assertCreated();
+        $worker = Worker::query()->firstOrFail();
+
+        // `sv-worker-3` tells an operator in journalctl nothing. The
+        // application is in it because "queue" alone is ambiguous on a box
+        // with twenty sites.
+        expect($worker->slug)->toBe('queued-site-email-queue')
+            ->and(app(WorkerSupervisor::class)->template($worker))
+            ->toBe('sv-worker-queued-site-email-queue@.service');
+    });
+
+    it('does not move when the worker is renamed', function () {
+        fakeWorkerSystemd();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload(['name' => 'Email Queue']))->assertCreated();
+        $worker = Worker::query()->firstOrFail();
+        $before = app(WorkerSupervisor::class)->template($worker);
+
+        $this->actingAs($this->admin)
+            ->putJson(workerUrl('/'.$worker->id), workerPayload(['name' => 'Something Else']))
+            ->assertOk();
+
+        // The whole reason identity is not the name. Renaming under a
+        // name-derived unit means stop, disable, delete, write, enable, start
+        // on a running process — and a half-failure leaves an orphan still
+        // consuming the queue.
+        expect($worker->fresh()->name)->toBe('Something Else')
+            ->and($worker->fresh()->slug)->toBe('queued-site-email-queue')
+            ->and(app(WorkerSupervisor::class)->template($worker->fresh()))->toBe($before);
+    });
+
+    it('suffixes rather than collides when two names reduce to one slug', function () {
+        fakeWorkerSystemd();
+
+        // The name is unique per application, but Str::slug() is lossy: these
+        // two reduce to the same string. Checking the name would let both
+        // claim one unit.
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload(['name' => 'My Queue']))->assertCreated();
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload(['name' => 'my-queue']))->assertCreated();
+
+        [$first, $second] = Worker::query()->orderBy('id')->get()->all();
+
+        expect($first->slug)->toBe('queued-site-my-queue')
+            ->and($second->slug)->toBe('queued-site-my-queue-2');
+    });
 });

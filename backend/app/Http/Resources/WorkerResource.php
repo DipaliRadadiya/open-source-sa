@@ -41,7 +41,7 @@ class WorkerResource extends JsonResource
 
             // The journal identifier, so the logs screen can be linked to
             // without the frontend constructing a unit name.
-            'log_identifier' => 'sv-worker-'.$this->resource->id,
+            'log_identifier' => 'sv-worker-'.$this->resource->slug,
 
             'created_at' => $this->resource->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->resource->created_at?->diffForHumans(),

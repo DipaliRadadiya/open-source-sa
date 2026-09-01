@@ -46,6 +46,9 @@ class WorkerController extends Controller
         WorkerSupervisor $supervisor,
         ActivityLogger $activity,
     ): JsonResponse {
+        // The slug that names this worker's systemd unit is derived on the
+        // model's `creating` hook — it is not fillable, so no request can
+        // choose the name of a file the panel writes.
         $worker = Worker::create($request->validated() + [
             'application_id' => $application->id,
         ]);

@@ -531,15 +531,15 @@ describe('worker logs', function () {
         $logs = collect($this->withHeader('Authorization', "Bearer {$this->token}")
             ->getJson('/api/logs')->assertOk()->json('logs'))->keyBy('key');
 
-        expect($logs)->toHaveKey('sv-worker-'.$this->worker->id)
-            ->and($logs['sv-worker-'.$this->worker->id]['label'])->toBe('Shop — Queue')
-            ->and($logs['sv-worker-'.$this->worker->id]['group'])->toBe('worker')
-            ->and($logs['sv-worker-'.$this->worker->id]['kind'])->toBe('journal');
+        expect($logs)->toHaveKey('sv-worker-'.$this->worker->slug)
+            ->and($logs['sv-worker-'.$this->worker->slug]['label'])->toBe('Shop — Queue')
+            ->and($logs['sv-worker-'.$this->worker->slug]['group'])->toBe('worker')
+            ->and($logs['sv-worker-'.$this->worker->slug]['kind'])->toBe('journal');
     });
 
     it('reads only that worker, not the whole box', function () {
         $this->withHeader('Authorization', "Bearer {$this->token}")
-            ->getJson('/api/logs/sv-worker-'.$this->worker->id)
+            ->getJson('/api/logs/sv-worker-'.$this->worker->slug)
             ->assertOk()
             ->assertJsonPath('log.lines', ['worker started']);
 
@@ -547,7 +547,7 @@ describe('worker logs', function () {
         // interleaved, which is not an answer to "what is this worker doing".
         Process::assertRan(fn ($p) => in_array('journalctl', $p->command, true)
             && in_array('-t', $p->command, true)
-            && in_array('sv-worker-'.$this->worker->id, $p->command, true));
+            && in_array('sv-worker-'.$this->worker->slug, $p->command, true));
     });
 
     it('leaves the system journal showing the whole system', function () {

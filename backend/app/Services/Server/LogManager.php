@@ -224,7 +224,7 @@ class LogManager
 
         if (is_string($identifier) && $identifier !== '') {
             // Passed as its own argv element, never interpolated — the value
-            // is ours (`sv-worker-{id}`), and keeping it an argument means it
+            // is ours (`sv-worker-{slug}`), and keeping it an argument means it
             // stays ours even if that ever stops being true.
             $command[] = '-t';
             $command[] = $identifier;
@@ -434,9 +434,9 @@ class LogManager
      * One source per worker, read from the journal.
      *
      * A worker writes no file: its unit sends stdout and stderr to journald
-     * under `sv-worker-{id}`, which is why nothing has to rotate or clean up
+     * under `sv-worker-{slug}`, which is why nothing has to rotate or clean up
      * after it. The panel already told the frontend that identifier, and the
-     * worker row already links to `/logs?source=sv-worker-3` — but no source
+     * worker row already links to `/logs?source=sv-worker-shop-queue` — but no source
      * by that key existed, so the one button offering a worker's output led
      * nowhere. Built from the table for the same reason cron jobs are: a
      * source then always maps to a worker that exists, and the label is the
@@ -455,12 +455,12 @@ class LogManager
             'name',
         )->get()
             ->map(fn (Worker $worker) => [
-                'key' => 'sv-worker-'.$worker->id,
+                'key' => 'sv-worker-'.$worker->slug,
                 'label' => trim(($worker->application?->name ? $worker->application->name.' — ' : '').$worker->name),
                 'group' => 'worker',
                 'path' => '',
                 'kind' => 'journal',
-                'identifier' => 'sv-worker-'.$worker->id,
+                'identifier' => 'sv-worker-'.$worker->slug,
             ])
             ->all();
     }

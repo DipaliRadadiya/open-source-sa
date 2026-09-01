@@ -20,6 +20,17 @@ return new class extends Migration
             $table->foreignId('application_id')->constrained()->cascadeOnDelete();
 
             $table->string('name');
+
+            // Identity, and not the same thing as the name. The name is a
+            // label the user may change; this is what the systemd unit is
+            // called (`sv-worker-{slug}`), and a unit that renames itself when
+            // a label changes means stopping and recreating a running process
+            // — where a half-failure leaves an orphan still consuming the
+            // queue. Unique server-wide rather than per application, because a
+            // unit name is server-wide. Same rule applications and cron jobs
+            // already follow for the files they own.
+            $table->string('slug')->unique();
+
             $table->text('command');
 
             // Which preset produced it, or `custom`. Kept because the restart
