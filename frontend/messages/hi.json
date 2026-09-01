@@ -4449,6 +4449,7 @@
     "readyCount": "{total} में से {passed} तैयार",
     "captionFree": "खाली · {need} चाहिए",
     "captionAvailable": "उपलब्ध · {need} चाहिए",
+    "captionRecommended": "उपलब्ध · {need} अनुशंसित",
     "detailFree": "{have} खाली · {need} चाहिए",
     "detailAvailable": "{have} उपलब्ध · {need} चाहिए",
     "detailUnknown": "पता नहीं लगाया जा सका",

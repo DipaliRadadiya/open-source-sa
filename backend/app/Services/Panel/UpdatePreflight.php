@@ -21,7 +21,7 @@ class UpdatePreflight
     /**
      * @return array{
      *     ready: bool,
-     *     checks: list<array{key: string, passed: bool, detail: string|null}>
+     *     checks: list<array{key: string, passed: bool, detail: string|null, advisory?: bool}>
      * }
      */
     public function run(): array
@@ -35,10 +35,35 @@ class UpdatePreflight
         ];
 
         return [
-            // `ready` is the single thing the button binds to.
-            'ready' => collect($checks)->every(fn (array $check): bool => $check['passed']),
+            'ready' => $this->ready($checks),
             'checks' => $checks,
         ];
+    }
+
+    /**
+     * `ready` is the single thing the update button binds to.
+     *
+     * Advisory checks are reported but never gate it. The distinction is
+     * whether the check can be *wrong* in a way the admin cannot act on: a
+     * dirty working tree is a fact that stays true until someone fixes it, but
+     * free memory is a sample of a number that moves on its own — a backup
+     * running at the wrong moment would disable the button with no failure to
+     * point at and no way to proceed. Blocking on the volatile ones turns a
+     * helpful warning into a lockout.
+     *
+     * Missing `advisory` means blocking, so a check added later has to opt out
+     * deliberately rather than by forgetting a key.
+     *
+     * Public and pure, so the rule is tested without a machine in a
+     * particular state.
+     *
+     * @param  list<array{key: string, passed: bool, detail: string|null, advisory?: bool}>  $checks
+     */
+    public function ready(array $checks): bool
+    {
+        return collect($checks)
+            ->reject(fn (array $check): bool => $check['advisory'] ?? false)
+            ->every(fn (array $check): bool => $check['passed']);
     }
 
     /**
@@ -142,7 +167,15 @@ class UpdatePreflight
      * refuse an update on the very servers the installer prepared to survive
      * one — a build that finishes slowly is still a build that finishes.
      *
-     * @return array{key: string, passed: bool, detail: string|null}
+     * Advisory, never blocking. Unlike every other check here this one samples
+     * a number that moves by itself: MemAvailable dips whenever a backup, a
+     * customer's own build or a burst of php-fpm children happens to be
+     * running, and gating on it meant the update button could be dark for
+     * reasons that had nothing to do with the update and would be gone a
+     * minute later. The figure is still worth showing — it is the first thing
+     * to look at when a build is killed — but it is a reading, not a verdict.
+     *
+     * @return array{key: string, passed: bool, detail: string|null, advisory: bool}
      */
     private function freeMemory(): array
     {
@@ -150,7 +183,7 @@ class UpdatePreflight
         $availableMb = $this->availableMemoryMb();
 
         if ($availableMb === null) {
-            return ['key' => 'free_memory', 'passed' => false, 'detail' => 'unknown'];
+            return ['key' => 'free_memory', 'passed' => false, 'detail' => 'unknown', 'advisory' => true];
         }
 
         return $this->memoryVerdict($availableMb, $this->freeSwapMb(), $required);
@@ -159,7 +192,7 @@ class UpdatePreflight
     /**
      * Public and pure, so the arithmetic is tested without a fake `/proc`.
      *
-     * @return array{key: string, passed: bool, detail: string|null}
+     * @return array{key: string, passed: bool, detail: string|null, advisory: bool}
      */
     public function memoryVerdict(int $availableMb, ?int $swapMb, int $requiredMb): array
     {
@@ -171,7 +204,12 @@ class UpdatePreflight
             // Broken out rather than summed into one number: an admin who is
             // 400 MB short needs to know whether the answer is "close a
             // process" or "add a swapfile", and those are different fixes.
+            //
+            // The shape is load-bearing: lib/admin/preflight-detail.js parses
+            // this sentence to render a localized figure, and anything it
+            // cannot parse falls back to raw English megabytes.
             'detail' => $availableMb.'MB available + '.$swapMb.'MB swap, '.$requiredMb.'MB required',
+            'advisory' => true,
         ];
     }
 

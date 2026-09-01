@@ -9,12 +9,28 @@
  * through to the original string. The proper fix is the API sending numbers;
  * until then this is the only place that knows the sentence exists.
  */
-const SIZE = /^(\d+)MB (free|available), (\d+)MB required$/;
+/**
+ * The memory check adds a swap term — `700MB available + 2400MB swap, 2560MB
+ * required` — because available memory alone answers the wrong question on a
+ * box whose installer added a swapfile precisely so the build could finish.
+ * It is optional in the pattern rather than a second regex: the disk check
+ * has no such term and both must keep parsing.
+ */
+const SIZE = /^(\d+)MB (free|available)(?: \+ (\d+)MB swap)?, (\d+)MB required$/;
 
 export function parseSizeDetail(detail) {
   const match = SIZE.exec(String(detail ?? "").trim());
   if (!match) return null;
-  return { haveMb: Number(match[1]), kind: match[2], needMb: Number(match[3]) };
+  const swapMb = match[3] === undefined ? null : Number(match[3]);
+  return {
+    // The headline figure is what the build can actually reach, so swap is
+    // added in rather than reported beside it — a 700MB box with 2.4GB of swap
+    // is not a 700MB box for this purpose.
+    haveMb: Number(match[1]) + (swapMb ?? 0),
+    kind: match[2],
+    swapMb,
+    needMb: Number(match[4]),
+  };
 }
 
 /** Every check can report this when it cannot inspect the thing it checks. */

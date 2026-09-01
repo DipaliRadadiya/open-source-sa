@@ -9,13 +9,29 @@ test("the two size sentences the backend builds are understood", () => {
   assert.deepEqual(parseSizeDetail("261887MB free, 2048MB required"), {
     haveMb: 261887,
     kind: "free",
+    swapMb: null,
     needMb: 2048,
   });
   assert.deepEqual(parseSizeDetail("1097MB available, 768MB required"), {
     haveMb: 1097,
     kind: "available",
+    swapMb: null,
     needMb: 768,
   });
+});
+
+// The memory check grew a swap term. Before this parsed, it fell through to the
+// raw English sentence — the exact regression this file exists to catch.
+test("the memory sentence's swap term is understood and counted", () => {
+  assert.deepEqual(parseSizeDetail("700MB available + 2400MB swap, 2560MB required"), {
+    // Swap is added in: a 700MB box with 2.4GB of swap can finish the build,
+    // and leading with 700MB would tell the admin the opposite.
+    haveMb: 3100,
+    kind: "available",
+    swapMb: 2400,
+    needMb: 2560,
+  });
+  assert.equal(parseSizeDetail("700MB available + 0MB swap, 2560MB required").haveMb, 700);
 });
 
 test("anything else falls through rather than being guessed at", () => {

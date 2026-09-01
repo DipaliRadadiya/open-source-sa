@@ -74,6 +74,9 @@ const preflightCheckSchema = z
     key: z.string(),
     passed: z.boolean().default(false),
     detail: z.string().nullish(),
+    // Reported but never gates the update button — see UpdatePreflight::run().
+    // Defaults false so a check from an older backend stays blocking.
+    advisory: z.boolean().default(false),
   })
   .passthrough();
 

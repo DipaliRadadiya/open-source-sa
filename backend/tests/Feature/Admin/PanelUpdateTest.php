@@ -236,11 +236,56 @@ it('treats a kernel with no swap support as having no swap', function () {
 
 it('requires enough memory for a build that was measured, not guessed', function () {
     // 2000MB is OOM-killed during compilation and 2500MB during static
-    // generation; the shipped floor must sit above both. The old 768MB default
-    // passed on boxes where the build was certain to die minutes later, which
-    // is the worst thing a preflight check can do.
+    // generation; the reported figure must sit above both. The old 768MB
+    // default described a box that could not build at all as having enough.
     expect(config('panel_update.preflight.min_free_memory_mb'))
         ->toBeGreaterThanOrEqual(2560);
+});
+
+it('reports memory without ever blocking the update on it', function () {
+    // Every other check is a fact that stays true until somebody fixes it.
+    // Free memory is a sample of a number that moves on its own: a backup
+    // running at the wrong moment would disable the update button with no
+    // failure to point at and nothing the admin could do but wait. The reading
+    // is worth showing -- it is the first thing to look at when a build is
+    // killed -- but it is not a verdict.
+    $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
+
+    expect($preflight->memoryVerdict(100, 0, 2560))
+        ->toMatchArray(['passed' => false, 'advisory' => true]);
+});
+
+it('stays ready when the only thing short is memory', function () {
+    // The whole point of the advisory flag: a failing memory reading must not
+    // reach `ready`, or nothing has actually changed for the admin.
+    $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
+
+    expect($preflight->ready([
+        ['key' => 'git_checkout', 'passed' => true, 'detail' => null],
+        ['key' => 'clean_working_tree', 'passed' => true, 'detail' => null],
+        ['key' => 'free_disk', 'passed' => true, 'detail' => null],
+        ['key' => 'free_memory', 'passed' => false, 'detail' => null, 'advisory' => true],
+        ['key' => 'writable_path', 'passed' => true, 'detail' => null],
+    ]))->toBeTrue();
+});
+
+it('still blocks on a check that is a fact rather than a reading', function () {
+    // The advisory escape hatch must not leak into the checks that do gate.
+    $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
+
+    expect($preflight->ready([
+        ['key' => 'clean_working_tree', 'passed' => false, 'detail' => null],
+        ['key' => 'free_memory', 'passed' => false, 'detail' => null, 'advisory' => true],
+    ]))->toBeFalse();
+});
+
+it('treats a check with no advisory key as blocking', function () {
+    // A check added later must opt out of gating deliberately, not by
+    // forgetting a key -- the safe default is the one that refuses.
+    $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
+
+    expect($preflight->ready([['key' => 'something_new', 'passed' => false, 'detail' => null]]))
+        ->toBeFalse();
 });
 
 it('still fails closed when git cannot answer', function () {

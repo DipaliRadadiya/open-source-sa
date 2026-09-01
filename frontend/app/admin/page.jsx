@@ -65,7 +65,11 @@ export default async function AdminDashboardPage() {
       // An update you cannot install is not the same news as one you can, and
       // the tile said the same thing for both. The count comes from the same
       // response — nothing extra is fetched to say this.
-      const blocking = panelUpdate.preflight.checks.filter((c) => !c.passed).length;
+      // Advisory checks are excluded: they do not gate the update, so counting
+      // one would promise a blocker the update page cannot show you.
+      const blocking = panelUpdate.preflight.checks.filter(
+        (c) => !c.passed && !c.advisory,
+      ).length;
       return {
         tone: panelUpdate.preflight.ready ? "action" : "warning",
         value: t("tiles.versionAvailable", { version: panelUpdate.available.version }),

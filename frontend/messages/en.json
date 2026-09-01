@@ -4449,6 +4449,7 @@
     "readyCount": "{passed} of {total} ready",
     "captionFree": "free · {need} needed",
     "captionAvailable": "available · {need} needed",
+    "captionRecommended": "available · {need} recommended",
     "detailFree": "{have} free · {need} needed",
     "detailAvailable": "{have} available · {need} needed",
     "detailUnknown": "Couldn't be determined",

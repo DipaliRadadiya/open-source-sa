@@ -4449,6 +4449,7 @@
     "readyCount": "{passed} de {total} listas",
     "captionFree": "libres · {need} necesarios",
     "captionAvailable": "disponibles · {need} necesarios",
+    "captionRecommended": "disponible · {need} recomendado",
     "detailFree": "{have} libres · {need} necesarios",
     "detailAvailable": "{have} disponibles · {need} necesarios",
     "detailUnknown": "No se pudo determinar",

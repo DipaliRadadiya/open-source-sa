@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations, useFormatter } from "next-intl";
-import { Check, CircleX } from "lucide-react";
+import { Check, CircleX, TriangleAlert } from "lucide-react";
 import { isUnknownDetail, megabytes, parseSizeDetail } from "@/lib/admin/preflight-detail";
 
 /**
@@ -16,6 +16,13 @@ import { isUnknownDetail, megabytes, parseSizeDetail } from "@/lib/admin/preflig
  *   because "have I got room" is answered by a number, not a tick;
  * - everything else is a compact row.
  *
+ * An ADVISORY check is never one of the red rows, however it reads: it does not
+ * gate the update (see UpdatePreflight::run()), so presenting it as the thing
+ * standing in your way would be a lie about a button that works. It keeps its
+ * tile and shows a muted warning instead of a tick when short — the figure is
+ * the first thing to look at if a build is later killed, and a green tick over
+ * 300 MB would be a worse lie than no check at all.
+ *
  * The grids are `auto-fit`, never a fixed column count: with three checks or
  * five, the last row stretches to fill instead of leaving an empty cell.
  *
@@ -25,9 +32,10 @@ import { isUnknownDetail, megabytes, parseSizeDetail } from "@/lib/admin/preflig
  */
 const FILL = "grid gap-3 grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]";
 
-function StatusIcon({ passed }) {
-  return passed ? (
-    <Check className="size-4 shrink-0 text-success" aria-hidden />
+function StatusIcon({ passed, advisory = false }) {
+  if (passed) return <Check className="size-4 shrink-0 text-success" aria-hidden />;
+  return advisory ? (
+    <TriangleAlert className="size-4 shrink-0 text-muted-foreground" aria-hidden />
   ) : (
     <CircleX className="size-4 shrink-0 text-destructive" aria-hidden />
   );
@@ -52,17 +60,20 @@ export function PreflightList({ checks }) {
   // A measurement makes a tile; the parser returning null (or the backend
   // saying "unknown") means there is no figure to lead with.
   const withSize = checks.map((c) => ({ ...c, measured: parseSizeDetail(c.detail) }));
-  const failed = withSize.filter((c) => !c.passed);
-  const tiles = withSize.filter((c) => c.passed && c.measured);
-  const rows = withSize.filter((c) => c.passed && !c.measured);
-  const passedCount = checks.filter((c) => c.passed).length;
+  const failed = withSize.filter((c) => !c.passed && !c.advisory);
+  const tiles = withSize.filter((c) => (c.passed || c.advisory) && c.measured);
+  const rows = withSize.filter((c) => (c.passed || c.advisory) && !c.measured);
+  // Counts what gates the button, so an advisory check short on memory does not
+  // read as "4 of 5 ready" next to an update that starts perfectly well.
+  const gating = checks.filter((c) => !c.advisory);
+  const passedCount = gating.filter((c) => c.passed).length;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="text-sm font-medium">{t("preflightTitle")}</p>
         <p className="text-sm tabular-nums text-muted-foreground">
-          {t("readyCount", { passed: passedCount, total: checks.length })}
+          {t("readyCount", { passed: passedCount, total: gating.length })}
         </p>
       </div>
 
@@ -102,16 +113,20 @@ export function PreflightList({ checks }) {
                 <p className="min-w-0 flex-1 truncate text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   {shortName(c.key)}
                 </p>
-                <StatusIcon passed />
+                <StatusIcon passed={c.passed} advisory={c.advisory} />
               </div>
               <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
                 <p className="font-mono text-base leading-none font-semibold tracking-tight">
                   {size(c.measured.haveMb)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {t(c.measured.kind === "free" ? "captionFree" : "captionAvailable", {
-                    need: size(c.measured.needMb),
-                  })}
+                  {/* "recommended", not "needed", when the shortfall does not
+                      stop anything — the caption has to agree with the button. */}
+                  {c.passed
+                    ? t(c.measured.kind === "free" ? "captionFree" : "captionAvailable", {
+                        need: size(c.measured.needMb),
+                      })
+                    : t("captionRecommended", { need: size(c.measured.needMb) })}
                 </p>
               </div>
             </div>
@@ -126,7 +141,7 @@ export function PreflightList({ checks }) {
               key={c.key}
               className="flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm"
             >
-              <StatusIcon passed />
+              <StatusIcon passed={c.passed} advisory={c.advisory} />
               <span className="min-w-0">{name(c.key)}</span>
               {isUnknownDetail(c.detail) ? null : c.detail ? (
                 <span className="ml-auto shrink-0 font-mono text-xs text-muted-foreground">
