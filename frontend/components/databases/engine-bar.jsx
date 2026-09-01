@@ -11,11 +11,13 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallConfirm } from "@/components/databases/install-confirm";
 import { DatabaseInstallProgress } from "@/components/databases/database-install-progress";
 import { useEngineInstallPolling } from "@/components/databases/use-engine-install-polling";
+import { findInstallCandidates } from "@/lib/databases/install-lifecycle";
 import {
-  findInstallCandidate,
-  findPresentSqlEngine,
-  isSqlEngine,
-} from "@/lib/databases/install-lifecycle";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * What is running, plus any second engine currently being added.
@@ -47,7 +49,8 @@ export function EngineBar({ engines = [], canManage, summary }) {
   // Recovery wins over a fresh choice. Previously failed engines were excluded
   // by `!engine.install_status`, so Retry vanished permanently whenever another
   // engine kept this populated page visible.
-  const addable = findInstallCandidate(list);
+  const addable = findInstallCandidates(list);
+  const only = addable.length === 1 ? addable[0] : null;
   // Only one apt install can run. Prefer its live lifecycle; otherwise retain
   // the newest failed lifecycle so diagnostics do not disappear beside a
   // healthy engine.
@@ -58,8 +61,6 @@ export function EngineBar({ engines = [], canManage, summary }) {
   const failureMessage = progressEngine
     ? null
     : failed.find((engine) => engine.install_message)?.install_message;
-  const hasPresentSql = Boolean(findPresentSqlEngine(list));
-  const choosingSql = isSqlEngine(pending) && !hasPresentSql;
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -122,24 +123,51 @@ export function EngineBar({ engines = [], canManage, summary }) {
           </Link>
         </Button>
 
-        {addable ? (
+        {/* Named, always. One candidate gets its own button ("Install
+            MongoDB"); several get a menu of names. Neither opens a dialog that
+            asks which — the click is the answer. */}
+        {only ? (
           <ReasonTooltip reason={canManage ? null : t("noPermission")}>
             <Button
               variant="outline"
               size="sm"
               disabled={!canManage}
-              onClick={() => setPending(addable)}
+              onClick={() => setPending(only)}
             >
-              {addable.install_status === "failed" ? (
+              {only.install_status === "failed" ? (
                 <TriangleAlert className="size-4" />
               ) : (
                 <Plus className="size-4" />
               )}
-              {addable.install_status === "failed"
+              {only.install_status === "failed"
                 ? t("status.tryAgain")
-                : t("install.addEngine")}
+                : t("install.addNamed", { name: t(`engines.${only.engine}`) })}
             </Button>
           </ReasonTooltip>
+        ) : addable.length > 1 ? (
+          <DropdownMenu>
+            <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={!canManage}>
+                  <Plus className="size-4" />
+                  {t("install.addEngine")}
+                </Button>
+              </DropdownMenuTrigger>
+            </ReasonTooltip>
+            <DropdownMenuContent align="end">
+              {addable.map((engine) => (
+                <DropdownMenuItem
+                  key={engine.engine}
+                  onSelect={() => setPending(engine)}
+                >
+                  {engine.install_status === "failed" ? (
+                    <TriangleAlert className="size-4" />
+                  ) : null}
+                  {t(`engines.${engine.engine}`)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </div>
 
@@ -166,9 +194,8 @@ export function EngineBar({ engines = [], canManage, summary }) {
       ) : null}
 
       <InstallConfirm
-        engine={choosingSql ? null : pending ?? null}
+        engine={pending}
         open={pending !== null}
-        choosing={choosingSql}
         onOpenChange={(next) => !next && setPending(null)}
         onSuccess={({ engine, queued }) => {
           setPending(null);

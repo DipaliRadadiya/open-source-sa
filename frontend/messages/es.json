@@ -2226,6 +2226,7 @@
     "install": {
       "action": "Instalar un motor",
       "addEngine": "Añadir motor",
+      "addNamed": "Instalar {name}",
       "title": "Instalar un motor de base de datos",
       "subtitle": "El servidor lo instala en segundo plano; suele tardar unos minutos.",
       "submit": "Instalar",
@@ -2372,11 +2373,6 @@
       "title": "¿Instalar {name}?",
       "description": "El servidor lo descargará y lo configurará en segundo plano.",
       "submit": "Instalar",
-      "chooseEngine": {
-        "title": "Elige un motor SQL",
-        "description": "Ambos se ejecutan en el mismo puerto. Elige el que use tu aplicación.",
-        "submit": "Instalar motor"
-      },
       "chooseEngineFirst": "Elige primero un motor de base de datos"
     },
     "connection": {
@@ -3038,6 +3034,7 @@
       "typeSearch": "Buscar tipos de aplicación…",
       "popular": "Popular",
       "typeNoResults": "Ningún tipo de aplicación coincide con «{query}».",
+      "typeNeedsDatabase": "Algunas opciones necesitan un motor de base de datos: instala uno en la página Bases de datos.",
       "defaultsTo": "Por defecto: {value}.",
       "startCommand": {
         "shell": "Ejecuta un solo comando, no sintaxis de shell (sin &&, |, ; ni $( )). Apunta al archivo de entrada.",
@@ -4607,7 +4604,8 @@
     "sectionRecommendedHint": "Aconsejado para la mayoría de servidores. Puedes añadirlos cuando quieras.",
     "sectionOptionalHint": "Solo los necesitan algunos sitios.",
     "alreadyInstalledHint": "Ya están en este servidor. Aquí no hay nada que hacer.",
-    "chooseEngineFirst": "Elige primero un motor de base de datos"
+    "chooseEngineFirst": "Elige primero un motor de base de datos",
+    "oneSqlOnly": "Un servidor ejecuta un solo motor SQL. Una vez instalado, cambiar al otro implica reconstruir el servidor."
   },
   "storage": {
     "title": "Almacenamiento",

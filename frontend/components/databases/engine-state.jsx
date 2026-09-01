@@ -96,10 +96,12 @@ export function EngineState({ engines = [], connections = [], canManage }) {
         </CardContent>
       </Card>
 
+      {/* The row that was clicked names the engine, so it goes straight to the
+          confirmation. It used to discard that and ask "which SQL engine?" —
+          a question the click had already answered. */}
       <InstallConfirm
-        engine={isSqlEngine(pending) && !sqlPresent ? null : pending ?? null}
+        engine={pending}
         open={pending !== null}
-        choosing={isSqlEngine(pending) && !sqlPresent}
         onOpenChange={(next) => !next && setPending(null)}
         onSuccess={({ engine, queued }) => {
           setPending(null);

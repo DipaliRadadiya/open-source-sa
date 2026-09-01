@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -12,6 +14,7 @@ import {
   Sparkles,
   TriangleAlert,
   X,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -229,6 +232,29 @@ export function SiteTypePicker({ types = [], value, onChange }) {
             </p>
           )}
         </div>
+
+        {/* The grey card explains why it cannot be picked and stops there. This
+            is the one blocker the reader can clear themselves, so it gets the
+            way out — a link, not a fourth sentence.
+
+            Detected from `needs_database` plus the absence of an installable
+            runtime, because the API reports a database block as prose with
+            `installable_runtime: null` and gives no code to match on. A web
+            server that refuses a type would look the same, but nginx and Apache
+            restrict nothing, so in practice this only fires for the database. */}
+        {types.some(
+          (type) => !type.available && type.needs_database && !type.installable_runtime,
+        ) ? (
+          <div className="shrink-0 border-t px-3 py-2.5">
+            <Link
+              href="/databases"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              <Database className="size-3.5 shrink-0" />
+              {t("form.typeNeedsDatabase")}
+            </Link>
+          </div>
+        ) : null}
       </PopoverContent>
     </Popover>
   );

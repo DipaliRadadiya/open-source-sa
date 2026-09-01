@@ -197,12 +197,19 @@ test("all three install entry points hand queued work to persistent polling", ()
     "utf8",
   );
 
-  assert.match(confirm, /const effectiveEngine = engine \?\? picked/);
-  assert.match(confirm, /setPicked\(\{ engine: sql, driver: "sql" \}\)/);
+  // The dialog confirms the engine it was handed and never asks which. Every
+  // caller opens it from a control that names one, so a chooser here would be
+  // the panel forgetting the click that opened it — which is what it did.
+  assert.doesNotMatch(confirm, /setPicked|choosing|phase/);
+  assert.doesNotMatch(confirm, /chooseEngine/);
+  assert.match(confirm, /if \(!engine\?\.engine\) return null/);
   assert.match(confirm, /if \(pending\) return/);
-  assert.match(confirm, /installEngine\(engineName\)/);
+  assert.match(confirm, /installEngine\(engine\.engine\)/);
   assert.match(confirm, /catch \(error\)[\s\S]*toast\.error/);
-  assert.match(confirm, /onSuccess\?\.\(\{[\s\S]*engine: engineName,[\s\S]*queued:/);
+  assert.match(confirm, /onSuccess\?\.\(\{ engine: engine\.engine, queued:/);
+  // Both Databases surfaces pass the clicked engine straight through.
+  assert.match(bar, /engine=\{pending\}/);
+  assert.match(state, /engine=\{pending\}/);
   assert.doesNotMatch(confirm, /useEffect/);
   assert.match(bar, /useEngineInstallPolling\(engines\)/);
   assert.match(bar, /if \(queued\) markStarted\(engine\)/);

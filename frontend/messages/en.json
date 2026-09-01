@@ -2226,6 +2226,7 @@
     "install": {
       "action": "Install an engine",
       "addEngine": "Add engine",
+      "addNamed": "Install {name}",
       "title": "Install a database engine",
       "subtitle": "The server installs it in the background — this usually takes a few minutes.",
       "submit": "Install",
@@ -2372,11 +2373,6 @@
       "title": "Install {name}?",
       "description": "The server will download and set it up in the background.",
       "submit": "Install",
-      "chooseEngine": {
-        "title": "Choose a SQL engine",
-        "description": "Both run on the same port. Pick the one your application uses.",
-        "submit": "Install engine"
-      },
       "chooseEngineFirst": "Pick a database engine first"
     },
     "connection": {
@@ -3038,6 +3034,7 @@
       "typeSearch": "Search application types…",
       "popular": "Popular",
       "typeNoResults": "No application types match “{query}”.",
+      "typeNeedsDatabase": "Some options need a database engine — install one on the Databases page.",
       "defaultsTo": "Defaults to {value}.",
       "startCommand": {
         "shell": "Run a single command, not shell syntax (no &&, |, ; or $( )). Point it at the entry file.",
@@ -4607,7 +4604,8 @@
     "sectionRecommendedHint": "Advised for most servers. You can add these at any time.",
     "sectionOptionalHint": "Only needed by some sites.",
     "alreadyInstalledHint": "Already on this server. Nothing to do here.",
-    "chooseEngineFirst": "Pick a database engine first"
+    "chooseEngineFirst": "Pick a database engine first",
+    "oneSqlOnly": "A server runs one SQL engine. Once this installs, switching to the other means rebuilding the server."
   },
   "storage": {
     "title": "Storage",

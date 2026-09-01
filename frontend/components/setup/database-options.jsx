@@ -22,6 +22,9 @@ import { Button } from "@/components/ui/button";
 // engines and marking one "Recommended" tells you which button to press but
 // never why — and the answer is different per project, not per server. Unknown
 // engines simply fall back to their state, so the list stays API-driven.
+// One SQL engine per server — the choice cannot be undone once it installs.
+const SQL_ENGINES = ["mysql", "mariadb"];
+
 const PURPOSE = {
   mysql: "purposeMysql",
   mariadb: "purposeMariadb",
@@ -103,6 +106,16 @@ export function DatabaseOptions({ options, failed = false, disabled = false, dis
           );
         })}
       </div>
+
+      {/* The same sentence the Databases page shows before it commits. Choosing
+          MySQL or MariaDB here is exactly as permanent, and the wizard is where
+          most people make the choice — saying it in only one of the two places
+          meant whichever door you came through decided whether you were told. */}
+      {chosen && SQL_ENGINES.includes(chosen.value) ? (
+        <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed">
+          {t("oneSqlOnly")}
+        </p>
+      ) : null}
 
       {chosen?.action ? (
         <Button
