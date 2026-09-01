@@ -56,13 +56,21 @@ language rather than the language of whoever caused them.
 ## Installing
 
 ```bash
-sudo bash install.sh --stack=lemp     # nginx + PHP   (default)
+sudo bash install.sh --stack=lemp     # nginx + PHP          (default)
 sudo bash install.sh --stack=lamp     # Apache + PHP
 sudo bash install.sh --stack=mern     # nginx + Node
+sudo bash install.sh --stack=ols      # OpenLiteSpeed + PHP  (experimental)
 ```
 
 Run it without `--stack` from a terminal and it asks. Under `curl | bash` there is
 no terminal to ask on, so pass the flag.
+
+**On `--stack=ols`:** the web server the installer picks is the one serving the
+panel itself, so if it misbehaves there is no working panel left to fix it from.
+OpenLiteSpeed is the one stack that has not yet been proven on real hardware, and
+it is labelled experimental for that reason — the other three are the safe choice
+if you have no preference. The panel's own PHP runs on PHP-FPM on every stack
+including this one; hosted sites on OLS get LSAPI (`lsphp`) as usual.
 
 | Option | |
 |---|---|
@@ -84,7 +92,7 @@ again rather than rebuilding the server.
 
 Laravel 13 on PHP 8.4, SQLite by default, Redis for cache, Sanctum for auth,
 [Pest](https://pestphp.com) for tests. The interface is Next.js 16 with React 19 and
-Tailwind 4. **872 tests** cover the backend.
+Tailwind 4. **2,567 tests** cover the backend.
 
 ```
 backend/     Laravel API
@@ -98,10 +106,11 @@ Honest about what has and has not been exercised:
 
 | | |
 |---|---|
-| Backend features | 872 passing tests |
-| `install.sh` | ⚠️ **not yet run end to end on a real server** |
-| OpenLiteSpeed | ⚠️ written, **never run on hardware** — the installer refuses to offer it |
-| MongoDB | operable, but the panel cannot install the engine yet |
+| Backend features | 2,567 passing tests (6 known failures, all in rollback) |
+| `install.sh` | real-server runs started 2026-09-01 on 26.04; two blocking bugs found and fixed, **not yet confirmed end to end** |
+| nginx / Apache / MERN stacks | exercised by the installer |
+| OpenLiteSpeed | ⚠️ selectable since 2026-09-01, **never run on hardware** — see the note under Installing |
+| MongoDB | installable from the panel |
 | Licence | ⚠️ **not chosen yet** — see below |
 
 **There is no licence file yet**, which means the usual copyright default applies
