@@ -26,12 +26,25 @@
  * configured, listed so that a match against them is a decision rather than a
  * hole in the pattern below.
  *
- * The document root is the repository's own `backend/public`, present since
- * fetch_source(). The socket is not a path OpenLiteSpeed stats — it is an
+ * Both document roots are the repository's own directories, present since
+ * fetch_source(). The fcgi socket is not a path OpenLiteSpeed stats — it is an
  * address for an external app, and configure_fpm() has already made it.
  */
 const OLS_PREEXISTING_PATHS = [
     '${APP_DIR}/backend/public',
+    '${APP_DIR}/frontend',
+];
+
+/**
+ * Every function that writes a `location` or `docRoot` into an OpenLiteSpeed
+ * vhost. Two vhosts now — the panel proxies to Next, the API serves Laravel —
+ * plus the blocks they share, and a path missed in any of them fails the
+ * install just as hard.
+ */
+const OLS_VHOST_WRITERS = [
+    'write_ols_vhost',
+    'write_ols_api_vhost',
+    'ols_acme_context',
 ];
 
 function installerSource(): string
@@ -80,10 +93,30 @@ it('creates every directory the OpenLiteSpeed vhost serves from', function () {
 
     expect($created)->not->toBeEmpty();
 
+    // `docRoot ${doc_root}` is a shell variable, not a path. Resolved from its
+    // own assignments rather than skipped: it holds a real directory in each
+    // branch, and skipping it would quietly stop checking the one path every
+    // request to that vhost depends on.
+    $docRoots = [];
+    preg_match_all('/doc_root="([^"]+)"/', implode("\n", installerFunction('write_ols_vhost')), $m);
+    $docRoots = $m[1];
+
+    expect($docRoots)->not->toBeEmpty();
+
     $served = [];
 
-    foreach (installerFunction('write_ols_vhost') as $line) {
-        if (preg_match('/^\s*(?:location|docRoot)\s+(\S+)\s*$/', $line, $m) === 1) {
+    foreach (OLS_VHOST_WRITERS as $writer) {
+        foreach (installerFunction($writer) as $line) {
+            if (preg_match('/^\s*(?:location|docRoot)\s+(\S+)\s*$/', $line, $m) !== 1) {
+                continue;
+            }
+
+            if ($m[1] === '${doc_root}') {
+                $served = array_merge($served, $docRoots);
+
+                continue;
+            }
+
             $served[] = $m[1];
         }
     }
@@ -215,25 +248,50 @@ it('answers for the API hostname as well as the panel one', function () {
     // named only ${PANEL_HOST} — so with the shipped `map Example *` catch-all
     // also removed, nothing on the box answered for the API hostname and the
     // panel would have installed, loaded, and failed every request it made.
-    $source = installerSource();
+    $maps = implode("\n", installerFunction('ols_listener_maps'));
+
+    expect($maps)->toContain('"$PANEL_SLUG" "$PANEL_HOST"')
+        ->and($maps)->toContain('"$PANEL_SLUG" "$API_HOST"')
+        // Single-host installs put both roles on one name and one vhost;
+        // a second map there would name a virtual host that does not exist.
+        ->and($maps)->toContain('(( SINGLE_HOST ))');
 
     // Both listeners: the plain one register_ols_panel_vhost() maps into, and
     // the TLS one install_ols_certificate() creates. Getting one and not the
     // other means the panel works until the certificate lands.
-    expect(substr_count($source, 'awk -v slug="${PANEL_SLUG}" -v host="$(ols_vhost_domains)"'))->toBe(2)
-        ->and($source)->toContain('map                     ${PANEL_SLUG} $(ols_vhost_domains)')
+    $source = installerSource();
+
+    expect(substr_count($source, 'awk -v maps="$(ols_listener_maps)"'))->toBe(2)
         ->and($source)->not->toContain('-v host="${PANEL_HOST}"');
+});
 
-    // Comma-separated with no space. The manual's Listeners "Domains" field
-    // specifies a comma-separated list; a space is not documented as tolerated,
-    // and a listener map that parses as one long hostname fails silently — it
-    // matches nothing rather than erroring.
-    $helper = implode("\n", installerFunction('ols_vhost_domains'));
+it('keeps the front controller out of the vhost that proxies to Next', function () {
+    // A `rewrite` block is virtual-host scope. In the proxy vhost every SPA
+    // route — /dashboard is not a file under any document root — would match
+    // `RewriteCond %{REQUEST_FILENAME} !-f` and be rewritten to /index.php, so
+    // the panel would answer Laravel's 404 on every page it has.
+    //
+    // OpenLiteSpeed's own manual says not to put document-root rules at vhost
+    // level and to use a context instead; the context this one would go in is
+    // `/`, which is the proxy. So the two roles get two vhosts, exactly as the
+    // Apache stack already splits them.
+    $body = implode("\n", installerFunction('write_ols_vhost'));
 
-    expect($helper)->toContain('printf \'%s,%s\' "$PANEL_HOST" "$API_HOST"')
-        // Single-host installs put both roles on one name; mapping it twice
-        // would be a duplicate domain, which OpenLiteSpeed rejects outright.
-        ->and($helper)->toContain('if (( SINGLE_HOST ))');
+    // The rewrite is emitted through a variable that only the single-host
+    // branch fills, and that branch fences it to the backend's own paths.
+    expect($body)->toContain('front_controller=""')
+        ->and($body)->not->toContain('$(ols_front_controller "")');
+
+    $fenced = substr($body, strpos($body, 'if (( SINGLE_HOST )); then'));
+
+    expect($fenced)->toContain('RewriteCond %{REQUEST_URI} ^/(api|sanctum)(/|$)');
+
+    // The API vhost has no proxy in it, so there the plain rule is right — and
+    // it must actually be there, or the backend serves 404 for every route
+    // Laravel owns.
+    expect(implode("\n", installerFunction('write_ols_api_vhost')))
+        ->toContain('$(ols_front_controller "")')
+        ->not->toContain('panel-next');
 });
 
 it('converges when the installer is re-run', function () {

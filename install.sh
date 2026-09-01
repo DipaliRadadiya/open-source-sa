@@ -1415,6 +1415,7 @@ configure_ols() {
 
     local conf="/usr/local/lsws/conf/httpd_config.conf"
     local vhost_dir="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}"
+    local api_vhost_dir="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}-api"
 
     [[ -f "$conf" ]] || die "OpenLiteSpeed installed but ${conf} is missing — see $LOG_FILE"
 
@@ -1428,7 +1429,13 @@ configure_ols() {
     ensure_ols_context_paths
 
     write_ols_vhost "$vhost_dir"
-    register_ols_panel_vhost "$conf" "$vhost_dir"
+
+    if (( ! SINGLE_HOST )); then
+        run mkdir -p "$api_vhost_dir" "${api_vhost_dir}/logs"
+        write_ols_api_vhost "$api_vhost_dir"
+    fi
+
+    register_ols_panel_vhost "$conf" "$vhost_dir" "$api_vhost_dir"
     harden_ols_webadmin
 
     # Tested before restarting, exactly as with nginx and Apache: a broken
@@ -1628,42 +1635,32 @@ install_ols_packages() {
 # Deliberately NOT built from the panel's php.blade.php template: that one is
 # for hosted sites and runs them on lsphp with per-site suEXEC. The panel is a
 # different animal — PHP-FPM over an fcgi external app, plus a proxy to Next.
-# Every hostname the panel's OpenLiteSpeed vhost answers for.
+# The listener `map` lines, one per virtual host, newline-terminated.
 #
-# nginx and Apache give the API its own server block on ${API_HOST}; OpenLiteSpeed
-# routes by listener `map`, and the map only ever named ${PANEL_HOST}. So on this
-# stack the API hostname resolved to the box and matched no virtual host at all
-# -- and since the installer also drops the shipped `map Example *` catch-all,
-# there was nothing left to answer it. The panel would install, load, and fail
-# every request it made.
+# nginx and Apache give the API its own server block on ${API_HOST}.
+# OpenLiteSpeed routes by listener `map`, and the installer only ever named
+# ${PANEL_HOST} -- so on a two-host install the API hostname resolved to the box
+# and matched no virtual host at all. Worse once the shipped `map Example *`
+# catch-all was dropped, since that had been answering it by accident.
 #
-# One vhost for both names rather than a second vhost, because the vhost already
-# routes by path: /api and /sanctum reach the backend, everything else reaches
-# Next. What that does not reproduce is nginx serving the *whole* backend at the
-# API host's root -- ${API_HOST}/docs/api-reference goes to Next here and 404s.
-# Recorded rather than hidden: it wants a second virtual host, and that is a
-# bigger change than the one that makes the panel work.
-#
-# Comma-separated with no space: the manual (Listeners_General_Help, "Domains")
-# specifies a comma-separated list, and a space is not documented as tolerated.
-ols_vhost_domains() {
-    if (( SINGLE_HOST )); then
-        printf '%s' "$PANEL_HOST"
-    else
-        printf '%s,%s' "$PANEL_HOST" "$API_HOST"
-    fi
+# One map per name rather than a comma-separated list on one map, because the
+# two names now have two different vhosts behind them: the panel proxies to
+# Next, the API serves Laravel.
+ols_listener_maps() {
+    printf '  map                     %s %s\n' "$PANEL_SLUG" "$PANEL_HOST"
+    (( SINGLE_HOST )) || printf '  map                     %s-api %s\n' "$PANEL_SLUG" "$API_HOST"
 }
 
 write_ols_vhost() {
     local vhost_dir="$1"
-    local api_context proxy_context
+    local api_context="" front_controller="" doc_root="${APP_DIR}/frontend" index_block=""
 
-    # `context /api` and `context /sanctum` before `context /`: OLS matches the
-    # most specific context, but Sanctum's CSRF route is top-level rather than
-    # under /api, and without its own context the catch-all proxy sends the
-    # SPA's very first request to Next, which 404s and login never starts. The
-    # same trap the nginx and Apache blocks each call out.
-    read -r -d '' api_context <<CONF || true
+    # Single-host installs serve the API and the SPA from one name, so this one
+    # vhost has to do both. Two-host installs get a separate backend vhost (see
+    # write_ols_api_vhost) exactly as the Apache stack gets a second
+    # <VirtualHost> -- and this one is then pure proxy, with no PHP in it at all.
+    if (( SINGLE_HOST )); then
+        read -r -d '' api_context <<CONF || true
 extprocessor ${PANEL_SLUG}-fpm {
   type                    fcgi
   address                 uds://run/php/${PANEL_SLUG}-fpm.sock
@@ -1678,7 +1675,49 @@ extprocessor ${PANEL_SLUG}-fpm {
 scripthandler {
   add                     fcgi:${PANEL_SLUG}-fpm php
 }
+
+# `context /api` and `context /sanctum` alongside the catch-all proxy: OLS
+# matches the most specific context, but Sanctum's CSRF route is top-level
+# rather than under /api, and without its own context the SPA's very first
+# request goes to Next, which 404s and login never starts. The same trap the
+# nginx and Apache blocks each call out.
+context /api {
+  location                ${APP_DIR}/backend/public/
+  allowBrowse             1
+  enableScript            1
+}
+
+context /sanctum {
+  location                ${APP_DIR}/backend/public/
+  allowBrowse             1
+  enableScript            1
+}
 CONF
+
+        # The front controller, fenced to the paths the backend owns.
+        #
+        # A rewrite block is a *virtual host* level rule -- OpenLiteSpeed's
+        # manual says in as many words not to put document-root rules here, and
+        # to use a context instead. We cannot: the context this rule would go in
+        # is `/`, and in single-host mode that one is the proxy to Next. So the
+        # fence is a RewriteCond on REQUEST_URI instead.
+        #
+        # Without it, `RewriteCond %{REQUEST_FILENAME} !-f` is true for every SPA
+        # route -- /dashboard is not a file under backend/public -- so every page
+        # of the panel would be rewritten to /index.php and answered by Laravel's
+        # 404 instead of by Next. Apache avoids the same collision with
+        # `<Location /api> ProxyPass !`, which is the same fence written the
+        # other way round.
+        front_controller=$(ols_front_controller '  RewriteCond %{REQUEST_URI} ^/(api|sanctum)(/|$)
+')
+        doc_root="${APP_DIR}/backend/public"
+        read -r -d '' index_block <<'CONF' || true
+index {
+  useServer               0
+  indexFiles              index.php
+}
+CONF
+    fi
 
     read -r -d '' proxy_context <<CONF || true
 extprocessor ${PANEL_SLUG}-next {
@@ -1698,14 +1737,107 @@ context /_next/static {
   enableExpires           1
   expiresByType           *=A31536000
 }
+
+# Everything else goes to Next.
+context / {
+  type                    proxy
+  handler                 ${PANEL_SLUG}-next
+  addDefaultCharset       off
+}
 CONF
+
+    # In two-host mode this vhost has no PHP in it at all -- no scripthandler,
+    # no index.php, and crucially NO rewrite block. The front controller here
+    # would rewrite every SPA route to /index.php, because /dashboard is not a
+    # file on disk, and the panel would answer Laravel's 404 on every page. The
+    # backend lives in its own vhost; nothing in this one needs a rewrite.
+    cat >"${vhost_dir}/vhconf.conf" <<CONF
+# Managed by the Control panel installer.
+docRoot                   ${doc_root}
+vhDomain                  ${PANEL_HOST}
+enableGzip                1
+
+$(ols_log_blocks)
+
+${index_block}
+
+${api_context}
+
+${proxy_context}
+
+$(ols_acme_context)
+
+$(ols_dotfile_context)
+
+${front_controller}
+CONF
+
+    run chown -R lsadm:lsadm "$vhost_dir"
+    ok "panel vhost written to ${vhost_dir}/vhconf.conf"
+}
+
+# The backend on its own hostname, two-host installs only.
+#
+# nginx and Apache both do this: ${API_HOST} gets its own server block serving
+# the whole of backend/public, and ${PANEL_HOST} gets one that only proxies to
+# Next. OpenLiteSpeed was the odd one out, running both roles through a single
+# vhost -- which left the API hostname mapped to nothing at all until the
+# previous commit, and still left ${API_HOST}/docs/api-reference reaching Next.
+#
+# Splitting them also removes the rewrite collision for free: with no proxy
+# context in this vhost, the front-controller rule can be a plain virtual-host
+# rewrite, which is the shape OpenLiteSpeed documents for a PHP application.
+write_ols_api_vhost() {
+    local vhost_dir="$1"
 
     cat >"${vhost_dir}/vhconf.conf" <<CONF
 # Managed by the Control panel installer.
 docRoot                   ${APP_DIR}/backend/public
-vhDomain                  $(ols_vhost_domains)
+vhDomain                  ${API_HOST}
 enableGzip                1
 
+$(ols_log_blocks)
+
+index {
+  useServer               0
+  indexFiles              index.php
+}
+
+extprocessor ${PANEL_SLUG}-fpm {
+  type                    fcgi
+  address                 uds://run/php/${PANEL_SLUG}-fpm.sock
+  maxConns                10
+  initTimeout             60
+  retryTimeout            0
+  persistConn             1
+  respBuffer              0
+  autoStart               0
+}
+
+scripthandler {
+  add                     fcgi:${PANEL_SLUG}-fpm php
+}
+
+context / {
+  location                ${APP_DIR}/backend/public/
+  allowBrowse             1
+  enableScript            1
+}
+
+$(ols_acme_context)
+
+$(ols_dotfile_context)
+
+$(ols_front_controller "")
+CONF
+
+    run chown -R lsadm:lsadm "$vhost_dir"
+    ok "API vhost written to ${vhost_dir}/vhconf.conf"
+}
+
+# Blocks both vhosts share, written once so the two cannot drift apart.
+ols_log_blocks() {
+    cat <<CONF
 errorlog \$VH_ROOT/logs/error.log {
   useServer               0
   logLevel                WARN
@@ -1717,70 +1849,53 @@ accesslog \$VH_ROOT/logs/access.log {
   rollingSize             10M
   keepDays                30
 }
-
-index {
-  useServer               0
-  indexFiles              index.php
+CONF
 }
 
-${api_context}
-
-${proxy_context}
-
 # Served from the backend's public/ so certbot --webroot has somewhere to drop
-# its token. Its own context so the front-controller rewrite below cannot
-# swallow it and answer Laravel's 404 page, which Let's Encrypt reads as
-# unauthorized.
+# its token. Its own context so the front-controller rewrite cannot swallow it
+# and answer Laravel's 404 page, which Let's Encrypt reads as unauthorized.
+# In both vhosts, because the certificate covers both names and certbot proves
+# each one separately.
+ols_acme_context() {
+    cat <<CONF
 context /.well-known/acme-challenge {
   location                ${APP_DIR}/backend/public/.well-known/acme-challenge
   allowBrowse             1
   addDefaultCharset       off
 }
-
-# Everything that is not the API goes to Next. Declared before the rewrite so
-# the front controller only ever sees API paths.
-context / {
-  type                    proxy
-  handler                 ${PANEL_SLUG}-next
-  addDefaultCharset       off
-}
-
-context /api {
-  location                ${APP_DIR}/backend/public/
-  allowBrowse             1
-  enableScript            1
-}
-
-context /sanctum {
-  location                ${APP_DIR}/backend/public/
-  allowBrowse             1
-  enableScript            1
+CONF
 }
 
 # Version control and dotfiles must never be served: a .git inside a web root
-# is a full source disclosure. "exp:" is OLS's regex context — nginx's "~" is
+# is a full source disclosure. "exp:" is OLS's regex context -- nginx's "~" is
 # not valid here and fails the config test.
-# (No backticks in this heredoc: it is unquoted, so they would be run as
-# command substitution rather than written to the file.)
+ols_dotfile_context() {
+    cat <<'CONF'
 context exp:^/\.(git|svn|hg|bzr|env|panel) {
   allowBrowse             0
 }
+CONF
+}
 
+# Laravel's front controller. $1 is an extra RewriteCond, used by the
+# single-host vhost to fence the rule to the paths the backend owns.
+ols_front_controller() {
+    local fence="$1"
+
+    cat <<CONF
 rewrite {
   enable                  1
-  # Apache's mod_rewrite, which OLS implements — not nginx's try_files. At
+  # Apache's mod_rewrite, which OLS implements -- not nginx's try_files. At
   # vhost level OLS does NOT strip the leading slash before matching, so the
   # loop guard is ^/index\.php\$ rather than ^index\.php\$; without the slash
   # the rule rewrites index.php to itself.
   RewriteRule ^/index\.php\$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
+${fence}  RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.php [L]
 }
 CONF
-
-    run chown -R lsadm:lsadm "$vhost_dir"
-    ok "panel vhost written to ${vhost_dir}/vhconf.conf"
 }
 
 # Register the panel's vhost in the shared httpd_config.conf.
@@ -1794,7 +1909,7 @@ CONF
 # and taking the panel down with it. Written outside, the panel's own entry is
 # copied through untouched exactly like a user's hand-written config.
 register_ols_panel_vhost() {
-    local conf="$1" vhost_dir="$2"
+    local conf="$1" vhost_dir="$2" api_vhost_dir="$3"
 
     if grep -q "^virtualHost ${PANEL_SLUG} " "$conf" 2>/dev/null; then
         skip "panel vhost already registered in httpd_config.conf"
@@ -1867,18 +1982,32 @@ virtualHost ${PANEL_SLUG} {
 }
 CONF
 
+    if (( ! SINGLE_HOST )); then
+        cat >>"$conf" <<CONF
+
+virtualHost ${PANEL_SLUG}-api {
+  vhRoot                  ${api_vhost_dir}/
+  configFile              ${api_vhost_dir}/vhconf.conf
+  allowSymbolLink         1
+  enableScript            1
+  # Same reason as above: the document root is under ${APP_DIR}, not vhRoot.
+  restrained              0
+}
+CONF
+    fi
+
     # The map goes just inside the Default listener's closing brace. Inserted
     # with awk on brace depth rather than "the next line starting with }" — a
     # hand-indented closing brace would otherwise put the map in whatever block
     # came next, where it is illegal and fails the config test.
     local tmp="${conf}.panel-tmp"
-    awk -v slug="${PANEL_SLUG}" -v host="$(ols_vhost_domains)" '
+    awk -v maps="$(ols_listener_maps)" '
         /^listener[[:space:]]+Default[[:space:]]*\{/ { inlistener = 1; depth = 0 }
         inlistener {
             n = gsub(/\{/, "{"); depth += n
             n = gsub(/\}/, "}"); depth -= n
             if (depth == 0) {
-                print "  map                     " slug " " host
+                printf "%s\n", maps
                 inlistener = 0
             }
         }
@@ -2481,11 +2610,21 @@ configure_tls_ols() {
 
 install_ols_certificate() {
     local conf="$1" vhconf="$2" cert="$3" key="$4"
+    local vhconfs=("$vhconf")
+
+    # The API vhost needs the certificate too. It answers on ${API_HOST}, which
+    # is on the same certificate, and a vhost without vhssl is served the
+    # listener's default -- so the SPA's own API calls would be the ones getting
+    # a name mismatch.
+    (( SINGLE_HOST )) || vhconfs+=("/usr/local/lsws/conf/vhosts/${PANEL_SLUG}-api/vhconf.conf")
 
     # The certificate on the vhost. Without this a second site on the box would
     # be served the panel's certificate and every visitor gets a name mismatch.
-    if ! grep -q '^vhssl {' "$vhconf"; then
-        cat >>"$vhconf" <<CONF
+    local target
+    for target in "${vhconfs[@]}"; do
+        [[ -f "$target" ]] || continue
+        grep -q '^vhssl {' "$target" && continue
+        cat >>"$target" <<CONF
 
 vhssl {
   keyFile                 ${key}
@@ -2497,7 +2636,7 @@ vhssl {
   sslProtocol             24
 }
 CONF
-    fi
+    done
 
     # The secure listener, and the panel mapped into it. Created only if absent:
     # a box that already has one has it for a reason.
@@ -2511,18 +2650,18 @@ listener Defaultssl {
   certFile                ${cert}
   certChain               1
   sslProtocol             24
-  map                     ${PANEL_SLUG} $(ols_vhost_domains)
+$(ols_listener_maps)
 }
 CONF
-    elif ! awk '/^listener[[:space:]]+Defaultssl[[:space:]]*\{/,/^\}/' "$conf" | grep -q "map .*${PANEL_SLUG} "; then
+    elif ! awk '/^listener[[:space:]]+Defaultssl[[:space:]]*\{/,/^\}/' "$conf" | grep -q "map .*${PANEL_SLUG}[ -]"; then
         local tmp="${conf}.panel-tmp"
-        awk -v slug="${PANEL_SLUG}" -v host="$(ols_vhost_domains)" '
+        awk -v maps="$(ols_listener_maps)" '
             /^listener[[:space:]]+Defaultssl[[:space:]]*\{/ { inlistener = 1; depth = 0 }
             inlistener {
                 n = gsub(/\{/, "{"); depth += n
                 n = gsub(/\}/, "}"); depth -= n
                 if (depth == 0) {
-                    print "  map                     " slug " " host
+                    printf "%s\n", maps
                     inlistener = 0
                 }
             }
