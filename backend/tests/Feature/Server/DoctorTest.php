@@ -528,3 +528,33 @@ describe('the PHP isolation check', function () {
         }
     });
 });
+
+it('fails when the panel is configured for a different web server than the box runs', function () {
+    // The check used to detect independently and never look at the value the
+    // panel actually writes vhosts with — so on the real server that hit this,
+    // doctor reported a clean bill of health while every site creation failed
+    // with `tee: /etc/apache2/sites-available/x.conf: No such file or directory`.
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'lamp',
+        'web_server' => 'apache',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer',
+        'verified_at' => now(),
+    ]);
+
+    Process::fake(fn () => Process::result(output: ''));
+
+    // The box runs nginx; /etc exists so detection finds it. Apache's directory
+    // is present too, which is what keeps reconcileWebServer() out of this —
+    // this is the reported case, not the repaired one.
+    config()->set('server.web_servers', ['nginx' => ['/etc'], 'apache' => ['/etc']]);
+    config()->set('server.doctor.checks', [WebServerCheck::class]);
+
+    $report = app(Doctor::class)->run();
+
+    expect($report['checks'][0]['status'])->toBe('fail')
+        ->and($report['healthy'])->toBeFalse()
+        ->and($report['checks'][0]['detail'])->toContain('apache')
+        ->and($report['checks'][0]['detail'])->toContain('nginx');
+});

@@ -5,6 +5,7 @@ namespace App\Services\Server\Capabilities;
 use App\Models\ServerCapability;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 
 /**
  * The single source of truth for "what is this server, and what can it run".
@@ -115,6 +116,71 @@ class ServerCapabilities
             'capabilities' => $this->detectRuntimes(),
             'source' => $record->source,
         ]);
+    }
+
+    /**
+     * Correct a recorded web server that the box contradicts.
+     *
+     * The record is normally right and beats detection — the installer knows
+     * what it built. But it can be wrong in one specific, checkable way: a
+     * server recorded as Apache, running OpenLiteSpeed, because detection ran
+     * before the installer's record and picked a leftover /etc/apache2. Every
+     * vhost the panel writes then goes to a directory that is not there, and
+     * the only way out was an operator running `server:record-stack` by hand.
+     * A panel that can see it is wrong should not need to be told.
+     *
+     * Deliberately narrow. It corrects only when the recorded web server is
+     * **not running and not even installed**, and exactly one supported web
+     * server *is* running. That is not a judgement call between two plausible
+     * answers; it is one answer and one thing that is not there. Anything less
+     * certain is left alone and reported by `panel:doctor` instead — silently
+     * overwriting the installer's own record on a weaker signal would be a
+     * worse bug than the one this fixes.
+     *
+     * Returns the corrected name, or null when nothing needed correcting.
+     */
+    public function reconcileWebServer(): ?string
+    {
+        $recorded = $this->recordedWebServer();
+
+        if ($recorded === null) {
+            return null;
+        }
+
+        $configured = (array) config('server.web_servers', []);
+
+        // Installed at all? A recorded server whose config directory is still
+        // there might merely be stopped, and stopping a web server is not the
+        // panel's cue to decide the box runs something else.
+        foreach ((array) ($configured[$recorded] ?? []) as $path) {
+            if (File::isDirectory($path)) {
+                return null;
+            }
+        }
+
+        $running = [];
+
+        foreach (array_keys($configured) as $name) {
+            if ($name !== $recorded && $this->unitIsActive($name)) {
+                $running[] = $name;
+            }
+        }
+
+        if (count($running) !== 1) {
+            return null;
+        }
+
+        Log::warning('Recorded web server corrected from the running server.', [
+            'recorded' => $recorded,
+            'running' => $running[0],
+        ]);
+
+        $this->store([
+            'web_server' => $running[0],
+            'source' => 'reconciled',
+        ]);
+
+        return $running[0];
     }
 
     private function detectAndStore(): ServerCapability

@@ -35,6 +35,7 @@ return [
         'binaries_required' => 'Instala los paquetes que faltan. Sin ellos las funciones básicas no pueden ejecutarse.',
         'binaries_optional' => 'Cada herramienta que falta desactiva la función indicada al lado. Instálala desde la página de configuración o ignórala si no la necesitas.',
         'web_server_missing' => 'No se encontró un servidor web compatible. Instala nginx o Apache.',
+        'web_server_mismatch' => 'Ejecute `php artisan server:record-stack <lemp|lamp|ols|mern>` en este servidor para registrar la pila que realmente ejecuta. Hasta entonces, la creación de sitios escribe en el servidor web equivocado.',
         'web_server_undrivable' => 'El panel no puede escribir configuración para este servidor web, así que no se pueden crear sitios. Cambia a nginx o Apache.',
         'web_server_config' => 'La configuración del servidor web no es válida. Ejecuta su prueba de configuración para ver por qué; la próxima recarga fallará hasta que se corrija.',
         'web_server_untestable' => 'El panel no tiene permiso para ejecutar la prueba de configuración del servidor web, así que no se pudo comprobar. Vuelve a ejecutar install.sh para actualizar el permiso de sudo; consulta la comprobación de privilegios para ver la causa.',

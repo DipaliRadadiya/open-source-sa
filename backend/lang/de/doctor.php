@@ -35,6 +35,7 @@ return [
         'binaries_required' => 'Installieren Sie die fehlenden Pakete. Ohne sie funktionieren Kernfunktionen überhaupt nicht.',
         'binaries_optional' => 'Jedes fehlende Werkzeug deaktiviert die daneben genannte Funktion. Über die Einrichtungsseite installieren oder ignorieren, wenn nicht benötigt.',
         'web_server_missing' => 'Kein unterstützter Webserver gefunden. Installieren Sie nginx oder Apache.',
+        'web_server_mismatch' => 'Führen Sie auf diesem Server `php artisan server:record-stack <lemp|lamp|ols|mern>` aus, um den tatsächlich laufenden Stack zu hinterlegen. Bis dahin schreibt die Site-Erstellung in den falschen Webserver.',
         'web_server_undrivable' => 'Das Panel kann für diesen Webserver keine Konfiguration schreiben, daher lassen sich keine Sites anlegen. Wechseln Sie zu nginx oder Apache.',
         'web_server_config' => 'Die Webserver-Konfiguration ist ungültig. Führen Sie deren Konfigurationstest aus — der nächste Reload schlägt fehl, bis das behoben ist.',
         'web_server_untestable' => 'Das Panel darf den Konfigurationstest des Webservers nicht ausführen, daher konnte er nicht geprüft werden. Führen Sie install.sh erneut aus, um die sudo-Berechtigung zu aktualisieren; die Ursache steht bei der Rechteprüfung.',

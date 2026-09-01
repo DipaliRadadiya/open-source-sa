@@ -3,6 +3,7 @@
 namespace App\Services\Server\Doctor\Checks;
 
 use App\Contracts\DoctorCheck;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
@@ -21,9 +22,19 @@ use Illuminate\Support\Str;
  * panel may not be *allowed* to run the config test. That is a warning about
  * this check, not a verdict on the config — {@see PrivilegeCheck} is where the
  * missing grant belongs, and it reports it.
+ *
+ * And a fourth, which this check used to be blind to. Everything above asks
+ * the *box* what is installed. The panel does not use that answer — it uses
+ * `ServerCapability.web_server`, recorded at install time. When the two
+ * disagree the box is fine, the config test passes, and doctor reported a
+ * clean bill of health on a server where every site creation was writing an
+ * Apache vhost into a directory that did not exist. A check that reads a
+ * different value from the code it is checking is not checking that code.
  */
 class WebServerCheck implements DoctorCheck
 {
+    public function __construct(private ServerCapabilities $capabilities) {}
+
     public function key(): string
     {
         return 'web_server';
@@ -31,7 +42,23 @@ class WebServerCheck implements DoctorCheck
 
     public function run(): array
     {
+        // Before anything else, because it can repair itself: a record the box
+        // flatly contradicts is corrected here rather than left for an operator
+        // to fix with a command they would first have to be told about.
+        $this->capabilities->reconcileWebServer();
+
         $detected = $this->detect();
+
+        $recorded = $this->capabilities->recordedWebServer();
+
+        if ($recorded !== null && $detected !== null && $recorded !== $detected) {
+            return [
+                'status' => 'fail',
+                'detail' => "the panel is configured for {$recorded} but this server runs {$detected}"
+                    ." — every site the panel writes goes to {$recorded}'s directories",
+                'fix' => 'doctor.fixes.web_server_mismatch',
+            ];
+        }
 
         if ($detected === null) {
             return [

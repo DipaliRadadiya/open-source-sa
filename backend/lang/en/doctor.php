@@ -35,6 +35,7 @@ return [
         'binaries_required' => 'Install the missing packages. Without them core features cannot run at all.',
         'binaries_optional' => 'Each missing tool disables the feature named beside it. Install it from the setup page, or ignore it if you do not need that feature.',
         'web_server_missing' => 'No supported web server was found. Install nginx or Apache.',
+        'web_server_mismatch' => 'Run `php artisan server:record-stack <lemp|lamp|ols|mern>` on this server to record the stack it actually runs. Site creation writes to the wrong web server until you do.',
         'web_server_undrivable' => 'The panel cannot write configuration for this web server, so sites cannot be created. Switch to nginx or Apache.',
         'web_server_config' => 'The web server configuration is invalid. Run its own config test to see why — the next reload will fail until it is fixed.',
         'web_server_untestable' => 'The panel is not permitted to run the web server\'s config test, so it could not be checked. Re-run install.sh to refresh the sudo grant; see the privilege check for the cause.',
