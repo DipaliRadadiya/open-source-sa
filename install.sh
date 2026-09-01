@@ -1421,12 +1421,61 @@ install_ols_packages() {
     local keyring=/usr/share/keyrings/litespeed.gpg
     local list=/etc/apt/sources.list.d/litespeed.list
 
+    # BOTH keys, not one. LiteSpeed publish two and sign the repository with the
+    # second; installing only lst_debian_repo.gpg produces
+    #
+    #   NO_PUBKEY 011AA62DEDA1F085
+    #   E: The repository ... is not signed.
+    #
+    # which is what a real install hit. Their own bootstrapper installs both,
+    # which is why it works and picking "the obvious one" did not.
+    #
+    #   lst_debian_repo.gpg -> 3F6F627083084D0E
+    #   lst_repo.gpg        -> 011AA62DEDA1F085  <- signs the Release file
+    #
+    # Fingerprints are pinned. This file becomes a root-level apt trust anchor,
+    # so "whatever that URL served" is not good enough: a key swapped in transit
+    # over plain HTTP would otherwise be trusted for every package it signs.
+    local -a key_urls=(
+        http://rpms.litespeedtech.com/debian/lst_debian_repo.gpg
+        http://rpms.litespeedtech.com/debian/lst_repo.gpg
+    )
+    local -a key_fprs=(
+        42259994257E19EB6A91CA853F6F627083084D0E
+        3E892522DB44E1B063D366C5011AA62DEDA1F085
+    )
+
     if [[ ! -f "$keyring" ]]; then
-        run curl -fsSL -o /tmp/litespeed.gpg http://rpms.litespeedtech.com/debian/lst_debian_repo.gpg
-        run gpg --dearmor --yes -o "$keyring" /tmp/litespeed.gpg 2>/dev/null \
-            || run cp -f /tmp/litespeed.gpg "$keyring"
-        run rm -f /tmp/litespeed.gpg
-        run chmod 644 "$keyring"
+        local tmpdir i url fpr got
+        tmpdir="$(mktemp -d)"
+
+        for i in "${!key_urls[@]}"; do
+            url="${key_urls[$i]}"
+            fpr="${key_fprs[$i]}"
+
+            run curl -fsSL -o "${tmpdir}/key${i}" "$url"
+
+            got="$(gpg --show-keys --with-colons "${tmpdir}/key${i}" 2>/dev/null \
+                   | awk -F: '/^fpr:/ {print $10; exit}')"
+
+            if [[ "$got" != "$fpr" ]]; then
+                rm -rf "$tmpdir"
+                die "the LiteSpeed signing key from ${url} is not the expected one.
+     expected ${fpr}
+     got      ${got:-nothing}
+     Refusing to trust it. Nothing has been added to apt."
+            fi
+        done
+
+        # Concatenated through --dearmor so the result is one keyring holding
+        # both keys, whichever encoding they arrive in.
+        if ! cat "${tmpdir}"/key* | gpg --dearmor >"${tmpdir}/keyring" 2>/dev/null; then
+            rm -rf "$tmpdir"
+            die "could not build the LiteSpeed keyring — see $LOG_FILE"
+        fi
+
+        run install -m 644 "${tmpdir}/keyring" "$keyring"
+        rm -rf "$tmpdir"
     fi
 
     # LiteSpeed publish one suite per Debian/Ubuntu codename under debian/.
