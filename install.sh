@@ -1425,6 +1425,8 @@ configure_ols() {
 
     run mkdir -p "$vhost_dir" "/usr/local/lsws/conf/vhosts" "${vhost_dir}/logs"
 
+    ensure_ols_context_paths
+
     write_ols_vhost "$vhost_dir"
     register_ols_panel_vhost "$conf" "$vhost_dir"
     harden_ols_webadmin
@@ -1439,15 +1441,54 @@ configure_ols() {
     # exiting non-zero. So `lswsctrl config_test` never tested anything: it
     # failed exactly the way a rejected config fails, and this function then
     # restored the original and aborted every single --stack=ols install.
-    if ! /usr/local/lsws/bin/openlitespeed -t >>"$LOG_FILE" 2>&1; then
+    local test_output
+    if ! test_output=$(/usr/local/lsws/bin/openlitespeed -t 2>&1); then
+        printf '%s\n' "$test_output" >>"$LOG_FILE"
         warn "the generated OpenLiteSpeed config failed its own test — restoring the original"
+        # The reason, on the terminal. OpenLiteSpeed names the offending vhost
+        # and context on the [ERROR] lines, which is the whole diagnosis; making
+        # someone go and find it in the log wastes the one thing the test
+        # produced.
+        printf '%s\n' "$test_output" | grep -F '[ERROR]' | sed 's/^/     /' >&2 || true
         run cp -f "${conf}.preinstall" "$conf"
         die "OpenLiteSpeed rejected the generated config; the original has been restored — see $LOG_FILE"
     fi
+    printf '%s\n' "$test_output" >>"$LOG_FILE"
 
     run systemctl enable lshttpd
     run systemctl restart lshttpd
     ok "OpenLiteSpeed serving ${PANEL_HOST}"
+}
+
+# The directories the vhost's static contexts point at, created before the
+# config that names them.
+#
+# OpenLiteSpeed resolves a `context`'s `location` at config-load time and
+# reports `path is not accessible` for one that does not exist. nginx and Apache
+# do not care -- they resolve per request -- so this is the one stack where the
+# order matters, and the order cannot change: configure_web_server() runs before
+# build_frontend() on purpose, because Next inlines NEXT_PUBLIC_* at build time
+# and the URLs are not final until TLS is settled. So at this point
+# frontend/.next does not exist yet, and neither does the acme-challenge
+# directory certbot has not yet had a reason to create.
+#
+# Dropping a context is not cosmetic in either case: the acme-challenge one is
+# how `certbot --webroot` proves the domain, and without it issuance gets
+# Laravel's 404 page and Let's Encrypt reads that as unauthorized.
+#
+# Ownership follows the panel account because build_frontend() writes into
+# .next as that user; a root-owned .next/static would trade this failure for a
+# build one. It chowns the tree again anyway, so this is belt and braces.
+ensure_ols_context_paths() {
+    local dirs=(
+        "${APP_DIR}/backend/public/.well-known/acme-challenge"
+        "${APP_DIR}/frontend/.next/static"
+    )
+
+    run mkdir -p "${dirs[@]}"
+    run chown -R "${APP_USER}:${APP_USER}" \
+        "${APP_DIR}/backend/public/.well-known" \
+        "${APP_DIR}/frontend/.next"
 }
 
 # The LiteSpeed apt repository, pinned rather than bootstrapped.
