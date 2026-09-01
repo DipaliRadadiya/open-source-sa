@@ -5,6 +5,7 @@ namespace App\Services\Server;
 use App\Contracts\PhpStack;
 use App\Exceptions\Server\Log\LogOperationException;
 use App\Models\Cronjob;
+use App\Models\Worker;
 use App\Support\ListSort;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -156,7 +157,7 @@ class LogManager
             // Asking journalctl for one line is the cheapest way to learn both
             // that it is installed and that the panel may read it.
             ? $this->serverOps->probe(
-                ['journalctl', '-n', '1', '--no-pager'],
+                $this->journalCommand($source, 1),
                 ['feature' => 'log', 'op' => 'exists', 'source' => $source['key']],
                 timeout: 15,
             )
@@ -203,6 +204,33 @@ class LogManager
             ['feature' => 'log', 'op' => 'permitted'],
             timeout: 10,
         )->ok;
+    }
+
+    /**
+     * `journalctl` for a source, narrowed to its identifier when it has one.
+     *
+     * The System Journal source has none and keeps its existing behaviour —
+     * the whole box, which is what that source is for. A worker has one, and
+     * without `-t` its "logs" would be every unit's output interleaved.
+     *
+     * @param  array<string, mixed>  $source
+     * @return array<int, string>
+     */
+    private function journalCommand(array $source, int $lines): array
+    {
+        $command = ['journalctl', '-n', (string) $lines, '--no-pager'];
+
+        $identifier = $source['identifier'] ?? null;
+
+        if (is_string($identifier) && $identifier !== '') {
+            // Passed as its own argv element, never interpolated — the value
+            // is ours (`sv-worker-{id}`), and keeping it an argument means it
+            // stays ours even if that ever stops being true.
+            $command[] = '-t';
+            $command[] = $identifier;
+        }
+
+        return $command;
     }
 
     private function remoteStat(array $source): array
@@ -303,7 +331,7 @@ class LogManager
         $window = $filter !== null && $filter !== '' ? self::PRIVILEGED_WINDOW : $lines;
 
         $command = ($source['kind'] ?? 'file') === 'journal'
-            ? ['journalctl', '-n', (string) $window, '--no-pager']
+            ? $this->journalCommand($source, $window)
             : ['tail', '-n', (string) $window, $source['path']];
 
         $result = $this->serverOps->run(
@@ -353,7 +381,12 @@ class LogManager
      */
     private function catalog(): array
     {
-        return array_merge(config('server.logs', []), $this->phpFpmLogs(), $this->cronjobLogs());
+        return array_merge(
+            config('server.logs', []),
+            $this->phpFpmLogs(),
+            $this->cronjobLogs(),
+            $this->workerLogs(),
+        );
     }
 
     /**
@@ -393,6 +426,41 @@ class LogManager
                 // contain anything it printed, and 0640 was chosen to keep that
                 // off other accounts.
                 'kind' => 'privileged',
+            ])
+            ->all();
+    }
+
+    /**
+     * One source per worker, read from the journal.
+     *
+     * A worker writes no file: its unit sends stdout and stderr to journald
+     * under `sv-worker-{id}`, which is why nothing has to rotate or clean up
+     * after it. The panel already told the frontend that identifier, and the
+     * worker row already links to `/logs?source=sv-worker-3` — but no source
+     * by that key existed, so the one button offering a worker's output led
+     * nowhere. Built from the table for the same reason cron jobs are: a
+     * source then always maps to a worker that exists, and the label is the
+     * worker's name rather than an identifier to decode.
+     *
+     * `identifier` rather than `path`, and the journal read is scoped to it —
+     * the generic System Journal source shows every unit on the box mixed
+     * together, which is not an answer to "what is this worker doing".
+     *
+     * @return array<int, array{key: string, label: string, group: string, path: string, kind: string, identifier: string}>
+     */
+    private function workerLogs(): array
+    {
+        return ListSort::caseInsensitive(
+            Worker::query()->with('application:id,name'),
+            'name',
+        )->get()
+            ->map(fn (Worker $worker) => [
+                'key' => 'sv-worker-'.$worker->id,
+                'label' => trim(($worker->application?->name ? $worker->application->name.' — ' : '').$worker->name),
+                'group' => 'worker',
+                'path' => '',
+                'kind' => 'journal',
+                'identifier' => 'sv-worker-'.$worker->id,
             ])
             ->all();
     }

@@ -4273,11 +4273,25 @@ For a `journal` source `size` and `modified` are **null** — it has no single
 size or last-write time, and a zero would read as an empty log last touched in
 1970.
 
-`group`: `web | database | cache | php | system | security | daemon | cronjob`. (`cache` is Redis; `cronjob` is one entry per cron job that has captured output, labelled with the job's name.)
+`group`: `web | database | cache | php | system | security | daemon | cronjob | worker`. (`cache` is Redis; `cronjob` is one entry per cron job that has captured output, labelled with the job's name; `worker` is one entry per background worker.)
 
 **The list is what exists on this server, not a fixed set.** Every source is filtered by whether it is really there — a file check, a privileged file check, or asking `journalctl` for one line — so a box with no MTA has no `mail` entry, a box running Apache has no `nginx_*` entries, and a box without certbot has no `letsencrypt`. Render whatever comes back rather than expecting fixed keys. System sources currently registered: `syslog`, `auth`, `kernel`, `mail`, `journal`.
 
 **A source is omitted only when the server answered "not there".** If the panel could not run the check at all — an out-of-date sudo grant is the usual reason — the source is **kept**, with `readable: false`. Those are opposite statements: dropping the second would say this server has no such log, and someone would reasonably conclude their cron jobs never wrote anything.
+
+**Worker logs are `journal`, one source per worker, keyed `sv-worker-{id}`.** A
+worker writes no file — its unit sends stdout and stderr to journald under that
+identifier, which is why nothing has to rotate or clean up after it. The source
+is **scoped to its own identifier**, so it shows that worker rather than every
+unit on the box; the `journal` source remains the whole system, which is what it
+is for. `WorkerResource.log_identifier` is the same string, so a worker row can
+link straight to `/logs?source={log_identifier}` without building the key.
+
+Like any journal source these are `follow: false`, `downloadable: false`, and
+`size`/`modified` null. Retention is journald's, not the panel's — the disk
+cleaner's `journal` category vacuums to `SERVER_DISK_JOURNAL_DAYS` (default 7)
+when it is enabled and includes that category; otherwise systemd's own size cap
+applies.
 
 **Cron job logs are `privileged`.** They are `0640` owned by the account the job runs as, whose group is that account's own — so the `adm` membership that makes `nginx`, `mysql` and `syslog` readable does not apply, and the panel reads them through the system like Let's Encrypt. `follow` and `downloadable` are therefore `false` for them.
 

@@ -1,8 +1,11 @@
 <?php
 
 use App\Models\ActivityLog;
+use App\Models\Application;
 use App\Models\Cronjob;
+use App\Models\SystemUser;
 use App\Models\User;
+use App\Models\Worker;
 use App\Services\Server\LogManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
@@ -492,5 +495,68 @@ describe('a cron job log', function () {
             ->and($source['kind'])->toBe('privileged')
             ->and($source['follow'])->toBeFalse()
             ->and($source['downloadable'])->toBeFalse();
+    });
+});
+
+describe('worker logs', function () {
+    beforeEach(function () {
+        config(['server.logs' => [
+            ['key' => 'journal', 'label' => 'System — Journal', 'group' => 'system', 'kind' => 'journal', 'path' => ''],
+        ]]);
+
+        $systemUser = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $application = Application::forceCreate([
+            'system_user_id' => $systemUser->id,
+            'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test',
+            'site_type' => 'php', 'serving_profile' => 'php',
+            'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
+        ]);
+
+        $this->worker = Worker::forceCreate([
+            'application_id' => $application->id,
+            'name' => 'Queue', 'kind' => 'queue',
+            'command' => 'php artisan queue:work',
+            'directory' => '/home/siteowner/shop',
+            'processes' => 1, 'enabled' => true,
+        ]);
+
+        Process::fake(fn () => Process::result(output: "worker started\n"));
+    });
+
+    it('offers one source per worker, named after the worker', function () {
+        // The API already sent `log_identifier` and the worker row already
+        // linked to /logs?source=sv-worker-{id}. No source by that key existed,
+        // so the one button offering a worker's output led nowhere.
+        $logs = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs'))->keyBy('key');
+
+        expect($logs)->toHaveKey('sv-worker-'.$this->worker->id)
+            ->and($logs['sv-worker-'.$this->worker->id]['label'])->toBe('Shop — Queue')
+            ->and($logs['sv-worker-'.$this->worker->id]['group'])->toBe('worker')
+            ->and($logs['sv-worker-'.$this->worker->id]['kind'])->toBe('journal');
+    });
+
+    it('reads only that worker, not the whole box', function () {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/sv-worker-'.$this->worker->id)
+            ->assertOk()
+            ->assertJsonPath('log.lines', ['worker started']);
+
+        // Without `-t` this source would show every unit on the server
+        // interleaved, which is not an answer to "what is this worker doing".
+        Process::assertRan(fn ($p) => in_array('journalctl', $p->command, true)
+            && in_array('-t', $p->command, true)
+            && in_array('sv-worker-'.$this->worker->id, $p->command, true));
+    });
+
+    it('leaves the system journal showing the whole system', function () {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/journal')->assertOk();
+
+        // That source exists precisely to show everything; narrowing it would
+        // remove the only view of units the panel does not manage.
+        Process::assertRan(fn ($p) => in_array('journalctl', $p->command, true)
+            && in_array('-t', $p->command, true) === false);
     });
 });
