@@ -125,6 +125,96 @@ it('creates them before the config that names them is tested', function () {
         ->and($write)->toBeLessThan($test);
 });
 
+/**
+ * The `listener Default` block and `virtualHost Example` exactly as
+ * OpenLiteSpeed 1.9.2 ships them — no space before either brace, `map Example
+ * *` last inside the listener, and a hand-indented closing brace.
+ *
+ * Copied from the .deb rather than typed from the documentation. Every mistake
+ * this installer has made against this file came from writing what the config
+ * ought to look like: `listener Default {` with a space matched nothing, and
+ * the listener being on :8088 rather than :80 would have registered the panel
+ * perfectly on a port nobody was asking for.
+ */
+const OLS_SHIPPED_CONFIG = <<<'CONF'
+virtualHost Example{
+    vhRoot                   Example/
+    allowSymbolLink          1
+    enableScript             1
+    restrained               1
+    setUIDMode               0
+    configFile               conf/vhosts/Example/vhconf.conf
+}
+
+listener Default{
+    address                  *:8088
+    secure                   0
+    map                      Example *
+}
+
+vhTemplate centralConfigLog{
+    templateFile             conf/templates/ccl.conf
+    listeners                Default
+}
+CONF;
+
+/**
+ * Run the installer's own awk program, pulled out of install.sh rather than
+ * copied into this file. A copy would drift, and the transformation is the
+ * thing being tested.
+ */
+function applyOlsRewrite(string $config): string
+{
+    preg_match(
+        "/local tmp80=.*?\n\s*awk '\n(.*?)\n\s*' \"\\\$conf\"/s",
+        installerSource(),
+        $matches,
+    );
+
+    expect($matches)->not->toBeEmpty('install.sh no longer has the awk pass this test exercises');
+
+    $input = tempnam(sys_get_temp_dir(), 'ols');
+    file_put_contents($input, $config);
+
+    $program = tempnam(sys_get_temp_dir(), 'awk');
+    file_put_contents($program, $matches[1]);
+
+    $output = (string) shell_exec('awk -f '.escapeshellarg($program).' '.escapeshellarg($input).' 2>&1');
+
+    unlink($input);
+    unlink($program);
+
+    return $output;
+}
+
+it('takes the shipped Example site out of the config, not just off the listener', function () {
+    $result = applyOlsRewrite(OLS_SHIPPED_CONFIG);
+
+    // Removing only the map left the virtualHost defined and still validated on
+    // every config load, where its root-owned document root trips
+    //   [WARN] ... Uid of /usr/local/lsws/Example/html/ is 0 ...
+    // on a demo site the installer has already decided is not reachable.
+    expect($result)->not->toContain('virtualHost Example')
+        ->and($result)->not->toContain('map                      Example');
+
+    // The listener survives it, on port 80, with the panel's own map still to
+    // be added by the pass that follows.
+    expect($result)->toContain('listener Default{')
+        ->and($result)->toContain('address                  *:80')
+        ->and($result)->not->toContain('*:8088');
+
+    // Nothing else went with it. An over-eager brace counter that swallowed the
+    // rest of the file would still satisfy every assertion above.
+    expect($result)->toContain('vhTemplate centralConfigLog{')
+        ->and($result)->toContain('conf/templates/ccl.conf');
+});
+
+it('converges when the installer is re-run', function () {
+    $once = applyOlsRewrite(OLS_SHIPPED_CONFIG);
+
+    expect(applyOlsRewrite($once))->toBe($once);
+});
+
 it('hands the frontend build a tree it can still write to', function () {
     // .next is created here as root and written by the panel account minutes
     // later. Without the chown this would trade an OpenLiteSpeed error for a

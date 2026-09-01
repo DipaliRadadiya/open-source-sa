@@ -1441,19 +1441,40 @@ configure_ols() {
     # exiting non-zero. So `lswsctrl config_test` never tested anything: it
     # failed exactly the way a rejected config fails, and this function then
     # restored the original and aborted every single --stack=ols install.
-    local test_output
-    if ! test_output=$(/usr/local/lsws/bin/openlitespeed -t 2>&1); then
-        printf '%s\n' "$test_output" >>"$LOG_FILE"
+    local test_output test_status=0
+    test_output=$(/usr/local/lsws/bin/openlitespeed -t 2>&1) || test_status=$?
+    printf '%s\n' "$test_output" >>"$LOG_FILE"
+
+    if (( test_status != 0 )); then
         warn "the generated OpenLiteSpeed config failed its own test — restoring the original"
-        # The reason, on the terminal. OpenLiteSpeed names the offending vhost
-        # and context on the [ERROR] lines, which is the whole diagnosis; making
-        # someone go and find it in the log wastes the one thing the test
-        # produced.
-        printf '%s\n' "$test_output" | grep -F '[ERROR]' | sed 's/^/     /' >&2 || true
+
+        # ALL of it, not the [ERROR] lines. OpenLiteSpeed fails this test on
+        # [WARN] too — an unbalanced brace is reported as one — so filtering to
+        # [ERROR] hid the entire reason for a failure on the one run where it
+        # mattered, and cost a round trip to a real server to find that out.
+        # A test whose output we cannot see is worth about as much as no test.
+        printf '     openlitespeed -t exited %s:\n' "$test_status" >&2
+        printf '%s\n' "$test_output" | sed 's/^/     /' >&2
+
         run cp -f "${conf}.preinstall" "$conf"
+
+        # Now ask the same question of the file exactly as OpenLiteSpeed
+        # shipped it. If that fails too, nothing the panel wrote is to blame
+        # and restoring it has fixed nothing — saying "the original has been
+        # restored" would be an outright lie, and the operator would go looking
+        # in the wrong file.
+        local base_output base_status=0
+        base_output=$(/usr/local/lsws/bin/openlitespeed -t 2>&1) || base_status=$?
+        printf '%s\n' "$base_output" >>"$LOG_FILE"
+
+        if (( base_status != 0 )); then
+            die "OpenLiteSpeed also rejects its own shipped configuration on this
+     server, so this is not something the panel put in the file. Both
+     tests are in $LOG_FILE. Nothing has been left modified."
+        fi
+
         die "OpenLiteSpeed rejected the generated config; the original has been restored — see $LOG_FILE"
     fi
-    printf '%s\n' "$test_output" >>"$LOG_FILE"
 
     run systemctl enable lshttpd
     run systemctl restart lshttpd
@@ -1774,8 +1795,29 @@ register_ols_panel_vhost() {
     # and the shipped `map Example *` catch-all dropped: left in place it
     # answers for our hostname too, exactly as Ubuntu's default nginx site and
     # Apache's 000-default do, both of which this installer already removes.
+    #
+    # The `virtualHost Example` block goes with it, not just the map. Removing
+    # only the map left the vhost defined and still validated on every config
+    # load, where its document root — root-owned, as apt unpacked it — trips
+    #
+    #   [WARN] [config:server:vhosts:vhost:Example] Uid of
+    #       /usr/local/lsws/Example/html/ is 0, smaller than minimum
+    #       requirement 11, use server uid!
+    #
+    # on a demo site the panel has already decided should not be reachable.
+    # Deleting nginx's default site and running a2dissite 000-default are the
+    # same decision; this is finishing it rather than doing half of it.
     local tmp80="${conf}.panel-tmp"
     awk '
+        !inexample && /^virtualHost[[:space:]]+Example[[:space:]]*\{/ {
+            inexample = 1; exdepth = 0
+        }
+        inexample {
+            n = gsub(/\{/, "{"); exdepth += n
+            n = gsub(/\}/, "}"); exdepth -= n
+            if (exdepth == 0) { inexample = 0 }
+            next
+        }
         /^listener[[:space:]]+Default[[:space:]]*\{/ { inlistener = 1 }
         inlistener && /^[[:space:]]*address[[:space:]]/ {
             sub(/address[[:space:]]+.*/, "address                  *:80")
