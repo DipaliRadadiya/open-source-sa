@@ -2,6 +2,7 @@
 
 use App\Models\ActivityLog;
 use App\Models\Application;
+use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\FileBrowser;
@@ -62,6 +63,21 @@ beforeEach(function () {
         'status' => 'active',
         'web_root' => '/',
         'php_version' => '8.4',
+    ]);
+
+    // Every installed panel has this row: install.sh records the stack it
+    // built. Without it these tests fell through to *detection*, which reads
+    // /etc from whatever machine the suite happens to run on — so what the
+    // file browser did before validating a path depended on whether the
+    // developer's laptop had nginx and Apache both installed. Recording it
+    // makes these tests about the file browser again.
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'lemp',
+        'web_server' => 'nginx',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer',
+        'verified_at' => now(),
     ]);
 
     FixPermissionsFake::reset();

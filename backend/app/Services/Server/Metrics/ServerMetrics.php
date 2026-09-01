@@ -3,6 +3,7 @@
 namespace App\Services\Server\Metrics;
 
 use App\Services\Server\Applications\DnsVerifier;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerPublicIp;
 use App\Support\Bytes;
@@ -31,6 +32,7 @@ class ServerMetrics
         private ServerOps $serverOps,
         private DnsVerifier $dns,
         private ServerPublicIp $publicIp,
+        private ServerCapabilities $capabilities,
     ) {}
 
     /**
@@ -524,10 +526,42 @@ class ServerMetrics
         return [
             'php' => $this->version(['php', '-r', 'echo PHP_VERSION;']),
             'node' => $this->version([(string) config('server.node_binary', 'node'), '-v']),
-            'nginx' => $this->version(['nginx', '-v']),
             'redis' => $this->version(['redis-server', '--version']),
             'mysql' => $this->version(['mysql', '--version']),
+            ...$this->webServerVersion(),
         ];
+    }
+
+    /**
+     * The version of the web server this box actually runs, keyed by its name.
+     *
+     * `nginx` used to be hardcoded here, so an Apache or OpenLiteSpeed server
+     * reported `nginx: null` on its dashboard and never showed the version of
+     * the web server it was really running — a blank where the one number the
+     * reader came for should be.
+     *
+     * Read from the recorded capability rather than probed, because probing is
+     * what this method is for and the answer is already known. Recorded, not
+     * detected: this is a dashboard read and must not trigger a box-wide probe
+     * as a side effect.
+     *
+     * @return array<string, string|null>
+     */
+    private function webServerVersion(): array
+    {
+        $name = $this->capabilities->recordedWebServer();
+
+        $command = match ($name) {
+            'nginx' => ['nginx', '-v'],
+            'apache' => ['apache2', '-v'],
+            // Prints the banner and exits; `lswsctrl` has no version verb.
+            'openlitespeed' => ['/usr/local/lsws/bin/openlitespeed', '-v'],
+            default => null,
+        };
+
+        // A server running something we have no driver for still gets a
+        // dashboard. Omitting the key is honest; inventing one is not.
+        return $command === null ? [] : [$name => $this->version($command)];
     }
 
     /**

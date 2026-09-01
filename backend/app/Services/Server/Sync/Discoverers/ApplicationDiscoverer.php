@@ -44,14 +44,14 @@ class ApplicationDiscoverer implements Discoverable
 
     public function discover(SyncRun $run): array
     {
-        $directory = $this->configDirectory();
+        $command = $this->listCommand();
 
-        if ($directory === null) {
+        if ($command === null) {
             return [];
         }
 
         $listing = $this->serverOps->run(
-            ['find', $directory, '-maxdepth', '1', '-type', 'f'],
+            $command,
             ['feature' => 'sync', 'op' => 'discover_applications'],
             timeout: 30,
         );
@@ -84,7 +84,7 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
-            $name = preg_replace('/\.conf$/', '', basename($path)) ?? basename($path);
+            $name = $this->vhostName($path);
 
             if ($this->matchesAny($name, $excludedNames)) {
                 continue;
@@ -250,23 +250,52 @@ class ApplicationDiscoverer implements Discoverable
     }
 
     /**
-     * Where this web server keeps its per-site configuration.
+     * How to list this web server's per-site configs.
      *
-     * OpenLiteSpeed keeps a directory per vhost rather than a file, so it is
-     * not covered here — reporting nothing is better than reporting a
-     * directory listing as if it were a list of sites.
+     * A command rather than a directory, because the layouts genuinely differ.
+     * nginx and Apache keep one file per site in one directory. OpenLiteSpeed
+     * keeps a *directory* per site, each holding a `vhconf.conf` — so a
+     * `-maxdepth 1 -type f` over its vhost root finds nothing at all, which is
+     * why sync used to return zero sites on this stack and call it a clean
+     * result. A server with sites on it reporting none is the wrong answer to
+     * give quietly.
+     *
+     * @return array<int, string>|null
      */
-    private function configDirectory(): ?string
+    private function listCommand(): ?array
     {
         $driver = $this->webServers->driver()->name();
 
-        return match ($driver) {
-            'nginx', 'apache' => rtrim(
-                (string) config("server.web_server_drivers.{$driver}.sites_available_dir"),
-                '/',
-            ) ?: null,
-            default => null,
-        };
+        if ($driver === 'openlitespeed') {
+            $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root'), '/');
+
+            // Exactly two levels: <vhost_root>/<site>/vhconf.conf. Deeper would
+            // pick up the per-site logs directory the templates write beside it.
+            return $root === '' ? null : [
+                'find', $root, '-mindepth', '2', '-maxdepth', '2', '-type', 'f', '-name', 'vhconf.conf',
+            ];
+        }
+
+        $directory = rtrim((string) config("server.web_server_drivers.{$driver}.sites_available_dir"), '/');
+
+        return $directory === '' ? null : ['find', $directory, '-maxdepth', '1', '-type', 'f'];
+    }
+
+    /**
+     * The site's name as this web server records it.
+     *
+     * For nginx and Apache that is the file. For OpenLiteSpeed every file is
+     * called `vhconf.conf`, so the *directory* is the name — taking the
+     * basename there would have given every site on the box the same one, and
+     * the tracked-slug and exclusion checks are both keyed on it.
+     */
+    private function vhostName(string $path): string
+    {
+        if (basename($path) === 'vhconf.conf') {
+            return basename(dirname($path));
+        }
+
+        return preg_replace('/\.conf$/', '', basename($path)) ?? basename($path);
     }
 
     /**
@@ -296,6 +325,15 @@ class ApplicationDiscoverer implements Discoverable
             }
         }
 
+        // OpenLiteSpeed: vhDomain and vhAliases, both comma-separated lists
+        // rather than space-separated — split on either, since a config
+        // written by hand may use spaces after the commas or instead of them.
+        if (preg_match_all('/^\s*vh(?:Domain|Aliases)\s+(.+)$/mi', $contents, $matches)) {
+            foreach ($matches[1] as $group) {
+                $domains = array_merge($domains, preg_split('/[,\s]+/', trim($group)) ?: []);
+            }
+        }
+
         $domains = array_values(array_unique(array_filter(
             array_map('strtolower', array_map('trim', $domains)),
             // `_` is nginx's catch-all and names nothing; a wildcard is not a
@@ -308,6 +346,11 @@ class ApplicationDiscoverer implements Discoverable
         if (preg_match('/^\s*root\s+([^;]+);/mi', $contents, $m)) {
             $root = trim($m[1]);
         } elseif (preg_match('/^\s*DocumentRoot\s+"?([^"\s]+)"?/mi', $contents, $m)) {
+            $root = trim($m[1]);
+        } elseif (preg_match('/^\s*docRoot\s+"?([^"\s]+)"?/mi', $contents, $m)) {
+            // OpenLiteSpeed. Matched last because `docRoot` is also a legal
+            // Apache-ish spelling nobody uses, and nginx/Apache should keep
+            // answering for their own files.
             $root = trim($m[1]);
         }
 

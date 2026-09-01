@@ -513,6 +513,11 @@ return [
     'web_server_drivers' => [
         'nginx' => [
             'driver' => NginxDriver::class,
+            // Every driver carries one. Without it the "not available on this
+            // web server" message falls back to the config key, so a user on
+            // nginx would be told about "nginx" while an OpenLiteSpeed user got
+            // "OpenLiteSpeed" — the same sentence in two registers.
+            'label' => 'Nginx',
             // The symlink nginx actually reads via its sites-enabled/* include.
             'sites_dir' => env('SERVER_NGINX_SITES_DIR', '/etc/nginx/sites-enabled'),
             // Where the real file is written; sites_dir then symlinks to it.
@@ -524,6 +529,7 @@ return [
         ],
         'apache' => [
             'driver' => ApacheDriver::class,
+            'label' => 'Apache',
             'sites_dir' => env('SERVER_APACHE_SITES_DIR', '/etc/apache2/sites-enabled'),
             'sites_available_dir' => env('SERVER_APACHE_SITES_AVAILABLE_DIR', '/etc/apache2/sites-available'),
             // `${APACHE_LOG_DIR}` in the templates, resolved — Apache expands
@@ -1333,7 +1339,7 @@ return [
         'nginx' => ['nginx_error', 'nginx_access'],
         'fail2ban' => ['fail2ban'],
         'apache' => ['apache_error', 'apache_access'],
-        'openlitespeed' => ['openlitespeed_error'],
+        'openlitespeed' => ['openlitespeed_error', 'openlitespeed_access'],
         'mysql' => ['mysql_error', 'mysql_slow'],
         'mariadb' => ['mysql_error', 'mysql_slow'],
         'mongodb' => ['mongodb'],
@@ -1371,6 +1377,11 @@ return [
         ['key' => 'nginx_error', 'label' => 'Nginx — Error', 'group' => 'web', 'path' => '/var/log/nginx/error.log'],
         ['key' => 'apache_access', 'label' => 'Apache — Access', 'group' => 'web', 'path' => '/var/log/apache2/access.log'],
         ['key' => 'apache_error', 'label' => 'Apache — Error', 'group' => 'web', 'path' => '/var/log/apache2/error.log'],
+        // Both, like the other two. OpenLiteSpeed had only an error log here,
+        // so the Logs screen offered no access log on that stack at all. The
+        // shipped httpd_config.conf writes `accessLog logs/access.log`, which
+        // resolves against $SERVER_ROOT.
+        ['key' => 'openlitespeed_access', 'label' => 'OpenLiteSpeed — Access', 'group' => 'web', 'path' => '/usr/local/lsws/logs/access.log'],
         ['key' => 'openlitespeed_error', 'label' => 'OpenLiteSpeed — Error', 'group' => 'web', 'path' => '/usr/local/lsws/logs/error.log'],
         // Database (installed engine)
         ['key' => 'mysql_error', 'label' => 'MySQL — Error', 'group' => 'database', 'path' => '/var/log/mysql/error.log'],
@@ -1447,6 +1458,11 @@ return [
             '/var/log/nginx/*.log',
             '/var/log/apache2/*.log',
             '/usr/local/lsws/logs/*.log',
+            // Per-site logs, which OpenLiteSpeed keeps under the vhost's own
+            // directory rather than in one shared place the way nginx and
+            // Apache do. Without this line every hosted site's logs on this
+            // stack were invisible to the cleaner.
+            '/usr/local/lsws/conf/vhosts/*/logs/*.log',
             '/var/log/mysql/*.log',
             '/var/log/mongodb/*.log',
             '/var/log/redis/*.log',

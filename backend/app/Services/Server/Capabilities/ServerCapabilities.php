@@ -142,20 +142,83 @@ class ServerCapabilities
     }
 
     /**
-     * Whoever owns port 80. Only one can, so the first match wins in the
-     * configured order.
+     * Whoever owns port 80.
+     *
+     * **A running unit beats a leftover directory.** This used to be a single
+     * pass over `server.web_servers` returning the first name whose config
+     * directory existed — and a directory is not a web server. `apt remove
+     * apache2` leaves /etc/apache2 behind, and apache is listed before
+     * openlitespeed, so a box running OpenLiteSpeed with a purged Apache
+     * answered "apache". Everything downstream follows this one value, so the
+     * panel then wrote Apache vhosts into a directory that no longer existed
+     * and site creation failed with `tee: /etc/apache2/sites-available/...:
+     * No such file or directory`.
+     *
+     * So: ask systemd first, which knows what is actually running. The
+     * directory pass stays as the fallback — a web server that is installed but
+     * stopped is still the one this box uses, and detection has to answer
+     * something for the setup screen to be able to say what it found.
      */
     private function detectWebServer(): ?string
     {
+        $candidates = [];
+
         foreach ((array) config('server.web_servers', []) as $name => $paths) {
             foreach ((array) $paths as $path) {
                 if (File::isDirectory($path)) {
-                    return $name;
+                    $candidates[] = $name;
+
+                    continue 2;
                 }
             }
         }
 
-        return null;
+        // One candidate is not ambiguous, and asking systemd would cost a
+        // subprocess to confirm what is already the only answer. That matters
+        // beyond speed: this runs on a cold read from anywhere in the panel,
+        // and the file browser guarantees it validates a path before touching
+        // the server at all. Probing here unconditionally broke that promise.
+        if (count($candidates) < 2) {
+            return $candidates[0] ?? null;
+        }
+
+        // Two config directories, so one of them is a leftover. `apt remove`
+        // does not delete /etc/apache2, and apache is listed before
+        // openlitespeed — which is how a box running OpenLiteSpeed answered
+        // "apache", and every vhost the panel then wrote went to a directory
+        // that no longer existed.
+        foreach ($candidates as $name) {
+            if ($this->unitIsActive($name)) {
+                return $name;
+            }
+        }
+
+        // None of them running: nothing to go on but the order, which is where
+        // this started. Returning the first is no worse than before, and the
+        // installer's own record beats detection on any box it built.
+        return $candidates[0];
+    }
+
+    /**
+     * Is this web server's systemd unit running right now?
+     *
+     * The unit name comes from the `services` catalog, which already maps
+     * openlitespeed to `lshttpd` — one list, so a rename cannot desync the two.
+     */
+    private function unitIsActive(string $name): bool
+    {
+        $unit = collect((array) config('server.services', []))
+            ->firstWhere('key', $name)['unit'] ?? null;
+
+        if (! is_string($unit) || $unit === '') {
+            return false;
+        }
+
+        return $this->serverOps->run(
+            ['systemctl', 'is-active', '--quiet', $unit],
+            ['feature' => 'capabilities', 'op' => 'detect_web_server', 'unit' => $unit],
+            timeout: 15,
+        )->ok;
     }
 
     /**

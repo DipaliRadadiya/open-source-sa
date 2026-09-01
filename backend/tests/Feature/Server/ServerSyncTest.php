@@ -23,6 +23,7 @@ use App\Models\User;
 use App\Models\Worker;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\Sync\Discoverers\ApplicationDiscoverer;
 use App\Services\Server\Sync\ServerSync;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
@@ -154,8 +155,20 @@ describe('preview', function () {
         fakeServer();
         runSync(SyncMode::Preview);
 
-        foreach (['useradd', 'usermod', 'tee', 'rm', 'chmod', 'chown', 'systemctl'] as $binary) {
+        // Binaries that only ever write.
+        foreach (['useradd', 'usermod', 'tee', 'rm', 'chmod', 'chown'] as $binary) {
             Process::assertNotRan(fn ($p) => in_array($binary, (array) $p->command, true));
+        }
+
+        // systemctl by verb, not by name. Banning the binary outright was a
+        // proxy for "changes nothing", and it is the wrong proxy: `is-active`
+        // and `show` are reads this codebase already relies on to answer what
+        // is running — including web-server detection, which preview needs in
+        // order to know whose vhosts it is about to read. Asserting on the verb
+        // says what the test means, and still fails on the thing that matters.
+        foreach (['start', 'stop', 'restart', 'reload', 'enable', 'disable', 'mask', 'daemon-reload'] as $verb) {
+            Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'systemctl'
+                && in_array($verb, (array) $p->command, true));
         }
     });
 });
@@ -1685,5 +1698,108 @@ describe('a run nothing is going to finish', function () {
             ->getJson('/api/server/sync/latest')
             ->assertOk()
             ->assertJsonPath('sync.status', 'failed');
+    });
+});
+
+/*
+ * Discovering sites on OpenLiteSpeed.
+ *
+ * A separate describe because the layout is genuinely different, and the
+ * difference is what broke it: nginx and Apache keep one config file per site
+ * in one directory, OpenLiteSpeed keeps a *directory* per site each holding a
+ * `vhconf.conf`. The old `find -maxdepth 1 -type f` over its vhost root matched
+ * nothing, so a server full of sites synced clean and reported none — the worst
+ * possible shape for this feature, because "no sites found" is also what a
+ * correct run on an empty box looks like.
+ */
+describe('discovering sites on OpenLiteSpeed', function () {
+    beforeEach(function () {
+        ServerCapability::query()->delete();
+        ServerCapability::query()->create([
+            'stack' => 'ols',
+            'web_server' => 'openlitespeed',
+            'capabilities' => ['php' => true, 'node' => true],
+            'source' => 'installer',
+            'verified_at' => now(),
+        ]);
+
+        $this->run = SyncRun::create(['status' => 'running', 'started_at' => now()]);
+        $this->owner = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    function fakeOlsVhosts(array $vhosts, string $owner = 'siteowner'): void
+    {
+        Process::fake(function ($process) use ($vhosts, $owner) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+
+            if ($binary === 'getent') {
+                return Process::result(output: "siteowner:x:1001:1001::/home/siteowner:/bin/bash\n");
+            }
+
+            // The real shape: two levels down, and always called vhconf.conf.
+            if ($binary === 'find') {
+                return Process::result(output: implode("\n", array_map(
+                    fn (string $name): string => "/usr/local/lsws/conf/vhosts/{$name}/vhconf.conf",
+                    array_keys($vhosts),
+                )));
+            }
+
+            if ($binary === 'cat') {
+                $path = (string) ($args[1] ?? '');
+
+                foreach ($vhosts as $name => $contents) {
+                    if (str_contains($path, "/vhosts/{$name}/")) {
+                        return Process::result(output: $contents);
+                    }
+                }
+
+                return Process::result(exitCode: 1, errorOutput: 'No such file');
+            }
+
+            if ($binary === 'stat') {
+                return Process::result(output: $owner);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    it('reads vhDomain, vhAliases and docRoot', function () {
+        fakeOlsVhosts(['shop' => implode("\n", [
+            'docRoot                   /home/siteowner/shop/public_html',
+            'vhDomain                  shop.example.com',
+            'vhAliases                 www.shop.example.com, shop.example.net',
+            'enableGzip                1',
+        ])]);
+
+        $found = app(ApplicationDiscoverer::class)->discover($this->run);
+
+        expect($found)->toHaveCount(1)
+            ->and($found[0]['key'])->toBe('shop.example.com')
+            // Comma-separated, unlike nginx's spaces. Splitting on whitespace
+            // alone would have produced one domain called "www.shop.example.com,".
+            ->and($found[0]['attributes']['domains'])
+            ->toBe(['shop.example.com', 'www.shop.example.com', 'shop.example.net'])
+            ->and($found[0]['attributes']['document_root'])->toBe('/home/siteowner/shop/public_html');
+    });
+
+    it('names the site after its directory, not after vhconf.conf', function () {
+        // Every OpenLiteSpeed site's file has the same basename, so deriving
+        // the name from the file would give every site on the box the name
+        // "vhconf" — and both the already-tracked check and the exclusion list
+        // are keyed on it, so one adopted site would suppress all the others.
+        Application::factory()->create(['slug' => 'shop', 'domain' => 'shop.example.com']);
+
+        fakeOlsVhosts([
+            'shop' => "docRoot /home/siteowner/shop/public_html\nvhDomain shop.example.com\n",
+            'blog' => "docRoot /home/siteowner/blog/public_html\nvhDomain blog.example.com\n",
+        ]);
+
+        $found = app(ApplicationDiscoverer::class)->discover($this->run);
+
+        // `shop` is already tracked and drops out by slug; `blog` survives.
+        expect($found)->toHaveCount(1)
+            ->and($found[0]['key'])->toBe('blog.example.com');
     });
 });
