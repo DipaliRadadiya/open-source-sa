@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -19,6 +19,11 @@ import { CoverageTable, sortCoverage } from "@/components/backups/coverage-table
 import { CoverageCards } from "@/components/backups/coverage-cards";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 
+// How long a press of "Run backup" keeps the page watching on its own. Long
+// enough for a queue to pick the job up and the row to start reporting it;
+// short enough that a job which never starts stops polling on its own.
+const JUST_STARTED_MS = 90_000;
+
 /**
  * Which sites are protected, and which are not.
  *
@@ -33,6 +38,10 @@ export function CoverageCard({ coverage, applications, destinations, canManage }
   const [setupFor, setSetupFor] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  // Set when "Run backup" is pressed, so the poller can cover the gap between
+  // accepting the run and the row showing it. A timer clears it rather than a
+  // comparison against `Date.now()`, which would make the render impure.
+  const [justStarted, setJustStarted] = useState(false);
 
   const [state, setState] = useState("all");
   const [search, setSearch] = useState("");
@@ -72,6 +81,10 @@ export function CoverageCard({ coverage, applications, destinations, canManage }
     try {
       await runBackupNow(applicationId);
       toast.success(t("started", { name }));
+      // Before the refresh, not after. The run is queued, so the row the
+      // server is about to send still carries the PREVIOUS backup's finished
+      // status — see `watching` below.
+      setJustStarted(true);
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
@@ -80,16 +93,33 @@ export function CoverageCard({ coverage, applications, destinations, canManage }
     }
   }
 
+  // Stop watching on our own if the run never shows up — a job that was
+  // accepted and then never ran must not poll for as long as the tab is open.
+  useEffect(() => {
+    if (!justStarted) return undefined;
+    const id = setTimeout(() => setJustStarted(false), JUST_STARTED_MS);
+    return () => clearTimeout(id);
+  }, [justStarted]);
+
   const listProps = { rows, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyId };
 
   // Pressing "Run backup" used to leave the row unchanged until someone
   // reloaded. While any site's newest run is still being written, re-run the
   // server component so the status dot and the last-run time keep up.
-  const busy = coverage.rows.some((row) => BACKUP_IN_FLIGHT.includes(row.lastBackup?.status));
+  //
+  // The status alone is not enough to start watching. `router.refresh()` fires
+  // the instant the API accepts the run, and at that moment the newest backup
+  // on the row is still the *last* one, finished — so nothing looked in
+  // flight, the poller never mounted, and a run that completed four seconds
+  // later left the row reading the old timestamp until someone reloaded by
+  // hand. Pressing the button is itself evidence that work has begun, so it
+  // opens a window in which we keep watching regardless of what the row says.
+  const inFlight = coverage.rows.some((row) => BACKUP_IN_FLIGHT.includes(row.lastBackup?.status));
+  const watching = inFlight || justStarted;
 
   return (
     <>
-      {busy ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
+      {watching ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
       <div className="space-y-4">
         {/* Above the coverage banner: a site can be perfectly configured and
