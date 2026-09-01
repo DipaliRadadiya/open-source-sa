@@ -2,6 +2,7 @@
 
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -214,4 +215,63 @@ it('still offers the package removal for a manual clean', function () {
         ->assertOk();
 
     Process::assertRan(fn ($p) => $p->command === ['apt-get', '-y', 'autoremove', '--purge']);
+});
+
+describe('the journal estimate', function () {
+    it('counts only what a vacuum would actually remove', function () {
+        $ran = [];
+
+        Process::fake(function ($process) use (&$ran) {
+            $args = ($process->command[0] ?? '') === 'sudo'
+                ? array_slice($process->command, 2)
+                : $process->command;
+
+            $ran[] = $args;
+
+            return match ($args[0] ?? '') {
+                // Deliberately large: if the estimate still asked journalctl,
+                // this is the number that would come back and the assertion
+                // below would catch it.
+                'journalctl' => Process::result(output: 'Archived and active journals take up 200.0M in the file system.'),
+                'find' => Process::result(output: "1024\n2048\n"),
+                default => Process::result(exitCode: 0),
+            };
+        });
+
+        expect(app(JournalTarget::class)->estimate())->toBe(3072);
+
+        $find = collect($ran)->first(fn (array $c) => ($c[0] ?? '') === 'find');
+
+        // Archived files only — `system.journal` is the open one and a vacuum
+        // never removes it — and only those past the retention window. The
+        // old estimate reported the whole journal, so the screen offered
+        // 200 MB and the button freed nothing.
+        expect($find)->not->toBeNull()
+            ->and($find)->toContain('/var/log/journal')
+            ->and($find)->toContain('*@*.journal*')
+            ->and($find)->toContain('+7');
+    });
+
+    it('estimates against the same window it cleans with', function () {
+        config(['server.disk_cleaner.journal_days' => 30]);
+
+        $ran = [];
+
+        Process::fake(function ($process) use (&$ran) {
+            $ran[] = ($process->command[0] ?? '') === 'sudo'
+                ? array_slice($process->command, 2)
+                : $process->command;
+
+            return Process::result(output: "1024\n");
+        });
+
+        $target = app(JournalTarget::class);
+        $target->estimate();
+        $target->clean();
+
+        // One number, two commands. Reading the config twice is how they drift.
+        expect(collect($ran)->first(fn (array $c) => ($c[0] ?? '') === 'find'))->toContain('+30')
+            ->and(collect($ran)->first(fn (array $c) => ($c[0] ?? '') === 'journalctl'))
+            ->toContain('--vacuum-time=30d');
+    });
 });
