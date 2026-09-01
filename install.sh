@@ -449,16 +449,36 @@ BUILD_MEMORY_MB=3072
 # is a cheap way to turn a hard kill into a slow minute.
 MINIMUM_SWAP_MB=1024
 
+# How far below target the existing swapfile may sit before it is rebuilt.
+# Exists because mkswap's one-page header makes every file measure 1 MB short
+# of the size it was created at, so an exact comparison is never satisfied and
+# the installer rebuilds its swapfile on every single run. 64 MB is far above
+# that 1 MB and far below any increment worth acting on.
+SWAP_TOLERANCE_MB=64
+
 configure_swap() {
     step "Checking memory"
 
-    local ram_mb swap_mb wanted_mb add_mb
+    local ram_mb swap_mb wanted_mb add_mb ours_mb
     ram_mb=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
 
     # Existing swap is counted, not treated as a reason to stop looking. The
     # old check bailed the moment *any* swap existed, so a box that came with a
     # 256 MB swapfile got nothing added and failed the build anyway.
     swap_mb=$(awk '/SwapTotal/ {printf "%d", $2/1024}' /proc/meminfo)
+
+    # A second file rather than resizing the first: /swapfile may not be ours,
+    # and swapoff-ing a file the box is actively paging into is a far worse
+    # failure than using a little more disk.
+    local swapfile=/swapfile-panel
+
+    # How much of that total is the file we manage. Read from /proc/swaps
+    # rather than `swapon --show`, which is in /sbin and not always on PATH,
+    # and which would be a second way of reading what /proc/meminfo above
+    # already answers. A file listed as "(deleted)" does not match, which is
+    # correct: it is gone and is not coming back.
+    ours_mb=$(awk -v f="$swapfile" '$1 == f {printf "%d", $3/1024}' /proc/swaps 2>/dev/null)
+    ours_mb=${ours_mb:-0}
 
     # PANEL_SWAP_MB is the escape hatch: `0` skips this entirely (for a box
     # whose swap the operator manages), any other number forces that size.
@@ -486,20 +506,34 @@ configure_swap() {
         wanted_mb=$(( BUILD_MEMORY_MB - ram_mb ))
         (( wanted_mb < MINIMUM_SWAP_MB )) && wanted_mb=$MINIMUM_SWAP_MB
 
-        add_mb=$(( wanted_mb - swap_mb ))
+        # Sized against the swap that is NOT ours, because our own file is
+        # about to be deleted and recreated. Counting it would size the
+        # replacement as though it still existed: a 1 GB box wanting 2048 MB,
+        # already holding our 1024 MB file, computed 1025 MB — then removed the
+        # 1024 and created 1025, landing at half the target.
+        add_mb=$(( wanted_mb - (swap_mb - ours_mb) ))
 
         if (( add_mb <= 0 )); then
             ok "${ram_mb} MB RAM + ${swap_mb} MB swap, nothing to add"
             return
         fi
 
-        say "     ${ram_mb} MB RAM + ${swap_mb} MB swap — adding ${add_mb} MB (want ${wanted_mb} MB of swap)"
-    fi
+        # mkswap spends one page on its header, so a file of N MB reports as
+        # N-1: 64 MB measures 63, 1024 measures 1023. Without a tolerance every
+        # re-run therefore saw a 1 MB shortfall and "fixed" it — and since the
+        # fix is swapoff/delete/recreate at add_mb, re-running the installer
+        # REPLACED a gigabyte of swap with a 1 MB file. Observed on a real
+        # server: "Setting up swapspace version 1, size = 1020 KiB".
+        #
+        # The faked /proc/meminfo this was verified against used exact numbers,
+        # which is precisely why it could not show this.
+        if (( ours_mb > 0 && ours_mb + SWAP_TOLERANCE_MB >= add_mb )); then
+            ok "${ram_mb} MB RAM + ${swap_mb} MB swap, already enough"
+            return
+        fi
 
-    # A second file rather than resizing the first: /swapfile may not be ours,
-    # and swapoff-ing a file the box is actively paging into is a far worse
-    # failure than using a little more disk.
-    local swapfile=/swapfile-panel
+        say "     ${ram_mb} MB RAM + ${swap_mb} MB swap — sizing ${swapfile} to ${add_mb} MB (want ${wanted_mb} MB total)"
+    fi
 
     if [[ -e "$swapfile" ]]; then
         swapoff "$swapfile" 2>/dev/null || true
@@ -1445,7 +1479,24 @@ install_ols_packages() {
         3E892522DB44E1B063D366C5011AA62DEDA1F085
     )
 
+    # Rebuilt whenever the keyring on disk does not already hold every expected
+    # key, not merely when the file is absent. A box that ran an earlier build
+    # of this installer has a keyring with only one of the two, and `-f` alone
+    # would skip past it forever — which is exactly what happened: the re-run
+    # after the fix produced the identical NO_PUBKEY error, because the broken
+    # file was still there and still counted as "done".
+    local needs_keyring=0
     if [[ ! -f "$keyring" ]]; then
+        needs_keyring=1
+    else
+        local have
+        have="$(gpg --show-keys --with-colons "$keyring" 2>/dev/null | awk -F: '/^fpr:/ {print $10}')"
+        for fpr in "${key_fprs[@]}"; do
+            grep -qx "$fpr" <<<"$have" || needs_keyring=1
+        done
+    fi
+
+    if (( needs_keyring )); then
         local tmpdir i url fpr got
         tmpdir="$(mktemp -d)"
 
