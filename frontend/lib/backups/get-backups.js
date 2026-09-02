@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { read } from "@/lib/api/read";
+import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 import { classify } from "@/lib/backups/coverage-state";
 import { getAllApplications } from "@/lib/applications/get-applications";
 import {
@@ -13,6 +14,26 @@ import {
   backupsResponseSchema,
   restoresResponseSchema,
 } from "@/lib/schemas/backup";
+
+/**
+ * `per_page` from the URL, held to the four values the selector offers.
+ *
+ * These two lists were the only paginated ones passing it through untouched,
+ * and the API takes any integer 1-100. So `?per_page=999` answered 422 and the
+ * whole page rendered its load-failure panel over one junk query param, while
+ * `?per_page=7` was honoured — paging by seven under a rows-per-page box that
+ * rendered blank, because seven is not one of its options.
+ *
+ * Only strings are policed. Those come from the URL and are somebody's typing;
+ * a number came from our own code, which asks for `per_page: 5` when it wants
+ * the few most recent restores rather than a screenful, and overriding that
+ * would be this guard picking a fight with its own callers.
+ */
+function perPage(value) {
+  if (typeof value === "number") return value;
+  if (value === undefined || value === null) return undefined;
+  return PER_PAGE_OPTIONS.includes(Number(value)) ? Number(value) : PER_PAGE_OPTIONS[0];
+}
 
 /**
  * Backup history across every application, paginated by the server.
@@ -29,7 +50,7 @@ export async function getBackups(searchParams = {}) {
   const result = await read("/backups", backupsResponseSchema, {
     searchParams: {
         page: searchParams.page,
-        per_page: searchParams.per_page,
+        per_page: perPage(searchParams.per_page),
         "filter[application_id]": searchParams.application,
         "filter[status]": oneOf(searchParams.status, BACKUP_STATUSES),
         "filter[type]": oneOf(searchParams.type, BACKUP_TYPES),
@@ -39,7 +60,7 @@ export async function getBackups(searchParams = {}) {
 
   return {
     backups: result.data?.backups ?? [],
-    meta: result.data?.meta ?? { current_page: 1, per_page: 20, total: 0, last_page: 1 },
+    meta: result.data?.meta ?? { current_page: 1, per_page: PER_PAGE_OPTIONS[0], total: 0, last_page: 1 },
     failed: result.failed,
     status: result.status,
     failure: result.failure,
@@ -112,7 +133,7 @@ export async function getRestores(searchParams = {}) {
   const result = await read("/restores", restoresResponseSchema, {
     searchParams: {
       page: searchParams.page,
-      per_page: searchParams.per_page,
+      per_page: perPage(searchParams.per_page),
       "filter[application_id]": searchParams.application,
       "filter[status]": oneOf(searchParams.status, RESTORE_STATUSES),
       "filter[type]": oneOf(searchParams.type, BACKUP_TYPES),
@@ -122,7 +143,7 @@ export async function getRestores(searchParams = {}) {
 
   return {
     restores: result.data?.restores ?? [],
-    meta: result.data?.meta ?? { current_page: 1, per_page: 20, total: 0, last_page: 1 },
+    meta: result.data?.meta ?? { current_page: 1, per_page: PER_PAGE_OPTIONS[0], total: 0, last_page: 1 },
     failed: result.failed,
     status: result.status,
     failure: result.failure,
