@@ -1,26 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
 import { Activity } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
-import {
-  Area,
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  orderedLegend,
-  timeLabel,
-} from "@/components/dashboard/live-chart-card";
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
   Card,
   CardContent,
@@ -28,10 +11,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { clockFormatter } from "@/lib/format/time";
 import { historySeries } from "@/lib/server/history-series";
-import { cn } from "@/lib/utils";
+
+/** Tokens this chart draws with, resolved from globals.css at runtime. */
+const TOKENS = [
+  "chart-1",
+  "chart-2",
+  "chart-3",
+  "border",
+  "muted-foreground",
+  "popover",
+  "popover-foreground",
+];
 
 function metricValue(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -59,52 +51,11 @@ function ChartNotice({ message }) {
   );
 }
 
-function ChartViewport({ children, config }) {
-  const rootRef = useRef(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    let observer;
-    const revealIfReady = () => {
-      if (!root.querySelector("svg")) return;
-      setReady(true);
-      observer?.disconnect();
-    };
-
-    observer = new MutationObserver(revealIfReady);
-    observer.observe(root, { childList: true, subtree: true });
-    const frame = window.requestAnimationFrame(revealIfReady);
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, []);
-
-  return (
-    <div ref={rootRef} className="relative h-72" aria-busy={!ready}>
-      {!ready ? (
-        <Skeleton
-          className="absolute inset-0 z-10 h-full w-full rounded-lg"
-          aria-hidden="true"
-        />
-      ) : null}
-      <ChartContainer
-        config={config}
-        className={cn("h-72 w-full", !ready && "invisible")}
-      >
-        {children}
-      </ChartContainer>
-    </div>
-  );
-}
-
 export function QueryChart({ metrics = [], timeZone }) {
   const t = useTranslations("databases.monitor");
   const format = useFormatter();
+  const tokens = useChartTokens(TOKENS);
+
   const data = querySeries(metrics);
   const clock = clockFormatter(format, timeZone);
   const decimal = (value) =>
@@ -119,6 +70,153 @@ export function QueryChart({ metrics = [], timeZone }) {
     });
   };
 
+  const qpsValues = data
+    .map((point) => point.qps)
+    .filter((value) => value !== null);
+  const currentQps = data.at(-1)?.qps ?? null;
+  const peakQps = qpsValues.length ? Math.max(...qpsValues) : null;
+  const averageQps = qpsValues.length
+    ? qpsValues.reduce((total, value) => total + value, 0) / qpsValues.length
+    : null;
+
+  const labels = {
+    qps: t("qps"),
+    connections: t("connections"),
+    threads_running: t("threadsRunning"),
+  };
+
+  // Rebuilt only when the data or the resolved palette changes; EChart calls
+  // setOption on every new object it is handed.
+  const option = useMemo(() => {
+    if (!tokens["chart-1"]) return null;
+
+    const line = (key, axis, colour) => ({
+      name: labels[key],
+      type: "line",
+      yAxisIndex: axis,
+      showSymbol: false,
+      smooth: true,
+      // A gap in the samples is a gap in what we know. Joining across it would
+      // draw a straight line through a collector outage as though it were data.
+      connectNulls: false,
+      lineStyle: { width: key === "qps" ? 2 : 1.75, color: colour },
+      itemStyle: { color: colour },
+      data: data.map((point) => [point.t, point[key]]),
+    });
+
+    const qps = line("qps", 0, tokens["chart-1"]);
+    qps.areaStyle = { color: tokens["chart-1"], opacity: 0.18 };
+
+    return {
+      // ECharts' own description, alongside the hidden table EChart renders.
+      aria: { enabled: true, decal: { show: true } },
+      animation: false,
+      grid: { left: 52, right: 44, top: 16, bottom: 64, containLabel: false },
+      legend: {
+        // Declaration order, so the legend matches the summary above it. The
+        // Recharts version needed a custom content component to achieve this.
+        data: [labels.qps, labels.connections, labels.threads_running],
+        bottom: 28,
+        icon: "roundRect",
+        itemWidth: 10,
+        itemHeight: 10,
+        textStyle: { color: tokens["muted-foreground"] },
+      },
+      tooltip: {
+        trigger: "axis",
+        backgroundColor: tokens.popover,
+        borderColor: tokens.border,
+        textStyle: { color: tokens["popover-foreground"] },
+        formatter: (params) => {
+          const header = clock(params[0]?.value?.[0]);
+          const rows = params
+            .filter((p) => p.value?.[1] !== null && p.value?.[1] !== undefined)
+            .map(
+              (p) =>
+                `<div style="display:flex;gap:.75rem;justify-content:space-between">
+                   <span>${p.marker} ${p.seriesName}</span>
+                   <strong>${decimal(p.value[1])}</strong>
+                 </div>`,
+            )
+            .join("");
+
+          return `<div style="font-weight:600;margin-bottom:.25rem">${header}</div>${rows}`;
+        },
+      },
+      // The reason for the migration: drag inside the plot to zoom a range,
+      // wheel to scale, and a slider underneath for coarse selection.
+      dataZoom: [
+        { type: "inside", throttle: 50 },
+        {
+          type: "slider",
+          height: 18,
+          bottom: 4,
+          borderColor: tokens.border,
+          textStyle: { color: tokens["muted-foreground"] },
+        },
+      ],
+      xAxis: {
+        type: "time",
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        axisLabel: {
+          color: tokens["muted-foreground"],
+          hideOverlap: true,
+          formatter: (value) => clock(value),
+        },
+      },
+      yAxis: [
+        {
+          type: "value",
+          min: 0,
+          axisLine: { show: false },
+          axisTick: { show: false },
+          splitLine: { lineStyle: { color: tokens.border, type: "dashed" } },
+          axisLabel: {
+            color: tokens["muted-foreground"],
+            formatter: (value) => axisNumber(value),
+          },
+        },
+        {
+          type: "value",
+          min: 0,
+          minInterval: 1,
+          axisLine: { show: false },
+          axisTick: { show: false },
+          splitLine: { show: false },
+          axisLabel: { color: tokens["muted-foreground"] },
+        },
+      ],
+      series: [
+        qps,
+        line("connections", 1, tokens["chart-2"]),
+        line("threads_running", 1, tokens["chart-3"]),
+      ],
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, tokens, timeZone]);
+
+  const dataTable = useMemo(
+    () => ({
+      caption: t("chartTitle"),
+      columns: [
+        t("summary.current"),
+        labels.qps,
+        labels.connections,
+        labels.threads_running,
+      ],
+      rows: data.map((point) => [
+        clock(point.t),
+        point.qps === null ? "—" : decimal(point.qps),
+        point.connections === null ? "—" : decimal(point.connections),
+        point.threads_running === null ? "—" : decimal(point.threads_running),
+      ]),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, timeZone],
+  );
+
   if (data.length < 2) {
     return <ChartNotice message={t("collecting")} />;
   }
@@ -132,32 +230,6 @@ export function QueryChart({ metrics = [], timeZone }) {
   if (!hasActivity) {
     return <ChartNotice message={t("noActivity")} />;
   }
-
-  const qpsValues = data
-    .map((point) => point.qps)
-    .filter((value) => value !== null);
-  const currentQps = data.at(-1)?.qps ?? null;
-  const peakQps = qpsValues.length ? Math.max(...qpsValues) : null;
-  const averageQps = qpsValues.length
-    ? qpsValues.reduce((total, value) => total + value, 0) / qpsValues.length
-    : null;
-
-  // These concrete colors are intentional: Recharts SVG strokes have failed
-  // to resolve chart CSS variables in this card in production builds.
-  const config = {
-    qps: {
-      label: t("qps"),
-      color: "hsl(221 83% 53%)",
-    },
-    connections: {
-      label: t("connections"),
-      color: "hsl(142 71% 38%)",
-    },
-    threads_running: {
-      label: t("threadsRunning"),
-      color: "hsl(38 92% 45%)",
-    },
-  };
 
   return (
     <Card>
@@ -189,91 +261,7 @@ export function QueryChart({ metrics = [], timeZone }) {
       </CardHeader>
 
       <CardContent>
-        <ChartViewport config={config}>
-          <ComposedChart data={data} margin={{ left: 8, right: 4, top: 8 }}>
-            <defs>
-              <linearGradient id="database-qps" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={config.qps.color} stopOpacity={0.28} />
-                <stop offset="95%" stopColor={config.qps.color} stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <XAxis
-              dataKey="t"
-              type="number"
-              scale="time"
-              domain={["dataMin", "dataMax"]}
-              tickLine={false}
-              axisLine={false}
-              tickCount={5}
-              minTickGap={40}
-              tickFormatter={clock}
-            />
-            <YAxis
-              yAxisId="qps"
-              tickLine={false}
-              axisLine={false}
-              width={48}
-              tickCount={4}
-              domain={[0, (max) => Math.max(1, Number(max) * 1.1)]}
-              tickFormatter={axisNumber}
-            />
-            <YAxis
-              yAxisId="count"
-              orientation="right"
-              tickLine={false}
-              axisLine={false}
-              width={36}
-              tickCount={4}
-              allowDecimals={false}
-              domain={[0, (max) => Math.max(1, Math.ceil(Number(max) * 1.1))]}
-            />
-
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  indicator="line"
-                  labelFormatter={timeLabel(clock)}
-                  valueFormatter={(value) => decimal(value)}
-                />
-              }
-            />
-            <ChartLegend content={orderedLegend(config)} />
-
-            <Area
-              yAxisId="qps"
-              type="monotone"
-              dataKey="qps"
-              stroke={config.qps.color}
-              fill="url(#database-qps)"
-              strokeWidth={2}
-              dot={false}
-              connectNulls={false}
-              isAnimationActive={false}
-            />
-            <Line
-              yAxisId="count"
-              type="monotone"
-              dataKey="connections"
-              stroke={config.connections.color}
-              strokeWidth={1.75}
-              dot={false}
-              connectNulls={false}
-              isAnimationActive={false}
-            />
-            <Line
-              yAxisId="count"
-              type="monotone"
-              dataKey="threads_running"
-              stroke={config.threads_running.color}
-              strokeWidth={1.75}
-              dot={false}
-              connectNulls={false}
-              isAnimationActive={false}
-            />
-          </ComposedChart>
-        </ChartViewport>
+        <EChart option={option} dataTable={dataTable} height="h-72" />
       </CardContent>
     </Card>
   );
