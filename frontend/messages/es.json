@@ -5219,7 +5219,12 @@
         "type": "Tipo",
         "name": "Nombre",
         "outcome": "Estado"
-      }
+      },
+      "showDetailsShort": "Ver detalles",
+      "hideDetailsShort": "Ocultar detalles",
+      "ignoreShort": "Descartar",
+      "restoreShort": "Deshacer el descarte",
+      "working": "Trabajando…"
     },
     "outcomes": {
       "found": "Encontrado",

@@ -5219,7 +5219,12 @@
         "type": "प्रकार",
         "name": "नाम",
         "outcome": "स्थिति"
-      }
+      },
+      "showDetailsShort": "विवरण देखें",
+      "hideDetailsShort": "विवरण छिपाएँ",
+      "ignoreShort": "हटाएँ",
+      "restoreShort": "हटाना पूर्ववत करें",
+      "working": "काम चल रहा है…"
     },
     "outcomes": {
       "found": "मिला",

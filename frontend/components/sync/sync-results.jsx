@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, EyeOff, SearchX, Undo2 } from "lucide-react";
+import { ChevronRight, EyeOff, Loader2, SearchX, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SYNC_RESOURCE_TYPES } from "@/lib/schemas/sync";
 import { ignoreKey } from "@/lib/server/sync-selection";
@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 const ACTION_VARIANTS = {
@@ -160,20 +161,30 @@ export function SyncResults({
                     className={cn(ignored && "opacity-55")}
                   >
                     <TableCell className="align-top">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-7"
-                        aria-expanded={isOpen}
-                        aria-label={t("results.toggleDetails", { name: item.resource_key })}
-                        onClick={() => toggleExpanded(item.id)}
-                      >
-                        <ChevronRight
-                          className={cn("size-4 transition-transform", isOpen && "rotate-90")}
-                          aria-hidden
-                        />
-                      </Button>
+                      {/* A chevron on its own is a guess. The aria-label names
+                          the row for a screen reader; the tooltip is the same
+                          answer for everyone else. */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-7"
+                            aria-expanded={isOpen}
+                            aria-label={t("results.toggleDetails", { name: item.resource_key })}
+                            onClick={() => toggleExpanded(item.id)}
+                          >
+                            <ChevronRight
+                              className={cn("size-4 transition-transform", isOpen && "rotate-90")}
+                              aria-hidden
+                            />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isOpen ? t("results.hideDetailsShort") : t("results.showDetailsShort")}
+                        </TooltipContent>
+                      </Tooltip>
                     </TableCell>
                     <TableCell className="align-top text-sm text-muted-foreground">
                       {t(`types.${item.resource_type}`)}
@@ -203,25 +214,47 @@ export function SyncResults({
                     </TableCell>
                     <TableCell className="align-top">
                       {canManage ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-7"
-                          disabled={pendingKey === key}
-                          aria-label={
-                            ignored
-                              ? t("results.restore", { name: item.resource_key })
-                              : t("results.ignore", { name: item.resource_key })
-                          }
-                          onClick={() => (ignored ? onUnignore(item) : onIgnore(item))}
-                        >
-                          {ignored ? (
-                            <Undo2 className="size-4" aria-hidden />
-                          ) : (
-                            <EyeOff className="size-4" aria-hidden />
-                          )}
-                        </Button>
+                        <Tooltip>
+                          {/* The trigger wraps a span: a disabled button
+                              swallows pointer events, so the tooltip would
+                              vanish exactly while the row is working — which is
+                              when someone is most likely to hover it. */}
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-7"
+                                disabled={pendingKey === key}
+                                aria-label={
+                                  ignored
+                                    ? t("results.restore", { name: item.resource_key })
+                                    : t("results.ignore", { name: item.resource_key })
+                                }
+                                onClick={() => (ignored ? onUnignore(item) : onIgnore(item))}
+                              >
+                                {/* The button was disabled while the write was
+                                    in flight and nothing else changed, so a
+                                    click looked like it had done nothing. */}
+                                {pendingKey === key ? (
+                                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                                ) : ignored ? (
+                                  <Undo2 className="size-4" aria-hidden />
+                                ) : (
+                                  <EyeOff className="size-4" aria-hidden />
+                                )}
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {pendingKey === key
+                              ? t("results.working")
+                              : ignored
+                                ? t("results.restoreShort")
+                                : t("results.ignoreShort")}
+                          </TooltipContent>
+                        </Tooltip>
                       ) : null}
                     </TableCell>
                   </TableRow>,

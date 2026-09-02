@@ -1,7 +1,8 @@
-import { EyeOff, Undo2 } from "lucide-react";
+import { EyeOff, Loader2, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ignoreKey } from "@/lib/server/sync-selection";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Sheet,
   SheetContent,
@@ -55,17 +56,38 @@ export function IgnoredSheet({ ignores, canManage, pendingKey, onUnignore }) {
                     ) : null}
                   </div>
                   {canManage ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 shrink-0"
-                      disabled={pendingKey === ignoreKey(ignore)}
-                      aria-label={t("ignored.restore", { name: ignore.resource_key })}
-                      onClick={() => onUnignore(ignore)}
-                    >
-                      <Undo2 className="size-4" aria-hidden />
-                    </Button>
+                    <Tooltip>
+                      {/* Wrapped, because a disabled button stops receiving
+                          pointer events — and this one is disabled exactly
+                          while someone is waiting to know it is working. */}
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 shrink-0"
+                            disabled={pendingKey === ignoreKey(ignore)}
+                            aria-label={t("ignored.restore", { name: ignore.resource_key })}
+                            onClick={() => onUnignore(ignore)}
+                          >
+                            {/* Same gap as the results table: disabling on its
+                                own is not feedback, because nothing on screen
+                                changes. */}
+                            {pendingKey === ignoreKey(ignore) ? (
+                              <Loader2 className="size-4 animate-spin" aria-hidden />
+                            ) : (
+                              <Undo2 className="size-4" aria-hidden />
+                            )}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {pendingKey === ignoreKey(ignore)
+                          ? t("results.working")
+                          : t("results.restoreShort")}
+                      </TooltipContent>
+                    </Tooltip>
                   ) : null}
                 </li>
               ))}

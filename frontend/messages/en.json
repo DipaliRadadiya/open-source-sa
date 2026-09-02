@@ -5219,7 +5219,12 @@
         "type": "Type",
         "name": "Name",
         "outcome": "Status"
-      }
+      },
+      "showDetailsShort": "Show details",
+      "hideDetailsShort": "Hide details",
+      "ignoreShort": "Dismiss",
+      "restoreShort": "Undo dismissing",
+      "working": "Working…"
     },
     "outcomes": {
       "found": "Found",
