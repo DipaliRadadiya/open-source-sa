@@ -2079,7 +2079,7 @@
       "enable": "Limpiar automáticamente",
       "howOften": "Con qué frecuencia",
       "onlyWhen": "Ejecutar cuando el uso del disco supere",
-      "always": "Siempre",
+      "thresholdPlaceholder": "80",
       "thresholdHint": "Déjalo vacío para limpiar cada vez que se ejecute.",
       "whatToClean": "Qué limpiar",
       "safeOnly": "Solo se pueden programar los elementos seguros de eliminar sin supervisión.",

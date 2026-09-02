@@ -2079,7 +2079,7 @@
       "enable": "Clean up automatically",
       "howOften": "How often",
       "onlyWhen": "Run when disk usage is above",
-      "always": "Always",
+      "thresholdPlaceholder": "80",
       "thresholdHint": "Leave empty to clean every time it runs.",
       "whatToClean": "What to clean",
       "safeOnly": "Only items that are safe to remove unattended can be scheduled.",

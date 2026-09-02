@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { CalendarClock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveCleanerSchedule } from "@/lib/api/disk-cleaner";
+import { clampPercent } from "@/lib/disk-cleaner/clamp-percent";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -246,14 +247,18 @@ export function ScheduleCard({ schedule, categories, canManage }) {
                   value={threshold}
                   disabled={!enabled}
                   disabledReason={t("schedule.turnOnFirst")}
-                  placeholder={t("schedule.always")}
-                  onChange={(e) => setThreshold(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))}
+                  // An example of the number to type, not a word. The old
+                  // placeholder read "Always", which argued with the label
+                  // directly above it — "run when usage is above Always".
+                  placeholder={t("schedule.thresholdPlaceholder")}
+                  onChange={(e) => setThreshold(clampPercent(e.target.value))}
                 />
-                {threshold ? (
-                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
-                    %
-                  </span>
-                ) : null}
+                {/* Always rendered, not only once something is typed. The unit
+                    is the one thing an empty box has to communicate, and it
+                    used to appear after the moment it was needed. */}
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
+                  %
+                </span>
               </div>
               <p className="text-xs text-muted-foreground">{t("schedule.thresholdHint")}</p>
             </div>
