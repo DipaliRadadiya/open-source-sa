@@ -6,6 +6,7 @@ return [
         'queued' => 'Queued',
         'checking_conflicts' => 'Checking for conflicting database engines',
         'preparing_repository' => 'Preparing the package repository',
+        'waiting_for_package_manager' => 'Waiting for another package operation to finish',
         'updating_package_index' => 'Updating the package index',
         'preparing' => 'Preparing packages',
         'downloading' => 'Downloading packages',

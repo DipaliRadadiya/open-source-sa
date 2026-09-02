@@ -52,6 +52,12 @@ class AptOrphansTarget extends AbstractCleanupTarget
 
     public function estimate(): int
     {
+        // `run()`, not `apt()`, and deliberately: this is a simulation that
+        // runs when the disk-cleaner screen is opened. apt()'s wait is sized
+        // for a first-boot unattended-upgrades holding the lock for minutes,
+        // and a page that hangs for minutes to put a number on a card is worse
+        // than a card that says nothing. The clean itself waits; the preview
+        // gives up and reports zero.
         $output = $this->serverOps->run(
             ['apt-get', '-s', 'autoremove'],
             ['feature' => 'disk_cleaner', 'op' => 'estimate', 'target' => $this->key()],
@@ -67,7 +73,7 @@ class AptOrphansTarget extends AbstractCleanupTarget
 
     public function clean(): ServerOpsResult
     {
-        return $this->serverOps->run(
+        return $this->serverOps->apt(
             ['apt-get', '-y', 'autoremove', '--purge'],
             ['feature' => 'disk_cleaner', 'op' => 'clean', 'target' => $this->key()],
             300,

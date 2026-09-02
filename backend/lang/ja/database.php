@@ -6,6 +6,7 @@ return [
         'queued' => '待機中',
         'checking_conflicts' => '競合するデータベースエンジンを確認しています',
         'preparing_repository' => 'パッケージリポジトリを準備しています',
+        'waiting_for_package_manager' => '他のパッケージ操作の完了を待機しています',
         'updating_package_index' => 'パッケージインデックスを更新しています',
         'preparing' => 'パッケージを準備しています',
         'downloading' => 'パッケージをダウンロードしています',

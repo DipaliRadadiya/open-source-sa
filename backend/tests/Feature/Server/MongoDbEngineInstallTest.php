@@ -4,6 +4,7 @@ use App\Exceptions\Server\Database\EngineInstallException;
 use App\Models\DatabaseConnection;
 use App\Models\User;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
+use App\Services\Server\Databases\Installers\MongoDbInstaller;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -443,4 +444,60 @@ it('repairs the panel-created MongoDB key before the bootstrap installer updates
         ->and($installer)->toContain('signed-by=${old_key}')
         ->and($installer)->toContain('mongodb-server-${series}.asc')
         ->and($installer)->toContain('https://repo.mongodb.org/apt/ubuntu');
+});
+
+describe('a retry after a part-finished install', function () {
+    it('still enables authentication, because the first attempt found nothing here', function () {
+        // The failure this prevents: attempt one installs the package and then
+        // dies. Attempt two asks the box, is told MongoDB is already present,
+        // concludes it belongs to somebody else, and skips enabling auth — on a
+        // database the panel then reports as successfully installed.
+        $ran = [];
+
+        Process::fake(function ($process) use (&$ran) {
+            $args = ($process->command[0] ?? '') === 'sudo'
+                ? array_slice($process->command, 2)
+                : $process->command;
+
+            $ran[] = implode(' ', $args).' '.(string) $process->input;
+
+            return match (true) {
+                // The package IS here now — attempt one put it there.
+                ($args[0] ?? '') === 'dpkg-query' => Process::result(output: 'install ok installed'),
+                ($args[0] ?? '') === 'cat' && str_contains($args[1] ?? '', 'keyring') => Process::result(output: '-----BEGIN PGP PUBLIC KEY BLOCK-----'),
+                default => Process::result(output: ''),
+            };
+        });
+
+        // …but the install was *requested* when it was not.
+        app(MongoDbInstaller::class)->install(wasAbsent: true);
+
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, 'authorization')))
+            ->toBeTrue();
+    });
+
+    it('leaves a genuinely pre-existing server alone', function () {
+        // The other half, and the reason this is not just "always configure":
+        // a server that already had MongoDB is a server something already
+        // connects to, and rewriting its config would break whatever that is.
+        $ran = [];
+
+        Process::fake(function ($process) use (&$ran) {
+            $args = ($process->command[0] ?? '') === 'sudo'
+                ? array_slice($process->command, 2)
+                : $process->command;
+
+            $ran[] = implode(' ', $args).' '.(string) $process->input;
+
+            return match (true) {
+                ($args[0] ?? '') === 'dpkg-query' => Process::result(output: 'install ok installed'),
+                default => Process::result(output: ''),
+            };
+        });
+
+        app(MongoDbInstaller::class)->install(wasAbsent: false);
+
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, 'authorization')))
+            ->toBeFalse();
+    });
 });

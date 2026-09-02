@@ -6,6 +6,7 @@ return [
         'queued' => 'В очереди',
         'checking_conflicts' => 'Проверка конфликтующих СУБД',
         'preparing_repository' => 'Подготовка репозитория пакетов',
+        'waiting_for_package_manager' => 'Ожидание завершения другой операции с пакетами',
         'updating_package_index' => 'Обновление индекса пакетов',
         'preparing' => 'Подготовка пакетов',
         'downloading' => 'Загрузка пакетов',

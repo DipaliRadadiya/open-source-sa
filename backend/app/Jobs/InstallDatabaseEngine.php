@@ -74,6 +74,10 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
             $installers->installer($this->engine)->install(
                 $progress === null ? null : fn (string $step) => $progress->step($step),
                 $progress === null ? null : fn (string $chunk) => $progress->output($chunk),
+                // Recorded when this install was requested, not asked again
+                // here: on a retry the box has already changed underneath the
+                // question. See MongoDbInstaller::install().
+                $row?->was_absent,
             );
         } catch (EngineInstallException $e) {
             $progress?->flushOutput();

@@ -213,3 +213,69 @@ describe('a lock nobody holds', function () {
         }
     });
 });
+
+describe('apt', function () {
+    it('waits far longer than a passwd lock would justify', function () {
+        // `run()` already retries `could not get lock` — but on the budget a
+        // passwd lock needs, where the holder is a competing useradd that
+        // finishes in seconds. apt's holder on a freshly booted server is
+        // unattended-upgrades, which runs for minutes, so the generic budget
+        // expires long before the lock frees. That is the whole bug: install
+        // MongoDB on a new box, fail, retry ten minutes later, succeed.
+        config([
+            'server.transient.attempts' => 3,
+            'server.apt.lock_attempts' => 12,
+            'server.apt.lock_delay_ms' => 0,
+        ]);
+
+        $attempts = 0;
+
+        Process::fake(function () use (&$attempts) {
+            $attempts++;
+
+            return Process::result(errorOutput: 'E: Could not get lock /var/lib/apt/lists/lock', exitCode: 100);
+        });
+
+        app(ServerOps::class)->apt(['apt-get', 'update'], ['feature' => 'test']);
+
+        expect($attempts)->toBe(12);
+    });
+
+    it('costs nothing when the lock is free', function () {
+        config(['server.apt.lock_attempts' => 40, 'server.apt.lock_delay_ms' => 15000]);
+
+        $attempts = 0;
+
+        Process::fake(function () use (&$attempts) {
+            $attempts++;
+
+            return Process::result(output: 'done');
+        });
+
+        // No probe before the command, so a free lock is one call and no wait.
+        // A check-then-run would also be racy: anything can take the lock in
+        // between, where apt takes it atomically.
+        expect(app(ServerOps::class)->apt(['apt-get', 'update'], ['feature' => 'test'])->ok)->toBeTrue()
+            ->and($attempts)->toBe(1);
+    });
+
+    it('tells the caller each time it is waiting', function () {
+        config(['server.apt.lock_attempts' => 3, 'server.apt.lock_delay_ms' => 0]);
+
+        Process::fake(fn () => Process::result(errorOutput: 'Could not get lock', exitCode: 100));
+
+        $waits = 0;
+
+        app(ServerOps::class)->apt(
+            ['apt-get', 'update'],
+            ['feature' => 'test'],
+            onWait: function () use (&$waits) {
+                $waits++;
+            },
+        );
+
+        // So the install screen can say why it is sitting there. A silent
+        // ten-minute wait is indistinguishable from a hung install.
+        expect($waits)->toBe(2);
+    });
+});

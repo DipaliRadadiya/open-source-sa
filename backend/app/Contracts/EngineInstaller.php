@@ -47,5 +47,15 @@ interface EngineInstaller
      * @param  callable(string): void|null  $onStep
      * @param  callable(string): void|null  $onOutput
      */
-    public function install(?callable $onStep = null, ?callable $onOutput = null): void;
+    /**
+     * @param  bool|null  $wasAbsent  whether the engine was absent when the
+     *                                install was *requested*, or null when
+     *                                nobody recorded it. Installers that write
+     *                                configuration must prefer this over asking
+     *                                the box: on a retry after a part-finished
+     *                                attempt the package is already there, and
+     *                                an installer that re-asks concludes it
+     *                                belongs to somebody else.
+     */
+    public function install(?callable $onStep = null, ?callable $onOutput = null, ?bool $wasAbsent = null): void;
 }

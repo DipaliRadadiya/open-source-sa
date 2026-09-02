@@ -16,6 +16,7 @@ class RuntimeInstall extends Model
     {
         return [
             'status' => InstallStatus::class,
+            'was_absent' => 'boolean',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];

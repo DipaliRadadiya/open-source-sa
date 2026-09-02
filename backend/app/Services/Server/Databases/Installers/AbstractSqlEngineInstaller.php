@@ -84,14 +84,14 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     /**
      * @throws EngineInstallException
      */
-    public function install(?callable $onStep = null, ?callable $onOutput = null): void
+    public function install(?callable $onStep = null, ?callable $onOutput = null, ?bool $wasAbsent = null): void
     {
         $this->report($onStep, 'checking_conflicts');
         $this->assertPortIsOurs();
 
         if (! $this->installed()) {
             $this->report($onStep, 'preparing');
-            $result = $this->serverOps->run(
+            $result = $this->serverOps->apt(
                 array_merge(['apt-get', 'install', '-y', '--no-install-recommends'], $this->packages()),
                 ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'install'],
                 timeout: (int) config('server.databases.install_timeout', 900),

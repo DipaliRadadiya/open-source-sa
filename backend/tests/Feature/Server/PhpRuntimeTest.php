@@ -93,6 +93,36 @@ it('lists installed versions from the same place the Services screen reads', fun
         ->and($versions['8.4']['is_default'])->toBeTrue();
 });
 
+it('orders pinned site names without case bias', function () {
+    fakePhp();
+
+    $user = SystemUser::create([
+        'username' => 'mixedphp',
+        'home_path' => '/home/mixedphp',
+        'shell' => '/bin/bash',
+        'sudo' => false,
+    ]);
+
+    foreach ([
+        ['name' => 'Case Zebra', 'slug' => 'case-zebra', 'domain' => 'zebra.test'],
+        ['name' => 'case apple', 'slug' => 'case-apple', 'domain' => 'apple.test'],
+        ['name' => 'CASE Banana', 'slug' => 'case-banana', 'domain' => 'banana.test'],
+    ] as $site) {
+        Application::forceCreate($site + [
+            'system_user_id' => $user->id,
+            'site_type' => 'php',
+            'serving_profile' => 'php',
+            'web_root' => '/',
+            'status' => 'pending',
+            'php_version' => '8.3',
+        ]);
+    }
+
+    $version = collect(phpSettings()['versions'])->firstWhere('version', '8.3');
+
+    expect($version['sites'])->toBe(['case apple', 'CASE Banana', 'Case Zebra']);
+});
+
 it('offers only versions that are not installed yet', function () {
     fakePhp();
 

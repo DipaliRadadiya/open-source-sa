@@ -323,6 +323,24 @@ return [
     |
     */
 
+    /*
+    | apt's own lock budget, separate from `transient` above.
+    |
+    | The generic retry is sized for a passwd lock, whose holder is a competing
+    | account command that finishes in seconds. apt's holder on a freshly booted
+    | server is `unattended-upgrades`, which runs for minutes — so the same
+    | three-attempts-in-four-seconds budget expires long before the lock frees
+    | and the user gets a hard failure for something that would have worked on
+    | its own. 40 x 15s covers a ten-minute first boot.
+    |
+    | The wait costs nothing when the lock is free: apt takes it on the first
+    | attempt and no retry happens.
+    */
+    'apt' => [
+        'lock_attempts' => (int) env('SERVER_APT_LOCK_ATTEMPTS', 40),
+        'lock_delay_ms' => (int) env('SERVER_APT_LOCK_DELAY_MS', 15000),
+    ],
+
     'transient' => [
         'attempts' => (int) env('SERVER_OPS_RETRIES', 3),
         'delay_ms' => (int) env('SERVER_OPS_RETRY_DELAY_MS', 1500),

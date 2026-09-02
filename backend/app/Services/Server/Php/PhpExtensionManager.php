@@ -147,7 +147,7 @@ class PhpExtensionManager
     {
         $this->assertVersion($version);
 
-        $result = $this->serverOps->run(
+        $result = $this->serverOps->apt(
             ['apt-get', 'install', '-y', '--no-install-recommends', $this->stack->extensionPackage($version, $name)],
             ['feature' => 'php', 'op' => 'extension_install', 'version' => $version, 'extension' => $name],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),

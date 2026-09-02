@@ -28,6 +28,7 @@ class InstallTracker
         string $version,
         ?string $extension = null,
         ?string $initialStep = null,
+        ?bool $wasAbsent = null,
     ): RuntimeInstall {
         $identity = ['runtime' => $runtime, 'version' => $version, 'extension' => (string) $extension];
         $now = now();
@@ -49,14 +50,30 @@ class InstallTracker
                 'output' => null,
                 'started_at' => $now,
                 'finished_at' => null,
+                'was_absent' => $wasAbsent,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]],
             ['runtime', 'version', 'extension'],
+            // `was_absent` is deliberately absent from this list. Everything
+            // else is per-attempt and a retry should overwrite it; that one
+            // records what was true when the install was first *asked for*,
+            // and a retry asking the box again is exactly the mistake it
+            // exists to prevent — by then the half-installed package is there.
             ['status', 'reason', 'reference', 'current_step', 'output', 'started_at', 'finished_at', 'updated_at'],
         );
 
-        return $this->query($runtime, $version, $extension)->firstOrFail();
+        $row = $this->query($runtime, $version, $extension)->firstOrFail();
+
+        // An upsert that updated an existing row skipped the column above, so
+        // a row from before this existed — or one whose first attempt never
+        // recorded an answer — still gets one rather than staying unknown
+        // forever.
+        if ($row->was_absent === null && $wasAbsent !== null) {
+            $row->forceFill(['was_absent' => $wasAbsent])->save();
+        }
+
+        return $row;
     }
 
     /**

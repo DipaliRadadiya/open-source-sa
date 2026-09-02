@@ -146,6 +146,36 @@ it('counts how many sites pin each version', function () {
     expect(collect(nodeSettings()['versions'])->firstWhere('version', '20.11.0')['in_use_by'])->toBe(1);
 });
 
+it('orders pinned site names without case bias', function () {
+    fakeNode(installed: ['20.11.0']);
+
+    $user = SystemUser::create([
+        'username' => 'mixednode',
+        'home_path' => '/home/mixednode',
+        'shell' => '/bin/bash',
+        'sudo' => false,
+    ]);
+
+    foreach ([
+        ['name' => 'Case Zebra', 'slug' => 'case-zebra', 'domain' => 'zebra.test'],
+        ['name' => 'case apple', 'slug' => 'case-apple', 'domain' => 'apple.test'],
+        ['name' => 'CASE Banana', 'slug' => 'case-banana', 'domain' => 'banana.test'],
+    ] as $site) {
+        Application::forceCreate($site + [
+            'system_user_id' => $user->id,
+            'site_type' => 'node',
+            'serving_profile' => 'node',
+            'web_root' => '/',
+            'status' => 'pending',
+            'node_version' => '20.11.0',
+        ]);
+    }
+
+    $version = collect(nodeSettings()['versions'])->firstWhere('version', '20.11.0');
+
+    expect($version['sites'])->toBe(['case apple', 'CASE Banana', 'Case Zebra']);
+});
+
 it('queues an install, once per version however many times it is clicked', function () {
     Queue::fake();
     fakeNode();

@@ -6,6 +6,7 @@ return [
         'queued' => 'En attente',
         'checking_conflicts' => 'Vérification des moteurs de base de données en conflit',
         'preparing_repository' => 'Préparation du dépôt de paquets',
+        'waiting_for_package_manager' => 'En attente de la fin d’une autre opération de paquets',
         'updating_package_index' => 'Mise à jour de l’index des paquets',
         'preparing' => 'Préparation des paquets',
         'downloading' => 'Téléchargement des paquets',

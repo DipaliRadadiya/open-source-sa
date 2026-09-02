@@ -49,7 +49,7 @@ class InstallFail2ban implements ShouldQueue
         InstallTracker $installs,
         InstallFailureClassifier $classifier,
     ): void {
-        $result = $serverOps->run(
+        $result = $serverOps->apt(
             ['apt-get', 'install', '-y', 'fail2ban'],
             ['feature' => 'fail2ban', 'op' => 'install'],
             timeout: 600,

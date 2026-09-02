@@ -6,6 +6,7 @@ return [
         'queued' => 'En cola',
         'checking_conflicts' => 'Comprobando motores de base de datos en conflicto',
         'preparing_repository' => 'Preparando el repositorio de paquetes',
+        'waiting_for_package_manager' => 'Esperando a que termine otra operación de paquetes',
         'updating_package_index' => 'Actualizando el índice de paquetes',
         'preparing' => 'Preparando paquetes',
         'downloading' => 'Descargando paquetes',

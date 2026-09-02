@@ -42,7 +42,7 @@ class AptCacheTarget extends AbstractCleanupTarget
 
     public function clean(): ServerOpsResult
     {
-        return $this->serverOps->run(
+        return $this->serverOps->apt(
             ['apt-get', 'clean'],
             ['feature' => 'disk_cleaner', 'op' => 'clean', 'target' => $this->key()],
             120,

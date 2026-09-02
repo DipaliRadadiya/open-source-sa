@@ -69,7 +69,7 @@ class ServerOps
      * @param  array<int, int>  $expectedExitCodes  Exit codes that answer an
      *                                              expected negative probe.
      */
-    public function run(array $command, array $context = [], int $timeout = 60, mixed $input = null, ?string $cwd = null, array $env = [], ?callable $onOutput = null, array $expectedExitCodes = []): ServerOpsResult
+    public function run(array $command, array $context = [], int $timeout = 60, mixed $input = null, ?string $cwd = null, array $env = [], ?callable $onOutput = null, array $expectedExitCodes = [], ?int $retryAttempts = null, ?int $retryDelayMs = null, ?callable $onRetry = null): ServerOpsResult
     {
         $command = $this->elevate($command);
 
@@ -83,7 +83,8 @@ class ServerOps
         $result = null;
         $attempts = 0;
 
-        $maxAttempts = max(1, (int) config('server.transient.attempts', 1));
+        $maxAttempts = max(1, $retryAttempts ?? (int) config('server.transient.attempts', 1));
+        $retryDelayMs = max(0, $retryDelayMs ?? (int) config('server.transient.delay_ms', 1500));
 
         // A lock failure means the command refused before doing anything, so
         // trying again is safe and usually works: the holder is normally
@@ -146,7 +147,11 @@ class ServerOps
                 'stderr' => $stderr,
             ]));
 
-            usleep(max(0, (int) config('server.transient.delay_ms', 1500)) * 1000);
+            if ($onRetry !== null) {
+                $onRetry($attempts, $maxAttempts);
+            }
+
+            usleep($retryDelayMs * 1000);
         }
 
         // Some commands answer a question rather than perform an operation:
@@ -212,6 +217,49 @@ class ServerOps
     public function probe(array $command, array $context = [], int $timeout = 60): ServerOpsResult
     {
         return $this->run($command, $context, $timeout, expectedExitCodes: [1]);
+    }
+
+    /**
+     * An apt command, with a wait long enough for the holder apt actually has.
+     *
+     * `run()` already retries a held lock — `could not get lock` is one of the
+     * transient patterns — but on the budget a *passwd* lock needs: three
+     * attempts, 1.5s apart, because the thing holding that one is a competing
+     * `useradd` that finishes in seconds.
+     *
+     * apt's contender is different in kind. A server that booted minutes ago is
+     * running `unattended-upgrades`, which holds the lock for **minutes**. Four
+     * and a half seconds of retries expire long before it lets go, and the user
+     * gets a hard failure for something that would have worked on its own —
+     * which is exactly what happened: install MongoDB on a fresh box, fail,
+     * retry ten minutes later, succeed.
+     *
+     * So the budget is apt's own, not the generic one. Raising the generic
+     * numbers instead would make every busy account operation hang for minutes,
+     * where failing fast is right.
+     *
+     * Deliberately *not* a lock probe before the command. install.sh uses one
+     * because it also wants to explain the delay, but a probe is a check
+     * followed by a command, and anything can take the lock in between. apt
+     * takes it atomically, so letting apt contend and retrying is the version
+     * with no race in it.
+     *
+     * @param  array<int, string>  $command
+     * @param  array<string, mixed>  $context
+     * @param  callable(int, int): void|null  $onWait  told each time the lock was busy
+     */
+    public function apt(array $command, array $context = [], int $timeout = 900, array $env = [], ?callable $onOutput = null, ?callable $onWait = null): ServerOpsResult
+    {
+        return $this->run(
+            $command,
+            $context,
+            $timeout,
+            env: array_merge(['DEBIAN_FRONTEND' => 'noninteractive'], $env),
+            onOutput: $onOutput,
+            retryAttempts: max(1, (int) config('server.apt.lock_attempts', 40)),
+            retryDelayMs: max(100, (int) config('server.apt.lock_delay_ms', 15000)),
+            onRetry: $onWait,
+        );
     }
 
     /**

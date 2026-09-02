@@ -6,6 +6,7 @@ return [
         'queued' => 'कतार में',
         'checking_conflicts' => 'परस्पर विरोधी डेटाबेस इंजन की जाँच की जा रही है',
         'preparing_repository' => 'पैकेज रिपॉज़िटरी तैयार की जा रही है',
+        'waiting_for_package_manager' => 'दूसरे पैकेज ऑपरेशन के पूरा होने की प्रतीक्षा',
         'updating_package_index' => 'पैकेज इंडेक्स अपडेट किया जा रहा है',
         'preparing' => 'पैकेज तैयार किए जा रहे हैं',
         'downloading' => 'पैकेज डाउनलोड किए जा रहे हैं',

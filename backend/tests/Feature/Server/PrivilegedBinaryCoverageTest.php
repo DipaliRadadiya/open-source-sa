@@ -193,6 +193,7 @@ it('elevates the binaries that come from config as whole commands', function () 
 
         if (! in_array($binary, $allowed, true) && ! str_starts_with($binary, 'php-fpm')) {
             $missing[$key] = $binary;
+
             continue;
         }
 
@@ -269,4 +270,53 @@ it('never reloads a web server it may have just told the operator to stop', func
     preg_match_all('/systemctl reload (nginx|apache2)\b/', (string) file_get_contents($installer), $bare);
 
     expect($bare[0])->toBe([], 'bare reload(s) in install.sh: '.implode(', ', $bare[0]));
+});
+
+/**
+ * apt goes through `ServerOps::apt()`, never `run()`.
+ *
+ * The difference is a wait budget: `run()` retries a held lock three times,
+ * 1.5s apart, which is right for a passwd lock and far too short for apt's —
+ * a freshly booted server runs unattended-upgrades for minutes. A call that
+ * slips back onto `run()` fails on a busy server and works on a quiet one,
+ * which is the hardest kind of bug to be told about.
+ *
+ * A source scan for the same reason the privilege one is: nothing else notices.
+ * The suite fakes `Process`, so a faked apt returns instantly whichever method
+ * issued it.
+ */
+const APT_WITHOUT_WAITING = [
+    // A simulation run when the disk-cleaner screen opens. apt()'s wait is
+    // sized for a first-boot unattended-upgrades holding the lock for minutes,
+    // and a page that hangs that long to put a number on a card is worse than
+    // a card that says nothing. Its `clean()` does wait.
+    'Services/Server/DiskCleaner/Targets/AptOrphansTarget.php',
+];
+
+it('routes every apt command through the waiting wrapper', function () {
+    $offenders = [];
+
+    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path()));
+
+    foreach ($files as $file) {
+        if ($file->getExtension() !== 'php') {
+            continue;
+        }
+
+        $source = (string) file_get_contents($file->getPathname());
+
+        // `->run([... 'apt-get' ...])`, allowing for array_merge and newlines
+        // between the call and the binary.
+        $relative = str_replace(app_path().'/', '', $file->getPathname());
+
+        if (in_array($relative, APT_WITHOUT_WAITING, true)) {
+            continue;
+        }
+
+        if (preg_match("/->run\(\s*(?:array_merge\(\s*)?\[\s*'apt-get'/", $source) === 1) {
+            $offenders[] = $relative;
+        }
+    }
+
+    expect($offenders)->toBe([], 'apt through run() instead of apt(): '.implode(', ', $offenders));
 });

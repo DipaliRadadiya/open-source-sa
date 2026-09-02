@@ -6,6 +6,7 @@ return [
         'queued' => 'In Warteschlange',
         'checking_conflicts' => 'Konflikte mit anderen Datenbank-Engines werden geprüft',
         'preparing_repository' => 'Paketquelle wird vorbereitet',
+        'waiting_for_package_manager' => 'Warten, bis ein anderer Paketvorgang abgeschlossen ist',
         'updating_package_index' => 'Paketindex wird aktualisiert',
         'preparing' => 'Pakete werden vorbereitet',
         'downloading' => 'Pakete werden heruntergeladen',

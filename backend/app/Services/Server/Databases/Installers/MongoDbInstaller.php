@@ -82,12 +82,25 @@ class MongoDbInstaller implements EngineInstaller
     /**
      * @throws EngineInstallException
      */
-    public function install(?callable $onStep = null, ?callable $onOutput = null): void
+    public function install(?callable $onStep = null, ?callable $onOutput = null, ?bool $wasAbsent = null): void
     {
-        // Whether *this run* put MongoDB on the box. It decides whether the
-        // config is ours to change: a server that already had one is a server
-        // something already connects to.
-        $fresh = ! $this->installed();
+        // Whether this *install* put MongoDB on the box — not whether this
+        // attempt did. It decides whether the config is ours to change: a
+        // server that already had one is a server something already connects
+        // to, and rewriting its config would break whatever that is.
+        //
+        // Taken from what was recorded when the install was requested, because
+        // asking the box is only right the first time. A first attempt that
+        // got as far as installing the package and then failed leaves MongoDB
+        // present; the retry then asked, was told "already here", took the
+        // brownfield path and skipped enabling authentication — on a database
+        // the panel went on to report as successfully installed. That is the
+        // one outcome this class exists to prevent, reached by the safest
+        // sounding branch in it.
+        //
+        // Null means nobody recorded an answer, which is the pre-existing
+        // behaviour and no worse than it was.
+        $fresh = $wasAbsent ?? ! $this->installed();
 
         if ($fresh) {
             $this->report($onStep, 'preparing_repository');
@@ -183,12 +196,33 @@ class MongoDbInstaller implements EngineInstaller
         // apt-get install fails with "Unable to locate package mongodb-org",
         // which reads as a broken panel rather than a stale index.
         $this->report($onStep, 'updating_package_index');
-        $this->must($this->serverOps->run(
+
+        $updated = $this->serverOps->apt(
             ['apt-get', 'update'],
             $this->context('repo_update'),
             timeout: (int) config('server.databases.install_timeout', 900),
-            env: ['DEBIAN_FRONTEND' => 'noninteractive'],
-        ), 'repository_failed');
+            onWait: fn () => $this->report($onStep, 'waiting_for_package_manager'),
+        );
+
+        if ($updated->failed()) {
+            // Classified, not assumed. This used to be `repository_failed`
+            // unconditionally — "the MongoDB package repository could not be
+            // added, check the server has network access to repo.mongodb.org"
+            // — which is a fair description of *some* ways this fails and a
+            // misdirection for the one that actually happens: a fresh server
+            // still running unattended-upgrades holds the apt lists lock, and
+            // the reader goes looking at DNS for a problem that was Ubuntu
+            // installing its own updates. `installPackages()` below has
+            // classified its failures all along; this call never did.
+            //
+            // repository_failed stays the fallback, because it carries
+            // information this classifier does not: an unrecognised failure
+            // *here* really is about adding the repository.
+            throw EngineInstallException::because(
+                $this->classify($updated->errorOutput().' '.$updated->output(), 'repository_failed'),
+                $updated->reference,
+            );
+        }
     }
 
     /**
@@ -196,17 +230,18 @@ class MongoDbInstaller implements EngineInstaller
      */
     private function installPackages(?callable $onOutput): void
     {
-        $result = $this->serverOps->run(
+        $result = $this->serverOps->apt(
             array_merge(['apt-get', 'install', '-y', '--no-install-recommends'], $this->packages()),
             $this->context('install'),
             timeout: (int) config('server.databases.install_timeout', 900),
-            env: ['DEBIAN_FRONTEND' => 'noninteractive'],
             onOutput: $onOutput,
         );
 
         if ($result->failed()) {
+            // Both streams: apt splits its errors between them inconsistently,
+            // and "No space left on device" in particular arrives on stdout.
             throw EngineInstallException::because(
-                $this->classify($result->errorOutput()),
+                $this->classify($result->errorOutput().' '.$result->output()),
                 $result->reference,
             );
         }
@@ -534,7 +569,7 @@ class MongoDbInstaller implements EngineInstaller
      * Maps apt's output to a stable code. Unmatched output is `unknown` rather
      * than a guess — a wrong reason sends the user somewhere useless.
      */
-    private function classify(string $stderr): string
+    private function classify(string $stderr, string $fallback = 'unknown'): string
     {
         foreach ((array) config('server.databases.failure_reasons', []) as $reason => $pattern) {
             if (preg_match($pattern, $stderr) === 1) {
@@ -542,6 +577,6 @@ class MongoDbInstaller implements EngineInstaller
             }
         }
 
-        return 'unknown';
+        return $fallback;
     }
 }

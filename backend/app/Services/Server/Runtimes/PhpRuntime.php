@@ -148,7 +148,7 @@ class PhpRuntime implements Runtime
      */
     public function install(string $version, ?callable $onOutput = null): void
     {
-        $result = $this->serverOps->run(
+        $result = $this->serverOps->apt(
             ['apt-get', 'install', '-y', '--no-install-recommends', ...$this->stack->versionPackages($version)],
             ['feature' => 'runtime', 'op' => 'php_install', 'version' => $version],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
@@ -193,7 +193,7 @@ class PhpRuntime implements Runtime
      */
     public function uninstall(string $version, ?callable $onOutput = null): void
     {
-        $this->must($this->serverOps->run(
+        $this->must($this->serverOps->apt(
             ['apt-get', 'purge', '-y', $this->stack->packagePrefix($version).'*'],
             ['feature' => 'runtime', 'op' => 'php_uninstall', 'version' => $version],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
