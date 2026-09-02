@@ -1,16 +1,43 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations, useFormatter } from "next-intl";
 import { CircleAlert, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clockFormatter } from "@/lib/format/time";
 import { useLiveMetrics } from "@/components/server-dashboard/use-live-metrics";
 import { StatCards } from "@/components/server-dashboard/stat-cards";
-import { ServerLoadChart } from "@/components/server-dashboard/server-load-chart";
-import { ResourceUsageChart } from "@/components/server-dashboard/resource-usage-chart";
-import { NetworkIoChart } from "@/components/server-dashboard/network-io-chart";
-import { DiskIoChart } from "@/components/server-dashboard/disk-io-chart";
+import { ChartCardSkeleton } from "@/components/server-dashboard/chart-card-skeleton";
+
+/**
+ * The four charts are loaded after the page, not with it.
+ *
+ * Recharts is around 400 KB and this is the screen login lands on, so
+ * importing it statically made the numbers people actually came for wait for a
+ * drawing library. Split out, the stat cards and the live badge are readable
+ * immediately and the charts fill in behind them.
+ *
+ * `ssr: false` because none of the four can render anything real on the
+ * server: the two I/O charts need a second poll sample before they have a
+ * line at all, and the two history charts are inside a client-polled section.
+ * Server-rendering markup that is about to be replaced buys nothing and costs
+ * the render.
+ */
+const chart = (load) => dynamic(load, { ssr: false, loading: ChartCardSkeleton });
+
+const ServerLoadChart = chart(() =>
+  import("@/components/server-dashboard/server-load-chart").then((m) => m.ServerLoadChart),
+);
+const ResourceUsageChart = chart(() =>
+  import("@/components/server-dashboard/resource-usage-chart").then((m) => m.ResourceUsageChart),
+);
+const NetworkIoChart = chart(() =>
+  import("@/components/server-dashboard/network-io-chart").then((m) => m.NetworkIoChart),
+);
+const DiskIoChart = chart(() =>
+  import("@/components/server-dashboard/disk-io-chart").then((m) => m.DiskIoChart),
+);
 
 /** Announce only meaningful connection transitions, never every metric poll. */
 function ConnectionAnnouncement({ failed }) {
