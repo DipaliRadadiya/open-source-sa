@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { retryProvisioning } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Progress } from "@/components/ui/progress";
@@ -38,6 +39,7 @@ const POLL_LIMIT_MS = 20 * 60 * 1000;
  */
 export function ProvisioningCard({ application, canManage = false }) {
   const t = useTranslations("applications.details");
+  const { refresh, pending: refreshing } = useRefresh();
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
   const [stalled, setStalled] = useState(false);
@@ -158,8 +160,13 @@ export function ProvisioningCard({ application, canManage = false }) {
 
         {stalled ? (
           <div className="border-t pt-4">
-            <Button variant="outline" onClick={() => router.refresh()} className="w-full sm:w-auto">
-              <RotateCw className="size-4" />
+            <Button
+              variant="outline"
+              onClick={refresh}
+              disabled={refreshing}
+              className="w-full sm:w-auto"
+            >
+              <RotateCw className={cn("size-4", refreshing && "animate-spin")} />
               {t("checkAgain")}
             </Button>
           </div>

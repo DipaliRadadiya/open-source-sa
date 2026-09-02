@@ -3,10 +3,12 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CircleAlert, CircleCheck, Loader2, RefreshCw, TriangleAlert, Undo2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { reasonText } from "@/lib/backups/reason";
 import { fetchBackup, fetchRestore } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
@@ -37,6 +39,7 @@ const QUEUED_LIMIT_MS = 2 * 60 * 1000;
  */
 export function RestoreProgress({ restore: initial, applicationDomain, onDismiss }) {
   const t = useTranslations("backups.progress");
+  const { refresh, pending: refreshing } = useRefresh();
   const router = useRouter();
   const [restore, setRestore] = useState(initial);
   const [undoBackup, setUndoBackup] = useState(null);
@@ -232,8 +235,8 @@ export function RestoreProgress({ restore: initial, applicationDomain, onDismiss
           </div>
         </div>
         <div className="ml-14 flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => router.refresh()}>
-            <RefreshCw className="size-4" />
+          <Button variant="outline" onClick={refresh} disabled={refreshing}>
+            <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
             {t("checkAgain")}
           </Button>
           <Button variant="ghost" onClick={onDismiss}>

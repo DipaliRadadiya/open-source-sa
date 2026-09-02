@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { DownloadCloud, Loader2, RefreshCw, ScanSearch } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -11,6 +10,7 @@ import {
   startSync,
   unignoreSyncItem,
 } from "@/lib/api/sync";
+import { cn } from "@/lib/utils";
 import { apiMessage } from "@/lib/api/error-message";
 import { syncRunResponseSchema } from "@/lib/schemas/sync";
 import { ignoreKey, ignoreKeySet, typesPresent } from "@/lib/server/sync-selection";
@@ -19,6 +19,7 @@ import { IgnoredSheet } from "@/components/sync/ignored-sheet";
 import { SyncResults } from "@/components/sync/sync-results";
 import { SyncSummary } from "@/components/sync/sync-summary";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 
 /* One page of items per call, matching the backend's limit. A full page means
@@ -33,7 +34,7 @@ const SCAN_STOP_MS = 10 * 60 * 1000;
 
 export function SyncPanel({ run: initialRun, items: initialItems, ignores: initialIgnores, canManage }) {
   const t = useTranslations("sync");
-  const router = useRouter();
+  const { refresh, pending: refreshing } = useRefresh();
 
   const [run, setRun] = useState(initialRun);
   const [items, setItems] = useState(initialItems ?? []);
@@ -218,8 +219,8 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
         />
 
         {run?.finished ? (
-          <Button variant="ghost" onClick={() => router.refresh()}>
-            <RefreshCw className="size-4" aria-hidden />
+          <Button variant="ghost" onClick={refresh} disabled={refreshing}>
+            <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
             {t("actions.refresh")}
           </Button>
         ) : null}

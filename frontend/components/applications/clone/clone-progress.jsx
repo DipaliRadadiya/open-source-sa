@@ -8,6 +8,7 @@ import { CLONE_IN_FLIGHT } from "@/lib/schemas/clone";
 import { fetchClone } from "@/lib/api/clone";
 import { apiDuration } from "@/lib/format/api-date";
 import { Badge } from "@/components/ui/badge";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -35,6 +36,7 @@ const POLL_LIMIT_MS = 20 * 60 * 1000;
  */
 export function CloneProgress({ clone: initial, sourceApplication, onDone, onAgain }) {
   const t = useTranslations("applications.clone.progress");
+  const { refresh, pending: refreshing } = useRefresh();
   const router = useRouter();
   const [clone, setClone] = useState(initial);
   const [stalled, setStalled] = useState(false);
@@ -165,7 +167,15 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
             difference between someone sitting here and getting on with
             something else. */}
         {stalled ? (
-          <Button variant="outline" onClick={() => router.refresh()} className="w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={refresh}
+            disabled={refreshing}
+            className="w-full sm:w-auto"
+          >
+            {/* No icon at rest — this button never had one. The spinner is the
+                only thing added, and only while it is actually working. */}
+            {refreshing ? <Loader2 className="size-4 animate-spin" /> : null}
             {t("checkAgain")}
           </Button>
         ) : (

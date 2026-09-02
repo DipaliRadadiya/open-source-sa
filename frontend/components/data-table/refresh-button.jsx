@@ -1,11 +1,9 @@
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useNavTransition } from "@/components/data-table/nav-transition";
 
 /**
  * Re-fetches the current list without a full page reload by re-running the
@@ -14,12 +12,7 @@ import { useNavTransition } from "@/components/data-table/nav-transition";
  */
 export function RefreshButton({ className }) {
   const t = useTranslations("common");
-  const nav = useNavTransition();
-  const router = useRouter();
-  const [localPending, startLocal] = useTransition();
-
-  const pending = nav ? nav.isPending : localPending;
-  const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
+  const { pending, refresh } = useRefresh();
 
   return (
     <Tooltip>

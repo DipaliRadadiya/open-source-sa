@@ -1,8 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { TriangleAlert, RotateCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -22,7 +23,7 @@ import { Button } from "@/components/ui/button";
  */
 export function LoadFailed({ description, status = null, failure = null }) {
   const t = useTranslations("errors");
-  const router = useRouter();
+  const { refresh, pending } = useRefresh();
 
   /**
    * Which of the six things went wrong, or null when we cannot tell.
@@ -70,8 +71,8 @@ export function LoadFailed({ description, status = null, failure = null }) {
       </div>
       {/* refresh() re-runs the server component, which is the whole fix when the
           failure was a one-off. */}
-      <Button variant="outline" size="sm" onClick={() => router.refresh()}>
-        <RotateCw className="size-4" />
+      <Button variant="outline" size="sm" onClick={refresh} disabled={pending}>
+        <RotateCw className={cn("size-4", pending && "animate-spin")} />
         {t("retry")}
       </Button>
     </div>
