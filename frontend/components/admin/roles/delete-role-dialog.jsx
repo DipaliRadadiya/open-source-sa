@@ -1,29 +1,20 @@
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useAction } from "@/hooks/use-action";
 import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { deleteRole } from "@/lib/api/roles";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { apiMessage } from "@/lib/api/error-message";
 
 export function DeleteRoleDialog({ role, open, onOpenChange }) {
   const t = useTranslations("roles");
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
+  const { run, pending } = useAction();
 
   async function onConfirm() {
-    setPending(true);
-    try {
-      await deleteRole(role.id);
-      toast.success(t("toast.deleted"));
-      onOpenChange?.(false);
-      router.refresh();
-    } catch (error) {
-      toast.error(apiMessage(error, t("toast.deleteFailed")));
-    } finally {
-      setPending(false);
-    }
+    await run(() => deleteRole(role.id), {
+      success: t("toast.deleted"),
+      error: t("toast.deleteFailed"),
+      onSuccess: () => onOpenChange?.(false),
+      refresh: true,
+    });
   }
 
   return (

@@ -1,30 +1,22 @@
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { deleteUser } from "@/lib/api/users";
+import { useAction } from "@/hooks/use-action";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { apiMessage } from "@/lib/api/error-message";
 
 export function DeleteUserDialog({ user, open, onOpenChange }) {
   const t = useTranslations("users");
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
+  const { run, pending } = useAction();
 
   async function onConfirm() {
-    setPending(true);
-    try {
-      await deleteUser(user.id);
-      toast.success(t("toast.deleted"));
-      onOpenChange?.(false);
-      router.refresh();
-    } catch (error) {
-      // Backend blocks self-deletion (and similar) with a 422 message.
-      toast.error(apiMessage(error, t("toast.deleteFailed")));
-    } finally {
-      setPending(false);
-    }
+    await run(() => deleteUser(user.id), {
+      success: t("toast.deleted"),
+      // Backend blocks self-deletion (and similar) with a 422 message, which
+      // apiMessage surfaces in place of this fallback.
+      error: t("toast.deleteFailed"),
+      onSuccess: () => onOpenChange?.(false),
+      refresh: true,
+    });
   }
 
   return (
