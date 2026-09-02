@@ -1,6 +1,7 @@
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
 import { locales, defaultLocale } from "./routing";
+import { getMessageFallback, onError } from "./message-fallback";
 
 const COOKIE = "NEXT_LOCALE";
 
@@ -57,5 +58,5 @@ export default getRequestConfig(async () => {
     Intl.DateTimeFormat().resolvedOptions().timeZone ||
     "UTC";
 
-  return { locale, messages, timeZone };
+  return { locale, messages, timeZone, getMessageFallback, onError };
 });

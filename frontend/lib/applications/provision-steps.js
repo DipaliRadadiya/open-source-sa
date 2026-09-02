@@ -50,9 +50,19 @@ export const PROVISION_STEPS = new Set([
  * Human label for a step. `prefix` bridges the two namespaces this is called
  * from — the card translates under `applications.details`, the list and row
  * actions under `applications`, and both need the same words.
+ *
+ * An unrecognised step is handed to `t()` anyway rather than swapped for the
+ * generic phrase. The panel now supplies a fallback for every missing key
+ * (i18n/message-fallback.js), so a step we have no wording for reads as
+ * "Brand new step" instead of leaking `brand_new_step` — and, more to the
+ * point, instead of "Completed a step", which the failure sentence rendered as
+ * **"Stopped at: Completed a step"**. A message that contradicts itself is
+ * worse than one that is merely unpolished.
+ *
+ * `unknownStep` survives for the case it was actually right about: no step at
+ * all. A failure that names nothing cannot be described by naming something.
  */
 export function provisionStepLabel(step, t, prefix = "") {
-  return PROVISION_STEPS.has(step)
-    ? t(`${prefix}steps.${step}`)
-    : t(`${prefix}unknownStep`);
+  if (!step) return t(`${prefix}unknownStep`);
+  return t(`${prefix}steps.${step}`);
 }
