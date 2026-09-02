@@ -160,10 +160,27 @@ class MongoEngine implements DatabaseEngine
         $this->createUser($newUsername, $newHost, $password, $database);
     }
 
+    /**
+     * Everything running except this connection's own operations.
+     *
+     * `currentOp` reports the operation asking for it, so the panel appeared in
+     * its own process list on every poll — see {@see SqlEngine::processes()}
+     * for the same problem and why it matters. `$ownOps` names our connection
+     * from the server's side; filtering on that rather than on the command text
+     * keeps a genuine `currentOp` from an operator visible.
+     *
+     * The connection id is compared as a string. It arrives as a BSON `Long`,
+     * and two `Long`s holding the same number are different objects — `!==`
+     * between them is always true, so an identity comparison would filter
+     * nothing while looking like it worked.
+     */
     public function processes(): array
     {
         $result = $this->run(
-            'db.adminCommand({ currentOp: 1 }).inprog.forEach(o => print(['
+            'const own = String(((db.adminCommand({ currentOp: 1, $ownOps: true }).inprog[0]) || {}).connectionId); '
+            .'db.adminCommand({ currentOp: 1 }).inprog'
+            .'.filter(o => String(o.connectionId) !== own)'
+            .'.forEach(o => print(['
             .'o.opid, (o.client||""), (o.ns||""), (o.op||""), (o.secs_running||0), (o.desc||"")].join("\t")));'
         );
         if ($result->failed()) {

@@ -214,9 +214,35 @@ class SqlEngine implements DatabaseEngine
         );
     }
 
+    /**
+     * Everything running except the connection doing the asking.
+     *
+     * `SHOW FULL PROCESSLIST` includes the thread executing it, so the panel
+     * was always in its own list: a row with `Command = Query` and our own
+     * statement as its text. That row is not `Sleep`, so it survived the
+     * active-query filter and an idle database never read as idle — on a quiet
+     * server the entire list was the panel watching itself. It was also given
+     * a Stop Query button that could not work: the KILL is issued on a new
+     * connection, by which time that thread has gone, so MySQL answers
+     * `Unknown thread id` and the user gets an error for pressing a control we
+     * offered them.
+     *
+     * `information_schema.PROCESSLIST` carries the same columns in the same
+     * order and lets the server exclude us by its own reckoning of who we are.
+     * Matching on the statement text instead would misfire the moment somebody
+     * legitimately runs `SHOW FULL PROCESSLIST` themselves.
+     *
+     * NULL is selected as the literal 'NULL' the batch client would have
+     * printed, so the parsing below is unchanged.
+     */
     public function processes(): array
     {
-        $result = $this->run('SHOW FULL PROCESSLIST;');
+        $result = $this->run(
+            'SELECT ID, USER, HOST, IFNULL(DB, \'NULL\'), COMMAND, TIME, '
+            .'IFNULL(STATE, \'\'), IFNULL(INFO, \'NULL\') '
+            .'FROM information_schema.PROCESSLIST '
+            .'WHERE ID <> CONNECTION_ID() ORDER BY TIME DESC;'
+        );
         if ($result->failed()) {
             return [];
         }

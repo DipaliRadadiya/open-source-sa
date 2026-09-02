@@ -47,7 +47,7 @@ function fakeDb(): void
             return match (true) {
                 str_contains($sql, 'VERSION()') => Process::result(output: '8.0.36'),
                 str_contains($sql, 'SHOW DATABASES') => Process::result(output: "app_db\nother_db\ninformation_schema\nmysql\n"),
-                str_contains($sql, 'SHOW FULL PROCESSLIST') => Process::result(output: "12\troot\tlocalhost\tshop\tQuery\t3\texecuting\tSELECT 1\n"),
+                str_contains($sql, 'information_schema.PROCESSLIST') => Process::result(output: "12\troot\tlocalhost\tshop\tQuery\t3\texecuting\tSELECT 1\n"),
                 str_contains($sql, "LIKE 'max_connections'") => Process::result(output: "max_connections\t151"),
                 str_contains($sql, 'SHOW GLOBAL STATUS') => Process::result(output: "Threads_connected\t5\nThreads_running\t1\nQueries\t1000\nSlow_queries\t2\nUptime\t3600"),
                 str_contains($sql, 'SELECT table_name') => Process::result(output: "users\t42\t8192\nposts\t10\t4096"),
