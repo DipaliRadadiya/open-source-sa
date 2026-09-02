@@ -16,10 +16,9 @@ import {
   MoreHorizontal,
   Pencil,
   RotateCw,
-  Ruler,
   Trash2,
 } from "lucide-react";
-import { measureApplicationSize, retryProvisioning } from "@/lib/api/applications";
+import { retryProvisioning } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -73,7 +72,6 @@ export function ApplicationRowActions({
   const t = useTranslations("applications");
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
-  const [measuring, setMeasuring] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [webRootOpen, setWebRootOpen] = useState(false);
 
@@ -84,22 +82,6 @@ export function ApplicationRowActions({
 
   // Nothing to offer (view-only, on the detail page) → no empty ⋯ trigger.
   if (!showNavigation && !showRetry && !canManage && shortcuts.length === 0) return null;
-
-  // Walks every inode on the site, so it is the user's decision and never a
-  // side effect of opening a screen. Lives here because it is a per-row action
-  // like every other item in this menu — the Size cell shows the answer, not a
-  // control repeated down the column.
-  async function measure() {
-    setMeasuring(true);
-    try {
-      await measureApplicationSize(application.id);
-      router.refresh();
-    } catch (error) {
-      toast.error(apiMessage(error, t("size.measureFailed")));
-    } finally {
-      setMeasuring(false);
-    }
-  }
 
   async function retry() {
     setRetrying(true);
@@ -118,7 +100,7 @@ export function ApplicationRowActions({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-8">
-            {retrying || measuring ? (
+            {retrying ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <MoreHorizontal className="size-4" />
@@ -185,11 +167,6 @@ export function ApplicationRowActions({
               <DropdownMenuSeparator />
             </>
           ) : null}
-
-          <DropdownMenuItem disabled={measuring} onSelect={measure}>
-            <Ruler className="size-4" />
-            {measuring ? t("size.measuring") : t("size.measure")}
-          </DropdownMenuItem>
 
           {showRetry ? (
             <DropdownMenuItem disabled={retrying} onSelect={retry}>

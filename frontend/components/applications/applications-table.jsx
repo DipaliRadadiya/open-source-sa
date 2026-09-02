@@ -62,11 +62,17 @@ function CreatedCell({ row }) {
   );
 }
 
-/* Nothing measures a site's size on a timer — `du` walks every inode, so it is
- * counted after a deploy and when somebody asks, never on a schedule. A number
- * with no date therefore reads as current when it may be weeks old, which is
- * why the API sends the measurement time alongside it and this cell shows it.
- * A site nobody has measured says so rather than showing a zero. */
+/* A scheduled sweep measures every site every minute, so the number here is
+ * current without anybody asking for it — see `applications:measure-sizes` in
+ * routes/console.php. This cell therefore shows the figure alone; the manual
+ * re-measure that used to live in the row menu was doing by hand what the
+ * sweep already does each tick.
+ *
+ * The one state the sweep cannot cover is a site it has not reached yet: one
+ * created seconds ago, a server where `application_size.per_run` bounds the
+ * pass, or a scheduler that is not running at all. Those show "Not measured"
+ * rather than a zero, and the words are the trigger — clicking them tells the
+ * three apart, which an empty column never could. */
 function SizeCell({ row }) {
   const t = useTranslations("applications");
   const format = useFormatter();
