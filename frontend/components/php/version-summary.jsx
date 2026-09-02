@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Trash2, Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
 import { setDefaultPhpVersion, removePhpVersion } from "@/lib/api/php";
 import { Badge } from "@/components/ui/badge";
@@ -187,6 +187,7 @@ export function VersionSummary({
                   disabled={!canManage || pending || Boolean(notReadyReason)}
                   onClick={makeDefault}
                 >
+                  {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("versions.makeDefault")}
                 </Button>
               </ReasonTooltip>

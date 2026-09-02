@@ -162,6 +162,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
                   disabled={!canManage || pending || Boolean(notReadyReason)}
                   onClick={makeDefault}
                 >
+                  {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("versions.makeDefault")}
                 </Button>
               </ReasonTooltip>

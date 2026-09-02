@@ -15,6 +15,7 @@ import { BackupStatusBadge, SafetyBadge } from "@/components/backups/backup-stat
 import { DownloadBackupButton } from "@/components/backups/download-backup-button";
 import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ActionIcon } from "@/components/ui/action-icon";
 import { restoreBlocker } from "@/components/backups/restore-dialog";
 
 /* ---------------------------------------------------------------------------
@@ -178,7 +179,7 @@ function ActionsCell({ row, table }) {
             disabled={busyId === backup.id}
             onClick={() => onClear?.(backup)}
           >
-            <CircleAlert className="size-4" />
+            <ActionIcon icon={CircleAlert} pending={busyId === backup.id} className="size-4" />
             {t("clear.action")}
           </Button>
         ) : null}
@@ -202,7 +203,7 @@ function ActionsCell({ row, table }) {
             disabledReason={retryBlocked}
             onClick={() => onRetry(backup)}
           >
-            <RotateCw className="size-4" />
+            <ActionIcon icon={RotateCw} pending={busyId === backup.id} className="size-4" />
             {t("retry")}
           </Button>
         ) : null}

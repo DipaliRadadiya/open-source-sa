@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
+import { ActionIcon } from "@/components/ui/action-icon";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
 
@@ -120,7 +121,7 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
                             disabled={busyId === application.id || !target}
                             onClick={() => onBackUpNow(application.id, application.name)}
                           >
-                            <PlayCircle className="size-4" />
+                            <ActionIcon icon={PlayCircle} pending={busyId === application.id} className="size-4" />
                             {t("runBackup")}
                           </Button>
                         </ReasonTooltip>

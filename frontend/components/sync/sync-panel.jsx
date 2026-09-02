@@ -238,6 +238,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
             onClick={() => begin("preview")}
             disabled={starting}
           >
+            {starting ? <Loader2 className="size-3.5 animate-spin" /> : null}
             <RefreshCw className="size-3.5" aria-hidden />
             {t("actions.rescan")}
           </Button>

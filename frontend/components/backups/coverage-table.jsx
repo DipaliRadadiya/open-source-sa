@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
+import { ActionIcon } from "@/components/ui/action-icon";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
 import {
   DropdownMenu,
@@ -235,7 +236,7 @@ function ActionsCell({ row, table }) {
             onClick={() => onBackUpNow(application.id, application.name)}
             disabled={busyId === application.id || !target}
           >
-            <PlayCircle className="size-4" />
+            <ActionIcon icon={PlayCircle} pending={busyId === application.id} className="size-4" />
             {t("runBackup")}
           </Button>
         </ReasonTooltip>

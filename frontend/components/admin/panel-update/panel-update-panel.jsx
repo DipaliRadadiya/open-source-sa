@@ -22,6 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { ActionIcon } from "@/components/ui/action-icon";
 import { UpdateHeader } from "./update-header";
 import { ReleaseNotes } from "./release-notes";
 import { PreflightList } from "./preflight-list";
@@ -198,7 +199,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     <div className="flex w-full flex-col items-end gap-1.5 sm:ml-auto sm:w-auto">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button variant="outline" onClick={() => begin(true)} disabled={starting}>
-          <FlaskConical className="size-4" />
+          <ActionIcon icon={FlaskConical} pending={starting} className="size-4" />
           {t("dryRun")}
         </Button>
         <ReasonTooltip reason={blockedReason}>

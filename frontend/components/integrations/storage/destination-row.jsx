@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { ActionIcon } from "@/components/ui/action-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -198,7 +199,7 @@ export function DestinationRow({
               onClick={onTest}
               disabled={!canManage || testing || !destination.has_credentials}
             >
-              <PlugZap className="size-3.5" />
+              <ActionIcon icon={PlugZap} pending={testing} className="size-3.5" />
               {t("row.test")}
             </Button>
           </ReasonTooltip>

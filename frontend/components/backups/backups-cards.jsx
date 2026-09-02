@@ -4,6 +4,7 @@ import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
 import { Button } from "@/components/ui/button";
+import { ActionIcon } from "@/components/ui/action-icon";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { BackupStatusBadge, SafetyBadge } from "@/components/backups/backup-status-badge";
 import { DownloadBackupButton } from "@/components/backups/download-backup-button";
@@ -112,7 +113,7 @@ export function BackupsCards({
                       disabled={busyId === backup.id}
                       onClick={() => onClear?.(backup)}
                     >
-                      <CircleAlert className="size-4" />
+                      <ActionIcon icon={CircleAlert} pending={busyId === backup.id} className="size-4" />
                       {t("clear.action")}
                     </Button>
                   ) : null
@@ -125,7 +126,7 @@ export function BackupsCards({
                       disabledReason={retryBlockedFor?.(backup) ?? null}
                       onClick={() => onRetry(backup)}
                     >
-                      <RotateCw className="size-4" />
+                      <ActionIcon icon={RotateCw} pending={busyId === backup.id} className="size-4" />
                       {t("retry")}
                     </Button>
                   ) : null

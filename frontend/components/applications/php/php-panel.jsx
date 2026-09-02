@@ -481,6 +481,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
             </p>
             {canManage && onIsolate ? (
               <Button type="button" size="sm" onClick={onIsolate} disabled={saving}>
+                {saving ? <Loader2 className="size-4 animate-spin" /> : null}
                 {t("isolation.isolateAction")}
               </Button>
             ) : null}
