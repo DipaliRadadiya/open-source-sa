@@ -3781,6 +3781,7 @@
       "warning": "Esto protege todo el sitio, no solo un área de administración: los motores de búsqueda, los monitores de disponibilidad y cualquier integración que acceda a este dominio también quedarán bloqueados hasta que reciban las credenciales. Puedes desactivarlo aquí en cualquier momento si eso causa un problema.",
       "credentialsNote": "Esto crea un inicio de sesión nuevo solo para este sitio, independiente de tu cuenta de {brand}. Los visitantes verán el aviso de inicio de sesión propio del navegador, no una página con estilo.",
       "disabledHint": "El sitio es de acceso público: cualquiera puede verlo.",
+      "unsupportedForType": "Esta aplicación inicia sesión con la cabecera Authorization, que HTTP solo permite una vez por petición. La protección con contraseña la consumiría y dejaría la aplicación inaccesible. Ya requiere sus propias credenciales.",
       "username": "Usuario",
       "usernamePlaceholder": "p. ej. admin",
       "password": "Contraseña",

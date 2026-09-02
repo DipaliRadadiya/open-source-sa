@@ -3781,6 +3781,7 @@
       "warning": "This protects the whole site, not just an admin area — search engines, uptime monitors and any integration hitting this domain will also be blocked until they're given the credentials. You can turn this off here at any time if that causes a problem.",
       "credentialsNote": "This creates a new login just for this site — separate from your {brand} account. Visitors will see their browser's own plain sign-in prompt, not a styled page.",
       "disabledHint": "The site is publicly reachable — anyone can view it.",
+      "unsupportedForType": "This application signs in with the Authorization header, which HTTP allows only once per request. Password protection would consume it and make the application unreachable. It already requires its own credentials.",
       "username": "Username",
       "usernamePlaceholder": "e.g. admin",
       "password": "Password",

@@ -123,6 +123,10 @@ export const applicationSchema = z.object({
   webhook: webhookSchema.nullish(),
   basic_auth_enabled: z.boolean().default(false),
   basic_auth_username: z.string().nullish(),
+  // False when the app's own client signs in with the Authorization header,
+  // which Basic Auth would consume. Defaults true so a backend that predates
+  // the flag keeps the control enabled rather than hiding a working feature.
+  basic_auth_supported: z.boolean().default(true),
   is_disabled: z.boolean().default(false),
   disabled_at: z.string().nullish(),
   // "This site has a jail configured" — NOT "fail2ban is protecting this site".

@@ -102,10 +102,23 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   // vanishes with no warning. See components/ui/unsaved-guard.jsx.
   useWatchUnsaved("app-security", isDirty);
 
-  const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
+  // Some applications sign in with the Authorization header, and HTTP carries
+  // only one of those per request -- Basic Auth would consume it and make the
+  // application unreachable rather than merely double-protected. The API
+  // refuses the combination, so the control is disabled here rather than
+  // letting the user fill in a form that cannot be saved.
+  //
+  // Turning protection OFF stays available: an application protected before
+  // this was known must not be stuck that way.
+  const conflicts = application.basic_auth_supported === false;
+  const alreadyProtected = application.basic_auth_enabled ?? false;
+  const cannotEnable = conflicts && !alreadyProtected;
+
+  const controlReason = !canManage ? t("noPermission") : cannotEnable ? t("unsupportedForType") : null;
+  const saveReason = controlReason ?? (!isDirty ? t("nothingToSave") : null);
 
   return (
-    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+    <DisabledReasonProvider reason={controlReason}>
       <Form {...form}>
         <form method="post" onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())} className="max-w-4xl">
           <Card className="gap-0 overflow-hidden py-0 shadow-sm">
@@ -147,7 +160,11 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {field.value ? t("enableHint") : t("disabledHint")}
+                            {cannotEnable
+                              ? t("unsupportedForType")
+                              : field.value
+                                ? t("enableHint")
+                                : t("disabledHint")}
                           </p>
                         </div>
                       </div>
@@ -156,7 +173,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                           <Switch
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            disabled={!canManage || submitting}
+                            disabled={!canManage || submitting || cannotEnable}
                             aria-label={t("enable")}
                           />
                         </FormControl>
