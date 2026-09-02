@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -24,6 +25,15 @@ import {
 export function LoginForm() {
   const router = useRouter();
   const t = useTranslations("auth");
+  // `router.push` returns void, so awaiting it is impossible and
+  // `formState.isSubmitting` goes false the moment the credentials come back —
+  // which is where the wait *starts*, not where it ends. The dashboard sits
+  // behind an async layout (identity, permissions, impersonation, reboot flag),
+  // so the button would return to its resting state and the page would appear
+  // to have ignored the click for as long as that took. A transition stays
+  // pending until the navigation and its server work finish, and this component
+  // unmounts at that point, so there is nothing to reset.
+  const [navigating, startNavigation] = useTransition();
   const form = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "" },
@@ -32,14 +42,17 @@ export function LoginForm() {
   async function onSubmit(values) {
     try {
       await login(values);
-      router.push("/dashboard");
-      router.refresh();
+      startNavigation(() => {
+        router.push("/dashboard");
+        router.refresh();
+      });
     } catch (error) {
       handleValidationError(error, form);
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  // Credentials in flight, then the redirect — one uninterrupted signal.
+  const isSubmitting = form.formState.isSubmitting || navigating;
 
   return (
     <Form {...form}>
