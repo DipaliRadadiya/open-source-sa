@@ -39,7 +39,11 @@ export default async function RestoresPage({ searchParams }) {
     <NavTransitionProvider>
       <div className="space-y-4">
         <RestoresList restores={restores} applications={applications} hasFilters={hasFilters} />
-        {restores.length > 0 ? <DataTablePagination meta={meta} /> : null}
+        {/* Not behind a row count. The selector hides itself when the list is
+            too short to paginate, and gating it on the current page as well is
+            how it used to vanish on the very page you needed it — see the note
+            in data-table-pagination.jsx. */}
+        <DataTablePagination meta={meta} />
       </div>
     </NavTransitionProvider>
   );

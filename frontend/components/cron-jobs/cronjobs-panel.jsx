@@ -148,7 +148,10 @@ export function CronjobsPanel({
         />
       )}
 
-      {cronjobs.length > 0 ? <DataTablePagination meta={meta} /> : null}
+      {/* Not behind a row count: the selector hides itself when the list is too
+          short to paginate, and gating it on the current page as well is how it
+          used to vanish on the very page you needed it. */}
+      <DataTablePagination meta={meta} />
 
       {canManage ? (
         <CreateCronjobDialog

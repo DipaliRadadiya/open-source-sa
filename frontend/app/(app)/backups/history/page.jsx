@@ -31,11 +31,6 @@ export default async function BackupsHistoryPage({ searchParams }) {
   // Re-running a failed backup is an app_backup action, not a restore.
   const canRun = can(appPermissions, "app_backup", "manage", "application");
   const hasFilters = Boolean(sp.application || sp.status || sp.type || sp.period);
-  // A page past the end is not "nothing has ever run" — the API answers 200
-  // with an empty array, and the never-run empty state then contradicts the
-  // tallies printed right above it.
-
-
   // Before anything renders: a page past the end sends the reader to the
   // last real page instead of painting an error for it.
   redirectOutOfRange("/backups/history", sp, meta, failed);
@@ -50,7 +45,11 @@ export default async function BackupsHistoryPage({ searchParams }) {
           canRun={canRun}
           hasFilters={hasFilters}
         />
-        {backups.length > 0 ? <DataTablePagination meta={meta} /> : null}
+        {/* Not behind a row count. The selector hides itself when the list is
+            too short to paginate, and gating it on the current page as well is
+            how it used to vanish on the very page you needed it — see the note
+            in data-table-pagination.jsx. */}
+        <DataTablePagination meta={meta} />
       </div>
     </NavTransitionProvider>
   );
