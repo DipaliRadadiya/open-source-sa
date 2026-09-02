@@ -1,19 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
+import { nextSearchValue as nextValue } from "../lib/tables/search-sync.js";
+
 /**
  * The rule SearchInput follows when the URL changes underneath it.
  *
  * The box seeded itself from the URL once and then owned its value, so
  * "Clear filters" emptied the table and left the term in the input — the list
- * then said "no matches" for a search nothing was applying. Extracted here so
- * the decision is pinned; the component wires it during render.
+ * then said "no matches" for a search nothing was applying.
+ *
+ * This file used to declare its own copy of the rule; it now imports the one
+ * the component calls.
  */
-function nextValue({ urlValue, seenUrlValue, value }) {
-  if (seenUrlValue === urlValue) return value; // nothing external changed
-  return urlValue !== value.trim() ? urlValue : value;
-}
-
 test("clearing the URL empties the box", () => {
   assert.equal(nextValue({ urlValue: "", seenUrlValue: "zzz", value: "zzz" }), "");
 });

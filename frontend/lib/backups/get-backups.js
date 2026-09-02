@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { read } from "@/lib/api/read";
+import { classify } from "@/lib/backups/coverage-state";
 import { getAllApplications } from "@/lib/applications/get-applications";
 import {
   BACKUP_PERIODS,
@@ -227,20 +228,5 @@ export async function getBackupCoverage() {
   };
 }
 
-/**
- * Three states, not two. A target that exists but is switched off — or set to
- * manual, which runs on no schedule at all — is the dangerous middle: it looks
- * configured on every screen that only asks "is there a target?", and backs up
- * nothing. It gets its own state so the UI can say so.
- */
-function classify(target, lastBackup) {
-  if (!target) return "unprotected";
-  if (!target.enabled || target.frequency === "manual") return "paused";
-  // A schedule that is running and failing protects nothing, and this screen
-  // exists to answer "could I get this site back". The last run is the only
-  // evidence there is; if it failed, the answer is no.
-  if (lastBackup?.status === "failed") return "failing";
-  return "protected";
-}
 
 

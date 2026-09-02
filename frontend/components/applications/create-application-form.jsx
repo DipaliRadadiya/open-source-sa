@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { timezoneOptions } from "@/lib/settings/timezone-options";
+import { preselectOption, preselectVersion } from "@/lib/runtime/preselect-version";
 import {
   Form,
   FormControl,
@@ -372,9 +373,7 @@ function ConfigField({
       return true;
     });
   }, [config.options, runtimeVersions]);
-  const runtimeDefault = isRuntime
-    ? (options.find((option) => option.is_default)?.value ?? options[0]?.value)
-    : undefined;
+  const runtimeDefault = isRuntime ? preselectOption(options) : undefined;
   // Timezones: flatten the grouped API response into a flat option list.
   const timezoneChoices = useMemo(
     () => (isTimezone ? timezoneOptions(timezones) : []),
@@ -941,15 +940,7 @@ export function CreateApplicationForm({
       (field) => field.source === "node_versions",
     );
     if (phpField && !form.getValues(phpField.name)) {
-      const candidates = [
-        phpDefaultVersion,
-        phpVersions.find((item) => item.is_default)?.version,
-        phpVersions[0]?.version,
-      ];
-      const version = candidates.find(
-        (candidate) =>
-          candidate && phpVersions.some((item) => item.version === candidate),
-      );
+      const version = preselectVersion(phpVersions, phpDefaultVersion);
       if (version)
         form.setValue(phpField.name, version, {
           shouldDirty: true,
@@ -957,15 +948,7 @@ export function CreateApplicationForm({
         });
     }
     if (nodeField && !form.getValues(nodeField.name)) {
-      const candidates = [
-        nodeDefaultVersion,
-        nodeVersions.find((item) => item.is_default)?.version,
-        nodeVersions[0]?.version,
-      ];
-      const version = candidates.find(
-        (candidate) =>
-          candidate && nodeVersions.some((item) => item.version === candidate),
-      );
+      const version = preselectVersion(nodeVersions, nodeDefaultVersion);
       if (version)
         form.setValue(nodeField.name, version, {
           shouldDirty: true,

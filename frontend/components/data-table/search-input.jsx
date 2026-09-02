@@ -1,11 +1,10 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, X, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { useSetQuery } from "@/hooks/use-set-query";
+import { nextSearchValue } from "@/lib/tables/search-sync";
 import { useNavPending } from "@/components/data-table/nav-transition";
 
 /**
@@ -46,7 +45,7 @@ export function SearchInput({
   const [seenUrlValue, setSeenUrlValue] = useState(urlValue);
   if (seenUrlValue !== urlValue) {
     setSeenUrlValue(urlValue);
-    if (urlValue !== value.trim()) setValue(urlValue);
+    setValue(nextSearchValue({ urlValue, seenUrlValue, value }));
   }
 
   useEffect(() => {
