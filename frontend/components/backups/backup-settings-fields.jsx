@@ -8,6 +8,8 @@ import {
   ExternalLink,
   HardDrive,
   Layers,
+  Loader2,
+  RotateCw,
   TriangleAlert,
 } from "lucide-react";
 import { BACKUP_TYPES } from "@/lib/schemas/backup";
@@ -84,6 +86,11 @@ export function BackupSettingsFields({
   form,
   applications,
   destinations = [],
+  // Supplied by the dialog so the storage list can be re-read without a page
+  // reload; omitted by any caller that has no way to refresh, in which case the
+  // button simply is not offered.
+  onRefreshDestinations = null,
+  refreshingDestinations = false,
   disabled = false,
   // The configuration as it stands today. Only used to warn about changes that
   // take something away — there is nothing to warn about on a new target.
@@ -314,13 +321,35 @@ export function BackupSettingsFields({
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
             <div className="space-y-2">
               <p>{t("noDestinations")}</p>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/integrations/storage" target="_blank" rel="noreferrer" prefetch={false}>
-                  <HardDrive className="size-4" />
-                  {t("addDestination")}
-                  <ExternalLink className="size-3.5" />
-                </Link>
-              </Button>
+              {/* Two actions, because the first one leaves. "Add destination"
+                  opens a new tab, so the way back has to be here — without it
+                  the only route was reloading the page, which discards
+                  everything already filled in on this form. */}
+              <div className="flex flex-wrap gap-2">
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/integrations/storage" target="_blank" rel="noreferrer" prefetch={false}>
+                    <HardDrive className="size-4" />
+                    {t("addDestination")}
+                    <ExternalLink className="size-3.5" />
+                  </Link>
+                </Button>
+                {onRefreshDestinations ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={refreshingDestinations}
+                    onClick={onRefreshDestinations}
+                  >
+                    {refreshingDestinations ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <RotateCw className="size-4" />
+                    )}
+                    {t("checkAgain")}
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
         ) : (

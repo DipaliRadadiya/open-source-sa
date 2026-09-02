@@ -4807,7 +4807,10 @@
       },
       "editTitle": "Edit backup settings",
       "editSubtitle": "Change what is copied, how often, and where it goes.",
-      "saveChanges": "Save changes"
+      "saveChanges": "Save changes",
+      "refreshFound": "Storage list updated.",
+      "refreshNoneNew": "No new storage found yet.",
+      "refreshFailed": "The storage list could not be refreshed."
     },
     "form": {
       "applicationPlaceholder": "Choose a site",
@@ -4815,6 +4818,7 @@
       "applicationEmpty": "No sites found",
       "noDestinations": "Backups need somewhere to go. Connect an S3-compatible storage destination first — it only takes a bucket and a key.",
       "addDestination": "Set up storage",
+      "checkAgain": "Check again",
       "manageStorage": "Manage storage",
       "destinationPlaceholder": "Choose a destination",
       "destinationSearch": "Search destinations",

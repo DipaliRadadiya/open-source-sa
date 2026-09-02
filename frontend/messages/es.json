@@ -4807,7 +4807,10 @@
       },
       "editTitle": "Editar ajustes de copia",
       "editSubtitle": "Cambia qué se copia, con qué frecuencia y dónde se guarda.",
-      "saveChanges": "Guardar cambios"
+      "saveChanges": "Guardar cambios",
+      "refreshFound": "Lista de almacenamiento actualizada.",
+      "refreshNoneNew": "Aún no se ha encontrado almacenamiento nuevo.",
+      "refreshFailed": "No se pudo actualizar la lista de almacenamiento."
     },
     "form": {
       "applicationPlaceholder": "Elige un sitio",
@@ -4815,6 +4818,7 @@
       "applicationEmpty": "No se encontraron sitios",
       "noDestinations": "Las copias necesitan un destino. Conecta primero un almacenamiento compatible con S3: solo hace falta un bucket y una clave.",
       "addDestination": "Configurar almacenamiento",
+      "checkAgain": "Comprobar de nuevo",
       "manageStorage": "Gestionar almacenamiento",
       "destinationPlaceholder": "Elige un destino",
       "destinationSearch": "Buscar destinos",

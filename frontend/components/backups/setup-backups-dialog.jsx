@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, PlayCircle, ShieldCheck } from "lucide-react";
 import { BACKUP_DEFAULT_TIME, backupTargetFormSchema } from "@/lib/schemas/backup";
 import { runBackupNow, saveBackupTarget } from "@/lib/api/backups";
+import { listDestinations } from "@/lib/api/storage";
+import { storageDestinationsResponseSchema } from "@/lib/schemas/storage";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { apiMessage } from "@/lib/api/error-message";
@@ -44,6 +46,21 @@ export function SetupBackupsDialog({
   const router = useRouter();
   const [saved, setSaved] = useState(null);
   const [running, setRunning] = useState(false);
+  /*
+   * The destinations, as of the last time we asked.
+   *
+   * `destinations` arrives from a server component, so it cannot change while
+   * this dialog is open — and "Add destination" opens the storage page in a
+   * NEW TAB. Someone who came here without one had to add it, come back, and
+   * reload the page to see it, losing everything already typed.
+   *
+   * Null until refreshed, so the prop stays authoritative for a dialog nobody
+   * has pressed the button in. Cleared on close, when the page's own data is
+   * fresher than anything held here.
+   */
+  const [refreshed, setRefreshed] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const available = refreshed ?? destinations;
 
   const form = useForm({
     resolver: zodResolver(backupTargetFormSchema),
@@ -107,6 +124,9 @@ export function SetupBackupsDialog({
 
   function close() {
     setSaved(null);
+    // Back to the prop: the page behind this dialog re-reads on navigation, so
+    // its list is the fresher one once we are no longer holding a form open.
+    setRefreshed(null);
     form.reset(defaults(applicationId, destinations, target));
     onOpenChange?.(false);
   }
@@ -117,6 +137,41 @@ export function SetupBackupsDialog({
   const values = useWatch({ control: form.control });
   // Required fields, mirrored from the schema. The primary action stays
   // disabled until they are answered rather than failing on submit.
+  /**
+   * Ask again, without disturbing the form.
+   *
+   * Deliberately not `router.refresh()`: that re-runs the server component and
+   * would re-render this dialog's parent, which is the reload we are trying to
+   * avoid. Only the list is replaced.
+   */
+  async function refreshDestinations() {
+    setRefreshing(true);
+    try {
+      const { data } = await listDestinations();
+      const parsed = storageDestinationsResponseSchema.safeParse(data);
+      if (!parsed.success) {
+        toast.error(t("refreshFailed"));
+        return;
+      }
+      const next = parsed.data.storage_destinations;
+      setRefreshed(next);
+
+      // Just added their first one: fill the field they have not answered yet,
+      // rather than making them open a picker holding a single option. Never
+      // overwrites a choice already made.
+      if (next.length === 1 && !form.getValues("storage_destination_id")) {
+        form.setValue("storage_destination_id", next[0].id, { shouldValidate: true });
+      }
+      toast.success(
+        next.length > destinations.length ? t("refreshFound") : t("refreshNoneNew"),
+      );
+    } catch (error) {
+      toast.error(apiMessage(error, t("refreshFailed")));
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   const incomplete =
     !values.application_id ||
     !values.storage_destination_id ||
@@ -126,7 +181,7 @@ export function SetupBackupsDialog({
   // What is missing, in the order the form asks for it. A disabled primary
   // action that does not say why is the anti-pattern; this is the sentence.
   const blocker =
-    destinations.length === 0
+    available.length === 0
       ? t("blocked.noStorage")
       : !values.application_id
         ? t("blocked.noSite")
@@ -206,7 +261,9 @@ export function SetupBackupsDialog({
         <BackupSettingsFields
           form={form}
           applications={applications}
-          destinations={destinations}
+          destinations={available}
+          onRefreshDestinations={refreshDestinations}
+          refreshingDestinations={refreshing}
           disabled={submitting}
           target={target}
         />
@@ -214,7 +271,7 @@ export function SetupBackupsDialog({
         {/* What pressing Save will actually do, in one line. Reading your own
             answers back is the cheapest way to catch the wrong site or a
             schedule you did not mean. */}
-        <SummaryLine values={values} applications={applications} destinations={destinations} />
+        <SummaryLine values={values} applications={applications} destinations={available} />
       </FormModal>
     </Form>
   );

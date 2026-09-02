@@ -2,6 +2,19 @@ import { api } from "@/lib/api/client";
 
 const BASE = "/integrations/storage/destinations";
 
+/**
+ * The destinations, read from the browser.
+ *
+ * Every screen gets this list from its server component, so for a long time
+ * there was no client-side read at all. The backup form needs one: its
+ * "Add destination" button opens the storage page in a new tab, and without a
+ * way to ask again the only route back was reloading the page — which threw
+ * away everything already typed into the form.
+ */
+export function listDestinations() {
+  return api.get(BASE);
+}
+
 /** `{name, endpoint?, region?, bucket, prefix?, access_key, secret_key}`. */
 export function createDestination(payload) {
   return api.post(BASE, payload);

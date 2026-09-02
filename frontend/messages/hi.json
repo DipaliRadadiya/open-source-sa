@@ -4807,7 +4807,10 @@
       },
       "editTitle": "बैकअप सेटिंग्स बदलें",
       "editSubtitle": "बदलें कि क्या कॉपी हो, कितनी बार, और कहाँ जाए।",
-      "saveChanges": "बदलाव सहेजें"
+      "saveChanges": "बदलाव सहेजें",
+      "refreshFound": "स्टोरेज सूची अपडेट हो गई।",
+      "refreshNoneNew": "अभी तक कोई नया स्टोरेज नहीं मिला।",
+      "refreshFailed": "स्टोरेज सूची रीफ़्रेश नहीं हो सकी।"
     },
     "form": {
       "applicationPlaceholder": "एक साइट चुनें",
@@ -4815,6 +4818,7 @@
       "applicationEmpty": "कोई साइट नहीं मिली",
       "noDestinations": "बैकअप को कहीं रखना ज़रूरी है। पहले कोई S3-संगत स्टोरेज जोड़ें — बस एक bucket और एक की चाहिए।",
       "addDestination": "स्टोरेज सेट करें",
+      "checkAgain": "फिर से जाँचें",
       "manageStorage": "स्टोरेज प्रबंधित करें",
       "destinationPlaceholder": "एक गंतव्य चुनें",
       "destinationSearch": "गंतव्य खोजें",
