@@ -47,6 +47,10 @@ export default async function ApplicationDeploymentPage({ params }) {
   if (!isGit) notFound();
 
   const canManage = can(appPermissions, "app_deployment", "manage", "application");
+  // The failure banner offers the site's own log as the evidence, and the Logs
+  // page is a separate grant — offering a link that would only redirect them
+  // back here is worse than offering nothing.
+  const canViewLogs = can(appPermissions, "app_log", "view", "application");
   const settled = application.status === "active";
   const [{ providers }, history] = await Promise.all([
     getWebhookProviders(),
@@ -71,6 +75,7 @@ export default async function ApplicationDeploymentPage({ params }) {
           application={application}
           providers={providers}
           canManage={canManage}
+          canViewLogs={canViewLogs}
           deployments={history.deployments}
           settings={history.settings}
         />

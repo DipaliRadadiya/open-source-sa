@@ -22,6 +22,7 @@ export function DeploymentPanel({
   application: initial,
   providers,
   canManage,
+  canViewLogs = false,
   deployments = [],
   settings = null,
 }) {
@@ -32,6 +33,14 @@ export function DeploymentPanel({
   const [application, setApplication] = useState(initial);
   const [deploying, setDeploying] = useState(false);
   const pollRef = useRef(null);
+  // The failure banner and the build log sit in two different cards; this is
+  // the one place that can see both.
+  const historyRef = useRef(null);
+
+  // Only the newest deploy's log answers "why did THIS fail". An older failed
+  // run further down the list is a different question, and `failed_step` can
+  // also come from provisioning, where there is no deploy to open at all.
+  const lastFailed = deployments[0]?.status === "failed" ? deployments[0] : null;
 
   const stopPoll = useCallback(() => {
     if (pollRef.current) {
@@ -92,7 +101,9 @@ export function DeploymentPanel({
         application={application}
         deploying={deploying}
         canManage={canManage}
+        canViewLogs={canViewLogs}
         onDeploy={deploy}
+        onShowBuildLog={lastFailed ? () => historyRef.current?.show(lastFailed) : null}
       />
       {/* What a deploy runs, before the record of what it ran. */}
       {settings ? (
@@ -120,6 +131,7 @@ export function DeploymentPanel({
         applicationId={application.id}
         deployments={deployments}
         canManage={canManage}
+        ref={historyRef}
       />
     </div>
   );

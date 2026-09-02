@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   GitBranch,
@@ -7,6 +8,7 @@ import {
   Info,
   Loader2,
   Rocket,
+  ScrollText,
   SquareArrowOutUpRight,
   TriangleAlert,
 } from "lucide-react";
@@ -54,7 +56,32 @@ function Fact({ label, children }) {
   );
 }
 
-export function DeployCard({ application, deploying, canManage, onDeploy }) {
+/**
+ * Where the reason for a failed step actually is.
+ *
+ * `verify` is the odd one out: everything ran, the process started, and the
+ * site still did not answer — so the evidence is the application's own runtime
+ * log, not the deploy's output. Every other step failed before or during the
+ * deploy itself, and its output is the build log.
+ */
+function evidenceFor(step, application) {
+  if (step !== "verify") return { kind: "build" };
+  return {
+    kind: "logs",
+    // A static or client-rendered git site runs no process, so it has no
+    // application log — its 404 or 500 is the web server's to explain.
+    source: application.has_process ? "application_error" : "error",
+  };
+}
+
+export function DeployCard({
+  application,
+  deploying,
+  canManage,
+  canViewLogs = false,
+  onDeploy,
+  onShowBuildLog,
+}) {
   const t = useTranslations("applications.deployment");
   // A deploy records into the same `steps[]` as provisioning, so it reads the
   // same catalog of labels — which lives under `details` because that is where
@@ -74,6 +101,7 @@ export function DeployCard({ application, deploying, canManage, onDeploy }) {
   const neverDeployed = !application.last_deployed_at && !commit;
   const commitHref = commitUrl(application.repository_url, commit);
   const steps = application.steps ?? [];
+  const evidence = evidenceFor(application.failed_step, application);
 
   return (
     <Card>
@@ -104,12 +132,34 @@ export function DeployCard({ application, deploying, canManage, onDeploy }) {
             className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 px-3 py-2.5 text-sm text-warning"
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            <div className="space-y-0.5">
-              <p>{t("deploy.failedAt", { step: stepLabel(application.failed_step) })}</p>
-              {application.reference ? (
-                <p className="font-mono text-xs opacity-90">
-                  {t("deploy.reference", { reference: application.reference })}
-                </p>
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="space-y-0.5">
+                <p>{t("deploy.failedAt", { step: stepLabel(application.failed_step) })}</p>
+                {application.reference ? (
+                  <p className="font-mono text-xs opacity-90">
+                    {t("deploy.reference", { reference: application.reference })}
+                  </p>
+                ) : null}
+              </div>
+              {/* The banner names the step that failed; on its own that still
+                  leaves "so where do I look?" — which cost a morning of
+                  guessing at a crash-looping site. This is that answer. */}
+              {evidence.kind === "logs" ? (
+                canViewLogs ? (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/applications/${application.id}/logs?source=${evidence.source}`}>
+                      <ScrollText className="size-4" />
+                      {evidence.source === "application_error"
+                        ? t("deploy.viewAppErrors")
+                        : t("deploy.viewErrorLog")}
+                    </Link>
+                  </Button>
+                ) : null
+              ) : onShowBuildLog ? (
+                <Button variant="outline" size="sm" onClick={onShowBuildLog}>
+                  <ScrollText className="size-4" />
+                  {t("deploy.viewBuildLog")}
+                </Button>
               ) : null}
             </div>
           </div>

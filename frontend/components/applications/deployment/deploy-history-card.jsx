@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useImperativeHandle, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -54,7 +54,7 @@ const TONE = {
  * — so a row opens it rather than the list carrying fifty build logs nobody
  * asked for.
  */
-export function DeployHistoryCard({ applicationId, deployments, canManage }) {
+export function DeployHistoryCard({ ref, applicationId, deployments, canManage }) {
   const t = useTranslations("applications.deployment.history");
   const router = useRouter();
   const [open, setOpen] = useState(null);
@@ -65,19 +65,31 @@ export function DeployHistoryCard({ applicationId, deployments, canManage }) {
   // copy of which statuses are terminal.
   const running = deployments.some((deployment) => deployment.in_flight);
 
-  async function show(deployment) {
-    setOpen({ ...deployment, output: null });
-    setLoading(true);
-    try {
-      const { data } = await fetchDeployment(applicationId, deployment.id);
-      const parsed = deploymentResponseSchema.safeParse(data);
-      if (parsed.success) setOpen(parsed.data.deployment);
-    } catch (error) {
-      toast.error(apiMessage(error, t("logFailed")));
-    } finally {
-      setLoading(false);
-    }
-  }
+  const show = useCallback(
+    async (deployment) => {
+      setOpen({ ...deployment, output: null });
+      setLoading(true);
+      try {
+        const { data } = await fetchDeployment(applicationId, deployment.id);
+        const parsed = deploymentResponseSchema.safeParse(data);
+        if (parsed.success) setOpen(parsed.data.deployment);
+      } catch (error) {
+        toast.error(apiMessage(error, t("logFailed")));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applicationId, t],
+  );
+
+  // The failure banner up on the Deploy card opens a build log from here: the
+  // evidence for "the setup script failed" lives in this dialog, and making
+  // someone scroll down and guess which row to click is the gap this closes.
+  //
+  // Imperative rather than an `openId` prop because the trigger is a click, not
+  // a render — routing it through state would mean opening a dialog from an
+  // effect, which is both a lint error and a lie about what happened.
+  useImperativeHandle(ref, () => ({ show }), [show]);
 
   async function redeploy(deployment) {
     setBusyId(deployment.id);
