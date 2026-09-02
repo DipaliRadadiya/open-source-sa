@@ -24,6 +24,8 @@
 
 **Pagination:** page-based. Response includes `meta: {current_page, per_page, total, last_page}`. Pass `?page=N&per_page=20`.
 
+**Text matching and ordering:** database-backed `search` parameters are case-insensitive on SQLite, MySQL/MariaDB and PostgreSQL. Human-facing names and labels are also ordered case-insensitively, whether ordering is selected through `?sort=` or fixed by the endpoint. Structured filters remain exact because their values are canonical IDs, enums, booleans or dates. Git-provider repository search is provider-controlled.
+
 **Permissions:** read operations need `view` ability; mutations need `manage`. Middleware notation: `permission:<name>` or `permission:<name>,manage`.
 
 ---
@@ -108,7 +110,7 @@ Auth-gated. Exit impersonation mode (admin feature).
 ### GET `/admin/roles`
 **Permission:** `access-admin` (view)
 
-Paged. `?search=` matches name **and** description; `?sort=name|created_at` (prefix `-` for descending, default `name` ascending); `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
+Paged. `?search=` case-insensitively matches name **and** description; `?sort=name|created_at` (prefix `-` for descending, default `name` ascending; name ordering is case-insensitive); `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
 
 ```json
 {"roles": [{
@@ -174,7 +176,7 @@ Each item needs `level` **and** `name` — the same `name` can exist at two leve
 ### GET `/admin/users`
 **Permission:** `access-admin` (view)
 
-Paginated. Filter by `filter[role_id]`, `filter[search]` (username).
+Paginated. `?search=` case-insensitively matches name and username; `?filter[is_admin]=0|1`; `?per_page=10|20|50|100`.
 
 ```json
 {"users": [{"id": 1, "username": "admin", "is_admin": true, "roles": [...], "created_at": "…", "last_active_at": "…"}], "meta": {"current_page": 1, "per_page": 20, "total": 3, "last_page": 1}}
@@ -607,7 +609,7 @@ nothing installable fixes them, so a card must not offer a button that cannot wo
 |---|---|
 | `page` | 1-based, standard Laravel paging |
 | `per_page` | default **10**, max 100 — `422` above that |
-| `search` | free text over **name and domain**, max 255 chars |
+| `search` | case-insensitive free text over **name and domain**, max 255 chars |
 | `filter[status]` | `pending` · `provisioning` · `active` · `failed` |
 | `filter[site_type]` | any name from `GET /site-types` |
 | `sort` | `created_at` · `name` · `domain` · `status` · `site_type` · `directory_size_bytes` — prefix `-` for descending, default `-created_at` |
@@ -2670,7 +2672,7 @@ Every application and its backup configuration — the overview screen.
 
 **Driven from applications, not from backup targets** — a list built from targets could only ever return the sites that are already protected, and the question this screen exists to answer is which ones are not.
 
-Paged. `?search=` matches application name and domain; **`?filter[protected]=0`** is the one this screen exists for — the sites with no backup configured at all; `?sort=name|domain|created_at`, default `name` ascending; `?per_page=10|20|30|50|100`, default 10.
+Paged. `?search=` case-insensitively matches application name and domain; **`?filter[protected]=0`** is the one this screen exists for — the sites with no backup configured at all; `?sort=name|domain|created_at`, default `name` ascending with case-insensitive name ordering; `?per_page=10|20|30|50|100`, default 10.
 
 **`meta.total` / `meta.protected` / `meta.unprotected` count every application on the server**, not the current page and not the current filter — the header reads "N of M sites protected", and that sentence must not change when you turn the page. **`meta.matched` is the separate number**: how many rows the current search and filter found. Two different questions, two fields.
 
@@ -3107,7 +3109,7 @@ Test reachability of the admin connection.
 ### GET `/databases`
 **Permission:** `database` (view)
 
-Paged. `?search=` matches the database name; `?filter[engine]=mariadb` (validated against the configured engines — an unknown one is a **422**, not an empty list); `?sort=created_at|name|engine|users_count`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
+Paged. `?search=` case-insensitively matches the database name; `?filter[engine]=mariadb` (validated against the configured engines — an unknown one is a **422**, not an empty list); `?sort=created_at|name|engine|users_count`, default `-created_at`, with case-insensitive name ordering; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
 
 ```json
 {"databases": [{
@@ -3508,7 +3510,7 @@ Kill a process/op (`KILL`).
 ### GET `/system-users`
 **Permission:** `system_user` (view)
 
-Paged. `?search=` matches the username; `?sort=created_at|username`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
+Paged. `?search=` case-insensitively matches the username; `?sort=created_at|username`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
 
 ```json
 {"system_users": [{
@@ -4041,7 +4043,7 @@ The rules on their own, paged — use this for the rules table rather than readi
 
 Separate endpoint on purpose: `GET /firewall` also reports live UFW status and the listening ports, and building `listening[]` shells out to `ss`. Turning a page should not re-run that. `GET /firewall` still returns its full `rules` array unchanged, so nothing breaks before the frontend migrates.
 
-`?search=` matches port, source IP and description (text match, so `80` finds both 80 and 8080); `?filter[enabled]=0|1`, `?filter[action]=allow|deny`, `?filter[origin]=user|default|db_user`; `?sort=created_at|port_from|action|protocol`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10.
+`?search=` case-insensitively matches port, source IP and description (text match, so `80` finds both 80 and 8080); `?filter[enabled]=0|1`, `?filter[action]=allow|deny`, `?filter[origin]=user|default|db_user`; `?sort=created_at|port_from|action|protocol`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10.
 
 ```json
 {"rules": [{"id": 1, "port_from": 443, "…": "…"}],
@@ -4808,7 +4810,7 @@ What each provider needs to connect.
 }]}
 ```
 
-The account name is `identifier`, not `username`. **There is no `status` or `expires_at` here** — token health is never cached on this record; ask `GET /integrations/git/accounts/status` for it, since a token can be revoked at any moment.
+Rows are ordered by `label` without case bias. The account name is `identifier`, not `username`. **There is no `status` or `expires_at` here** — token health is never cached on this record; ask `GET /integrations/git/accounts/status` for it, since a token can be revoked at any moment.
 
 `host` is null for the hosted service and set for a self-hosted GitLab/Bitbucket. `workspace` is the Bitbucket workspace (or GitLab group) the token is scoped to, null elsewhere. `scopes` is what the token was found to grant at `last_verified_at` — an empty array means the check has not run or returned none, not that the token is scopeless.
 
@@ -4817,7 +4819,7 @@ The account name is `identifier`, not `username`. **There is no `status` or `exp
 ### GET `/integrations/git/accounts/status`
 **Permission:** `git` (view) | **Throttle:** 30/min
 
-Live token health — checked on demand, never cached (tokens can be revoked at any time).
+Live token health — checked on demand, never cached (tokens can be revoked at any time). Rows use the same case-insensitive `label` ordering as the account list.
 
 ```json
 {"statuses": [
@@ -4897,6 +4899,8 @@ Verify the token is still valid with the provider.
 
 ### GET `/integrations/storage/destinations`
 **Permission:** `storage` (view)
+
+Rows are ordered by `name` without case bias.
 
 ```json
 {"storage_destinations": [{

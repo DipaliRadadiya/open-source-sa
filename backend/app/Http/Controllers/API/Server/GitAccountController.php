@@ -12,6 +12,7 @@ use App\Http\Requests\Server\Git\UpdateGitAccountRequest;
 use App\Http\Resources\GitAccountResource;
 use App\Models\GitAccount;
 use App\Services\Git\GitProviderManager;
+use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 
 class GitAccountController extends Controller
@@ -27,7 +28,7 @@ class GitAccountController extends Controller
 
     public function index(): JsonResponse
     {
-        $accounts = GitAccount::query()->orderBy('label')->get();
+        $accounts = ListSort::caseInsensitive(GitAccount::query(), 'label')->get();
 
         return response()->json([
             'git_accounts' => GitAccountResource::collection($accounts)->resolve(),
@@ -47,7 +48,7 @@ class GitAccountController extends Controller
      */
     public function status(GitProviderManager $manager): JsonResponse
     {
-        $statuses = GitAccount::query()->orderBy('label')->get()
+        $statuses = ListSort::caseInsensitive(GitAccount::query(), 'label')->get()
             ->map(function (GitAccount $account) use ($manager) {
                 $result = $manager->driver($account->provider)->status($account);
                 $expiresAt = $result['expires_at'];

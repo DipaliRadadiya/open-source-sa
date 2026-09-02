@@ -11,15 +11,14 @@ use App\Http\Requests\Server\StorageDestination\UpdateStorageDestinationRequest;
 use App\Http\Resources\StorageDestinationResource;
 use App\Models\StorageDestination;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
+use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 
 class StorageDestinationController extends Controller
 {
     public function index(): JsonResponse
     {
-        $destinations = StorageDestination::query()
-            ->orderBy('name')
-            ->get();
+        $destinations = ListSort::caseInsensitive(StorageDestination::query(), 'name')->get();
 
         return response()->json([
             'storage_destinations' => StorageDestinationResource::collection($destinations)->resolve(),

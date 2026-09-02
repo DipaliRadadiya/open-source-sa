@@ -9,6 +9,7 @@ use App\Http\Requests\Server\SystemUser\IndexSystemUsersRequest;
 use App\Http\Requests\Server\SystemUser\StoreSystemUserRequest;
 use App\Http\Resources\SystemUserResource;
 use App\Models\SystemUser;
+use App\Support\ListSearch;
 use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 
@@ -22,7 +23,7 @@ class SystemUserController extends Controller
         // user owns without the full detail.
         $users = SystemUser::query()
             ->with('applications:id,system_user_id,name')
-            ->when($search !== '', fn ($query) => $query->where('username', 'like', '%'.$search.'%'));
+            ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['username']));
 
         $users = ListSort::apply($users, $request->validated('sort'), IndexSystemUsersRequest::SORTS)
             ->paginate($request->validated('per_page', IndexSystemUsersRequest::PER_PAGE));

@@ -7,6 +7,7 @@ use App\Http\Requests\ListMyActivityLogRequest;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
 use App\Services\ActivityScopes;
+use App\Support\ListSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -90,10 +91,7 @@ class ActivityLogController extends Controller
         // Free-text over type + action only. Unlike the admin log there is no
         // actor to search — every row here belongs to the caller.
         if ($search = $request->string('search')->trim()->value()) {
-            $query->where(function ($q) use ($search) {
-                $q->where('type', 'like', "%{$search}%")
-                    ->orWhere('action', 'like', "%{$search}%");
-            });
+            ListSearch::apply($query, $search, ['type', 'action']);
         }
 
         $perPage = (int) $request->input('per_page', 10);
@@ -137,10 +135,7 @@ class ActivityLogController extends Controller
         }
 
         if ($search = $request->string('search')->trim()->value()) {
-            $query->where(function ($q) use ($search) {
-                $q->where('type', 'like', "%{$search}%")
-                    ->orWhere('action', 'like', "%{$search}%");
-            });
+            ListSearch::apply($query, $search, ['type', 'action']);
         }
 
         $perPage = (int) $request->input('per_page', 20);

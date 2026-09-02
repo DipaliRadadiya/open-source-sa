@@ -9,8 +9,10 @@ use App\Models\Role;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Support\ListSearch;
 use App\Support\ListSort;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Database\Query\Grammars\PostgresGrammar;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Process;
 
@@ -135,6 +137,19 @@ describe('every paged list', function () {
         expect($first)->toBe('alpha');
     });
 
+    it('searches and sorts database names without case bias', function () {
+        foreach (['Case_Zebra', 'case_apple', 'CASE_Banana'] as $name) {
+            Database::factory()->create(['name' => $name, 'engine' => 'mariadb']);
+        }
+
+        grantPermission($this->user, 'database');
+
+        $names = collect($this->getJson('/api/databases?search=CASE&sort=name')->assertOk()->json('databases'))
+            ->pluck('name')->all();
+
+        expect($names)->toBe(['case_apple', 'CASE_Banana', 'Case_Zebra']);
+    });
+
     /*
      * Rows that tie on the sorted column leave the database free to return them
      * in any order, and free to pick a different one next time. Paged, that
@@ -170,6 +185,20 @@ describe('every paged list', function () {
 
         expect($sql)->toContain('order by "created_at" desc')
             ->and($sql)->not->toContain('password');
+    });
+
+    it('compiles portable case-insensitive search for PostgreSQL', function () {
+        $connection = Database::query()->getConnection();
+        $original = $connection->getQueryGrammar();
+
+        try {
+            $connection->setQueryGrammar(new PostgresGrammar($connection));
+            $sql = ListSearch::apply(Database::query(), 'SHOP', ['name'])->toSql();
+        } finally {
+            $connection->setQueryGrammar($original);
+        }
+
+        expect($sql)->toContain('ilike');
     });
 });
 
@@ -300,7 +329,7 @@ describe('GET /applications', function () {
         Application::factory()->create(['name' => 'shop archive', 'directory_size_bytes' => 20]);
         Application::factory()->create(['name' => 'blog', 'directory_size_bytes' => 30]);
 
-        $response = $this->getJson('/api/applications?search=shop&sort=-directory_size_bytes')->assertOk();
+        $response = $this->getJson('/api/applications?search=SHOP&sort=-directory_size_bytes')->assertOk();
 
         expect(collect($response->json('applications'))->pluck('name')->all())
             ->toBe(['shop archive', 'shop'])
@@ -320,7 +349,7 @@ describe('GET /system-users', function () {
             ->assertJsonCount(10, 'system_users')
             ->assertJsonPath('meta.total', 13);
 
-        $this->getJson('/api/system-users?search=deploy')
+        $this->getJson('/api/system-users?search=DEPLOY')
             ->assertOk()
             ->assertJsonCount(1, 'system_users')
             ->assertJsonPath('system_users.0.username', 'deployer');
@@ -352,6 +381,20 @@ describe('GET /admin/roles', function () {
             ->assertOk()
             ->assertJsonCount(1, 'roles')
             ->assertJsonPath('roles.0.name', 'Alpha');
+    });
+
+    it('searches and sorts role names without case bias', function () {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        foreach (['Case Zebra', 'case apple', 'CASE Banana'] as $name) {
+            Role::factory()->create(['name' => $name, 'description' => 'Mixed Case Group']);
+        }
+
+        $names = collect($this->getJson('/api/admin/roles?search=mIxEd&sort=name')->assertOk()->json('roles'))
+            ->pluck('name')->all();
+
+        expect($names)->toBe(['case apple', 'CASE Banana', 'Case Zebra']);
     });
 
     it('is still admin only', function () {
@@ -388,7 +431,7 @@ describe('GET /firewall/rules', function () {
         ]);
         FirewallRule::create(['port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
 
-        foreach (['5432', '10.0.0.7', 'reporting'] as $term) {
+        foreach (['5432', '10.0.0.7', 'REPORTING'] as $term) {
             expect($this->getJson("/api/firewall/rules?search={$term}")->json('rules'))
                 ->toHaveCount(1, "searching for {$term}");
         }
@@ -472,10 +515,21 @@ describe('GET /backup-targets', function () {
         Application::factory()->count(5)->create();
         Application::factory()->create(['name' => 'invoices']);
 
-        $response = $this->getJson('/api/backup-targets?search=invoice')->assertOk();
+        $response = $this->getJson('/api/backup-targets?search=INVOICE')->assertOk();
 
         expect($response->json('meta.matched'))->toBe(1)
             ->and($response->json('meta.total'))->toBe(6);
+    });
+
+    it('sorts backup target names without case bias', function () {
+        foreach (['Case Zebra', 'case apple', 'CASE Banana'] as $name) {
+            Application::factory()->create(['name' => $name]);
+        }
+
+        $names = collect($this->getJson('/api/backup-targets?search=case&sort=name')->assertOk()->json('backup_targets'))
+            ->pluck('application_name')->all();
+
+        expect($names)->toBe(['case apple', 'CASE Banana', 'Case Zebra']);
     });
 
     it('filters to the sites that are not backed up at all', function () {

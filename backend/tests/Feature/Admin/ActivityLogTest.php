@@ -114,7 +114,7 @@ it('searches the activity log by acting username', function () {
     $this->withHeader('Authorization', "Bearer {$otherToken}")->postJson('/api/admin/users', userPayload(['name' => 'B', 'username' => 'userb']));
 
     $response = $this->withHeader('Authorization', "Bearer {$adminToken}")
-        ->getJson('/api/admin/activity-log?search=searchableadmin');
+        ->getJson('/api/admin/activity-log?search=SEARCHABLEADMIN');
 
     expect($response->json('activity_log'))->not->toBeEmpty();
     foreach ($response->json('activity_log') as $entry) {

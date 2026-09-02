@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\ListActivityLogRequest;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
 use App\Services\ActivityScopes;
+use App\Support\ListSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
@@ -65,13 +66,12 @@ class ActivityLogController extends Controller
         }
 
         if ($search = $request->string('search')->trim()->value()) {
-            $query->where(function ($q) use ($search) {
-                $q->where('type', 'like', "%{$search}%")
-                    ->orWhere('action', 'like', "%{$search}%")
-                    ->orWhereHas('user', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('username', 'like', "%{$search}%");
-                    });
+            $query->where(function ($query) use ($search) {
+                ListSearch::apply($query, $search, ['type', 'action']);
+                $query->orWhereHas(
+                    'user',
+                    fn ($user) => ListSearch::apply($user, $search, ['name', 'username']),
+                );
             });
         }
 

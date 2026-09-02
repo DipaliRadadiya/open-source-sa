@@ -2,6 +2,7 @@
 
 use App\Models\GitAccount;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Http;
 
@@ -48,6 +49,33 @@ it('lists the supported providers with their connect-form fields', function () {
 
     $github = $providers->firstWhere('name', 'github');
     expect(collect($github['fields'])->pluck('name')->all())->toBe(['token']);
+});
+
+it('orders account and status lists without case bias', function () {
+    foreach ([
+        ['label' => 'Case Zebra', 'identifier' => 'zebra'],
+        ['label' => 'case apple', 'identifier' => 'apple'],
+        ['label' => 'CASE Banana', 'identifier' => 'banana'],
+    ] as $account) {
+        connectGithub($account);
+    }
+
+    $accounts = $this->withHeaders(asAdmin())
+        ->getJson('/api/integrations/git/accounts')
+        ->assertOk()
+        ->json('git_accounts');
+
+    Http::fake(['api.github.com/user' => Http::response(['login' => 'octocat'], 200)]);
+
+    $statuses = $this->withHeaders(asAdmin())
+        ->getJson('/api/integrations/git/accounts/status')
+        ->assertOk()
+        ->json('statuses');
+
+    expect(collect($accounts)->pluck('label')->all())
+        ->toBe(['case apple', 'CASE Banana', 'Case Zebra'])
+        ->and(collect($statuses)->pluck('label')->all())
+        ->toBe(['case apple', 'CASE Banana', 'Case Zebra']);
 });
 
 it('connects a github account and never returns the token', function () {
@@ -285,6 +313,8 @@ it('records the connection in the activity log', function () {
 });
 
 it('reports live token status per account without persisting anything', function () {
+    $this->travelTo(Carbon::parse('2026-08-01 00:00:00'));
+
     connectGithub(['label' => 'Alive']);
     connectGithub(['label' => 'Revoked', 'token' => 'ghp_dead']);
 

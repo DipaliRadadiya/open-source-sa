@@ -22,6 +22,7 @@ use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabaseSizes;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
+use App\Support\ListSearch;
 use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -98,14 +99,20 @@ class DatabaseController extends Controller
         // So the check is now "installed *and* answering". A dispatch when it
         // is not answering re-runs provisionPanelAccount(), which is exactly
         // the repair — install() already skips apt when the package is there.
-        if ($installers->installer($engine)->installed() && $manager->engine($engine)->available()) {
+        $installed = $installers->installer($engine)->installed();
+
+        if ($installed && $manager->engine($engine)->available()) {
             return response()->json(['engines' => $manager->capabilities(), 'queued' => false]);
         }
 
         // The row is written here, before dispatch — inside the job it would
         // leave a blind window between this response and the worker picking it
         // up, during which the setup page would show nothing happening.
-        $installs->start('database', $engine, initialStep: 'queued');
+        // The answer to "was this here before we started?" is recorded now,
+        // while it is still true. Asking again inside the job is fine on a
+        // first attempt and wrong on a retry, where a part-finished install has
+        // already put the package on disk.
+        $installs->start('database', $engine, initialStep: 'queued', wasAbsent: ! $installed);
 
         InstallDatabaseEngine::dispatch($engine, Auth::id());
 
@@ -120,15 +127,14 @@ class DatabaseController extends Controller
         $databases = Database::query()
             ->withCount('users')
             ->when($filter['engine'] ?? null, fn ($query, $engine) => $query->where('engine', $engine))
-            ->when($search !== '', function ($query) use ($search) {
-                // Grouped, so that adding a filter alongside this later cannot
-                // let the OR escape across the whole query and match rows the
-                // filter was meant to exclude.
-                $query->where('name', 'like', '%'.$search.'%');
-            });
+            ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name']));
 
-        $databases = ListSort::apply($databases, $request->validated('sort'), IndexDatabasesRequest::SORTS)
-            ->paginate($request->validated('per_page', IndexDatabasesRequest::PER_PAGE));
+        $databases = ListSort::apply(
+            $databases,
+            $request->validated('sort'),
+            IndexDatabasesRequest::SORTS,
+            caseInsensitive: ['name'],
+        )->paginate($request->validated('per_page', IndexDatabasesRequest::PER_PAGE));
 
         return response()->json([
             'databases' => DatabaseResource::collection($databases->items())->resolve(),

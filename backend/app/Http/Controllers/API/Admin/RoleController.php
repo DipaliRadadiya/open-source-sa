@@ -11,6 +11,7 @@ use App\Http\Requests\Admin\ListRolesRequest;
 use App\Http\Requests\Admin\StoreRoleRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
 use App\Models\Role;
+use App\Support\ListSearch;
 use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -23,16 +24,15 @@ class RoleController extends Controller
 
         $roles = Role::query()
             ->with('permissions')
-            ->when($search !== '', function ($query) use ($search) {
-                $like = '%'.$search.'%';
+            ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name', 'description']));
 
-                // Grouped so the OR cannot escape across the whole query if a
-                // filter is added beside it later.
-                $query->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('description', 'like', $like));
-            });
-
-        $roles = ListSort::apply($roles, $request->validated('sort'), ListRolesRequest::SORTS, 'asc')
-            ->paginate($request->validated('per_page', ListRolesRequest::PER_PAGE));
+        $roles = ListSort::apply(
+            $roles,
+            $request->validated('sort'),
+            ListRolesRequest::SORTS,
+            'asc',
+            caseInsensitive: ['name'],
+        )->paginate($request->validated('per_page', ListRolesRequest::PER_PAGE));
 
         return response()->json([
             'roles' => array_map(fn (Role $role) => $this->format($role), $roles->items()),

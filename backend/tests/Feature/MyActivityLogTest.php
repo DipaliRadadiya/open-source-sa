@@ -80,7 +80,7 @@ it('searches own activity across type and action', function () {
     [, $token] = userWithActivity();
 
     $response = $this->withHeader('Authorization', "Bearer {$token}")
-        ->getJson('/api/activity-log?search=password');
+        ->getJson('/api/activity-log?search=PASSWORD');
 
     $response->assertOk()->assertJsonCount(1, 'activity_log');
     $response->assertJsonPath('activity_log.0.action', 'password_changed');

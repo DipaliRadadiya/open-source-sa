@@ -3,6 +3,7 @@
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\ActivityScopes;
+use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -115,6 +116,17 @@ it('composes scope with the filters that already existed', function () {
 
     expect(collect(asUser('GET', '/api/activity-log?filter[scope]=server&search=data')->json('activity_log')))
         ->toHaveCount(1);
+});
+
+it('searches server activity without case bias', function () {
+    $this->seed(PermissionSeeder::class);
+    grantPermission($this->user, 'activity_log');
+    ($this->log)('firewall', 'rule_added');
+
+    asUser('GET', '/api/server/activity-log?search=FIREWALL')
+        ->assertOk()
+        ->assertJsonCount(1, 'activity_log')
+        ->assertJsonPath('activity_log.0.type', 'firewall');
 });
 
 it('rejects a scope it does not know instead of returning an empty page', function () {

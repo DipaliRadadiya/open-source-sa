@@ -22,6 +22,7 @@ use App\Models\BackupTarget;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Support\ListSearch;
 use App\Support\ListSort;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -110,14 +111,15 @@ class BackupController extends Controller
                 fn ($query) => $filter['protected']
                     ? $query->whereHas('backupTarget')
                     : $query->whereDoesntHave('backupTarget'))
-            ->when($search !== '', function ($query) use ($search) {
-                $like = '%'.$search.'%';
+            ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name', 'domain']));
 
-                $query->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('domain', 'like', $like));
-            });
-
-        $applications = ListSort::apply($applications, $request->validated('sort'), IndexBackupTargetsRequest::SORTS, 'asc')
-            ->paginate($request->validated('per_page', IndexBackupTargetsRequest::PER_PAGE));
+        $applications = ListSort::apply(
+            $applications,
+            $request->validated('sort'),
+            IndexBackupTargetsRequest::SORTS,
+            'asc',
+            caseInsensitive: ['name'],
+        )->paginate($request->validated('per_page', IndexBackupTargetsRequest::PER_PAGE));
 
         // Counted, not fetched. `whereHas` on a fresh query is one aggregate
         // each; loading every application to call ->filter() on it would undo

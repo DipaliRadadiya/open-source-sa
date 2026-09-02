@@ -53,16 +53,17 @@ function makeDestination(array $overrides = []): StorageDestination
     ], $overrides));
 }
 
-it('lists destinations sorted by name and never returns secrets', function () {
-    makeDestination(['name' => 'B-secondary']);
-    makeDestination(['name' => 'A-primary']);
+it('lists destinations sorted by name without case bias and never returns secrets', function () {
+    makeDestination(['name' => 'Case Zebra']);
+    makeDestination(['name' => 'case apple']);
+    makeDestination(['name' => 'CASE Banana']);
 
     $response = $this->withHeaders(storageAdminAuthHeader())->getJson('/api/integrations/storage/destinations');
 
     $response->assertOk();
-    expect($response->json('storage_destinations'))->toHaveCount(2);
+    expect($response->json('storage_destinations'))->toHaveCount(3);
     expect(collect($response->json('storage_destinations'))->pluck('name')->all())
-        ->toBe(['A-primary', 'B-secondary']);
+        ->toBe(['case apple', 'CASE Banana', 'Case Zebra']);
 
     // Defence in depth — scan the whole envelope for the secret values.
     $json = $response->getContent();

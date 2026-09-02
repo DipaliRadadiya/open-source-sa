@@ -3,6 +3,7 @@
 namespace App\Services\Runtime;
 
 use App\Models\Application;
+use App\Support\ListSort;
 use Illuminate\Support\Collection;
 
 /**
@@ -29,10 +30,10 @@ class PinnedSites
     {
         $limit = (int) config('server.runtimes.pinned_sites_shown', 5);
 
-        return Application::query()
-            ->whereNotNull($column)
-            ->orderBy('name')
-            ->get([$column.' as pinned_version', 'name'])
+        return ListSort::caseInsensitive(
+            Application::query()->whereNotNull($column),
+            'name',
+        )->get([$column.' as pinned_version', 'name'])
             ->groupBy('pinned_version')
             ->map(fn (Collection $apps) => [
                 'count' => $apps->count(),
@@ -48,10 +49,9 @@ class PinnedSites
      */
     public function allFor(string $column, string $version): array
     {
-        return Application::query()
-            ->where($column, $version)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        return ListSort::caseInsensitive(
+            Application::query()->where($column, $version),
+            'name',
+        )->pluck('name')->all();
     }
 }

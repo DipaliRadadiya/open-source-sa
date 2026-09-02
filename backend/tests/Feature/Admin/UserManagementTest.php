@@ -164,7 +164,7 @@ it('lets an admin search users by name or username', function () {
     $token = $admin->createToken('test')->plainTextToken;
 
     $response = $this->withHeader('Authorization', "Bearer {$token}")
-        ->getJson('/api/admin/users?search=jane');
+        ->getJson('/api/admin/users?search=JANE');
 
     $response->assertOk()->assertJsonCount(1, 'users')
         ->assertJsonPath('users.0.username', 'janecooper');

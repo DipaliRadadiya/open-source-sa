@@ -13,6 +13,7 @@ use App\Http\Requests\Admin\ResetUserPasswordRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Support\ListSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -26,10 +27,7 @@ class UserController extends Controller
         $query = User::query()->where('is_system', false)->with('roles:id,name')->latest();
 
         if ($search = $request->string('search')->trim()->value()) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('username', 'like', "%{$search}%");
-            });
+            ListSearch::apply($query, $search, ['name', 'username']);
         }
 
         if ($request->has('filter.is_admin')) {
