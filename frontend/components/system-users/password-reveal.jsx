@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 
 // Shows the stored OS password masked, with reveal + copy. The backend stores
 // it plaintext (operator decision) so an admin can copy it for server login.
@@ -29,26 +30,30 @@ export function PasswordReveal({ password, className }) {
       <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1.5 font-mono text-sm">
         {shown ? password : "•".repeat(Math.min(password.length, 12))}
       </code>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        onClick={() => setShown((v) => !v)}
-        aria-label={shown ? t("hide") : t("reveal")}
-      >
-        {shown ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        onClick={copy}
-        aria-label={t("copy")}
-      >
-        <Copy className="size-4" />
-      </Button>
+      <IconTooltip label={shown ? t("hide") : t("reveal")}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          onClick={() => setShown((v) => !v)}
+          aria-label={shown ? t("hide") : t("reveal")}
+        >
+          {shown ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+        </Button>
+      </IconTooltip>
+      <IconTooltip label={t("copy")}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          onClick={copy}
+          aria-label={t("copy")}
+        >
+          <Copy className="size-4" />
+        </Button>
+      </IconTooltip>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { failureReason } from "@/lib/files/bulk-result";
 
 /**
@@ -32,16 +33,18 @@ export function BulkResultPanel({ result, onDismiss }) {
             ? t("bulk.noneDone", { total })
             : t("bulk.partlyDone", { done: succeeded.length, total })}
         </p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-6 shrink-0"
-          aria-label={t("bulk.dismiss")}
-          onClick={onDismiss}
-        >
-          <X className="size-3.5" />
-        </Button>
+        <IconTooltip label={t("bulk.dismiss")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6 shrink-0"
+            aria-label={t("bulk.dismiss")}
+            onClick={onDismiss}
+          >
+            <X className="size-3.5" />
+          </Button>
+        </IconTooltip>
       </div>
 
       {/* Bounded: a failed batch of 250 must not push the file list off the

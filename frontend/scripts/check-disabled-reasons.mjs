@@ -28,8 +28,10 @@ const IN_FLIGHT =
   /submitting|pending|saving|busy|loading|inflight|running|working|removing|retrying|verifying|starting|opening|checking|deleting|creating|leaving|stopping|testing|installing|uploading|deploying|refreshing/i;
 
 // A reason is present if the control carries one, or something nearby does.
+// IconTooltip counts because it hands `reason` straight to ReasonTooltip — the
+// same guarantee, reached through the component that also labels the icon.
 const HAS_REASON =
-  /disabledReason|ReasonTooltip|TooltipContent|MenuItemHint|DisabledReasonProvider/;
+  /disabledReason|ReasonTooltip|IconTooltip|TooltipContent|MenuItemHint|DisabledReasonProvider/;
 
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {

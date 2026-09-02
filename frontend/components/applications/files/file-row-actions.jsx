@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { MoreHorizontal, Download, ClipboardCopy } from "lucide-react";
 import { fileDownloadUrl } from "@/lib/api/files";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,23 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FileActionItems } from "@/components/applications/files/file-actions-menu";
 
-// A plain descriptive tooltip that also works when the button inside it is
-// disabled — when `disabledReason` is set the tooltip explains that instead.
-// A disabled native button fires neither hover nor focus events (same reason
-// MenuItemHint/ReasonTooltip wrap their disabled children in a span), so the
-// trigger is this inline-flex span, not the button itself.
-function IconTooltip({ label, disabledReason, children }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span tabIndex={0} className="inline-flex">
-          {children}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{disabledReason ?? label}</TooltipContent>
-    </Tooltip>
-  );
-}
 
 export function FileRowActions({ file, appId, canManage, onAction }) {
   const t = useTranslations("applications.files");
@@ -58,7 +41,7 @@ export function FileRowActions({ file, appId, canManage, onAction }) {
           doesn't read as seven equally-weighted buttons, and nothing
           destructive is one accidental click away. */}
       {file.type !== "dir" ? (
-        <IconTooltip label={t("actions.download")} disabledReason={downloadReason}>
+        <IconTooltip label={t("actions.download")} reason={downloadReason}>
           <Button variant="ghost" size="icon" className="size-8" disabled={symlink} asChild>
             <a href={fileDownloadUrl(appId, file.path)} download={file.name} aria-label={t("actions.download")}>
               <Download className="size-4" />

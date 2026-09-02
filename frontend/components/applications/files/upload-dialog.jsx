@@ -9,6 +9,7 @@ import { uploadAnySize, uploadSpace } from "@/lib/api/files";
 import { joinPath } from "@/lib/files/path-helpers";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import {
   Dialog,
   DialogContent,
@@ -304,16 +305,18 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
                     <CircleAlert className="size-4 shrink-0 text-destructive" />
                   ) : null}
                   {item.status === "pending" || item.status === "error" ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 shrink-0"
-                      onClick={() => removeItem(item.id)}
-                      aria-label={t("uploadDialog.remove")}
-                    >
-                      <X className="size-3.5" />
-                    </Button>
+                    <IconTooltip label={t("uploadDialog.remove")}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-6 shrink-0"
+                        onClick={() => removeItem(item.id)}
+                        aria-label={t("uploadDialog.remove")}
+                      >
+                        <X className="size-3.5" />
+                      </Button>
+                    </IconTooltip>
                   ) : null}
                 </div>
                 {item.status === "uploading" ? (

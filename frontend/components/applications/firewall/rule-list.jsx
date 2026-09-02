@@ -4,6 +4,7 @@ import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 
 // The API bounds both lists at 50 entries of 1–255 characters. Enforced here
 // too, so the limit is visible while typing instead of arriving as a 422.
@@ -71,17 +72,19 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
               className="flex items-center gap-2 rounded-lg border bg-background py-1 pr-1 pl-3"
             >
               <code className="min-w-0 flex-1 truncate font-mono text-xs">{item}</code>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0"
-                disabled={disabled}
-                onClick={() => onChange(items.filter((value) => value !== item))}
-                aria-label={t("remove", { value: item })}
-              >
-                <X className="size-3.5" />
-              </Button>
+              <IconTooltip label={t("remove", { value: item })}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0"
+                  disabled={disabled}
+                  onClick={() => onChange(items.filter((value) => value !== item))}
+                  aria-label={t("remove", { value: item })}
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </IconTooltip>
             </li>
           ))}
         </ul>

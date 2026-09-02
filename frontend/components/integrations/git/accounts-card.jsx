@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useBranding } from "@/components/branding-provider";
 import { Card, CardContent } from "@/components/ui/card";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { AccountRow } from "@/components/integrations/git/account-row";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import { ConnectDialog } from "@/components/integrations/git/connect-dialog";
@@ -132,16 +133,18 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
 
           <div className="flex items-center gap-2">
             {accounts.length > 0 ? (
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-9"
-                disabled={rechecking}
-                aria-label={t("accounts.recheck")}
-                onClick={recheck}
-              >
-                <RefreshCw className={`size-4 ${rechecking ? "animate-spin" : ""}`} />
-              </Button>
+              <IconTooltip label={t("accounts.recheck")}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-9"
+                  disabled={rechecking}
+                  aria-label={t("accounts.recheck")}
+                  onClick={recheck}
+                >
+                  <RefreshCw className={`size-4 ${rechecking ? "animate-spin" : ""}`} />
+                </Button>
+              </IconTooltip>
             ) : null}
             {accounts.length > 0 ? connectButton : null}
           </div>

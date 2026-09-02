@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormModal } from "@/components/ui/form-modal";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import {
   Form,
   FormField,
@@ -214,16 +215,18 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                           </Button>
                         </div>
                       ) : (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                          onClick={() => setRemoving(key.id)}
-                          aria-label={t("sshForm.remove")}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <IconTooltip label={t("sshForm.remove")}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => setRemoving(key.id)}
+                            aria-label={t("sshForm.remove")}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </IconTooltip>
                       )}
                     </li>
                   ))}

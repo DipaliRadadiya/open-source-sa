@@ -10,9 +10,10 @@ import { updateFail2ban } from "@/lib/api/fail2ban";
 import { isIpOrCidr } from "@/lib/validation/ip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
+import { ActionIcon } from "@/components/ui/action-icon";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import {
   Card,
   CardContent,
@@ -142,7 +143,7 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
                   disabled={!canManage || pending}
                   onClick={() => add(yourIp)}
                 >
-                  <UserCheck className="size-4" />
+                  <ActionIcon icon={UserCheck} pending={pending} />
                   {t("settings.addMine")}
                 </Button>
               </div>
@@ -204,7 +205,8 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
               aria-invalid={Boolean(draftError)}
               aria-describedby={draftError ? "f2b-ignore-error" : undefined}
             />
-            <ReasonTooltip
+            <IconTooltip
+              label={t("settings.addIp")}
               reason={
                 !canManage
                   ? t("disabled.noPermission")
@@ -222,9 +224,9 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
                 onClick={() => add(draft)}
                 aria-label={t("settings.addIp")}
               >
-                <Plus className="size-4" />
+                <ActionIcon icon={Plus} pending={pending} />
               </Button>
-            </ReasonTooltip>
+            </IconTooltip>
           </div>
   
           {draftError ? (
