@@ -1,0 +1,11 @@
+The panel serves no static assets of its own — the logo and favicon come from
+the branding API as absolute URLs, so this directory is empty by design.
+
+It is kept, and tracked, because the systemd unit copies it into the standalone
+build on every start:
+
+    cp -a public .next/standalone/public
+
+Without the directory that command fails, ExecStartPre fails, and the service
+does not come up. Deleting the five create-next-app SVGs that used to live here
+took the directory with them and would have broken the deploy.
