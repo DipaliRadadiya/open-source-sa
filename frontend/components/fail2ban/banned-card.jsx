@@ -10,7 +10,7 @@ import { ShieldOff, Ban, ScrollText } from "lucide-react";
 import { unbanIp, unbanAll } from "@/lib/api/fail2ban";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import {
   Select,
   SelectContent,
@@ -256,13 +256,11 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null })
             table is only ever long on the day something is going wrong. */}
         {needsTools ? (
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
+            <LocalSearchInput
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={setQuery}
               placeholder={t("banned.search")}
               className="sm:max-w-64"
-              autoComplete="off"
-              spellCheck={false}
             />
             {jailOptions.length > 1 ? (
               <Select value={jailFilter} onValueChange={setJailFilter}>
