@@ -311,7 +311,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-2"
                             onClick={() => {
                               setChanging(false);
                               form.resetField("password");
@@ -329,13 +328,12 @@ export function RedisForm({ redis, canManage, changedBy }) {
                         magic empty value — the API needs the distinction too,
                         because Laravel rewrites "" to null before validation. */}
                     {!passwordLocked && !changing ? (
-                      <div className="flex flex-wrap items-center gap-1">
+                      <div className="flex flex-wrap items-center gap-2">
                         {showStored ? (
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-7"
                             onClick={() => setChanging(true)}
                           >
                             {t("redis.changePassword")}
@@ -343,11 +341,14 @@ export function RedisForm({ redis, canManage, changedBy }) {
                         ) : null}
 
                         {redis?.has_password === true ? (
+                          // The `destructive` variant, not a ghost tinted red by
+                          // hand: ghost has no fill and no border, so beside an
+                          // outlined "Change password" this read as a stray red
+                          // sentence rather than the other half of a pair.
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="destructive"
                             size="sm"
-                            className="h-7 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => setRemoving(true)}
                           >
                             {t("redis.removePassword")}
