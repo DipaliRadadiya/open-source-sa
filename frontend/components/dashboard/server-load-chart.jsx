@@ -1,18 +1,13 @@
 import { useTranslations, useFormatter } from "next-intl";
 import { Activity } from "lucide-react";
-import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 import { clockFormatter } from "@/lib/format/time";
+import { LiveChartCard } from "@/components/dashboard/live-chart-card";
+import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
-  LiveChartCard,
-  orderedLegend,
-  timeLabel,
-} from "@/components/dashboard/live-chart-card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-} from "@/components/ui/chart";
+  axisMax,
+  seriesDataTable,
+  timeSeriesOption,
+} from "@/lib/charts/time-series-option";
 
 /**
  * 5- and 15-minute load against the core count.
@@ -26,9 +21,22 @@ import {
  * 5-minute line doesn't say more reliably; the stat card above still prints
  * all three as numbers for anyone who wants the instant reading.
  */
+/** Resolved from globals.css at runtime; never restated as literals here. */
+const TOKENS = [
+  "chart-1",
+  "chart-2",
+  "chart-3",
+  "chart-4",
+  "border",
+  "muted-foreground",
+  "popover",
+  "popover-foreground",
+];
+
 export function ServerLoadChart({ history = [], metrics, timeZone }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
+  const tokens = useChartTokens(TOKENS);
   // No seconds: samples are five minutes apart, so a clock reading 11:05:00
   // implies a precision the data does not have.
   const clock = clockFormatter(format, timeZone);
@@ -38,10 +46,37 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
   const cores = Number(metrics?.cpu?.cores) || 0;
   const latest = history.at(-1);
 
-  const config = {
-    load_5: { label: "5m", color: "var(--chart-1)" },
-    load_15: { label: "15m", color: "var(--chart-2)" },
-  };
+  const series = [
+    { key: "load_5", label: "5m", token: "chart-1", kind: "line" },
+    { key: "load_15", label: "15m", token: "chart-2", kind: "line" },
+  ];
+
+  const option = timeSeriesOption({
+    data: history,
+    series,
+    tokens,
+    xLabel: clock,
+    value: decimal,
+    // The axis must include the core count even when load is near zero: the
+    // lines hugging the floor under a high ceiling is the message.
+    axes: [
+      {
+        max: axisMax(history, ["load_5", "load_15"], { floor: cores * 1.05 }),
+        formatter: decimal,
+      },
+    ],
+    markLine: cores
+      ? { value: cores, label: t("charts.load.cores", { count: cores }), token: "chart-3" }
+      : null,
+  });
+  const table = seriesDataTable({
+    caption: t("charts.load.title"),
+    timeLabel: t("charts.time"),
+    data: history,
+    series,
+    xLabel: clock,
+    value: decimal,
+  });
 
   return (
     <LiveChartCard
@@ -59,60 +94,7 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
           : null
       }
     >
-      <ChartContainer config={config} className="h-72 w-full">
-        <LineChart data={history} margin={{ left: -20, right: 8 }}>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis
-            dataKey="t"
-            tickLine={false}
-            axisLine={false}
-            minTickGap={48}
-            tickFormatter={clock}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            domain={[0, (max) => Math.max(cores * 1.05, max * 1.2, 1)]}
-            tickFormatter={decimal}
-          />
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                indicator="line"
-                labelFormatter={timeLabel(clock)}
-                valueFormatter={(v) => decimal(v)}
-              />
-            }
-          />
-          <ChartLegend content={orderedLegend(config)} />
-          {cores ? (
-            <ReferenceLine
-              y={cores}
-              stroke="var(--chart-3)"
-              strokeDasharray="6 4"
-              strokeWidth={2}
-              ifOverflow="extendDomain"
-              label={{
-                value: t("charts.load.cores", { count: cores }),
-                position: "insideTopLeft",
-                fill: "var(--chart-3)",
-                fontSize: 11,
-              }}
-            />
-          ) : null}
-          {Object.keys(config).map((key) => (
-            <Line
-              key={key}
-              type="monotone"
-              dataKey={key}
-              stroke={config[key].color}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          ))}
-        </LineChart>
-      </ChartContainer>
+      <EChart option={option} dataTable={table} height="h-72" />
     </LiveChartCard>
   );
 }

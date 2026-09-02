@@ -789,7 +789,8 @@
         "read": "रीड",
         "write": "राइट",
         "iops": "{ops} IOPS"
-      }
+      },
+      "time": "समय"
     },
     "processes": {
       "title": "प्रक्रियाएं",

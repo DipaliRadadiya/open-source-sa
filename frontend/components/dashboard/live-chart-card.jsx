@@ -7,35 +7,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { ChartLegendContent } from "@/components/ui/chart";
-
-/**
- * Recharts builds the legend from its own item ordering, not the order the
- * series are declared, so load average listed itself as "1m · 15m · 5m" —
- * against the order the stat card above it uses. Passing `payload` to Legend
- * does not help (the chart clones the element and overwrites it), so the
- * ordering has to happen inside the content callback.
- */
-export function orderedLegend(config) {
-  const order = Object.keys(config);
-  return function OrderedLegend(props) {
-    const payload = [...(props.payload ?? [])].sort(
-      (a, b) => order.indexOf(a.dataKey) - order.indexOf(b.dataKey),
-    );
-    return <ChartLegendContent {...props} payload={payload} />;
-  };
-}
-
-/**
- * ChartTooltipContent only trusts the x value when it is a string; ours is a
- * timestamp number, so it falls back to the first series' label and the header
- * ends up formatting "5m" as a clock. Read the timestamp off the payload.
- */
-export function timeLabel(clock) {
-  return function formatTimeLabel(_, payload) {
-    return clock(payload?.[0]?.payload?.t);
-  };
-}
 
 /**
  * Shared shell for the four live charts. They sit in a 2x2 grid, so the header

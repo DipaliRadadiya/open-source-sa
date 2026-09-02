@@ -1,20 +1,15 @@
 import { useTranslations, useFormatter } from "next-intl";
 import { HardDrive } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { formatRate } from "@/lib/format/bytes";
 import { clockFormatter } from "@/lib/format/time";
 import { Badge } from "@/components/ui/badge";
+import { LiveChartCard } from "@/components/dashboard/live-chart-card";
+import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
-  LiveChartCard,
-  orderedLegend,
-  timeLabel,
-} from "@/components/dashboard/live-chart-card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-} from "@/components/ui/chart";
+  axisMax,
+  seriesDataTable,
+  timeSeriesOption,
+} from "@/lib/charts/time-series-option";
 
 /**
  * Read/write throughput, with the op counts in the header rather than on the
@@ -27,26 +22,61 @@ import {
  * lived there, "Disk" meant I/O in one place and free space in the stat card
  * above, which is two meanings for one word on one screen.
  */
-export function DiskIoChart({ series, metrics, timeZone, stale }) {
+/** Resolved from globals.css at runtime; never restated as literals here. */
+const TOKENS = [
+  "chart-1",
+  "chart-2",
+  "chart-3",
+  "chart-4",
+  "border",
+  "muted-foreground",
+  "popover",
+  "popover-foreground",
+];
+
+export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
   const rate = (value) => formatRate(value, format);
   const clock = clockFormatter(format, timeZone, { second: "2-digit" });
   const ops = (value) => format.number(Number(value ?? 0));
+  const tokens = useChartTokens(TOKENS);
 
   // Same colours as the network card — down is chart-2, up is chart-1 — so the
   // two I/O charts can be read with one set of eyes.
-  const config = {
-    disk_read: { label: t("charts.disk.read"), color: "var(--chart-2)" },
-    disk_write: { label: t("charts.disk.write"), color: "var(--chart-1)" },
-  };
+  const series = [
+    { key: "disk_read", label: t("charts.disk.read"), token: "chart-2", kind: "area" },
+    { key: "disk_write", label: t("charts.disk.write"), token: "chart-1", kind: "area" },
+  ];
+
+  const option = timeSeriesOption({
+    data: chartSeries,
+    series,
+    tokens,
+    xLabel: clock,
+    value: rate,
+    axes: [
+      {
+        max: axisMax(chartSeries, ["disk_read", "disk_write"], { floor: 65536 }),
+        formatter: rate,
+      },
+    ],
+  });
+  const table = seriesDataTable({
+    caption: t("charts.disk.title"),
+    timeLabel: t("charts.time"),
+    data: chartSeries,
+    series,
+    xLabel: clock,
+    value: rate,
+  });
 
   return (
     <LiveChartCard
       icon={HardDrive}
       title={t("charts.disk.title")}
       description={t("charts.disk.description")}
-      ready={series.length >= 2}
+      ready={chartSeries.length >= 2}
       stale={stale}
       badges={
         <>
@@ -71,55 +101,7 @@ export function DiskIoChart({ series, metrics, timeZone, stale }) {
         </>
       }
     >
-      <ChartContainer config={config} className="h-72 w-full">
-        <AreaChart data={series} margin={{ left: -10, right: 8 }}>
-          <defs>
-            {Object.entries(config).map(([key, cfg]) => (
-              <linearGradient key={key} id={`dio-${key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={cfg.color} stopOpacity={0.35} />
-                <stop offset="95%" stopColor={cfg.color} stopOpacity={0.03} />
-              </linearGradient>
-            ))}
-          </defs>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis
-            dataKey="t"
-            tickLine={false}
-            axisLine={false}
-            minTickGap={48}
-            tickFormatter={clock}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={70}
-            domain={[0, (max) => Math.max(65536, max * 1.2)]}
-            tickFormatter={rate}
-          />
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                indicator="line"
-                labelFormatter={timeLabel(clock)}
-                valueFormatter={(v) => rate(v)}
-              />
-            }
-          />
-          <ChartLegend content={orderedLegend(config)} />
-          {Object.keys(config).map((key) => (
-            <Area
-              key={key}
-              type="monotone"
-              dataKey={key}
-              stroke={config[key].color}
-              fill={`url(#dio-${key})`}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          ))}
-        </AreaChart>
-      </ChartContainer>
+      <EChart option={option} dataTable={table} height="h-72" />
     </LiveChartCard>
   );
 }

@@ -1,18 +1,12 @@
 import { useTranslations, useFormatter } from "next-intl";
 import { Gauge } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { clockFormatter } from "@/lib/format/time";
+import { LiveChartCard } from "@/components/dashboard/live-chart-card";
+import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
-  LiveChartCard,
-  orderedLegend,
-  timeLabel,
-} from "@/components/dashboard/live-chart-card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-} from "@/components/ui/chart";
+  seriesDataTable,
+  timeSeriesOption,
+} from "@/lib/charts/time-series-option";
 
 /**
  * Three percentages on one 0-100 axis.
@@ -24,9 +18,22 @@ import {
  * same "is it busy" question in the right unit, and load keeps its own card
  * where a cores line gives it a scale.
  */
+/** Resolved from globals.css at runtime; never restated as literals here. */
+const TOKENS = [
+  "chart-1",
+  "chart-2",
+  "chart-3",
+  "chart-4",
+  "border",
+  "muted-foreground",
+  "popover",
+  "popover-foreground",
+];
+
 export function ResourceUsageChart({ history = [], timeZone }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
+  const tokens = useChartTokens(TOKENS);
   // No seconds — five minutes between samples.
   const clock = clockFormatter(format, timeZone);
   const percentTick = (value) =>
@@ -42,11 +49,30 @@ export function ResourceUsageChart({ history = [], timeZone }) {
   // read as an empty disk.
   const hasDisk = history.some((point) => Number(point.disk) > 0);
   const latest = history.at(-1);
-  const config = {
-    cpu: { label: t("cpu"), color: "var(--chart-1)" },
-    memory: { label: t("memory"), color: "var(--chart-2)" },
-    ...(hasDisk ? { disk: { label: t("disk"), color: "var(--chart-4)" } } : {}),
-  };
+  const series = [
+    { key: "cpu", label: t("cpu"), token: "chart-1", kind: "area" },
+    { key: "memory", label: t("memory"), token: "chart-2", kind: "area" },
+    ...(hasDisk ? [{ key: "disk", label: t("disk"), token: "chart-4", kind: "area" }] : []),
+  ];
+
+  const option = timeSeriesOption({
+    data: history,
+    series,
+    tokens,
+    xLabel: clock,
+    value: percentValue,
+    // Fixed 0-100 with explicit ticks. Left to pick its own on a percentage
+    // scale, an auto axis lands on -2%.
+    axes: [{ max: 100, interval: 25, formatter: percentTick }],
+  });
+  const table = seriesDataTable({
+    caption: t("charts.usage.title"),
+    timeLabel: t("charts.time"),
+    data: history,
+    series,
+    xLabel: clock,
+    value: percentValue,
+  });
 
   return (
     <LiveChartCard
@@ -62,57 +88,7 @@ export function ResourceUsageChart({ history = [], timeZone }) {
           : null
       }
     >
-      <ChartContainer config={config} className="h-72 w-full">
-        <AreaChart data={history} margin={{ left: -20, right: 8 }}>
-          <defs>
-            {Object.entries(config).map(([key, cfg]) => (
-              <linearGradient key={key} id={`use-${key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={cfg.color} stopOpacity={0.35} />
-                <stop offset="95%" stopColor={cfg.color} stopOpacity={0.03} />
-              </linearGradient>
-            ))}
-          </defs>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis
-            dataKey="t"
-            tickLine={false}
-            axisLine={false}
-            minTickGap={48}
-            tickFormatter={clock}
-          />
-          {/* Explicit ticks: with only a domain, Recharts picks its own and
-              lands on -2% — a negative percentage on a 0-100 scale. */}
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            domain={[0, 100]}
-            ticks={[0, 25, 50, 75, 100]}
-            tickFormatter={percentTick}
-          />
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                indicator="line"
-                labelFormatter={timeLabel(clock)}
-                valueFormatter={(v) => percentValue(v)}
-              />
-            }
-          />
-          <ChartLegend content={orderedLegend(config)} />
-          {Object.keys(config).map((key) => (
-            <Area
-              key={key}
-              type="monotone"
-              dataKey={key}
-              stroke={config[key].color}
-              fill={`url(#use-${key})`}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          ))}
-        </AreaChart>
-      </ChartContainer>
+      <EChart option={option} dataTable={table} height="h-72" />
     </LiveChartCard>
   );
 }

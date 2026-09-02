@@ -51,38 +51,24 @@ test("database chart uses the shared history and chart presentation contracts", 
   assert.match(chart, /t\("noActivity"\)/);
   assert.match(chart, /notation: compact \? "compact" : "standard"/);
 
-  // A gap in the samples stays a gap. Joining across a collector outage would
-  // draw a straight line through it as though it were data.
-  assert.match(chart, /connectNulls: false/);
-
-  // Time axis, one area series for QPS against a second axis for the counts.
-  assert.match(chart, /type: "time"/);
-  assert.match(chart, /qps\.areaStyle = \{/);
-  assert.match(chart, /yAxisIndex/);
-  assert.match(chart, /minInterval: 1/);
-  assert.match(chart, /formatter: \(value\) => axisNumber\(value\)/);
-
-  // The reason for the migration.
-  assert.match(chart, /dataZoom: \[/);
-  assert.match(chart, /type: "inside"/);
-  assert.match(chart, /type: "slider"/);
-
-  // Animation off — these redraw on a poll, and a chart that re-animates every
-  // few seconds is unreadable.
-  assert.match(chart, /animation: false/);
-
-  // Legend order is the declaration order, so it matches the summary above the
-  // chart. Recharts needed a custom content component for this; ECharts does
-  // not, and the workaround must not come back.
-  assert.match(chart, /data: \[labels\.qps, labels\.connections, labels\.threads_running\]/);
-  assert.doesNotMatch(chart, /orderedLegend/);
-  assert.doesNotMatch(chart, /timeLabel/);
+  // The option itself is built by lib/charts/time-series-option.js and tested
+  // there against the object, not the source text. What matters here is that
+  // this chart is wired to it, and with the shape this screen needs: QPS as an
+  // area on its own axis, whole connections on a second, and the zoom the
+  // migration was for.
+  assert.match(chart, /timeSeriesOption\(\{/);
+  assert.match(chart, /seriesDataTable\(\{/);
+  assert.match(chart, /zoom: true/);
+  assert.match(chart, /axes: \[\{ formatter: axisNumber \}, \{ minInterval: 1 \}\]/);
+  assert.match(chart, /kind: "area", axis: 0/);
+  assert.match(chart, /token: "chart-2", axis: 1/);
 
   // Colours come from the cascade. The Recharts version hard-coded three hsl()
   // literals because its SVG strokes would not resolve the variables — that
   // took the chart out of the design system and stopped it following the dark
   // theme. No colour literal may reappear here.
   assert.match(chart, /useChartTokens\(TOKENS\)/);
+  assert.doesNotMatch(chart, /orderedLegend/);
   assert.doesNotMatch(chart, /hsl\(/);
   assert.doesNotMatch(chart, /#[0-9a-fA-F]{3,8}\b/);
 

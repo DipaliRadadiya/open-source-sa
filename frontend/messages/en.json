@@ -789,7 +789,8 @@
         "read": "Read",
         "write": "Write",
         "iops": "{ops} IOPS"
-      }
+      },
+      "time": "Time"
     },
     "processes": {
       "title": "Processes",

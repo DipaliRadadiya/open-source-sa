@@ -1,31 +1,51 @@
 import { useTranslations, useFormatter } from "next-intl";
 import { ArrowDownUp } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { formatRate } from "@/lib/format/bytes";
 import { clockFormatter } from "@/lib/format/time";
 import { Badge } from "@/components/ui/badge";
+import { LiveChartCard } from "@/components/dashboard/live-chart-card";
+import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
-  LiveChartCard,
-  orderedLegend,
-  timeLabel,
-} from "@/components/dashboard/live-chart-card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-} from "@/components/ui/chart";
+  axisMax,
+  seriesDataTable,
+  timeSeriesOption,
+} from "@/lib/charts/time-series-option";
+
+
+/** Tokens these charts draw with, resolved from globals.css at runtime. */
+const TOKENS = ["chart-1", "chart-2", "chart-3", "chart-4", "border", "muted-foreground", "popover", "popover-foreground"];
 
 export function NetworkIoChart({ series, metrics, timeZone, stale }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
+  const tokens = useChartTokens(TOKENS);
   const rate = (value) => formatRate(value, format);
   const clock = clockFormatter(format, timeZone, { second: "2-digit" });
 
-  const config = {
-    net_in: { label: t("charts.network.in"), color: "var(--chart-2)" },
-    net_out: { label: t("charts.network.out"), color: "var(--chart-1)" },
-  };
+  const lines = [
+    { key: "net_in", label: t("charts.network.in"), token: "chart-2", kind: "area" },
+    { key: "net_out", label: t("charts.network.out"), token: "chart-1", kind: "area" },
+  ];
+
+  const option = timeSeriesOption({
+    data: series,
+    series: lines,
+    tokens,
+    xLabel: clock,
+    value: rate,
+    // Floored at 64 KB/s so idle traffic does not render as dramatic spikes
+    // on an auto-scaled axis.
+    axes: [{ max: axisMax(series, ["net_in", "net_out"], { floor: 65536 }), formatter: rate }],
+  });
+
+  const table = seriesDataTable({
+    caption: t("charts.network.title"),
+    timeLabel: t("charts.time"),
+    data: series,
+    series: lines,
+    xLabel: clock,
+    value: rate,
+  });
 
   return (
     <LiveChartCard
@@ -51,57 +71,7 @@ export function NetworkIoChart({ series, metrics, timeZone, stale }) {
         </>
       }
     >
-      <ChartContainer config={config} className="h-72 w-full">
-        <AreaChart data={series} margin={{ left: -10, right: 8 }}>
-          <defs>
-            {Object.entries(config).map(([key, cfg]) => (
-              <linearGradient key={key} id={`net-${key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={cfg.color} stopOpacity={0.35} />
-                <stop offset="95%" stopColor={cfg.color} stopOpacity={0.03} />
-              </linearGradient>
-            ))}
-          </defs>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis
-            dataKey="t"
-            tickLine={false}
-            axisLine={false}
-            minTickGap={48}
-            tickFormatter={clock}
-          />
-          {/* Floor the scale at 64 KB/s so idle traffic doesn't render as
-              dramatic spikes on an auto-scaled axis. */}
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={70}
-            domain={[0, (max) => Math.max(65536, max * 1.2)]}
-            tickFormatter={rate}
-          />
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                indicator="line"
-                labelFormatter={timeLabel(clock)}
-                valueFormatter={(v) => rate(v)}
-              />
-            }
-          />
-          <ChartLegend content={orderedLegend(config)} />
-          {Object.keys(config).map((key) => (
-            <Area
-              key={key}
-              type="monotone"
-              dataKey={key}
-              stroke={config[key].color}
-              fill={`url(#net-${key})`}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          ))}
-        </AreaChart>
-      </ChartContainer>
+      <EChart option={option} dataTable={table} height="h-72" />
     </LiveChartCard>
   );
 }

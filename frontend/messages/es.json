@@ -789,7 +789,8 @@
         "read": "Lectura",
         "write": "Escritura",
         "iops": "{ops} IOPS"
-      }
+      },
+      "time": "Hora"
     },
     "processes": {
       "title": "Procesos",
