@@ -285,11 +285,6 @@ class SqlEngine implements DatabaseEngine
         return $tables;
     }
 
-    public function queryCount(): int
-    {
-        return (int) ($this->statusMap('SHOW GLOBAL STATUS;')['Queries'] ?? 0);
-    }
-
     public function optimize(string $database): void
     {
         $this->maintain($database, 'OPTIMIZE');

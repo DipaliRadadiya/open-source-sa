@@ -94,9 +94,6 @@ interface DatabaseEngine
      */
     public function tables(string $database): array;
 
-    /** Cumulative query/op counter for the QPS collector. */
-    public function queryCount(): int;
-
     /** Reclaim space / rebuild (SQL OPTIMIZE TABLE). No-op where unsupported. */
     public function optimize(string $database): void;
 

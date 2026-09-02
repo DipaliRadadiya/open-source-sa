@@ -196,20 +196,50 @@ class MongoEngine implements DatabaseEngine
         $this->must('db.adminCommand({ killOp: 1, op: '.(int) $id.' });');
     }
 
+    /**
+     * The opcounters are summed in PHP, not in the shell.
+     *
+     * mongosh freezes `promoteLongs: false` into the options of every driver
+     * call it makes, so a BSON int64 stays a `Long` object rather than becoming
+     * a JavaScript number. `Long` defines no `Symbol.toPrimitive` and its
+     * `valueOf()` returns another object, so `+` cannot reach a numeric
+     * primitive and falls back to `toString()` — which makes the operator
+     * concatenate. Summing five counters that way returned their digits glued
+     * end to end: 0, 1, 0, 0 and 50000 produced "010050000" instead of 50001.
+     * `(o.insert||0)` does not guard against it either, because `Long(0)` is a
+     * truthy object.
+     *
+     * That value is a cumulative counter, and the Query Monitor divides the
+     * difference between consecutive samples by the elapsed seconds. A quiet
+     * server doing 3 operations a second was charted at 133 million, spiking
+     * into the billions each time any one counter gained a digit and shifted
+     * the concatenation.
+     *
+     * `Number()` around each term would also work today, but it would keep the
+     * arithmetic dependent on a BSON option mongosh is free to change. Printing
+     * each counter as its own line and adding them here leaves nothing for a
+     * shell to get wrong, and matches how {@see SqlEngine::status()} has always
+     * read `SHOW GLOBAL STATUS`.
+     */
     public function status(): array
     {
         $result = $this->run(
             'const s = db.serverStatus(); const o = s.opcounters || {}; '
-            .'print([s.connections.current, (s.connections.available||0), s.uptime, '
-            .'((o.insert||0)+(o.query||0)+(o.update||0)+(o.delete||0)+(o.command||0))].join("\t"));'
+            .'[s.connections.current, (s.connections.available||0), s.uptime, '
+            .'o.insert, o.query, o.update, o.delete, o.command]'
+            .'.forEach(v => print(String(v == null ? 0 : v)));'
         );
-        $c = $result->ok ? explode("\t", trim($result->output())) : [];
+        $c = $result->ok ? preg_split('/\r?\n/', trim($result->output())) : [];
+        $c = is_array($c) ? $c : [];
 
         return [
             'connections' => (int) ($c[0] ?? 0),
             'max_connections' => (int) ($c[1] ?? 0),
             'threads_running' => null,
-            'queries' => (int) ($c[3] ?? 0),
+            'queries' => array_sum(array_map(
+                fn (int $i): int => (int) trim((string) ($c[$i] ?? 0)),
+                [3, 4, 5, 6, 7],
+            )),
             'slow_queries' => null,
             'uptime_seconds' => (int) ($c[2] ?? 0),
         ];
@@ -236,16 +266,6 @@ class MongoEngine implements DatabaseEngine
         }
 
         return $tables;
-    }
-
-    public function queryCount(): int
-    {
-        $result = $this->run(
-            'const o = db.serverStatus().opcounters || {}; '
-            .'print((o.insert||0)+(o.query||0)+(o.update||0)+(o.delete||0)+(o.command||0));'
-        );
-
-        return $result->ok ? (int) trim($result->output()) : 0;
     }
 
     public function optimize(string $database): void
