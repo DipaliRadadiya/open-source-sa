@@ -57,6 +57,24 @@ interface SiteType
     public function needsDatabase(): bool;
 
     /**
+     * Does this application's own browser client authenticate using the HTTP
+     * `Authorization` header?
+     *
+     * HTTP allows exactly one `Authorization` header per request. nginx Basic
+     * Auth consumes it, so an application whose editor or dashboard sends
+     * `Authorization: Bearer <token>` on its API calls cannot also satisfy
+     * Basic Auth -- the token replaces the credentials and nginx answers 401,
+     * or the credentials replace the token and the application answers 401.
+     * There is no third header to put the other one in.
+     *
+     * Types returning true therefore cannot be combined with the panel's
+     * password protection. Confirmed against a live Node-RED site: with
+     * protection enabled, /settings, /flows and /nodes are unreachable in
+     * every combination.
+     */
+    public function authorizationHeaderAuth(): bool;
+
+    /**
      * The unit's `MemoryMax` for this application, or null for the server
      * default.
      *

@@ -222,4 +222,5 @@ return [
     'filter_content_required' => 'La configuración del filtro es obligatoria.',
     'filter_content_string' => 'La configuración del filtro debe ser texto.',
     'filter_content_max' => 'La configuración del filtro es demasiado grande (máx. 65535 caracteres).',
+    'basic_auth_conflicts' => 'La protección con contraseña no se puede usar con :type. Su propia interfaz inicia sesión con la cabecera Authorization, que HTTP solo permite una vez por petición: la autenticación básica la consumiría y dejaría la aplicación inaccesible. :type ya requiere sus propias credenciales.',
 ];

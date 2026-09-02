@@ -95,6 +95,16 @@ abstract class AbstractSiteType implements SiteType
         return false;
     }
 
+    /**
+     * Most applications authenticate with a cookie or a session, which does
+     * not collide with Basic Auth. Only the ones that put a token in the
+     * `Authorization` header override this.
+     */
+    public function authorizationHeaderAuth(): bool
+    {
+        return false;
+    }
+
     public function needsDatabase(): bool
     {
         return false;

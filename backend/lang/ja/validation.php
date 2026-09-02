@@ -199,4 +199,5 @@ return [
     'filter_content_required' => 'フィルター設定は必須です。',
     'filter_content_string' => 'フィルター設定はテキストである必要があります。',
     'filter_content_max' => 'フィルター設定が大きすぎます（最大 65535 文字）。',
+    'basic_auth_conflicts' => 'パスワード保護は :type では使用できません。:type の画面は Authorization ヘッダーで認証しますが、HTTP はこのヘッダーをリクエストごとに1つしか許可しません。Basic 認証がそれを占有するとアプリケーションに到達できなくなります。:type はすでに独自の認証情報を必要とします。',
 ];

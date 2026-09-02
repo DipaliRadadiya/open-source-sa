@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Applications\SiteTypeManager;
 use App\Services\Git\Webhooks\WebhookManager;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\WebServers\WebServerManager;
@@ -61,6 +62,15 @@ class ApplicationResource extends JsonResource
             // closer to a credential no API response should carry.
             'basic_auth_enabled' => (bool) $this->basic_auth_enabled,
             'basic_auth_username' => $this->basic_auth_enabled ? $this->basic_auth_username : null,
+            // False when the application's own client signs in with the
+            // Authorization header, which Basic Auth would consume -- the UI
+            // disables the control rather than letting the user save something
+            // the API will refuse. See SiteType::authorizationHeaderAuth().
+            'basic_auth_supported' => ! (
+                app(SiteTypeManager::class)
+                    ->find((string) $this->site_type)
+                    ?->authorizationHeaderAuth() ?? false
+            ),
 
             // Which AI crawlers are 403'd for this site. `title` is the same
             // plain-language label the Bot Blocker screen's radio option

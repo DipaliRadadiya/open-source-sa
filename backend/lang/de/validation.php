@@ -199,4 +199,5 @@ return [
     'filter_content_required' => 'Die Filter-Konfiguration ist erforderlich.',
     'filter_content_string' => 'Die Filter-Konfiguration muss Text sein.',
     'filter_content_max' => 'Die Filter-Konfiguration ist zu groß (max. 65535 Zeichen).',
+    'basic_auth_conflicts' => 'Passwortschutz kann nicht mit :type verwendet werden. Dessen eigene Oberfläche meldet sich über den Authorization-Header an, den HTTP nur einmal pro Anfrage erlaubt — Basic Auth würde ihn belegen und die Anwendung unerreichbar machen. :type verlangt bereits eigene Zugangsdaten.',
 ];

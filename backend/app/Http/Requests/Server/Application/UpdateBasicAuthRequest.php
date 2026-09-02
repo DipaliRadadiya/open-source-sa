@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Models\Application;
+use App\Services\Applications\SiteTypeManager;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -38,6 +41,45 @@ class UpdateBasicAuthRequest extends FormRequest
                 'max:255',
             ],
         ];
+    }
+
+    /**
+     * Refuse to put Basic Auth in front of an application that authenticates
+     * with the `Authorization` header.
+     *
+     * HTTP carries one `Authorization` header. If the application's own client
+     * sends `Authorization: Bearer <token>`, that replaces the Basic
+     * credentials the browser would attach and nginx answers 401; send the
+     * credentials instead and the application answers 401. The application
+     * becomes unusable rather than merely double-protected, so this is
+     * rejected at the boundary rather than left to be discovered.
+     *
+     * These applications are not left unprotected: every type that returns
+     * true here mandates its own credentials at install time.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if (! $this->boolean('enabled')) {
+                return;
+            }
+
+            $application = $this->route('application');
+
+            if (! $application instanceof Application) {
+                return;
+            }
+
+            $type = app(SiteTypeManager::class)->find((string) $application->site_type);
+
+            if ($type?->authorizationHeaderAuth() !== true) {
+                return;
+            }
+
+            $validator->errors()->add('enabled', __('validation.basic_auth_conflicts', [
+                'type' => $application->site_type,
+            ]));
+        });
     }
 
     public function enabled(): bool

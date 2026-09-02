@@ -235,4 +235,5 @@ return [
     'filter_content_string' => 'The filter configuration must be a text string.',
     'filter_content_max' => 'The filter configuration is too large (max 65535 characters).',
 
+    'basic_auth_conflicts' => 'Password protection cannot be used with :type. Its own interface signs in with the Authorization header, which HTTP allows only once per request — Basic Auth would consume it and make the application unreachable. :type already requires its own credentials.',
 ];

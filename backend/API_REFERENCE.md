@@ -730,6 +730,7 @@ They are equal for fifteen of the seventeen site types, because most application
   "is_disabled": false, "disabled_at": null,
 
   "basic_auth_enabled": false, "basic_auth_username": null,
+  "basic_auth_supported": true,
 
   "ai_bot_policy": "block_training", "ai_bot_policy_title": "Block AI training crawlers",
   "waf_supported": true,
@@ -2139,6 +2140,10 @@ Enable/disable HTTP Basic Auth for this site.
 To disable: `{"enabled": false}`
 
 **Response `200`:** `{"application": {"id": 1, "basic_auth_enabled": true}}`
+
+**Not every application can be put behind it.** `basic_auth_supported: false` on the application resource means this site's own interface signs in with the `Authorization` header — Node-RED's editor sends `Authorization: Bearer <token>` on every admin call. HTTP carries that header once per request, so Basic Auth and the application's own token cannot both travel: whichever one is sent, the other side answers `401`, and the application becomes unreachable rather than merely double-protected.
+
+Enabling it on such a site is a **`422`** on `enabled`, not a silent success. Disable the control when `basic_auth_supported` is false; those types mandate their own credentials at install time, so nothing is left unprotected.
 
 ---
 
