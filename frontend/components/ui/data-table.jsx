@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 import { useNavPending } from "@/components/data-table/nav-transition";
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
@@ -62,7 +63,12 @@ function SortableHeader({ header, label }) {
 export function DataTable({
   columns,
   data,
-  emptyMessage = "No results.",
+  // Defaulted below rather than here: a literal default is invisible to the
+  // i18n gate, which only reads t() calls — so twenty of the thirty tables in
+  // the panel printed English "No results." to Spanish and Hindi readers while
+  // every check stayed green. A caller with something better to say still
+  // passes its own.
+  emptyMessage,
   sortable = false,
   stickyHeader = false,
   defaultSorting = [],
@@ -96,6 +102,7 @@ export function DataTable({
   onRowSelectionChange,
   rowId,
 }) {
+  const tc = useTranslations("common");
   const pending = useNavPending();
   const [sorting, setSorting] = useState(defaultSorting);
   const selectable = rowSelection !== undefined && onRowSelectionChange !== undefined;
@@ -224,7 +231,7 @@ export function DataTable({
                 colSpan={columns.length}
                 className="h-28 text-center text-sm text-muted-foreground"
               >
-                {emptyMessage}
+                {emptyMessage ?? tc("noResults")}
               </TableCell>
             </TableRow>
           )}
