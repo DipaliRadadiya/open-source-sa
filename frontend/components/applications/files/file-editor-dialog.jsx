@@ -86,8 +86,17 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
     return () => {
       active = false;
     };
+    // `appId` is in the list because the effect reads it — it is a plain scalar
+    // prop, so it cannot loop. Today it never changes while `file.path` holds:
+    // this dialog only ever opens inside one application's Files page. That is
+    // an assumption about the parent, enforced nowhere, and the cost of it
+    // being wrong is loading one site's file into another's editor.
+    //
+    // `t`, `onOpenChange` and the setters stay out: they are read only on the
+    // failure path, and re-running on a new translator identity would abort the
+    // in-flight request through the cleanup below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file.path]);
+  }, [appId, file.path]);
 
   const dirty = loaded !== null && contents !== loaded.content;
   const canEdit = canManage;

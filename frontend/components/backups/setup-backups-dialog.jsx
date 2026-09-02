@@ -55,6 +55,10 @@ export function SetupBackupsDialog({
   // Reopening from a different row must not inherit the previous row's site.
   useEffect(() => {
     if (open) form.reset(defaults(applicationId, destinations, target));
+    // `destinations` and `target` are excluded deliberately. Both change
+    // identity on every parent render, and re-seeding on them would overwrite a
+    // half-filled form; `open` going false→true already covers arriving from a
+    // different row, which is the case this exists for.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, applicationId]);
 

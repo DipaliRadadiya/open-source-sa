@@ -15,8 +15,13 @@ const eslintConfig = [
     },
     rules: {
       ...js.configs.recommended.rules,
-      // Left to the editor: an unused import is untidy, not broken.
-      "no-unused-vars": "off",
+      // An unused import is not just untidy: with no TypeScript it is usually
+      // the residue of a refactor that stopped halfway, which is how a
+      // component came to sit in the tree with no importer at all. `args` is
+      // left alone because table cell renderers and event handlers legitimately
+      // ignore parameters, and `^_` is the escape hatch for a binding kept on
+      // purpose.
+      "no-unused-vars": ["error", { args: "none", varsIgnorePattern: "^_" }],
     },
   },
 ];

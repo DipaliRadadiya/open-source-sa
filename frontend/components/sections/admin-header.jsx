@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft } from "lucide-react";
-import { ADMIN_NAV, isAdminNavActive } from "@/lib/admin-nav";
 import { SidebarToggle } from "@/components/sections/sidebar-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleSwitcher } from "@/components/sections/locale-switcher";
@@ -13,11 +12,15 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 
 export function AdminHeader() {
+  // Held for the same reason as the two `useWatch` calls in the create form:
+  // nothing here reads the path, but `usePathname` is a subscription, and
+  // dropping it stops this header re-rendering on navigation. Its output does
+  // not depend on the route, so that is a safe change — just not a textual one,
+  // so it is a separate decision.
+  // eslint-disable-next-line no-unused-vars -- pending a decision; see above
   const pathname = usePathname();
   const t = useTranslations("admin");
   const { guardNavigation } = useUnsaved();
-
-  const current = ADMIN_NAV.find((item) => isAdminNavActive(pathname, item.url));
 
   return (
     // Stickiness is owned by the wrapping cluster in the layout, so the

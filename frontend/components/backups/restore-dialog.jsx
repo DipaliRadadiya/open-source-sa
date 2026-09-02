@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { toast } from "sonner";
 import { History, Loader2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format/bytes";
 import { BACKUP_IN_FLIGHT, restorableTypes } from "@/lib/schemas/backup";
 import { startRestore } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Label } from "@/components/ui/label";

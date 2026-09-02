@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus, SearchX, Shield } from "lucide-react";
 import { useTranslations } from "next-intl";

@@ -136,7 +136,6 @@ export function PhpPanel({ appId, php, timezones = [], canManage }) {
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const settings = php.settings;
 
   async function isolate() {
     setBusy(true);

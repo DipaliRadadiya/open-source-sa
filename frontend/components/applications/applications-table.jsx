@@ -29,7 +29,6 @@ import {
   ApplicationStatusBadge,
   ApplicationStatusNotes,
   APPLICATION_STATUSES,
-  STATUS_VARIANTS,
 } from "@/components/applications/application-status-badge";
 
 

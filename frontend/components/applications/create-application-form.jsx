@@ -727,7 +727,14 @@ export function CreateApplicationForm({
     name: "system_user_id",
   });
   const branch = useWatch({ control: form.control, name: "branch" });
+  // Held deliberately, not overlooked. Nothing reads these two, but they are
+  // `useWatch` subscriptions rather than plain variables — deleting them stops
+  // the form re-rendering when those fields change. The rendered output would
+  // be identical and the re-renders strictly fewer, which is why it is a
+  // separate decision from clearing unused imports rather than part of it.
+  // eslint-disable-next-line no-unused-vars -- pending a decision; see above
   const phpVersion = useWatch({ control: form.control, name: "php_version" });
+  // eslint-disable-next-line no-unused-vars -- pending a decision; see above
   const nodeVersion = useWatch({ control: form.control, name: "node_version" });
   const selected = useMemo(
     () => siteTypes.find((type) => type.name === selectedName),

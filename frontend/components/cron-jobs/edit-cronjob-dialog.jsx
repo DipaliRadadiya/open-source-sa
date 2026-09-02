@@ -64,6 +64,12 @@ export function EditCronjobDialog({
         active: job.active,
       });
     }
+    // Depends on the fields, not just the id — the opposite of
+    // edit-worker-dialog, and deliberately so. Unlike workers, cron jobs are not
+    // polled: nothing in components/cron-jobs/ runs a timer, so these props only
+    // change when this dialog's own save calls router.refresh(). Re-seeding then
+    // is the point. Keying on the id alone would leave the reopened form holding
+    // pre-edit values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, job.id, job.name, job.command, job.expression, job.active]);
 

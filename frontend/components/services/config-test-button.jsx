@@ -45,7 +45,6 @@ export function ConfigTestButton({ service, canManage }) {
           : { ok: false, output: t("configTest.unreadable") },
       );
     } catch (error) {
-      const data = error.response?.data;
       setResult({ ok: false, output: apiMessage(error, t("configTest.failed")) });
     } finally {
       setPending(false);

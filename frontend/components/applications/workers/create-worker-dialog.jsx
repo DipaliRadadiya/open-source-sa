@@ -53,6 +53,9 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
         ? { name: preset.title, command: preset.command, kind: preset.kind }
         : null),
     });
+    // `presets` and `form` are excluded — `form` is stable, and `presets` is the
+    // catalog the seed is looked up in rather than something that should
+    // re-seed the form when its array identity changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, seed]);
 

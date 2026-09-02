@@ -70,6 +70,9 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
     return () => {
       active = false;
     };
+    // The id, not the `user` object — the object is a new reference after every
+    // refresh of the list behind this dialog, and refetching the keys on each
+    // one would flicker the list for no new data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 

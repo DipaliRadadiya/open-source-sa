@@ -86,7 +86,7 @@ function SelectAllHeader({ table }) {
 function NameCell({ row, table }) {
   const t = useTranslations("applications.files");
   const file = row.original;
-  const { appId, path, onAction } = table.options.meta;
+  const { appId, onAction } = table.options.meta;
 
   if (file.type === "dir") {
     const href = `/applications/${appId}/files?path=${encodeURIComponent(file.path)}`;

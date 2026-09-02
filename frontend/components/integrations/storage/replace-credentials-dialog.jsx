@@ -10,7 +10,6 @@ import { updateDestination } from "@/lib/api/storage";
 import { probeDestination } from "@/lib/storage/probe";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
-import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { FormModal } from "@/components/ui/form-modal";

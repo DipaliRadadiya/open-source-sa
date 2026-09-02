@@ -33,6 +33,9 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
     return () => {
       active = false;
     };
+    // `minimal` is excluded: it is only the fallback for a failed fetch, derived
+    // from the same user prop, and refetching when it changes identity would
+    // mean refetching on every parent render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 

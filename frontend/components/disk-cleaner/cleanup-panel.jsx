@@ -25,10 +25,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-// The API's three groups, in the order they matter to someone freeing space:
-// packages are the biggest and safest win, temp files the smallest.
-const GROUP_ORDER = ["package", "logs", "temp"];
-
 /**
  * Pick what to clean, see what it will do, then do it.
  *
@@ -53,9 +49,16 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
     [categories],
   );
 
+  // The API groups categories under `package`, `logs` and `temp`. This list
+  // used to be ordered by that grouping — packages first as the biggest and
+  // safest win — but a fixed order is only a guess at what is worth reclaiming
+  // on a given server, and the measured size is not. Sorted by what is actually
+  // there instead; the group keys are recorded here because nothing else in
+  // this file names them.
   const ordered = useMemo(
     () =>
       categories
+        // `filter` returns a new array, so the sort below cannot reach the prop.
         .filter((category) => category.available)
         // Descending by size, with the already-clean rows last: they can't be
         // acted on, so they belong out of the way rather than interleaved.

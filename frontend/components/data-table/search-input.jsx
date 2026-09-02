@@ -61,6 +61,11 @@ export function SearchInput({
       );
     }, delay);
     return () => clearTimeout(id);
+    // `extraQuery` is excluded, and that exclusion is what makes this work: a
+    // caller passes it as an object literal (account-tabs.jsx does), so a new
+    // identity arrives on every parent render. Included, the timer would be
+    // cleared and restarted each time and the search would never fire.
+    // `paramKey`, `delay` and `setQuery` are fixed for the life of the box.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 

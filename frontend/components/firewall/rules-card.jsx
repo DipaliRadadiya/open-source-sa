@@ -60,14 +60,6 @@ function SourceCell({ row, table }) {
   return <SourceText rule={row.original} labels={table.options.meta.labels} />;
 }
 
-function AddedCell({ row }) {
-  return (
-    <span className="whitespace-nowrap text-xs text-muted-foreground">
-      {row.original.created_at_human || "—"}
-    </span>
-  );
-}
-
 function ActionsCell({ row, table }) {
   const { enabled, canManage, pending, onDelete, onToggle, onRename, shownEnabled, labels } =
     table.options.meta;

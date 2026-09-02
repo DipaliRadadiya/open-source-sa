@@ -66,6 +66,10 @@ export function CreateCronjobDialog({
 
   useEffect(() => {
     if (open) form.reset({ ...DEFAULTS, ...initialValues });
+    // `initialValues` is safe to depend on despite being an object: the parent
+    // holds it in state (cronjobs-panel.jsx) rather than building it inline, so
+    // its identity changes only when a different quick-start is chosen — which
+    // is exactly when this should re-seed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialValues]);
 

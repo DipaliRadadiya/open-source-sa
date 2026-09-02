@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { updateFail2ban } from "@/lib/api/fail2ban";
 import { settingsPayload } from "@/lib/fail2ban/settings-payload";
 import { PendingSwitch } from "@/components/ui/pending-switch";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

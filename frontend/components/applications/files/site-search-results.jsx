@@ -45,6 +45,9 @@ export function SiteSearchResults({ appId, query, onAction }) {
       active = false;
       controller.abort();
     };
+    // `t` is excluded: it is read only to word a failure, so a new translator
+    // identity is not a reason to re-run the search — and re-running would
+    // abort the in-flight request via the cleanup above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId, query]);
 
