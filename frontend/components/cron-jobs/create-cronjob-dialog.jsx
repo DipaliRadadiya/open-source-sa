@@ -29,8 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScheduleField } from "@/components/cronjobs/schedule-field";
-import { CommandField } from "@/components/cronjobs/command-field";
+import { ScheduleField } from "@/components/cron-jobs/schedule-field";
+import { CommandField } from "@/components/cron-jobs/command-field";
 
 const DEFAULTS = {
   name: "",

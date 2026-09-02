@@ -10,8 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EditCronjobDialog } from "@/components/cronjobs/edit-cronjob-dialog";
-import { DeleteCronjobDialog } from "@/components/cronjobs/delete-cronjob-dialog";
+import { EditCronjobDialog } from "@/components/cron-jobs/edit-cronjob-dialog";
+import { DeleteCronjobDialog } from "@/components/cron-jobs/delete-cronjob-dialog";
 
 export function CronjobRowActions({
   job,

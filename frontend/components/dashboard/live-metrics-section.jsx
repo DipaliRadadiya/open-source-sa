@@ -6,9 +6,9 @@ import { useTranslations, useFormatter } from "next-intl";
 import { CircleAlert, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clockFormatter } from "@/lib/format/time";
-import { useLiveMetrics } from "@/components/server-dashboard/use-live-metrics";
-import { StatCards } from "@/components/server-dashboard/stat-cards";
-import { ChartCardSkeleton } from "@/components/server-dashboard/chart-card-skeleton";
+import { useLiveMetrics } from "@/components/dashboard/use-live-metrics";
+import { StatCards } from "@/components/dashboard/stat-cards";
+import { ChartCardSkeleton } from "@/components/dashboard/chart-card-skeleton";
 
 /**
  * The four charts are loaded after the page, not with it.
@@ -27,16 +27,16 @@ import { ChartCardSkeleton } from "@/components/server-dashboard/chart-card-skel
 const chart = (load) => dynamic(load, { ssr: false, loading: ChartCardSkeleton });
 
 const ServerLoadChart = chart(() =>
-  import("@/components/server-dashboard/server-load-chart").then((m) => m.ServerLoadChart),
+  import("@/components/dashboard/server-load-chart").then((m) => m.ServerLoadChart),
 );
 const ResourceUsageChart = chart(() =>
-  import("@/components/server-dashboard/resource-usage-chart").then((m) => m.ResourceUsageChart),
+  import("@/components/dashboard/resource-usage-chart").then((m) => m.ResourceUsageChart),
 );
 const NetworkIoChart = chart(() =>
-  import("@/components/server-dashboard/network-io-chart").then((m) => m.NetworkIoChart),
+  import("@/components/dashboard/network-io-chart").then((m) => m.NetworkIoChart),
 );
 const DiskIoChart = chart(() =>
-  import("@/components/server-dashboard/disk-io-chart").then((m) => m.DiskIoChart),
+  import("@/components/dashboard/disk-io-chart").then((m) => m.DiskIoChart),
 );
 
 /** Announce only meaningful connection transitions, never every metric poll. */

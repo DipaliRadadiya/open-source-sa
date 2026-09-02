@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { useSetQuery } from "@/hooks/use-set-query";
-import { humanizeActivity, actionBadgeVariant } from "@/lib/activity/labels";
+import { humanizeActivity, actionBadgeVariant } from "@/lib/activity-log/labels";
 
 /* Cells at module level: flexRender treats a cell function's identity as the
  * component type, so an inline cell remounts on every render of this table. */

@@ -17,8 +17,8 @@ const roleForm = read("components/admin/roles/role-form.jsx");
 const panelFocus = read("components/sections/panel-focus.jsx");
 const appLayout = read("app/(app)/layout.jsx");
 const adminLayout = read("app/admin/layout.jsx");
-const statCards = read("components/server-dashboard/stat-cards.jsx");
-const liveMetrics = read("components/server-dashboard/live-metrics-section.jsx");
+const statCards = read("components/dashboard/stat-cards.jsx");
+const liveMetrics = read("components/dashboard/live-metrics-section.jsx");
 
 test("unsaved work uses one panel-wide confirmation", () => {
   assert.match(unsavedGuard, /const \[pendingAction, setPendingAction\]/);

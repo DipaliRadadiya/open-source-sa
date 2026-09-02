@@ -5,7 +5,7 @@ import { SYNC_RESOURCE_TYPES } from "@/lib/schemas/sync";
 import { ignoreKey } from "@/lib/server/sync-selection";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
-import { SyncEvidence } from "@/components/server/sync/sync-evidence";
+import { SyncEvidence } from "@/components/sync/sync-evidence";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

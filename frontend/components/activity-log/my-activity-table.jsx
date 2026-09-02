@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { humanizeActivity, actionBadgeVariant, typeBadgeClass } from "@/lib/activity/labels";
+import { humanizeActivity, actionBadgeVariant, typeBadgeClass } from "@/lib/activity-log/labels";
 
 // Backend timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); parse
 // both, return null if neither is valid so we skip the tooltip instead of

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { collapseRepeats } from "../lib/activity/collapse-repeats.js";
+import { collapseRepeats } from "../lib/activity-log/collapse-repeats.js";
 
 const login = (id, userId = 2) => ({
   id,

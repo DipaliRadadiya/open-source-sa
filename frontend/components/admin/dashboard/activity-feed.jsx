@@ -3,10 +3,10 @@ import { getTranslations } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
-import { actionDotClass, humanizeActivity } from "@/lib/activity/labels";
-import { collapseRepeats } from "@/lib/activity/collapse-repeats";
-import { pickFeedRows, QUIET_ACTIONS } from "@/lib/activity/pick-feed-rows";
-import { lowerFirst } from "@/lib/activity/lower-first";
+import { actionDotClass, humanizeActivity } from "@/lib/activity-log/labels";
+import { collapseRepeats } from "@/lib/activity-log/collapse-repeats";
+import { pickFeedRows, QUIET_ACTIONS } from "@/lib/activity-log/pick-feed-rows";
+import { lowerFirst } from "@/lib/activity-log/lower-first";
 
 /**
  * The last few things anyone did, instead of a running total.

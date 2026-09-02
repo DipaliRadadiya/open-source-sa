@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
-import { KillProcessButton } from "@/components/server-dashboard/kill-process-button";
+import { KillProcessButton } from "@/components/dashboard/kill-process-button";
 
 function num(value) {
   const n = Number(value);

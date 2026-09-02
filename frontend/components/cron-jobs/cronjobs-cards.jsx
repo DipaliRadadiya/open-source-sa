@@ -1,13 +1,13 @@
 import { useTranslations } from "next-intl";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
-import { CronjobActiveSwitch } from "@/components/cronjobs/cronjob-active-switch";
-import { CronjobRowActions } from "@/components/cronjobs/cronjob-row-actions";
+import { CronjobActiveSwitch } from "@/components/cron-jobs/cronjob-active-switch";
+import { CronjobRowActions } from "@/components/cron-jobs/cronjob-row-actions";
 import {
   CronjobName,
   CronjobNextRun,
   CronjobRunAs,
   CronjobSchedule,
-} from "@/components/cronjobs/cronjobs-table";
+} from "@/components/cron-jobs/cronjobs-table";
 
 /**
  * Cron jobs on a narrow screen.

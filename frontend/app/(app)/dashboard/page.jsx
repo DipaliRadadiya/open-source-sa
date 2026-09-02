@@ -10,9 +10,9 @@ import { getServerProcesses } from "@/lib/server/get-server-processes";
 import { getServiceHealth } from "@/lib/server/get-service-health";
 import { getSetup } from "@/lib/setup/get-setup";
 import { SetupBanner } from "@/components/setup/setup-banner";
-import { LiveMetricsSection } from "@/components/server-dashboard/live-metrics-section";
-import { ServerInfoCard } from "@/components/server-dashboard/server-info-card";
-import { ProcessesCard } from "@/components/server-dashboard/processes-card";
+import { LiveMetricsSection } from "@/components/dashboard/live-metrics-section";
+import { ServerInfoCard } from "@/components/dashboard/server-info-card";
+import { ProcessesCard } from "@/components/dashboard/processes-card";
 
 export const dynamic = "force-dynamic";
 

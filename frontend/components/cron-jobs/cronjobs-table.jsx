@@ -7,9 +7,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CronjobActiveSwitch } from "@/components/cronjobs/cronjob-active-switch";
-import { CronjobRowActions } from "@/components/cronjobs/cronjob-row-actions";
-import { CronjobsCards } from "@/components/cronjobs/cronjobs-cards";
+import { CronjobActiveSwitch } from "@/components/cron-jobs/cronjob-active-switch";
+import { CronjobRowActions } from "@/components/cron-jobs/cronjob-row-actions";
+import { CronjobsCards } from "@/components/cron-jobs/cronjobs-cards";
 
 /**
  * Labels an expression using the API's own preset list ("Daily (midnight)"),

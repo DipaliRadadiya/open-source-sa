@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getMyActivity } from "@/lib/account/get-my-activity";
-import { getMyActivityFilters } from "@/lib/activity/get-activity-filters";
+import { getMyActivityFilters } from "@/lib/activity-log/get-activity-filters";
 import { AccountTabs } from "@/components/account/account-tabs";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";

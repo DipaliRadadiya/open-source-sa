@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { lowerFirst } from "../lib/activity/lower-first.js";
+import { lowerFirst } from "../lib/activity-log/lower-first.js";
 
 // What the feed is built from: "test" + "logged in" + "50 times".
 test("an ordinary capitalised label joins mid-sentence", () => {

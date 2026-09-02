@@ -2,16 +2,16 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getCronjobs } from "@/lib/cronjobs/get-cronjobs";
+import { getCronjobs } from "@/lib/cron-jobs/get-cronjobs";
 import {
   getSchedulePresets,
   getCommandPresets,
-} from "@/lib/cronjobs/get-cron-presets";
+} from "@/lib/cron-jobs/get-cron-presets";
 import { getSystemUserOptions } from "@/lib/system-users/get-system-users";
 import { getAllApplications } from "@/lib/applications/get-applications";
 import { getServerFacts } from "@/lib/server/get-server-facts";
 import { withTimeout } from "@/lib/api/with-timeout";
-import { CronjobsPanel } from "@/components/cronjobs/cronjobs-panel";
+import { CronjobsPanel } from "@/components/cron-jobs/cronjobs-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";

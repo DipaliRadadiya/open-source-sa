@@ -14,10 +14,10 @@ import {
 import { apiMessage } from "@/lib/api/error-message";
 import { syncRunResponseSchema } from "@/lib/schemas/sync";
 import { ignoreKey, ignoreKeySet, typesPresent } from "@/lib/server/sync-selection";
-import { AdoptDialog } from "@/components/server/sync/adopt-dialog";
-import { IgnoredSheet } from "@/components/server/sync/ignored-sheet";
-import { SyncResults } from "@/components/server/sync/sync-results";
-import { SyncSummary } from "@/components/server/sync/sync-summary";
+import { AdoptDialog } from "@/components/sync/adopt-dialog";
+import { IgnoredSheet } from "@/components/sync/ignored-sheet";
+import { SyncResults } from "@/components/sync/sync-results";
+import { SyncSummary } from "@/components/sync/sync-summary";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { Button } from "@/components/ui/button";
 

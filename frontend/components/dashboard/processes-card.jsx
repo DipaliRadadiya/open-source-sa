@@ -14,7 +14,7 @@ import {
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
-import { ProcessTable } from "@/components/server-dashboard/process-table";
+import { ProcessTable } from "@/components/dashboard/process-table";
 
 const PREVIEW_COUNT = 3;
 

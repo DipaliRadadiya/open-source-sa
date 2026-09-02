@@ -22,8 +22,8 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import { ScheduleField } from "@/components/cronjobs/schedule-field";
-import { CommandField } from "@/components/cronjobs/command-field";
+import { ScheduleField } from "@/components/cron-jobs/schedule-field";
+import { CommandField } from "@/components/cron-jobs/command-field";
 
 export function EditCronjobDialog({
   job,

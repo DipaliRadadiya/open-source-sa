@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { SearchInput } from "@/components/data-table/search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { useSetQuery } from "@/hooks/use-set-query";
-import { humanizeActivity } from "@/lib/activity/labels";
+import { humanizeActivity } from "@/lib/activity-log/labels";
 import {
   Select,
   SelectContent,

@@ -8,7 +8,7 @@ import {
   LiveChartCard,
   orderedLegend,
   timeLabel,
-} from "@/components/server-dashboard/live-chart-card";
+} from "@/components/dashboard/live-chart-card";
 import {
   ChartContainer,
   ChartTooltip,

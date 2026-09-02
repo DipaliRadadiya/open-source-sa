@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pickFeedRows } from "../lib/activity/pick-feed-rows.js";
+import { pickFeedRows } from "../lib/activity-log/pick-feed-rows.js";
 
 const group = (action, id) => ({ key: String(id), newest: { id, action }, count: 1 });
 

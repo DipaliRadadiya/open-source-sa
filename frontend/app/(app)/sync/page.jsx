@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getLatestSyncRun, getSyncIgnores, getSyncRunItems } from "@/lib/server/get-sync";
-import { SyncPanel } from "@/components/server/sync/sync-panel";
+import { SyncPanel } from "@/components/sync/sync-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
 export const dynamic = "force-dynamic";

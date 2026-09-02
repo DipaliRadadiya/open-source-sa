@@ -9,9 +9,9 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { useSetQuery } from "@/hooks/use-set-query";
-import { CronjobsToolbar } from "@/components/cronjobs/cronjobs-toolbar";
-import { CronjobsTable } from "@/components/cronjobs/cronjobs-table";
-import { CreateCronjobDialog } from "@/components/cronjobs/create-cronjob-dialog";
+import { CronjobsToolbar } from "@/components/cron-jobs/cronjobs-toolbar";
+import { CronjobsTable } from "@/components/cron-jobs/cronjobs-table";
+import { CreateCronjobDialog } from "@/components/cron-jobs/create-cronjob-dialog";
 
 // A first job is easier to copy than to compose — offer the two most common
 // ones straight from the API's own templates.
