@@ -22,7 +22,18 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOTS = ["app", "components", "lib", "hooks", "tests"];
-const SUBJECT = "components";
+const SUBJECTS = ["components"];
+
+/**
+ * CSS modules are checked everywhere, not just under `components/`.
+ *
+ * `app/page.module.css` — 2.4 KB of create-next-app scaffolding styling a page
+ * that had long since become a bare redirect — sat in the tree for months
+ * because the original check only looked at one directory. A stylesheet nothing
+ * imports is invisible in a way a component is not: it has no exports to go
+ * unused and no render to go missing.
+ */
+const STYLE_SUBJECTS = ROOTS;
 const EXEMPT = [path.join("components", "ui") + path.sep];
 const SKIP_DIRS = new Set([".next", "node_modules", ".git"]);
 
@@ -32,7 +43,7 @@ function walk(dir, out = []) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) walk(full, out);
-    } else if (/\.(jsx|js|mjs)$/.test(entry.name)) {
+    } else if (/\.(jsx|js|mjs|module\.css)$/.test(entry.name)) {
       out.push(full);
     }
   }
@@ -62,8 +73,13 @@ for (const [file, text] of source) {
   }
 }
 
+const inScope = (f) =>
+  f.endsWith(".module.css")
+    ? STYLE_SUBJECTS.some((r) => f.startsWith(r + path.sep))
+    : SUBJECTS.some((r) => f.startsWith(r + path.sep));
+
 const orphans = files
-  .filter((f) => f.startsWith(SUBJECT + path.sep))
+  .filter(inScope)
   .filter((f) => !EXEMPT.some((e) => f.startsWith(e)))
   .filter((f) => {
     const name = path.basename(f).replace(/\.(jsx|js|mjs)$/, "");
@@ -81,4 +97,6 @@ if (orphans.length) {
   process.exit(1);
 }
 
-console.log(`unreferenced ok — every file in ${SUBJECT}/ is imported somewhere`);
+console.log(
+  `unreferenced ok — every component and every stylesheet is imported somewhere`,
+);
