@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { History, PlayCircle, ShieldCheck } from "lucide-react";
+import { History, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,38 +102,48 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
               </CardFact>
             </CardFacts>
 
-            {canManage || !target ? (
+            {/* Was `canManage || !target`, which hid the whole row from a
+                view-only reader whenever a target existed — while the desktop
+                table went on offering them View backups and Manage. Now only
+                the one genuinely empty case is skipped: an unprotected app has
+                nothing but Set up, and that needs the permission. */}
+            {state !== "unprotected" || canManage ? (
               <div className="mt-auto flex flex-wrap justify-end gap-2">
-                  {state === "unprotected" ? (
-                    canManage ? (
-                      <Button size="sm" variant="outline" onClick={() => onSetUp(application.id)}>
-                        <ShieldCheck className="size-4" />
-                        {t("setUpShort")}
-                      </Button>
-                    ) : null
-                  ) : (
-                    <>
-                      {canManage ? (
-                        <ReasonTooltip reason={!target && busyId !== application.id ? tc("needsBackupTarget") : null}>
+                {state === "unprotected" ? (
+                  <Button size="sm" variant="outline" onClick={() => onSetUp(application.id)}>
+                    <ShieldCheck className="size-4" />
+                    {t("setUpShort")}
+                  </Button>
+                ) : (
+                  <>
+                    {canManage ? (
+                      <ReasonTooltip reason={!target && busyId !== application.id ? tc("needsBackupTarget") : null}>
                         <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busyId === application.id || !target}
-                            onClick={() => onBackUpNow(application.id, application.name)}
-                          >
-                            <ActionIcon icon={PlayCircle} pending={busyId === application.id} className="size-4" />
-                            {t("runBackup")}
-                          </Button>
-                        </ReasonTooltip>
-                      ) : null}
-                      <Button size="sm" variant="ghost" asChild>
-                        <Link href={`/backups/history?application=${application.id}`}>
-                          <History className="size-4" />
-                          {t("viewBackups")}
-                        </Link>
-                      </Button>
-                    </>
-                  )}
+                          size="sm"
+                          variant="outline"
+                          disabled={busyId === application.id || !target}
+                          onClick={() => onBackUpNow(application.id, application.name)}
+                        >
+                          <ActionIcon icon={PlayCircle} pending={busyId === application.id} className="size-4" />
+                          {t("runBackup")}
+                        </Button>
+                      </ReasonTooltip>
+                    ) : null}
+                    <Button size="sm" variant="ghost" asChild>
+                      <Link href={`/backups/history?application=${application.id}`} prefetch={false}>
+                        <History className="size-4" />
+                        {t("viewBackups")}
+                      </Link>
+                    </Button>
+                    {/* The table's row menu has had this all along. */}
+                    <Button size="sm" variant="ghost" asChild>
+                      <Link href={`/applications/${application.id}/backups`} prefetch={false}>
+                        <Settings2 className="size-4" />
+                        {t("manage")}
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             ) : null}
           </CardListItem>

@@ -2,9 +2,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
-import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
+import { DatabaseRowActions } from "@/components/databases/database-row-actions";
 import { userCount } from "@/lib/databases/phpmyadmin-state";
 
 /**
@@ -34,6 +33,7 @@ export function DatabasesCards({
   lastBackup = {},
   backupsUnknown = false,
   phpmyadminInstalled = null,
+  onDelete,
 }) {
   const t = useTranslations("databases");
 
@@ -109,19 +109,13 @@ export function DatabasesCards({
 
             {/* mt-auto: cards in a row stretch to the tallest, and an action row
                 floating mid-card reads as unfinished. */}
-            <div className="mt-auto flex flex-wrap justify-end gap-2 border-t pt-3">
-              <PhpmyadminButton
+            <div className="mt-auto border-t pt-3">
+              <DatabaseRowActions
                 database={database}
+                onDelete={onDelete}
                 canManage={canManage}
-                installed={phpmyadminInstalled}
-                compact
+                phpmyadminInstalled={phpmyadminInstalled}
               />
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/databases/${database.id}`} prefetch={false}>
-                  {t("manage")}
-                  <ChevronRight className="size-3.5" />
-                </Link>
-              </Button>
             </div>
           </CardListItem>
         );

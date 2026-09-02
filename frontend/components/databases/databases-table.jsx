@@ -3,10 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ChevronRight, Database, Plus, SearchX, Trash2 } from "lucide-react";
+import { ChevronRight, Database, Plus, SearchX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { useSearchParams } from "next/navigation";
@@ -17,14 +16,10 @@ import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { SortHeader } from "@/components/data-table/sort-header";
 import { RefreshButton } from "@/components/data-table/refresh-button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { CreateDatabaseDialog } from "@/components/databases/create-database-dialog";
 import { DatabasesCards } from "@/components/databases/databases-cards";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
+import { DatabaseRowActions } from "@/components/databases/database-row-actions";
 
 /* Cells are module-level components: flexRender treats a cell function's
  * identity as the component type, so inline definitions remount every cell on
@@ -122,7 +117,7 @@ function CreatedCell({ row }) {
 
 function RowActionsCell({ row, table }) {
   return (
-    <RowActions
+    <DatabaseRowActions
       database={row.original}
       onDelete={table.options.meta.onDelete}
       canManage={table.options.meta.canManage}
@@ -136,49 +131,6 @@ function RowActionsCell({ row, table }) {
  * reveal one item costs a click and hides the only thing you can do. When a
  * second action arrives (export is the likely one) this goes back to a menu.
  */
-function RowActions({ database, onDelete, canManage, phpmyadminInstalled }) {
-  const t = useTranslations("databases");
-  const href = `/databases/${database.id}`;
-
-  return (
-    <div className="flex items-center justify-end gap-1">
-      {/* Spelled out, not an icon. Users, credentials and backups all live on
-          the detail page, and nothing on this row said so — people could not
-          find them without being told the name was clickable. */}
-      <Button asChild variant="outline" size="sm">
-        <Link href={href}>
-          {t("manage")}
-          <ChevronRight className="size-3.5" />
-        </Link>
-      </Button>
-
-      {/* On the row, not only on the detail page: opening the database is
-          what most visits to this list are for, and making it cost a page
-          load first is the difference between a shortcut and a detour. */}
-      <PhpmyadminButton
-        database={database}
-        canManage={canManage}
-        installed={phpmyadminInstalled}
-        compact
-      />
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t("delete.forName", { name: database.name })}
-            className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => onDelete(database)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t("delete.action")}</TooltipContent>
-      </Tooltip>
-    </div>
-  );
-}
 
 export function DatabasesTable(props) {
   // One shared transition for search and paging, so the box spins and the table
@@ -328,6 +280,7 @@ function DatabasesList({
           <DatabasesCards
             databases={data}
             canManage={canManage}
+            onDelete={setDeleting}
             phpmyadminInstalled={phpmyadminInstalled}
             showEngine={showEngine}
             engineName={(engine) => t(`engines.${engine}`)}
