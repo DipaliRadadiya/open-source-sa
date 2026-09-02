@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useNavTransition } from "@/components/data-table/nav-transition";

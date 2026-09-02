@@ -1,5 +1,3 @@
-"use client";
-
 import { CircleAlert, CircleCheck, Eye, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { runTotals } from "@/lib/server/sync-selection";

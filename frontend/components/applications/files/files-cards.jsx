@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { Folder, Link2, Loader2, Unlink } from "lucide-react";
 import { useTranslations } from "next-intl";

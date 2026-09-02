@@ -1,5 +1,3 @@
-"use client";
-
 import { TriangleAlert, Info, OctagonAlert } from "lucide-react";
 
 // Every case documented against a real failure mode (queue:restart silently

@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { ExternalLink } from "lucide-react";
 import { releaseNotesText } from "@/lib/admin/release-notes-text";

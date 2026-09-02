@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useState } from "react";
 
 // Only used until the first measurement lands, and only on a first paint where

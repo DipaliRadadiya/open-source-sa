@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { useState } from "react";
 import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText, SquareArrowOutUpRight } from "lucide-react";

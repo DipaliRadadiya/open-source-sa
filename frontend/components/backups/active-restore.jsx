@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 import { RestoreProgress } from "@/components/backups/restore-progress";
 

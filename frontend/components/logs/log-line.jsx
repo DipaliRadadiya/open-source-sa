@@ -1,5 +1,3 @@
-"use client";
-
 import { Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LEVEL_CLASS, lineLevel, splitOnTerm } from "@/lib/logs/severity";

@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations, useFormatter } from "next-intl";
 import { Check, CircleX, TriangleAlert } from "lucide-react";
 import { isUnknownDetail, megabytes, parseSizeDetail } from "@/lib/admin/preflight-detail";

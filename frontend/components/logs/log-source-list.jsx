@@ -1,5 +1,3 @@
-"use client";
-
 import { useFormatter, useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";

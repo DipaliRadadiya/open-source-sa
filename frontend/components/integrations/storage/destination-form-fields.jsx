@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { STORAGE_PROVIDERS } from "@/lib/schemas/storage";
 import { Input } from "@/components/ui/input";

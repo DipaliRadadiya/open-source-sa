@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { History, MoreHorizontal, PlayCircle, Settings2, ShieldCheck } from "lucide-react";

@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { ChevronDown, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

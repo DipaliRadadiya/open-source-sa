@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { SearchX, CircleAlert } from "lucide-react";

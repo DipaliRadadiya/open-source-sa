@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { ChoiceField } from "@/components/ui/choice-field";
 import {

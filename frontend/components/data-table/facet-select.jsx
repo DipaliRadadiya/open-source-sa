@@ -1,5 +1,3 @@
-"use client";
-
 import { useSearchParams } from "next/navigation";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { FilterSelect } from "@/components/data-table/filter-select";

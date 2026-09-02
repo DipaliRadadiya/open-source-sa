@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo } from "react";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";

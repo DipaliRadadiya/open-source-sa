@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations, useFormatter } from "next-intl";
 import { Cpu, MemoryStick, HardDrive, Activity, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";

@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ShieldCheck, Loader2, CircleCheck, CircleX } from "lucide-react";

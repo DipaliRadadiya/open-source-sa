@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations, useFormatter } from "next-intl";
 import { Activity } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";

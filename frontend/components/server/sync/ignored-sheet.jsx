@@ -1,5 +1,3 @@
-"use client";
-
 import { EyeOff, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ignoreKey } from "@/lib/server/sync-selection";

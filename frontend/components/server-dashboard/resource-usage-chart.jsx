@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations, useFormatter } from "next-intl";
 import { Gauge } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";

@@ -1,5 +1,3 @@
-"use client";
-
 import { DynamicIcon } from "lucide-react/dynamic";
 import { CircleHelp } from "lucide-react";
 

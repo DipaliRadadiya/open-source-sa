@@ -1,5 +1,3 @@
-"use client";
-
 import { useSearchParams } from "next/navigation";
 import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 import { useSetQuery } from "@/hooks/use-set-query";

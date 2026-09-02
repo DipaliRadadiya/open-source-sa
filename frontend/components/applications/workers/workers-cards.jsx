@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";

@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations, useFormatter } from "next-intl";
 import { ArrowRight, ArrowUpCircle, CircleCheck, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";

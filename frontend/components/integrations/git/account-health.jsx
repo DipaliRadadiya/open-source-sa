@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { CircleAlert, CircleCheck, CircleHelp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";

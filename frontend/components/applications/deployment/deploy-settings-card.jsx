@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { useRouter } from "next/navigation";

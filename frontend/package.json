@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . && node scripts/check-i18n.mjs && node scripts/check-disabled-reasons.mjs && node scripts/check-install-home.mjs && node scripts/check-unreferenced.mjs",
+    "lint": "eslint . && node scripts/check-i18n.mjs && node scripts/check-disabled-reasons.mjs && node scripts/check-install-home.mjs && node scripts/check-unreferenced.mjs && node scripts/check-client-boundary.mjs",
     "test": "node --test \"tests/*.test.mjs\"",
     "check:i18n": "node scripts/check-i18n.mjs"
   },

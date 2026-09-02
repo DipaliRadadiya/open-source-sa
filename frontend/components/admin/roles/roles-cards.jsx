@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";

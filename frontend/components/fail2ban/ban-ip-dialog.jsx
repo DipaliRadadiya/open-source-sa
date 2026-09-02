@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";

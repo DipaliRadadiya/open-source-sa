@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { Server, AppWindow, Folder } from "lucide-react";
 import {

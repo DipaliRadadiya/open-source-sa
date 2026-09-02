@@ -1,5 +1,3 @@
-"use client";
-
 import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 

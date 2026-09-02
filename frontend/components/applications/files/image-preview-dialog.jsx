@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Image as ImageIcon, Loader2, Download } from "lucide-react";

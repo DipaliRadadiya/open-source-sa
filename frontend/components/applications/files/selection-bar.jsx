@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { Copy, FileArchive, FolderInput, Lock, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";

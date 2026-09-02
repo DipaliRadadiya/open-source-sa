@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";

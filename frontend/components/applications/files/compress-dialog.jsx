@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { Archive } from "lucide-react";
 import { compressFile } from "@/lib/api/files";

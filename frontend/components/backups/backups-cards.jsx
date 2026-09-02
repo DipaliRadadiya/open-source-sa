@@ -1,5 +1,3 @@
-"use client";
-
 import { useFormatter, useTranslations } from "next-intl";
 import { CircleAlert, History, RotateCw } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";

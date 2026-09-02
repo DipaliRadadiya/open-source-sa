@@ -1,5 +1,3 @@
-"use client";
-
 import { Braces, ChevronDown, CircleX, TriangleAlert } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";

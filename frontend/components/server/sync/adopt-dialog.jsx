@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo, useState } from "react";
 import { DownloadCloud, ShieldAlert, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";

@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { PencilLine } from "lucide-react";
 import { renameFile } from "@/lib/api/files";

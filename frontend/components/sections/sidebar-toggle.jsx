@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {

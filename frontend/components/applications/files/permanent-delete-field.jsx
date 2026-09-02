@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";

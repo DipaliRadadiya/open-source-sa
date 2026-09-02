@@ -1,5 +1,3 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { CronjobActiveSwitch } from "@/components/cronjobs/cronjob-active-switch";

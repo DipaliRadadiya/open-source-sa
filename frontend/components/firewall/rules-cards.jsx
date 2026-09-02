@@ -1,5 +1,3 @@
-"use client";
-
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PendingSwitch } from "@/components/ui/pending-switch";

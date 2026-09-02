@@ -1,5 +1,3 @@
-"use client";
-
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
