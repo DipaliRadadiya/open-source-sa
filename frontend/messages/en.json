@@ -1548,7 +1548,8 @@
       "security": "Access & security",
       "performance": "Memory",
       "maintenance": "Updates & restart",
-      "needsAttention": "Needs attention"
+      "needsAttention": "Needs attention",
+      "database": "Database"
     },
     "common": {
       "save": "Save changes",
@@ -1829,6 +1830,9 @@
       "purgeFailed": "The binary logs could not be purged.",
       "saved": "Binary log settings updated",
       "saveFailed": "The binary log settings could not be changed."
+    },
+    "database": {
+      "noEngine": "No MySQL or MariaDB server is running on this machine, so there is nothing to configure here."
     }
   },
   "php": {

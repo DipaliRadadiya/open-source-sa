@@ -30,6 +30,14 @@ export default async function SettingsLayout({ children }) {
     // brute-forcer a shell; everything else is a preference.
     security: data?.security?.permit_root_login === "yes" ? "warning" : null,
     maintenance: data?.updates?.reboot_required ? "info" : null,
+    // Two states here are worth a dot from another tab: a connection limit the
+    // server refused to honour, and binary logs with no expiry — the second
+    // fills the disk given enough time, which is not a preference.
+    database:
+      data?.mysql?.capped ||
+      (data?.mysql_binlog?.enabled && data?.mysql_binlog?.expire_seconds === 0)
+        ? "warning"
+        : null,
   };
 
   return (

@@ -1548,7 +1548,8 @@
       "security": "Acceso y seguridad",
       "performance": "Memoria",
       "maintenance": "Actualizaciones y reinicio",
-      "needsAttention": "Requiere atención"
+      "needsAttention": "Requiere atención",
+      "database": "Base de datos"
     },
     "common": {
       "save": "Guardar cambios",
@@ -1829,6 +1830,9 @@
       "purgeFailed": "No se pudieron purgar los registros binarios.",
       "saved": "Ajustes de registros binarios actualizados",
       "saveFailed": "No se pudieron cambiar los ajustes de registros binarios."
+    },
+    "database": {
+      "noEngine": "No hay ningún servidor MySQL o MariaDB en ejecución en esta máquina, así que no hay nada que configurar aquí."
     }
   },
   "php": {
