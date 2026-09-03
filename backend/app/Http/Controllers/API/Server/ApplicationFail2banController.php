@@ -197,7 +197,16 @@ class ApplicationFail2banController extends Controller
             ."enabled  = true\n"
             ."port     = http,https\n"
             ."filter   = {$slug}\n"
-            ."logpath  = /var/log/nginx/{$slug}.access.log\n"
+            // The placeholder, not a path. Every other jail in this feature
+            // carries `{logpath}` and lets the write path substitute the value
+            // `ApplicationFail2banManager::getLogPath()` gets from the active
+            // web-server driver — which is the only thing that knows nginx and
+            // Apache log under /var/log while OpenLiteSpeed logs inside the
+            // site's own directory. Baked in as nginx's path, a jail migrated
+            // on an OLS server watched a file that does not exist: enabled,
+            // reported enabled, banning nobody. It also froze the answer, so a
+            // server that later changed web server kept the old path.
+            ."logpath  = {logpath}\n"
             .'maxretry = '.((int) ($maxretry ?: $defaults['maxretry']))."\n"
             .'bantime  = '.((int) ($bantime ?: $defaults['bantime']))."\n"
             .'findtime = '.((int) ($findtime ?: $defaults['findtime']))."\n";

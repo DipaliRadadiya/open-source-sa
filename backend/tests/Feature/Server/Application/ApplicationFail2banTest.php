@@ -333,6 +333,16 @@ it('auto-migrates structured columns to raw INI on first GET', function () {
         ->and($fresh->fail2ban_jail_content)->toContain('findtime = 900')
         ->and($fresh->fail2ban_filter_content)->toContain('failregex');
 
+    // The log path is left as the placeholder rather than resolved here, so
+    // the write path substitutes whatever the active web-server driver says.
+    // It used to be baked in as `/var/log/nginx/{slug}.access.log`: on an
+    // OpenLiteSpeed server — which logs inside the site's own directory — the
+    // migrated jail watched a file that does not exist, and banned nobody
+    // while reporting itself enabled.
+    expect($fresh->fail2ban_jail_content)
+        ->toContain('logpath  = {logpath}')
+        ->not->toContain('/var/log/nginx/');
+
     // The old columns are cleared (will be dropped by the migration).
     $attributes = $fresh->getAttributes();
     expect($attributes['fail2ban_maxretry'] ?? null)->toBeNull()
