@@ -130,6 +130,7 @@ return [
     ],
 
     'help' => [
+        'table_prefix_random' => 'Leave empty and a random prefix is generated, keeping the tables apart if the database is ever shared.',
         'timezone' => 'Timezone for the site, e.g. America/New_York or Europe/Berlin. See Settings → General → Timezone.',
         'table_prefix_optional' => 'Optional. Leave empty for no prefix — Akaunting is Laravel-based and has no standard one.',
         'start_command' => 'The entry file, for example \"node server.js\". Not \"npm start\" — a package manager forks the real process, so shutdown signals never reach it.',

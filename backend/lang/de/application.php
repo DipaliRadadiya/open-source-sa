@@ -125,6 +125,7 @@ return [
     ],
 
     'help' => [
+        'table_prefix_random' => 'Leer lassen, dann wird ein zufälliges Präfix erzeugt — so bleiben die Tabellen getrennt, falls die Datenbank je geteilt wird.',
         'timezone' => 'Zeitzone der Website, z. B. America/New_York oder Europe/Berlin. Siehe Einstellungen → Allgemein → Zeitzone.',
         'table_prefix_optional' => 'Optional. Leer lassen für kein Präfix — Akaunting basiert auf Laravel und hat kein Standardpräfix.',
         'start_command' => 'Die Einstiegsdatei, z. B. „node server.js“. Nicht „npm start“ – ein Paketmanager forkt den eigentlichen Prozess, sodass Shutdown-Signale ihn nie erreichen.',

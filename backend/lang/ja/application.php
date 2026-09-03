@@ -125,6 +125,7 @@ return [
     ],
 
     'help' => [
+        'table_prefix_random' => '空欄にするとランダムな接頭辞が生成され、データベースを共有した場合でもテーブルが混ざりません。',
         'timezone' => 'サイトのタイムゾーン。例: America/New_York、Asia/Tokyo。設定 → 一般 → タイムゾーンを参照してください。',
         'table_prefix_optional' => '任意。空欄にすると接頭辞なしになります — Akaunting は Laravel ベースで、標準の接頭辞はありません。',
         'start_command' => 'エントリファイル（例:「node server.js」）。「npm start」は不可 — パッケージマネージャーが実際のプロセスをフォークするため、終了シグナルが届きません。',

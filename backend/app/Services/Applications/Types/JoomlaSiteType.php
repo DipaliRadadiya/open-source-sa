@@ -52,19 +52,20 @@ class JoomlaSiteType extends AbstractSiteType
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             // Generated per site when left blank, as Joomla's own installer
             // does, so tables stay apart if the database is ever shared.
-            // A default, not a placeholder: this value is submitted and ends
-            // up in the database schema, so ghost text that is never sent
-            // would create the site with no prefix at all. `jos_` is Joomla's
-            // historic convention and matches what the panel already does for
-            // WordPress (`wp_`), Moodle (`mdl_`) and PrestaShop (`ps_`).
+            // Deliberately no default, because JoomlaInstaller::tablePrefix()
+            // already generates a random one when this arrives empty — "as
+            // Joomla's own installer generates", per its docblock, so the
+            // tables stay apart if the database is ever shared.
             //
-            // Joomla's own installer suggests a random prefix instead, which is
-            // marginally better against a blind SQL injection that has to guess
-            // table names. Consistency won: a panel whose four PHP CMSes prefix
-            // three predictably and one randomly is harder to reason about than
-            // one that is uniform, and the field stays editable for anyone who
-            // wants a random one.
-            $this->field('table_prefix', 'text', advanced: true, extra: ['default' => 'jos_']),
+            // Shipping `jos_` here would have filled the box on every form and
+            // made that branch unreachable, quietly replacing a per-site random
+            // prefix with the single most guessable value in Joomla's history.
+            // A predictable prefix is what a blind SQL injection needs to name
+            // a table. The help text says what empty means; anyone who wants a
+            // fixed prefix can still type one.
+            $this->field('table_prefix', 'text', advanced: true, extra: [
+                'help' => __('application.help.table_prefix_random'),
+            ]),
         ], $this->phpFields());
     }
 
