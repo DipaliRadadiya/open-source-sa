@@ -7,7 +7,6 @@ import {
   Server,
   ShieldCheck,
   Gauge,
-  Database,
   Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,7 +17,6 @@ const SECTIONS = [
   { key: "server", href: "/settings/server", icon: Server },
   { key: "security", href: "/settings/security", icon: ShieldCheck },
   { key: "performance", href: "/settings/performance", icon: Gauge },
-  { key: "database", href: "/settings/database", icon: Database },
   { key: "maintenance", href: "/settings/maintenance", icon: Wrench },
 ];
 
@@ -42,7 +40,7 @@ export function SettingsTabs({ badges = {} }) {
     <ScrollFade className="-mx-1 px-1 pb-1">
       <nav
         aria-label={t("tabs.label")}
-        className="grid w-full grid-cols-5 gap-1 rounded-lg bg-muted p-1 max-sm:inline-flex max-sm:w-fit"
+        className="grid w-full grid-cols-4 gap-1 rounded-lg bg-muted p-1 max-sm:inline-flex max-sm:w-fit"
       >
         {SECTIONS.map(({ key, href, icon: Icon }) => {
           const active = pathname === href;

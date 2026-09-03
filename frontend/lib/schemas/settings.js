@@ -142,52 +142,15 @@ export const redisSettingsSchema = z.object({
 // Groups are detect-gated server-side: an absent group means "not installed on
 // this server", which is a different thing from "installed with no values".
 /**
- * MySQL / MariaDB engine tuning. `present` and `reachable` are separate on
- * purpose: an engine that is installed but whose stored credentials are
- * rejected is a different state from one that is not installed, and the card
- * says which. Readings the panel could not take are null rather than 0.
- */
-const mysqlSettingsSchema = z.object({
-  engine: z.string().nullable().optional(),
-  engine_label: z.string().nullable().optional(),
-  present: z.boolean().optional(),
-  reachable: z.boolean().optional(),
-  max_connections: z.number().nullable().optional(),
-  configured_max_connections: z.number().nullable().optional(),
-  capped: z.boolean().optional(),
-  open_files_limit: z.number().nullable().optional(),
-  connections: z.number().nullable().optional(),
-  floor: z.number().optional(),
-  recommended_max: z.number().nullable().optional(),
-  memory_mb: z.number().nullable().optional(),
-});
-
-const mysqlBinlogSettingsSchema = z.object({
-  engine: z.string().nullable().optional(),
-  engine_label: z.string().nullable().optional(),
-  present: z.boolean().optional(),
-  reachable: z.boolean().optional(),
-  enabled: z.boolean().optional(),
-  format: z.string().nullable().optional(),
-  expire_seconds: z.number().nullable().optional(),
-  max_binlog_size: z.number().nullable().optional(),
-  log_count: z.number().nullable().optional(),
-  log_bytes: z.number().nullable().optional(),
-  oldest_log: z.string().nullable().optional(),
-  // PHP hands back `[]` for an empty map, so both shapes are legal.
-  configured: z.union([z.record(z.string(), z.number()), z.array(z.never())]).optional(),
-});
-
-/**
  * Every group the API can return must be listed here.
  *
  * Zod strips unknown keys, so a group the backend sends and this object does
  * not name is deleted before any page sees it — silently, with no error and a
- * 200 response. That is exactly how the database groups disappeared: the two
- * backend groups shipped, the API returned them correctly, and the Database
- * tab reported "no MySQL or MariaDB server is running on this machine" because
- * the parse had already removed them. See tests/settings-schema.test.mjs,
- * which fails if a backend group is missing from this list.
+ * 200 response. The page then renders its empty state as though the server had
+ * said there was nothing there, which is the hardest kind of wrong to find:
+ * the API is correct, the logs are clean, and only the screen disagrees. That
+ * cost an afternoon once. See tests/settings-schema.test.mjs, which reads the
+ * backend and fails if a group it can return is missing from this list.
  */
 export const settingsSchema = z.object({
   general: generalSettingsSchema.optional(),
@@ -196,8 +159,6 @@ export const settingsSchema = z.object({
   updates: updateSettingsSchema.optional(),
   reboot_schedule: rebootScheduleSchema.optional(),
   redis: redisSettingsSchema.optional(),
-  mysql: mysqlSettingsSchema.optional(),
-  mysql_binlog: mysqlBinlogSettingsSchema.optional(),
 });
 
 /** Who last touched each group, keyed by group name. */
@@ -240,35 +201,6 @@ export const swapFormSchema = z.object({
     .int("invalidNumber")
     .min(0, "invalidNumber")
     .max(SWAP_MAX_MB, "swapTooLarge"),
-});
-
-export const mysqlFormSchema = z.object({
-  // The floor is a lockout guard: the panel needs connections of its own, and
-  // a server set below this is one this screen can no longer reach to undo it.
-  max_connections: z.coerce
-    .number({ message: "invalidNumber" })
-    .int("invalidNumber")
-    .min(10, "connectionsTooLow")
-    .max(100000, "connectionsTooHigh"),
-});
-
-export const mysqlBinlogFormSchema = z.object({
-  // Days in the form, seconds on the wire — the server's unit is seconds and
-  // nobody thinks about binlog retention in those. `0` is keep-forever, which
-  // is allowed because a server may already be in that state and the panel has
-  // to be able to represent it.
-  expire_days: z.coerce
-    .number({ message: "invalidNumber" })
-    .int("invalidNumber")
-    .min(0, "invalidNumber")
-    .max(365, "binlogRetentionTooLong"),
-  // MB in the form, bytes on the wire. A larger single log makes purging
-  // coarse: the server can only drop whole files.
-  max_binlog_size_mb: z.coerce
-    .number({ message: "invalidNumber" })
-    .int("invalidNumber")
-    .min(1, "binlogSizeTooSmall")
-    .max(1024, "binlogSizeTooLarge"),
 });
 
 export const ROOT_LOGIN_OPTIONS = ["yes", "prohibit-password", "no"];

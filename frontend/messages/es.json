@@ -1550,8 +1550,7 @@
       "security": "Acceso y seguridad",
       "performance": "Memoria",
       "maintenance": "Actualizaciones y reinicio",
-      "needsAttention": "Requiere atención",
-      "database": "Base de datos"
+      "needsAttention": "Requiere atención"
     },
     "common": {
       "save": "Guardar cambios",
@@ -1574,12 +1573,7 @@
       "invalidPort": "Introduce un puerto entre 1 y 65535.",
       "invalidTime": "Usa una hora de 24 horas, como 03:00.",
       "invalidMemory": "Usa un tamaño como 256mb o 1gb, o 0 para no poner límite.",
-      "passwordTooShort": "Usa 8 caracteres o más.",
-      "connectionsTooLow": "Debe ser al menos 10; por debajo el panel no puede acceder a la base de datos.",
-      "connectionsTooHigh": "Es más alto de lo que cualquier servidor aceptará.",
-      "binlogRetentionTooLong": "Un año es el máximo.",
-      "binlogSizeTooSmall": "Al menos 1 MB.",
-      "binlogSizeTooLarge": "1024 MB es el máximo."
+      "passwordTooShort": "Usa 8 caracteres o más."
     },
     "server": {
       "title": "Servidor",
@@ -1792,53 +1786,7 @@
     "unsavedTitle": "¿Salir sin guardar?",
     "unsavedDescription": "Los cambios de esta página no se han guardado. Se perderán.",
     "unsavedStay": "Quedarme aquí",
-    "unsavedLeave": "Salir y descartar",
-    "mysql": {
-      "title": "Conexiones de base de datos",
-      "description": "Cuántos clientes aceptará MySQL o MariaDB a la vez. Se aplica de inmediato y se mantiene tras reiniciar.",
-      "maxConnections": "Conexiones máximas",
-      "maxConnectionsHint": "Se aplica de inmediato: sin reinicio, y sin cerrar las conexiones abiertas.",
-      "inUse": "En uso ahora",
-      "recommended": "Recomendado para este servidor: {value}",
-      "recommendedHint": "Según la memoria de este servidor. Cada conexión reserva memoria propia, así que un valor alto en un servidor pequeño puede agotarla bajo carga.",
-      "cappedTitle": "El servidor redujo este valor",
-      "cappedBody": "Pediste {requested} pero el servidor ejecuta {effective}, porque su límite de archivos abiertos ({limit}) no admite más. Aumentar ese límite requiere reiniciar el servicio de base de datos.",
-      "saved": "Límite de conexiones actualizado",
-      "saveFailed": "No se pudo cambiar el límite de conexiones.",
-      "unreachableTitle": "{engine} está instalado, pero el panel no puede conectarse",
-      "unreachableBody": "El servidor está en ejecución; las credenciales que el panel tiene guardadas están siendo rechazadas. Configúralas en Bases de datos y esta tarjeta funcionará."
-    },
-    "binlog": {
-      "title": "Registros binarios",
-      "description": "Los registros binarios anotan cada cambio para replicación y recuperación a un punto en el tiempo. Crecen con cada escritura, así que la retención es lo que evita que llenen el disco.",
-      "statusOn": "Activado",
-      "statusOff": "Desactivado",
-      "state": "Estado",
-      "format": "Formato",
-      "onDisk": "En disco",
-      "onDiskValue": "{count, plural, one {# archivo} other {# archivos}} · {size}",
-      "oldest": "Registro más antiguo",
-      "disabledBody": "El registro binario está desactivado en este servidor, así que no hay nada que retener. Activarlo requiere reiniciar la base de datos y no se hace desde esta pantalla.",
-      "retention": "Conservar registros durante",
-      "retentionHint": "Días. Se aplica de inmediato: el servidor expira los registros antiguos según su propio calendario.",
-      "retentionForeverWarning": "Con 0, los registros se conservan para siempre y acabarán llenando el disco. Cualquier valor mayor que 0 es más seguro.",
-      "days": "días",
-      "maxSize": "Tamaño máximo por registro",
-      "maxSizeHint": "MB. El servidor inicia un archivo nuevo a este tamaño; solo puede expirar archivos completos, así que los más pequeños expiran con más precisión.",
-      "purge": "Purgar ahora",
-      "purgeTitle": "Purgar registros binarios",
-      "purgeDescription": "Elimina los registros de más de {days, plural, one {# día} other {# días}}. Las réplicas que no los hayan leído fallarán, y una recuperación a un punto en el tiempo no podrá ir más atrás de lo que quede.",
-      "purgeConfirm": "Purgar registros",
-      "purgeDays": "Anteriores a (días)",
-      "purged": "Registros binarios purgados",
-      "purgeFailed": "No se pudieron purgar los registros binarios.",
-      "saved": "Ajustes de registros binarios actualizados",
-      "saveFailed": "No se pudieron cambiar los ajustes de registros binarios.",
-      "unreachableBody": "El panel no puede conectarse al servidor de base de datos, así que no puede leer sus ajustes de registros binarios. Corrige las credenciales guardadas en Bases de datos."
-    },
-    "database": {
-      "noEngine": "No hay ningún servidor MySQL o MariaDB en ejecución en esta máquina, así que no hay nada que configurar aquí."
-    }
+    "unsavedLeave": "Salir y descartar"
   },
   "php": {
     "title": "PHP",
@@ -2626,7 +2574,8 @@
       },
       "runningQueries": "Consultas en ejecución",
       "longRunningCount": "{count, plural, one {# de larga duración} other {# de larga duración}}",
-      "chartDescription": "Consultas por segundo, conexiones e hilos en ejecución, medidos cada 5 minutos."
+      "chartDescription": "Consultas por segundo, conexiones e hilos en ejecución, medidos cada 5 minutos.",
+      "zoomHint": "Arrastra los controles bajo el gráfico, o desplázate sobre él, para acercar un intervalo de tiempo."
     },
     "tables": {
       "title": "Tablas",

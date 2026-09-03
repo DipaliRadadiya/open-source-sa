@@ -41,14 +41,6 @@ test("the tab grid has exactly as many columns as there are tabs", () => {
   assert.equal(Number(grid[1]), count);
 });
 
-test("database configuration is reachable from the tab bar", () => {
-  // It was originally added to the Performance tab, where nobody looking for
-  // the connection limit found it.
-  const keys = sectionKeys().map((section) => section.key);
-
-  assert.ok(keys.includes("database"));
-});
-
 test("each tab has a label in every locale", () => {
   for (const locale of ["en", "es", "hi"]) {
     const messages = JSON.parse(

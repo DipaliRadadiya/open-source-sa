@@ -47,28 +47,6 @@ export function updateRebootSchedule(payload) {
  * something still in flight and re-reads state that has not changed yet — which
  * reads exactly like "the password was not updated".
  */
-/**
- * `max_connections`. The response carries what the server actually adopted —
- * MySQL caps the value against open_files_limit — so the caller must render
- * the response rather than the value it sent.
- */
-export function updateMysqlSettings(payload) {
-  return api.put("/settings/mysql", payload);
-}
-
-/** Binary log retention and size. Both variables are dynamic — no restart. */
-export function updateMysqlBinlogSettings(payload) {
-  return api.put("/settings/mysql-binlog", payload);
-}
-
-/**
- * Drop binary logs older than `days`. Destroys what a point-in-time recovery
- * would have replayed, so it is a deliberate action rather than part of a save.
- */
-export function purgeMysqlBinlog(days) {
-  return api.post("/settings/mysql-binlog/purge", { days });
-}
-
 export function updateRedisSettings(payload) {
   return api.put("/settings/redis", payload);
 }

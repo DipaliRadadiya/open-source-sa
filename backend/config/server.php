@@ -501,19 +501,6 @@ return [
     |
     */
 
-    /*
-    | Where systemd unit files live, for presence checks that must not shell
-    | out. Read with `is_file` rather than asked of `systemctl`: the panel may
-    | run as an account with no sudo grant for it, and a presence probe that
-    | needs a privilege is a probe that reports "not installed" when it is
-    | really "not permitted".
-    */
-    'systemd_unit_dirs' => [
-        '/etc/systemd/system',
-        '/lib/systemd/system',
-        '/usr/lib/systemd/system',
-    ],
-
     'web_servers' => [
         'nginx' => ['/etc/nginx'],
         'apache' => ['/etc/apache2', '/etc/httpd'],
@@ -1798,8 +1785,8 @@ return [
             // MongoDB is operable but not installable yet — it needs its own apt
             // repository — so it has none, and the catalog says so rather than
             // showing a button that cannot work.
-            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'config_dir' => env('SERVER_MYSQL_CONFIG_DIR', '/etc/mysql/conf.d'), 'installer' => MySqlInstaller::class],
-            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'config_dir' => env('SERVER_MARIADB_CONFIG_DIR', '/etc/mysql/mariadb.conf.d'), 'installer' => MariaDbInstaller::class],
+            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MySqlInstaller::class],
+            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MariaDbInstaller::class],
             'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'installer' => MongoDbInstaller::class],
         ],
 

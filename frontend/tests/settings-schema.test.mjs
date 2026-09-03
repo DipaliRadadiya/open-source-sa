@@ -10,12 +10,14 @@ const backend = path.join(root, "..", "backend");
 /*
  * Zod strips unknown keys, and that is how two settings groups disappeared.
  *
- * `mysql` and `mysql_binlog` shipped on the backend, the API returned them
- * correctly, `available()` was true, `read()` was correct — and the Database
- * tab still said "No MySQL or MariaDB server is running on this machine",
- * because `settingsSchema` did not name them and the parse deleted them before
- * any page saw them. No error, no warning, a 200 response, and four rounds of
- * debugging aimed at the backend.
+ * Two groups once shipped on the backend, the API returned them correctly, and
+ * the page still rendered its "nothing here" state — because `settingsSchema`
+ * did not name them and the parse deleted them before any page saw them. No
+ * error, no warning, a 200 response, and several rounds of debugging aimed at
+ * a backend that had been answering correctly the whole time.
+ *
+ * Those groups have since been removed, but the trap has not: it applies to
+ * every group added from now on.
  *
  * A group missing here is invisible in exactly the way that is hardest to
  * find, so it is worth a test that reads the backend rather than a list
@@ -57,69 +59,53 @@ test("the backend groups this test can see are the ones we expect", () => {
   const keys = backendGroupKeys();
 
   assert.ok(keys.length >= 6, `only found ${keys.length} backend groups — the parse is probably broken`);
-  assert.ok(keys.includes("mysql"));
+  // Two groups that have been there since the beginning; if the regex breaks,
+  // these disappear and the check above starts passing vacuously.
+  assert.ok(keys.includes("general"));
+  assert.ok(keys.includes("security"));
 });
 
 test("a real API payload survives the parse intact", () => {
-  // Captured from a live panel, which is how the stripping was finally found.
-  const payload = {
-    settings: {
-      mysql: {
-        engine: "mariadb",
-        engine_label: "MariaDB",
-        present: true,
-        reachable: true,
-        max_connections: 151,
-        configured_max_connections: null,
-        capped: false,
-        open_files_limit: 32183,
-        connections: 1,
-        floor: 10,
-        recommended_max: 73,
-        memory_mb: 1968,
-      },
-      mysql_binlog: {
-        engine: "mariadb",
-        engine_label: "MariaDB",
-        present: true,
-        reachable: true,
-        enabled: false,
-        format: "MIXED",
-        expire_seconds: 864000,
-        max_binlog_size: 1073741824,
-        log_count: 0,
-        log_bytes: 0,
-        oldest_log: null,
-        // PHP renders an empty map as `[]`, so both shapes have to parse.
-        configured: [],
-      },
-    },
-  };
-
-  const parsed = settingsResponseSchema.safeParse(payload);
-
-  assert.equal(parsed.success, true);
-  assert.equal(parsed.data.settings.mysql.max_connections, 151);
-  assert.equal(parsed.data.settings.mysql_binlog.format, "MIXED");
-});
-
-test("the unreachable shape parses too, with its nulls", () => {
-  // The engine is installed but the panel cannot authenticate: readings are
-  // null rather than 0, and null must not be a parse failure.
+  // Captured from a live panel: unknown-key stripping is invisible unless a
+  // real response is parsed and checked field by field.
   const parsed = settingsResponseSchema.safeParse({
     settings: {
-      mysql: {
-        engine: "mariadb",
-        engine_label: "MariaDB",
-        present: true,
-        reachable: false,
-        max_connections: null,
-        configured_max_connections: null,
+      general: {
+        timezone: "Etc/UTC",
+        ntp: true,
+        clock_synchronized: true,
+        hostname: "suresh-dont-delete",
+      },
+      redis: {
+        maxmemory: "0",
+        maxmemory_policy: "noeviction",
+        has_password: true,
+        password_manageable: true,
+        running: true,
       },
     },
   });
 
   assert.equal(parsed.success, true);
-  assert.equal(parsed.data.settings.mysql.reachable, false);
-  assert.equal(parsed.data.settings.mysql.max_connections, null);
+  assert.equal(parsed.data.settings.general.hostname, "suresh-dont-delete");
+  assert.equal(parsed.data.settings.redis.running, true);
+});
+
+test("a group the schema does not name is dropped, which is the point", () => {
+  // Documents the behaviour the cross-check above exists to catch, so the
+  // reason for that test survives even when nobody remembers the incident.
+  const parsed = settingsResponseSchema.safeParse({
+    settings: {
+      general: {
+        timezone: "Etc/UTC",
+        ntp: true,
+        clock_synchronized: true,
+        hostname: "box",
+      },
+      invented_group: { a: 1 },
+    },
+  });
+
+  assert.equal(parsed.success, true);
+  assert.equal("invented_group" in parsed.data.settings, false);
 });

@@ -6,9 +6,6 @@ use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Setting\GeneralSettingsRequest;
-use App\Http\Requests\Server\Setting\MysqlBinlogSettingsRequest;
-use App\Http\Requests\Server\Setting\MysqlSettingsRequest;
-use App\Http\Requests\Server\Setting\PurgeBinlogRequest;
 use App\Http\Requests\Server\Setting\RebootScheduleRequest;
 use App\Http\Requests\Server\Setting\RebootServerRequest;
 use App\Http\Requests\Server\Setting\RedisSettingsRequest;
@@ -17,7 +14,6 @@ use App\Http\Requests\Server\Setting\SwapSettingsRequest;
 use App\Http\Requests\Server\Setting\UpdateSettingsRequest;
 use App\Services\ActivityLogger;
 use App\Services\Server\ServerOps;
-use App\Services\Server\Settings\MysqlBinlogSettings;
 use App\Services\Server\Settings\RebootScheduleSettings;
 use App\Services\Server\Settings\RedisSettings;
 use App\Services\Server\Settings\SettingChangeLog;
@@ -69,47 +65,6 @@ class SettingController extends Controller
     public function updateSwap(SwapSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
     {
         return $this->save('swap', $request, $settings, $log);
-    }
-
-    /**
-     * The response carries the value the *server* adopted, not the one that
-     * was asked for. MySQL and MariaDB silently cap `max_connections` against
-     * `open_files_limit`, so `save()` re-reads the group afterwards and the
-     * form shows what actually happened rather than echoing the request back.
-     */
-    public function updateMysql(MysqlSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
-    {
-        return $this->save('mysql', $request, $settings, $log);
-    }
-
-    /**
-     * Binary log retention and size. Both variables are dynamic, so this takes
-     * effect without a restart; the drop-in keeps it across one.
-     */
-    public function updateMysqlBinlog(MysqlBinlogSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
-    {
-        return $this->save('mysql_binlog', $request, $settings, $log);
-    }
-
-    /**
-     * Drop binary logs older than N days, now. Separate from the settings save
-     * because it destroys data rather than changing configuration — and what
-     * it destroys is what a point-in-time recovery would have replayed.
-     */
-    public function purgeMysqlBinlog(PurgeBinlogRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
-    {
-        $group = $settings->find('mysql_binlog');
-
-        if (! $group instanceof MysqlBinlogSettings || ! $group->available()) {
-            abort(404, __('errors/setting.group_unavailable'));
-        }
-
-        $days = (int) $request->validated('days');
-        $group->purge($days);
-
-        $log->log('setting.binlog_purged', null, ['days' => $days]);
-
-        return response()->json(['mysql_binlog' => $group->read()]);
     }
 
     /**
