@@ -569,6 +569,23 @@ One entry per installable site type. Each carries its own field schema — the f
 
 Field `type` values: `text`, `password`, `select`, `domain`, `email`, `textarea`, `toggle`, `repository`.
 
+**`default` and `placeholder` are not interchangeable, and a field never carries both** (a test enforces it). A `default` is a real value: pre-fill the input with it, and the request carries it. A `placeholder` is ghost text: show it in an empty box, and it is *never* submitted. Rendering a default as a placeholder produces a form that looks filled in and posts `null`.
+
+As of 2026-09-03 every free-text field carries at least one of `default`, `placeholder` or `help`, all localized in the caller's locale, so no create form has an empty box with nothing to go on. `help` is a sentence to show under the input.
+
+The rule the values follow is **never show a value that differs from what an empty box actually produces**, which is why the table prefixes are not uniform:
+
+| Type | `table_prefix` | Cleared box produces |
+|---|---|---|
+| `wordpress` | `default: wp_` | `wp_` |
+| `joomla` | `default: jml_` | a random per-site prefix |
+| `moodle` | `default: mdl_` | `mdl_` |
+| `akaunting` | `default: akt_` | no prefix at all |
+| `prestashop` | `default: ps_` | `ps_` |
+
+Joomla and Akaunting say so in their `help`; do not paper over it with a placeholder.
+
+
 **`options` comes in two shapes, and both are already handled by rendering `label` and submitting `value`.** A plain array of strings (`["8.4", "8.3"]`) means value and label are the same. Objects (`{"value": …, "label": …}`) mean they differ — always render `label`.
 
 That distinction now matters for the locale and country pickers. They used to label every option with its own code, so choosing a site language meant picking between `he_IL` and `hi_IN`. They now carry real names, **in the viewer's locale**, built at read time:
@@ -1070,6 +1087,13 @@ Re-check DNS for this domain. Returns the full domain object with `dns_verified`
 Promote this domain to primary and synchronize the application's own canonical URL before applying the vhost. The canonical URL uses HTTPS only when the current certificate is servable **and covers the new hostname**; otherwise it uses HTTP, avoiding an application-level redirect to a name whose certificate is invalid.
 
 The transition is atomic from the caller's point of view. If URL synchronization or vhost application fails, the previous primary domain, application-domain mirror, canonical URL, and vhost are restored best-effort and the request fails; do not update the UI optimistically before the `200` response.
+
+**Which types reconcile a canonical URL.** Only applications that keep their own copy of the site address have anything to synchronize — the rest are a deliberate no-op, and this is the same list for certificate issue, certificate removal and the primary-domain change above:
+
+`wordpress`, `moodle`, `mautic`, `prestashop`, `akaunting`, `craftcms`, `statamic`, `nextcloud`, `nodebb`, `n8n`.
+
+`joomla`, `nodered`, `uptimekuma` and `phpmyadmin` are **not** on it and are not missing it: none of them is given a URL at install and each detects its address per request. PrestaShop and Akaunting joined the list on 2026-09-03 — before that a shop issued a certificate served pages over HTTPS while its images and generated links still pointed at HTTP, which reads as a broken padlock and is often reported as a certificate fault.
+
 
 **Response `200`:** `{"domains": [...updated list with type reordered...]}`
 
