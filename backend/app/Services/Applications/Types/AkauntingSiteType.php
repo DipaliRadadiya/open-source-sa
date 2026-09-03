@@ -56,13 +56,15 @@ class AkauntingSiteType extends AbstractSiteType
                 'default' => 'en-GB',
                 'options' => FieldOptions::localeOptions(FieldOptions::hyphenLocales()),
             ]),
-            // Deliberately no default, and this is the answer to "someone
-            // should pick one" rather than a gap. Akaunting is a Laravel
-            // application and Laravel does not prefix tables; there is no
-            // convention to follow, and an invented one would be baked into
-            // every install of it forever for the sake of looking filled in.
-            // Blank means no prefix, which is what Akaunting itself does.
+            // `akt_`, an operator decision (2026-09-03). Akaunting is a
+            // Laravel application and Laravel does not prefix tables, so there
+            // was no convention to inherit — but a shared database with no
+            // prefix at all is the case this field exists for, and a prefix
+            // someone can recognise is worth more than fidelity to a framework
+            // default nobody sees. AkauntingInstaller still passes an empty
+            // --db-prefix through untouched if the box is cleared.
             $this->field('table_prefix', 'text', advanced: true, extra: [
+                'default' => 'akt_',
                 'help' => __('application.help.table_prefix_optional'),
             ]),
         ], $this->phpFields());

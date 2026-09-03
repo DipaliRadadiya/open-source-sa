@@ -52,18 +52,21 @@ class JoomlaSiteType extends AbstractSiteType
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             // Generated per site when left blank, as Joomla's own installer
             // does, so tables stay apart if the database is ever shared.
-            // Deliberately no default, because JoomlaInstaller::tablePrefix()
-            // already generates a random one when this arrives empty — "as
-            // Joomla's own installer generates", per its docblock, so the
-            // tables stay apart if the database is ever shared.
+            // `jml_`, an operator decision (2026-09-03): a prefix someone can
+            // recognise in phpMyAdmin beats one they cannot.
             //
-            // Shipping `jos_` here would have filled the box on every form and
-            // made that branch unreachable, quietly replacing a per-site random
-            // prefix with the single most guessable value in Joomla's history.
-            // A predictable prefix is what a blind SQL injection needs to name
-            // a table. The help text says what empty means; anyone who wants a
-            // fixed prefix can still type one.
+            // Objection recorded, because the code it overrides is deliberate.
+            // JoomlaInstaller::tablePrefix() generates a random per-site prefix
+            // when this arrives empty — "as Joomla's own installer generates" —
+            // and a predictable prefix is what a blind SQL injection needs in
+            // order to name a table. Shipping a default means that branch is
+            // only reached by someone who clears the box on purpose.
+            //
+            // The trade is defensible: it is the same bet every other control
+            // panel makes, the random branch still exists, and the help text
+            // below says what clearing the field gets you.
             $this->field('table_prefix', 'text', advanced: true, extra: [
+                'default' => 'jml_',
                 'help' => __('application.help.table_prefix_random'),
             ]),
         ], $this->phpFields());

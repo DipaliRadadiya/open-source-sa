@@ -127,7 +127,7 @@ return [
     'help' => [
         'table_prefix_random' => 'Laissez vide et un préfixe aléatoire sera généré, ce qui sépare les tables si la base de données est un jour partagée.',
         'timezone' => 'Fuseau horaire du site, par ex. America/New_York ou Europe/Paris. Voir Réglages → Général → Fuseau horaire.',
-        'table_prefix_optional' => 'Facultatif. Laissez vide pour aucun préfixe — Akaunting repose sur Laravel et n\'en a pas de standard.',
+        'table_prefix_optional' => 'Facultatif. Si vous le videz, les tables sont créées sans aucun préfixe.',
         'start_command' => 'Le fichier d\'entrée, par exemple « node server.js ». Pas « npm start » : un gestionnaire de paquets fork le vrai processus, donc les signaux d\'arrêt ne l\'atteignent jamais.',
         'app_port' => 'Laissé vide, le panneau en choisit un libre.',
         'rendering_type' => 'Le rendu côté serveur exécute votre app et lui sert de proxy. Les deux autres compilent des fichiers que le serveur web sert directement — plus rapide, et rien à maintenir en marche.',

@@ -127,7 +127,7 @@ return [
     'help' => [
         'table_prefix_random' => 'Leer lassen, dann wird ein zufälliges Präfix erzeugt — so bleiben die Tabellen getrennt, falls die Datenbank je geteilt wird.',
         'timezone' => 'Zeitzone der Website, z. B. America/New_York oder Europe/Berlin. Siehe Einstellungen → Allgemein → Zeitzone.',
-        'table_prefix_optional' => 'Optional. Leer lassen für kein Präfix — Akaunting basiert auf Laravel und hat kein Standardpräfix.',
+        'table_prefix_optional' => 'Optional. Wird das Feld geleert, werden die Tabellen ganz ohne Präfix angelegt.',
         'start_command' => 'Die Einstiegsdatei, z. B. „node server.js“. Nicht „npm start“ – ein Paketmanager forkt den eigentlichen Prozess, sodass Shutdown-Signale ihn nie erreichen.',
         'app_port' => 'Leer gelassen wählt das Panel einen freien Port.',
         'rendering_type' => 'Server-Rendering führt deine App aus und leitet an sie weiter. Die anderen beiden bauen Dateien, die der Webserver direkt ausliefert – schneller, und nichts muss laufen.',

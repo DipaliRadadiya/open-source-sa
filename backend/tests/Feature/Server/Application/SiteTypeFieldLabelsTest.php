@@ -5,6 +5,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Applications\SiteTypeManager;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Validator;
 
 /*
  * Field labels are localized on the backend so the frontend never holds a
@@ -82,6 +83,39 @@ it('never gives a field both a default and a placeholder', function () {
     // checking nothing, and would keep passing if fields() ever returned [].
     expect($seen)->toBeGreaterThan(50)
         ->and($both)->toBe([], 'both a default and a placeholder: '.implode(', ', $both));
+});
+
+it('offers no default its own validation rules would reject', function () {
+    // A pre-filled value the API refuses is the cheapest possible own-goal:
+    // the form opens already invalid, and the person who typed nothing gets
+    // the error. Worth pinning because the two sit in the same file and are
+    // still easy to change one at a time — `akt_` had to fit a lowercase-only
+    // rule, and `jml_` a length its neighbours do not share.
+    $checked = 0;
+
+    foreach (app(SiteTypeManager::class)->all() as $type) {
+        $rules = $type->rules();
+
+        foreach ($type->fields() as $field) {
+            if (! filled($field['default'] ?? null) || ! isset($rules[$field['name']])) {
+                continue;
+            }
+
+            $checked++;
+
+            $validator = Validator::make(
+                [$field['name'] => $field['default']],
+                [$field['name'] => $rules[$field['name']]],
+            );
+
+            expect($validator->fails())->toBeFalse(
+                "{$type->name()}.{$field['name']} defaults to '{$field['default']}', which its own rules reject: "
+                .implode(' ', $validator->errors()->all())
+            );
+        }
+    }
+
+    expect($checked)->toBeGreaterThan(5);
 });
 
 it('gives every free-text field an example or a value to start from', function () {
