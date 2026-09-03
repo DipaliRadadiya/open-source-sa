@@ -57,6 +57,21 @@ class ServerOpsResult
         return ! $this->ok;
     }
 
+    /**
+     * The exit code, for the few callers whose tool says different things with
+     * different non-zero codes rather than just "it went wrong".
+     *
+     * `openlitespeed -t` is the one that forced this: it exits 1 for warnings
+     * and 2 for errors, so reading only `failed()` there means refusing to
+     * write a site over a warning. Null when the process never ran — a timeout
+     * or a sudo refusal — which is not the same as an exit code of 0 and must
+     * not be read as one.
+     */
+    public function exitCode(): ?int
+    {
+        return $this->result?->exitCode();
+    }
+
     public function output(): string
     {
         return $this->result?->output() ?? '';

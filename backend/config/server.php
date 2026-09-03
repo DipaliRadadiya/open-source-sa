@@ -606,6 +606,14 @@ return [
             // and registration skips it rather than failing.
             'ssl_listener' => env('SERVER_OLS_SSL_LISTENER', 'Defaultssl'),
             'test_command' => ['/usr/local/lsws/bin/openlitespeed', '-t'],
+
+            // OpenLiteSpeed's tmp directory (`DEFAULT_TMP_DIR`, compiled in).
+            // The config test writes its error log here and reads the file
+            // back to decide its own exit code — and test mode is the one mode
+            // that does not create the directory, so without it the test
+            // passes on anything. OlsDriver::test() creates it first; see
+            // there. Config because a package could build it elsewhere.
+            'tmp_dir' => env('SERVER_OLS_TMP_DIR', '/tmp/lshttpd'),
             // Restart, not reload: nothing lighter picks up a new virtual host,
             // and it is graceful — old workers drain rather than being cut off.
             'reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],

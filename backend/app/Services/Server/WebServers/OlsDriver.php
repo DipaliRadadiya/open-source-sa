@@ -47,6 +47,7 @@ class OlsDriver extends AbstractWebServerDriver
         private OlsSharedConfig $shared,
         private PhpStack $stack,
         private SitePhpIni $phpIni,
+        private OlsConfigCheck $configCheck,
     ) {
         parent::__construct($serverOps, $files, $certificateFiles, $logDirectory, $certbot);
     }
@@ -275,6 +276,19 @@ class OlsDriver extends AbstractWebServerDriver
     protected function testCommand(): array
     {
         return (array) config('server.web_server_drivers.openlitespeed.test_command');
+    }
+
+    /**
+     * Through `OlsConfigCheck`, which is where the reasons live: on this stack
+     * the raw command cannot fail unless the panel prepares for it first, and
+     * the same preparation is needed by `OlsSharedConfig`.
+     */
+    public function test(): ServerOpsResult
+    {
+        return $this->configCheck->run([
+            'op' => 'config_test',
+            'web_server' => $this->name(),
+        ]);
     }
 
     /**

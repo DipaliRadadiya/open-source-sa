@@ -126,9 +126,15 @@ function fakeOls(string $config, bool $testPasses = true, bool $tlsFallbackPrese
         // has to follow the real command names or a passing test only proves
         // that nothing ran.
         if (str_contains((string) ($command[0] ?? ''), '/lsws/bin/')) {
+            // Exit 2 and the reason on *stdout*, which is what a real failing
+            // `openlitespeed -t` does: it prints the contents of its error log
+            // and exits 2 when they contain `[ERROR]`. This said exit 1 with
+            // the reason on stderr, and exit 1 is OLS's code for "warnings,
+            // nothing wrong" — so the one test asserting a refused config was
+            // asserting it against a code that does not mean refusal.
             return $testPasses
                 ? Process::result(output: 'ok')
-                : Process::result(output: '', errorOutput: 'config error', exitCode: 1);
+                : Process::result(output: "[ERROR] [config:vhost:shop] invalid directive\n", exitCode: 2);
         }
 
         return Process::result(output: '');
@@ -552,6 +558,66 @@ describe('the driver', function () {
             // …and there is still nothing to switch on: isolation here is a
             // property of how the vhost is written, not a feature to enable.
             ->assertJsonPath('php.isolation_supported', false);
+    });
+
+    it('creates the directory the config test writes its verdict into', function () {
+        // `openlitespeed -t` decides its own exit code by reading
+        // {tmp}/testconf back, and test mode is the one mode that does not
+        // create that directory — so with /tmp/lshttpd missing, which is the
+        // normal state of a rebooted box and the permanent state of one where
+        // lshttpd has never started, the test exits 0 on any config at all.
+        $runs = fakeOls(olsConfig());
+
+        app(OlsDriver::class)->test();
+
+        $commands = collect($runs)->pluck('command');
+
+        expect($commands)->toContain(['mkdir', '-p', '/tmp/lshttpd']);
+
+        // And before the test, not after it.
+        expect($commands->search(['mkdir', '-p', '/tmp/lshttpd']))
+            ->toBeLessThan($commands->search(['/usr/local/lsws/bin/openlitespeed', '-t']));
+    });
+
+    it('prepares the config test for the shared file too, not only for a vhost', function () {
+        // The rollback in OlsSharedConfig is the panel's last defence for the
+        // file every site on the box shares, and it used to run the raw
+        // command — so the guard could not fail for the same reason. Both
+        // callers go through OlsConfigCheck now.
+        $runs = fakeOls(olsConfig());
+
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        expect(collect($runs)->pluck('command'))->toContain(['mkdir', '-p', '/tmp/lshttpd']);
+    });
+
+    it('fails the config test on an error', function () {
+        fakeOls(olsConfig(), testPasses: false);
+
+        // Exit 2: the error log OLS read back contained `[ERROR]`.
+        expect(app(OlsDriver::class)->test()->failed())->toBeTrue();
+    });
+
+    it('passes the config test on a warning, rather than refusing the site', function () {
+        Process::fake(fn () => Process::result(output: "[WARN] [config] deprecated directive\n", exitCode: 1));
+
+        // Exit 1 means the log had content and none of it was an error. Until
+        // the directory above was created the test exited 0 regardless, so
+        // exit 1 has never been reachable on a real server — treating it as
+        // failure now would be a brand-new refusal shipped as a fix, and it
+        // would refuse to create a site over a deprecation notice.
+        $result = app(OlsDriver::class)->test();
+
+        expect($result->failed())->toBeFalse()
+            ->and($result->exitCode())->toBe(1);
+    });
+
+    it('still fails when the test binary cannot be run at all', function () {
+        // sudo refusing, or a missing binary. Not an exit code from OLS, and
+        // must not be read as one.
+        Process::fake(fn () => Process::result(output: '', errorOutput: 'sudo: a password is required', exitCode: 127));
+
+        expect(app(OlsDriver::class)->test()->failed())->toBeTrue();
     });
 
     it('unregisters before deleting the files', function () {

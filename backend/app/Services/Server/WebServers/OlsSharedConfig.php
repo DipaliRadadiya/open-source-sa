@@ -61,6 +61,7 @@ class OlsSharedConfig
         private ServerOps $serverOps,
         private ManagedFile $files,
         private CertificateFiles $certificateFiles,
+        private OlsConfigCheck $configCheck,
     ) {}
 
     /**
@@ -493,17 +494,18 @@ class OlsSharedConfig
         return preg_match($pattern, $contents, $matches) === 1 ? $matches[1] : '';
     }
 
+    /**
+     * Through `OlsConfigCheck`, and this is the caller that made it a class.
+     *
+     * The rollback above is the panel's last defence for the file every site
+     * on the box shares — and this used to run `openlitespeed -t` itself, a
+     * command that exits 0 on any configuration unless a directory OLS does
+     * not create in test mode happens to exist. A rollback wired to a check
+     * that could not fail.
+     */
     public function test(): ServerOpsResult
     {
-        return $this->serverOps->run(
-            // `openlitespeed -t`, not `lswsctrl config_test`: lswsctrl has no
-            // such verb. It prints its usage and exits non-zero for anything
-            // outside start|stop|restart|reload|status, so the old default
-            // failed exactly the way a rejected config fails — every write
-            // through this class would have rolled itself back.
-            (array) config('server.web_server_drivers.openlitespeed.test_command', ['/usr/local/lsws/bin/openlitespeed', '-t']),
-            ['feature' => 'application', 'op' => 'ols_config_test'],
-        );
+        return $this->configCheck->run();
     }
 
     private function path(): string
