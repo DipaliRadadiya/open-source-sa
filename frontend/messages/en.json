@@ -23,6 +23,7 @@
     "hidePassword": "Hide password",
     "clearSearch": "Clear search",
     "logOut": "Log out",
+    "loggingOut": "Signing out…",
     "openUserMenu": "Open user menu",
     "refresh": "Refresh",
     "expandSidebar": "Expand sidebar",
@@ -657,7 +658,8 @@
       "returnHint": "· you’ll return to {admin}"
     },
     "menu": {
-      "back": "Back to my account"
+      "back": "Back to my account",
+      "backPending": "Leaving…"
     }
   },
   "validation": {

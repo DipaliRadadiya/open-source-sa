@@ -23,6 +23,7 @@
     "hidePassword": "Ocultar contraseña",
     "clearSearch": "Borrar búsqueda",
     "logOut": "Cerrar sesión",
+    "loggingOut": "Cerrando sesión…",
     "openUserMenu": "Abrir menú de usuario",
     "refresh": "Actualizar",
     "expandSidebar": "Expandir barra lateral",
@@ -372,7 +373,8 @@
       "returnHint": "· volverás a {admin}"
     },
     "menu": {
-      "back": "Volver a mi cuenta"
+      "back": "Volver a mi cuenta",
+      "backPending": "Saliendo…"
     }
   },
   "users": {

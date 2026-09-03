@@ -29,11 +29,16 @@ export function UserMenu({ extraItems, impersonating = false }) {
   const tImp = useTranslations("impersonation");
   const { guardAction } = useUnsaved();
   const [leaving, setLeaving] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   async function performLogout() {
+    setSigningOut(true);
     try {
       await logout();
     } finally {
+      // Deliberately not cleared: the menu should keep saying "signing out"
+      // right up until the login page replaces it, rather than flicking back
+      // to "Log out" for the length of the navigation.
       router.push("/login");
       router.refresh();
     }
@@ -96,13 +101,22 @@ export function UserMenu({ extraItems, impersonating = false }) {
         <div className="space-y-0.5 p-1 [&_[role=menuitem]]:py-1.5">
           {impersonating ? (
             <>
-              <DropdownMenuItem disabled={leaving} onSelect={onBackToAccount}>
+              <DropdownMenuItem
+                disabled={leaving || signingOut}
+                onSelect={(event) => {
+                  // Held open: Radix closes on select, and a menu that vanishes
+                  // for the length of the request is why this never looked like
+                  // it was doing anything.
+                  event.preventDefault();
+                  onBackToAccount();
+                }}
+              >
                 {leaving ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <LogIn className="size-4" />
                 )}
-                {tImp("menu.back")}
+                {leaving ? tImp("menu.backPending") : tImp("menu.back")}
               </DropdownMenuItem>
               <DropdownMenuSeparator className="mx-0 my-1" />
             </>
@@ -113,9 +127,22 @@ export function UserMenu({ extraItems, impersonating = false }) {
               <DropdownMenuSeparator className="mx-0 my-1" />
             </>
           ) : null}
-          <DropdownMenuItem variant="destructive" onClick={onLogout}>
-            <LogOut className="size-4" />
-            {t("logOut")}
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={signingOut || leaving}
+            onSelect={(event) => {
+              // Same reason as above: without this the menu disappears and the
+              // page sits unchanged until the login screen arrives.
+              event.preventDefault();
+              onLogout();
+            }}
+          >
+            {signingOut ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <LogOut className="size-4" />
+            )}
+            {signingOut ? t("loggingOut") : t("logOut")}
           </DropdownMenuItem>
         </div>
       </DropdownMenuContent>

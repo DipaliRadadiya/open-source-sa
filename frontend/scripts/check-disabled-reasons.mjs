@@ -24,8 +24,10 @@ import { join } from "node:path";
 const ROOTS = ["components", "app"];
 
 // Disabled because something is in flight — no explanation wanted.
+// `signing` covers signing out and signing in, which are waits like any other;
+// the list already had `leaving` for the impersonation exit sitting next to it.
 const IN_FLIGHT =
-  /submitting|pending|saving|busy|loading|inflight|running|working|removing|retrying|verifying|starting|opening|checking|deleting|creating|leaving|stopping|testing|installing|uploading|deploying|refreshing/i;
+  /submitting|pending|saving|busy|loading|inflight|running|working|removing|retrying|verifying|starting|opening|checking|deleting|creating|leaving|signing|stopping|testing|installing|uploading|deploying|refreshing/i;
 
 // A reason is present if the control carries one, or something nearby does.
 // IconTooltip counts because it hands `reason` straight to ReasonTooltip — the
