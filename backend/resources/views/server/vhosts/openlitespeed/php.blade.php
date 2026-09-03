@@ -111,6 +111,16 @@ extprocessor lsphp{{ $lsphpVersion }} {
   path                    {{ $lsphpBinary }}
   extUser                 {{ $user }}
   extGroup                {{ $user }}
+{{-- This site's own PHP settings — memory_limit, upload limits, open_basedir,
+     disable_functions. On php-fpm they are php_admin_value lines in the pool
+     file; there is no pool here, so LSPHP is pointed at an ini file of our own
+     instead. See SitePhpIni for why an ini rather than phpIniOverride.
+
+     The leading colon is not a typo and must not be "tidied": an empty entry
+     means "also scan the directory PHP was compiled with", which is where
+     every extension's ini lives. Without it this REPLACES that directory and
+     the site loses mysqli, curl and opcache. --}}
+  env                     PHP_INI_SCAN_DIR={{ $phpIniScanDir }}
   runOnStartUp            1
   memSoftLimit            2047M
   memHardLimit            2047M

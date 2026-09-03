@@ -4,6 +4,7 @@ use App\Contracts\PhpStack;
 use App\Exceptions\Server\Php\PhpConfigException;
 use App\Exceptions\Server\WebServer\OlsListenerNotFoundException;
 use App\Models\Application;
+use App\Models\ApplicationPhpSettings;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -456,6 +457,101 @@ describe('the driver', function () {
         // whole server, not just this site.
         expect($mkdir)->toBeLessThan($tee)
             ->and($tee)->toBeLessThan($cat);
+    });
+
+    it("writes the site's PHP settings as an ini file of its own", function () {
+        // There is no pool on this stack, so nothing else carries these. Until
+        // this existed the PHP screen saved memory_limit and friends with a
+        // 200 and applied none of them.
+        ApplicationPhpSettings::create([
+            'application_id' => $this->app_->id,
+            'memory_limit' => '512M',
+            'upload_max_filesize' => '128M',
+            'disable_functions' => 'exec,passthru',
+        ]);
+
+        fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_->fresh(['phpSettings', 'systemUser']), '/home/shopuser/shop/public_html');
+
+        $ini = test()->files['/home/shopuser/shop/.panel/php/zz-panel.ini'] ?? '';
+
+        expect($ini)
+            ->toContain('memory_limit = 512M')
+            ->toContain('upload_max_filesize = 128M')
+            // The directive `phpIniOverride` cannot set at all — PHP only
+            // honours it from an ini file, which is why this is one.
+            ->toContain('disable_functions = exec,passthru');
+    });
+
+    it('keeps the settings file out of the served directory', function () {
+        fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
+
+        // Above the document root: anything under it is a URL, and this names
+        // the session path and the error log.
+        expect(array_keys((array) test()->files))
+            ->toContain('/home/shopuser/shop/.panel/php/zz-panel.ini')
+            ->not->toContain('/home/shopuser/shop/public_html/zz-panel.ini');
+    });
+
+    it('adds its ini directory to the default one rather than replacing it', function () {
+        $config = app(OlsDriver::class)->renderConfig($this->app_, '/home/shopuser/shop/public_html');
+
+        // The leading colon means "also scan the directory PHP was compiled
+        // with". Without it this REPLACES that directory — where every
+        // extension's ini lives — and the site loses mysqli, curl and opcache.
+        expect($config)->toContain('env                     PHP_INI_SCAN_DIR=:/home/shopuser/shop/.panel/php');
+    });
+
+    it('does not write a settings file for a site that does not run PHP', function () {
+        $this->app_->forceFill(['serving_profile' => 'node', 'php_version' => null])->save();
+
+        fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_->fresh(), '/home/shopuser/shop/public_html');
+
+        expect(array_keys((array) test()->files))
+            ->not->toContain('/home/shopuser/shop/.panel/php/zz-panel.ini');
+    });
+
+    it('accepts PHP settings instead of demanding a pool that cannot exist', function () {
+        // The guard asked "does this stack have pools", which is false here —
+        // so it never fired on the one stack where nothing else applied these
+        // values either. Saving returned 200 and the server did not move.
+        $this->seed(PermissionSeeder::class);
+        $admin = User::factory()->admin()->create();
+
+        fakeOls(olsConfig());
+
+        $this->withHeaders(['Authorization' => 'Bearer '.$admin->createToken('t')->plainTextToken])
+            ->putJson("/api/applications/{$this->app_->id}/php", ['memory_limit' => '512M'])
+            ->assertSuccessful();
+
+        expect(test()->files['/home/shopuser/shop/.panel/php/zz-panel.ini'] ?? '')
+            ->toContain('memory_limit = 512M');
+    });
+
+    it('names the account the site actually runs as', function () {
+        // `runs_as` was inferred from `isolated_at`, a column only the pool
+        // feature sets — so every OpenLiteSpeed site was reported as running
+        // under www-data. The vhost names the site's own user as `extUser`, so
+        // it has never run as www-data, and this is the screen someone opens
+        // to find out which account it is.
+        $this->seed(PermissionSeeder::class);
+        $admin = User::factory()->admin()->create();
+
+        fakeOls(olsConfig());
+
+        $this->withHeaders(['Authorization' => 'Bearer '.$admin->createToken('t')->plainTextToken])
+            ->getJson("/api/applications/{$this->app_->id}/php")
+            ->assertOk()
+            ->assertJsonPath('php.runs_as', 'shopuser')
+            ->assertJsonPath('php.isolated', true)
+            // …and there is still nothing to switch on: isolation here is a
+            // property of how the vhost is written, not a feature to enable.
+            ->assertJsonPath('php.isolation_supported', false);
     });
 
     it('unregisters before deleting the files', function () {

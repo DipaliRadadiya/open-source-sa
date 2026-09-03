@@ -281,6 +281,16 @@ class LsphpPhpStack implements PhpStack
      * ship nothing to unlink it again, so installed and enabled are the same
      * state here.
      */
+    /**
+     * Every site's vhost names its own `extUser` and its own socket, so a site
+     * on this stack is isolated the moment it is written. There is no pool to
+     * create and nothing for the isolation feature to do.
+     */
+    public function isolatesByDefault(): bool
+    {
+        return true;
+    }
+
     public function togglesExtensions(): bool
     {
         return false;

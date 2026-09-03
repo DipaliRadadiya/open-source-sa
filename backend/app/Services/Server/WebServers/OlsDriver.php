@@ -9,6 +9,7 @@ use App\Services\Server\Applications\ApplicationLogDirectory;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
+use App\Services\Server\Php\SitePhpIni;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 
@@ -45,6 +46,7 @@ class OlsDriver extends AbstractWebServerDriver
         CertbotClient $certbot,
         private OlsSharedConfig $shared,
         private PhpStack $stack,
+        private SitePhpIni $phpIni,
     ) {
         parent::__construct($serverOps, $files, $certificateFiles, $logDirectory, $certbot);
     }
@@ -76,6 +78,10 @@ class OlsDriver extends AbstractWebServerDriver
             'lsphpVersion' => str_replace('.', '', $version),
             // The LSAPI binary, not the CLI — this is what OLS spawns.
             'lsphpBinary' => $this->stack->handlerPath($version),
+            // Where this site's own php settings live. Written by `apply()`
+            // below, in the same pass that renders this template, so the file
+            // and the `env` line naming it cannot drift apart.
+            'phpIniScanDir' => $this->phpIni->scanDir($application),
         ];
     }
 
@@ -150,6 +156,20 @@ class OlsDriver extends AbstractWebServerDriver
         // file a root process appends to. A bare `mkdir` here would leave OLS
         // the one web server whose log directory had the wrong owner.
         $this->logDirectory->ensure($application);
+
+        // The site's own PHP settings, before the vhost that points LSPHP at
+        // them. On php-fpm these ride in the pool file, which is written by
+        // `PoolManager` from the provisioner — a step that does not exist
+        // here, because there is no pool. That is precisely why every setting
+        // on the PHP screen used to save with a 200 and change nothing on an
+        // OpenLiteSpeed server.
+        //
+        // Deliberately not fatal. A site that cannot be given its overrides
+        // still serves on the stack's defaults; refusing to write the vhost
+        // over it would turn a settings problem into a site that is down.
+        if ($application->serving_profile === 'php') {
+            $this->phpIni->apply($application);
+        }
 
         $directory = $this->serverOps->run(
             ['mkdir', '-p', dirname($this->configPath($application))],

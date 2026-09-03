@@ -141,6 +141,15 @@ class FpmPhpStack implements PhpStack
         );
     }
 
+    /**
+     * A site here runs as the web server's account until the panel gives it a
+     * pool of its own. {@see PoolIsolator}
+     */
+    public function isolatesByDefault(): bool
+    {
+        return false;
+    }
+
     public function togglesExtensions(): bool
     {
         return true;

@@ -87,12 +87,22 @@ class ApplicationPhpController extends Controller
         $version = $data['php_version'] ?? null;
         unset($data['php_version']);
 
-        // Every value below is enforced by the pool file. Without a pool they
-        // would be stored and never applied — the user changes memory_limit,
-        // gets a 200 and nothing on the server moves. Say so instead. The
-        // version is exempt: it is carried by the vhost and means something
-        // either way.
-        if ($data !== [] && $application->isolated_at === null && $isolator->supported()) {
+        // Whether this server carries a site's PHP settings somewhere other
+        // than a pool file. True on OpenLiteSpeed, which has no pools: each
+        // site gets its own ini, written with its vhost. {@see SitePhpIni}
+        //
+        // The guard below used to read `$isolator->supported()` directly,
+        // which asks "does this stack have pools" — false on OLS, so the guard
+        // was switched off on the one stack where nothing else applied these
+        // values either. Every setting saved with a 200 and reached nothing.
+        $appliedWithoutPool = ! $isolator->supported();
+
+        // Every value below is enforced by the pool file. Without a pool, and
+        // without another way to carry them, they would be stored and never
+        // applied — the user changes memory_limit, gets a 200 and nothing on
+        // the server moves. Say so instead. The version is exempt: it is
+        // carried by the vhost and means something either way.
+        if ($data !== [] && $application->isolated_at === null && ! $appliedWithoutPool) {
             throw ValidationException::withMessages([
                 'settings' => [__('php_settings.errors.needs_isolation')],
             ]);
@@ -148,7 +158,13 @@ class ApplicationPhpController extends Controller
 
         $settings->save();
 
-        if ($version !== null) {
+        // Re-applied whenever anything changed, not only on a version change.
+        // On a stack with no pools this is what puts the settings on the
+        // server at all: the driver writes the site's ini in the same pass it
+        // renders the vhost, so re-applying is the whole mechanism. On FPM the
+        // pool above already did the work and this republishes the vhost for a
+        // version change exactly as before.
+        if ($version !== null || ($appliedWithoutPool && $data !== [])) {
             $isolator->republish($application);
         }
 

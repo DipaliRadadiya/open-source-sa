@@ -2107,6 +2107,13 @@ On a **migrated server**, the first time the panel takes ownership of a site's p
 
 `php_version` is exempt — it is carried by the vhost and can be changed either way.
 
+**On OpenLiteSpeed (`isolation_supported: false`) a save is accepted and applied**, and this is new as of 2026-09-03. There are no pools on that stack, so the settings are written as the site's own `.ini` file and LSPHP is pointed at it by the vhost — the `422` above must not be expected there. Until this changed, every value on this form saved with a `200` on an OpenLiteSpeed server and reached nothing: the guard asked "does this stack have pools", which is false, so it never fired on the one stack where nothing else applied the settings either.
+
+Two other fields changed meaning on that stack at the same time, both because they were inferred from `isolated_at` — a column only the pool feature ever writes:
+
+- **`runs_as`** reported `www-data` for every OpenLiteSpeed site. The vhost names the site's own user as `extUser`, so the site had never run as `www-data`; it now names the real account.
+- **`isolated`** is `true` on OpenLiteSpeed. Each site gets its own `extprocessor` with its own user and socket, so it is isolated the moment its vhost is written. `isolation_supported` stays `false` — there is genuinely nothing to switch on, so keep hiding the isolate action on that value, not on `isolated`.
+
 ---
 
 ### POST `/applications/{application}/php/isolate`

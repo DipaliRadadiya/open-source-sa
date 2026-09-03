@@ -72,6 +72,23 @@ interface PhpStack
      * extension is enabled exactly when it is installed, and offering a toggle
      * would be offering a control that cannot exist.
      */
+    /**
+     * Whether a site on this stack already runs as its own Linux user without
+     * anything extra being configured.
+     *
+     * False for PHP-FPM: a site runs as the shared web-server account until it
+     * is given a pool of its own, which is what the panel's isolation feature
+     * does. True for LSPHP, where each site's `extprocessor` block carries its
+     * own `extUser`/`extGroup` and its own socket — the isolation is a
+     * property of how the vhost is written, so there is nothing to switch on.
+     *
+     * The PHP screen used to report `runs_as: www-data` for every
+     * OpenLiteSpeed site, which was simply untrue: it named an account the
+     * site does not run as, on the screen a user checks precisely to find out
+     * which one it does.
+     */
+    public function isolatesByDefault(): bool;
+
     public function togglesExtensions(): bool;
 
     /**

@@ -30,6 +30,11 @@ class ApplicationPhpSettingsResource extends JsonResource
 
         $effective = $settings->effective();
 
+        // Whether a site on this stack runs as its own user without the pool
+        // feature being involved. True on LSPHP, where isolation is a property
+        // of how the vhost is written rather than something to switch on.
+        $isolatesByDefault = app(PhpStackManager::class)->stack()->isolatesByDefault();
+
         return [
             'application_id' => $application->id,
             'php_version' => $application->php_version,
@@ -41,10 +46,18 @@ class ApplicationPhpSettingsResource extends JsonResource
             // Whether this site has a pool of its own yet. Everything else on
             // this screen is only enforceable once it does — a shared pool
             // means a shared memory_limit.
-            'isolated' => $application->isolated_at !== null,
+            'isolated' => $application->isolated_at !== null || $isolatesByDefault,
             'isolated_at' => $application->isolated_at?->format('d-m-Y H:i:s'),
             'isolation_supported' => $pools->supported(),
-            'runs_as' => $application->isolated_at !== null
+
+            // The account this site's PHP actually runs as.
+            //
+            // This said `www-data` for every OpenLiteSpeed site, because it
+            // inferred the answer from `isolated_at` — a column only the pool
+            // feature ever sets. On LSPHP the vhost names the site's own user
+            // as `extUser`, so the site has never run as www-data and the one
+            // screen a user checks to find that out was telling them it did.
+            'runs_as' => $application->isolated_at !== null || $isolatesByDefault
                 ? $application->systemUser?->username
                 : (string) config('server.web_server_user', 'www-data'),
 
