@@ -80,7 +80,19 @@
     --accent-foreground: oklch(0.28 0.014 264);
     --destructive: oklch(0.577 0.245 27.325);
     --success: oklch(0.62 0.16 150);
-    --warning: oklch(0.68 0.14 70);
+    /* Dark enough to read on its own tint. At 0.68 the amber badges and
+       banners sat at 2.96:1 on a card and 2.56:1 on `bg-warning/15` — the
+       colour was bright enough to read AS amber and not bright enough to read
+       AS text. 0.52 is the first step that clears 4.5:1 on all three
+       backgrounds this token is used over (card, /10 tint, /15 tint).
+
+       The dark theme keeps 0.78 and is untouched: it measures 8.78:1, because
+       there the same hue is light text on a dark card rather than the reverse.
+
+       Nothing loses by this. The eight solid `bg-warning` uses are dots and
+       progress bars with no text on them, so a darker amber only makes them
+       easier to see against a light card. */
+    --warning: oklch(0.52 0.14 70);
     /* Console surface — a log is machine output, not page content, so it keeps
        its terminal identity in BOTH themes. Deliberately not pure black
        (crushes elevation) and hue-matched to the app's 264 neutral. Severity
