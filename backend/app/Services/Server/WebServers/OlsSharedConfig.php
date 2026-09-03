@@ -3,6 +3,7 @@
 namespace App\Services\Server\WebServers;
 
 use App\Exceptions\Server\WebServer\OlsListenerNotFoundException;
+use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -59,6 +60,7 @@ class OlsSharedConfig
     public function __construct(
         private ServerOps $serverOps,
         private ManagedFile $files,
+        private CertificateFiles $certificateFiles,
     ) {}
 
     /**
@@ -72,6 +74,10 @@ class OlsSharedConfig
             fn (array $sites) => [...$sites, $name => ['domains' => $domains, 'root' => $vhRoot]],
             $name,
             'ols_register',
+            // Adding a site is the moment a secure listener might be needed;
+            // removing one never is. Creating a listener on the way out would
+            // change what the server binds as a side effect of a deletion.
+            secureListener: true,
         );
     }
 
@@ -155,20 +161,20 @@ class OlsSharedConfig
     /**
      * @param  callable(array<string, array<int, string>>): array<string, array<int, string>>  $change
      */
-    private function rewrite(callable $change, string $name, string $op): ServerOpsResult
+    private function rewrite(callable $change, string $name, string $op, bool $secureListener = false): ServerOpsResult
     {
         // Read-modify-write on a file shared by every site, from a queue that
         // runs more than one worker. Without this, two sites provisioning at
         // once means the second read misses the first's entry and writes it
         // back out — the site reports Active with a vhost the server has never
         // heard of.
-        return Cache::lock('ols-shared-config', 30)->block(20, fn () => $this->rewriteLocked($change, $name, $op));
+        return Cache::lock('ols-shared-config', 30)->block(20, fn () => $this->rewriteLocked($change, $name, $op, $secureListener));
     }
 
     /**
      * @param  callable(array<string, array<int, string>>): array<string, array<int, string>>  $change
      */
-    private function rewriteLocked(callable $change, string $name, string $op): ServerOpsResult
+    private function rewriteLocked(callable $change, string $name, string $op, bool $secureListener): ServerOpsResult
     {
         $path = $this->path();
         $context = ['feature' => 'application', 'op' => $op, 'site' => $name];
@@ -180,7 +186,11 @@ class OlsSharedConfig
         }
 
         $original = $read->output();
-        $updated = $this->render($original, $change($this->sites($original)));
+        $updated = $this->render(
+            $original,
+            $change($this->sites($original)),
+            $secureListener ? $this->tlsFallback($context) : null,
+        );
 
         // Nothing to do — and no reason to touch a file every site depends on.
         if ($updated === $original) {
@@ -219,10 +229,43 @@ class OlsSharedConfig
     }
 
     /**
-     * @param  array<string, array<int, string>>  $sites
+     * The shared TLS-reject key pair, but only if it is really on disk.
+     *
+     * `OlsDriver::apply()` creates it before it gets here, so the usual answer
+     * is yes. Asked anyway, because the cost of being wrong is not symmetric:
+     * a secure listener naming files that do not exist stops OpenLiteSpeed
+     * starting — every site on the server, not one — and the config test that
+     * would normally catch that has been seen passing a config it should have
+     * rejected. Null means the listener is simply not created, which leaves
+     * the server exactly as it was.
+     *
+     * @param  array<string, mixed>  $context
+     * @return array{certificate: string, private_key: string}|null
      */
-    private function render(string $contents, array $sites): string
+    private function tlsFallback(array $context): ?array
     {
+        $paths = $this->certificateFiles->fallbackPaths();
+
+        $present = $this->serverOps->run(
+            ['test', '-s', $paths['certificate'], '-a', '-s', $paths['private_key']],
+            $context,
+        );
+
+        return $present->ok ? $paths : null;
+    }
+
+    /**
+     * @param  array<string, array<int, string>>  $sites
+     * @param  array{certificate: string, private_key: string}|null  $tlsFallback
+     *                                                                             the key pair a newly created secure listener presents, or null
+     *                                                                             when it could not be confirmed on disk
+     */
+    private function render(string $contents, array $sites, ?array $tlsFallback = null): string
+    {
+        if ($tlsFallback !== null) {
+            $contents = $this->ensureSecureListener($contents, $tlsFallback);
+        }
+
         ksort($sites);
 
         $vhosts = [];
@@ -320,6 +363,74 @@ class OlsSharedConfig
         return $append
             ? rtrim($contents)."\n\n".$region."\n"
             : $this->insertInListener($contents, $region, $listener);
+    }
+
+    /**
+     * The secure listener, created when the server has none.
+     *
+     * OpenLiteSpeed binds certificates to a **listener**, not to a vhost: a
+     * site answers on 443 only if a secure listener exists *and* the site is
+     * mapped into it. A fresh OLS install ships one listener, `Default` on
+     * *:8088, and no secure one at all — install.sh moves that to :80 and
+     * creates `Defaultssl`, but **only when the panel itself gets TLS**.
+     *
+     * Until now the SSL maps region simply gave up when the listener was
+     * absent, and the caller swallowed the exception. On a panel left on HTTP
+     * that produced the quietest failure in the OLS support: issuing a
+     * certificate for a site succeeded, `vhssl` was written into its vhost
+     * naming the real key pair, the panel reported HTTPS — and nothing on the
+     * box was listening on 443, with no error anywhere to say so.
+     *
+     * Inventing this listener is not the guess that inventing the *plain* one
+     * would be. There is exactly one right answer for TLS (`*:443`), the other
+     * two web servers already listen there for every site — nginx's template
+     * emits `listen 443 ssl` whether or not a certificate exists — and
+     * install.sh writes this very block, which this deliberately mirrors.
+     *
+     * The key pair is the shared TLS-reject pair, the same one the vhost
+     * templates name when a site has no certificate of its own. A listener
+     * certificate is only the SNI fallback; each site overrides it in `vhssl`.
+     *
+     * Caller-supplied and only when confirmed present on disk: a listener
+     * naming a key pair that is not there does not break one site, it stops
+     * OpenLiteSpeed starting — and `openlitespeed -t` has been observed
+     * reporting success on a config it should have rejected, so this cannot
+     * be left for the test to catch.
+     *
+     * @param  array{certificate: string, private_key: string}  $tlsFallback
+     */
+    private function ensureSecureListener(string $contents, array $tlsFallback): string
+    {
+        $listener = (string) config('server.web_server_drivers.openlitespeed.ssl_listener', 'Defaultssl');
+
+        // A box that already has one has it for a reason — an operator's own
+        // certificate, a non-standard port, a listener the panel did not make.
+        // Same rule as install.sh: create only when absent, never rewrite.
+        if (preg_match('/^listener\s+'.preg_quote($listener, '/').'\s*\{/m', $contents) === 1) {
+            return $contents;
+        }
+
+        $block = implode("\n", [
+            '',
+            "listener {$listener} {",
+            '  address                 *:443',
+            '  secure                  1',
+            "  keyFile                 {$tlsFallback['private_key']}",
+            "  certFile                {$tlsFallback['certificate']}",
+            '  certChain               1',
+            // TLS 1.2 as the floor, spelled as OLS spells it. Matches the
+            // vhost templates and install.sh rather than being a third
+            // opinion about which protocols this server offers.
+            '  sslProtocol             24',
+            // Empty, and that is the point: the maps region below is written
+            // by the same pass, and it needs the markers to already be inside
+            // a listener to find them.
+            self::BEGIN_SSL_MAPS,
+            self::END_SSL_MAPS,
+            '}',
+        ]);
+
+        return rtrim($contents)."\n".$block."\n";
     }
 
     /**

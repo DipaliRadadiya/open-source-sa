@@ -87,15 +87,22 @@ function olsConfig(string $managed = ''): string
  * and a fake that returned "the last thing written" for any `cat` would hand
  * the driver its own vhost back when it went to read httpd_config.conf.
  */
-function fakeOls(string $config, bool $testPasses = true): ArrayObject
+function fakeOls(string $config, bool $testPasses = true, bool $tlsFallbackPresent = true): ArrayObject
 {
     $runs = new ArrayObject;
     $files = new ArrayObject([sharedPath() => $config]);
 
-    Process::fake(function ($process) use ($runs, $files, $testPasses) {
+    Process::fake(function ($process) use ($runs, $files, $testPasses, $tlsFallbackPresent) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
         $command = $process->command;
         $path = (string) ($command[1] ?? '');
+
+        // `test -s <cert> -a -s <key>` — whether the shared TLS-reject pair is
+        // on disk. Answered explicitly rather than by the catch-all success at
+        // the bottom, because a secure listener is only written when it is.
+        if (($command[0] ?? '') === 'test') {
+            return Process::result(exitCode: $tlsFallbackPresent ? 0 : 1);
+        }
 
         if (($command[0] ?? '') === 'cat') {
             return Process::result(output: $files[$path] ?? '');
@@ -150,6 +157,83 @@ describe('the shared httpd_config.conf', function () {
         expect(sharedConfig())
             ->toContain('virtualHost shop.test {')
             ->toContain('map                     shop.test shop.test, www.shop.test');
+    });
+
+    it('creates a secure listener when the server has none', function () {
+        // OpenLiteSpeed binds certificates to a listener, not to a vhost. A
+        // fresh install ships one plain listener and no secure one, and
+        // install.sh only creates `Defaultssl` when the panel itself gets TLS
+        // — so on an HTTP panel this used to be skipped silently. Issuing a
+        // certificate then succeeded, `vhssl` was written, and nothing on the
+        // box was listening on 443.
+        fakeOls(olsConfig());
+
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        expect(sharedConfig())
+            ->toContain('listener Defaultssl {')
+            ->toContain('address                 *:443')
+            ->toContain('secure                  1')
+            // The shared TLS-reject pair, the same one a vhost with no
+            // certificate of its own names. A listener certificate is only the
+            // SNI fallback; each site overrides it in `vhssl`.
+            ->toContain('.panel-tls-reject.crt')
+            ->toContain('.panel-tls-reject.key');
+    });
+
+    it('maps the site into the secure listener it just created', function () {
+        // A listener with no map serves nothing — the site would still be
+        // unreachable on 443, which is the bug this is here to prevent.
+        fakeOls(olsConfig());
+
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        $ssl = substr(sharedConfig(), (int) strpos(sharedConfig(), 'listener Defaultssl {'));
+
+        expect($ssl)->toContain('map                     shop.test shop.test');
+    });
+
+    it('leaves a secure listener the operator already has alone', function () {
+        // A box that has one has it for a reason: their own certificate, a
+        // different port, a listener the panel did not make. Same rule as
+        // install.sh — create only when absent, never rewrite.
+        $existing = olsConfig()."\n\nlistener Defaultssl {\n  address                 *:443\n  secure                  1\n  keyFile                 /etc/ssl/theirs.key\n  certFile                /etc/ssl/theirs.crt\n}\n";
+
+        fakeOls($existing);
+
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        expect(sharedConfig())
+            ->toContain('/etc/ssl/theirs.crt')
+            ->not->toContain('.panel-tls-reject.crt')
+            ->and(substr_count(sharedConfig(), 'listener Defaultssl {'))->toBe(1);
+    });
+
+    it('does not create a listener naming a key pair that is not on disk', function () {
+        // A secure listener pointing at files that are not there does not
+        // break one site — OpenLiteSpeed will not start at all, taking every
+        // site with it. And `openlitespeed -t` has been seen passing a config
+        // it should have rejected, so this cannot be left to the config test.
+        fakeOls(olsConfig(), tlsFallbackPresent: false);
+
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        expect(sharedConfig())
+            ->not->toContain('listener Defaultssl {')
+            // …and the site is still registered on plain HTTP. Refusing to add
+            // a site because the server has no TLS material would be worse
+            // than the problem.
+            ->toContain('virtualHost shop.test {');
+    });
+
+    it('does not create a secure listener while removing a site', function () {
+        // Changing what the server binds as a side effect of a deletion is
+        // not something a user asked for.
+        fakeOls(olsConfig());
+
+        app(OlsSharedConfig::class)->unregister('shop.test');
+
+        expect(sharedConfig())->not->toContain('listener Defaultssl {');
     });
 
     it('never touches anything outside its markers', function () {
