@@ -706,7 +706,7 @@ export function CreateApplicationForm({
    */
   const canUseTemporary = Boolean(ipToLabel(serverIp));
   const [domainMode, setDomainMode] = useState(() =>
-    initialDomainMode({ prefilledName: initialName, serverIp }),
+    initialDomainMode({ serverIp }),
   );
   const temporary = domainMode === "temporary";
   const generated = temporary

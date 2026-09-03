@@ -109,18 +109,17 @@ export function temporaryDomain(
 /**
  * Which domain tab the create form opens on.
  *
- * "own" for everyone arriving normally — most people bring a domain, and
- * flipping that default for everybody would be a much bigger change than the
- * shortcut that needs it. "temporary" only when something sent them here with a
- * name already filled in (the databases page's "Install phpMyAdmin") AND this
- * server can actually build a temporary domain.
+ * "temporary" whenever this server can build one. A new site is far more often
+ * made before its domain is pointed than after, and the temporary host works
+ * the moment provisioning finishes — so opening on "own" asked most people to
+ * switch tabs before they could get anywhere.
  *
- * That second condition is the address, not the suffix: the suffix always
- * resolves via FALLBACK_TEMPORARY_SUFFIX, while a missing or non-IPv4 address
- * makes `temporaryDomain` return null AND hides the own/temporary toggle. Left
- * on "temporary" there, the field is readOnly and empty with no control on
- * screen to escape it.
+ * The condition is the address, not the suffix: the suffix always resolves via
+ * FALLBACK_TEMPORARY_SUFFIX, while a missing or non-IPv4 address makes
+ * `temporaryDomain` return null AND hides the own/temporary toggle. Defaulting
+ * to "temporary" there would leave the field readOnly and empty with no
+ * control on screen to escape it, so that case still opens on "own".
  */
-export function initialDomainMode({ prefilledName, serverIp } = {}) {
-  return prefilledName && ipToLabel(serverIp) ? "temporary" : "own";
+export function initialDomainMode({ serverIp } = {}) {
+  return ipToLabel(serverIp) ? "temporary" : "own";
 }
