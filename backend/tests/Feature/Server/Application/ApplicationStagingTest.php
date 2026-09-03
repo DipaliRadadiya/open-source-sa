@@ -468,3 +468,194 @@ describe('when creating staging fails', function () {
         expect(Application::where('production_application_id', $this->production->id)->exists())->toBeFalse();
     })->with(['chmod', 'chown']);
 });
+
+/*
+ * What a push must never carry from staging to production.
+ *
+ * Reported from a live site: after pushing, production was serving the
+ * staging URL. The cause was not the URL rewrite — that ran and worked. The
+ * rsync had no exclusion for `wp-config.php`, so staging's config landed on
+ * production carrying staging's DB_NAME/DB_USER/DB_PASSWORD and its
+ * WP_HOME/WP_SITEURL. Those are PHP constants, so they override whatever
+ * `wp_options` says: the live site connected to the staging database and
+ * answered on the staging URL, and the search-replace was overruled in
+ * silence. The mail trap rode across in the same sync, which stops a live
+ * site sending email at all.
+ */
+
+/** Records every command a push runs, so the sync and the wp-cli calls can be read back. */
+function recordStagingPush(array &$commands): void
+{
+    Process::fake(function ($process) use (&$commands) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $commands[] = $args;
+
+        // The verification step reads production's wp-config; answer with a
+        // file that still names production's own database.
+        if (($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), 'wp-config.php')) {
+            return Process::result(output: "<?php\ndefine('DB_NAME', 'shop_db');\ndefine('WP_HOME', 'https://shop.test');\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
+
+/**
+ * The rsync that pushes staging onto production.
+ *
+ * Not simply the first one: a push starts by rsyncing production's own files
+ * into the rollback snapshot directory, and that copy is deliberately
+ * unfiltered — a safety copy with exclusions would not restore the site. An
+ * earlier version of this helper matched that one and reported the push as
+ * having no exclusions at all.
+ */
+function pushRsyncArgs(array $commands): array
+{
+    foreach ($commands as $args) {
+        if (($args[0] ?? '') === 'rsync' && str_ends_with((string) end($args), '/public_html/')) {
+            return $args;
+        }
+    }
+
+    return [];
+}
+
+/** Every wp-cli invocation, flattened — they run behind `runuser -u <user> --`. */
+function wpCommands(array $commands): array
+{
+    return collect($commands)
+        ->filter(fn (array $args) => collect($args)->contains(fn ($a) => str_ends_with((string) $a, '/wp')))
+        ->map(fn (array $args) => implode(' ', $args))
+        ->values()
+        ->all();
+}
+
+/** The search terms passed to `wp search-replace`, in order. */
+function searchReplaceTerms(array $commands): array
+{
+    $terms = [];
+
+    foreach ($commands as $args) {
+        $index = array_search('search-replace', $args, true);
+
+        if ($index !== false) {
+            $terms[] = (string) ($args[$index + 1] ?? '');
+        }
+    }
+
+    return $terms;
+}
+
+it('never copies wp-config.php onto production', function () {
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    $rsync = pushRsyncArgs($commands);
+
+    expect($rsync)->not->toBeEmpty()
+        // The single most important exclusion in this feature: it carries the
+        // database credentials and the site's own URL.
+        ->and($rsync)->toContain('wp-config.php');
+});
+
+it('never copies the staging mail trap onto production', function () {
+    // Pushed to production this makes wp_mail() return without sending, so
+    // the live site stops delivering order confirmations and password resets
+    // with no error anywhere.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    expect(pushRsyncArgs($commands))->toContain('wp-content/mu-plugins/panel-staging-mail-trap.php');
+});
+
+it('rewrites every spelling of the staging URL, not just one', function () {
+    // A single literal replace misses the cases that leave a site half
+    // migrated: a scheme mismatch between the two sites, the escaped slashes
+    // the block editor stores, protocol-relative asset URLs, and the bare
+    // host in email templates and plugin settings.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    $searches = searchReplaceTerms($commands);
+
+    expect($searches)->toContain('https://staging.shop.test')
+        ->and($searches)->toContain('http://staging.shop.test')
+        ->and($searches)->toContain('//staging.shop.test')
+        ->and($searches)->toContain('staging.shop.test')
+        // The escaped form: JSON-encoded options and block-editor content.
+        ->and(collect($searches)->contains(fn (string $s) => str_contains($s, '\\/\\/staging.shop.test')))->toBeTrue();
+});
+
+it('flushes caches and rewrite rules after a full push', function () {
+    // The database was just replaced: a stale object cache serves the old
+    // site, and rewrite rules from staging 404 every post and page until
+    // somebody re-saves permalinks.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    $wpSubcommands = wpCommands($commands);
+
+    expect(collect($wpSubcommands)->contains(fn (string $c) => str_contains($c, 'cache flush')))->toBeTrue()
+        ->and(collect($wpSubcommands)->contains(fn (string $c) => str_contains($c, 'transient delete')))->toBeTrue()
+        ->and(collect($wpSubcommands)->contains(fn (string $c) => str_contains($c, 'rewrite flush')))->toBeTrue();
+});
+
+it('flushes caches on a files-only push too', function () {
+    // Templates and assets changed; a page cache serving the old markup makes
+    // the push look like it did nothing.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+
+    expect(collect($commands)->contains(fn (array $args) => in_array('cache', $args, true) && in_array('flush', $args, true)))->toBeTrue();
+});
+
+it('refuses to finish a push that left production wearing staging identity', function () {
+    // The catch-all: whatever else changes about the sync, a live site that
+    // came out of a push pointed at the staging database must not be
+    // reported as a success.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $staging = Application::where('production_application_id', $this->production->id)->first();
+    $stagingDatabase = Database::where('application_id', $staging->id)->first();
+
+    Process::fake(function ($process) use ($stagingDatabase) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        // Production's wp-config comes back naming the *staging* database.
+        if (($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), 'wp-config.php')) {
+            return Process::result(output: "<?php\ndefine('DB_NAME', '{$stagingDatabase->name}');\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'full'])
+        ->assertStatus(500);
+});

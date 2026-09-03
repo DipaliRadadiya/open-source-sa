@@ -71,11 +71,53 @@ class WordPressStagingStrategy implements StagingStrategy
         $this->flushCaches($staging, $stagingDocumentRoot);
     }
 
+    /**
+     * Never synced, in either direction.
+     *
+     * `wp-config.php` is the one that mattered: it carries DB_NAME, DB_USER,
+     * DB_PASSWORD, WP_HOME and WP_SITEURL. Copying staging's onto production
+     * pointed the live site at the staging database and pinned its URL to
+     * staging's — and because those are PHP constants they override whatever
+     * `wp_options` says, so the search-replace below was doing its job and
+     * being silently overruled.
+     *
+     * The mail trap is the other one, and it fails silently in the worst way:
+     * pushed to production it makes the live site stop sending email
+     * altogether — order confirmations, password resets — with no error
+     * anywhere.
+     *
+     * @return array<int, string>
+     */
+    public function syncExcludes(): array
+    {
+        return [
+            // Site identity and credentials. Each site keeps its own.
+            'wp-config.php',
+            // Written by the panel onto staging *because* it is staging.
+            'wp-content/mu-plugins/panel-staging-mail-trap.php',
+            // Media: rsync --delete would wipe production uploads added since
+            // the clone, and there is no file-level safety copy to undo it.
+            'wp-content/uploads/',
+            // Regenerates itself, and is per-site by nature.
+            'wp-content/cache/',
+            'wp-content/upgrade/',
+            // Not part of the site.
+            '.git/', 'node_modules/', '*.log', '.panel/',
+        ];
+    }
+
     public function push(Application $production, Application $staging, string $mode): void
     {
+        $productionDocumentRoot = $this->provisioner->documentRoot($production);
+
         if ($mode !== 'full') {
-            // `files` already happened in StagingManager — nothing in this
-            // recipe is file-only, so there is nothing left to do here.
+            // Files only — the database is untouched, so there are no staging
+            // URLs to rewrite. The caches still have to go: the pushed files
+            // include templates and assets, and a page cache serving the old
+            // markup makes the push look like it did nothing.
+            $this->flushCaches($production, $productionDocumentRoot);
+            $this->assertProductionIntact($production, $staging, $productionDocumentRoot);
+
             return;
         }
 
@@ -95,11 +137,116 @@ class WordPressStagingStrategy implements StagingStrategy
         $this->serverOps->run(['rm', '-f', $dumpPath], $this->context($production, 'staging_push_dump_cleanup'));
 
         // The production database now physically contains staging's rows —
-        // including staging's URL. Rewrite it back on the production site,
-        // not the staging one; the staging site's own files/config are
-        // untouched by a push.
-        $productionDocumentRoot = $this->provisioner->documentRoot($production);
-        $this->searchReplace($production, $productionDocumentRoot, $staging->url(), $production->url());
+        // including staging's URL, in every spelling WordPress and its
+        // plugins use. Rewrite them back on the production site; the staging
+        // site's own files and config are untouched by a push.
+        $this->rewriteUrls($production, $productionDocumentRoot, $staging, $production);
+
+        // Permalinks come from the staging database that was just restored.
+        // Without a flush the rewrite rules on disk no longer match, and
+        // every post and page 404s until somebody re-saves permalinks.
+        $this->flushRewrites($production, $productionDocumentRoot);
+        $this->flushCaches($production, $productionDocumentRoot);
+
+        $this->assertProductionIntact($production, $staging, $productionDocumentRoot);
+    }
+
+    /**
+     * Replace every spelling of the source URL, longest first.
+     *
+     * One literal `https://staging.example.com` is not enough, and the gaps
+     * are the ones that leave a site half-migrated:
+     *
+     *  - **Scheme mismatch.** `Application::url()` builds from the site's own
+     *    scheme, so a staging site on http and a production site on https
+     *    produce two strings that never match each other. That single case
+     *    misses *everything*.
+     *  - **Escaped slashes.** The block editor and any JSON-encoded option
+     *    store `https:\/\/host`. wp-cli does not unescape before matching, so
+     *    a plain replace walks straight past post content.
+     *  - **Protocol-relative.** `//host` appears in enqueued asset URLs.
+     *  - **Bare domain.** Email templates, plugin settings and CSV exports
+     *    keep the host with no scheme at all.
+     *
+     * Ordered longest to shortest so the bare-domain pass runs last and
+     * cannot corrupt a string an earlier, more specific pass already fixed.
+     */
+    private function rewriteUrls(Application $application, string $documentRoot, Application $from, Application $to): void
+    {
+        foreach ($this->urlVariants($from, $to) as [$search, $replace]) {
+            if ($search === $replace) {
+                continue;
+            }
+
+            $this->searchReplace($application, $documentRoot, $search, $replace);
+        }
+    }
+
+    /**
+     * @return array<int, array{0: string, 1: string}>
+     */
+    private function urlVariants(Application $from, Application $to): array
+    {
+        $fromHost = $from->domain;
+        $toHost = $to->domain;
+
+        $variants = [];
+
+        // Both schemes for each side, so a staging-on-http / production-on-
+        // https pair is still caught.
+        foreach (['https://', 'http://'] as $scheme) {
+            $variants[] = [$scheme.$fromHost, $to->url()];
+            $variants[] = [str_replace('/', '\\/', $scheme).$fromHost, str_replace('/', '\\/', $to->url())];
+        }
+
+        $variants[] = ['//'.$fromHost, '//'.$toHost];
+        $variants[] = ['\\/\\/'.$fromHost, '\\/\\/'.$toHost];
+        // Last, and only the host: anything with a scheme is already done.
+        $variants[] = [$fromHost, $toHost];
+
+        return $variants;
+    }
+
+    private function flushRewrites(Application $application, string $documentRoot): void
+    {
+        $this->runAsSiteUser($application, [
+            $this->wpCliBinary(), 'rewrite', 'flush', '--hard',
+            '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
+        ]);
+    }
+
+    /**
+     * Refuse to call a push finished if production came out of it wearing
+     * staging's identity.
+     *
+     * This is the check that would have caught the whole class of bug rather
+     * than one instance of it: whatever else changes about the sync, the live
+     * site must still be connected to its own database and answering on its
+     * own URL. Throwing here puts StagingManager into its rollback path,
+     * which restores the file snapshot and the pre-push database dump.
+     */
+    private function assertProductionIntact(Application $production, Application $staging, string $documentRoot): void
+    {
+        $config = $this->serverOps->run(
+            ['cat', "{$documentRoot}/wp-config.php"],
+            $this->context($production, 'staging_push_verify_config'),
+        );
+
+        if ($config->failed()) {
+            throw new StagingOperationException($config->reference);
+        }
+
+        $contents = $config->output();
+        $stagingDatabase = Database::where('application_id', $staging->id)->first();
+
+        // The live site must not be pointed at staging's database, and must
+        // not have had its URL pinned to staging's by a copied constant.
+        $wearsStagingIdentity = ($stagingDatabase !== null && str_contains($contents, "'{$stagingDatabase->name}'"))
+            || str_contains($contents, $staging->url());
+
+        if ($wearsStagingIdentity) {
+            throw new StagingOperationException((string) Str::uuid());
+        }
     }
 
     private function createStagingDatabase(Application $production, Application $staging, string $engine): Database

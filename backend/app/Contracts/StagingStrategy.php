@@ -28,4 +28,20 @@ interface StagingStrategy
      * `files` needs nothing here at all.
      */
     public function push(Application $production, Application $staging, string $mode): void;
+
+    /**
+     * Paths rsync must never carry between the two sites, in either
+     * direction.
+     *
+     * This lives on the strategy rather than in `StagingManager` because the
+     * answer is entirely type-specific: which file holds the database
+     * credentials, which file pins the site's own URL, and which files the
+     * panel wrote onto staging *because* it is staging. The manager cannot
+     * know any of that, and when it tried, the WordPress answers were absent
+     * — a push copied staging's `wp-config.php` onto production, pointing the
+     * live site at the staging database and overriding its URL with staging's.
+     *
+     * @return array<int, string> rsync `--exclude` patterns
+     */
+    public function syncExcludes(): array;
 }

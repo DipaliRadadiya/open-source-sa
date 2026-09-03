@@ -25,30 +25,6 @@ use Throwable;
  */
 class StagingManager
 {
-    /**
-     * Excludes are sane defaults, not user-editable in v1 — the design this
-     * follows explicitly says to ship the two simple modes first. Same
-     * categories the Backups feature already excludes by convention: caches,
-     * VCS metadata, build artifacts, the panel's own bookkeeping directory.
-     *
-     * @var array<int, string>
-     */
-    private const FILE_EXCLUDES = [
-        // wp-content/uploads/ is intentionally excluded: rsync --delete means
-        // pushing files mode would wipe production media added since staging
-        // was cloned, and there is no safety copy for files-only mode.
-        //
-        // The exclusion is right; the reason once written here was not.
-        // "Media lives in the database in WordPress; pushing the DB brings it
-        // back" is false — WordPress stores uploads on disk and keeps only
-        // attachment rows in the database. So excluding uploads does NOT get
-        // the files back from anywhere: it leaves production's own media
-        // untouched, which is the point. Stated plainly because the wrong
-        // reason made this look safe to revert.
-        'wp-content/uploads/',
-        'wp-content/cache/', '.git/', 'node_modules/', '*.log', 'wp-content/upgrade/', '.panel/',
-    ];
-
     public function __construct(
         private ApplicationProvisioner $provisioner,
         private DatabaseManager $databases,
@@ -101,10 +77,15 @@ class StagingManager
             // avoids with the same flag.
             $this->provisioner->provision($staging, skipInstaller: true);
 
+            // Same exclusions in this direction. `create()` writes staging's
+            // own wp-config immediately afterwards, but excluding it here
+            // means the file never exists holding production's credentials
+            // under staging's document root, even for a moment.
             $this->rsync(
                 $this->provisioner->documentRoot($production->load('systemUser')),
                 $this->provisioner->documentRoot($staging),
                 $staging,
+                $strategy->syncExcludes(),
             );
 
             $strategy->create($production, $staging);
@@ -182,6 +163,12 @@ class StagingManager
             throw $failure;
         }
 
+        // Only `full` dumps. A files-only push does not touch the database:
+        // the post-push work it does run — flushing caches and rewrite rules
+        // — writes nothing but transients and `rewrite_rules`, both of which
+        // WordPress regenerates on demand. Dumping a large production
+        // database on every files push would be real cost to protect data
+        // that restores itself.
         if ($mode === 'full') {
             try {
                 $databaseSnapshot = $this->safetyDump($production);
@@ -208,6 +195,7 @@ class StagingManager
                 $this->provisioner->documentRoot($staging),
                 $this->provisioner->documentRoot($production),
                 $production,
+                $strategy->syncExcludes(),
             );
 
             $strategy->push($production, $staging, $mode);
@@ -255,11 +243,17 @@ class StagingManager
         return $this->siteTypes->find($production->site_type)?->stagingStrategy();
     }
 
-    private function rsync(string $source, string $destination, Application $owner): void
+    /**
+     * @param  array<int, string>  $patterns
+     */
+    private function rsync(string $source, string $destination, Application $owner, array $patterns): void
     {
-        $excludes = array_merge(
-            ...array_map(fn (string $pattern) => ['--exclude', $pattern], self::FILE_EXCLUDES),
-        );
+        // The list comes from the strategy: which files carry a site's own
+        // identity is a question only the site type can answer, and when this
+        // manager tried to answer it the WordPress ones were missing.
+        $excludes = $patterns === []
+            ? []
+            : array_merge(...array_map(fn (string $pattern) => ['--exclude', $pattern], $patterns));
 
         $result = $this->serverOps->run(
             array_merge(['rsync', '-a', '--delete'], $excludes, [rtrim($source, '/').'/', rtrim($destination, '/').'/']),
