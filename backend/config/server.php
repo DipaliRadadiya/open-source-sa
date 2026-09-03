@@ -501,6 +501,19 @@ return [
     |
     */
 
+    /*
+    | Where systemd unit files live, for presence checks that must not shell
+    | out. Read with `is_file` rather than asked of `systemctl`: the panel may
+    | run as an account with no sudo grant for it, and a presence probe that
+    | needs a privilege is a probe that reports "not installed" when it is
+    | really "not permitted".
+    */
+    'systemd_unit_dirs' => [
+        '/etc/systemd/system',
+        '/lib/systemd/system',
+        '/usr/lib/systemd/system',
+    ],
+
     'web_servers' => [
         'nginx' => ['/etc/nginx'],
         'apache' => ['/etc/apache2', '/etc/httpd'],

@@ -2,7 +2,7 @@
 
 namespace App\Services\Server\Databases;
 
-use App\Services\Server\ServerOps;
+use Throwable;
 
 /**
  * Which SQL engine is on this box, and can the panel actually talk to it.
@@ -35,10 +35,7 @@ class SqlEngineLocator
      */
     private const ENGINES = ['mariadb', 'mysql'];
 
-    public function __construct(
-        private DatabaseManager $databases,
-        private ServerOps $serverOps,
-    ) {}
+    public function __construct(private DatabaseManager $databases) {}
 
     /**
      * The SQL engine installed on this box, or null when there is none.
@@ -54,7 +51,11 @@ class SqlEngineLocator
                 continue;
             }
 
-            if ($this->unitKnown($engine) || $this->configDirectoryExists($engine)) {
+            // Config directory first, and it is usually the only check that
+            // runs. It is a plain `is_dir` on a world-readable path: no sudo,
+            // no subprocess, nothing that can fail for a reason unrelated to
+            // the question being asked.
+            if ($this->configDirectoryExists($engine) || $this->unitFileExists($engine)) {
                 return $engine;
             }
         }
@@ -62,39 +63,58 @@ class SqlEngineLocator
         return null;
     }
 
-    /** Can the panel authenticate and run a statement right now? */
+    /**
+     * Can the panel authenticate and run a statement right now?
+     *
+     * Never throws. This is asked while rendering a settings page, and an
+     * exception from a probe would take out the whole screen — including the
+     * other groups, which have nothing to do with the database.
+     */
     public function reachable(string $engine): bool
     {
-        $resolved = $this->databases->engine($engine);
+        try {
+            $resolved = $this->databases->engine($engine);
 
-        return $resolved instanceof SqlEngine && $resolved->available();
+            return $resolved instanceof SqlEngine && $resolved->available();
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     /**
-     * Does systemd know a unit for this engine?
+     * Is there a systemd unit file for this engine, or for the other spelling?
      *
-     * `list-unit-files` rather than `is-active`, because a stopped engine is
-     * still an installed one and this method is only asked about existence.
+     * Read off the disk rather than asked of `systemctl`. That earlier version
+     * shipped a real bug: `systemctl cat` goes through ServerOps and therefore
+     * `sudo`, and on a panel running as `www-data` the grant did not cover it.
+     * The denial was then *logged*, the log file was not writable by that user,
+     * and the logging exception propagated out of a method whose whole job is
+     * to answer true or false. So a probe that could not answer the question
+     * prevented the one that could — the directory check below, which had the
+     * right answer all along — from ever running.
+     *
+     * Both unit names are tried. MariaDB ships `mariadb.service` and a
+     * `mysql.service` alias, and which one a box has depends on how it was
+     * installed; asking for one spelling only is a coin flip.
      */
-    private function unitKnown(string $engine): bool
+    private function unitFileExists(string $engine): bool
     {
-        $unit = null;
+        $names = $engine === 'mariadb' ? ['mariadb', 'mysql'] : ['mysql', 'mariadb'];
+        $directories = (array) config('server.systemd_unit_dirs', [
+            '/etc/systemd/system',
+            '/lib/systemd/system',
+            '/usr/lib/systemd/system',
+        ]);
 
-        foreach ((array) config('server.services', []) as $service) {
-            if (($service['key'] ?? null) === $engine) {
-                $unit = $service['unit'] ?? null;
-                break;
+        foreach ($directories as $directory) {
+            foreach ($names as $name) {
+                if (is_file(rtrim((string) $directory, '/').'/'.$name.'.service')) {
+                    return true;
+                }
             }
         }
 
-        if ($unit === null) {
-            return false;
-        }
-
-        return $this->serverOps->run(
-            ['systemctl', 'cat', $unit.'.service'],
-            ['feature' => 'database', 'engine' => $engine, 'op' => 'unit_present'],
-        )->ok;
+        return false;
     }
 
     /**

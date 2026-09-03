@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\Server\Databases\SqlEngineLocator;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -275,11 +276,61 @@ it('says the engine is absent only when nothing is installed', function () {
         return Process::result(exitCode: 1, errorOutput: 'not found');
     });
 
-    config(['server.databases.engines.mariadb.config_dir' => '/nonexistent-'.uniqid()]);
-    config(['server.databases.engines.mysql.config_dir' => '/nonexistent-'.uniqid()]);
+    // Nothing on disk at all: no config directory and no unit file. This box
+    // genuinely has MariaDB installed, so the unit directories have to be
+    // pointed somewhere empty or the check correctly finds the real one.
+    config([
+        'server.databases.engines.mariadb.config_dir' => '/nonexistent-'.uniqid(),
+        'server.databases.engines.mysql.config_dir' => '/nonexistent-'.uniqid(),
+        'server.systemd_unit_dirs' => ['/nonexistent-'.uniqid()],
+    ]);
 
     $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
         ->getJson('/api/settings')->assertOk();
 
     expect($settings->json('settings.mysql'))->toBeNull();
+});
+
+/*
+ * Presence must not depend on a privileged command.
+ *
+ * Reported from a real box running the panel as `www-data`: the config
+ * directory was readable and the answer was sitting right there, but the
+ * systemd probe ran first, `sudo -n systemctl cat` was denied, ServerOps
+ * logged the denial, the log file was not writable by that user, and the
+ * logging exception propagated out of a method that answers true or false.
+ * A probe that could not answer the question stopped the one that could.
+ */
+
+it('detects the engine without running a single privileged command', function () {
+    // Every subprocess fails, exactly as a denied sudo would.
+    Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'sudo: a password is required'));
+
+    // ...but the config directory is there, which is all presence needs.
+    expect(app(SqlEngineLocator::class)->present())
+        ->toBe('mariadb');
+
+    Process::assertNotRan(fn ($process) => in_array('systemctl', $process->command, true));
+});
+
+it('offers the group to a panel user who cannot sudo', function () {
+    Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'sudo: a password is required'));
+
+    $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/settings')->assertOk();
+
+    expect($settings->json('settings.mysql'))->not->toBeNull()
+        ->and($settings->json('settings.mysql.present'))->toBeTrue();
+});
+
+it('survives a probe that throws rather than taking the page down with it', function () {
+    // Logging a failed operation can itself fail — an unwritable log file is
+    // enough. The settings page must still render: the other groups have
+    // nothing to do with the database.
+    Process::fake(function () {
+        throw new RuntimeException('The stream or file could not be opened in append mode');
+    });
+
+    $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/settings')->assertOk();
 });
