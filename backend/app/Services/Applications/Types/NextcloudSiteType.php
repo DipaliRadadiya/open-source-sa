@@ -46,7 +46,7 @@ class NextcloudSiteType extends AbstractSiteType
     {
         return array_merge($this->commonFields(), [
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
-            $this->field('admin_email', 'email', required: true),
+            $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
         ], $this->phpFields());
     }

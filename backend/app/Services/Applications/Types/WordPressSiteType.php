@@ -54,9 +54,9 @@ class WordPressSiteType extends AbstractSiteType
     public function fields(): array
     {
         return array_merge($this->commonFields(), [
-            $this->field('site_title', 'text', required: true),
+            $this->field('site_title', 'text', required: true, extra: ['placeholder' => __('application.placeholders.site_title')]),
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
-            $this->field('admin_email', 'email', required: true),
+            $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
             // Offered pre-filled with a strong value so the simple path never
             // invites a weak password.
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
@@ -65,7 +65,8 @@ class WordPressSiteType extends AbstractSiteType
                 'options' => FieldOptions::localeOptions(FieldOptions::wordpressLocales()),
             ]),
             $this->field('timezone', 'text', advanced: true, extra: [
-                'help' => 'Timezone for the WordPress site, e.g. America/New_York or Europe/Berlin. See WordPress Settings → General → Timezone.',
+                'help' => __('application.help.timezone'),
+                'placeholder' => __('application.placeholders.timezone'),
             ]),
             $this->field('table_prefix', 'text', advanced: true, extra: ['default' => 'wp_']),
         ], $this->phpFields());

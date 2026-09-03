@@ -3,6 +3,7 @@
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Applications\SiteTypeManager;
 use Database\Seeders\PermissionSeeder;
 
 /*
@@ -49,6 +50,93 @@ it('never sends a raw key as a label', function () {
             // Laravel echoed the key back.
             expect($label)->not->toBe($key)
                 ->and($label)->not->toBe("application.fields.{$key}");
+        }
+    }
+});
+
+/*
+ * Placeholders and defaults are not interchangeable, and the frontend's list of
+ * "51 fields needing an example" was built as though they were. A placeholder
+ * is ghost text that is never submitted; a default is a real value that is. Ask
+ * for a placeholder on `table_prefix` and the box shows a grey `wp_`, the user
+ * leaves it alone, and the request carries null — a form that looks filled in
+ * and posts nothing.
+ */
+it('never gives a field both a default and a placeholder', function () {
+    $both = [];
+    $seen = 0;
+
+    foreach (app(SiteTypeManager::class)->all() as $type) {
+        foreach ($type->fields() as $field) {
+            $seen++;
+
+            // The pre-filled value hides the ghost text, so a field carrying
+            // both was written under a misapprehension about which does what.
+            if (isset($field['default'], $field['placeholder'])) {
+                $both[] = $type->name().'.'.$field['name'];
+            }
+        }
+    }
+
+    // Asserted, not assumed: a loop over an empty catalogue passes this while
+    // checking nothing, and would keep passing if fields() ever returned [].
+    expect($seen)->toBeGreaterThan(50)
+        ->and($both)->toBe([], 'both a default and a placeholder: '.implode(', ', $both));
+});
+
+it('gives every free-text field an example or a value to start from', function () {
+    $missing = [];
+
+    foreach (app(SiteTypeManager::class)->all() as $type) {
+        foreach ($type->fields() as $field) {
+            // Only the fields someone types prose into. A password is
+            // generated, a select already lists its answers, and a number with
+            // min/max says its own shape — an example is noise in all three.
+            if (! in_array($field['type'], ['text', 'email', 'url', 'textarea'], true)) {
+                continue;
+            }
+
+            // Handled by the form itself rather than by the field schema: the
+            // frontend owns the name and domain boxes and has its own copy for
+            // them, and a git field's answer comes from the connected account.
+            if (in_array($field['name'], ['name', 'domain', 'repository_url'], true)) {
+                continue;
+            }
+
+            // `help` counts. A sentence under the box describing the value is a
+            // better example than ghost text, and demanding both would push
+            // duplicate copy onto the fields that already read well.
+            if (filled($field['default'] ?? null)
+                || filled($field['placeholder'] ?? null)
+                || filled($field['help'] ?? null)) {
+                continue;
+            }
+
+            $missing[] = $type->name().'.'.$field['name'];
+        }
+    }
+
+    expect($missing)->toBe([], 'fields with nothing to go on: '.implode(', ', $missing));
+});
+
+it('has a translation for every placeholder and help string a field references', function () {
+    // These go out through the API in the caller's locale, so an untranslated
+    // one ships the raw key — `application.placeholders.site_title` — into a
+    // form field, which is worse than no example at all.
+    foreach (config('app.available_locales') as $locale) {
+        app()->setLocale($locale);
+
+        foreach (app(SiteTypeManager::class)->all() as $type) {
+            foreach ($type->fields() as $field) {
+                foreach (['placeholder', 'help'] as $key) {
+                    if (! filled($field[$key] ?? null)) {
+                        continue;
+                    }
+
+                    expect($field[$key])->not->toStartWith('application.',
+                        "{$type->name()}.{$field['name']} {$key} is an untranslated key in [{$locale}]");
+                }
+            }
         }
     }
 });

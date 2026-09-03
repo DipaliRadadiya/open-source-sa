@@ -45,23 +45,26 @@ class MauticSiteType extends AbstractSiteType
     public function fields(): array
     {
         return array_merge($this->commonFields(), [
-            $this->field('site_title', 'text', required: true),
+            $this->field('site_title', 'text', required: true, extra: ['placeholder' => __('application.placeholders.site_title')]),
             $this->field('admin_first_name', 'text', required: true, extra: ['default' => 'Admin']),
             $this->field('admin_last_name', 'text', required: true, extra: ['default' => 'User']),
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
-            $this->field('admin_email', 'email', required: true),
+            $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             // Mailer / email delivery configuration
             $this->field('mailer_name', 'text', required: true,
-                extra: ['autocomplete' => 'name', 'autocapitalize' => 'words']),
-            $this->field('mailer_email', 'email', required: false),
+                extra: ['autocomplete' => 'name', 'autocapitalize' => 'words',
+                    'placeholder' => __('application.placeholders.mailer_name')]),
+            $this->field('mailer_email', 'email', required: false,
+                extra: ['placeholder' => __('application.placeholders.mailer_email')]),
             $this->field('mailer_host', 'text', required: true,
                 extra: ['autocomplete' => 'off', 'autocapitalize' => 'none', 'spellcheck' => 'false',
                     'placeholder' => 'e.g. smtp.example.com']),
             $this->field('mailer_port', 'number', required: true,
                 extra: ['min' => 1, 'max' => 65535, 'placeholder' => '587']),
             $this->field('mailer_username', 'text', required: true,
-                extra: ['autocomplete' => 'username', 'autocapitalize' => 'none', 'spellcheck' => 'false']),
+                extra: ['autocomplete' => 'username', 'autocapitalize' => 'none', 'spellcheck' => 'false',
+                    'placeholder' => __('application.placeholders.mailer_username')]),
             $this->field('mailer_password', 'password', required: true,
                 extra: ['autocomplete' => 'current-password']),
         ], $this->phpFields());

@@ -93,7 +93,40 @@ return [
         'mailer_password' => 'SMTP-Passwort',
     ],
 
+    /*
+    | Example values, shown as ghost text in an empty field.
+    |
+    | A placeholder is NOT a default: it is never submitted. Anything with a
+    | correct value the panel can pick lives in the field's `default` instead,
+    | which the form pre-fills and the request carries — a table prefix is a
+    | default, an email address is a placeholder. Getting that backwards ships
+    | a form that looks filled in and posts null.
+    |
+    | Keyed by field name, not by site type, so one entry serves every type
+    | declaring that field — the same arrangement as `fields` and `help`.
+    | Localized because these are read by a person: an example is only an
+    | example if it is in a language they read.
+    */
+    'placeholders' => [
+        'site_title' => 'Meine Website',
+        'site_name' => 'Meine Website',
+        'shop_name' => 'Mein Shop',
+        'company_name' => 'Meine Firma',
+        'short_name' => 'meineseite',
+        'mailer_name' => 'Meine Website',
+        'admin_email' => 'du@beispiel.de',
+        'company_email' => 'du@beispiel.de',
+        'mailer_email' => 'no-reply@beispiel.de',
+        'mailer_username' => 'no-reply@beispiel.de',
+        'timezone' => 'Europe/Berlin',
+        'repository_url' => 'https://github.com/du/repo.git',
+        'build_command' => 'npm ci && npm run build',
+        'start_command' => 'node server.js',
+    ],
+
     'help' => [
+        'timezone' => 'Zeitzone der Website, z. B. America/New_York oder Europe/Berlin. Siehe Einstellungen → Allgemein → Zeitzone.',
+        'table_prefix_optional' => 'Optional. Leer lassen für kein Präfix — Akaunting basiert auf Laravel und hat kein Standardpräfix.',
         'start_command' => 'Die Einstiegsdatei, z. B. „node server.js“. Nicht „npm start“ – ein Paketmanager forkt den eigentlichen Prozess, sodass Shutdown-Signale ihn nie erreichen.',
         'app_port' => 'Leer gelassen wählt das Panel einen freien Port.',
         'rendering_type' => 'Server-Rendering führt deine App aus und leitet an sie weiter. Die anderen beiden bauen Dateien, die der Webserver direkt ausliefert – schneller, und nichts muss laufen.',

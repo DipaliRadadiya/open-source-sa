@@ -45,10 +45,10 @@ class MoodleSiteType extends AbstractSiteType
     public function fields(): array
     {
         return array_merge($this->commonFields(), [
-            $this->field('site_name', 'text', required: true),
-            $this->field('short_name', 'text', required: true),
+            $this->field('site_name', 'text', required: true, extra: ['placeholder' => __('application.placeholders.site_name')]),
+            $this->field('short_name', 'text', required: true, extra: ['placeholder' => __('application.placeholders.short_name')]),
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
-            $this->field('admin_email', 'email', required: true),
+            $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             $this->field('table_prefix', 'text', advanced: true, extra: ['default' => 'mdl_']),
         ], $this->phpFields());

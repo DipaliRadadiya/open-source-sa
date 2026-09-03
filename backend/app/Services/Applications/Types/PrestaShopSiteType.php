@@ -49,10 +49,10 @@ class PrestaShopSiteType extends AbstractSiteType
     public function fields(): array
     {
         return array_merge($this->commonFields(), [
-            $this->field('shop_name', 'text', required: true),
+            $this->field('shop_name', 'text', required: true, extra: ['placeholder' => __('application.placeholders.shop_name')]),
             $this->field('admin_first_name', 'text', required: true, extra: ['default' => 'Admin']),
             $this->field('admin_last_name', 'text', required: true, extra: ['default' => 'User']),
-            $this->field('admin_email', 'email', required: true),
+            $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
             $this->field('country', 'select', advanced: true, extra: [
                 'default' => 'gb',

@@ -93,7 +93,40 @@ return [
         'mailer_password' => 'Contraseña SMTP',
     ],
 
+    /*
+    | Example values, shown as ghost text in an empty field.
+    |
+    | A placeholder is NOT a default: it is never submitted. Anything with a
+    | correct value the panel can pick lives in the field's `default` instead,
+    | which the form pre-fills and the request carries — a table prefix is a
+    | default, an email address is a placeholder. Getting that backwards ships
+    | a form that looks filled in and posts null.
+    |
+    | Keyed by field name, not by site type, so one entry serves every type
+    | declaring that field — the same arrangement as `fields` and `help`.
+    | Localized because these are read by a person: an example is only an
+    | example if it is in a language they read.
+    */
+    'placeholders' => [
+        'site_title' => 'Mi sitio',
+        'site_name' => 'Mi sitio',
+        'shop_name' => 'Mi tienda',
+        'company_name' => 'Mi empresa',
+        'short_name' => 'misitio',
+        'mailer_name' => 'Mi sitio',
+        'admin_email' => 'tu@ejemplo.com',
+        'company_email' => 'tu@ejemplo.com',
+        'mailer_email' => 'no-reply@ejemplo.com',
+        'mailer_username' => 'no-reply@ejemplo.com',
+        'timezone' => 'Europe/Madrid',
+        'repository_url' => 'https://github.com/tu/repo.git',
+        'build_command' => 'npm ci && npm run build',
+        'start_command' => 'node server.js',
+    ],
+
     'help' => [
+        'timezone' => 'Zona horaria del sitio, p. ej. America/New_York o Europe/Madrid. Ver Ajustes → General → Zona horaria.',
+        'table_prefix_optional' => 'Opcional. Déjalo vacío para no usar prefijo: Akaunting está basado en Laravel y no tiene uno estándar.',
         'start_command' => 'El archivo de entrada, por ejemplo \"node server.js\". No \"npm start\": un gestor de paquetes bifurca el proceso real, así que las señales de apagado nunca le llegan.',
         'app_port' => 'Si lo dejas vacío, el panel elige uno libre.',
         'rendering_type' => 'El renderizado en servidor ejecuta tu app y hace de proxy hacia ella. Los otros dos compilan a archivos que el servidor web entrega directamente: más rápido y sin nada que mantener en ejecución.',

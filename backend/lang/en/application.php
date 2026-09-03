@@ -98,7 +98,40 @@ return [
         'mailer_password' => 'SMTP password',
     ],
 
+    /*
+    | Example values, shown as ghost text in an empty field.
+    |
+    | A placeholder is NOT a default: it is never submitted. Anything with a
+    | correct value the panel can pick lives in the field's `default` instead,
+    | which the form pre-fills and the request carries — a table prefix is a
+    | default, an email address is a placeholder. Getting that backwards ships
+    | a form that looks filled in and posts null.
+    |
+    | Keyed by field name, not by site type, so one entry serves every type
+    | declaring that field — the same arrangement as `fields` and `help`.
+    | Localized because these are read by a person: an example is only an
+    | example if it is in a language they read.
+    */
+    'placeholders' => [
+        'site_title' => 'My Site',
+        'site_name' => 'My Site',
+        'shop_name' => 'My Shop',
+        'company_name' => 'My Company',
+        'short_name' => 'mysite',
+        'mailer_name' => 'My Site',
+        'admin_email' => 'you@example.com',
+        'company_email' => 'you@example.com',
+        'mailer_email' => 'no-reply@example.com',
+        'mailer_username' => 'no-reply@example.com',
+        'timezone' => 'Europe/Berlin',
+        'repository_url' => 'https://github.com/you/repo.git',
+        'build_command' => 'npm ci && npm run build',
+        'start_command' => 'node server.js',
+    ],
+
     'help' => [
+        'timezone' => 'Timezone for the site, e.g. America/New_York or Europe/Berlin. See Settings → General → Timezone.',
+        'table_prefix_optional' => 'Optional. Leave empty for no prefix — Akaunting is Laravel-based and has no standard one.',
         'start_command' => 'The entry file, for example \"node server.js\". Not \"npm start\" — a package manager forks the real process, so shutdown signals never reach it.',
         'app_port' => 'Left empty, the panel picks a free one.',
         'rendering_type' => 'Server-side rendering runs your app and proxies to it. The other two build to files the web server hands out directly — faster, and nothing to keep running.',

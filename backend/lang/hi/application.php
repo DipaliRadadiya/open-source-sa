@@ -93,7 +93,40 @@ return [
         'mailer_password' => 'SMTP पासवर्ड',
     ],
 
+    /*
+    | Example values, shown as ghost text in an empty field.
+    |
+    | A placeholder is NOT a default: it is never submitted. Anything with a
+    | correct value the panel can pick lives in the field's `default` instead,
+    | which the form pre-fills and the request carries — a table prefix is a
+    | default, an email address is a placeholder. Getting that backwards ships
+    | a form that looks filled in and posts null.
+    |
+    | Keyed by field name, not by site type, so one entry serves every type
+    | declaring that field — the same arrangement as `fields` and `help`.
+    | Localized because these are read by a person: an example is only an
+    | example if it is in a language they read.
+    */
+    'placeholders' => [
+        'site_title' => 'मेरी साइट',
+        'site_name' => 'मेरी साइट',
+        'shop_name' => 'मेरी दुकान',
+        'company_name' => 'मेरी कंपनी',
+        'short_name' => 'mysite',
+        'mailer_name' => 'मेरी साइट',
+        'admin_email' => 'you@example.com',
+        'company_email' => 'you@example.com',
+        'mailer_email' => 'no-reply@example.com',
+        'mailer_username' => 'no-reply@example.com',
+        'timezone' => 'Asia/Kolkata',
+        'repository_url' => 'https://github.com/you/repo.git',
+        'build_command' => 'npm ci && npm run build',
+        'start_command' => 'node server.js',
+    ],
+
     'help' => [
+        'timezone' => 'साइट का टाइम ज़ोन, जैसे America/New_York या Asia/Kolkata. सेटिंग्स → सामान्य → टाइम ज़ोन देखें।',
+        'table_prefix_optional' => 'वैकल्पिक। कोई उपसर्ग न चाहने पर खाली छोड़ें — Akaunting Laravel आधारित है और इसका कोई मानक उपसर्ग नहीं है।',
         'start_command' => 'एंट्री फ़ाइल, जैसे \"node server.js\"। \"npm start\" नहीं — पैकेज मैनेजर असली प्रक्रिया को फ़ोर्क करता है, इसलिए शटडाउन सिग्नल उस तक नहीं पहुँचते।',
         'app_port' => 'खाली छोड़ने पर पैनल एक खाली पोर्ट चुन लेता है।',
         'rendering_type' => 'सर्वर-साइड रेंडरिंग आपका ऐप चलाता है और उसे प्रॉक्सी करता है। अन्य दो फ़ाइलों में बिल्ड होते हैं जिन्हें वेब सर्वर सीधे देता है — तेज़, और चलाने के लिए कुछ नहीं।',

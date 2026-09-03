@@ -93,7 +93,40 @@ return [
         'mailer_password' => 'Mot de passe SMTP',
     ],
 
+    /*
+    | Example values, shown as ghost text in an empty field.
+    |
+    | A placeholder is NOT a default: it is never submitted. Anything with a
+    | correct value the panel can pick lives in the field's `default` instead,
+    | which the form pre-fills and the request carries — a table prefix is a
+    | default, an email address is a placeholder. Getting that backwards ships
+    | a form that looks filled in and posts null.
+    |
+    | Keyed by field name, not by site type, so one entry serves every type
+    | declaring that field — the same arrangement as `fields` and `help`.
+    | Localized because these are read by a person: an example is only an
+    | example if it is in a language they read.
+    */
+    'placeholders' => [
+        'site_title' => 'Mon site',
+        'site_name' => 'Mon site',
+        'shop_name' => 'Ma boutique',
+        'company_name' => 'Mon entreprise',
+        'short_name' => 'monsite',
+        'mailer_name' => 'Mon site',
+        'admin_email' => 'vous@exemple.fr',
+        'company_email' => 'vous@exemple.fr',
+        'mailer_email' => 'no-reply@exemple.fr',
+        'mailer_username' => 'no-reply@exemple.fr',
+        'timezone' => 'Europe/Paris',
+        'repository_url' => 'https://github.com/vous/repo.git',
+        'build_command' => 'npm ci && npm run build',
+        'start_command' => 'node server.js',
+    ],
+
     'help' => [
+        'timezone' => 'Fuseau horaire du site, par ex. America/New_York ou Europe/Paris. Voir Réglages → Général → Fuseau horaire.',
+        'table_prefix_optional' => 'Facultatif. Laissez vide pour aucun préfixe — Akaunting repose sur Laravel et n\'en a pas de standard.',
         'start_command' => 'Le fichier d\'entrée, par exemple « node server.js ». Pas « npm start » : un gestionnaire de paquets fork le vrai processus, donc les signaux d\'arrêt ne l\'atteignent jamais.',
         'app_port' => 'Laissé vide, le panneau en choisit un libre.',
         'rendering_type' => 'Le rendu côté serveur exécute votre app et lui sert de proxy. Les deux autres compilent des fichiers que le serveur web sert directement — plus rapide, et rien à maintenir en marche.',

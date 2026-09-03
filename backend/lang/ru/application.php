@@ -93,7 +93,40 @@ return [
         'mailer_password' => 'Пароль SMTP',
     ],
 
+    /*
+    | Example values, shown as ghost text in an empty field.
+    |
+    | A placeholder is NOT a default: it is never submitted. Anything with a
+    | correct value the panel can pick lives in the field's `default` instead,
+    | which the form pre-fills and the request carries — a table prefix is a
+    | default, an email address is a placeholder. Getting that backwards ships
+    | a form that looks filled in and posts null.
+    |
+    | Keyed by field name, not by site type, so one entry serves every type
+    | declaring that field — the same arrangement as `fields` and `help`.
+    | Localized because these are read by a person: an example is only an
+    | example if it is in a language they read.
+    */
+    'placeholders' => [
+        'site_title' => 'Мой сайт',
+        'site_name' => 'Мой сайт',
+        'shop_name' => 'Мой магазин',
+        'company_name' => 'Моя компания',
+        'short_name' => 'mysite',
+        'mailer_name' => 'Мой сайт',
+        'admin_email' => 'you@example.com',
+        'company_email' => 'you@example.com',
+        'mailer_email' => 'no-reply@example.com',
+        'mailer_username' => 'no-reply@example.com',
+        'timezone' => 'Europe/Moscow',
+        'repository_url' => 'https://github.com/you/repo.git',
+        'build_command' => 'npm ci && npm run build',
+        'start_command' => 'node server.js',
+    ],
+
     'help' => [
+        'timezone' => 'Часовой пояс сайта, например America/New_York или Europe/Moscow. См. Настройки → Общие → Часовой пояс.',
+        'table_prefix_optional' => 'Необязательно. Оставьте пустым, чтобы не использовать префикс — Akaunting основан на Laravel и стандартного префикса не имеет.',
         'start_command' => 'Входной файл, например «node server.js». Не «npm start»: менеджер пакетов порождает реальный процесс отдельно, поэтому сигналы завершения до него не доходят.',
         'app_port' => 'Если оставить пустым, панель выберет свободный порт.',
         'rendering_type' => 'Серверный рендеринг запускает приложение и проксирует к нему. Два других собираются в файлы, которые веб-сервер отдаёт напрямую — быстрее, и ничего не нужно держать запущенным.',

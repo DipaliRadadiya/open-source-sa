@@ -93,7 +93,40 @@ return [
         'mailer_password' => 'SMTP パスワード',
     ],
 
+    /*
+    | Example values, shown as ghost text in an empty field.
+    |
+    | A placeholder is NOT a default: it is never submitted. Anything with a
+    | correct value the panel can pick lives in the field's `default` instead,
+    | which the form pre-fills and the request carries — a table prefix is a
+    | default, an email address is a placeholder. Getting that backwards ships
+    | a form that looks filled in and posts null.
+    |
+    | Keyed by field name, not by site type, so one entry serves every type
+    | declaring that field — the same arrangement as `fields` and `help`.
+    | Localized because these are read by a person: an example is only an
+    | example if it is in a language they read.
+    */
+    'placeholders' => [
+        'site_title' => 'マイサイト',
+        'site_name' => 'マイサイト',
+        'shop_name' => 'マイショップ',
+        'company_name' => 'マイカンパニー',
+        'short_name' => 'mysite',
+        'mailer_name' => 'マイサイト',
+        'admin_email' => 'you@example.com',
+        'company_email' => 'you@example.com',
+        'mailer_email' => 'no-reply@example.com',
+        'mailer_username' => 'no-reply@example.com',
+        'timezone' => 'Asia/Tokyo',
+        'repository_url' => 'https://github.com/you/repo.git',
+        'build_command' => 'npm ci && npm run build',
+        'start_command' => 'node server.js',
+    ],
+
     'help' => [
+        'timezone' => 'サイトのタイムゾーン。例: America/New_York、Asia/Tokyo。設定 → 一般 → タイムゾーンを参照してください。',
+        'table_prefix_optional' => '任意。空欄にすると接頭辞なしになります — Akaunting は Laravel ベースで、標準の接頭辞はありません。',
         'start_command' => 'エントリファイル（例:「node server.js」）。「npm start」は不可 — パッケージマネージャーが実際のプロセスをフォークするため、終了シグナルが届きません。',
         'app_port' => '空欄にすると、パネルが空きポートを選びます。',
         'rendering_type' => 'サーバーサイドレンダリングはアプリを実行してプロキシします。他の 2 つは Web サーバーが直接配信するファイルにビルドします — 高速で、常駐させるものがありません。',
