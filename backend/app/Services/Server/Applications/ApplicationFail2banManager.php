@@ -82,16 +82,25 @@ class ApplicationFail2banManager
     }
 
     /**
-     * The access log path for this site's web server. Falls back to the
-     * slug-named log so an unprovisioned application still has something
-     * to point at — enable() writes the file before the log exists, and
-     * fail2ban reads the path lazily anyway.
+     * The access log path for this site's web server. Falls back to the site's
+     * own log directory so an unprovisioned application still has something to
+     * point at — enable() writes the file before the log exists, and fail2ban
+     * reads the path lazily anyway.
+     *
+     * The fallback used to be `/var/log/nginx/{slug}.access.log`, which is not
+     * where any of the three drivers has put a log since they moved into the
+     * site's own directory. It was unreachable — every driver returns an
+     * `access` key — but "unreachable" was luck rather than construction, and
+     * this is the same shape as the jail body that shipped with nginx's path
+     * baked into it and watched a file that does not exist on OpenLiteSpeed.
+     * A default that names one web server is a bug waiting for a fourth driver
+     * that forgets the key.
      */
     public function getLogPath(Application $application): string
     {
         $paths = $this->webServers->driver()->logPaths($application);
 
-        return $paths['access'] ?? '/var/log/nginx/'.$this->slug($application).'.access.log';
+        return $paths['access'] ?? $application->logsPath().'/access.log';
     }
 
     /**

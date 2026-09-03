@@ -341,6 +341,44 @@ describe('the checks added for "routes error after setup"', function () {
         expect(app(Doctor::class)->run()['checks'][0]['status'])->toBe('fail');
     });
 
+    it('tests the OpenLiteSpeed configuration rather than asking whether it is running', function () {
+        // This asked `lswsctrl status` — whether the service is up, which is
+        // not what the check reports. A box with a healthy process and a
+        // broken vhost was told "config valid", on the one stack whose config
+        // test needs the panel's help to work at all.
+        $commands = [];
+
+        Process::fake(function ($process) use (&$commands) {
+            $commands[] = $process->command;
+            $command = implode(' ', (array) $process->command);
+
+            // The grant probe has to answer separately, or the check reports
+            // "not permitted" — which is the right answer to a different
+            // question, and would have hidden whether the config test ran.
+            if (str_contains($command, '-n -l')) {
+                return Process::result(output: 'may run');
+            }
+
+            return Process::result(output: "[ERROR] [config:vhost:shop] invalid directive\n", exitCode: 2);
+        });
+
+        config()->set('server.web_servers', ['openlitespeed' => ['/etc']]);
+        config()->set('server.doctor.checks', [WebServerCheck::class]);
+
+        $report = app(Doctor::class)->run();
+
+        $flat = collect($commands)->map(fn ($c) => implode(' ', (array) $c));
+
+        expect($flat->filter(fn ($c) => str_contains($c, 'lswsctrl status')))->toBeEmpty()
+            ->and($flat->filter(fn ($c) => str_contains($c, 'openlitespeed -t')))->not->toBeEmpty()
+            // And prepared, or the test it just ran could not have failed.
+            ->and($flat->filter(fn ($c) => str_contains($c, 'mkdir -p /tmp/lshttpd')))->not->toBeEmpty();
+
+        // The reason is on stdout for this web server, not stderr.
+        expect($report['checks'][0]['status'])->toBe('fail')
+            ->and($report['checks'][0]['detail'])->toContain('invalid directive');
+    });
+
     it('warns rather than blaming the config when it is not allowed to test it', function () {
         // The state of a panel deployed without install.sh: sudo refuses, so
         // `nginx -t` never runs and exits non-zero anyway. This used to report

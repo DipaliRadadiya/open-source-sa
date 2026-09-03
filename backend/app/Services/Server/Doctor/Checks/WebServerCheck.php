@@ -4,6 +4,7 @@ namespace App\Services\Server\Doctor\Checks;
 
 use App\Contracts\DoctorCheck;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\WebServers\OlsConfigCheck;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
@@ -33,7 +34,10 @@ use Illuminate\Support\Str;
  */
 class WebServerCheck implements DoctorCheck
 {
-    public function __construct(private ServerCapabilities $capabilities) {}
+    public function __construct(
+        private ServerCapabilities $capabilities,
+        private OlsConfigCheck $olsConfig,
+    ) {}
 
     public function key(): string
     {
@@ -81,9 +85,24 @@ class WebServerCheck implements DoctorCheck
             ];
         }
 
+        // OpenLiteSpeed used to be asked `lswsctrl status` here — whether the
+        // service is running, which is not what this check is for. A box with
+        // a healthy process and a broken vhost got "config valid", on the one
+        // stack whose config test needs the panel's help to work at all. Same
+        // shape as PhpIsolationCheck's bare pass: a check answering "fine"
+        // about a thing it never looked at.
+        //
+        // The real test goes through OlsConfigCheck rather than being spelled
+        // out here, because on this stack the command cannot fail unless a
+        // directory is created first — and a second copy of that knowledge is
+        // how the shared-config guard came to be wired to a check that could
+        // not fail.
+        if ($detected === 'openlitespeed') {
+            return $this->openLiteSpeed();
+        }
+
         [$binary, $args] = match ($detected) {
             'apache' => ['apachectl', ['configtest']],
-            'openlitespeed' => ['lswsctrl', ['status']],
             default => ['nginx', ['-t']],
         };
 
@@ -118,6 +137,50 @@ class WebServerCheck implements DoctorCheck
             'status' => 'pass',
             'detail' => $detected.', config valid',
             'fix' => null,
+        ];
+    }
+
+    /**
+     * OpenLiteSpeed's config test, with the preparation it cannot do itself.
+     *
+     * Reads the same three answers as the branch above — permitted or not,
+     * valid or not — and keeps the same order, so a missing sudoers grant is
+     * still reported as a gap in this check rather than as a verdict on the
+     * configuration.
+     *
+     * @return array<string, mixed>
+     */
+    private function openLiteSpeed(): array
+    {
+        $binary = (string) (config('server.web_server_drivers.openlitespeed.test_command')[0] ?? '');
+        $test = $binary.' -t';
+
+        $result = $this->olsConfig->run(['op' => 'doctor_config_test']);
+
+        if (! $result->failed()) {
+            return [
+                'status' => 'pass',
+                'detail' => 'openlitespeed, config valid',
+                'fix' => null,
+            ];
+        }
+
+        if (! $this->permitted($binary)) {
+            return [
+                'status' => 'warn',
+                'detail' => 'not permitted to run '.$test.', so the configuration was not tested',
+                'fix' => 'doctor.fixes.web_server_untestable',
+            ];
+        }
+
+        // OpenLiteSpeed prints the contents of its test log on stdout, so the
+        // reason is there rather than on stderr — reading stderr first the way
+        // the other web servers need would report a failure with nothing to
+        // back it up.
+        return [
+            'status' => 'fail',
+            'detail' => trim('openlitespeed config does not pass '.$test.': '.$this->firstLine($result->output() ?: $result->errorOutput())),
+            'fix' => 'doctor.fixes.web_server_config',
         ];
     }
 
