@@ -141,6 +141,54 @@ export const redisSettingsSchema = z.object({
 
 // Groups are detect-gated server-side: an absent group means "not installed on
 // this server", which is a different thing from "installed with no values".
+/**
+ * MySQL / MariaDB engine tuning. `present` and `reachable` are separate on
+ * purpose: an engine that is installed but whose stored credentials are
+ * rejected is a different state from one that is not installed, and the card
+ * says which. Readings the panel could not take are null rather than 0.
+ */
+const mysqlSettingsSchema = z.object({
+  engine: z.string().nullable().optional(),
+  engine_label: z.string().nullable().optional(),
+  present: z.boolean().optional(),
+  reachable: z.boolean().optional(),
+  max_connections: z.number().nullable().optional(),
+  configured_max_connections: z.number().nullable().optional(),
+  capped: z.boolean().optional(),
+  open_files_limit: z.number().nullable().optional(),
+  connections: z.number().nullable().optional(),
+  floor: z.number().optional(),
+  recommended_max: z.number().nullable().optional(),
+  memory_mb: z.number().nullable().optional(),
+});
+
+const mysqlBinlogSettingsSchema = z.object({
+  engine: z.string().nullable().optional(),
+  engine_label: z.string().nullable().optional(),
+  present: z.boolean().optional(),
+  reachable: z.boolean().optional(),
+  enabled: z.boolean().optional(),
+  format: z.string().nullable().optional(),
+  expire_seconds: z.number().nullable().optional(),
+  max_binlog_size: z.number().nullable().optional(),
+  log_count: z.number().nullable().optional(),
+  log_bytes: z.number().nullable().optional(),
+  oldest_log: z.string().nullable().optional(),
+  // PHP hands back `[]` for an empty map, so both shapes are legal.
+  configured: z.union([z.record(z.string(), z.number()), z.array(z.never())]).optional(),
+});
+
+/**
+ * Every group the API can return must be listed here.
+ *
+ * Zod strips unknown keys, so a group the backend sends and this object does
+ * not name is deleted before any page sees it — silently, with no error and a
+ * 200 response. That is exactly how the database groups disappeared: the two
+ * backend groups shipped, the API returned them correctly, and the Database
+ * tab reported "no MySQL or MariaDB server is running on this machine" because
+ * the parse had already removed them. See tests/settings-schema.test.mjs,
+ * which fails if a backend group is missing from this list.
+ */
 export const settingsSchema = z.object({
   general: generalSettingsSchema.optional(),
   swap: swapSettingsSchema.optional(),
@@ -148,6 +196,8 @@ export const settingsSchema = z.object({
   updates: updateSettingsSchema.optional(),
   reboot_schedule: rebootScheduleSchema.optional(),
   redis: redisSettingsSchema.optional(),
+  mysql: mysqlSettingsSchema.optional(),
+  mysql_binlog: mysqlBinlogSettingsSchema.optional(),
 });
 
 /** Who last touched each group, keyed by group name. */
