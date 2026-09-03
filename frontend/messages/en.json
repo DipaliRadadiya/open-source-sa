@@ -399,7 +399,8 @@
       "confirm": "Login as user",
       "starting": "Starting…",
       "cancel": "Cancel"
-    }
+    },
+    "loadFailed": "Users could not be loaded. Try again in a moment."
   },
   "roles": {
     "sync": {
@@ -613,7 +614,8 @@
       "empty": "You haven't done anything yet.",
       "emptyFiltered": "Nothing matches those filters.",
       "searchPlaceholder": "Search what you did…"
-    }
+    },
+    "loadFailed": "The activity log could not be loaded. Try again in a moment."
   },
   "pagination": {
     "perPage": "Per page",

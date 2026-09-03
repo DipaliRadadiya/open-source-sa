@@ -1,15 +1,16 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { activityResponseSchema } from "@/lib/schemas/activity";
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
-const EMPTY = {
-  activity_log: [],
-  meta: { current_page: 1, per_page: 10, total: 0, last_page: 1 },
-};
+const EMPTY_META = { current_page: 1, per_page: 10, total: 0, last_page: 1 };
 
 /**
- * Admin-wide activity log (GET /admin/activity-log). Maps `type`/`action` to
- * the backend's `filter[...]` params. Returns a safe empty result on failure.
+ * One page of the server-wide activity log.
+ *
+ * Same correction as getUsers: this returned an empty list on every failure, so
+ * an unreachable API rendered as "nothing has happened here". On an audit log
+ * that reading is worse than useless — the screen exists to answer "what was
+ * done to this server", and silence is the one answer it must never invent.
  */
 export async function getActivityLog(searchParams = {}) {
   const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
@@ -17,7 +18,7 @@ export async function getActivityLog(searchParams = {}) {
     : 10;
   const page = Math.max(1, Number(searchParams.page) || 1);
 
-  const res = await serverFetch("/admin/activity-log", {
+  const result = await read("/admin/activity-log", activityResponseSchema, {
     searchParams: {
       search: searchParams.search?.trim() || undefined,
       "filter[type]": searchParams.type || undefined,
@@ -27,13 +28,11 @@ export async function getActivityLog(searchParams = {}) {
     },
   });
 
-  if (!res.ok) return EMPTY;
-
-  try {
-    const json = await res.json();
-    const parsed = activityResponseSchema.safeParse(json);
-    return parsed.success ? parsed.data : EMPTY;
-  } catch {
-    return EMPTY;
-  }
+  return {
+    activity_log: result.data?.activity_log ?? [],
+    meta: result.data?.meta ?? EMPTY_META,
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure,
+  };
 }

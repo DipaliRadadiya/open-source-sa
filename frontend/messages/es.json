@@ -354,7 +354,8 @@
       "empty": "Todavía no has hecho nada.",
       "emptyFiltered": "Nada coincide con esos filtros.",
       "searchPlaceholder": "Busca lo que hiciste…"
-    }
+    },
+    "loadFailed": "No se pudo cargar el registro de actividad. Vuelve a intentarlo en un momento."
   },
   "pagination": {
     "perPage": "Por página",
@@ -471,7 +472,8 @@
       "confirm": "Iniciar sesión como usuario",
       "starting": "Iniciando…",
       "cancel": "Cancelar"
-    }
+    },
+    "loadFailed": "No se pudieron cargar los usuarios. Vuelve a intentarlo en un momento."
   },
   "roles": {
     "sync": {
