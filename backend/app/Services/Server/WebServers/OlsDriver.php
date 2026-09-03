@@ -6,6 +6,7 @@ use App\Contracts\PhpStack;
 use App\Enums\DomainType;
 use App\Models\Application;
 use App\Services\Server\Applications\ApplicationLogDirectory;
+use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
@@ -41,10 +42,11 @@ class OlsDriver extends AbstractWebServerDriver
         ManagedFile $files,
         CertificateFiles $certificateFiles,
         ApplicationLogDirectory $logDirectory,
+        CertbotClient $certbot,
         private OlsSharedConfig $shared,
         private PhpStack $stack,
     ) {
-        parent::__construct($serverOps, $files, $certificateFiles, $logDirectory);
+        parent::__construct($serverOps, $files, $certificateFiles, $logDirectory, $certbot);
     }
 
     /**
@@ -129,6 +131,14 @@ class OlsDriver extends AbstractWebServerDriver
         // class's guarantee that `.panel/` exists before a config naming it
         // goes live.
         $this->ensurePanelDirectory($application);
+
+        // And it matters more here than anywhere else. OpenLiteSpeed resolves
+        // a context's `location` when the configuration is loaded, not per
+        // request — so the ACME context every template declares points at a
+        // directory that, on a server where no certificate has ever been
+        // issued, does not exist yet. install.sh already learned this for the
+        // panel's own vhost; sites had been left out.
+        $this->ensureChallengeRoot();
 
         // The log directory the vhost names. OpenLiteSpeed does not create it —
         // it silently falls back to the server-wide log, so a site's own errors

@@ -8,6 +8,7 @@ use App\Enums\DomainType;
 use App\Enums\WafMode;
 use App\Models\Application;
 use App\Services\Server\Applications\ApplicationLogDirectory;
+use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\PoolManager;
@@ -22,6 +23,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         protected ManagedFile $files,
         protected CertificateFiles $certificateFiles,
         protected ApplicationLogDirectory $logDirectory,
+        protected CertbotClient $certbot,
     ) {}
 
     /**
@@ -40,6 +42,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         }
 
         $this->ensurePanelDirectory($application);
+        $this->ensureChallengeRoot();
 
         // Before the config is written, for the same reason the panel
         // directory is: the vhost names `logs/access.log`, and a web server
@@ -79,6 +82,34 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         }
 
         return $this->certificateFiles->ensureFallback();
+    }
+
+    /**
+     * The shared ACME webroot, before a vhost that names it goes on disk.
+     *
+     * Every template declares a context/location for
+     * `{challenge_root}/.well-known/acme-challenge`, and until now the only
+     * thing that created that directory was `IssueCertificate` — so on a
+     * server where no certificate had ever been requested, every site's config
+     * pointed at a directory that was not there.
+     *
+     * nginx and Apache resolve a location per request, so the cost was a
+     * missing directory nobody noticed until issuance failed. **OpenLiteSpeed
+     * resolves a context's location when the configuration is loaded**, which
+     * is a different class of problem: install.sh hit exactly this and its
+     * `ensure_ols_context_paths()` says so — *"neither does the acme-challenge
+     * directory certbot has not yet had a reason to create"* — creating the
+     * panel's own before writing the panel's vhost. Sites never got the same
+     * treatment.
+     *
+     * Cheap and idempotent (`install -d`), and deliberately unchecked: this
+     * must not be able to stop a site being written. A challenge root that
+     * cannot be created is certbot's problem to report at issuance, where the
+     * user is asking for a certificate, not here.
+     */
+    protected function ensureChallengeRoot(): void
+    {
+        $this->certbot->ensureChallengeRoot();
     }
 
     /**
