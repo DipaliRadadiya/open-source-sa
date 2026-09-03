@@ -4322,6 +4322,10 @@
             "label": "Solo archivos",
             "description": "Copia los archivos del sitio y elimina cualquier archivo que solo exista en producción. No se hace ninguna copia de seguridad previa."
           },
+          "database": {
+            "label": "Solo base de datos",
+            "description": "Reemplaza la base de datos de producción con la de staging y deja los archivos intactos. Todo lo escrito desde que se hizo la copia — pedidos, comentarios, entradas nuevas — se pierde. Antes se guarda una copia de la base de datos anterior. Comprueba que producción tenga los mismos plugins y temas que staging: la base de datos los esperará, y si falta alguno el sitio puede quedarse en blanco."
+          },
           "full": {
             "label": "Archivos y base de datos",
             "description": "También reemplaza la base de datos, así que todo lo escrito desde que se hizo la copia — pedidos, comentarios, entradas nuevas — se pierde. Antes se guarda una copia de la base de datos anterior."

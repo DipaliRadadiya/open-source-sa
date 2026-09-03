@@ -48,8 +48,17 @@ export const createStagingFormSchema = z.object({
  * production's database wholesale. Both destroy something, they just destroy
  * different things — so the screen makes you choose rather than shipping one
  * of them as the thoughtless click.
+ *
+ * `database` is not the gentle middle option it looks like. It leaves
+ * production's files alone and replaces the database underneath them, so if
+ * staging carries a plugin or theme version production does not have, the
+ * database references something that is not on disk — an activated-plugin
+ * list pointing at a missing folder, a schema newer than the installed
+ * plugin. That is a white screen, not a warning, and the copy says so.
+ *
+ * Ordered by what each one replaces: files, database, both.
  */
-export const PUSH_MODES = ["files", "full"];
+export const PUSH_MODES = ["files", "database", "full"];
 
 export const pushStagingFormSchema = z.object({
   mode: z.enum(PUSH_MODES, { message: "modeRequired" }),

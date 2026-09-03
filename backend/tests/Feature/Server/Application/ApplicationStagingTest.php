@@ -659,3 +659,133 @@ it('refuses to finish a push that left production wearing staging identity', fun
         ->postJson(stagingUrl().'/push', ['mode' => 'full'])
         ->assertStatus(500);
 });
+
+/*
+ * `database` mode: the third option, for moving content without touching the
+ * files production is running.
+ *
+ * The half it moves is the half that cannot restore itself, so it dumps
+ * first — but it must not snapshot the document root, because nothing in
+ * this mode can write to it and copying it would be a slow way to protect
+ * files that cannot change.
+ */
+
+it('pushes the database without touching production files', function () {
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'database'])
+        ->assertOk();
+
+    // No sync at all — not the push copy, and not the file snapshot either.
+    expect(collect($commands)->contains(fn (array $args) => ($args[0] ?? '') === 'rsync'))->toBeFalse();
+
+    // ...but the database did move.
+    expect(collect($commands)->contains(fn (array $args) => ($args[0] ?? '') === 'mysqldump'))->toBeTrue();
+});
+
+it('dumps a safety copy before replacing the database', function () {
+    // This mode replaces the half holding orders and customers. Losing it is
+    // not recoverable by regeneration the way transients are.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $dumps = [];
+    Process::fake(function ($process) use (&$dumps) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'mysqldump') {
+            $dumps[] = implode(' ', $args);
+        }
+
+        if (($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), 'wp-config.php')) {
+            return Process::result(output: "<?php\ndefine('DB_NAME', 'shop_db');\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'database'])
+        ->assertOk();
+
+    // The safety dump lands under the site's own .panel directory; the push
+    // dump goes to /tmp. Both run, and the safety one is what rollback needs.
+    expect(collect($dumps)->contains(fn (string $d) => str_contains($d, '.panel/staging-backups')))->toBeTrue();
+});
+
+it('rewrites the URLs and flushes on a database push', function () {
+    // The database arriving from staging carries staging's URLs and staging's
+    // permalink rules, exactly as in a full push.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'database'])->assertOk();
+
+    $searches = searchReplaceTerms($commands);
+    $wp = wpCommands($commands);
+
+    expect($searches)->toContain('https://staging.shop.test')
+        ->and($searches)->toContain('staging.shop.test')
+        ->and(collect($wp)->contains(fn (string $c) => str_contains($c, 'rewrite flush')))->toBeTrue()
+        ->and(collect($wp)->contains(fn (string $c) => str_contains($c, 'cache flush')))->toBeTrue();
+});
+
+it('restores the database but not the files when a database push fails', function () {
+    // There is no file snapshot in this mode, so the rollback must not try to
+    // restore one — doing so would overwrite the live document root with an
+    // empty directory.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $restores = [];
+    Process::fake(function ($process) use (&$restores) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'rsync') {
+            $restores[] = implode(' ', $args);
+        }
+
+        // Fail the URL rewrite, which is inside the strategy's push.
+        if (in_array('search-replace', $args, true)) {
+            return Process::result(exitCode: 1, errorOutput: 'wp failed');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'database'])
+        ->assertStatus(500);
+
+    // No rsync ran at all: not to snapshot, and not to restore.
+    expect($restores)->toBeEmpty()
+        // The site is not left behind a maintenance page.
+        ->and($this->production->fresh()->disabled_at)->toBeNull();
+});
+
+it('accepts all three modes and refuses anything else', function () {
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $ignored = [];
+    recordStagingPush($ignored);
+
+    foreach (['files', 'database', 'full'] as $mode) {
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/push', ['mode' => $mode])
+            ->assertOk();
+    }
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'everything'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('mode');
+});

@@ -53,11 +53,16 @@ test("the domain is lower-cased and trimmed the way the backend does it", () => 
 test("push refuses to submit without a mode — there is no safe default", () => {
   assert.equal(pushStagingFormSchema.safeParse({}).success, false);
   assert.equal(pushStagingFormSchema.safeParse({ mode: "" }).success, false);
-  assert.equal(pushStagingFormSchema.safeParse({ mode: "database" }).success, false);
+  // "database" used to be the example of a mode that does not exist. It does
+  // now, so the invalid case has to be something that genuinely is not one.
+  assert.equal(pushStagingFormSchema.safeParse({ mode: "everything" }).success, false);
 });
 
-test("both modes the backend accepts are offered, and only those", () => {
-  assert.deepEqual(PUSH_MODES, ["files", "full"]);
+test("every mode the backend accepts is offered, and only those", () => {
+  // Ordered by what each one replaces: files, database, both. The list is
+  // cross-checked against the backend FormRequest in
+  // tests/staging-push-modes.test.mjs, which fails if the two drift apart.
+  assert.deepEqual(PUSH_MODES, ["files", "database", "full"]);
   for (const mode of PUSH_MODES) {
     assert.equal(pushStagingFormSchema.safeParse({ mode }).success, true, mode);
   }

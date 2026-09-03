@@ -4322,6 +4322,10 @@
             "label": "Files only",
             "description": "Copies the site's files and deletes any file that exists only on production. Nothing is backed up first."
           },
+          "database": {
+            "label": "Database only",
+            "description": "Replaces production's database with staging's and leaves the files alone. Anything written since the copy was made — orders, comments, new posts — is gone. A copy of the old database is saved first. Check that production has the same plugins and themes as staging: the database will expect them, and a missing one can leave the site blank."
+          },
           "full": {
             "label": "Files and database",
             "description": "Also replaces the database, so anything written since the copy was made — orders, comments, new posts — is gone. A copy of the old database is saved first."

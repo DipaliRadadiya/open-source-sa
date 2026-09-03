@@ -110,7 +110,11 @@ class WordPressStagingStrategy implements StagingStrategy
     {
         $productionDocumentRoot = $this->provisioner->documentRoot($production);
 
-        if ($mode !== 'full') {
+        // `database` and `full` both replace the database, so both need the
+        // URL rewrite and the rewrite-rule flush below. The only difference
+        // between them is whether the files were rsynced, which is the
+        // manager's business and not visible from here.
+        if ($mode === 'files') {
             // Files only — the database is untouched, so there are no staging
             // URLs to rewrite. The caches still have to go: the pushed files
             // include templates and assets, and a page cache serving the old

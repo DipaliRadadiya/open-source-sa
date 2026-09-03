@@ -151,25 +151,36 @@ class StagingManager
         $production->load('systemUser');
         $staging->load('systemUser');
 
+        // Each mode moves one half, the other, or both. Named here so the
+        // branches below read as intent rather than as string comparisons
+        // repeated five times.
+        $pushesFiles = in_array($mode, ['files', 'full'], true);
+        $pushesDatabase = in_array($mode, ['database', 'full'], true);
+
         $rollbackDirectory = $production->panelPath().'/staging-rollbacks/'.Str::uuid();
         $fileSnapshot = $rollbackDirectory.'/files';
         $databaseSnapshot = null;
 
-        try {
-            $this->snapshotFiles($production, $fileSnapshot);
-        } catch (Throwable $failure) {
-            $this->discardFileSnapshot($production, $rollbackDirectory);
+        // No file snapshot for a database-only push. Nothing writes to the
+        // document root in that mode, so copying the whole of it would be a
+        // slow way to protect files that cannot change.
+        if ($pushesFiles) {
+            try {
+                $this->snapshotFiles($production, $fileSnapshot);
+            } catch (Throwable $failure) {
+                $this->discardFileSnapshot($production, $rollbackDirectory);
 
-            throw $failure;
+                throw $failure;
+            }
         }
 
-        // Only `full` dumps. A files-only push does not touch the database:
-        // the post-push work it does run — flushing caches and rewrite rules
-        // — writes nothing but transients and `rewrite_rules`, both of which
-        // WordPress regenerates on demand. Dumping a large production
-        // database on every files push would be real cost to protect data
-        // that restores itself.
-        if ($mode === 'full') {
+        // Any mode that replaces the database dumps it first — that is the
+        // half carrying orders and customers, and it is the half that cannot
+        // restore itself. A files-only push does not touch it: the post-push
+        // work it runs writes nothing but transients and `rewrite_rules`,
+        // which WordPress regenerates on demand, so dumping a large database
+        // there would be real cost to protect data that comes back anyway.
+        if ($pushesDatabase) {
             try {
                 $databaseSnapshot = $this->safetyDump($production);
             } catch (Throwable $failure) {
@@ -191,18 +202,26 @@ class StagingManager
         }
 
         try {
-            $this->rsync(
-                $this->provisioner->documentRoot($staging),
-                $this->provisioner->documentRoot($production),
-                $production,
-                $strategy->syncExcludes(),
-            );
+            if ($pushesFiles) {
+                $this->rsync(
+                    $this->provisioner->documentRoot($staging),
+                    $this->provisioner->documentRoot($production),
+                    $production,
+                    $strategy->syncExcludes(),
+                );
+            }
 
             $strategy->push($production, $staging, $mode);
             $this->provisioner->enable($production);
         } catch (Throwable $pushFailure) {
             try {
-                $this->restoreFiles($production, $fileSnapshot);
+                // Only restore halves that were snapshotted. A database-only
+                // push never took a file snapshot, and `restoreFiles` against
+                // a directory that was never written would replace the live
+                // document root with nothing.
+                if ($pushesFiles) {
+                    $this->restoreFiles($production, $fileSnapshot);
+                }
 
                 if ($databaseSnapshot !== null) {
                     $database = $databaseSnapshot['database'];

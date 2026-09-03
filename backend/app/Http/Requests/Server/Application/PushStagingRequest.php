@@ -21,7 +21,7 @@ class PushStagingRequest extends FormRequest
             // 'files' is the default the create form should pre-select — it
             // is the only mode that cannot lose data, so it is what a click
             // without a second thought should do.
-            'mode' => ['required', Rule::in(['files', 'full'])],
+            'mode' => ['required', Rule::in(['files', 'database', 'full'])],
         ];
     }
 
