@@ -169,8 +169,22 @@ export function ApplicationRowActions({
           ) : null}
 
           {showRetry ? (
-            <DropdownMenuItem disabled={retrying} onSelect={retry}>
-              <RotateCw className="size-4" />
+            <DropdownMenuItem
+              disabled={retrying}
+              onSelect={(event) => {
+                // Radix closes the menu on select, which left the "Retrying…"
+                // branch below unreachable — the trigger's spinner was the only
+                // sign, and on a long row that is easy to miss. Held open so the
+                // item says it itself.
+                event.preventDefault();
+                retry();
+              }}
+            >
+              {retrying ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RotateCw className="size-4" />
+              )}
               {retrying ? t("details.retrying") : t("details.retry")}
             </DropdownMenuItem>
           ) : null}
