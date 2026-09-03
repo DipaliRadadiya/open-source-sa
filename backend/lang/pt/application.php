@@ -108,6 +108,8 @@ return [
     | example if it is in a language they read.
     */
     'placeholders' => [
+        'mailer_host' => 'smtp.exemplo.pt',
+        'mailer_port' => '587',
         'site_title' => 'O meu site',
         'site_name' => 'O meu site',
         'shop_name' => 'A minha loja',

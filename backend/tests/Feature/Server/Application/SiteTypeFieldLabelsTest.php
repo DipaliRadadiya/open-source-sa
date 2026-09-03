@@ -153,6 +153,30 @@ it('gives every free-text field an example or a value to start from', function (
     expect($missing)->toBe([], 'fields with nothing to go on: '.implode(', ', $missing));
 });
 
+it('shows a bare example, not a sentence about one', function () {
+    // Mautic's SMTP host carried the literal 'e.g. smtp.example.com' — the
+    // prefix inside the value, so one field read "e.g. ..." while its nine
+    // neighbours showed the value alone. Ghost text is already understood as
+    // an example by being ghost text; saying so again is nine characters of
+    // the box spent on nothing, and it was the one placeholder still hardcoded
+    // in English, so a German form showed "e.g." beside translated examples.
+    foreach (config('app.available_locales') as $locale) {
+        app()->setLocale($locale);
+
+        foreach (app(SiteTypeManager::class)->all() as $type) {
+            foreach ($type->fields() as $field) {
+                if (! filled($field['placeholder'] ?? null)) {
+                    continue;
+                }
+
+                expect(mb_strtolower((string) $field['placeholder']))
+                    ->not->toStartWith('e.g.', "{$type->name()}.{$field['name']} explains its example instead of being one")
+                    ->not->toStartWith('example', "{$type->name()}.{$field['name']} explains its example instead of being one");
+            }
+        }
+    }
+});
+
 it('has a translation for every placeholder and help string a field references', function () {
     // These go out through the API in the caller's locale, so an untranslated
     // one ships the raw key — `application.placeholders.site_title` — into a

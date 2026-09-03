@@ -59,9 +59,14 @@ class MauticSiteType extends AbstractSiteType
                 extra: ['placeholder' => __('application.placeholders.mailer_email')]),
             $this->field('mailer_host', 'text', required: true,
                 extra: ['autocomplete' => 'off', 'autocapitalize' => 'none', 'spellcheck' => 'false',
-                    'placeholder' => 'e.g. smtp.example.com']),
+                    // Was the literal 'e.g. smtp.example.com'. The prefix sat
+                    // inside the value, so this one field said "e.g." while
+                    // its nine neighbours showed a bare example — and being a
+                    // literal it stayed English while the rest translated.
+                    'placeholder' => __('application.placeholders.mailer_host')]),
             $this->field('mailer_port', 'number', required: true,
-                extra: ['min' => 1, 'max' => 65535, 'placeholder' => '587']),
+                extra: ['min' => 1, 'max' => 65535,
+                    'placeholder' => __('application.placeholders.mailer_port')]),
             $this->field('mailer_username', 'text', required: true,
                 extra: ['autocomplete' => 'username', 'autocapitalize' => 'none', 'spellcheck' => 'false',
                     'placeholder' => __('application.placeholders.mailer_username')]),
