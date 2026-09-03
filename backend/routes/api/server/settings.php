@@ -19,6 +19,8 @@ Route::get('/settings/reboot', [SettingController::class, 'rebootStatus'])->midd
 Route::delete('/settings/reboot', [SettingController::class, 'cancelReboot'])->middleware('permission:setting,manage');
 Route::put('/settings/security', [SettingController::class, 'updateSecurity'])->middleware('permission:setting,manage');
 Route::put('/settings/mysql', [SettingController::class, 'updateMysql'])->middleware('permission:setting,manage');
+Route::put('/settings/mysql-binlog', [SettingController::class, 'updateMysqlBinlog'])->middleware('permission:setting,manage');
+Route::post('/settings/mysql-binlog/purge', [SettingController::class, 'purgeMysqlBinlog'])->middleware('permission:setting,manage');
 Route::put('/settings/updates', [SettingController::class, 'updateUpdates'])->middleware('permission:setting,manage');
 Route::put('/settings/redis', [SettingController::class, 'updateRedis'])->middleware('permission:setting,manage');
 

@@ -1573,7 +1573,10 @@
       "invalidMemory": "Usa un tamaño como 256mb o 1gb, o 0 para no poner límite.",
       "passwordTooShort": "Usa 8 caracteres o más.",
       "connectionsTooLow": "Debe ser al menos 10; por debajo el panel no puede acceder a la base de datos.",
-      "connectionsTooHigh": "Es más alto de lo que cualquier servidor aceptará."
+      "connectionsTooHigh": "Es más alto de lo que cualquier servidor aceptará.",
+      "binlogRetentionTooLong": "Un año es el máximo.",
+      "binlogSizeTooSmall": "Al menos 1 MB.",
+      "binlogSizeTooLarge": "1024 MB es el máximo."
     },
     "server": {
       "title": "Servidor",
@@ -1799,6 +1802,33 @@
       "cappedBody": "Pediste {requested} pero el servidor ejecuta {effective}, porque su límite de archivos abiertos ({limit}) no admite más. Aumentar ese límite requiere reiniciar el servicio de base de datos.",
       "saved": "Límite de conexiones actualizado",
       "saveFailed": "No se pudo cambiar el límite de conexiones."
+    },
+    "binlog": {
+      "title": "Registros binarios",
+      "description": "Los registros binarios anotan cada cambio para replicación y recuperación a un punto en el tiempo. Crecen con cada escritura, así que la retención es lo que evita que llenen el disco.",
+      "statusOn": "Activado",
+      "statusOff": "Desactivado",
+      "state": "Estado",
+      "format": "Formato",
+      "onDisk": "En disco",
+      "onDiskValue": "{count, plural, one {# archivo} other {# archivos}} · {size}",
+      "oldest": "Registro más antiguo",
+      "disabledBody": "El registro binario está desactivado en este servidor, así que no hay nada que retener. Activarlo requiere reiniciar la base de datos y no se hace desde esta pantalla.",
+      "retention": "Conservar registros durante",
+      "retentionHint": "Días. Se aplica de inmediato: el servidor expira los registros antiguos según su propio calendario.",
+      "retentionForeverWarning": "Con 0, los registros se conservan para siempre y acabarán llenando el disco. Cualquier valor mayor que 0 es más seguro.",
+      "days": "días",
+      "maxSize": "Tamaño máximo por registro",
+      "maxSizeHint": "MB. El servidor inicia un archivo nuevo a este tamaño; solo puede expirar archivos completos, así que los más pequeños expiran con más precisión.",
+      "purge": "Purgar ahora",
+      "purgeTitle": "Purgar registros binarios",
+      "purgeDescription": "Elimina los registros de más de {days, plural, one {# día} other {# días}}. Las réplicas que no los hayan leído fallarán, y una recuperación a un punto en el tiempo no podrá ir más atrás de lo que quede.",
+      "purgeConfirm": "Purgar registros",
+      "purgeDays": "Anteriores a (días)",
+      "purged": "Registros binarios purgados",
+      "purgeFailed": "No se pudieron purgar los registros binarios.",
+      "saved": "Ajustes de registros binarios actualizados",
+      "saveFailed": "No se pudieron cambiar los ajustes de registros binarios."
     }
   },
   "php": {

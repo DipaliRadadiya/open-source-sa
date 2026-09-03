@@ -6,6 +6,7 @@ import { getMemoryTotal } from "@/lib/settings/get-memory-total";
 import { SwapForm } from "@/components/settings/swap-form";
 import { RedisForm } from "@/components/settings/redis-form";
 import { MysqlForm } from "@/components/settings/mysql-form";
+import { BinlogForm } from "@/components/settings/binlog-form";
 import { changedFor } from "@/lib/settings/changed-for";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -55,6 +56,14 @@ export default async function SettingsPerformancePage() {
           mysql={data.mysql}
           canManage={canManage}
           changedBy={await changedFor(lastChanged, "mysql")}
+        />
+      ) : null}
+
+      {data.mysql_binlog ? (
+        <BinlogForm
+          binlog={data.mysql_binlog}
+          canManage={canManage}
+          changedBy={await changedFor(lastChanged, "mysql_binlog")}
         />
       ) : null}
     </div>

@@ -1573,7 +1573,10 @@
       "invalidMemory": "Use a size like 256mb or 1gb — or 0 for no limit.",
       "passwordTooShort": "Use 8 characters or more.",
       "connectionsTooLow": "Must be at least 10 — below that the panel cannot reach the database.",
-      "connectionsTooHigh": "That is higher than any server will honour."
+      "connectionsTooHigh": "That is higher than any server will honour.",
+      "binlogRetentionTooLong": "A year is the most this can hold.",
+      "binlogSizeTooSmall": "At least 1 MB.",
+      "binlogSizeTooLarge": "1024 MB is the most."
     },
     "server": {
       "title": "Server",
@@ -1799,6 +1802,33 @@
       "cappedBody": "You asked for {requested} but the server is running {effective}, because its open file limit ({limit}) cannot support more. Raising that limit requires a restart of the database service.",
       "saved": "Connection limit updated",
       "saveFailed": "The connection limit could not be changed."
+    },
+    "binlog": {
+      "title": "Binary logs",
+      "description": "Binary logs record every change for replication and point-in-time recovery. They grow with every write, so retention is what keeps them from filling the disk.",
+      "statusOn": "Enabled",
+      "statusOff": "Disabled",
+      "state": "Status",
+      "format": "Format",
+      "onDisk": "On disk",
+      "onDiskValue": "{count, plural, one {# file} other {# files}} · {size}",
+      "oldest": "Oldest log",
+      "disabledBody": "Binary logging is off on this server, so there is nothing to retain. Turning it on requires restarting the database and is not done from this screen.",
+      "retention": "Keep logs for",
+      "retentionHint": "Days. Applies immediately — the server expires older logs on its own schedule.",
+      "retentionForeverWarning": "Set to 0, logs are kept forever and will fill the disk eventually. Any value above 0 is safer.",
+      "days": "days",
+      "maxSize": "Maximum size per log",
+      "maxSizeHint": "MB. The server starts a new file at this size; it can only expire whole files, so smaller files expire more precisely.",
+      "purge": "Purge now",
+      "purgeTitle": "Purge binary logs",
+      "purgeDescription": "Deletes logs older than {days, plural, one {# day} other {# days}}. Replicas that have not read them will break, and a point-in-time recovery cannot go back past what remains.",
+      "purgeConfirm": "Purge logs",
+      "purgeDays": "Older than (days)",
+      "purged": "Binary logs purged",
+      "purgeFailed": "The binary logs could not be purged.",
+      "saved": "Binary log settings updated",
+      "saveFailed": "The binary log settings could not be changed."
     }
   },
   "php": {

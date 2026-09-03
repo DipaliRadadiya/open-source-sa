@@ -56,6 +56,19 @@ export function updateMysqlSettings(payload) {
   return api.put("/settings/mysql", payload);
 }
 
+/** Binary log retention and size. Both variables are dynamic — no restart. */
+export function updateMysqlBinlogSettings(payload) {
+  return api.put("/settings/mysql-binlog", payload);
+}
+
+/**
+ * Drop binary logs older than `days`. Destroys what a point-in-time recovery
+ * would have replayed, so it is a deliberate action rather than part of a save.
+ */
+export function purgeMysqlBinlog(days) {
+  return api.post("/settings/mysql-binlog/purge", { days });
+}
+
 export function updateRedisSettings(payload) {
   return api.put("/settings/redis", payload);
 }

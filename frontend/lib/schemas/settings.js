@@ -202,6 +202,25 @@ export const mysqlFormSchema = z.object({
     .max(100000, "connectionsTooHigh"),
 });
 
+export const mysqlBinlogFormSchema = z.object({
+  // Days in the form, seconds on the wire — the server's unit is seconds and
+  // nobody thinks about binlog retention in those. `0` is keep-forever, which
+  // is allowed because a server may already be in that state and the panel has
+  // to be able to represent it.
+  expire_days: z.coerce
+    .number({ message: "invalidNumber" })
+    .int("invalidNumber")
+    .min(0, "invalidNumber")
+    .max(365, "binlogRetentionTooLong"),
+  // MB in the form, bytes on the wire. A larger single log makes purging
+  // coarse: the server can only drop whole files.
+  max_binlog_size_mb: z.coerce
+    .number({ message: "invalidNumber" })
+    .int("invalidNumber")
+    .min(1, "binlogSizeTooSmall")
+    .max(1024, "binlogSizeTooLarge"),
+});
+
 export const ROOT_LOGIN_OPTIONS = ["yes", "prohibit-password", "no"];
 
 export const securityFormSchema = z.object({

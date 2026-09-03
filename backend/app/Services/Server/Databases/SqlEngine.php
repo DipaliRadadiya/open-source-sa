@@ -348,6 +348,90 @@ class SqlEngine implements DatabaseEngine
         return (int) ($this->variable('max_connections') ?? 0);
     }
 
+    /**
+     * Set one global variable on the running server.
+     *
+     * `$name` is interpolated, not bound — a system variable cannot be a
+     * placeholder in MySQL — so every caller must pass a name it chose itself
+     * from a fixed list. Nothing user-supplied reaches this argument.
+     *
+     * The value the server actually adopted is returned rather than assumed:
+     * several of these are silently clamped (max_connections against
+     * open_files_limit, max_binlog_size to a 4 KB multiple), so the only
+     * trustworthy answer is the one read back.
+     */
+    public function setGlobalVariable(string $name, int|string $value): ?string
+    {
+        $literal = is_int($value) ? (string) $value : "'".$this->esc($value)."'";
+        $result = $this->run('SET GLOBAL '.$name.' = '.$literal.';');
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+
+        return $this->variable($name);
+    }
+
+    /**
+     * The binary logs the server is currently holding, newest last.
+     *
+     * From `SHOW BINARY LOGS` rather than by listing the directory: the server
+     * is the only thing that knows which files it still considers live, and a
+     * file on disk that mysqld has already released looks identical to one it
+     * is writing to.
+     *
+     * @return array<int, array{name: string, size_bytes: int}>
+     */
+    public function binaryLogs(): array
+    {
+        $result = $this->run('SHOW BINARY LOGS;');
+
+        // Not an error worth raising: a server with binary logging off answers
+        // with an error here, and "none" is the correct reading of that.
+        if ($result->failed()) {
+            return [];
+        }
+
+        $logs = [];
+
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+
+            $columns = explode("\t", $line);
+            $name = trim($columns[0] ?? '');
+
+            if ($name === '') {
+                continue;
+            }
+
+            $logs[] = ['name' => $name, 'size_bytes' => (int) ($columns[1] ?? 0)];
+        }
+
+        return $logs;
+    }
+
+    /**
+     * Drop binary logs older than `$days`.
+     *
+     * `PURGE BINARY LOGS` is the only correct way to remove these. Deleting
+     * the files leaves the server holding them open — so the space is not even
+     * freed — and leaves `mysql-bin.index` naming files that no longer exist.
+     * The panel's own disk cleaner carries two separate guards to avoid
+     * exactly that; see RotatedLogsTarget.
+     */
+    public function purgeBinaryLogs(int $days): void
+    {
+        $result = $this->run(
+            'PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL '.$days.' DAY);'
+        );
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+    }
+
     public function optimize(string $database): void
     {
         $this->maintain($database, 'OPTIMIZE');
