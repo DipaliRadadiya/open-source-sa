@@ -97,4 +97,43 @@ class AkauntingInstaller extends AbstractPhpInstaller
 
         return $url;
     }
+
+    /**
+     * Akaunting is a Laravel application, so its canonical URL is `APP_URL` in
+     * the site's own `.env`.
+     *
+     * It matters more here than the name suggests. Laravel builds absolute
+     * URLs from `APP_URL` wherever there is no request to infer them from —
+     * every emailed invoice link, and everything the queue and the scheduler
+     * generate. Left at the http:// address the site was installed on, a shop
+     * behind a fresh certificate keeps mailing customers links that are not
+     * the address they are being asked to trust.
+     *
+     * The value is quoted because a URL contains `//` and dotenv treats an
+     * unquoted `#` as the start of a comment; a domain may legitimately carry
+     * one after a fragment-looking path.
+     */
+    public function syncUrl(Application $application, string $url): void
+    {
+        $documentRoot = $application->documentRoot();
+        $url = rtrim($url, '/');
+
+        $changed = $this->setEnvValue($application, $documentRoot.'/.env', 'APP_URL', '"'.$url.'"');
+
+        if (! $changed) {
+            return;
+        }
+
+        // Laravel caches the resolved config, and a cached `APP_URL` outlives
+        // the file that changed it. Best-effort: a shop whose cache could not
+        // be cleared is still correct on the next deploy or restart, and
+        // failing here would roll back a certificate over a cache file.
+        try {
+            $this->runAsSiteUser('sync_url', $application, [
+                $this->phpBinary($application), 'artisan', 'config:clear',
+            ], null, $documentRoot);
+        } catch (ProvisioningFailedException $e) {
+            report($e);
+        }
+    }
 }

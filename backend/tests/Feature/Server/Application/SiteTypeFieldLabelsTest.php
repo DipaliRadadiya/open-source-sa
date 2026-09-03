@@ -257,3 +257,55 @@ it('keeps steps as a list — it is a genuine array', function () {
     $response->assertOk();
     expect($response->getContent())->toContain('"steps":[]');
 });
+
+/*
+ * The frontend reported PrestaShop's missing syncUrl and added "same problem
+ * likely affects Joomla, Akaunting, Node-RED, Uptime Kuma" — a list of who
+ * lacked the method, not of who needed it. One of the four was right.
+ *
+ * Missing syncUrl is only a bug when the application persists a URL. This
+ * pins the answer for each so the next person reading the no-op list does not
+ * have to re-derive it, and so an installer that starts writing a URL has a
+ * failing test rather than a silent mixed-content shop.
+ */
+it('implements syncUrl for exactly the installers that persist a URL', function () {
+    $implements = [];
+
+    foreach (glob(app_path('Services/Server/Applications/Installers/*Installer.php')) as $file) {
+        $name = basename($file, '.php');
+
+        if (str_starts_with($name, 'Abstract')) {
+            continue;
+        }
+
+        if (str_contains((string) file_get_contents($file), 'function syncUrl(')) {
+            $implements[] = $name;
+        }
+    }
+
+    sort($implements);
+
+    expect($implements)->toBe([
+        // Each stores a canonical URL of its own: wp_options, config.php's
+        // wwwroot, .env keys, config.json, occ's overwrite.cli.url, local.php's
+        // site_url, and PrestaShop's shop_url rows.
+        'AkauntingInstaller',
+        'CraftCmsInstaller',
+        'MauticInstaller',
+        'MoodleInstaller',
+        'N8nInstaller',
+        'NextcloudInstaller',
+        'NodeBbInstaller',
+        'PrestaShopInstaller',
+        'StatamicInstaller',
+        'WordPressInstaller',
+    ], 'the installers that persist a URL changed — see the no-op list in AbstractSiteInstaller');
+
+    // The deliberate absences, each checked against its own install command
+    // rather than assumed: Joomla is passed no URL and leaves $live_site empty
+    // so it detects per request, Node-RED and Uptime Kuma write no URL at all,
+    // and phpMyAdmin leaves PmaAbsoluteUri unset.
+    foreach (['JoomlaInstaller', 'NodeRedInstaller', 'UptimeKumaInstaller', 'PhpMyAdminInstaller'] as $absent) {
+        expect($implements)->not->toContain($absent);
+    }
+});

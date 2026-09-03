@@ -181,4 +181,137 @@ class PrestaShopInstaller extends AbstractPhpInstaller
 
         return $url;
     }
+
+    /**
+     * PrestaShop keeps its own copy of the shop address, in the database.
+     *
+     * `install/index_cli.php` is given `--domain=` at install time and writes
+     * it to `shop_url.domain`; nothing has ever updated it since. So a shop
+     * issued a certificate served its pages over https while every image,
+     * stylesheet and generated link still pointed at http — the browser sees
+     * the mix and drops the padlock. The certificate was never the problem.
+     *
+     * ## Why this one writes SQL
+     *
+     * Every other syncUrl here edits a config file or calls the application's
+     * own CLI. PrestaShop has neither for this: the value lives in
+     * `shop_url` and `configuration`, and its console ships no command to
+     * change them. Four rows, by name, with bound parameters.
+     *
+     * `domain_ssl` matters as much as `domain` — PrestaShop reads that one
+     * when building an https link, and a shop with the two disagreeing
+     * generates links to whichever address is in the wrong column.
+     *
+     * ## Where the credentials come from
+     *
+     * The shop's own `app/config/parameters.php`. The panel does not store
+     * database passwords — it generates one at install and forgets it — so
+     * the only account that can still reach this database is the shop, and
+     * the file is read by a process running as the site user, never by the
+     * panel. The prefix comes from there too rather than from the panel's
+     * saved setting: the shop is the authority on its own table names, and a
+     * setting edited afterwards would send this at tables that do not exist.
+     *
+     * ## Why stdin
+     *
+     * The domain is user input. Interpolating it into a `php -r` program
+     * would be building code out of it — so the program is fixed and its
+     * three values arrive as JSON on stdin, the same reason every query below
+     * binds rather than concatenates.
+     */
+    public function syncUrl(Application $application, string $url): void
+    {
+        $documentRoot = $application->documentRoot();
+        $host = (string) parse_url($url, PHP_URL_HOST);
+
+        if ($host === '') {
+            throw new \RuntimeException('PrestaShop was given a URL with no host.');
+        }
+
+        $this->runAsSiteUser('sync_url', $application, [
+            $this->phpBinary($application), '-r', $this->syncUrlProgram(),
+        ], json_encode([
+            'parameters' => $documentRoot.'/app/config/parameters.php',
+            'domain' => $host,
+            'ssl' => parse_url($url, PHP_URL_SCHEME) === 'https' ? 1 : 0,
+        ], JSON_THROW_ON_ERROR), $documentRoot);
+
+        // The compiled container and Smarty templates hold the old address.
+        // Best-effort and deliberately last: the rows are already correct, and
+        // failing here would roll a certificate back over a cache directory
+        // that the next request rebuilds anyway.
+        try {
+            $this->runAsSiteUser('sync_url', $application, [
+                'sh', '-c', 'rm -rf '.escapeshellarg($documentRoot.'/var/cache').'/*',
+            ], null, $documentRoot);
+        } catch (ProvisioningFailedException $e) {
+            report($e);
+        }
+    }
+
+    /**
+     * The program run as the site user. Fixed text — every value it works on
+     * arrives on stdin. {@see self::syncUrl()}
+     */
+    private function syncUrlProgram(): string
+    {
+        return <<<'PHP'
+        $in = json_decode(stream_get_contents(STDIN), true);
+        if (!is_array($in) || !is_file($in['parameters'])) {
+            fwrite(STDERR, "PrestaShop parameters.php was not found.\n");
+            exit(1);
+        }
+        $config = require $in['parameters'];
+        $p = $config['parameters'] ?? null;
+        if (!is_array($p) || !isset($p['database_name'], $p['database_user'])) {
+            fwrite(STDERR, "PrestaShop parameters.php holds no database settings.\n");
+            exit(1);
+        }
+        // `database_host` carries an optional :port, as PrestaShop writes it.
+        $host = (string) ($p['database_host'] ?? '127.0.0.1');
+        $port = (string) ($p['database_port'] ?? '');
+        if ($port === '' && substr_count($host, ':') === 1) {
+            [$host, $port] = explode(':', $host);
+        }
+        $dsn = 'mysql:host='.$host.($port !== '' ? ';port='.$port : '').';dbname='.$p['database_name'];
+        try {
+            $pdo = new PDO($dsn, $p['database_user'], (string) ($p['database_password'] ?? ''), [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ]);
+        } catch (Throwable $e) {
+            fwrite(STDERR, "PrestaShop database is unreachable: ".$e->getMessage()."\n");
+            exit(1);
+        }
+        // Not bindable — an identifier, not a value — so it is constrained to
+        // what PrestaShop's own installer accepts as a prefix instead.
+        $prefix = (string) ($p['database_prefix'] ?? 'ps_');
+        if (!preg_match('/^[A-Za-z0-9_]*$/', $prefix)) {
+            fwrite(STDERR, "PrestaShop table prefix is not a plain identifier.\n");
+            exit(1);
+        }
+        try {
+            // Both columns: PrestaShop reads domain_ssl when building an https
+            // link, so leaving it behind swaps one wrong address for another.
+            $shop = $pdo->prepare('UPDATE `'.$prefix.'shop_url` SET `domain` = ?, `domain_ssl` = ?');
+            $shop->execute([$in['domain'], $in['domain']]);
+            $conf = $pdo->prepare(
+                'UPDATE `'.$prefix.'configuration` SET `value` = ? '
+                ."WHERE `name` IN ('PS_SSL_ENABLED', 'PS_SSL_ENABLED_EVERYWHERE')"
+            );
+            $conf->execute([(string) $in['ssl']]);
+        } catch (Throwable $e) {
+            // A wrong prefix names tables that do not exist, and uncaught that
+            // arrives as a fatal-error dump with a stack trace in the
+            // server-ops log. Same failure, one line, still non-zero.
+            fwrite(STDERR, "PrestaShop tables could not be updated: ".$e->getMessage()."\n");
+            exit(1);
+        }
+        // A shop whose rows did not move is a shop this did nothing for, and
+        // silence would read as success to every caller above.
+        if ($shop->rowCount() === 0 && $conf->rowCount() === 0) {
+            fwrite(STDERR, "PrestaShop shop_url and configuration were not updated.\n");
+            exit(1);
+        }
+        PHP;
+    }
 }

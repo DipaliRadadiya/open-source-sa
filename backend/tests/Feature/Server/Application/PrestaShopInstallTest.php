@@ -5,6 +5,7 @@ use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\Installers\PrestaShopInstaller;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
@@ -218,4 +219,70 @@ it('checks the shop was really installed before removing the wizard', function (
     );
 
     expect($removedWizard)->toBeFalse();
+});
+
+it('updates the shop URL and the SSL flags when a certificate is issued', function () {
+    // PrestaShop keeps its own copy of the address, in the database, and
+    // `install/index_cli.php --domain=` was the only thing that ever wrote it.
+    // A shop issued a certificate served pages over https while every image
+    // and generated link still pointed at http — the browser sees the mix and
+    // drops the padlock, and the certificate was never the problem.
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
+
+        return Process::result(exitCode: 0);
+    });
+
+    app(PrestaShopInstaller::class)
+        ->syncUrl($this->application->fresh(['systemUser']), 'https://shop.example.com/');
+
+    $sync = collect($runs)->first(fn ($run) => in_array('-r', $run['command'], true));
+
+    expect($sync)->not->toBeNull();
+
+    // As the site user: the panel does not hold this database's password, and
+    // the only account that still can is the shop itself.
+    expect($sync['command'][0])->toBe('runuser');
+
+    // The host and the scheme travel on stdin, never inside the program. The
+    // domain is user input, and interpolating it would be building code from
+    // it — the same reason the queries bind rather than concatenate.
+    $input = json_decode($sync['input'], true);
+
+    expect($input['domain'])->toBe('shop.example.com')
+        ->and($input['ssl'])->toBe(1)
+        ->and($input['parameters'])->toEndWith('/app/config/parameters.php')
+        ->and($sync['command'])->not->toContain('shop.example.com');
+});
+
+it('turns the SSL flags back off when the certificate goes away', function () {
+    // RemoveCertificate calls syncUrl with the http:// URL. A shop left
+    // claiming SSL after its certificate is gone redirects to an address that
+    // no longer answers, which is a shop that cannot be reached at all.
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
+
+        return Process::result(exitCode: 0);
+    });
+
+    app(PrestaShopInstaller::class)
+        ->syncUrl($this->application->fresh(['systemUser']), 'http://shop.example.com');
+
+    $sync = collect($runs)->first(fn ($run) => in_array('-r', $run['command'], true));
+
+    expect(json_decode($sync['input'], true)['ssl'])->toBe(0);
+});
+
+it('refuses a URL with no host rather than blanking the shop domain', function () {
+    Process::fake(fn () => Process::result(exitCode: 0));
+
+    // An empty domain column is a shop that generates links to nowhere, and
+    // the write would report success.
+    expect(fn () => app(PrestaShopInstaller::class)
+        ->syncUrl($this->application->fresh(['systemUser']), 'not-a-url'))
+        ->toThrow(RuntimeException::class);
 });

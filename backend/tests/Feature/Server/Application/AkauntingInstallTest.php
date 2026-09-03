@@ -5,6 +5,7 @@ use App\Models\Database;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\Installers\AkauntingInstaller;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
@@ -129,4 +130,35 @@ it('runs from the site directory as the site user', function () {
 
     expect($install['path'])->toBe("{$this->home}/books/public_html")
         ->and(array_slice($install['command'], 0, 4))->toBe(['runuser', '-u', 'akuser', '--']);
+});
+
+it('follows the domain when a certificate is issued, and clears the cached config', function () {
+    // Akaunting is Laravel, so APP_URL is what it builds absolute links from
+    // where there is no request to infer them — every emailed invoice link and
+    // everything the queue generates. Left on the http:// address the site was
+    // installed at, a shop behind a fresh certificate keeps mailing customers
+    // links to an address they are not being asked to trust.
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
+
+        return ($process->command[0] ?? '') === 'cat'
+            ? Process::result(output: "APP_NAME=Akaunting\nAPP_URL=http://books.example.com\n")
+            : Process::result(exitCode: 0);
+    });
+
+    app(AkauntingInstaller::class)
+        ->syncUrl($this->application->fresh(['systemUser']), 'https://books.example.com/');
+
+    $written = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'tee');
+
+    // Quoted, and without the trailing slash: a dotenv value ending in `/`
+    // doubles every generated path, and an unquoted one ends at a `#`.
+    expect($written['input'])->toContain('APP_URL="https://books.example.com"')
+        // The rest of the file is the user's — not rebuilt from parsed pairs.
+        ->and($written['input'])->toContain('APP_NAME=Akaunting');
+
+    expect(collect($runs)->contains(fn ($run) => in_array('config:clear', $run['command'], true)))
+        ->toBeTrue();
 });
