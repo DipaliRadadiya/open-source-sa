@@ -6,8 +6,10 @@ use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\SqlEngine;
+use App\Services\Server\Databases\SqlEngineLocator;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use Illuminate\Validation\ValidationException;
 
 /**
  * `max_connections` for MySQL / MariaDB, applied now and kept across restarts.
@@ -51,6 +53,7 @@ class MysqlSettings implements SettingGroup
 
     public function __construct(
         private DatabaseManager $databases,
+        private SqlEngineLocator $locator,
         private ManagedFile $files,
         private ServerOps $serverOps,
     ) {}
@@ -61,12 +64,18 @@ class MysqlSettings implements SettingGroup
     }
 
     /**
-     * Only when a SQL engine is actually reachable. Detect, don't trust the
-     * config list: every box has `mysql` in the catalog, few have it running.
+     * Present, not reachable.
+     *
+     * This used to require a successful `SELECT 1`, which meant a box with
+     * MariaDB installed and running but whose stored credentials do not work
+     * lost the card entirely — and the page then said no engine was installed,
+     * which was false. A card that disappears cannot explain itself, so the
+     * bar for showing it is that the engine exists; whether the panel can log
+     * in is reported inside it.
      */
     public function available(): bool
     {
-        return $this->engineName() !== null;
+        return $this->locator->present() !== null;
     }
 
     /**
@@ -74,10 +83,25 @@ class MysqlSettings implements SettingGroup
      */
     public function read(): array
     {
-        $engine = $this->engineName();
+        $engine = $this->locator->present();
 
         if ($engine === null) {
-            return ['engine' => null, 'max_connections' => null];
+            return ['engine' => null, 'present' => false, 'reachable' => false, 'max_connections' => null];
+        }
+
+        $label = (string) config("server.databases.engines.{$engine}.label", $engine);
+
+        // Installed but not answering. Everything below this point needs a
+        // working connection, and inventing zeroes for it would report an idle
+        // database rather than an unreachable one.
+        if (! $this->locator->reachable($engine)) {
+            return [
+                'engine' => $engine,
+                'engine_label' => $label,
+                'present' => true,
+                'reachable' => false,
+                'max_connections' => null,
+            ];
         }
 
         $status = $this->sqlEngine($engine)->status();
@@ -86,7 +110,9 @@ class MysqlSettings implements SettingGroup
 
         return [
             'engine' => $engine,
-            'engine_label' => (string) config("server.databases.engines.{$engine}.label", $engine),
+            'engine_label' => $label,
+            'present' => true,
+            'reachable' => true,
             // What the server is running right now.
             'max_connections' => $effective,
             // What our drop-in asks for, when we have written one. Null means
@@ -108,10 +134,24 @@ class MysqlSettings implements SettingGroup
      */
     public function apply(array $data): void
     {
-        $engine = $this->engineName();
+        $engine = $this->locator->present();
 
         if ($engine === null) {
-            throw new SettingOperationException('database.engine_unavailable');
+            throw ValidationException::withMessages([
+                'engine' => [__('errors/setting.database_absent')],
+            ]);
+        }
+
+        // Refuse rather than half-apply: the drop-in would be written and the
+        // running server left alone, so the panel would claim a value that
+        // only arrives at the next restart.
+        if (! $this->locator->reachable($engine)) {
+            // 422 naming the cause, not a 500 with a reference: the operator
+            // can fix this, and "the engine is unreachable" is the one thing
+            // that tells them how.
+            throw ValidationException::withMessages([
+                'engine' => [__('errors/setting.database_unreachable')],
+            ]);
         }
 
         $requested = (int) $data['max_connections'];
@@ -138,39 +178,18 @@ class MysqlSettings implements SettingGroup
     }
 
     /**
-     * The installed SQL engine, or null. MariaDB first: on a box carrying both
-     * client packages, the running server is far more often MariaDB, and
-     * `available()` is about what answers on the socket rather than what is
-     * listed in the catalog.
-     */
-    private function engineName(): ?string
-    {
-        foreach (['mariadb', 'mysql'] as $engine) {
-            if (! in_array($engine, $this->databases->engineNames(), true)) {
-                continue;
-            }
-
-            $candidate = $this->databases->engine($engine);
-
-            if ($candidate instanceof SqlEngine && $candidate->available()) {
-                return $engine;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * The engine as its concrete SQL implementation. `engineName()` only ever
-     * returns an engine it has already seen answer as one, so this cannot fail
-     * for a caller that went through it.
+     * The engine as its concrete SQL implementation. Only ever called for an
+     * engine the locator has already reported present, so a non-SQL driver
+     * here would be a wiring mistake rather than a state this can be in.
      */
     private function sqlEngine(string $engine): SqlEngine
     {
         $resolved = $this->databases->engine($engine);
 
         if (! $resolved instanceof SqlEngine) {
-            throw new SettingOperationException('database.engine_unavailable');
+            throw ValidationException::withMessages([
+                'engine' => [__('errors/setting.database_absent')],
+            ]);
         }
 
         return $resolved;
@@ -189,7 +208,7 @@ class MysqlSettings implements SettingGroup
     /** The value in our own drop-in, or null when we have never written one. */
     private function configuredValue(): ?int
     {
-        $engine = $this->engineName();
+        $engine = $this->locator->present();
 
         if ($engine === null) {
             return null;
@@ -215,7 +234,7 @@ class MysqlSettings implements SettingGroup
      */
     private function openFilesLimit(): ?int
     {
-        $engine = $this->engineName();
+        $engine = $this->locator->present();
 
         if ($engine === null) {
             return null;

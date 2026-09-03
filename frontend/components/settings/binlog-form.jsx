@@ -55,7 +55,8 @@ export function BinlogForm({ binlog, canManage, changedBy }) {
   const [purgeOpen, setPurgeOpen] = useState(false);
   const [purgeDays, setPurgeDays] = useState(7);
 
-  const enabled = binlog?.enabled ?? false;
+  const unreachable = binlog?.present === true && binlog?.reachable === false;
+  const enabled = !unreachable && (binlog?.enabled ?? false);
 
   const form = useForm({
     resolver: zodResolver(mysqlBinlogFormSchema),
@@ -120,7 +121,7 @@ export function BinlogForm({ binlog, canManage, changedBy }) {
             changedBy={changedBy}
             readOnly={!canManage}
             actions={
-              enabled ? (
+              enabled && !unreachable ? (
                 <SectionActions
                   label={t("title")}
                   isDirty={form.formState.isDirty}
@@ -137,10 +138,12 @@ export function BinlogForm({ binlog, canManage, changedBy }) {
               </Badge>
             </InfoRow>
 
-            {/* Off is a complete answer: there is nothing to retain, and the
-                one action that would change it is a restart this screen does
-                not perform. Say so rather than showing dead inputs. */}
-            {!enabled ? (
+            {/* Two different "nothing to show here" states, and they need
+                different words: the panel cannot ask the server, versus the
+                server answered and logging is off. */}
+            {unreachable ? (
+              <p className="text-sm text-muted-foreground">{t("unreachableBody")}</p>
+            ) : !enabled ? (
               <p className="text-sm text-muted-foreground">{t("disabledBody")}</p>
             ) : (
               <>

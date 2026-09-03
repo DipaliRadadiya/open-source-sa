@@ -1804,7 +1804,9 @@
       "cappedTitle": "The server reduced this value",
       "cappedBody": "You asked for {requested} but the server is running {effective}, because its open file limit ({limit}) cannot support more. Raising that limit requires a restart of the database service.",
       "saved": "Connection limit updated",
-      "saveFailed": "The connection limit could not be changed."
+      "saveFailed": "The connection limit could not be changed.",
+      "unreachableTitle": "{engine} is installed, but the panel cannot connect to it",
+      "unreachableBody": "The server is running — the credentials the panel has stored for it are being rejected. Set them under Databases, then this card will work."
     },
     "binlog": {
       "title": "Binary logs",
@@ -1831,7 +1833,8 @@
       "purged": "Binary logs purged",
       "purgeFailed": "The binary logs could not be purged.",
       "saved": "Binary log settings updated",
-      "saveFailed": "The binary log settings could not be changed."
+      "saveFailed": "The binary log settings could not be changed.",
+      "unreachableBody": "The panel cannot connect to the database server, so its binary log settings cannot be read. Fix the stored credentials under Databases."
     },
     "database": {
       "noEngine": "No MySQL or MariaDB server is running on this machine, so there is nothing to configure here."
@@ -3376,7 +3379,8 @@
         "saved": "Deploy settings saved.",
         "saveFailed": "Those settings could not be saved.",
         "noPermission": "Your role does not include Deployment for this site with Manage access. Ask an administrator to grant it.",
-        "nothingToSave": "Nothing to save"
+        "nothingToSave": "Nothing to save",
+        "branchPlaceholder": "main"
       },
       "history": {
         "empty": {
@@ -3648,7 +3652,9 @@
         },
         "deleteDescriptionPermanent": "These are destroyed on the server straight away. This can't be undone.",
         "deleteSubmitForever": "Delete forever",
-        "deleteDoneForever": "{count, plural, one {# item deleted for good.} other {# items deleted for good.}}"
+        "deleteDoneForever": "{count, plural, one {# item deleted for good.} other {# items deleted for good.}}",
+        "targetFolderPlaceholder": "wp-content/keep",
+        "archiveNamePlaceholder": "site-backup"
       },
       "size": {
         "failed": "That folder could not be measured."
@@ -4268,7 +4274,17 @@
         "disagrees": "The server is enforcing something different from what is saved here.",
         "disagreesWhy": "Either the pool file was edited by hand, or an open_basedir line in Additional directives is overriding this one.",
         "liveLabel": "What the server is enforcing now"
-      }
+      },
+      "memoryLimitPlaceholder": "256M",
+      "uploadMaxFilesizePlaceholder": "64M",
+      "maxExecutionTimePlaceholder": "120",
+      "maxInputVarsPlaceholder": "3000",
+      "pmMaxChildrenPlaceholder": "10",
+      "pmMaxRequestsPlaceholder": "500",
+      "maxInputTimePlaceholder": "60",
+      "sessionGcMaxlifetimePlaceholder": "1440",
+      "autoPrependPlaceholder": "/home/site/app/prepend.php",
+      "postMaxSizePlaceholder": "128M"
     },
     "fail2ban": {
       "pageTitle": "Attack protection",

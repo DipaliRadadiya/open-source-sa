@@ -1804,7 +1804,9 @@
       "cappedTitle": "El servidor redujo este valor",
       "cappedBody": "Pediste {requested} pero el servidor ejecuta {effective}, porque su límite de archivos abiertos ({limit}) no admite más. Aumentar ese límite requiere reiniciar el servicio de base de datos.",
       "saved": "Límite de conexiones actualizado",
-      "saveFailed": "No se pudo cambiar el límite de conexiones."
+      "saveFailed": "No se pudo cambiar el límite de conexiones.",
+      "unreachableTitle": "{engine} está instalado, pero el panel no puede conectarse",
+      "unreachableBody": "El servidor está en ejecución; las credenciales que el panel tiene guardadas están siendo rechazadas. Configúralas en Bases de datos y esta tarjeta funcionará."
     },
     "binlog": {
       "title": "Registros binarios",
@@ -1831,7 +1833,8 @@
       "purged": "Registros binarios purgados",
       "purgeFailed": "No se pudieron purgar los registros binarios.",
       "saved": "Ajustes de registros binarios actualizados",
-      "saveFailed": "No se pudieron cambiar los ajustes de registros binarios."
+      "saveFailed": "No se pudieron cambiar los ajustes de registros binarios.",
+      "unreachableBody": "El panel no puede conectarse al servidor de base de datos, así que no puede leer sus ajustes de registros binarios. Corrige las credenciales guardadas en Bases de datos."
     },
     "database": {
       "noEngine": "No hay ningún servidor MySQL o MariaDB en ejecución en esta máquina, así que no hay nada que configurar aquí."
@@ -3376,7 +3379,8 @@
         "saved": "Ajustes de despliegue guardados.",
         "saveFailed": "No se pudieron guardar esos ajustes.",
         "noPermission": "Tu rol no incluye Despliegue de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
-        "nothingToSave": "Nada que guardar"
+        "nothingToSave": "Nada que guardar",
+        "branchPlaceholder": "main"
       },
       "history": {
         "empty": {
@@ -3648,7 +3652,9 @@
         },
         "deleteDescriptionPermanent": "Estos se destruyen en el servidor de inmediato. Esto no se puede deshacer.",
         "deleteSubmitForever": "Borrar definitivamente",
-        "deleteDoneForever": "{count, plural, one {# elemento borrado definitivamente.} other {# elementos borrados definitivamente.}}"
+        "deleteDoneForever": "{count, plural, one {# elemento borrado definitivamente.} other {# elementos borrados definitivamente.}}",
+        "targetFolderPlaceholder": "wp-content/keep",
+        "archiveNamePlaceholder": "site-backup"
       },
       "size": {
         "failed": "No se pudo medir esa carpeta."
@@ -4268,7 +4274,17 @@
         "disagrees": "El servidor está aplicando algo distinto de lo que está guardado aquí.",
         "disagreesWhy": "O se editó el archivo de pool a mano, o una línea open_basedir en Directivas adicionales está anulando esta.",
         "liveLabel": "Lo que el servidor aplica ahora"
-      }
+      },
+      "memoryLimitPlaceholder": "256M",
+      "uploadMaxFilesizePlaceholder": "64M",
+      "maxExecutionTimePlaceholder": "120",
+      "maxInputVarsPlaceholder": "3000",
+      "pmMaxChildrenPlaceholder": "10",
+      "pmMaxRequestsPlaceholder": "500",
+      "maxInputTimePlaceholder": "60",
+      "sessionGcMaxlifetimePlaceholder": "1440",
+      "autoPrependPlaceholder": "/home/site/app/prepend.php",
+      "postMaxSizePlaceholder": "128M"
     },
     "fail2ban": {
       "pageTitle": "Protección contra ataques",

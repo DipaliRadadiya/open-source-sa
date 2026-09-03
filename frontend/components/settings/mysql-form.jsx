@@ -45,6 +45,7 @@ export function MysqlForm({ mysql, canManage, changedBy }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 
+  const unreachable = mysql?.present === true && mysql?.reachable === false;
   const effective = mysql?.max_connections ?? 0;
   const requested = mysql?.configured_max_connections ?? null;
 
@@ -90,6 +91,7 @@ export function MysqlForm({ mysql, canManage, changedBy }) {
             changedBy={changedBy}
             readOnly={!canManage}
             actions={
+              unreachable ? null : (
               <SectionActions
                 label={t("title")}
                 isDirty={form.formState.isDirty}
@@ -97,8 +99,24 @@ export function MysqlForm({ mysql, canManage, changedBy }) {
                 onDiscard={() => form.reset()}
                 canManage={canManage}
               />
+              )
             }
           >
+            {/* Installed but not answering. The form is useless here — every
+                save would be refused — so the card explains instead of
+                offering controls that cannot work. */}
+            {unreachable ? (
+              <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+                <div>
+                  <p className="font-medium">
+                    {t("unreachableTitle", { engine: mysql?.engine_label ?? "" })}
+                  </p>
+                  <p className="text-muted-foreground">{t("unreachableBody")}</p>
+                </div>
+              </div>
+            ) : null}
+
             {/* The server disagreeing with the request is the one thing on this
                 card worth interrupting for. */}
             {mysql?.capped ? (
@@ -117,6 +135,7 @@ export function MysqlForm({ mysql, canManage, changedBy }) {
               </div>
             ) : null}
 
+            {unreachable ? null : (
             <FormField
               control={form.control}
               name="max_connections"
@@ -141,13 +160,18 @@ export function MysqlForm({ mysql, canManage, changedBy }) {
               )}
             />
 
+            )}
+
+            {unreachable ? null : (
             <InfoRow label={t("inUse")}>
               <p className="text-sm tabular-nums">
                 {number(mysql?.connections ?? 0)} / {number(effective)}
               </p>
             </InfoRow>
 
-            {mysql?.recommended_max ? (
+            )}
+
+            {!unreachable && mysql?.recommended_max ? (
               <InfoRow
                 label={t("recommended", { value: number(mysql.recommended_max) })}
                 hint={t("recommendedHint")}

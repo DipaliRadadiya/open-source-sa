@@ -182,8 +182,101 @@ it('denies an unauthenticated request', function () {
     $this->putJson('/api/settings/mysql', ['max_connections' => 300])->assertUnauthorized();
 });
 
-it('does not offer the group when no SQL engine answers', function () {
+it('still offers the group when the engine is installed but not answering', function () {
+    // This assertion used to be the opposite — it expected the group to vanish
+    // when `SELECT 1` failed, which is precisely the bug: a box with MariaDB
+    // installed and running lost the card and was told nothing was installed.
+    // Absence is now decided by the unit and the config directory, neither of
+    // which can be wrong for the reason a rejected password can.
     fakeMysql(reachable: false);
+
+    $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/settings')->assertOk();
+
+    expect($settings->json('settings.mysql'))->not->toBeNull()
+        ->and($settings->json('settings.mysql.reachable'))->toBeFalse();
+});
+
+/*
+ * The three states, and why they are three.
+ *
+ * A running MariaDB whose stored credentials are rejected used to be reported
+ * as "no MySQL or MariaDB server is running on this machine" — the panel
+ * asserting something the server flatly contradicted. Reproduced on a real box
+ * where MariaDB was up, the client installed, and the admin connection still
+ * held the firstOrCreate default of root with no password.
+ */
+
+function fakeUnreachable(): void
+{
+    Process::fake(function ($process) {
+        $cmd = $process->command;
+
+        if (($cmd[0] ?? null) === 'sudo' && ($cmd[1] ?? null) === '-n') {
+            $cmd = array_slice($cmd, 2);
+        }
+
+        // The unit exists — the engine is installed and systemd knows it.
+        if (($cmd[0] ?? '') === 'systemctl') {
+            return Process::result(output: '# /lib/systemd/system/mariadb.service');
+        }
+
+        if (($cmd[0] ?? '') === 'cat') {
+            return Process::result(exitCode: 1, errorOutput: 'No such file');
+        }
+
+        // ...but every statement is refused.
+        return Process::result(exitCode: 1, errorOutput: "ERROR 1698 (28000): Access denied for user 'root'@'localhost'");
+    });
+}
+
+it('does not call a running engine absent just because it cannot log in', function () {
+    fakeUnreachable();
+
+    $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/settings')->assertOk();
+
+    // The group is still offered: a card that disappears cannot explain itself.
+    expect($settings->json('settings.mysql'))->not->toBeNull()
+        ->and($settings->json('settings.mysql.present'))->toBeTrue()
+        ->and($settings->json('settings.mysql.reachable'))->toBeFalse();
+});
+
+it('reports no reading rather than a zero when the engine cannot be reached', function () {
+    fakeUnreachable();
+
+    $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/settings')->assertOk();
+
+    // A zero here would read as "a database allowing no connections", which is
+    // a measurement nobody took.
+    expect($settings->json('settings.mysql.max_connections'))->toBeNull();
+});
+
+it('refuses to save against an unreachable engine rather than half-applying', function () {
+    fakeUnreachable();
+
+    // Writing the drop-in and failing the SET GLOBAL would leave the panel
+    // claiming a value that only arrives at the next restart.
+    putMaxConnections(300)->assertUnprocessable()->assertJsonValidationErrors('engine');
+
+    expect(File::exists($this->dir.'/99-serveravatar.cnf'))->toBeFalse();
+});
+
+it('says the engine is absent only when nothing is installed', function () {
+    Process::fake(function ($process) {
+        $cmd = $process->command;
+
+        if (($cmd[0] ?? null) === 'sudo' && ($cmd[1] ?? null) === '-n') {
+            $cmd = array_slice($cmd, 2);
+        }
+
+        // No unit, no config directory, nothing answering.
+        return Process::result(exitCode: 1, errorOutput: 'not found');
+    });
+
+    config(['server.databases.engines.mariadb.config_dir' => '/nonexistent-'.uniqid()]);
+    config(['server.databases.engines.mysql.config_dir' => '/nonexistent-'.uniqid()]);
 
     $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
         ->getJson('/api/settings')->assertOk();

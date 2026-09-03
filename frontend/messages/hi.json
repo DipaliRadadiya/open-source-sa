@@ -1804,7 +1804,9 @@
       "cappedTitle": "सर्वर ने यह मान घटा दिया",
       "cappedBody": "आपने {requested} माँगा था लेकिन सर्वर {effective} पर चल रहा है, क्योंकि उसकी ओपन फ़ाइल सीमा ({limit}) इससे अधिक का समर्थन नहीं करती। उस सीमा को बढ़ाने के लिए डेटाबेस सेवा को रीस्टार्ट करना होगा।",
       "saved": "कनेक्शन सीमा अपडेट हुई",
-      "saveFailed": "कनेक्शन सीमा नहीं बदली जा सकी."
+      "saveFailed": "कनेक्शन सीमा नहीं बदली जा सकी.",
+      "unreachableTitle": "{engine} इंस्टॉल है, लेकिन पैनल उससे कनेक्ट नहीं कर पा रहा",
+      "unreachableBody": "सर्वर चल रहा है — पैनल ने जो क्रेडेंशियल सहेजे हैं वे अस्वीकृत हो रहे हैं। उन्हें Databases में सेट करें, फिर यह कार्ड काम करेगा।"
     },
     "binlog": {
       "title": "बाइनरी लॉग",
@@ -1831,7 +1833,8 @@
       "purged": "बाइनरी लॉग purge हुए",
       "purgeFailed": "बाइनरी लॉग purge नहीं हो सके।",
       "saved": "बाइनरी लॉग सेटिंग अपडेट हुईं",
-      "saveFailed": "बाइनरी लॉग सेटिंग नहीं बदली जा सकीं।"
+      "saveFailed": "बाइनरी लॉग सेटिंग नहीं बदली जा सकीं।",
+      "unreachableBody": "पैनल डेटाबेस सर्वर से कनेक्ट नहीं कर सका, इसलिए बाइनरी लॉग सेटिंग पढ़ी नहीं जा सकीं। Databases में सहेजे गए क्रेडेंशियल ठीक करें।"
     },
     "database": {
       "noEngine": "इस मशीन पर कोई MySQL या MariaDB सर्वर नहीं चल रहा, इसलिए यहाँ कॉन्फ़िगर करने के लिए कुछ नहीं है।"
@@ -3376,7 +3379,8 @@
         "saved": "डिप्लॉय सेटिंग्स सहेजी गईं।",
         "saveFailed": "वे सेटिंग्स सहेजी नहीं जा सकीं।",
         "noPermission": "आपकी भूमिका में डिप्लॉयमेंट (इस साइट के लिए) का Manage एक्सेस नहीं है। इसे देने के लिए किसी एडमिन से कहें।",
-        "nothingToSave": "सहेजने के लिए कुछ नहीं"
+        "nothingToSave": "सहेजने के लिए कुछ नहीं",
+        "branchPlaceholder": "main"
       },
       "history": {
         "empty": {
@@ -3648,7 +3652,9 @@
         },
         "deleteDescriptionPermanent": "ये तुरंत सर्वर से मिटा दिए जाते हैं। यह वापस नहीं हो सकता।",
         "deleteSubmitForever": "हमेशा के लिए हटाएँ",
-        "deleteDoneForever": "{count, plural, one {# चीज़ हमेशा के लिए हटाई।} other {# चीज़ें हमेशा के लिए हटाईं।}}"
+        "deleteDoneForever": "{count, plural, one {# चीज़ हमेशा के लिए हटाई।} other {# चीज़ें हमेशा के लिए हटाईं।}}",
+        "targetFolderPlaceholder": "wp-content/keep",
+        "archiveNamePlaceholder": "site-backup"
       },
       "size": {
         "failed": "उस फ़ोल्डर को मापा नहीं जा सका।"
@@ -4268,7 +4274,17 @@
         "disagrees": "सर्वर यहाँ सेव किए गए से कुछ अलग लागू कर रहा है।",
         "disagreesWhy": "या तो पूल फ़ाइल हाथ से बदली गई है, या Additional directives में मौजूद एक open_basedir पंक्ति इसे ओवरराइड कर रही है।",
         "liveLabel": "सर्वर अभी क्या लागू कर रहा है"
-      }
+      },
+      "memoryLimitPlaceholder": "256M",
+      "uploadMaxFilesizePlaceholder": "64M",
+      "maxExecutionTimePlaceholder": "120",
+      "maxInputVarsPlaceholder": "3000",
+      "pmMaxChildrenPlaceholder": "10",
+      "pmMaxRequestsPlaceholder": "500",
+      "maxInputTimePlaceholder": "60",
+      "sessionGcMaxlifetimePlaceholder": "1440",
+      "autoPrependPlaceholder": "/home/site/app/prepend.php",
+      "postMaxSizePlaceholder": "128M"
     },
     "fail2ban": {
       "pageTitle": "हमलों से सुरक्षा",

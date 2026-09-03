@@ -6,8 +6,10 @@ use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\SqlEngine;
+use App\Services\Server\Databases\SqlEngineLocator;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Binary log retention and size for MySQL / MariaDB.
@@ -54,6 +56,7 @@ class MysqlBinlogSettings implements SettingGroup
 
     public function __construct(
         private DatabaseManager $databases,
+        private SqlEngineLocator $locator,
         private ManagedFile $files,
         private ServerOps $serverOps,
     ) {}
@@ -63,9 +66,10 @@ class MysqlBinlogSettings implements SettingGroup
         return 'mysql_binlog';
     }
 
+    /** Present, not reachable — see {@see MysqlSettings::available()}. */
     public function available(): bool
     {
-        return $this->engineName() !== null;
+        return $this->locator->present() !== null;
     }
 
     /**
@@ -73,10 +77,23 @@ class MysqlBinlogSettings implements SettingGroup
      */
     public function read(): array
     {
-        $engine = $this->engineName();
+        $engine = $this->locator->present();
 
         if ($engine === null) {
-            return ['enabled' => false];
+            return ['enabled' => false, 'present' => false, 'reachable' => false];
+        }
+
+        if (! $this->locator->reachable($engine)) {
+            // Binary logging state is a question only the server can answer,
+            // and reporting "disabled" here would be a guess presented as a
+            // fact — the same mistake as calling an unreachable engine absent.
+            return [
+                'engine' => $engine,
+                'engine_label' => (string) config("server.databases.engines.{$engine}.label", $engine),
+                'present' => true,
+                'reachable' => false,
+                'enabled' => false,
+            ];
         }
 
         $sql = $this->sqlEngine($engine);
@@ -88,6 +105,8 @@ class MysqlBinlogSettings implements SettingGroup
             'engine_label' => (string) config("server.databases.engines.{$engine}.label", $engine),
             // Read-only here on purpose: changing it needs a restart, which
             // this group does not do. The UI explains rather than offers.
+            'present' => true,
+            'reachable' => true,
             'enabled' => $enabled,
             'format' => $sql->variable('binlog_format'),
             'expire_seconds' => $this->expireSeconds($sql),
@@ -107,10 +126,21 @@ class MysqlBinlogSettings implements SettingGroup
      */
     public function apply(array $data): void
     {
-        $engine = $this->engineName();
+        $engine = $this->locator->present();
 
         if ($engine === null) {
-            throw new SettingOperationException('database.engine_unavailable');
+            throw ValidationException::withMessages([
+                'engine' => [__('errors/setting.database_absent')],
+            ]);
+        }
+
+        if (! $this->locator->reachable($engine)) {
+            // 422 naming the cause, not a 500 with a reference: the operator
+            // can fix this, and "the engine is unreachable" is the one thing
+            // that tells them how.
+            throw ValidationException::withMessages([
+                'engine' => [__('errors/setting.database_unreachable')],
+            ]);
         }
 
         $values = [
@@ -153,10 +183,21 @@ class MysqlBinlogSettings implements SettingGroup
      */
     public function purge(int $days): void
     {
-        $engine = $this->engineName();
+        $engine = $this->locator->present();
 
         if ($engine === null) {
-            throw new SettingOperationException('database.engine_unavailable');
+            throw ValidationException::withMessages([
+                'engine' => [__('errors/setting.database_absent')],
+            ]);
+        }
+
+        if (! $this->locator->reachable($engine)) {
+            // 422 naming the cause, not a 500 with a reference: the operator
+            // can fix this, and "the engine is unreachable" is the one thing
+            // that tells them how.
+            throw ValidationException::withMessages([
+                'engine' => [__('errors/setting.database_unreachable')],
+            ]);
         }
 
         $this->sqlEngine($engine)->purgeBinaryLogs($days);
@@ -184,29 +225,14 @@ class MysqlBinlogSettings implements SettingGroup
         return $days === null ? 0 : (int) round(((float) $days) * 86400);
     }
 
-    private function engineName(): ?string
-    {
-        foreach (['mariadb', 'mysql'] as $engine) {
-            if (! in_array($engine, $this->databases->engineNames(), true)) {
-                continue;
-            }
-
-            $candidate = $this->databases->engine($engine);
-
-            if ($candidate instanceof SqlEngine && $candidate->available()) {
-                return $engine;
-            }
-        }
-
-        return null;
-    }
-
     private function sqlEngine(string $engine): SqlEngine
     {
         $resolved = $this->databases->engine($engine);
 
         if (! $resolved instanceof SqlEngine) {
-            throw new SettingOperationException('database.engine_unavailable');
+            throw ValidationException::withMessages([
+                'engine' => [__('errors/setting.database_absent')],
+            ]);
         }
 
         return $resolved;
@@ -228,7 +254,7 @@ class MysqlBinlogSettings implements SettingGroup
      */
     private function configuredValues(): array
     {
-        $engine = $this->engineName();
+        $engine = $this->locator->present();
 
         if ($engine === null) {
             return [];
