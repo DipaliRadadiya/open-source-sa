@@ -54,11 +54,60 @@ echarts.use([
  */
 const NO_TOKENS = Object.freeze({});
 
+/** Reused: one 1x1 context is enough for every token on the page. */
+let probe = null;
+// Any colour will do, as long as a token is unlikely to be exactly it.
+const SENTINEL = "#010203";
+
+/**
+ * A token in a colour space ECharts can do arithmetic on.
+ *
+ * The tokens are authored in `oklch()`, which the cascade hands back as
+ * `lab()`. The browser paints that happily, so charts drew correctly — until
+ * you hovered one, and every line vanished until you moved away.
+ *
+ * ECharts does not ask the browser for its hover colour. It lightens the
+ * series colour itself, using zrender's own parser, and that parser knows
+ * `#rgb`, `rgb()` and `hsl()` and nothing else. Given `lab(...)` it returns
+ * undefined, so the emphasised line is painted with no colour at all.
+ *
+ * Converting by hand would mean an oklch-to-sRGB implementation living here
+ * and drifting from whatever the browser does. So the browser converts it:
+ * fill one pixel and read back what it actually painted. That is the same
+ * answer the canvas would have produced anyway, gamut clamping included.
+ *
+ * A value the browser does not recognise as a colour is passed through
+ * untouched — this reads whatever tokens a chart asks for, and not all of
+ * them have to be colours.
+ */
+function toSrgb(value) {
+  if (!value) return value;
+
+  probe ??= document
+    .createElement("canvas")
+    .getContext("2d", { willReadFrequently: true });
+  if (!probe) return value;
+
+  probe.fillStyle = SENTINEL;
+  probe.fillStyle = value;
+  // Assigning an invalid colour is silently ignored, so the sentinel surviving
+  // means this was never a colour to begin with.
+  if (probe.fillStyle === SENTINEL) return value;
+
+  probe.clearRect(0, 0, 1, 1);
+  probe.fillRect(0, 0, 1, 1);
+  const [r, g, b, a] = probe.getImageData(0, 0, 1, 1).data;
+
+  return a === 255
+    ? `rgb(${r}, ${g}, ${b})`
+    : `rgba(${r}, ${g}, ${b}, ${Number((a / 255).toFixed(3))})`;
+}
+
 function readTokens(names) {
   const styles = getComputedStyle(document.documentElement);
   const resolved = {};
   for (const name of names) {
-    resolved[name] = styles.getPropertyValue(`--${name}`).trim();
+    resolved[name] = toSrgb(styles.getPropertyValue(`--${name}`).trim());
   }
 
   return resolved;
