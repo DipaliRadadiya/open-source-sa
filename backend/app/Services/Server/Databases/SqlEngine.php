@@ -311,6 +311,43 @@ class SqlEngine implements DatabaseEngine
         return $tables;
     }
 
+    /**
+     * One global variable, or null when it cannot be read.
+     *
+     * Null rather than zero: "the server did not answer" and "the server said
+     * zero" are different facts, and a limit reported as 0 would read as no
+     * limit at all.
+     */
+    public function variable(string $name): ?string
+    {
+        $vars = $this->statusMap("SHOW GLOBAL VARIABLES LIKE '".$this->esc($name)."';");
+
+        return $vars[$name] ?? null;
+    }
+
+    /**
+     * Raise or lower `max_connections` on the running server.
+     *
+     * Takes effect immediately and drops nothing — existing connections are
+     * untouched, and lowering the value only stops new ones once the count
+     * falls back under it. No restart, which is the whole reason this is worth
+     * doing alongside the drop-in rather than instead of it.
+     *
+     * The value the server ends up with is returned rather than assumed. It
+     * silently caps this against `open_files_limit`, so the only trustworthy
+     * answer is the one read back afterwards.
+     */
+    public function setGlobalMaxConnections(int $value): int
+    {
+        $result = $this->run('SET GLOBAL max_connections = '.$value.';');
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+
+        return (int) ($this->variable('max_connections') ?? 0);
+    }
+
     public function optimize(string $database): void
     {
         $this->maintain($database, 'OPTIMIZE');

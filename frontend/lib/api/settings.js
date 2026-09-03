@@ -47,6 +47,15 @@ export function updateRebootSchedule(payload) {
  * something still in flight and re-reads state that has not changed yet — which
  * reads exactly like "the password was not updated".
  */
+/**
+ * `max_connections`. The response carries what the server actually adopted —
+ * MySQL caps the value against open_files_limit — so the caller must render
+ * the response rather than the value it sent.
+ */
+export function updateMysqlSettings(payload) {
+  return api.put("/settings/mysql", payload);
+}
+
 export function updateRedisSettings(payload) {
   return api.put("/settings/redis", payload);
 }

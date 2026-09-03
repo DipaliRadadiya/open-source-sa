@@ -1571,7 +1571,9 @@
       "invalidPort": "Enter a port between 1 and 65535.",
       "invalidTime": "Use a 24-hour time, like 03:00.",
       "invalidMemory": "Use a size like 256mb or 1gb — or 0 for no limit.",
-      "passwordTooShort": "Use 8 characters or more."
+      "passwordTooShort": "Use 8 characters or more.",
+      "connectionsTooLow": "Must be at least 10 — below that the panel cannot reach the database.",
+      "connectionsTooHigh": "That is higher than any server will honour."
     },
     "server": {
       "title": "Server",
@@ -1784,7 +1786,20 @@
     "unsavedTitle": "Leave without saving?",
     "unsavedDescription": "Your changes on this page have not been saved. They will be lost.",
     "unsavedStay": "Stay on this page",
-    "unsavedLeave": "Leave and lose changes"
+    "unsavedLeave": "Leave and lose changes",
+    "mysql": {
+      "title": "Database connections",
+      "description": "How many clients MySQL or MariaDB will accept at once. Applied immediately and kept across restarts.",
+      "maxConnections": "Maximum connections",
+      "maxConnectionsHint": "Applies straight away — no restart, and open connections are not dropped.",
+      "inUse": "In use now",
+      "recommended": "Recommended for this server: {value}",
+      "recommendedHint": "Based on this server's memory. Each connection reserves memory of its own, so a high value on a small server risks running out under load.",
+      "cappedTitle": "The server reduced this value",
+      "cappedBody": "You asked for {requested} but the server is running {effective}, because its open file limit ({limit}) cannot support more. Raising that limit requires a restart of the database service.",
+      "saved": "Connection limit updated",
+      "saveFailed": "The connection limit could not be changed."
+    }
   },
   "php": {
     "title": "PHP",

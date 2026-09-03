@@ -6,6 +6,7 @@ use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Setting\GeneralSettingsRequest;
+use App\Http\Requests\Server\Setting\MysqlSettingsRequest;
 use App\Http\Requests\Server\Setting\RebootScheduleRequest;
 use App\Http\Requests\Server\Setting\RebootServerRequest;
 use App\Http\Requests\Server\Setting\RedisSettingsRequest;
@@ -65,6 +66,17 @@ class SettingController extends Controller
     public function updateSwap(SwapSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
     {
         return $this->save('swap', $request, $settings, $log);
+    }
+
+    /**
+     * The response carries the value the *server* adopted, not the one that
+     * was asked for. MySQL and MariaDB silently cap `max_connections` against
+     * `open_files_limit`, so `save()` re-reads the group afterwards and the
+     * form shows what actually happened rather than echoing the request back.
+     */
+    public function updateMysql(MysqlSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
+    {
+        return $this->save('mysql', $request, $settings, $log);
     }
 
     /**

@@ -192,6 +192,16 @@ export const swapFormSchema = z.object({
     .max(SWAP_MAX_MB, "swapTooLarge"),
 });
 
+export const mysqlFormSchema = z.object({
+  // The floor is a lockout guard: the panel needs connections of its own, and
+  // a server set below this is one this screen can no longer reach to undo it.
+  max_connections: z.coerce
+    .number({ message: "invalidNumber" })
+    .int("invalidNumber")
+    .min(10, "connectionsTooLow")
+    .max(100000, "connectionsTooHigh"),
+});
+
 export const ROOT_LOGIN_OPTIONS = ["yes", "prohibit-password", "no"];
 
 export const securityFormSchema = z.object({

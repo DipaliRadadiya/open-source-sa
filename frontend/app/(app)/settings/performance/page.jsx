@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/settings/get-settings";
 import { getMemoryTotal } from "@/lib/settings/get-memory-total";
 import { SwapForm } from "@/components/settings/swap-form";
 import { RedisForm } from "@/components/settings/redis-form";
+import { MysqlForm } from "@/components/settings/mysql-form";
 import { changedFor } from "@/lib/settings/changed-for";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -44,6 +45,16 @@ export default async function SettingsPerformancePage() {
           redis={data.redis}
           canManage={canManage}
           changedBy={await changedFor(lastChanged, "redis")}
+        />
+      ) : null}
+
+      {/* Absent means no MySQL or MariaDB answered on this box — the same
+          rule as Redis above: no card for software that isn't there. */}
+      {data.mysql ? (
+        <MysqlForm
+          mysql={data.mysql}
+          canManage={canManage}
+          changedBy={await changedFor(lastChanged, "mysql")}
         />
       ) : null}
     </div>
