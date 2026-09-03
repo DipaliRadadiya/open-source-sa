@@ -2,8 +2,10 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Enums\DomainType;
 use App\Exceptions\Server\Application\CloneOperationException;
 use App\Models\Application;
+use App\Models\ApplicationDomain;
 use App\Models\SiteClone;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\ServerOps;
@@ -90,6 +92,25 @@ class CloneManager
             'repository_url' => $source->repository_url,
             'branch' => $source->branch,
             'status' => 'pending',
+        ]);
+
+        // The Domains screen reads `application_domains`, not this column —
+        // `applications.domain` is only the mirror of whichever row is
+        // primary. CreateApplication writes that row; this path does not go
+        // through it, so a cloned site came up serving its domain with a
+        // completely empty Domains section.
+        //
+        // Worse than cosmetic. `Application::serverNames()` falls back to this
+        // column only while the relation is empty, so adding a single alias
+        // afterwards made the relation non-empty *without* the primary in it —
+        // and the next vhost dropped the site's own domain.
+        $target->domains()->create([
+            'domain' => strtolower(trim((string) $target->domain)),
+            'type' => DomainType::Primary,
+            // A generated clone hostname is usually a wildcard-DNS name, and the
+            // certificate actions filter on this flag to avoid spending the
+            // shared nip.io rate limit.
+            'is_test' => ApplicationDomain::looksTemporary((string) $target->domain),
         ]);
 
         if ($source->app_port !== null) {

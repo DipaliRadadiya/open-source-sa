@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\DomainType;
 use App\Jobs\RunClone;
 use App\Models\ActivityLog;
 use App\Models\Application;
@@ -63,8 +64,13 @@ function runClone(Application $source, string $domain, ?string $name = null): Si
 
     $clone = SiteClone::findOrFail($response->json('clone.id'));
 
-    app()->call([new RunClone($clone->id, $source->id), 'handle']);
-
+    // No second `handle()`. The suite runs QUEUE_CONNECTION=sync, so
+    // `RunClone::dispatch` inside the POST above has already run the whole
+    // clone — calling it again ran every clone twice and asserted on the
+    // second pass. Harmless only while nothing in the flow was unique per
+    // application; the moment the clone started writing its primary domain
+    // row, the second run collided with the first on
+    // `application_domains.domain` and every clone test failed.
     return $clone->fresh();
 }
 
@@ -369,4 +375,56 @@ describe('when a clone fails partway', function () {
             ->and($record->target_application_id)->toBeNull()
             ->and(Application::where('domain', 'shop-clone.test')->exists())->toBeFalse();
     })->with(['chmod', 'chown']);
+});
+
+it('gives the clone a primary domain row, not just the mirror column', function () {
+    // The Domains screen reads `application_domains`; `applications.domain` is
+    // only the mirror of whichever row is primary. CreateApplication writes
+    // that row and CloneManager does not go through it, so a clone came up
+    // serving its domain with a completely empty Domains section.
+    fakeCloneServer();
+
+    $source = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id,
+        'name' => 'Docs primary',
+        'slug' => 'docs-primary', 'domain' => 'docs-primary.test', 'site_type' => 'static',
+        'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
+    ]);
+
+    $clone = Application::find(runClone($source, 'docs-primary-clone.test')->target_application_id);
+
+    $primary = $clone->domains()->where('type', 'primary')->first();
+
+    expect($primary)->not->toBeNull()
+        ->and($primary->domain)->toBe('docs-primary-clone.test')
+        // The clone's own domain, not the source's — the mirror column and the
+        // row have to name the same host or the vhost and the screen disagree.
+        ->and($clone->domain)->toBe($primary->domain);
+});
+
+it('keeps serving its own domain after an alias is added', function () {
+    // This is why the missing row was worse than cosmetic. `serverNames()`
+    // falls back to `applications.domain` *only while the relation is empty*.
+    // With no primary row, adding one alias made the relation non-empty
+    // without the site's own domain in it — and the next vhost dropped it.
+    fakeCloneServer();
+
+    $source = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id,
+        'name' => 'Docs alias',
+        'slug' => 'docs-alias', 'domain' => 'docs-alias.test', 'site_type' => 'static',
+        'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
+    ]);
+
+    $clone = Application::find(runClone($source, 'docs-alias-clone.test')->target_application_id);
+
+    $clone->domains()->create([
+        'domain' => 'extra.docs-alias.test',
+        'type' => DomainType::Alias,
+        'is_test' => false,
+    ]);
+
+    expect($clone->fresh()->load('domains')->serverNames())
+        ->toContain('docs-alias-clone.test')
+        ->toContain('extra.docs-alias.test');
 });

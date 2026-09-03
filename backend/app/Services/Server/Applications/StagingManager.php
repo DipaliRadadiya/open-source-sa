@@ -3,10 +3,12 @@
 namespace App\Services\Server\Applications;
 
 use App\Contracts\StagingStrategy;
+use App\Enums\DomainType;
 use App\Exceptions\Server\Application\StagingOperationException;
 use App\Exceptions\Server\Application\StagingRollbackException;
 use App\Exceptions\Server\ServerOperationException;
 use App\Models\Application;
+use App\Models\ApplicationDomain;
 use App\Models\Database;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Databases\DatabaseManager;
@@ -60,6 +62,25 @@ class StagingManager
             'php_version' => $production->php_version,
             'web_root' => $production->web_root,
             'status' => 'pending',
+        ]);
+
+        // The Domains screen reads `application_domains`, not this column —
+        // `applications.domain` is only the mirror of whichever row is
+        // primary. CreateApplication writes that row; this path does not go
+        // through it, so a staging site came up serving its domain with a
+        // completely empty Domains section.
+        //
+        // Worse than cosmetic. `Application::serverNames()` falls back to this
+        // column only while the relation is empty, so adding a single alias
+        // afterwards made the relation non-empty *without* the primary in it —
+        // and the next vhost dropped the site's own domain.
+        $staging->domains()->create([
+            'domain' => strtolower(trim((string) $staging->domain)),
+            'type' => DomainType::Primary,
+            // A generated staging hostname is usually a wildcard-DNS name, and the
+            // certificate actions filter on this flag to avoid spending the
+            // shared nip.io rate limit.
+            'is_test' => ApplicationDomain::looksTemporary((string) $staging->domain),
         ]);
 
         $staging->load('systemUser');

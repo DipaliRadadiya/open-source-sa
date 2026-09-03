@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\DomainType;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Database;
@@ -1026,4 +1027,37 @@ it('refuses the push when production visibility cannot be read', function () {
     // It stops before the staging dump is restored over production: the only
     // dump that ran is the safety copy.
     expect(collect($dumps)->filter(fn (string $d) => str_contains($d, '/tmp/panel-staging-push')))->toBeEmpty();
+});
+
+it('gives the staging site a primary domain row, not just the mirror column', function () {
+    // The Domains screen reads `application_domains`; `applications.domain` is
+    // only the mirror of whichever row is primary. CreateApplication writes
+    // that row, StagingManager does not go through it, and staging came up
+    // serving its domain with an empty Domains section.
+    //
+    // Worse than cosmetic: `serverNames()` falls back to the column only while
+    // the relation is empty, so adding one alias afterwards made the relation
+    // non-empty without the primary in it and the next vhost dropped the
+    // staging site's own domain.
+    fakeStagingServer();
+
+    $response = $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl(), ['domain' => 'staging.domains.test'])
+        ->assertCreated();
+
+    $staging = Application::find($response->json('staging.id'));
+    $primary = $staging->domains()->where('type', 'primary')->first();
+
+    expect($primary)->not->toBeNull()
+        ->and($primary->domain)->toBe('staging.domains.test')
+        ->and($staging->domain)->toBe($primary->domain);
+
+    $staging->domains()->create([
+        'domain' => 'extra.staging.domains.test',
+        'type' => DomainType::Alias,
+        'is_test' => false,
+    ]);
+
+    expect($staging->fresh()->load('domains')->serverNames())
+        ->toContain('staging.domains.test');
 });
