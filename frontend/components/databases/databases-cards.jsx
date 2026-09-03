@@ -110,7 +110,10 @@ export function DatabasesCards({
             {/* mt-auto: cards in a row stretch to the tallest, and an action row
                 floating mid-card reads as unfinished. */}
             <div className="mt-auto border-t pt-3">
+              {/* The card is the narrow case: three controls on one line do not
+                  fit at 390px, so here wrapping is the point. */}
               <DatabaseRowActions
+                className="flex flex-wrap items-center justify-end gap-2"
                 database={database}
                 onDelete={onDelete}
                 canManage={canManage}

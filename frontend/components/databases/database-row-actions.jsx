@@ -17,11 +17,28 @@ import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
  * workers, cron jobs, system users and files each have one row-actions
  * component that both views render. Databases was one of the two that did not.
  */
-export function DatabaseRowActions({ database, onDelete, canManage, phpmyadminInstalled }) {
+/**
+ * Layout is the caller's, and the default is the table's.
+ *
+ * Sharing the actions is not the same as sharing the shape they sit in. The
+ * first version wrapped, which a card on a phone needs and the table's 160px
+ * action column does not: given permission to wrap it did, breaking one tidy
+ * row into three stacked ones. Without `flex-wrap` the column simply widens to
+ * fit, which is what it did before and what the header alignment expects.
+ */
+const TABLE_ROW = "flex items-center justify-end gap-1";
+
+export function DatabaseRowActions({
+  database,
+  onDelete,
+  canManage,
+  phpmyadminInstalled,
+  className = TABLE_ROW,
+}) {
   const t = useTranslations("databases");
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className={className}>
       {/* Spelled out, not an icon. Users, credentials and backups all live on
           the detail page, and nothing on this row said so — people could not
           find them without being told the name was clickable. */}
