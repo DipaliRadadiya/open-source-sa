@@ -1137,6 +1137,22 @@ setup_backend() {
     # failed update.
     set_env "${dir}/.env" PANEL_UPDATE_STATE_DIR "$UPDATE_STATE_DIR"
     set_env "${dir}/.env" PANEL_PHP_VERSION "$PHP_VERSION"
+
+    # The same version again, under the key the *sites* use. `PANEL_PHP_VERSION`
+    # above is the panel's own interpreter and is read by the self-updater
+    # alone; `SERVER_DEFAULT_PHP_VERSION` is what a site that names no version
+    # gets — its pool, its vhost's `lsphp` path, its installer's CLI.
+    #
+    # This installer installs exactly one PHP, the one asked for here, and the
+    # config default for sites was the literal `8.4` regardless. So
+    # `PHP_VERSION=8.3 ./install.sh` produced a server with only 8.3 on it
+    # where every site was created pointing at an 8.4 that was never installed:
+    # on nginx a pool written into a missing `/etc/php/8.4`, on OpenLiteSpeed
+    # an `lsphp84` binary that is not there and a site reported Active that
+    # answers 503. Two keys because they are genuinely two decisions — a panel
+    # can be updated onto a newer PHP without moving every site onto it — but
+    # at install time there is only one PHP, so they start out agreeing.
+    set_env "${dir}/.env" SERVER_DEFAULT_PHP_VERSION "$PHP_VERSION"
     set_env "${dir}/.env" PANEL_PHP_FPM_SERVICE "${PANEL_SLUG}-fpm.service"
     set_env "${dir}/.env" PANEL_FRONTEND_SERVICE "${PANEL_SLUG}-frontend.service"
     set_env "${dir}/.env" PANEL_QUEUE_SERVICE "${PANEL_SLUG}-queue.service"

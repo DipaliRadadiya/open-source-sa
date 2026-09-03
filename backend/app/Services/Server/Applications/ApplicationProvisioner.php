@@ -94,6 +94,26 @@ class ApplicationProvisioner
 
         $this->progress->open($application);
 
+        // Before anything is created, because everything that follows assumes
+        // this account exists: the directory is chowned to it, the vhost names
+        // it, the installer runs as it.
+        //
+        // The `system_users` row is not proof — it records what the panel
+        // created, and a server rebuilt under a surviving database, an adopted
+        // box, or a `useradd` that failed somewhere the row outlived all leave
+        // a username with no passwd entry. {@see PoolManager} learned this and
+        // asked `getent` before writing a pool, and {@see CrontabManager}
+        // before writing a cron file — but the check lived *inside* the pool
+        // builder, and `PoolManager::supported()` is true for the FPM stack
+        // only. On OpenLiteSpeed the pool step never runs, so nothing asked,
+        // and `chown` exited 1 several steps later with a reference number in
+        // place of "that account does not exist on this server".
+        $this->step('check_account', fn (): ServerOpsResult => $this->serverOps->run(
+            ['getent', 'passwd', (string) $user?->username],
+            ['feature' => 'application', 'op' => 'account_check', 'application' => $application->id],
+            timeout: 15,
+        ));
+
         // One directory, for every site type there is. `documentRoot()` resolves
         // to the same flat `{root}/public_html/{web_root}` shape for all of
         // them.

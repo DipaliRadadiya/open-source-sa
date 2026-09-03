@@ -5,6 +5,7 @@ namespace App\Services\Server\Doctor\Checks;
 use App\Contracts\DoctorCheck;
 use App\Models\Application;
 use App\Services\Server\Php\MemoryBudget;
+use App\Services\Server\Php\PhpStackManager;
 use App\Services\Server\Php\PoolManager;
 
 /**
@@ -21,6 +22,7 @@ class PhpIsolationCheck implements DoctorCheck
     public function __construct(
         private PoolManager $pools,
         private MemoryBudget $budget,
+        private PhpStackManager $stacks,
     ) {}
 
     public function key(): string
@@ -34,8 +36,19 @@ class PhpIsolationCheck implements DoctorCheck
     public function run(): array
     {
         if (! $this->pools->supported()) {
-            // OpenLiteSpeed spawns LSPHP itself; there are no pools to check.
-            return ['status' => 'pass', 'detail' => 'OpenLiteSpeed — no FPM pools', 'fix' => null];
+            // OpenLiteSpeed spawns LSPHP itself, so there are no pools — but
+            // this used to stop here and report `pass`, which made it a check
+            // that answered "fine" on the one stack it had never looked at.
+            //
+            // There is something to check, and it is the OLS equivalent of the
+            // orphaned pool above: the vhost names an `lsphp` binary by path,
+            // and OpenLiteSpeed does not stat it when the config is tested. A
+            // site on a version with no lsphp installed is therefore accepted,
+            // reported Active, and answers 503 on every request with nothing
+            // anywhere saying why. Creating one is now refused up front, but a
+            // site created before that, adopted from a brownfield server, or
+            // left behind when a version was removed still needs naming.
+            return $this->interpreters();
         }
 
         // First, because it is the only one here that is already breaking
@@ -138,6 +151,49 @@ class PhpIsolationCheck implements DoctorCheck
             'detail' => $applications->isEmpty()
                 ? 'no PHP sites'
                 : $isolated->count().' PHP site(s), each in its own pool',
+            'fix' => null,
+        ];
+    }
+
+    /**
+     * Every PHP site's interpreter is on the box — the check for a stack that
+     * has no pools.
+     *
+     * The version is resolved the same way the vhost resolves it, falling back
+     * to the configured default for a site that names none: checking only the
+     * sites with an explicit version would miss exactly the ones that inherit
+     * a default nobody has installed.
+     *
+     * @return array{status: 'pass'|'warn'|'fail', detail: string|null, fix: string|null}
+     */
+    private function interpreters(): array
+    {
+        $stack = $this->stacks->stack();
+        $default = (string) config('server.default_php_version', '');
+
+        $missing = Application::query()
+            ->where('serving_profile', 'php')
+            ->get()
+            ->map(fn (Application $a): array => [
+                'domain' => (string) $a->domain,
+                'version' => (string) ($a->php_version ?: $default),
+            ])
+            ->filter(fn (array $site): bool => $site['version'] !== '' && ! $stack->installed($site['version']))
+            ->values();
+
+        if ($missing->isNotEmpty()) {
+            return [
+                'status' => 'fail',
+                'detail' => 'PHP not installed for '.$missing
+                    ->map(fn (array $site): string => "{$site['domain']} (needs {$site['version']})")
+                    ->implode(', '),
+                'fix' => 'doctor.fixes.php_interpreter_missing',
+            ];
+        }
+
+        return [
+            'status' => 'pass',
+            'detail' => $stack->key().' — no FPM pools; every PHP site has its interpreter',
             'fix' => null,
         ];
     }

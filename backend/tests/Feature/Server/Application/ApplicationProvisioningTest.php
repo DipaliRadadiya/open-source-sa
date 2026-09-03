@@ -74,7 +74,7 @@ it('creates the directory, writes a tested config and reloads', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'create_directory', 'placeholder', 'set_ownership', 'create_php_pool', 'write_config', 'test_config', 'reload',
+        'check_account', 'create_directory', 'placeholder', 'set_ownership', 'create_php_pool', 'write_config', 'test_config', 'reload',
     ]);
 
     // `{home}/{slug}/public_html` — the document root, not the site directory:
@@ -169,7 +169,7 @@ it('is idempotent when the job runs twice', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     // mkdir -p and an overwriting tee converge rather than compounding.
-    expect($app->steps)->toHaveCount(7);
+    expect($app->steps)->toHaveCount(8);
 });
 
 it('writes a static config without a php handler', function () {

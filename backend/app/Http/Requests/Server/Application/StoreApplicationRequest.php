@@ -8,6 +8,9 @@ use App\Rules\SingleLine;
 use App\Rules\StartCommand;
 use App\Rules\SupportedNodeVersion;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Php\PhpVersionManager;
+use App\Services\Server\Runtimes\NodeRuntime;
+use Closure;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -64,8 +67,63 @@ class StoreApplicationRequest extends FormRequest
             'system_user_id' => ['required', 'integer', 'exists:system_users,id'],
             // Both versions become path segments and, for PHP, part of an
             // executed binary path. `max:10` alone let a newline through.
-            'php_version' => ['nullable', 'string', 'max:10', 'regex:/^\d+\.\d+$/'],
-            'node_version' => ['nullable', 'string', 'max:10', 'regex:/^\d+(\.\d+)*$/'],
+            //
+            // Checked against what is installed as well as its shape, the same
+            // way `SavePhpSettingsRequest` already checks it on the version
+            // *change* endpoint. Creation did not, and the two web-server
+            // families fail differently: on nginx and Apache the pool step
+            // writes into an `/etc/php/<version>` that does not exist and
+            // provisioning stops with something to read. On OpenLiteSpeed
+            // there is no pool step at all — `PoolManager::supported()` is
+            // true only for the FPM stack — so nothing checked, the vhost was
+            // written naming an `lsphp` binary that is not on the box, the
+            // config test passed (it does not stat the interpreter), and the
+            // site went Active and answered 503 on every request.
+            'php_version' => [
+                'nullable', 'string', 'max:10', 'regex:/^\d+\.\d+$/',
+                function (string $attribute, mixed $value, Closure $fail) {
+                    $installed = app(PhpVersionManager::class)->versions();
+
+                    // Nothing detected is not "nothing installed" — it is also
+                    // what a stack we cannot read looks like. Refusing every
+                    // creation on the strength of an empty list would turn an
+                    // unreadable directory into a server that cannot host a
+                    // site. A server with genuinely no PHP is already refused
+                    // one layer up, by the runtime capability check in
+                    // `SiteTypeManager::unavailable()`.
+                    if ($installed === [] || in_array((string) $value, $installed, true)) {
+                        return;
+                    }
+
+                    $fail(__('php_settings.errors.version_not_installed', ['version' => $value]));
+                },
+            ],
+            // The same hole as `php_version`, one runtime along. A Node
+            // version was checked for shape, and — once `SupportedNodeVersion`
+            // existed — against the range the application runs on, but never
+            // against what is on the box. Nothing else checks it either: the
+            // version becomes a path in `NodeRuntime::binaryPath()` that goes
+            // straight into the systemd unit's `ExecStart`, and systemd does
+            // not stat a binary when a unit is written. The site is created,
+            // reported Active, and the unit fails on every start with a 502
+            // from the vhost in front of a port nobody is listening on.
+            'node_version' => [
+                'nullable', 'string', 'max:10', 'regex:/^\d+(\.\d+)*$/',
+                function (string $attribute, mixed $value, Closure $fail) {
+                    $node = app(NodeRuntime::class);
+
+                    // Empty means fnm is not installed or could not be read,
+                    // which is not the same as "no versions" — see the note on
+                    // `php_version` above. A site type that needs Node is
+                    // already refused on a server without it by the runtime
+                    // capability check.
+                    if ($node->versions() === [] || $node->installed((string) $value)) {
+                        return;
+                    }
+
+                    $fail(__('errors/node.not_installed', ['version' => $value]));
+                },
+            ],
             // Any port the owner of this server wants, provided nothing is
             // already using it. The auto-allocated range is a default, not a
             // restriction.

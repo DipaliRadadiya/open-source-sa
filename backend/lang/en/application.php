@@ -121,6 +121,7 @@ return [
         'seed_env' => 'Preparing the environment file',
         'build' => 'Running the build command',
         'write_credential' => 'Preparing git access',
+        'check_account' => 'Checking the system account',
         'create_directory' => 'Creating the directory',
         'set_ownership' => 'Setting ownership',
         'placeholder' => 'Adding a placeholder page',

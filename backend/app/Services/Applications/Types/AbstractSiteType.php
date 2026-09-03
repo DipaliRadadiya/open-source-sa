@@ -5,6 +5,7 @@ namespace App\Services\Applications\Types;
 use App\Contracts\CloneStrategy;
 use App\Contracts\SiteType;
 use App\Contracts\StagingStrategy;
+use App\Services\Server\Php\PhpVersionManager;
 
 /**
  * Shared defaults and field helpers, so a concrete site type is mostly just
@@ -140,7 +141,10 @@ abstract class AbstractSiteType implements SiteType
     protected function phpFields(): array
     {
         return [
-            $this->field('php_version', 'select', extra: ['source' => 'php_versions', 'default' => '8.4']),
+            $this->field('php_version', 'select', extra: [
+                'source' => 'php_versions',
+                'default' => $this->defaultPhpVersion(),
+            ]),
             $this->field('web_root', 'text', advanced: true, extra: ['default' => $this->defaultWebRoot()]),
         ];
     }
@@ -163,6 +167,41 @@ abstract class AbstractSiteType implements SiteType
                 'help' => __('application.help.app_port'),
             ]),
         ];
+    }
+
+    /**
+     * The PHP version the create form opens on.
+     *
+     * This used to be the literal string `8.4`, on every server, whatever was
+     * installed. On a box whose PHP is 8.3 — and on OpenLiteSpeed, where the
+     * installer installs exactly one `lsphp`, the panel's own version — the
+     * form therefore pre-selected a version that is not there. Accepting it is
+     * now refused (see StoreApplicationRequest), but a form that opens on a
+     * value the server will reject is a worse answer than one that opens on
+     * the version the site would actually run.
+     *
+     * The configured default wins when it is installed, because that is the
+     * version the rest of the panel falls back to for a site that names none.
+     * Otherwise the newest installed one; null when nothing was detected,
+     * which leaves the field unset rather than asserting a version.
+     *
+     * Read fresh each time rather than memoized. `fields()` renders for every
+     * site type in the catalog, so this runs a dozen times per request — but
+     * it is a `glob` over `/etc/php` (or the lsws tree) and nothing else, and
+     * a cached answer in a long-lived queue worker would go on offering a
+     * version the user has since removed.
+     */
+    protected function defaultPhpVersion(): ?string
+    {
+        $installed = app(PhpVersionManager::class)->versions();
+
+        if ($installed === []) {
+            return null;
+        }
+
+        $configured = (string) config('server.default_php_version', '');
+
+        return in_array($configured, $installed, true) ? $configured : $installed[0];
     }
 
     public function defaultWebRoot(): string

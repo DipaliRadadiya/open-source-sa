@@ -692,6 +692,10 @@ Create + queue provisioning. Poll `GET /applications/{id}` until `status` leaves
 
 **`domain_type` is `custom` or `temp`, and it is optional — but send it.** It records whether the user brought their own name or took the panel's offered `<name>.<ip>.nip.io` hostname. Omitted, the domain is treated as the user's own. It no longer decides whether the site can have a Let's Encrypt certificate — that is now one rule for every hostname, "does the name resolve to this server" — but it is still worth sending: it is how the panel knows a wildcard-DNS name resolves by construction and needs no lookup, and it is surfaced as `is_test` on the domain. A wildcard-DNS suffix is detected server-side regardless of the label, so an omitted or wrong value is corrected rather than trusted.
 
+**`php_version` and `node_version` are checked against what is installed on the server, not only against their shape.** A version that is not on the box is a `422` on that field naming the version, so the user can go and install it. This is new as of 2026-09-03 and it closes a hole that was invisible on nginx and Apache: there the FPM pool step failed loudly, but **OpenLiteSpeed has no pool step**, so a site on an absent `lsphp` was created, reported `active`, and answered 503 on every request forever. The same was true of a Node version, whose path goes straight into a systemd unit that is never validated.
+
+Take the version list from `GET /site-types` (the `php_version` / `node_version` field's `options`) rather than hardcoding one. The `php_version` field's `default` is now an installed version too — it used to be the literal `8.4` on every server, which on a box without 8.4 pre-selected a value the API now rejects.
+
 Never send the raw field list — `GET /site-types` publishes the fields for each type, including this one, with localized labels and help text.
 
 **No other site type deploys after creation.** The ten marketplace PHP types and four marketplace Node types install during provisioning; `php` and `static` sites start from a placeholder. Only `git` has `app_deployment` in its feature list at all.

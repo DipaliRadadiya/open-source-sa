@@ -116,6 +116,7 @@ return [
         'seed_env' => 'Preparando o arquivo de ambiente',
         'build' => 'Executando o comando de build',
         'write_credential' => 'Preparando o acesso ao git',
+        'check_account' => 'Verificando a conta do sistema',
         'create_directory' => 'Criando o diretório',
         'set_ownership' => 'Definindo o proprietário',
         'placeholder' => 'Adicionando uma página provisória',

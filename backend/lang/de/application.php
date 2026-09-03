@@ -116,6 +116,7 @@ return [
         'seed_env' => 'Umgebungsdatei wird vorbereitet',
         'build' => 'Build-Befehl wird ausgeführt',
         'write_credential' => 'Git-Zugang wird vorbereitet',
+        'check_account' => 'Systemkonto wird geprüft',
         'create_directory' => 'Verzeichnis wird erstellt',
         'set_ownership' => 'Besitzrechte werden gesetzt',
         'placeholder' => 'Platzhalterseite wird angelegt',
