@@ -128,18 +128,21 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
       icon: FolderInput,
       submit: () => moveFiles(appId, paths, target.trim()),
       label: t("bulk.targetFolder"),
+      placeholder: t("bulk.targetFolderPlaceholder"),
       hint: t("bulk.moveHint"),
     },
     copy: {
       icon: Copy,
       submit: () => copyFiles(appId, paths, target.trim()),
       label: t("bulk.targetFolder"),
+      placeholder: t("bulk.targetFolderPlaceholder"),
       hint: t("bulk.copyHint"),
     },
     compress: {
       icon: FileArchive,
       submit: () => compressFiles(appId, paths, target.trim()),
       label: t("bulk.archiveName"),
+      placeholder: t("bulk.archiveNamePlaceholder"),
       hint: t("bulk.compressHint", { folder: dirname(paths[0]) || "/" }),
     },
     permissions: { icon: Lock },
@@ -207,6 +210,7 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
           <Input
             id="bulk-target"
             value={target}
+            placeholder={meta.placeholder}
             onChange={(event) => setTarget(event.target.value)}
             autoComplete="off"
             spellCheck={false}

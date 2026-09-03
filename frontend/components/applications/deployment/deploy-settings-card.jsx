@@ -86,7 +86,12 @@ export function DeploySettingsCard({ applicationId, settings, canManage }) {
                   <FormItem className="min-w-0">
                     <FormLabel>{t("branch")}</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={!canManage || saving} className="font-mono text-sm" />
+                      <Input
+                        {...field}
+                        placeholder={t("branchPlaceholder")}
+                        disabled={!canManage || saving}
+                        className="font-mono text-sm"
+                      />
                     </FormControl>
                     <FormDescription>{t("branchHint")}</FormDescription>
                     <FormMessage />

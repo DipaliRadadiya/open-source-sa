@@ -557,6 +557,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   <ValueSelect
                     form={form}
                     name="memory_limit"
+                    placeholder={t("memoryLimitPlaceholder")}
                     disabled={saving}
                     options={MEMORY_SIZES}
                     customLabel={t("custom")}
@@ -567,6 +568,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   <ValueSelect
                     form={form}
                     name="pm_max_children"
+                    placeholder={t("pmMaxChildrenPlaceholder")}
                     disabled={saving}
                     options={WORKERS}
                     numeric
@@ -623,6 +625,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   <ValueSelect
                     form={form}
                     name="upload_max_filesize"
+                    placeholder={t("uploadMaxFilesizePlaceholder")}
                     disabled={saving}
                     options={UPLOAD_SIZES}
                     onPick={setUpload}
@@ -634,6 +637,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   <ValueSelect
                     form={form}
                     name="max_execution_time"
+                    placeholder={t("maxExecutionTimePlaceholder")}
                     disabled={saving}
                     options={EXECUTION_TIMES}
                     render={(value) => t("seconds", { count: value })}
@@ -646,6 +650,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   <ValueSelect
                     form={form}
                     name="max_input_vars"
+                    placeholder={t("maxInputVarsPlaceholder")}
                     disabled={saving}
                     options={INPUT_VARS}
                     numeric
@@ -717,6 +722,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                 <NumberField
                   form={form}
                   name="pm_max_requests"
+                  placeholder={t("pmMaxRequestsPlaceholder")}
                   label={t("fields.maxRequests")}
                   directive="pm.max_requests"
                   hint={t("hints.maxRequests")}
@@ -727,6 +733,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                 <NumberField
                   form={form}
                   name="max_input_time"
+                  placeholder={t("maxInputTimePlaceholder")}
                   label={t("fields.inputTime")}
                   directive="max_input_time"
                   hint={t("hints.inputTime")}
@@ -737,6 +744,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                 <NumberField
                   form={form}
                   name="session_gc_maxlifetime"
+                  placeholder={t("sessionGcMaxlifetimePlaceholder")}
                   label={t("fields.sessionLifetime")}
                   directive="session.gc_maxlifetime"
                   hint={t("hints.sessionLifetime")}
@@ -777,6 +785,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                 <TextField
                   form={form}
                   name="auto_prepend_file"
+                  placeholder={t("autoPrependPlaceholder")}
                   label={t("fields.autoPrepend")}
                   directive="auto_prepend_file"
                   hint={t("hints.autoPrepend")}
@@ -790,6 +799,7 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                 <TextField
                   form={form}
                   name="post_max_size"
+                  placeholder={t("postMaxSizePlaceholder")}
                   label={t("fields.post")}
                   directive="post_max_size"
                   hint={t("hints.post")}
@@ -859,6 +869,10 @@ function ValueSelect({
   numeric = false,
   onPick,
   customLabel,
+  // Choosing "Custom" replaces the list with an empty box, and the format is
+  // not guessable: memory wants "256M", execution time wants a plain number of
+  // seconds. An example is the shortest way to say which.
+  placeholder,
 }) {
   const tValidation = useTranslations("validation");
   const value = useWatch({ control: form.control, name });
@@ -924,6 +938,7 @@ function ValueSelect({
                 {...field}
                 type={numeric ? "number" : "text"}
                 inputMode={numeric ? "numeric" : undefined}
+                placeholder={placeholder}
                 disabled={disabled}
                 className="font-mono tabular-nums"
               />
@@ -1256,7 +1271,7 @@ function SectionTitle({ icon: Icon, title }) {
   );
 }
 
-function NumberField({ form, name, label, directive, hint, disabled, min, max }) {
+function NumberField({ form, name, label, directive, hint, disabled, min, max, placeholder }) {
   return (
     <FormField
       control={form.control}
@@ -1271,6 +1286,7 @@ function NumberField({ form, name, label, directive, hint, disabled, min, max })
               inputMode="numeric"
               min={min}
               max={max}
+              placeholder={placeholder}
               disabled={disabled}
               className="tabular-nums"
             />
@@ -1283,7 +1299,7 @@ function NumberField({ form, name, label, directive, hint, disabled, min, max })
   );
 }
 
-function TextField({ form, name, label, directive, hint, disabled, mono = false }) {
+function TextField({ form, name, label, directive, hint, disabled, mono = false, placeholder }) {
   return (
     <FormField
       control={form.control}
@@ -1295,6 +1311,7 @@ function TextField({ form, name, label, directive, hint, disabled, mono = false 
             <Input
               {...field}
               spellCheck={false}
+              placeholder={placeholder}
               disabled={disabled}
               className={cn(mono && "font-mono text-xs")}
             />
