@@ -58,6 +58,12 @@ function fakeStagingServer(bool $testPasses = true): void
 {
     Process::fake(function ($process) use ($testPasses) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
             return Process::result(exitCode: $testPasses ? 0 : 1, errorOutput: $testPasses ? '' : 'invalid');
@@ -66,6 +72,13 @@ function fakeStagingServer(bool $testPasses = true): void
         if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
             && str_contains((string) $process->input, 'information_schema.schemata')) {
             return Process::result(output: '1');
+        }
+
+        // `wp option get blog_public` — production is indexable by default,
+        // and a push must leave it that way. An empty answer is treated as
+        // "could not read" and refuses the push, so the fake has to answer.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
         }
 
         return Process::result(exitCode: 0);
@@ -159,6 +172,12 @@ it('pushes files-only without dumping the production database', function () {
     $dumps = [];
     Process::fake(function ($process) use (&$dumps) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         if (($args[0] ?? '') === 'mysqldump') {
             $dumps[] = $args;
@@ -188,6 +207,12 @@ it('dumps a local safety copy before a full push', function () {
     $dumps = [];
     Process::fake(function ($process) use (&$dumps) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         if (($args[0] ?? '') === 'mysqldump') {
             $dumps[] = $args;
@@ -214,6 +239,12 @@ it('restores production files before re-enabling when a push fails partway', fun
 
     Process::fake(function ($process) use (&$rsyncCalls, &$snapshotRemoved) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         if (($args[0] ?? '') === 'rsync') {
             $rsyncCalls[] = $args;
@@ -253,6 +284,12 @@ it('restores the production database as well as files after a full push fails', 
 
     Process::fake(function ($process) use (&$rsyncCalls, &$databaseRestores) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         if (($args[0] ?? '') === 'rsync') {
             $rsyncCalls[] = $args;
@@ -289,6 +326,12 @@ it('leaves production disabled and preserves recovery files when rollback fails'
 
     Process::fake(function ($process) use (&$rsyncCount, &$snapshotRemoved) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         if (($args[0] ?? '') === 'rsync') {
             $rsyncCount++;
@@ -325,6 +368,12 @@ it('never runs the marketplace installer against the copied files', function () 
     $installCalls = [];
     Process::fake(function ($process) use (&$installCalls) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         // Track any WordPress CLI call during provisioning.
         if (($args[0] ?? '') === 'wp' && ($args[1] ?? '') === 'core') {
@@ -411,6 +460,12 @@ describe('when creating staging fails', function () {
 
         Process::fake(function ($process) use (&$filesCopied) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            // Production's search-engine visibility. Read before the database is
+            // replaced and written back after, so a push cannot de-index a live
+            // site — an unreadable value refuses the push outright.
+            if (in_array('option', $args, true) && in_array('get', $args, true)) {
+                return Process::result(output: "1\n");
+            }
 
             if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
                 return Process::result(exitCode: 0);
@@ -444,6 +499,12 @@ describe('when creating staging fails', function () {
     it('does not keep staging when its secret config cannot be secured', function (string $command) {
         Process::fake(function ($process) use ($command) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            // Production's search-engine visibility. Read before the database is
+            // replaced and written back after, so a push cannot de-index a live
+            // site — an unreadable value refuses the push outright.
+            if (in_array('option', $args, true) && in_array('get', $args, true)) {
+                return Process::result(output: "1\n");
+            }
 
             if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
                 return Process::result(exitCode: 0);
@@ -494,6 +555,12 @@ function recordStagingPush(array &$commands): void
         // file that still names production's own database.
         if (($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), 'wp-config.php')) {
             return Process::result(output: "<?php\ndefine('DB_NAME', 'shop_db');\ndefine('WP_HOME', 'https://shop.test');\n");
+        }
+
+        // Production's search-engine visibility, read before the database is
+        // replaced and asserted after it is put back.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
         }
 
         return Process::result(exitCode: 0);
@@ -646,6 +713,12 @@ it('refuses to finish a push that left production wearing staging identity', fun
 
     Process::fake(function ($process) use ($stagingDatabase) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         // Production's wp-config comes back naming the *staging* database.
         if (($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), 'wp-config.php')) {
@@ -697,6 +770,12 @@ it('dumps a safety copy before replacing the database', function () {
     $dumps = [];
     Process::fake(function ($process) use (&$dumps) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         if (($args[0] ?? '') === 'mysqldump') {
             $dumps[] = implode(' ', $args);
@@ -748,6 +827,12 @@ it('restores the database but not the files when a database push fails', functio
     $restores = [];
     Process::fake(function ($process) use (&$restores) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        // Production's search-engine visibility. Read before the database is
+        // replaced and written back after, so a push cannot de-index a live
+        // site — an unreadable value refuses the push outright.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
 
         if (($args[0] ?? '') === 'rsync') {
             $restores[] = implode(' ', $args);
@@ -788,4 +873,157 @@ it('accepts all three modes and refuses anything else', function () {
         ->postJson(stagingUrl().'/push', ['mode' => 'everything'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('mode');
+});
+
+/*
+ * Search-engine visibility, in both directions.
+ *
+ * A staging site is the same content on a second address, which to a search
+ * engine is the same page published twice: the copy gets indexed, splits the
+ * ranking signals, and can outrank the original.
+ *
+ * Fixing that creates the opposite hazard, and it is the worse of the two.
+ * Once staging is `blog_public = 0`, every database push carries that row
+ * onto production — de-indexing a live site with no error, no visible change,
+ * and nobody noticing until the traffic goes. So production's own value is
+ * read before the database is replaced and written back afterwards.
+ */
+
+it('hides a new staging site from search engines', function () {
+    $commands = [];
+    Process::fake(function ($process) use (&$commands) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $commands[] = $args;
+
+        if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
+            return Process::result(exitCode: 0);
+        }
+
+        // Generating the staging database name asks the live server whether
+        // the identifier is free; without this, creation fails before any of
+        // the WordPress work runs.
+        if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+            && str_contains((string) $process->input, 'information_schema.schemata')) {
+            return Process::result(output: '1');
+        }
+
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
+        ->assertCreated();
+
+    // The setting, so the WordPress admin agrees with reality...
+    $sets = collect($commands)
+        ->filter(fn (array $a) => in_array('option', $a, true) && in_array('update', $a, true))
+        ->map(fn (array $a) => implode(' ', $a));
+
+    expect($sets->contains(fn (string $c) => str_contains($c, 'blog_public 0')))->toBeTrue();
+
+    // ...and the file, which a database import cannot undo.
+    $written = collect($commands)
+        ->filter(fn (array $a) => ($a[0] ?? '') === 'tee')
+        ->map(fn (array $a) => (string) ($a[1] ?? ''));
+
+    expect($written->contains(fn (string $path) => str_contains($path, 'panel-staging-noindex.php')))->toBeTrue();
+});
+
+it('never copies the noindex plugin onto production', function () {
+    // If it crossed, the live site would be told not to index itself.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    expect(pushRsyncArgs($commands))->toContain('wp-content/mu-plugins/panel-staging-noindex.php');
+});
+
+it('puts production back the way it was: indexable stays indexable', function () {
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    // The database that landed says 0 because staging is always hidden; the
+    // push must write production's own 1 back over it.
+    $sets = collect($commands)
+        ->filter(fn (array $a) => in_array('option', $a, true) && in_array('update', $a, true))
+        ->map(fn (array $a) => implode(' ', $a));
+
+    expect($sets->contains(fn (string $c) => str_contains($c, 'blog_public 1')))->toBeTrue();
+});
+
+it('puts production back the way it was: hidden stays hidden', function () {
+    // A site whose owner chose to keep it out of search must not be exposed
+    // by a push either. The rule is "restore what was there", not "force 1".
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    Process::fake(function ($process) use (&$commands) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $commands[] = $args;
+
+        if (($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), 'wp-config.php')) {
+            return Process::result(output: "<?php\ndefine('DB_NAME', 'shop_db');\n");
+        }
+
+        // This production site is deliberately not indexed.
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "0\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    $sets = collect($commands)
+        ->filter(fn (array $a) => in_array('option', $a, true) && in_array('update', $a, true))
+        ->map(fn (array $a) => implode(' ', $a));
+
+    expect($sets->contains(fn (string $c) => str_contains($c, 'blog_public 0')))->toBeTrue()
+        ->and($sets->contains(fn (string $c) => str_contains($c, 'blog_public 1')))->toBeFalse();
+});
+
+it('refuses the push when production visibility cannot be read', function () {
+    // Guessing is worse than stopping. Forcing 1 exposes a site its owner
+    // hid; letting staging's 0 through de-indexes a live one. Neither is a
+    // decision the panel should make on a wp-cli hiccup.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $dumps = [];
+    Process::fake(function ($process) use (&$dumps) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'mysqldump') {
+            $dumps[] = implode(' ', $args);
+        }
+
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(exitCode: 1, errorOutput: 'Error: The site you have requested is not installed.');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'full'])
+        ->assertStatus(500);
+
+    // It stops before the staging dump is restored over production: the only
+    // dump that ran is the safety copy.
+    expect(collect($dumps)->filter(fn (string $d) => str_contains($d, '/tmp/panel-staging-push')))->toBeEmpty();
 });

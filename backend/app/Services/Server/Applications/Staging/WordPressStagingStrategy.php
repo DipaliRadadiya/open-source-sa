@@ -67,6 +67,13 @@ class WordPressStagingStrategy implements StagingStrategy
         $this->searchReplace($staging, $stagingDocumentRoot, $production->url(), $staging->url());
 
         $this->writeMailTrap($staging, $stagingDocumentRoot);
+        $this->writeNoIndexPlugin($staging, $stagingDocumentRoot);
+
+        // The setting as well as the file. The file is what actually holds
+        // under a database import, but the setting is what an owner sees
+        // under Settings > Reading — leaving it ticked would tell them the
+        // clone is public while the header says otherwise.
+        $this->updateOption($staging, $stagingDocumentRoot, 'blog_public', '0');
 
         $this->flushCaches($staging, $stagingDocumentRoot);
     }
@@ -95,6 +102,7 @@ class WordPressStagingStrategy implements StagingStrategy
             'wp-config.php',
             // Written by the panel onto staging *because* it is staging.
             'wp-content/mu-plugins/panel-staging-mail-trap.php',
+            'wp-content/mu-plugins/panel-staging-noindex.php',
             // Media: rsync --delete would wipe production uploads added since
             // the clone, and there is no file-level safety copy to undo it.
             'wp-content/uploads/',
@@ -132,6 +140,22 @@ class WordPressStagingStrategy implements StagingStrategy
             throw new StagingOperationException((string) Str::uuid());
         }
 
+        // Read before anything is replaced, and refuse the push if it cannot
+        // be read.
+        //
+        // Staging is deliberately `blog_public = 0`, so the database about to
+        // land on production carries that value. Letting it through would
+        // quietly de-index a live site — no error, no visible change, and
+        // nobody notices until the traffic goes. Guessing is not better than
+        // failing here: forcing 1 would expose a site whose owner chose to
+        // keep it hidden, and forcing 0 is the bug itself. So the live site's
+        // own answer is captured now and written back after the restore.
+        $productionVisibility = $this->readOption($production, $productionDocumentRoot, 'blog_public');
+
+        if ($productionVisibility === null) {
+            throw new StagingOperationException((string) Str::uuid());
+        }
+
         $engine = $this->databases->engine($productionDatabase->engine);
         $dumpPath = '/tmp/panel-staging-push-'.Str::uuid()->toString().'.sql';
 
@@ -146,6 +170,10 @@ class WordPressStagingStrategy implements StagingStrategy
         // site's own files and config are untouched by a push.
         $this->rewriteUrls($production, $productionDocumentRoot, $staging, $production);
 
+        // Put the live site's own search-engine visibility back. The row that
+        // just arrived is staging's, and staging is always hidden.
+        $this->updateOption($production, $productionDocumentRoot, 'blog_public', $productionVisibility);
+
         // Permalinks come from the staging database that was just restored.
         // Without a flush the rewrite rules on disk no longer match, and
         // every post and page 404s until somebody re-saves permalinks.
@@ -153,6 +181,7 @@ class WordPressStagingStrategy implements StagingStrategy
         $this->flushCaches($production, $productionDocumentRoot);
 
         $this->assertProductionIntact($production, $staging, $productionDocumentRoot);
+        $this->assertVisibilityPreserved($production, $productionDocumentRoot, $productionVisibility);
     }
 
     /**
@@ -209,6 +238,63 @@ class WordPressStagingStrategy implements StagingStrategy
         $variants[] = [$fromHost, $toHost];
 
         return $variants;
+    }
+
+    /**
+     * Read one option, or null when it cannot be read.
+     *
+     * Null is deliberately distinct from an empty answer: "the site says this
+     * option is empty" and "wp-cli could not tell us" lead to different
+     * decisions, and conflating them is how a live site would get silently
+     * de-indexed on a wp-cli hiccup.
+     */
+    private function readOption(Application $application, string $documentRoot, string $option): ?string
+    {
+        $result = $this->serverOps->run(
+            array_merge(['runuser', '-u', $application->systemUser->username, '--'], [
+                $this->wpCliBinary(), 'option', 'get', $option,
+                '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
+            ]),
+            $this->context($application, 'staging_option_get'),
+            timeout: 60,
+        );
+
+        if ($result->failed()) {
+            return null;
+        }
+
+        $value = trim($result->output());
+
+        return $value === '' ? null : $value;
+    }
+
+    private function updateOption(Application $application, string $documentRoot, string $option, string $value): void
+    {
+        $this->runAsSiteUser($application, [
+            $this->wpCliBinary(), 'option', 'update', $option, $value,
+            '--path='.$documentRoot, '--skip-plugins', '--skip-themes',
+        ]);
+    }
+
+    /**
+     * A push must not change whether the live site is visible to search
+     * engines. Getting this wrong is invisible on the day and expensive
+     * months later, which is exactly the kind of thing worth asserting.
+     */
+    private function assertVisibilityPreserved(Application $production, string $documentRoot, string $expected): void
+    {
+        $actual = $this->readOption($production, $documentRoot, 'blog_public');
+
+        if ($actual !== $expected) {
+            throw new StagingOperationException((string) Str::uuid());
+        }
+    }
+
+    private function writeNoIndexPlugin(Application $staging, string $documentRoot): void
+    {
+        $contents = View::make('server.apps.wordpress.mu-plugin-staging-noindex')->render();
+
+        $this->writeSecretFile($staging, "{$documentRoot}/wp-content/mu-plugins/panel-staging-noindex.php", $contents, '0644');
     }
 
     private function flushRewrites(Application $application, string $documentRoot): void
