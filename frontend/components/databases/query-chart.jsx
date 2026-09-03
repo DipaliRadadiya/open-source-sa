@@ -163,8 +163,12 @@ export function QueryChart({ metrics = [], timeZone }) {
         </div>
       </CardHeader>
 
-      <CardContent>
-        <EChart option={option} dataTable={table} height="h-72" />
+      <CardContent className="space-y-2">
+        <EChart option={option} dataTable={table} height="h-80" />
+        {/* The slider is the only control on this card and the only one with
+            nothing naming it. Styling made it look like a control; this says
+            what it does, which is what nobody could tell. */}
+        <p className="text-xs text-muted-foreground">{t("zoomHint")}</p>
       </CardContent>
     </Card>
   );

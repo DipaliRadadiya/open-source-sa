@@ -94,7 +94,28 @@ test("zoom is opt-in, and moves the legend out of the slider's way", () => {
     withZoom.dataZoom.map((z) => z.type),
     ["inside", "slider"],
   );
-  assert.equal(withZoom.legend.bottom, 28);
+
+  /*
+   * The relationship, not the number. This asserted `legend.bottom === 28`,
+   * which was the value that put the legend INSIDE the slider's band -- the
+   * two overlapped by six pixels and rendered as one smudged strip. A test
+   * pinning a magic number cannot tell a layout from a collision, so it
+   * happily guarded the bug it was named after.
+   */
+  const slider = withZoom.dataZoom.find((z) => z.type === "slider");
+  const sliderTop = slider.bottom + slider.height;
+  assert.ok(
+    withZoom.legend.bottom > sliderTop,
+    `legend (${withZoom.legend.bottom}) must clear the slider (top ${sliderTop})`,
+  );
+
+  // Axis labels hang BELOW the grid line, roughly gridBottom-20..gridBottom-8,
+  // so the grid has to clear the legend by more than the label band is tall.
+  const LABEL_BAND = 20;
+  assert.ok(
+    withZoom.grid.bottom - LABEL_BAND > withZoom.legend.bottom,
+    `grid (${withZoom.grid.bottom}) must leave room for labels above the legend`,
+  );
   assert.ok(withZoom.grid.bottom > without.grid.bottom);
 });
 

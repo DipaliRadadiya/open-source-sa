@@ -21,6 +21,19 @@ function colourOf(series, tokens) {
 }
 
 /**
+ * The same colour, see-through.
+ *
+ * Tokens arrive as `rgb(r, g, b)` — the chart host converts them, because
+ * ECharts cannot do arithmetic on `oklch()`. That makes the alpha form a string
+ * edit rather than a colour-space problem. Anything unexpected is returned
+ * unchanged: a tint is decoration, and it is not worth risking a blank chart.
+ */
+function withAlpha(colour, alpha) {
+  const m = /^rgb\((\s*\d+\s*,\s*\d+\s*,\s*\d+\s*)\)$/.exec(colour ?? "");
+  return m ? `rgba(${m[1]}, ${alpha})` : colour;
+}
+
+/**
  * @param {object}   spec
  * @param {object[]} spec.data     points, each carrying `t` plus one field per series
  * @param {object[]} spec.series   { key, label, token, kind, axis, width }
@@ -90,11 +103,28 @@ export function timeSeriesOption({
     // These redraw on a poll. A chart that re-animates every few seconds is
     // unreadable, and on the 2x2 grid it is four of them out of step.
     animation: false,
+    /*
+     * Everything below the plot is stacked from the bottom edge up, and the
+     * numbers have to be kept in step by hand -- ECharts does not lay these
+     * out relative to each other.
+     *
+     *   slider   4 .. 34   (bottom 4, height 30)
+     *   legend  42 .. 56   (clears the slider by 8)
+     *   labels  68 .. 80   (ECharts puts them at gridBottom-20 .. gridBottom-8)
+     *   grid bottom 88     (so the labels clear the legend by 12)
+     *
+     * The legend used to sit at 28, which put it INSIDE the slider's band --
+     * they overlapped by six pixels and read as one smudged strip. Moving it
+     * to 46 then walked it into the axis labels instead, because those hang
+     * BELOW the grid line rather than above it. Hence the arithmetic written
+     * out: three bands stacked from the bottom edge, none of them aware of
+     * each other.
+     */
     grid: {
       left: 56,
       right: 20,
       top: 16,
-      bottom: zoom ? 64 : 40,
+      bottom: zoom ? 88 : 40,
       containLabel: false,
     },
     legend: {
@@ -103,7 +133,7 @@ export function timeSeriesOption({
       // order the stat card above used, and a custom content component had to
       // put it back. Nothing to work around here.
       data: series.map((s) => s.label),
-      bottom: zoom ? 28 : 4,
+      bottom: zoom ? 42 : 4,
       icon: "roundRect",
       itemWidth: 10,
       itemHeight: 10,
@@ -162,13 +192,39 @@ export function timeSeriesOption({
   };
 
   if (zoom) {
+    const tint = colourOf(series[0] ?? {}, tokens);
+
     option.dataZoom = [
       { type: "inside", throttle: 50 },
       {
         type: "slider",
-        height: 18,
+        /*
+         * Taller than the 18px it was, and coloured from the palette rather
+         * than left on ECharts' defaults. At 18px with grey factory handles it
+         * read as a divider under the chart -- people did not know it zoomed,
+         * which is the only thing it is there for.
+         */
+        height: 30,
         bottom: 4,
         borderColor: border,
+        backgroundColor: "transparent",
+        // The unselected span, so the selected one reads as a window cut out
+        // of the whole range rather than a bar sitting on top of it.
+        dataBackground: {
+          lineStyle: { color: muted, opacity: 0.35 },
+          areaStyle: { color: muted, opacity: 0.12 },
+        },
+        selectedDataBackground: {
+          lineStyle: { color: tint },
+          areaStyle: { color: withAlpha(tint, 0.22) },
+        },
+        fillerColor: withAlpha(tint, 0.12),
+        // Grabbable: a filled handle with a border, not the hairline default.
+        handleSize: "120%",
+        handleStyle: { color: tint, borderColor: border, borderWidth: 1 },
+        moveHandleSize: 5,
+        moveHandleStyle: { color: withAlpha(tint, 0.5) },
+        emphasis: { handleStyle: { color: tint, borderColor: tint } },
         textStyle: { color: muted },
       },
     ];
