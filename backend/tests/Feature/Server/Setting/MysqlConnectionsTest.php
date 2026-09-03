@@ -323,6 +323,38 @@ it('offers the group to a panel user who cannot sudo', function () {
         ->and($settings->json('settings.mysql.present'))->toBeTrue();
 });
 
+it('reaches the API even when no subprocess can run at all', function () {
+    // The end-to-end version of the bug, and the one that matters: every
+    // ServerOps call throws, exactly as it does on a panel whose storage/logs
+    // is not writable — ServerOps logs a failure, the logging itself fails,
+    // and the exception escapes. SettingsManager::all() catches per group and
+    // drops the ones that throw, so the card disappeared from the response
+    // while available() had been returning true all along. Nothing in the read
+    // path may depend on a subprocess.
+    Process::fake(function () {
+        throw new RuntimeException('The stream or file could not be opened in append mode');
+    });
+
+    $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/settings')->assertOk();
+
+    expect($settings->json('settings.mysql'))->not->toBeNull()
+        ->and($settings->json('settings.mysql.present'))->toBeTrue()
+        ->and($settings->json('settings.mysql_binlog'))->not->toBeNull();
+});
+
+it('reads its own drop-in without elevating', function () {
+    File::put($this->dir.'/99-serveravatar.cnf', "[mysqld]\nmax_connections = 321\n");
+    Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'sudo: a password is required'));
+
+    $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/settings')->assertOk();
+
+    // The value came off disk, with every subprocess failing.
+    expect($settings->json('settings.mysql.configured_max_connections'))->toBe(321);
+    Process::assertNotRan(fn ($process) => in_array('cat', $process->command, true));
+});
+
 it('survives a probe that throws rather than taking the page down with it', function () {
     // Logging a failed operation can itself fail — an unwritable log file is
     // enough. The settings page must still render: the other groups have

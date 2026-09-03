@@ -246,10 +246,19 @@ class MysqlBinlogSettings implements SettingGroup
     }
 
     /**
-     * What our drop-in asks for, so the UI can show a value the running server
-     * has not adopted yet — the case where somebody edited the file by hand,
-     * or a variable was clamped.
+     * Read our own drop-in directly, not through ServerOps.
      *
+     * It is a file we wrote, 0644, in a directory the panel can already list —
+     * there is nothing to elevate. Going through ServerOps meant `sudo cat`,
+     * which on a panel running as `www-data` is denied; ServerOps then *logs*
+     * the denial, and where `storage/logs` is not writable by that account the
+     * logging itself throws. `SettingsManager::all()` catches per group and
+     * drops the ones that throw, so the card vanished from the API and the
+     * page reported no engine — with `available()` returning true the whole
+     * time. Reading the file is the operation; a subprocess was never needed
+     * for it.
+     */
+    /**
      * @return array<string, int>
      */
     private function configuredValues(): array
@@ -260,19 +269,17 @@ class MysqlBinlogSettings implements SettingGroup
             return [];
         }
 
-        $read = $this->serverOps->run(
-            ['cat', $this->dropInPath($engine)],
-            ['feature' => 'setting', 'group' => 'mysql_binlog', 'op' => 'read_dropin'],
-        );
+        $path = $this->dropInPath($engine);
+        $contents = is_readable($path) ? @file_get_contents($path) : false;
 
-        if ($read->failed()) {
+        if ($contents === false) {
             return [];
         }
 
         $configured = [];
 
         foreach (self::MANAGED as $name => $option) {
-            if (preg_match('/^\s*'.preg_quote($option, '/').'\s*=\s*(\d+)/mi', $read->output(), $m) === 1) {
+            if (preg_match('/^\s*'.preg_quote($option, '/').'\s*=\s*(\d+)/mi', $contents, $m) === 1) {
                 $configured[$name] = (int) $m[1];
             }
         }

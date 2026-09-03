@@ -90,6 +90,9 @@ class MysqlSettings implements SettingGroup
         }
 
         $label = (string) config("server.databases.engines.{$engine}.label", $engine);
+        // Read before the reachability branch: it comes off our own drop-in
+        // and both branches report it.
+        $configured = $this->configuredValue();
 
         // Installed but not answering. Everything below this point needs a
         // working connection, and inventing zeroes for it would report an idle
@@ -101,12 +104,15 @@ class MysqlSettings implements SettingGroup
                 'present' => true,
                 'reachable' => false,
                 'max_connections' => null,
+                // Still worth showing: it comes off our own drop-in, needs no
+                // connection, and "what the panel asked for" is the one fact
+                // available while the server cannot be asked anything.
+                'configured_max_connections' => $configured,
             ];
         }
 
         $status = $this->sqlEngine($engine)->status();
         $effective = (int) ($status['max_connections'] ?? 0);
-        $configured = $this->configuredValue();
 
         return [
             'engine' => $engine,
@@ -205,7 +211,19 @@ class MysqlSettings implements SettingGroup
         return $dir.'/'.self::DROP_IN;
     }
 
-    /** The value in our own drop-in, or null when we have never written one. */
+    /**
+     * Read our own drop-in directly, not through ServerOps.
+     *
+     * It is a file we wrote, 0644, in a directory the panel can already list —
+     * there is nothing to elevate. Going through ServerOps meant `sudo cat`,
+     * which on a panel running as `www-data` is denied; ServerOps then *logs*
+     * the denial, and where `storage/logs` is not writable by that account the
+     * logging itself throws. `SettingsManager::all()` catches per group and
+     * drops the ones that throw, so the card vanished from the API and the
+     * page reported no engine — with `available()` returning true the whole
+     * time. Reading the file is the operation; a subprocess was never needed
+     * for it.
+     */
     private function configuredValue(): ?int
     {
         $engine = $this->locator->present();
@@ -214,16 +232,14 @@ class MysqlSettings implements SettingGroup
             return null;
         }
 
-        $read = $this->serverOps->run(
-            ['cat', $this->dropInPath($engine)],
-            ['feature' => 'setting', 'group' => 'mysql', 'op' => 'read_dropin'],
-        );
+        $path = $this->dropInPath($engine);
+        $contents = is_readable($path) ? @file_get_contents($path) : false;
 
-        if ($read->failed()) {
+        if ($contents === false) {
             return null;
         }
 
-        return preg_match('/^\s*max_connections\s*=\s*(\d+)/mi', $read->output(), $m) === 1
+        return preg_match('/^\s*max_connections\s*=\s*(\d+)/mi', $contents, $m) === 1
             ? (int) $m[1]
             : null;
     }
