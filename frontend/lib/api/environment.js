@@ -12,6 +12,16 @@ export async function saveEnvironment(appId, { raw, restart = false }) {
   return res.data;
 }
 
+// What one logged change did, key by key, with the old and new value. Fetched
+// on demand rather than with the history list: it reads one or two backup
+// files off the server, and most rows are never expanded.
+export async function getEnvironmentDiff(appId, logId) {
+  const res = await api.get(
+    `/applications/${appId}/environment/history/${logId}/diff`,
+  );
+  return res.data;
+}
+
 export async function restoreEnvironment(appId, { backup, restart = false }) {
   const res = await api.post(`/applications/${appId}/environment/restore`, {
     backup,

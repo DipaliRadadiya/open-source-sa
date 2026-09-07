@@ -35,3 +35,16 @@ Route::post('/applications/{application}/environment/restore', [ApplicationEnvir
 */
 Route::get('/applications/{application}/environment/history', [ApplicationEnvironmentController::class, 'history'])
     ->middleware('permission:app_environment');
+
+/*
+| What one change did, variable by variable — old value and new value.
+|
+| `manage`, a level above the history list it expands. The values come off the
+| backup files rather than the activity log, so this endpoint shows a manage
+| user only what they could already get by restoring a backup and reading it —
+| it saves them the round trip. A viewer cannot restore, so previously rotated
+| secrets are not otherwise reachable for them, and this would be a genuine
+| widening rather than a convenience.
+*/
+Route::get('/applications/{application}/environment/history/{log}/diff', [ApplicationEnvironmentController::class, 'diff'])
+    ->middleware(['permission:app_environment,manage', 'throttle:60,1']);

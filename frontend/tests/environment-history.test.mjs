@@ -152,6 +152,58 @@ test("a write this editor made is not re-applied by the refresh it triggers", ()
   );
 });
 
+test("values are read from the backup files, not from the activity log", () => {
+  // The whole reason the diff is its own endpoint. If a future change starts
+  // reading values off the history entry, they will have been written into
+  // activity_logs — never pruned, in every database backup, and rendered by an
+  // admin-wide screen gated on access-admin rather than app_environment.
+  const diff = fs.readFileSync(
+    path.join(root, "components/applications/environment/environment-diff.jsx"),
+    "utf8",
+  );
+
+  assert.match(
+    diff,
+    /getEnvironmentDiff\(/,
+    "the diff must come from its own endpoint",
+  );
+  assert.ok(
+    !/entry\.(before|after|changes|values)/.test(diff),
+    "the diff must not read values off the history entry itself",
+  );
+});
+
+test("a change whose backup is gone is not rendered as an empty diff", () => {
+  // "available: false" and "changes: []" mean different things: one is "the
+  // previous version was deleted", the other is "this change touched nothing".
+  const diff = fs.readFileSync(
+    path.join(root, "components/applications/environment/environment-diff.jsx"),
+    "utf8",
+  );
+
+  assert.match(diff, /available/, "the unavailable state must be handled");
+  assert.match(
+    diff,
+    /diffUnavailable/,
+    "…and it must say so rather than showing an empty table",
+  );
+});
+
+test("the values control is offered only where the backup can still be read", () => {
+  const card = fs.readFileSync(
+    path.join(root, "components/applications/environment/environment-history-card.jsx"),
+    "utf8",
+  );
+
+  // Manage only: a viewer cannot restore a backup, so for them these values
+  // are not otherwise reachable and this would be a real widening.
+  assert.match(
+    card,
+    /canManage && blocked !== "pruned"/,
+    "the diff must be manage-only and hidden for a pruned backup",
+  );
+});
+
 test("every history message the card uses exists in all three locales", () => {
   const card = fs.readFileSync(
     path.join(root, "components/applications/environment/environment-history-card.jsx"),

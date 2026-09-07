@@ -5,9 +5,11 @@ namespace App\Http\Controllers\API\Server;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\SaveEnvironmentRequest;
 use App\Http\Resources\ApplicationEnvironmentResource;
+use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationEnvironment;
+use App\Services\Server\Applications\EnvironmentDiff;
 use App\Services\Server\Applications\EnvironmentHistory;
 use App\Services\Server\Applications\EnvironmentInspector;
 use App\Services\Server\Applications\FrameworkDetector;
@@ -117,6 +119,31 @@ class ApplicationEnvironmentController extends Controller
                 'last_page' => $paginator->lastPage(),
             ],
         ]);
+    }
+
+    /**
+     * What one logged change did, variable by variable.
+     *
+     * Guarded on `manage` rather than `app_environment` view, unlike the
+     * history list beside it. A view-only user can read the file's *current*
+     * values in the editor; nobody can see previously rotated ones today. A
+     * `manage` user already can — restore a backup, read it, restore back — so
+     * this shows them nothing new and saves them from doing exactly that to
+     * find out what changed. For a viewer it would be a genuine widening.
+     */
+    public function diff(Application $application, ActivityLog $log, EnvironmentDiff $diff): JsonResponse
+    {
+        // Route model binding resolves the id globally. Without this a log id
+        // from any other application would render against this one — and this
+        // is the endpoint that answers with secret values.
+        $belongs = $log->type === 'application'
+            && $log->subject_type === $application->getMorphClass()
+            && (int) $log->subject_id === (int) $application->getKey()
+            && in_array($log->action, ['environment_updated', 'environment_restored'], true);
+
+        abort_unless($belongs, 404);
+
+        return response()->json(['diff' => $diff->for($application, $log)]);
     }
 
     /** Put a previous save back. */

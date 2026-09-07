@@ -37,6 +37,16 @@ class ApplicationEnvironment
     /** Refuse to read anything larger — a `.env` is kilobytes, not megabytes. */
     private const MAX_BYTES = 262144;
 
+    /**
+     * Exactly what {@see backup()} writes, and nothing else.
+     *
+     * One constant rather than the same literal in three places: this pattern
+     * is the only thing standing between a user-supplied string and a path, so
+     * the copy that guards a read must not be able to drift from the copy that
+     * guards a restore.
+     */
+    private const BACKUP_NAME = '/^\.env\.bak-\d{8}-\d{6}(?:-\d{1,2})?$/';
+
     public function __construct(
         private ServerOps $serverOps,
         private ApplicationProvisioner $provisioner,
@@ -280,7 +290,7 @@ class ApplicationEnvironment
      */
     public function restore(Application $application, string $name): ?string
     {
-        if (preg_match('/^\.env\.bak-\d{8}-\d{6}(?:-\d{1,2})?$/', $name) !== 1) {
+        if (preg_match(self::BACKUP_NAME, $name) !== 1) {
             // The name reaches a path. Anything not matching exactly what we
             // write is refused rather than sanitised.
             throw new RuntimeException('that is not a known backup');
@@ -296,6 +306,30 @@ class ApplicationEnvironment
         }
 
         return $this->write($application, $this->readFile($application, $source));
+    }
+
+    /**
+     * The contents of one previous save.
+     *
+     * Same name validation as {@see restore()}, for the same reason: the name
+     * reaches a path, and anything not matching exactly what this class writes
+     * is refused rather than sanitised. Returns null when the file is gone —
+     * pruned, or never taken — which is an ordinary answer here rather than an
+     * error, since the history outlives the files it points at.
+     */
+    public function readBackup(Application $application, string $name): ?string
+    {
+        if (preg_match(self::BACKUP_NAME, $name) !== 1) {
+            throw new RuntimeException('that is not a known backup');
+        }
+
+        $source = dirname($this->path($application)).'/'.$name;
+
+        if (! $this->present($application, $source, 'env_backup_exists')) {
+            return null;
+        }
+
+        return $this->readFile($application, $source);
     }
 
     private function backup(Application $application): string

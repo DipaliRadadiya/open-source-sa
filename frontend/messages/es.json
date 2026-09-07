@@ -2831,7 +2831,16 @@
         "confirmTitle": "¿Restaurar la versión anterior a este cambio?",
         "confirmBody": "Primero se hace una copia del archivo actual, así que esto también se puede deshacer. La aplicación sigue funcionando con los valores restaurados.",
         "cancel": "Cancelar",
-        "confirmSubmit": "Restaurar"
+        "confirmSubmit": "Restaurar",
+        "showValues": "Ver valores",
+        "diffLoading": "Leyendo las copias guardadas…",
+        "diffFailed": "No se pudieron leer esos valores.",
+        "diffUnavailable": "La copia de la versión anterior se eliminó, así que este cambio no se puede mostrar.",
+        "colKey": "Variable",
+        "colBefore": "Antes",
+        "colAfter": "Después",
+        "absent": "Sin definir",
+        "emptyValue": "vacío"
       }
     },
     "title": "Aplicaciones",

@@ -514,3 +514,175 @@ describe('the history of who changed it', function () {
         expect($second)->not->toBe($first);
     });
 });
+
+describe('what one change did, variable by variable', function () {
+    it('shows the old and new value of every key that moved', function () {
+        // The values come off the backup files, never out of the activity log.
+        $this->disk['/home/envowner/deployed-site/.env.bak-20260907-120000'] =
+            "APP_ENV=production\nAPP_KEY=base64:abc\nDB_PASSWORD=hunter2\n";
+        $this->backupNames = ['.env.bak-20260907-120000'];
+        fakeSite();
+
+        $log = ActivityLog::create([
+            'user_id' => $this->admin->id,
+            'type' => 'application',
+            'action' => 'environment_updated',
+            'subject_type' => $this->application->getMorphClass(),
+            'subject_id' => $this->application->id,
+            'properties' => ['backup' => '.env.bak-20260907-120000'],
+        ]);
+
+        // Nothing has changed the file since, so "after" is what is on disk:
+        // DB_PASSWORD rotated, APP_KEY gone, MAIL_HOST added.
+        $this->disk['/home/envowner/deployed-site/.env'] =
+            "APP_ENV=production\nDB_PASSWORD=rotated\nMAIL_HOST=smtp.test\n";
+
+        $changes = collect(
+            $this->actingAs($this->admin)
+                ->getJson(envUrl('/history/'.$log->id.'/diff'))
+                ->assertOk()
+                ->json('diff.changes')
+        )->keyBy('key');
+
+        expect($changes['DB_PASSWORD'])->toMatchArray([
+            'before' => 'hunter2', 'after' => 'rotated', 'status' => 'changed',
+        ])
+            ->and($changes['APP_KEY'])->toMatchArray([
+                'before' => 'base64:abc', 'after' => null, 'status' => 'removed',
+            ])
+            ->and($changes['MAIL_HOST'])->toMatchArray([
+                'before' => null, 'after' => 'smtp.test', 'status' => 'added',
+            ])
+            // Unchanged keys are not noise worth showing.
+            ->and($changes->has('APP_ENV'))->toBeFalse();
+    });
+
+    it('says it cannot show a change whose backup has been pruned', function () {
+        // Rather than an empty list, which would read as "this change touched
+        // nothing" — a different and false statement.
+        $this->backupNames = [];
+        fakeSite();
+
+        $log = ActivityLog::create([
+            'user_id' => $this->admin->id,
+            'type' => 'application',
+            'action' => 'environment_updated',
+            'subject_type' => $this->application->getMorphClass(),
+            'subject_id' => $this->application->id,
+            'properties' => ['backup' => '.env.bak-20250101-000000'],
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(envUrl('/history/'.$log->id.'/diff'))
+            ->assertOk();
+
+        expect($response->json('diff.available'))->toBeFalse()
+            ->and($response->json('diff.changes'))->toBe([]);
+    });
+
+    it('treats a first save as everything added', function () {
+        // No backup because there was no file — distinct from a pruned one,
+        // where the previous state is unknown rather than empty.
+        fakeSite();
+
+        $log = ActivityLog::create([
+            'user_id' => $this->admin->id,
+            'type' => 'application',
+            'action' => 'environment_updated',
+            'subject_type' => $this->application->getMorphClass(),
+            'subject_id' => $this->application->id,
+            'properties' => ['backup' => null],
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(envUrl('/history/'.$log->id.'/diff'))
+            ->assertOk();
+
+        expect($response->json('diff.available'))->toBeTrue()
+            ->and(collect($response->json('diff.changes'))->pluck('status')->unique()->all())
+            ->toBe(['added']);
+    });
+
+    it('refuses a log id belonging to another application', function () {
+        // Route model binding resolves ids globally, and this endpoint answers
+        // with secret values.
+        fakeSite();
+
+        $other = Application::forceCreate([
+            'system_user_id' => $this->application->system_user_id,
+            'name' => 'Other Site', 'slug' => 'other-site', 'domain' => 'other.test',
+            'site_type' => 'git', 'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
+        ]);
+
+        $log = ActivityLog::create([
+            'user_id' => $this->admin->id,
+            'type' => 'application',
+            'action' => 'environment_updated',
+            'subject_type' => $other->getMorphClass(),
+            'subject_id' => $other->id,
+            'properties' => ['backup' => '.env.bak-20260907-120000'],
+        ]);
+
+        $this->actingAs($this->admin)
+            ->getJson(envUrl('/history/'.$log->id.'/diff'))
+            ->assertNotFound();
+    });
+
+    it('refuses a log row that is not an environment change', function () {
+        fakeSite();
+
+        $log = ActivityLog::create([
+            'user_id' => $this->admin->id,
+            'type' => 'application',
+            'action' => 'deleted',
+            'subject_type' => $this->application->getMorphClass(),
+            'subject_id' => $this->application->id,
+            'properties' => [],
+        ]);
+
+        $this->actingAs($this->admin)
+            ->getJson(envUrl('/history/'.$log->id.'/diff'))
+            ->assertNotFound();
+    });
+
+    it('is refused for a viewer who cannot restore a backup anyway', function () {
+        // A manage user can already read these values by restoring; this only
+        // saves them the round trip. A viewer cannot, so for them it would be
+        // a genuine widening rather than a convenience.
+        fakeSite();
+
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_environment', view: true, manage: false);
+
+        $log = ActivityLog::create([
+            'user_id' => $this->admin->id,
+            'type' => 'application',
+            'action' => 'environment_updated',
+            'subject_type' => $this->application->getMorphClass(),
+            'subject_id' => $this->application->id,
+            'properties' => ['backup' => '.env.bak-20260907-120000'],
+        ]);
+
+        $this->actingAs($viewer)
+            ->getJson(envUrl('/history/'.$log->id.'/diff'))
+            ->assertForbidden();
+    });
+
+    it('refuses a backup name that is not one this panel writes', function () {
+        fakeSite();
+
+        $log = ActivityLog::create([
+            'user_id' => $this->admin->id,
+            'type' => 'application',
+            'action' => 'environment_updated',
+            'subject_type' => $this->application->getMorphClass(),
+            'subject_id' => $this->application->id,
+            'properties' => ['backup' => '../../../../etc/passwd'],
+        ]);
+
+        // The name reaches a path. Refused rather than sanitised.
+        $this->actingAs($this->admin)
+            ->getJson(envUrl('/history/'.$log->id.'/diff'))
+            ->assertStatus(500);
+    });
+});

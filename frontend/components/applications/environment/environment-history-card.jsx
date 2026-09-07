@@ -12,6 +12,7 @@ import {
   changedKeys,
   unrestorableReason,
 } from "@/lib/applications/environment-history";
+import { EnvironmentDiff } from "@/components/applications/environment/environment-diff";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,9 +28,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 /**
  * Who changed this application's `.env`, when, and what they touched.
  *
- * Key names only — the values are the reason this screen is permission-gated,
- * and a history holding old ones would put every rotated password somewhere it
- * does not belong.
+ * The list itself carries key names only. Values are one click further in, and
+ * only for a `manage` user — they come off the backup files on demand, never
+ * out of the activity log, which is append-only, unpruned, and rendered by an
+ * admin-wide screen with different permissions than this one.
  *
  * Restoring from a row puts the file back to what it was *before* that change,
  * which is why each row carries its own backup name. The alternative, and what
@@ -85,6 +87,7 @@ export function EnvironmentHistoryCard({
             {entries.map((entry) => (
               <HistoryRow
                 key={entry.id}
+                appId={appId}
                 entry={entry}
                 canManage={canManage}
                 onRestore={() => setPending(entry)}
@@ -109,7 +112,7 @@ export function EnvironmentHistoryCard({
   );
 }
 
-function HistoryRow({ entry, canManage, onRestore }) {
+function HistoryRow({ appId, entry, canManage, onRestore }) {
   const t = useTranslations("applications.environment.history");
   const actor = actorOf(entry);
   const keys = changedKeys(entry);
@@ -161,6 +164,15 @@ function HistoryRow({ entry, canManage, onRestore }) {
         <p className="text-xs text-muted-foreground" title={entry.created_at}>
           {entry.created_at_human}
         </p>
+
+        {/* Values live behind a click, and only for people who could already
+            read them by restoring a backup — it reads the same file.
+            Offered for a first save too, where the diff is "everything was
+            added"; hidden only when the backup is pruned and there is
+            genuinely nothing left to compare against. */}
+        {canManage && blocked !== "pruned" ? (
+          <EnvironmentDiff appId={appId} entry={entry} />
+        ) : null}
       </div>
 
       {canManage ? (

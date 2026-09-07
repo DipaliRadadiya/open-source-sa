@@ -2831,7 +2831,16 @@
         "confirmTitle": "Restore the version from before this change?",
         "confirmBody": "The current file is backed up first, so this is itself undoable. The application keeps running with the restored values.",
         "cancel": "Cancel",
-        "confirmSubmit": "Restore"
+        "confirmSubmit": "Restore",
+        "showValues": "Show values",
+        "diffLoading": "Reading the saved copies…",
+        "diffFailed": "Those values could not be read.",
+        "diffUnavailable": "The copy of the previous version has been deleted, so this change cannot be shown.",
+        "colKey": "Variable",
+        "colBefore": "Before",
+        "colAfter": "After",
+        "absent": "Not set",
+        "emptyValue": "empty"
       }
     },
     "title": "Applications",
