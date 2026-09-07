@@ -31,21 +31,22 @@ class SaveWorkerRequest extends FormRequest
         return [
             'name' => [
                 'required', 'string', 'max:60',
-                // The name is rendered into the systemd unit's `Description=`.
-                // A newline there is a directive of the caller's choosing in a
-                // file the panel writes and systemd executes — the same hazard
-                // the cron rule exists for, one file format over.
+                // The name is rendered into the supervisor program block. A
+                // newline there is a directive of the caller's choosing in a
+                // file the panel writes and supervisord executes — the same
+                // hazard the cron rule exists for, one file format over.
                 new SingleLine,
                 Rule::unique('workers', 'name')
                     ->where('application_id', $application->id)
                     ->ignore($worker),
             ],
 
-            // A bare `binary arg arg` line. systemd execs ExecStart directly
-            // rather than through a shell, so a pipe or a semicolon here would
-            // not do what someone writing it expects — it would be passed to
-            // the binary as a literal argument. Refusing is clearer than
-            // silently running something else.
+            // A bare `binary arg arg` line. supervisord does not run the
+            // command through a shell either, so a pipe or a semicolon here
+            // would not do what someone writing it expects — it would be
+            // passed to the binary as a literal argument. Refusing is clearer
+            // than silently running something else, and it keeps the value
+            // safe to write into an ini file.
             'command' => ['required', 'string', 'max:500', 'regex:/^[^\n\r;|&`$<>()]+$/'],
 
             'kind' => ['sometimes', Rule::in([Worker::KIND_QUEUE, Worker::KIND_HORIZON, Worker::KIND_CUSTOM])],
@@ -53,6 +54,30 @@ class SaveWorkerRequest extends FormRequest
             // the traversal guard stops it pointing elsewhere, and this stops
             // it being two directives instead of one.
             'directory' => ['sometimes', 'nullable', 'string', 'max:255', 'not_regex:/\.\./', new SingleLine],
+
+            // The account the copies run as. Left empty the panel uses the
+            // site's own system user, which is the answer for anything it
+            // created; this exists so an adopted block naming another account
+            // keeps it. Same character class the system-user rules use — it
+            // becomes `user=` in a file supervisord parses.
+            'user' => ['sometimes', 'nullable', 'string', 'max:32', 'regex:/^[a-z_][a-z0-9_-]*$/'],
+
+            // `stdout_logfile`. Absolute, and no traversal, for the reason the
+            // directory rule says: this is a path the panel writes into a
+            // config that runs as root.
+            'log_file' => ['sometimes', 'nullable', 'string', 'max:255', 'starts_with:/', 'not_regex:/\.\./', new SingleLine],
+
+            // supervisord's own set. Constrained here rather than in the
+            // database so adding one is a validation change, not a migration.
+            'log_level' => ['sometimes', 'nullable', Rule::in(['critical', 'error', 'warn', 'info', 'debug', 'trace', 'blather'])],
+
+            // Appended verbatim, so a directive here wins over everything the
+            // panel wrote. A section header would let it define a *second*
+            // program — one the panel does not know about and would never
+            // stop — so the one thing it may not contain is `[`.
+            'extra_config' => ['sometimes', 'nullable', 'string', 'max:2000', 'not_regex:/\[/'],
+
+            'auto_start' => ['sometimes', 'boolean'],
             'processes' => ['sometimes', 'integer', 'min:1', 'max:'.self::MAX_PROCESSES],
             'stop_wait_seconds' => ['sometimes', 'integer', 'min:1', 'max:600'],
             'auto_restart' => ['sometimes', 'boolean'],

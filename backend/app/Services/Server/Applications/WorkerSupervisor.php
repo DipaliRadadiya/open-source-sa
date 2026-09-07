@@ -10,18 +10,32 @@ use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\View;
 
 /**
- * Runs an application's background workers, via systemd template units.
+ * Runs an application's background workers, as supervisord programs.
  *
  * A sibling of ProcessSupervisor rather than an extension of it: that one
  * supervises *the* application process, exactly one, whose command lives on
- * the application row. A worker is one of many, has its own row, and can be
- * asked for in multiples — which systemd expresses as a template unit
- * (`sv-worker-shop-queue@.service`) instantiated per copy (`@1`, `@2`, …).
+ * the application row, and it stays on systemd. A worker is one of many, has
+ * its own row, and can be asked for in multiples.
  *
- * The multiple is why the instances are systemd's and not ours. Storing four
- * rows for "four copies of the same worker" would make the panel responsible
- * for keeping them in step with what is actually running, which is the
- * bookkeeping this design avoids everywhere else.
+ * ## Why supervisord and not systemd
+ *
+ * This ran on systemd template units (`sv-worker-shop-queue@1`, `@2`, …) until
+ * 2026-09-07. supervisord is what the commercial panel has always
+ * used, so anyone arriving from it finds the same fields and the same
+ * `[program:…]` blocks on the box — and it is what every Laravel queue
+ * tutorial teaches, which is what a migrated server is already running.
+ *
+ * That last point is the one that pays for itself. `WorkerDiscoverer` already
+ * *reads* `/etc/supervisor/conf.d` to adopt a migrated box's workers. Writing
+ * the same format makes adopt-then-manage one format instead of a translation
+ * between two, and an adopted worker can now be edited rather than only
+ * recorded.
+ *
+ * supervisor also owns the copies itself, via `numprocs`. The panel stores the
+ * number it asked for and nothing else — "3 of 4 running" stays a question
+ * supervisord answers rather than one the panel caches. Lowering the count is
+ * `update`'s job, which is simpler than the old template's surplus-instance
+ * sweep: there is no instance number to strand.
  */
 class WorkerSupervisor
 {
@@ -31,45 +45,43 @@ class WorkerSupervisor
         private FrameworkDetector $frameworks,
     ) {}
 
-    /** `sv-worker-shop-queue@.service` — the template. */
-    public function template(Worker $worker): string
+    /** `sv-worker-shop-queue` — the program name. */
+    public function program(Worker $worker): string
     {
-        return $this->unitName($worker).'@.service';
-    }
-
-    /** `sv-worker-shop-queue@2.service` — one instance of it. */
-    public function instance(Worker $worker, int $number): string
-    {
-        return $this->unitName($worker).'@'.$number.'.service';
-    }
-
-    /**
-     * The unit's name, and the journal identifier that goes with it.
-     *
-     * The slug rather than the id, so the name says what it is when read on
-     * the box — and the slug rather than the *name*, so renaming a worker
-     * relabels it without stopping and recreating a running process.
-     */
-    public function unitName(Worker $worker): string
-    {
+        // The slug rather than the id, so the name says what it is when read
+        // on the box — and the slug rather than the *name*, so renaming a
+        // worker relabels it without stopping and recreating a running
+        // process.
         return 'sv-worker-'.$worker->slug;
     }
 
-    public function unitPath(Worker $worker): string
+    /**
+     * `sv-worker-shop-queue:*` — every process of the program.
+     *
+     * supervisorctl treats a `numprocs` program as a group, and the bare name
+     * addresses nothing: `supervisorctl restart sv-worker-x` on a program with
+     * copies answers "no such process". The `:*` is not decoration.
+     */
+    public function group(Worker $worker): string
     {
-        $dir = rtrim((string) config('server.applications.systemd_dir', '/etc/systemd/system'), '/');
+        return $this->program($worker).':*';
+    }
 
-        return $dir.'/'.$this->template($worker);
+    public function configPath(Worker $worker): string
+    {
+        $dir = rtrim((string) config('server.applications.supervisor_dir', '/etc/supervisor/conf.d'), '/');
+
+        return $dir.'/'.$this->program($worker).'.conf';
     }
 
     /**
-     * Write the unit and bring the requested number of copies up.
+     * Write the program and bring the requested number of copies up.
      *
-     * Verified with `is-active` afterwards, for the reason the application
-     * supervisor documents: `systemctl start` succeeds for a unit that starts
-     * and dies immediately, which is exactly what a mistyped command does. A
-     * panel that reported such a worker as running would be worse than one
-     * that refused it.
+     * Verified with `status` afterwards, for the reason the application
+     * supervisor documents: starting succeeds for a program that starts and
+     * dies immediately, which is exactly what a mistyped command does. A panel
+     * that reported such a worker as running would be worse than one that
+     * refused it.
      *
      * @throws ProvisioningFailedException
      */
@@ -77,18 +89,17 @@ class WorkerSupervisor
     {
         $context = $this->context($worker, 'worker_write');
 
-        $written = $this->files->put($this->unitPath($worker), $this->render($worker), $context);
+        $written = $this->files->put($this->configPath($worker), $this->render($worker), $context);
 
         if ($written->failed()) {
             throw new ProvisioningFailedException('write_unit', $written->reference);
         }
 
-        $this->daemonReload();
-
-        // Instances beyond the new count are stopped first: lowering
-        // `processes` from 4 to 2 must actually stop two of them, and nothing
-        // else in the system would ever notice they were still running.
-        $this->stopSurplus($worker);
+        // `reread` parses the files, `update` applies the difference — adding
+        // the program, and retiring copies when `numprocs` went down. Both,
+        // and in that order: `update` alone acts on a config supervisord has
+        // not re-read, so a saved change appears to do nothing.
+        $this->reload($worker);
 
         if (! $worker->enabled) {
             $this->stop($worker);
@@ -96,58 +107,47 @@ class WorkerSupervisor
             return;
         }
 
-        foreach ($this->instances($worker) as $unit) {
-            $this->systemctl('enable', $unit, $worker);
+        $started = $this->supervisorctl(['restart', $this->group($worker)], $worker, 'worker_start');
 
-            $started = $this->systemctl('restart', $unit, $worker);
+        if ($started->failed() || $this->status($worker)['running'] < 1) {
+            $reference = $started->reference;
+            $this->remove($worker);
 
-            if ($started->failed() || ! $this->activeInstance($unit, $worker)) {
-                $reference = $started->reference;
-                $this->remove($worker);
-
-                throw new ProvisioningFailedException('start_worker', $reference);
-            }
+            throw new ProvisioningFailedException('start_worker', $reference);
         }
     }
 
-    /** Stop, disable and forget every instance, then delete the template. */
+    /** Stop every copy, then delete the program and let supervisord forget it. */
     public function remove(Worker $worker): void
     {
         $this->stop($worker);
 
-        foreach ($this->instances($worker, self::MAX_TRACKED) as $unit) {
-            $this->systemctl('disable', $unit, $worker);
-        }
+        $this->files->delete($this->configPath($worker), $this->context($worker, 'worker_remove'));
 
-        $this->files->delete($this->unitPath($worker), $this->context($worker, 'worker_remove'));
-        $this->daemonReload();
+        // After the file is gone, so `update` removes the program rather than
+        // reinstating it from a config that is still on disk.
+        $this->reload($worker);
     }
 
     public function start(Worker $worker): void
     {
-        foreach ($this->instances($worker) as $unit) {
-            $this->systemctl('start', $unit, $worker);
-        }
+        $this->supervisorctl(['start', $this->group($worker)], $worker, 'worker_start');
     }
 
     public function stop(Worker $worker): void
     {
-        // Every instance we might ever have started, not just the current
-        // count: an instance left running after `processes` was lowered is
-        // invisible to the panel and would keep consuming the queue.
-        foreach ($this->instances($worker, self::MAX_TRACKED) as $unit) {
-            $this->systemctl('stop', $unit, $worker);
-        }
+        $this->supervisorctl(['stop', $this->group($worker)], $worker, 'worker_stop');
     }
 
     /**
      * Restart, in the way this kind of worker is meant to be restarted.
      *
      * A Laravel queue worker is told to finish its current job and exit
-     * (`queue:restart`); systemd then starts it again with the new code. That
-     * is gentler than restarting the unit, which can kill a job mid-flight.
+     * (`queue:restart`); supervisor then starts it again with the new code,
+     * because `autorestart` treats a clean exit as something to replace. That
+     * is gentler than restarting the program, which can kill a job mid-flight.
      * Horizon has its own equivalent. Anything else has no such protocol, so
-     * the unit is restarted directly.
+     * the program is restarted directly.
      */
     public function restart(Worker $worker): void
     {
@@ -161,9 +161,7 @@ class WorkerSupervisor
             return;
         }
 
-        foreach ($this->instances($worker) as $unit) {
-            $this->systemctl('restart', $unit, $worker);
-        }
+        $this->supervisorctl(['restart', $this->group($worker)], $worker, 'worker_restart');
     }
 
     /**
@@ -177,10 +175,26 @@ class WorkerSupervisor
      */
     public function status(Worker $worker): array
     {
+        // Exit 3 is supervisorctl's "some processes are not running", which is
+        // the answer this method exists to report rather than a failure to ask
+        // — treating it as an error would make every stopped worker an entry
+        // on the admin error dashboard.
+        $result = $this->serverOps->run(
+            ['supervisorctl', 'status', $this->group($worker)],
+            $this->context($worker, 'worker_status'),
+            timeout: 30,
+            expectedExitCodes: [3],
+        );
+
         $running = 0;
 
-        foreach ($this->instances($worker) as $unit) {
-            if ($this->activeInstance($unit, $worker)) {
+        foreach (preg_split('/\R/', trim($result->output())) ?: [] as $line) {
+            // `sv-worker-shop-queue:sv-worker-shop-queue_00   RUNNING   pid 123, uptime 0:04:11`
+            // Matched on the word rather than split by whitespace: the state
+            // is the second column, and a program name containing a space
+            // could not exist, but a missing line could — and `RUNNING` is
+            // unambiguous either way.
+            if (preg_match('/^\S+\s+RUNNING\b/', trim($line)) === 1) {
                 $running++;
             }
         }
@@ -213,8 +227,8 @@ class WorkerSupervisor
         }
 
         // Craft has a queue, but not Laravel's `artisan queue:restart`. Let
-        // systemd restart its unit directly instead of logging an expected
-        // missing-command failure before doing that anyway.
+        // supervisor restart its program directly instead of logging an
+        // expected missing-command failure before doing that anyway.
         if ($this->frameworks->detect($application) === FrameworkDetector::CRAFT) {
             return null;
         }
@@ -225,77 +239,29 @@ class WorkerSupervisor
         };
     }
 
-    /** Instances beyond the requested count, stopped and disabled. */
-    private function stopSurplus(Worker $worker): void
-    {
-        for ($number = $worker->processes + 1; $number <= self::MAX_TRACKED; $number++) {
-            $unit = $this->instance($worker, $number);
-
-            if (! $this->activeInstance($unit, $worker)) {
-                continue;
-            }
-
-            $this->systemctl('stop', $unit, $worker);
-            $this->systemctl('disable', $unit, $worker);
-        }
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function instances(Worker $worker, ?int $count = null): array
-    {
-        $count = $count ?? $worker->processes;
-
-        return array_map(
-            fn (int $number): string => $this->instance($worker, $number),
-            range(1, max(1, $count)),
-        );
-    }
-
-    private function activeInstance(string $unit, Worker $worker): bool
-    {
-        return $this->serverOps->run(
-            ['systemctl', 'is-active', '--quiet', $unit],
-            $this->context($worker, 'worker_is_active'),
-            timeout: 15,
-        )->ok;
-    }
-
-    private function systemctl(string $verb, string $unit, Worker $worker): ServerOpsResult
-    {
-        return $this->serverOps->run(
-            ['systemctl', $verb, $unit],
-            $this->context($worker, 'worker_'.$verb),
-            timeout: 120,
-        );
-    }
-
-    private function daemonReload(): ServerOpsResult
-    {
-        return $this->serverOps->run(
-            ['systemctl', 'daemon-reload'],
-            ['feature' => 'application', 'op' => 'worker_daemon_reload'],
-            timeout: 60,
-        );
-    }
-
-    private function render(Worker $worker): string
+    public function render(Worker $worker): string
     {
         $application = $worker->application;
         $projectRoot = $this->frameworks->root($application);
+        $directory = $worker->directory ?: $projectRoot;
 
-        return View::make('server.units.worker', [
+        return View::make('server.programs.worker', [
             'worker' => $worker,
-            'application' => $application,
-            'user' => $application->systemUser->username,
-            'projectRoot' => $projectRoot,
-            'envPath' => $application->envPath(),
-            'directory' => $worker->directory ?: $projectRoot,
-            'exec' => $this->execStart($worker),
-            'path' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-            'stopWaitSeconds' => $worker->stop_wait_seconds,
+            'program' => $this->program($worker),
+            'command' => $this->command($worker),
+            'directory' => $directory,
+            'processes' => $worker->processes,
+            // The site's own account unless an adopted block named another.
+            // Rewriting someone else's choice silently would change who owns
+            // the files a running job writes.
+            'user' => $worker->user ?: $application->systemUser->username,
+            'autoStart' => $worker->auto_start,
             'autoRestart' => $worker->auto_restart,
+            'stopWaitSeconds' => $worker->stop_wait_seconds,
+            'logFile' => $worker->log_file ?: $application->logsPath().'/'.$this->program($worker).'.log',
+            'logLevel' => $worker->log_level,
+            'extraConfig' => $worker->extra_config,
+            'path' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
         ])->render();
     }
 
@@ -305,11 +271,16 @@ class WorkerSupervisor
     }
 
     /**
-     * `ExecStart` is not a shell — systemd execs the binary directly, so a
-     * bare `php` would never be found. The command is validated to a plain
-     * `binary arg arg` form upstream; this only resolves the binary.
+     * The command, with a bare `php` resolved to a path.
+     *
+     * supervisor does run its command through a shell-like split rather than
+     * exec'ing directly, so a bare `php` would in fact be found via PATH — but
+     * it would be *whichever* php is first on it, and a site pinned to 8.3
+     * whose worker silently ran on 8.4 is the kind of difference that only
+     * shows up as a serialisation error weeks later. Resolved for the same
+     * reason the systemd unit had to.
      */
-    private function execStart(Worker $worker): string
+    private function command(Worker $worker): string
     {
         $parts = preg_split('/\s+/', trim($worker->command)) ?: [];
         $binary = array_shift($parts) ?? '';
@@ -319,6 +290,31 @@ class WorkerSupervisor
         }
 
         return trim($binary.' '.implode(' ', $parts));
+    }
+
+    /**
+     * Re-read the configs and apply the difference.
+     *
+     * Not fatal on its own: a `reread` that fails leaves the file on disk and
+     * the previous program running, which is a state someone can act on. The
+     * caller checks whether the worker actually came up.
+     */
+    private function reload(Worker $worker): void
+    {
+        $this->supervisorctl(['reread'], $worker, 'worker_reread');
+        $this->supervisorctl(['update'], $worker, 'worker_update');
+    }
+
+    /**
+     * @param  array<int, string>  $arguments
+     */
+    private function supervisorctl(array $arguments, Worker $worker, string $op): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['supervisorctl', ...$arguments],
+            $this->context($worker, $op),
+            timeout: 120,
+        );
     }
 
     /**
@@ -333,13 +329,4 @@ class WorkerSupervisor
             'worker' => $worker->id,
         ];
     }
-
-    /**
-     * The highest instance number the panel will ever stop or disable.
-     *
-     * Bounded because "stop everything that might be running" has to terminate
-     * somewhere, and it must be comfortably above the validated maximum for
-     * `processes` so lowering the count can never strand an instance.
-     */
-    private const MAX_TRACKED = 32;
 }

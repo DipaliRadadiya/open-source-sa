@@ -853,7 +853,7 @@ install_packages() {
         apache) web_pkgs=(apache2) ;;
     esac
 
-    run_progress "Installing ${WEB_SERVER}, Redis, SQLite, and PHP ${PHP_VERSION}" apt-get install -y "${web_pkgs[@]}" redis-server sqlite3 "${php_pkgs[@]}"
+    run_progress "Installing ${WEB_SERVER}, Redis, SQLite, supervisor, and PHP ${PHP_VERSION}" apt-get install -y "${web_pkgs[@]}" redis-server sqlite3 supervisor "${php_pkgs[@]}"
     ok "${WEB_SERVER}, redis, sqlite, PHP ${PHP_VERSION}"
 
     if ! command -v composer >/dev/null 2>&1; then

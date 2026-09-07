@@ -20,8 +20,16 @@ use Illuminate\Support\Facades\Process;
  */
 class WorkerFake
 {
-    /** @var array<int, string> Units systemd currently considers active. */
-    public static array $active = [];
+    /**
+     * How many copies of each program supervisord currently has up.
+     *
+     * A count rather than a set of unit names, because supervisor's `numprocs`
+     * is the thing that decides it — "three of four running" is the state this
+     * has to be able to represent, and a boolean could not.
+     *
+     * @var array<string, int>
+     */
+    public static array $running = [];
 
     /** @var array<int, string> Every command the panel ran, in order. */
     public static array $ran = [];
@@ -33,10 +41,35 @@ class WorkerFake
 
     public static function reset(): void
     {
-        self::$active = [];
+        self::$running = [];
         self::$ran = [];
         self::$env = "APP_ENV=production\nCACHE_STORE=redis\n";
         self::$present = ['/home/workerowner/queued-site/public_html/artisan'];
+    }
+
+    /** The program name out of `sv-worker-shop-queue:*`. */
+    public static function program(string $target): string
+    {
+        return explode(':', $target)[0];
+    }
+
+    /**
+     * What `supervisorctl status` prints for a program.
+     *
+     * Real output, because the panel parses it: one line per process, with the
+     * state in the second column. A test that returned a tidier shape would be
+     * asserting against a format supervisord does not produce.
+     */
+    public static function statusOutput(string $program): string
+    {
+        $count = self::$running[$program] ?? 0;
+        $lines = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $lines[] = sprintf('%s:%s_%02d   RUNNING   pid %d, uptime 0:04:11', $program, $program, $i, 1000 + $i);
+        }
+
+        return implode("\n", $lines);
     }
 }
 
@@ -68,7 +101,7 @@ beforeEach(function () {
     WorkerFake::reset();
 });
 
-function fakeWorkerSystemd(): void
+function fakeWorkerSupervisor(): void
 {
     Process::fake(function ($process) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
@@ -88,23 +121,33 @@ function fakeWorkerSystemd(): void
             return Process::result(output: WorkerFake::$env);
         }
 
-        if ($binary === 'systemctl') {
+        if ($binary === 'supervisorctl') {
             $verb = $args[1] ?? '';
-            // `daemon-reload` has no unit argument at all.
-            $unit = ($args[2] ?? '') === '--quiet' ? ($args[3] ?? '') : ($args[2] ?? '');
+            $program = WorkerFake::program($args[2] ?? '');
 
-            if ($verb === 'is-active') {
-                return Process::result(exitCode: in_array($unit, WorkerFake::$active, true) ? 0 : 1);
+            if ($verb === 'status') {
+                // Exit 3 is supervisorctl's "some processes are not running",
+                // which is what it really answers for a stopped program — the
+                // panel treats it as an answer rather than a failure, and a
+                // fake returning 0 would never exercise that.
+                $output = WorkerFake::statusOutput($program);
+
+                return Process::result(output: $output, exitCode: $output === '' ? 3 : 0);
             }
 
-            // Starting marks it active; stopping clears it — enough for the
-            // supervisor to be exercised rather than mocked away.
+            // Starting brings up as many copies as the row asks for, which is
+            // what `numprocs` means; stopping clears them. Read from the
+            // database rather than assumed, so "lower the count and re-apply"
+            // is a real transition rather than one the fake pretends about.
             if (in_array($verb, ['start', 'restart'], true)) {
-                WorkerFake::$active = array_values(array_unique([...WorkerFake::$active, $unit]));
+                $slug = str_starts_with($program, 'sv-worker-') ? substr($program, strlen('sv-worker-')) : $program;
+                $processes = (int) (Worker::query()->where('slug', $slug)->value('processes') ?? 0);
+
+                WorkerFake::$running[$program] = $processes;
             }
 
             if ($verb === 'stop') {
-                WorkerFake::$active = array_values(array_diff(WorkerFake::$active, [$unit]));
+                unset(WorkerFake::$running[$program]);
             }
         }
 
@@ -128,7 +171,7 @@ function workerPayload(array $overrides = []): array
 }
 
 it('offers presets for the framework it finds, not a blank box', function () {
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
 
     $response = $this->actingAs($this->admin)->getJson(workerUrl())->assertOk();
     $presets = collect($response->json('presets'));
@@ -141,7 +184,7 @@ it('offers presets for the framework it finds, not a blank box', function () {
 });
 
 it('orders workers without case bias', function () {
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
 
     foreach (['Case Zebra', 'case apple', 'CASE Banana'] as $name) {
         Worker::create([
@@ -161,7 +204,7 @@ it('orders workers without case bias', function () {
 it('finds Craft above its served web directory and runs the worker there', function () {
     $this->application->update(['site_type' => 'craftcms', 'web_root' => '/web']);
     WorkerFake::$present = ['/home/workerowner/queued-site/public_html/craft'];
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
 
     $presets = collect($this->actingAs($this->admin)->getJson(workerUrl())->assertOk()->json('presets'));
 
@@ -173,9 +216,11 @@ it('finds Craft above its served web directory and runs the worker there', funct
         'kind' => 'queue',
     ]))->assertCreated();
 
-    Process::assertRan(fn ($process) => str_contains((string) $process->input, 'WorkingDirectory=/home/workerowner/queued-site/public_html')
-        && str_contains((string) $process->input, 'EnvironmentFile=-/home/workerowner/queued-site/public_html/.env')
-        && str_contains((string) $process->input, 'ReadWritePaths=/home/workerowner/queued-site/public_html'));
+    // The supervisor program's `directory`, which is where Craft's own CLI
+    // lives — above the served `web/`, not inside it. The worker has to run
+    // from the project root or `craft` is not on the path it starts in.
+    Process::assertRan(fn ($process) => str_contains((string) $process->input, 'directory=/home/workerowner/queued-site/public_html')
+        && str_contains((string) $process->input, 'command=/usr/bin/php8.4 craft queue/listen'));
 
     $worker = Worker::firstOrFail();
     WorkerFake::$ran = [];
@@ -183,7 +228,7 @@ it('finds Craft above its served web directory and runs the worker there', funct
 
     expect(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, 'artisan queue:restart')))
         ->toBeFalse()
-        ->and(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, "restart sv-worker-{$worker->slug}@1")))
+        ->and(collect(WorkerFake::$ran)->contains(fn (string $command) => str_contains($command, "restart sv-worker-{$worker->slug}:*")))
         ->toBeTrue();
 });
 
@@ -194,7 +239,7 @@ it('finds Statamic above its public web directory', function () {
         '/home/workerowner/queued-site/public_html/artisan',
         '/home/workerowner/queued-site/public_html/bootstrap/cache/config.php',
     ];
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
 
     $presets = collect($this->actingAs($this->admin)->getJson(workerUrl())->assertOk()->json('presets'));
     $detector = app(FrameworkDetector::class);
@@ -212,7 +257,7 @@ it('finds a brownfield Laravel project above its public web directory', function
         '/home/workerowner/queued-site/public_html/artisan',
         '/home/workerowner/queued-site/public_html/bootstrap/cache/config.php',
     ];
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
 
     $detector = app(FrameworkDetector::class);
 
@@ -226,7 +271,7 @@ it('finds a brownfield Laravel project above its public web directory', function
 it('keeps current flat git deployments rooted in the served directory', function () {
     $this->application->update(['web_root' => '/public']);
     WorkerFake::$present = ['/home/workerowner/queued-site/public_html/public/artisan'];
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
 
     $detector = app(FrameworkDetector::class);
 
@@ -241,14 +286,14 @@ it('keeps n8n and Node-RED on the custom worker preset', function (string $siteT
         'web_root' => '/',
     ]);
     WorkerFake::$present = ['/home/workerowner/queued-site/public_html/package.json'];
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
 
     expect($this->actingAs($this->admin)->getJson(workerUrl())->assertOk()->json('presets.*.key'))
         ->toBe(['custom']);
 })->with(['n8n', 'nodered']);
 
 it('creates a worker and starts as many copies as asked for', function () {
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
 
     $response = $this->actingAs($this->admin)
         ->postJson(workerUrl(), workerPayload(['processes' => 3]))
@@ -257,21 +302,21 @@ it('creates a worker and starts as many copies as asked for', function () {
     expect($response->json('worker.running'))->toBe(3)
         ->and($response->json('worker.state'))->toBe('running');
 
+    // supervisor owns the copies via `numprocs`, so the evidence is how many
+    // it reports running — not a unit name per copy, which no longer exists.
     $worker = Worker::first();
-    foreach ([1, 2, 3] as $number) {
-        expect(WorkerFake::$active)->toContain("sv-worker-{$worker->slug}@{$number}.service");
-    }
+    expect(WorkerFake::$running["sv-worker-{$worker->slug}"] ?? 0)->toBe(3);
 });
 
 it('reports a partly-running pool as its own state', function () {
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
     $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['processes' => 3]));
 
     $worker = Worker::first();
 
-    // One instance died. A green dot would hide this, and a half-dead worker
-    // pool is exactly the state nobody notices until the queue backs up.
-    WorkerFake::$active = array_values(array_diff(WorkerFake::$active, ["sv-worker-{$worker->slug}@2.service"]));
+    // One copy died. A green dot would hide this, and a half-dead worker pool
+    // is exactly the state nobody notices until the queue backs up.
+    WorkerFake::$running["sv-worker-{$worker->slug}"] = 2;
 
     $status = app(WorkerSupervisor::class)->status($worker->load('application.systemUser'));
 
@@ -279,7 +324,7 @@ it('reports a partly-running pool as its own state', function () {
 });
 
 it('stops the surplus when the process count is lowered', function () {
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
     $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['processes' => 4]));
     $worker = Worker::first();
 
@@ -287,11 +332,18 @@ it('stops the surplus when the process count is lowered', function () {
         ->putJson(workerUrl('/'.$worker->id), workerPayload(['processes' => 2]))
         ->assertOk();
 
-    // Instances 3 and 4 must actually stop. Nothing else in the system would
-    // ever notice they were still consuming the queue.
-    expect(WorkerFake::$active)->toContain("sv-worker-{$worker->slug}@1.service")
-        ->and(WorkerFake::$active)->not->toContain("sv-worker-{$worker->slug}@3.service")
-        ->and(WorkerFake::$active)->not->toContain("sv-worker-{$worker->slug}@4.service");
+    // Two copies must actually stop. supervisor retires them on `update`
+    // rather than the panel sweeping instance numbers, but the requirement is
+    // unchanged: nothing else in the system would notice four processes still
+    // consuming the queue.
+    expect(WorkerFake::$running["sv-worker-{$worker->slug}"] ?? 0)->toBe(2);
+
+    // And the pair that does it, in that order — `update` alone acts on a
+    // config supervisord has not re-read, so the change would appear to save
+    // and do nothing.
+    $commands = implode(' | ', WorkerFake::$ran);
+    expect($commands)->toContain('supervisorctl reread')
+        ->and($commands)->toContain('supervisorctl update');
 });
 
 it('refuses a worker whose unit will not stay up', function () {
@@ -311,7 +363,7 @@ it('refuses a worker whose unit will not stay up', function () {
 
 describe('restarting', function () {
     it('asks a queue worker to finish its job rather than killing it', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
         $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload());
         $worker = Worker::first();
 
@@ -325,7 +377,7 @@ describe('restarting', function () {
     });
 
     it('uses horizon:terminate for Horizon', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
         $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload([
             'name' => 'Horizon', 'command' => 'php8.4 artisan horizon', 'kind' => 'horizon',
         ]));
@@ -339,7 +391,7 @@ describe('restarting', function () {
     });
 
     it('restarts the unit for a command with no such protocol', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
         $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload([
             'name' => 'Custom', 'command' => '/usr/bin/myscript', 'kind' => 'custom',
         ]));
@@ -348,14 +400,14 @@ describe('restarting', function () {
         WorkerFake::$ran = [];
         $this->actingAs($this->admin)->postJson(workerUrl("/{$worker->id}/restart"));
 
-        expect(collect(WorkerFake::$ran)->contains(fn (string $c) => str_contains($c, "restart sv-worker-{$worker->slug}@1")))
+        expect(collect(WorkerFake::$ran)->contains(fn (string $c) => str_contains($c, "restart sv-worker-{$worker->slug}:*")))
             ->toBeTrue();
     });
 });
 
 describe('guardrails', function () {
     it('refuses Horizon alongside a queue worker', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
         $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload());
 
         // Horizon supervises its own workers, so both together means every job
@@ -369,7 +421,7 @@ describe('guardrails', function () {
     });
 
     it('refuses a command with shell syntax in it', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         // systemd execs ExecStart directly — a pipe would be passed to the
         // binary as a literal argument rather than doing what it looks like.
@@ -382,7 +434,7 @@ describe('guardrails', function () {
     });
 
     it('caps how many copies can be asked for', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         $this->actingAs($this->admin)
             ->postJson(workerUrl(), workerPayload(['processes' => 999]))
@@ -396,7 +448,7 @@ describe('guardrails', function () {
         // survive the process that wrote it. The command succeeds, nothing
         // restarts, and deploys quietly run old code in the queue forever.
         WorkerFake::$env = "APP_ENV=production\nCACHE_STORE=array\n";
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         $checks = collect($this->actingAs($this->admin)->getJson(workerUrl())->json('checks'));
 
@@ -406,7 +458,7 @@ describe('guardrails', function () {
     });
 
     it('says nothing about the cache when the driver is fine', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         expect($this->actingAs($this->admin)->getJson(workerUrl())->json('checks'))->toBe([]);
     });
@@ -431,7 +483,7 @@ describe('which sites have workers', function () {
     });
 
     it('is refused at the endpoint for a site that has none', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         $wordpress = Application::forceCreate([
             'system_user_id' => $this->application->system_user_id,
@@ -448,7 +500,7 @@ describe('which sites have workers', function () {
 
 describe('permissions', function () {
     it('lets a viewer read but not change', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
         $user = User::factory()->create();
         grantPermission($user, 'app_worker', view: true, manage: false);
 
@@ -457,13 +509,13 @@ describe('permissions', function () {
     });
 
     it('denies a user with no grant', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         $this->actingAs(User::factory()->create())->getJson(workerUrl())->assertForbidden();
     });
 
     it('denies an unauthenticated caller', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         // Its own test: an earlier actingAs in the same test leaves the guard
         // resolved, and the request would answer for that user instead.
@@ -478,7 +530,7 @@ describe('a worker id from another application', function () {
         // logs it against site 1 — an audit trail naming the wrong site, which
         // is worse than none because it is believed. The deployment, domain and
         // SSH-key routes all check this already; workers were the gap.
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         $other = Application::forceCreate([
             'system_user_id' => $this->application->system_user_id,
@@ -519,7 +571,7 @@ it('refuses a name or directory that would be two systemd directives', function 
     // `WorkingDirectory=`, in a file the panel writes and systemd executes.
     // A newline there is a directive of the caller's choosing — the same
     // hazard the cron rule was written for, one file format over.
-    fakeWorkerSystemd();
+    fakeWorkerSupervisor();
 
     $this->actingAs($this->admin)
         ->postJson(workerUrl(), workerPayload([
@@ -538,7 +590,7 @@ it('refuses a name or directory that would be two systemd directives', function 
 
 describe('the unit name', function () {
     it('is the slug, so it says what it is when read on the box', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         $this->actingAs($this->admin)
             ->postJson(workerUrl(), workerPayload(['name' => 'Email Queue']))->assertCreated();
@@ -548,17 +600,17 @@ describe('the unit name', function () {
         // application is in it because "queue" alone is ambiguous on a box
         // with twenty sites.
         expect($worker->slug)->toBe('queued-site-email-queue')
-            ->and(app(WorkerSupervisor::class)->template($worker))
-            ->toBe('sv-worker-queued-site-email-queue@.service');
+            ->and(app(WorkerSupervisor::class)->program($worker))
+            ->toBe('sv-worker-queued-site-email-queue');
     });
 
     it('does not move when the worker is renamed', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         $this->actingAs($this->admin)
             ->postJson(workerUrl(), workerPayload(['name' => 'Email Queue']))->assertCreated();
         $worker = Worker::query()->firstOrFail();
-        $before = app(WorkerSupervisor::class)->template($worker);
+        $before = app(WorkerSupervisor::class)->program($worker);
 
         $this->actingAs($this->admin)
             ->putJson(workerUrl('/'.$worker->id), workerPayload(['name' => 'Something Else']))
@@ -570,11 +622,11 @@ describe('the unit name', function () {
         // consuming the queue.
         expect($worker->fresh()->name)->toBe('Something Else')
             ->and($worker->fresh()->slug)->toBe('queued-site-email-queue')
-            ->and(app(WorkerSupervisor::class)->template($worker->fresh()))->toBe($before);
+            ->and(app(WorkerSupervisor::class)->program($worker->fresh()))->toBe($before);
     });
 
     it('suffixes rather than collides when two names reduce to one slug', function () {
-        fakeWorkerSystemd();
+        fakeWorkerSupervisor();
 
         // The name is unique per application, but Str::slug() is lossy: these
         // two reduce to the same string. Checking the name would let both

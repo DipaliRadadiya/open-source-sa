@@ -166,6 +166,8 @@ return [
             // leave the panel able to restart OpenLiteSpeed but not to check
             // what it is about to restart it into.
             'nginx', 'apachectl', 'lswsctrl', 'openlitespeed',
+            // Workers run as supervisord programs; this writes and controls them.
+            'supervisorctl',
             'phpenmod', 'phpdismod', 'update-alternatives',
             // The dump/restore clients belong here as much as the shells do:
             // backups run `dump_client` from the engines list below, and a
@@ -774,11 +776,16 @@ return [
         /*
         | Where supervisor keeps its program blocks.
         |
-        | Read-only, and only by the sync: the panel supervises with systemd.
-        | A migrated box usually runs its queue workers under supervisor,
-        | because that is what every Laravel tutorial teaches, and a sync that
-        | did not look here would report a site with no background processes
-        | while four of them were running.
+        | Written as well as read, since 2026-09-07: a worker *is* a supervisor
+        | program now, where it used to be a systemd template unit. The sync
+        | has always read this directory, because a migrated box runs its queue
+        | workers under supervisor — that is what every Laravel tutorial
+        | teaches — and the panel now writes the same format it adopts, so an
+        | adopted worker can be edited rather than only recorded.
+        |
+        | One key, deliberately. A second one for "where we write" beside this
+        | one for "where we read" is two answers to the same question, and the
+        | day they disagree the panel adopts a worker it cannot manage.
         */
         'supervisor_dir' => env('SERVER_SUPERVISOR_DIR', '/etc/supervisor/conf.d'),
         'port_range' => [

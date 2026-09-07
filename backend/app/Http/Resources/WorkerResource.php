@@ -33,6 +33,19 @@ class WorkerResource extends JsonResource
             'restart_on_deploy' => $this->resource->restart_on_deploy,
             'enabled' => $this->resource->enabled,
 
+            // supervisord's own directives. Null on every field the panel
+            // chose for itself, so the form can show what it will actually do
+            // rather than a value the user did not pick: `user` falls back to
+            // the site's account and `log_file` to its log directory, and
+            // saying so is the effective-value pattern the PHP settings screen
+            // already uses.
+            'user' => $this->resource->user,
+            'effective_user' => $this->resource->user ?: $this->resource->application?->systemUser?->username,
+            'log_file' => $this->resource->log_file,
+            'log_level' => $this->resource->log_level,
+            'extra_config' => $this->resource->extra_config,
+            'auto_start' => $this->resource->auto_start,
+
             // Read from systemd on every request, never stored. "3 of 4
             // running" is a real state that a single green dot would hide.
             'running' => $status['running'],

@@ -10,6 +10,11 @@ use Illuminate\Support\Str;
 #[Fillable([
     'application_id', 'name', 'command', 'kind', 'directory',
     'processes', 'stop_wait_seconds', 'auto_restart', 'restart_on_deploy', 'enabled',
+    // supervisord's own directives. `user` is fillable because an adopted
+    // block may name an account that is not the site's, and the panel must be
+    // able to keep it rather than silently rewrite who owns the files a
+    // running job writes.
+    'user', 'log_file', 'log_level', 'extra_config', 'auto_start',
 ])]
 class Worker extends Model
 {
@@ -31,6 +36,7 @@ class Worker extends Model
             'processes' => 'integer',
             'stop_wait_seconds' => 'integer',
             'auto_restart' => 'boolean',
+            'auto_start' => 'boolean',
             'restart_on_deploy' => 'boolean',
             'enabled' => 'boolean',
         ];
