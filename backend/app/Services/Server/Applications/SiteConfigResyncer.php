@@ -104,6 +104,29 @@ class SiteConfigResyncer
 
             $rendered = $driver->renderConfig($application, $this->provisioner->documentRoot($application));
 
+            // The directories the config about to be written names. This class
+            // writes the file itself rather than going through `apply()` — so
+            // that it can compare the rendered output and skip a site nothing
+            // changed for — and it used to skip this preparation with it.
+            //
+            // That made the standing advice wrong. A site provisioned before
+            // the challenge root was created at provision time had none, a
+            // resync rewrote its vhost still naming one, and on OpenLiteSpeed —
+            // where a context's `location` is resolved at config-load — the
+            // test failed and the site was rolled back. "Deploy, then resync"
+            // did not repair the very thing it was given for.
+            //
+            // Deliberately before the unchanged check below, not after it.
+            // The site this exists for has a *correct* config already — its
+            // vhost names a challenge root that was simply never created — so
+            // it is exactly the site the skip would pass over. Repairing only
+            // the sites whose text changed would leave the broken ones broken.
+            //
+            // Cheap enough to do every time: three `mkdir -p`-shaped calls
+            // that do nothing when the directories are there, which is the
+            // normal case.
+            $driver->ensureDirectories($application);
+
             // Nothing shipped changed for this site. Skipping keeps a routine
             // update from rewriting forty files to identical content.
             if ($previous !== null && $this->normalize($previous) === $this->normalize($rendered)) {

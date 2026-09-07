@@ -156,6 +156,42 @@ it('skips a site whose config is already current', function () {
         ->and($result['reloaded'])->toBeFalse();
 });
 
+it('creates the directories the config names, even for a site it skips', function () {
+    // The site this exists for has a *correct* vhost already — it names an
+    // ACME challenge root that was simply never created, because nothing made
+    // one at provision time before 2026-09-03. So it is exactly the site the
+    // "already current" skip passes over, and a resync that prepared nothing
+    // left it broken while reporting success.
+    //
+    // It bites hardest on OpenLiteSpeed, which resolves a context's `location`
+    // when the config loads rather than per request: the vhost fails its own
+    // test and the site is rolled back. "Deploy, then resync" was the standing
+    // advice for repairing precisely this, and it did not.
+    $site = makeSite('one.test');
+
+    $current = app(WebServerManager::class)
+        ->driver()
+        ->renderConfig(
+            $site->load('systemUser'),
+            app(ApplicationProvisioner::class)
+                ->documentRoot($site->load('systemUser')),
+        );
+
+    fakeResyncServer(onDisk: $current);
+
+    $result = app(SiteConfigResyncer::class)->run();
+
+    // Still skipped — this must not start rewriting files that are correct.
+    expect($result['unchanged'])->toBe(1)
+        ->and($result['updated'])->toBe(0);
+
+    // Asserted against the commands, not against the helper's return value:
+    // that ArrayObject collects `tee` *input*, so a filter over it was reading
+    // file contents and could never have seen a mkdir.
+    Process::assertRan(fn ($process) => in_array('install', $process->command, true)
+        && collect($process->command)->contains(fn ($arg) => str_contains((string) $arg, '.well-known/acme-challenge')));
+});
+
 it('rolls back a site that fails its config test and keeps going', function () {
     makeSite('one.test');
     makeSite('two.test');

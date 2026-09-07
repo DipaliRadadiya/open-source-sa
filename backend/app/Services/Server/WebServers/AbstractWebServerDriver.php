@@ -41,15 +41,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             return $fallback;
         }
 
-        $this->ensurePanelDirectory($application);
-        $this->ensureChallengeRoot();
-
-        // Before the config is written, for the same reason the panel
-        // directory is: the vhost names `logs/access.log`, and a web server
-        // refuses to start when a log file's directory does not exist. A
-        // missing directory here would fail `nginx -t` on every site and read
-        // as a bad template rather than as an absent folder.
-        $this->logDirectory->ensure($application);
+        $this->ensureDirectories($application);
 
         $written = $this->files->put(
             $this->configPath($application),
@@ -110,6 +102,35 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     protected function ensureChallengeRoot(): void
     {
         $this->certbot->ensureChallengeRoot();
+    }
+
+    /**
+     * Every directory the rendered config is about to name.
+     *
+     * Public, and called by anything that writes a vhost — not only
+     * `apply()`. `sites:resync` renders and writes the same file directly, so
+     * that it can skip a site whose config has not changed, and it used to
+     * write configs without any of this. On OpenLiteSpeed a context's
+     * `location` is resolved when the config loads rather than per request, so
+     * a resync that rewrote a vhost naming a challenge root nothing had
+     * created failed the config test and rolled that site back — and the
+     * advice "deploy, then resync" quietly did not repair the thing it was
+     * given for.
+     *
+     * All three are best-effort in the same way `apply()` always treated
+     * them: a directory that cannot be created is reported by whatever needs
+     * it, not by refusing to write a site's configuration.
+     */
+    public function ensureDirectories(Application $application): void
+    {
+        $this->ensurePanelDirectory($application);
+        $this->ensureChallengeRoot();
+
+        // The vhost names `logs/access.log`, and a web server refuses to start
+        // when a log file's directory does not exist. A missing directory here
+        // would fail `nginx -t` on every site and read as a bad template
+        // rather than as an absent folder.
+        $this->logDirectory->ensure($application);
     }
 
     /**

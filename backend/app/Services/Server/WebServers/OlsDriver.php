@@ -134,29 +134,16 @@ class OlsDriver extends AbstractWebServerDriver
             return $fallback;
         }
 
-        // This driver overrides apply(), so it does not inherit the base
-        // class's guarantee that `.panel/` exists before a config naming it
-        // goes live.
-        $this->ensurePanelDirectory($application);
-
-        // And it matters more here than anywhere else. OpenLiteSpeed resolves
-        // a context's `location` when the configuration is loaded, not per
-        // request — so the ACME context every template declares points at a
-        // directory that, on a server where no certificate has ever been
-        // issued, does not exist yet. install.sh already learned this for the
-        // panel's own vhost; sites had been left out.
-        $this->ensureChallengeRoot();
-
-        // The log directory the vhost names. OpenLiteSpeed does not create it —
-        // it silently falls back to the server-wide log, so a site's own errors
-        // go somewhere nobody thinks to look.
+        // Through the shared method, so this driver cannot drift from the
+        // base class's list — and so `sites:resync`, which writes a vhost
+        // without going through apply(), gets the same preparation.
         //
-        // Through the shared service rather than the `mkdir` that used to be
-        // folded into the line below: this directory now holds every log for
-        // the site and its ownership is what stops the site user replacing a
-        // file a root process appends to. A bare `mkdir` here would leave OLS
-        // the one web server whose log directory had the wrong owner.
-        $this->logDirectory->ensure($application);
+        // It matters more here than anywhere else: OpenLiteSpeed resolves a
+        // context's `location` when the configuration is loaded, not per
+        // request, so the ACME context every template declares points at a
+        // directory that must already exist. install.sh learned this for the
+        // panel's own vhost; sites had been left out.
+        $this->ensureDirectories($application);
 
         // The site's own PHP settings, before the vhost that points LSPHP at
         // them. On php-fpm these ride in the pool file, which is written by

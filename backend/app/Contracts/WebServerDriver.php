@@ -33,6 +33,15 @@ interface WebServerDriver
     public function apply(Application $application, string $documentRoot): ServerOpsResult;
 
     /**
+     * Create every directory the rendered config will name.
+     *
+     * On the contract because `apply()` is not the only writer: `sites:resync`
+     * renders and writes the same file itself, and used to do so without any
+     * of this preparation.
+     */
+    public function ensureDirectories(Application $application): void;
+
+    /**
      * Take it back out again — the inverse of `apply()`, and the rollback when
      * a config test fails. `rm -f` is not enough for a driver whose site lives
      * partly inside a file shared with every other site.
