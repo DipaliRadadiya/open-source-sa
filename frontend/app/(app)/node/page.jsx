@@ -81,6 +81,7 @@ export default async function NodePage({ searchParams }) {
               <InstallVersionButton
                 runtime="node"
                 installable={node?.installable ?? []}
+                installed={versions}
                 canManage={canManage}
                 lifecycleAvailable={lifecycleAvailable}
               />
@@ -104,6 +105,7 @@ export default async function NodePage({ searchParams }) {
                 <InstallVersionButton
                   runtime="node"
                   installable={node?.installable ?? []}
+                  installed={versions}
                   canManage={canManage}
                   lifecycleAvailable={lifecycleAvailable}
                 />
@@ -113,6 +115,7 @@ export default async function NodePage({ searchParams }) {
             <InstallVersionButton
               runtime="node"
               installable={node?.installable ?? []}
+              installed={versions}
               canManage={canManage}
               lifecycleAvailable={lifecycleAvailable}
             />

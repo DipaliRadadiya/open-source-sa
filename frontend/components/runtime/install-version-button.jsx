@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { FormModal } from "@/components/ui/form-modal";
 import { apiMessage } from "@/lib/api/error-message";
+import { allInstalled, firstInstallable, installOptions } from "@/lib/runtime/install-options";
 
 // The page is a Server Component, so it can't hand us a function — it names
 // the runtime and we pick. Two runtimes, one dialog.
@@ -36,6 +37,7 @@ const INSTALL = { php: installPhpVersion, node: installNodeVersion };
 export function InstallVersionButton({
   runtime,
   installable = [],
+  installed = [],
   canManage,
   lifecycleAvailable = false,
 }) {
@@ -43,17 +45,30 @@ export function InstallVersionButton({
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [version, setVersion] = useState(installable[0]?.version ?? "");
   const [pending, setPending] = useState(false);
+
+  // The two runtimes disagreed about whether an installed version belongs in
+  // this list, so the answer is settled here instead of taken from whichever
+  // page opened the dialog. See lib/runtime/install-options.js.
+  const options = installOptions(installable, installed);
+  const everythingInstalled = allInstalled(options);
+  const [version, setVersion] = useState(() => firstInstallable(options));
 
   // Never hidden. An empty list means the package index offers nothing new
   // right now, which is a fact worth stating — a button that disappears reads
   // as a missing feature, and "where is Install?" is the question it creates.
-  const unavailable = installable.length === 0 ? t("install.noneAvailable") : null;
+  //
+  // "Nothing on offer" and "you already have all of it" are different facts,
+  // and the second one used to be reported as the first.
+  const unavailable = everythingInstalled
+    ? t("install.allInstalled")
+    : options.length === 0
+      ? t("install.noneAvailable")
+      : null;
 
   // Warn before, not after: a dead version installs perfectly well and gets no
   // security fixes, and that is not something to find out later.
-  const chosen = installable.find((option) => option.version === version);
+  const chosen = options.find((option) => option.version === version);
   const dead = lifecycleAvailable && chosen?.lifecycle?.status === "eol";
 
   async function install() {
@@ -130,15 +145,28 @@ export function InstallVersionButton({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {installable.map((option) => (
-                <SelectItem key={option.version} value={option.version}>
+              {options.map((option) => (
+                <SelectItem
+                  key={option.version}
+                  value={option.version}
+                  disabled={option.installed}
+                >
                   <span className="flex items-center gap-2">
                     {t("versions.name", { version: option.version })}
-                    <LifecycleBadge
-                      namespace={runtime}
-                      lifecycle={option.lifecycle}
-                      available={lifecycleAvailable}
-                    />
+                    {/* Says which of the two reasons this row cannot be picked.
+                        Greying it out alone would read as "unavailable", which
+                        is the opposite of the truth — you have it. */}
+                    {option.installed ? (
+                      <span className="rounded bg-muted-foreground/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {t("install.installedTag")}
+                      </span>
+                    ) : (
+                      <LifecycleBadge
+                        namespace={runtime}
+                        lifecycle={option.lifecycle}
+                        available={lifecycleAvailable}
+                      />
+                    )}
                   </span>
                 </SelectItem>
               ))}

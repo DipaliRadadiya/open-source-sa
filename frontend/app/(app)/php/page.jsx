@@ -89,6 +89,7 @@ export default async function PhpPage({ searchParams }) {
             <InstallVersionButton
               runtime="php"
               installable={php?.installable ?? []}
+              installed={versions}
               canManage={canManage}
               lifecycleAvailable={lifecycleAvailable}
             />
@@ -110,6 +111,7 @@ export default async function PhpPage({ searchParams }) {
                 <InstallVersionButton
                   runtime="php"
                   installable={php?.installable ?? []}
+                  installed={versions}
                   canManage={canManage}
                   lifecycleAvailable={lifecycleAvailable}
                 />
@@ -119,6 +121,7 @@ export default async function PhpPage({ searchParams }) {
             <InstallVersionButton
               runtime="php"
               installable={php?.installable ?? []}
+              installed={versions}
               canManage={canManage}
               lifecycleAvailable={lifecycleAvailable}
             />
