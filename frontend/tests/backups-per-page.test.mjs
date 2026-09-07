@@ -31,9 +31,23 @@ test("a size the API accepts but the selector does not offer falls back", () => 
   assert.equal(perPage("7"), 10);
 });
 
-test("absent stays absent, so the API applies its own default", () => {
-  assert.equal(perPage(undefined), undefined);
-  assert.equal(perPage(null), undefined);
+test("absent resolves to the selector's own default, not the API's", () => {
+  /*
+   * This test used to assert the opposite -- "absent stays absent, so the API
+   * applies its own default" -- and that sentence was the bug written down as
+   * an intention. Dropping the parameter handed the choice to
+   * `BackupController::index`, whose default is 20, while `PerPageSelect`
+   * renders "10" for an empty URL. With 11-20 backups the page showed every
+   * row under a box reading 10 and no pager at all, because one page of 20
+   * makes `last_page` 1.
+   *
+   * The number the screen claims and the number it asks for have to be the
+   * same number, and neither end may assume the other's default.
+   */
+  assert.equal(perPage(undefined), PER_PAGE_OPTIONS[0]);
+  assert.equal(perPage(null), PER_PAGE_OPTIONS[0]);
+  // The value `PerPageSelect` displays when the URL carries no `per_page`.
+  assert.equal(perPage(undefined), 10);
 });
 
 test("a number from our own code is left alone", () => {

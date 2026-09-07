@@ -28,10 +28,18 @@ import {
  * a number came from our own code, which asks for `per_page: 5` when it wants
  * the few most recent restores rather than a screenful, and overriding that
  * would be this guard picking a fight with its own callers.
+ *
+ * An ABSENT value still has to resolve to a number. Returning undefined dropped
+ * the parameter, which handed the choice to `BackupController::index`, and its
+ * default is 20 — while `PerPageSelect` renders "10" whenever the URL is empty.
+ * So a first visit with 11-20 backups showed every row under a box reading 10,
+ * with no pager, because one page of 20 makes `last_page` 1. Every other list
+ * in the panel computes its own number and always sends it; these two were the
+ * exception, and the exception was the bug.
  */
 function perPage(value) {
   if (typeof value === "number") return value;
-  if (value === undefined || value === null) return undefined;
+  if (value === undefined || value === null) return PER_PAGE_OPTIONS[0];
   return PER_PAGE_OPTIONS.includes(Number(value)) ? Number(value) : PER_PAGE_OPTIONS[0];
 }
 
