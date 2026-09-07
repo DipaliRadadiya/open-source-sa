@@ -53,7 +53,14 @@ class LsphpPhpStack implements PhpStack
         foreach (glob($dir.'/lsphp*', GLOB_ONLYDIR) ?: [] as $path) {
             $version = $this->expand(substr(basename($path), strlen('lsphp')));
 
-            if ($version !== null) {
+            // The directory is not the evidence. `lsphp83/` is left behind by
+            // a removed version, and LiteSpeed's own packaging creates the
+            // tree before the interpreter lands in it — so globbing alone
+            // listed PHP 8.3 on a server that has only 8.4, offered it in
+            // every version picker, and let a site be pointed at a binary
+            // systemd would never find. `binaryPath()` two methods down
+            // already refuses to assume; this had not caught up.
+            if ($version !== null && $this->hasInterpreter($version)) {
                 $versions[] = $version;
             }
         }
@@ -324,6 +331,40 @@ class LsphpPhpStack implements PhpStack
      *
      * @param  array<int, string>  $defaults
      */
+    /**
+     * Is there actually an interpreter for this version on disk?
+     *
+     * The LSAPI handler specifically, which is what the vhost points at — a
+     * tree holding only the CLI is not a version OpenLiteSpeed can serve with.
+     * Asked of the real candidate list rather than one hardcoded path, because
+     * LSPHP is not always under the lsws tree.
+     *
+     * Separate from `handlerPath()` on purpose: that one always answers with a
+     * path so a caller has something to put in a config, falling back to the
+     * first candidate when nothing exists. Reading "did it find one?" off a
+     * return value that is never empty is the mistake this method exists to
+     * stop being possible.
+     */
+    private function hasInterpreter(string $version): bool
+    {
+        $candidates = array_map(
+            fn (string $pattern) => $this->interpolate($pattern, $version),
+            (array) config('server.php_stacks.lsphp.handler_candidates', [
+                '{root}/lsphp{compact}/bin/lsphp',
+                '/usr/bin/lsphp{version}',
+                '/usr/local/bin/lsphp{version}',
+            ]),
+        );
+
+        foreach ($candidates as $path) {
+            if (is_file($path)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function detect(string $key, array $defaults, string $version): string
     {
         $candidates = array_map(

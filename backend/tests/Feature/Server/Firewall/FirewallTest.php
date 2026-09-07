@@ -126,6 +126,69 @@ it('refuses to delete a protected default rule while the firewall is enabled', f
     expect(FirewallRule::find($rule->id))->not->toBeNull();
 });
 
+it('refuses an edit that turns a rule into a copy of another', function () {
+    // Creating an identical rule was already rejected by CreateFirewallRule.
+    // *Editing* one onto the same port/protocol/action/source was not, so the
+    // list ended up showing the same line twice — and because ufw is
+    // idempotent, deleting one of the pair changes nothing visible, which
+    // reads as a broken delete.
+    fakeUfw('active');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow'])
+        ->assertCreated();
+
+    $second = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 8081, 'protocol' => 'tcp', 'action' => 'allow'])
+        ->assertCreated()
+        ->json('rule.id');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$second}", ['port_from' => 8080])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('port_from');
+
+    expect(FirewallRule::where('port_from', 8080)->count())->toBe(1);
+});
+
+it('lets a rule be saved when only its description changed', function () {
+    // The check must not compare a rule against itself, or every edit that
+    // left the ports alone would be refused as a duplicate of the row being
+    // edited. The fields the request does not send come from the stored row,
+    // so this comparison sees 8081 either way.
+    fakeUfw('active');
+
+    $created = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 8081, 'protocol' => 'tcp', 'action' => 'allow'])
+        ->assertCreated()
+        ->json('rule.id');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$created}", ['description' => 'API traffic'])
+        ->assertOk();
+});
+
+it('does not treat a different source as the same rule', function () {
+    // `source_ip` null means "from anywhere", and a rule scoped to one address
+    // is a different rule — editing onto it must not be refused.
+    fakeUfw('active');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 8082, 'protocol' => 'tcp', 'action' => 'allow'])
+        ->assertCreated();
+
+    $scoped = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', [
+            'port_from' => 9000, 'protocol' => 'tcp', 'action' => 'allow', 'source_ip' => '10.0.0.5',
+        ])
+        ->assertCreated()
+        ->json('rule.id');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$scoped}", ['port_from' => 8082])
+        ->assertOk();
+});
+
 it('enables the firewall, seeding default rules first', function () {
     fakeUfw('active');
 

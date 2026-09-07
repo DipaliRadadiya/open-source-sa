@@ -784,10 +784,34 @@ describe('the lsphp stack', function () {
     });
 
     it('detects versions from the lsws tree and expands the compact name', function () {
-        File::makeDirectory($this->lsws.'/lsphp83', 0755, true);
+        // A real interpreter, not just the directory — this test is about the
+        // 83 → 8.3 expansion, and a bare folder is no longer a version.
+        File::makeDirectory($this->lsws.'/lsphp83/bin', 0755, true);
+        File::put($this->lsws.'/lsphp83/bin/lsphp', '');
 
         expect(app(LsphpPhpStack::class)->versions())->toBe(['8.4', '8.3'])
             ->and(app(LsphpPhpStack::class)->installed('8.4'))->toBeTrue();
+    });
+
+    it('does not report a version whose directory has no interpreter in it', function () {
+        // Reported from a real server: the dashboard offered PHP 8.3 on a box
+        // that only had 8.4. A `lsphp83/` tree is left behind by a removed
+        // version, and LiteSpeed's packaging creates the tree before the
+        // interpreter lands in it — so the directory is not the evidence.
+        //
+        // It is not only cosmetic: an offered version can be assigned to a
+        // site, and the vhost then points OpenLiteSpeed at a binary that is
+        // not there.
+        File::makeDirectory($this->lsws.'/lsphp83/bin', 0755, true);
+
+        expect(app(LsphpPhpStack::class)->versions())->toBe(['8.4'])
+            ->and(app(LsphpPhpStack::class)->installed('8.3'))->toBeFalse();
+
+        // The CLI alone is not enough either: the vhost needs the LSAPI build,
+        // and `bin/php` cannot serve a request.
+        File::put($this->lsws.'/lsphp83/bin/php', '');
+
+        expect(app(LsphpPhpStack::class)->versions())->toBe(['8.4']);
     });
 
     it('ignores anything in the tree that is not a version', function () {

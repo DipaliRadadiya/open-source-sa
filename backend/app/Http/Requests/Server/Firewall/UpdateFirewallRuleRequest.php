@@ -8,6 +8,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateFirewallRuleRequest extends FormRequest
 {
+    use RefusesDuplicateRules;
+
     public function authorize(): bool
     {
         return (bool) $this->user()?->canManage('firewall');
