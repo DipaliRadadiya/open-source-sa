@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { ApplicationStatusBadge, ApplicationStatusNotes } from "@/components/applications/application-status-badge";
+import { DomainText } from "@/components/ui/domain-text";
 
 /**
  * The sites list on a narrow screen.
@@ -50,7 +51,10 @@ export function ApplicationsCards({ applications = [], canManage = false }) {
                   </Badge>
                 ) : null}
               </div>
-              <p className="truncate font-mono text-xs text-muted-foreground">{application.domain}</p>
+              <DomainText
+                domain={application.domain}
+                className="font-mono text-xs text-muted-foreground"
+              />
             </div>
             {/* shrink-0 so the menu keeps its place however long the name is —
                 it is the reason this card exists. */}

@@ -4,6 +4,7 @@ import { ArrowRight, Globe2, ShieldCheck, ShieldOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DomainText } from "@/components/ui/domain-text";
 
 // Four rows plus a counted remainder. Enough to answer "what answers to this
 // site" for the overwhelming majority, without letting a site with forty
@@ -78,7 +79,7 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
             {rows.map((domain) => (
               <li key={domain.id} className="flex items-center gap-3 px-6 py-3">
                 <Globe2 className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate font-mono text-xs">{domain.domain}</span>
+                <DomainText domain={domain.domain} className="min-w-0 flex-1 font-mono text-xs" />
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {domain.type_title ?? t(`types.${domain.type}`)}
                 </span>
