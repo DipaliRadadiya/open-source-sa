@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +35,22 @@ export function ConfirmDialog({
   confirmDisabled = false,
   pending = false,
   onConfirm,
+  /*
+   * Why a failed confirmation looked like a stuck dialog.
+   *
+   * Around thirty callers close themselves inside the `try` and only toast in
+   * the `catch` — deliberately, because staying open is how you retry without
+   * finding the row again. But this dialog had nowhere to SAY anything, so the
+   * only account of the failure was a toast that clears itself after four
+   * seconds. What the reader is left with is the same box they pressed Confirm
+   * on, unchanged, with no reason given: indistinguishable from a click that
+   * did not land, which is why the reports call it "the modal does not close".
+   *
+   * So the fix is not to close on failure — that would throw away the retry
+   * and the context with it. It is to let the dialog explain itself, and stay
+   * open on purpose rather than by accident.
+   */
+  error = null,
   // Widening is opt-in: a yes/no confirmation should stay narrow, but one that
   // asks you to review a list needs the room.
   className,
@@ -102,6 +118,19 @@ export function ConfirmDialog({
             file list and the permanent-delete box — sat 12px apart inside 16px
             surroundings and read as cramped. */}
         {children ? <div className="min-w-0 space-y-4">{children}</div> : null}
+
+        {/* Below the body and above the buttons: the last thing read before
+            deciding whether to press Confirm again. `role="alert"` so it is
+            announced — a screen reader gets no toast either. */}
+        {error ? (
+          <div
+            role="alert"
+            className="flex min-w-0 items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span className="min-w-0 break-words">{error}</span>
+          </div>
+        ) : null}
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>

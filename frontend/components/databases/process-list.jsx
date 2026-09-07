@@ -8,13 +8,13 @@ import { Activity, ChevronDown, ChevronUp, Clock, Square, Timer } from "lucide-r
 import { cn } from "@/lib/utils";
 import { getProcesses, killProcess } from "@/lib/api/databases";
 import { dbProcessesResponseSchema } from "@/lib/schemas/database";
-import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
+import { useConfirmAction } from "@/hooks/use-confirm-action";
 
 const POLL_MS = 5000;
 
@@ -112,8 +112,9 @@ export function ProcessList({ engine, processes: initial = [], canManage }) {
   const t = useTranslations("databases.monitor");
   const router = useRouter();
   const [polled, setPolled] = useState(null);
-  const [killing, setKilling] = useState(null);
-  const [pending, setPending] = useState(false);
+  // Holds the row, the in-flight flag AND the last failure, so a refused
+  // stop explains itself in the dialog instead of in a toast that leaves.
+  const stop = useConfirmAction();
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const [slowOnly, setSlowOnly] = useState(false);
@@ -172,20 +173,16 @@ export function ProcessList({ engine, processes: initial = [], canManage }) {
   }, [engine]);
 
   async function kill() {
-    setPending(true);
-    try {
-      await killProcess(killing.id, engine);
-      toast.success(t("killed"));
-      setKilling(null);
-      // Drop back to the server's list so the row disappears from the same
-      // place everything else on this page comes from.
-      setPolled(null);
-      router.refresh();
-    } catch (error) {
-      toast.error(apiMessage(error, t("killFailed")));
-    } finally {
-      setPending(false);
-    }
+    await stop.run(() => killProcess(stop.target.id, engine), {
+      fallback: t("killFailed"),
+      onDone: () => {
+        toast.success(t("killed"));
+        // Drop back to the server's list so the row disappears from the same
+        // place everything else on this page comes from.
+        setPolled(null);
+        router.refresh();
+      },
+    });
   }
 
   return (
@@ -358,7 +355,7 @@ export function ProcessList({ engine, processes: initial = [], canManage }) {
                           "active:bg-destructive/25",
                           "focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
                         )}
-                        onClick={() => setKilling(process)}
+                        onClick={() => stop.open(process)}
                       >
                         <Square className="size-4" />
                         {t("stopQuery")}
@@ -401,15 +398,16 @@ export function ProcessList({ engine, processes: initial = [], canManage }) {
       </Card>
 
       <ConfirmDialog
-        open={killing !== null}
-        onOpenChange={(next) => !next && setKilling(null)}
+        open={stop.isOpen}
+        onOpenChange={stop.setOpen}
         icon={Square}
         tone="destructive"
         title={t("killTitle")}
         description={t("killDescription")}
         cancelLabel={t("cancel")}
-        confirmLabel={pending ? t("killing") : t("stopQuery")}
-        pending={pending}
+        confirmLabel={stop.pending ? t("killing") : t("stopQuery")}
+        pending={stop.pending}
+        error={stop.error}
         onConfirm={kill}
       />
     </>

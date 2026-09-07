@@ -7,10 +7,10 @@ import { useTranslations } from "next-intl";
 import { HardDrive, Plus, Trash2 } from "lucide-react";
 import { deleteDestination } from "@/lib/api/storage";
 import { probeDestination } from "@/lib/storage/probe";
-import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirmAction } from "@/hooks/use-confirm-action";
 import { InfoHint } from "@/components/ui/info-hint";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DestinationRow } from "@/components/integrations/storage/destination-row";
@@ -35,8 +35,10 @@ export function DestinationsCard({ destinations = [], canManage }) {
   const [connecting, setConnecting] = useState(false);
   const [editing, setEditing] = useState(null);
   const [replacing, setReplacing] = useState(null);
-  const [deleting, setDeleting] = useState(null);
-  const [removing, setRemoving] = useState(false);
+  // A refused delete keeps the dialog AND says why in it — the backend
+  // refuses when a backup target still points here, and that sentence is
+  // the whole answer.
+  const removal = useConfirmAction();
   const [testingId, setTestingId] = useState(null);
   // Keyed by id, cleared on a fresh test. Never persisted — see DestinationRow.
   const [results, setResults] = useState({});
@@ -51,17 +53,13 @@ export function DestinationsCard({ destinations = [], canManage }) {
   }
 
   async function remove() {
-    setRemoving(true);
-    try {
-      await deleteDestination(deleting.id);
-      toast.success(t("delete.removed"));
-      setDeleting(null);
-      router.refresh();
-    } catch (error) {
-      toast.error(apiMessage(error, t("delete.failed")));
-    } finally {
-      setRemoving(false);
-    }
+    await removal.run(() => deleteDestination(removal.target.id), {
+      fallback: t("delete.failed"),
+      onDone: () => {
+        toast.success(t("delete.removed"));
+        router.refresh();
+      },
+    });
   }
 
   // Defined once and used in both the header and the empty state, the way the
@@ -171,7 +169,7 @@ export function DestinationsCard({ destinations = [], canManage }) {
                 onTest={() => test(destination)}
                 onEdit={() => setEditing(destination)}
                 onReplace={() => setReplacing(destination)}
-                onDelete={() => setDeleting(destination)}
+                onDelete={() => removal.open(destination)}
               />
             ))}
           </div>
@@ -195,16 +193,17 @@ export function DestinationsCard({ destinations = [], canManage }) {
       ) : null}
 
       <ConfirmDialog
-        open={Boolean(deleting)}
-        onOpenChange={(open) => !open && setDeleting(null)}
+        open={removal.isOpen}
+        onOpenChange={removal.setOpen}
         icon={Trash2}
         tone="destructive"
         title={t("delete.title")}
-        description={t("delete.description", { name: deleting?.name ?? "" })}
+        description={t("delete.description", { name: removal.target?.name ?? "" })}
         cancelLabel={t("delete.cancel")}
         confirmLabel={t("delete.confirm")}
         confirmVariant="destructive"
-        pending={removing}
+        pending={removal.pending}
+        error={removal.error}
         onConfirm={remove}
       >
         {/* The backend deletes without checking whether a backup target points
