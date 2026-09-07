@@ -4984,7 +4984,11 @@
         "narrowerFiles": "Los archivos dejarán de respaldarse desde la próxima ejecución. Las copias ya realizadas siguen incluyéndolos.",
         "retentionDown": "{count, plural, one {Se eliminará la copia más antigua} other {Se eliminarán las # copias más antiguas}} en la próxima ejecución."
       },
-      "destinationFailing": "La última prueba de conexión con {name} falló, así que las copias enviadas allí no se escribirán hasta que se corrija."
+      "destinationFailing": "La última prueba de conexión con {name} falló, así que las copias enviadas allí no se escribirán hasta que se corrija.",
+      "noDatabase": {
+        "blocked": "Este sitio no tiene base de datos",
+        "filesOnly": "Este sitio no tiene base de datos, por lo que solo se respaldarán sus archivos."
+      }
     },
     "history": {
       "allApplications": "Todos los sitios",
@@ -5174,6 +5178,7 @@
       "started": "Copia iniciada.",
       "startFailed": "No se pudo iniciar esa copia.",
       "recentTitle": "Copias recientes",
+      "showing": "Mostrando {shown} de {total}",
       "viewAll": "Todas las copias",
       "noRuns": "Todavía no se ha hecho ninguna copia de este sitio.",
       "safetyBadge": "Copia de seguridad previa",

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useWatch } from "react-hook-form";
 import {
@@ -12,7 +13,9 @@ import {
   RotateCw,
   TriangleAlert,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { BACKUP_TYPES } from "@/lib/schemas/backup";
+import { hasNoDatabase } from "@/lib/backups/database-availability";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,12 +98,17 @@ export function BackupSettingsFields({
   // The configuration as it stands today. Only used to warn about changes that
   // take something away — there is nothing to warn about on a new target.
   target = null,
+  // How many databases each site has, and whether that answer is trustworthy.
+  // Absent means unknown, which reads the same as "say nothing".
+  databaseCounts = null,
+  databasesKnown = false,
 }) {
   const t = useTranslations("backups.form");
   const automatic = useWatch({ control: form.control, name: "enabled" });
   const frequency = useWatch({ control: form.control, name: "frequency" });
   const retention = useWatch({ control: form.control, name: "retention_count" });
   const type = useWatch({ control: form.control, name: "type" });
+  const applicationId = useWatch({ control: form.control, name: "application_id" });
 
   const destinationId = useWatch({ control: form.control, name: "storage_destination_id" });
 
@@ -120,6 +128,27 @@ export function BackupSettingsFields({
   // run drops something, and nobody finds out until a restore comes up short.
   // Forge asks a second time for the same reason.
   const dropping = droppedByNarrowing(target?.type, type);
+
+  // Which exclusions this backup type will actually honour. The backend gates
+  // its steps on the same two questions (`wantsFiles`/`wantsDatabase`), so a
+  // box shown outside them is a setting that saves cleanly and is then
+  // ignored — the worst kind, because nothing ever says so.
+  const wantsFiles = type === "filesystem" || type === "full";
+  const wantsDatabase = type === "database" || type === "full";
+
+  // `true` no databases, `false` some, `null` we could not tell — and `null`
+  // must stay silent. See `hasNoDatabase`.
+  const noDatabase = hasNoDatabase(databaseCounts, databasesKnown, applicationId);
+
+  // Switching the picker to a database-less site while "Database only" is
+  // chosen would leave a selected option that is also blocked, and save a
+  // backup guaranteed to be empty. Fall back to the full option, which is what
+  // that site can actually produce.
+  useEffect(() => {
+    if (noDatabase && type === "database") {
+      form.setValue("type", "full", { shouldDirty: true });
+    }
+  }, [noDatabase, type, form]);
   // Lowering retention prunes on the very next run. "Keeps 3" explains the
   // future; it does not say four archives are about to be deleted.
   const pruning =
@@ -174,13 +203,26 @@ export function BackupSettingsFields({
                   disabled={disabled}
                   variant="card"
                   className="sm:grid sm:grid-cols-3 sm:gap-2"
-                  options={BACKUP_TYPES.map((type) => ({
-                    value: type,
-                    label: t(`types.${type}.label`),
-                    hint: t(`types.${type}.hint`),
+                  options={BACKUP_TYPES.map((option) => ({
+                    value: option,
+                    label: t(`types.${option}.label`),
+                    hint: t(`types.${option}.hint`),
+                    // Blocked rather than merely warned about: this one would
+                    // produce an archive with nothing in it, and a backup that
+                    // reports success while holding nothing is discovered at
+                    // the worst possible moment.
+                    disabledReason:
+                      option === "database" && noDatabase ? t("noDatabase.blocked") : undefined,
                   }))}
                 />
               </FormControl>
+              {/* The other half of the same fact: this option is still allowed,
+                  because a site can gain a database later and the backend is
+                  happy to run it — but today it copies files and nothing else,
+                  and that is exactly what looked like a bug. */}
+              {noDatabase && type === "full" ? (
+                <Caution className="mt-2">{t("noDatabase.filesOnly")}</Caution>
+              ) : null}
               <FormMessage />
             </FormItem>
           )}
@@ -438,7 +480,15 @@ export function BackupSettingsFields({
               right-hand textarea to 112px against the left's 64px. The chips
               are now their own full-width row, so neither column can push the
               other around. */}
-          <div className="grid items-start gap-4 sm:grid-cols-2">
+          {/* One column when only one box applies, so the survivor does not
+              sit in a half-width cell beside a gap. */}
+          <div
+            className={cn(
+              "grid items-start gap-4",
+              wantsFiles && wantsDatabase ? "sm:grid-cols-2" : null,
+            )}
+          >
+            {wantsFiles ? (
             <FormField
               control={form.control}
               name="file_excludes"
@@ -464,7 +514,9 @@ export function BackupSettingsFields({
                 </FormItem>
               )}
             />
+            ) : null}
 
+            {wantsDatabase ? (
             <FormField
               control={form.control}
               name="database_excludes"
@@ -490,8 +542,11 @@ export function BackupSettingsFields({
                 </FormItem>
               )}
             />
+            ) : null}
           </div>
 
+          {/* The chips add file patterns, so they follow the file box. */}
+          {wantsFiles ? (
           <FormField
             control={form.control}
             name="file_excludes"
@@ -525,6 +580,7 @@ export function BackupSettingsFields({
               );
             }}
           />
+          ) : null}
         </CollapsibleContent>
       </Collapsible>
     </div>

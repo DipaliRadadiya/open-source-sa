@@ -7,6 +7,7 @@ import {
   connectionsResponseSchema,
 } from "@/lib/schemas/database";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
+import { countByApplication } from "@/lib/backups/database-availability";
 
 /**
  * Shapes are imported, never restated here — an inline copy silently rejects
@@ -28,6 +29,29 @@ export const getDatabases = cache(async function getDatabases(query = "") {
     searchParams: listQuery(query, { filters: { engine: "engine" } }),
   });
   return { databases: data?.databases ?? [], meta: data?.meta ?? EMPTY_LIST_META, failed, status, failure };
+});
+
+/**
+ * How many databases each site has, for the backup form's warning.
+ *
+ * One page of 100 — the largest the API allows — rather than walking every
+ * page: this powers a warning, and a warning is not worth N requests on the
+ * way to a form. When there are more rows than that, `known` goes false and
+ * the form says nothing at all rather than guessing about the sites it
+ * could not see.
+ */
+export const getDatabaseCounts = cache(async function getDatabaseCounts() {
+  const { data, failed } = await read("/databases", databasesResponseSchema, {
+    searchParams: { per_page: 100 },
+  });
+
+  const databases = data?.databases ?? [];
+  const total = data?.meta?.total ?? databases.length;
+
+  return {
+    counts: countByApplication(databases),
+    known: !failed && total <= databases.length,
+  };
 });
 
 /**

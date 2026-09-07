@@ -48,9 +48,12 @@ export function BackupsPanel({
   target,
   destinations,
   backups,
+  total = 0,
   activeRestore = null,
   canManage,
   canRestore,
+  databaseCounts = null,
+  databasesKnown = false,
 }) {
   const t = useTranslations("backups.application");
   const router = useRouter();
@@ -190,6 +193,7 @@ export function BackupsPanel({
 
       <RecentBackups
         backups={backups}
+        total={total}
         applicationId={application.id}
         canRestore={canRestore}
         canManage={canManage}
@@ -215,6 +219,8 @@ export function BackupsPanel({
         applicationId={application.id}
         destinations={destinations}
         target={target}
+        databaseCounts={databaseCounts}
+        databasesKnown={databasesKnown}
       />
 
       <ConfirmDialog
@@ -419,6 +425,7 @@ function ProtectionCard({ target, lastBackup, canManage, running, blockedReason,
  */
 function RecentBackups({
   backups,
+  total = 0,
   applicationId,
   canRestore,
   canManage,
@@ -453,9 +460,18 @@ function RecentBackups({
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3.5">
-        <h3 className="min-w-0 flex-1 text-base font-semibold tracking-tight">
-          {t("recentTitle")}
-        </h3>
+        {/* Said only when it is true: this list is the newest five, and with
+            exactly five rows and nothing else on screen it looked like the
+            whole history. At five or fewer runs there is no cap to admit, so
+            the count would be noise. */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <h3 className="text-base font-semibold tracking-tight">{t("recentTitle")}</h3>
+          {total > backups.length ? (
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {t("showing", { shown: backups.length, total })}
+            </span>
+          ) : null}
+        </div>
         {/* Matched to the RefreshButton it sits beside: that one is a 36px
             outline icon button, so a 28px ghost link next to it read as loose
             text rather than the second half of a pair. */}

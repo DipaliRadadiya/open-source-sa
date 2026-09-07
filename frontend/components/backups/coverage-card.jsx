@@ -31,7 +31,14 @@ const JUST_STARTED_MS = 90_000;
  * loaded (one call per application during SSR), so a round trip to narrow ten
  * rows would be slower and would lose the instant feel.
  */
-export function CoverageCard({ coverage, applications, destinations, canManage }) {
+export function CoverageCard({
+  coverage,
+  applications,
+  destinations,
+  canManage,
+  databaseCounts = null,
+  databasesKnown = false,
+}) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -242,6 +249,8 @@ export function CoverageCard({ coverage, applications, destinations, canManage }
         applications={applications}
         destinations={destinations}
         applicationId={setupFor}
+        databaseCounts={databaseCounts}
+        databasesKnown={databasesKnown}
       />
     </>
   );

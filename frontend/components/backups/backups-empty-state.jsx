@@ -21,7 +21,13 @@ import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
  * Showing the coverage list instead would be a wall of red rows with no
  * explanation of what a backup here even is.
  */
-export function BackupsEmptyState({ applications, destinations, canManage }) {
+export function BackupsEmptyState({
+  applications,
+  destinations,
+  canManage,
+  databaseCounts = null,
+  databasesKnown = false,
+}) {
   const t = useTranslations("backups.empty");
   const [open, setOpen] = useState(false);
   const hasDestination = destinations.length > 0;
@@ -96,6 +102,8 @@ export function BackupsEmptyState({ applications, destinations, canManage }) {
         open={open}
         onOpenChange={setOpen}
         applications={applications}
+        databaseCounts={databaseCounts}
+        databasesKnown={databasesKnown}
         destinations={destinations}
       />
     </>

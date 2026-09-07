@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
 import { getActiveRestore, getBackupTarget, getBackups } from "@/lib/backups/get-backups";
+import { getDatabaseCounts } from "@/lib/databases/get-databases";
 import { BackupsPanel } from "@/components/applications/backups/backups-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -52,15 +53,20 @@ export default async function ApplicationBackupsPage({ params }) {
 
   // A site still provisioning has nothing to back up and no directory to point
   // at — offering the form would be offering a save that cannot work.
-  const [{ target }, { destinations }, { backups }, activeRestore] = await Promise.all([
+  // `meta.total` is the whole history, not the five rows below it: the list is
+  // capped, and a cap the reader cannot see reads as the complete list.
+  const [{ target }, { destinations }, { backups, meta }, activeRestore, databases] = await Promise.all([
     settled ? getBackupTarget(id) : Promise.resolve({ target: null }),
     getStorageDestinations(),
     settled
       ? getBackups({ application: id, per_page: 5 })
-      : Promise.resolve({ backups: [] }),
+      : Promise.resolve({ backups: [], meta: { total: 0 } }),
     // Seeded from the server so a reload — or a colleague's browser — still
     // shows a restore that is rewriting this site right now.
     settled && canRestore ? getActiveRestore(id) : Promise.resolve(null),
+    // Only to tell the form whether a database backup of this site would hold
+    // anything. A failure here leaves it unknown, and unknown says nothing.
+    settled ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
   ]);
 
   return (
@@ -80,6 +86,9 @@ export default async function ApplicationBackupsPage({ params }) {
           target={target}
           destinations={destinations}
           backups={backups}
+          total={meta.total}
+          databaseCounts={databases.counts}
+          databasesKnown={databases.known}
           activeRestore={activeRestore}
           canManage={canManage}
           canRestore={canRestore}

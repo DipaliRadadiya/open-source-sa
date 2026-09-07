@@ -41,6 +41,10 @@ export function SetupBackupsDialog({
   // fields, prefilled — so the application page never needs its own copy of
   // the form, and the two can never drift apart.
   target = null,
+  // Passed straight through to the fields: which sites have a database, so the
+  // form can say when a database backup would hold nothing.
+  databaseCounts = null,
+  databasesKnown = false,
 }) {
   const t = useTranslations("backups.setup");
   const router = useRouter();
@@ -266,6 +270,8 @@ export function SetupBackupsDialog({
           refreshingDestinations={refreshing}
           disabled={submitting}
           target={target}
+          databaseCounts={databaseCounts}
+          databasesKnown={databasesKnown}
         />
 
         {/* What pressing Save will actually do, in one line. Reading your own

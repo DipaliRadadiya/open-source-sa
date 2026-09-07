@@ -4984,7 +4984,11 @@
         "narrowerFiles": "Files will stop being backed up from the next run. Backups already taken still contain them.",
         "retentionDown": "{count, plural, one {The oldest backup will be deleted} other {The # oldest backups will be deleted}} on the next run."
       },
-      "destinationFailing": "The last connection test to {name} failed, so backups sent there will not be written until it is fixed."
+      "destinationFailing": "The last connection test to {name} failed, so backups sent there will not be written until it is fixed.",
+      "noDatabase": {
+        "blocked": "This site has no database",
+        "filesOnly": "This site has no database, so only its files will be backed up."
+      }
     },
     "history": {
       "allApplications": "All sites",
@@ -5174,6 +5178,7 @@
       "started": "Backup started.",
       "startFailed": "That backup could not be started.",
       "recentTitle": "Recent backups",
+      "showing": "Showing {shown} of {total}",
       "viewAll": "All backups",
       "noRuns": "No backups have run for this site yet.",
       "safetyBadge": "Safety copy",

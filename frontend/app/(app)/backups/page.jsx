@@ -3,6 +3,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getBackupCoverage } from "@/lib/backups/get-backups";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
+import { getDatabaseCounts } from "@/lib/databases/get-databases";
 import { CoverageCard } from "@/components/backups/coverage-card";
 import { BackupsEmptyState } from "@/components/backups/backups-empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -10,9 +11,12 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 export const dynamic = "force-dynamic";
 
 export default async function BackupsPage() {
-  const [coverage, { destinations }, appPermissions, t] = await Promise.all([
+  const [coverage, { destinations }, databases, appPermissions, t] = await Promise.all([
     getBackupCoverage(),
     getStorageDestinations(),
+    // Lets the setup form say when the site picked in it has no database, so a
+    // "files + database" backup cannot quietly turn into a files-only one.
+    getDatabaseCounts(),
     // Application-level catalog with no site: answers "may this user configure
     // backups at all", which is what the Set up button needs. Per-site
     // filtering happens on the application's own page.
@@ -34,6 +38,8 @@ export default async function BackupsPage() {
         applications={coverage.rows.map((row) => row.application)}
         destinations={destinations}
         canManage={canManage}
+        databaseCounts={databases.counts}
+        databasesKnown={databases.known}
       />
     );
   }
@@ -44,6 +50,8 @@ export default async function BackupsPage() {
       applications={coverage.rows.map((row) => row.application)}
       destinations={destinations}
       canManage={canManage}
+      databaseCounts={databases.counts}
+      databasesKnown={databases.known}
     />
   );
 }

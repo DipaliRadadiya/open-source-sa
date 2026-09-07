@@ -1,6 +1,7 @@
 import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
 /**
  * A setting whose options each have a consequence, written out.
@@ -43,9 +44,20 @@ export function ChoiceField({ value, onChange, options, disabled, name, classNam
         const checked = option.value === value;
         const blocked = Boolean(option.disabledReason);
         const optionId = `${id}-${option.value}`;
+        // A blocked option's radio is disabled, so it fires no pointer or focus
+        // events of its own and cannot be tabbed to. The wrapper carries both,
+        // which is the only way the reason is reachable by hover, by keyboard,
+        // and — via the Popover it falls back to — by touch.
         return (
-          <label
+          <ReasonTooltip
             key={option.value}
+            reason={option.disabledReason ?? null}
+            // `h-full` only where the options are boxes in a row and heights
+            // have to agree. In the plain variant the wrapper must not impose
+            // a height on a stacked list.
+            className={cn("block", card && "h-full")}
+          >
+          <label
             htmlFor={optionId}
             className={cn(
               // No box and no fill. The radio already says which one is chosen;
@@ -53,7 +65,10 @@ export function ChoiceField({ value, onChange, options, disabled, name, classNam
               // fact, and five of those stacked read as a wall of boxes.
               "flex cursor-pointer items-start gap-3 rounded-md px-2 py-1.5 transition-colors",
               !checked && !blocked && !card && "hover:bg-muted/50",
-              card && "rounded-lg border p-3",
+              // `h-full` because a blocked option now sits inside a wrapper: the
+              // grid stretches the wrapper, and without this the card inside it
+              // keeps its own height and comes up short beside its neighbours.
+              card && "h-full rounded-lg border p-3",
               card && checked && "border-primary bg-primary/5 ring-1 ring-primary",
               card && !checked && !blocked && "hover:border-input hover:bg-muted/40",
               (disabled || blocked) && "cursor-not-allowed opacity-60",
@@ -91,6 +106,7 @@ export function ChoiceField({ value, onChange, options, disabled, name, classNam
               ) : null}
             </span>
           </label>
+          </ReasonTooltip>
         );
       })}
     </RadioGroup>
