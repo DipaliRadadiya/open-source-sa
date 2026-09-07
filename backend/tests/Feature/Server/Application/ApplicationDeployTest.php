@@ -340,3 +340,90 @@ it('stamps the directory size with the moment it was measured', function () {
     expect($app->directory_size_bytes)->toBe(4096 * 1024)
         ->and($app->directory_size_updated_at)->not->toBeNull();
 });
+
+describe('the post-deploy health check', function () {
+    /**
+     * A curl that answers non-2xx the first time and 200 once the site has
+     * caught up — which is what a first deploy looks like: the document root
+     * for a framework repository did not exist until the checkout seconds ago.
+     */
+    function fakeGitWarmingUp(int $failFirst, string $then = '200'): void
+    {
+        $attempts = 0;
+
+        Process::fake(function ($process) use (&$attempts, $failFirst, $then) {
+            if ($process->command[0] === 'curl') {
+                $attempts++;
+
+                return $attempts <= $failFirst
+                    ? Process::result(output: '502')
+                    : Process::result(output: $then);
+            }
+
+            return match (true) {
+                $process->command[0] === 'test' => Process::result(exitCode: 1),
+                in_array('rev-parse', $process->command, true) => Process::result(output: "abc123def456\n"),
+                default => Process::result(exitCode: 0),
+            };
+        });
+    }
+
+    it('waits for a site that is still coming up instead of failing the deploy', function () {
+        // The bug this fixes: one probe, five-second timeout, no second chance.
+        // Every first deploy failed at `verify` and the re-run passed, because
+        // the deploy was never the problem — the timing of the question was.
+        fakeGitWarmingUp(failFirst: 2);
+        $app = gitApp();
+
+        runDeploy($app);
+
+        expect($app->fresh()->failed_step)->toBeNull()
+            ->and($app->fresh()->status->value)->toBe('active');
+    });
+
+    it('still fails when the site answers but is genuinely broken', function () {
+        // The reason this check exists. A 500 that survives every retry is the
+        // deploy's fault, and reporting it as success would be worse than the
+        // false failure this change removes.
+        fakeGitWarmingUp(failFirst: 99);
+        $app = gitApp();
+
+        runDeploy($app);
+
+        expect($app->fresh()->failed_step)->toBe('verify');
+    });
+
+    it('does not fail a deploy over a site it could never reach', function () {
+        // A brand-new domain whose DNS has not propagated. curl exits non-zero
+        // without ever connecting, which says nothing about the code that was
+        // just deployed — failing here sends someone to fix a build that
+        // worked.
+        Process::fake(fn ($process) => match (true) {
+            $process->command[0] === 'curl' => Process::result(
+                errorOutput: 'curl: (6) Could not resolve host',
+                exitCode: 6,
+            ),
+            $process->command[0] === 'test' => Process::result(exitCode: 1),
+            in_array('rev-parse', $process->command, true) => Process::result(output: "abc123def456\n"),
+            default => Process::result(exitCode: 0),
+        });
+
+        $app = gitApp();
+
+        runDeploy($app);
+
+        expect($app->fresh()->failed_step)->toBeNull()
+            ->and($app->fresh()->status->value)->toBe('active');
+    });
+
+    it('records the check in the steps either way', function () {
+        // Silence is the one thing this must not do: whether the site answered
+        // or not is exactly what someone reading a deploy wants to know.
+        fakeGitWarmingUp(failFirst: 0);
+        $app = gitApp();
+
+        runDeploy($app);
+
+        expect($app->fresh()->steps)->toContain('verify');
+    });
+});

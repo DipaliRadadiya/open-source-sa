@@ -52,6 +52,27 @@ class GitDeployer
      *
      * @throws ProvisioningFailedException
      */
+    /**
+     * How long to keep asking, and how long to wait between asks.
+     *
+     * Four probes over roughly fourteen seconds. Long enough for a web server
+     * to notice a document root that has just appeared and for a restarted
+     * process to bind its port; short enough that a genuinely broken deploy is
+     * still reported while the person is looking at the screen.
+     */
+    private const VERIFY_BACKOFF_MS = [0, 2000, 4000, 8000];
+
+    /**
+     * @return array<int, int> the schedule, overridable so the test suite does
+     *                         not spend fourteen real seconds proving it waits
+     */
+    private function verifyBackoff(): array
+    {
+        $configured = config('server.verify_backoff_ms');
+
+        return is_array($configured) && $configured !== [] ? $configured : self::VERIFY_BACKOFF_MS;
+    }
+
     public function deploy(Application $application, string $documentRoot): array
     {
         $credentialFile = null;
@@ -186,36 +207,60 @@ class GitDeployer
      *
      * @throws ProvisioningFailedException
      */
+    /**
+     * Ask the site whether it is actually serving, once the deploy is done.
+     *
+     * Retried, because the first deploy of a site is the one case where a
+     * single immediate probe is guaranteed to be unfair. The document root for
+     * a framework repository (`public/`) did not exist until the checkout
+     * seconds ago, php-fpm and the web server can still be holding the old
+     * missing path, and a process that has just been restarted has not
+     * finished booting. One curl with a five-second timeout and no second
+     * chance failed every first deploy and then passed on the re-run — the
+     * deploy was never the problem, the timing of the question was.
+     *
+     * Unreachable is not the same answer as unhealthy, and only one of them is
+     * this deploy's fault. A curl that never connected — DNS that does not
+     * resolve yet on a brand-new domain, a firewall, a port — says nothing
+     * about the code that was just deployed, and failing the deploy over it
+     * tells someone to fix a build that worked. A curl that *did* connect and
+     * got a 500 is the failure this check exists to catch, and still fails.
+     */
     private function verifyDeploy(Application $application): void
     {
         $url = 'http://'.$application->domain;
+        $result = null;
+        $code = 0;
 
-        // --silent --show-error: no progress output, errors still visible
-        // --max-time 5: hard timeout, do not hang the deploy
-        // --location --max-redirs 1: follow one redirect (http→https most common)
-        // --write-out '%{http_code}': extract the final status code
-        // --output /dev/null: discard body, we only care about the status
-        // -o /dev/null: same as above, compatible with curl < 7.30
-        $result = $this->serverOps->run(
-            [
-                'curl', '--silent', '--show-error',
-                '--max-time', '5',
-                '--location', '--max-redirs', '1',
-                '--write-out', '%{http_code}',
-                '--output', '/dev/null',
-                $url,
-            ],
-            ['feature' => 'application', 'op' => 'verify_deploy', 'application' => $application->id],
-        );
+        foreach ($this->verifyBackoff() as $waitMs) {
+            if ($waitMs > 0) {
+                usleep($waitMs * 1000);
+            }
 
-        $code = (int) trim($result->output());
+            $result = $this->probe($url, $application);
+            $code = (int) trim($result->output());
 
-        if ($code >= 200 && $code < 300) {
-            return; // Healthy.
+            if ($code >= 200 && $code < 300) {
+                $this->recorder->step('verify', $result);
+                $this->progress->record('verify');
+
+                return;
+            }
         }
 
-        // Record the failure on the application so the UI can show what happened
-        // without the user needing to dig into the server-ops log.
+        $this->recorder->step('verify', $result);
+
+        // Never reached the site at all. Recorded so the build log says so, and
+        // deliberately not fatal: the checkout, the script and the restarts all
+        // succeeded, and "your DNS has not propagated" is not a deploy failure.
+        if ($result->exitCode() !== 0) {
+            $this->progress->record('verify_unreachable');
+
+            return;
+        }
+
+        // Connected, and the site answered with something that is not success.
+        // That is the case this check was added for, so it still fails.
         $application->update([
             'failed_step' => 'verify',
             'reference' => $result->reference,
@@ -225,6 +270,30 @@ class GitDeployer
             'verify',
             $result->reference,
             "curl {$url} returned HTTP {$code}",
+        );
+    }
+
+    /**
+     * One probe. Split out so the retry loop above reads as a loop.
+     *
+     * --silent --show-error: no progress output, errors still visible
+     * --max-time 5: hard timeout, do not hang the deploy
+     * --location --max-redirs 1: follow one redirect (http→https most common)
+     * --write-out '%{http_code}': extract the final status code
+     * --output /dev/null: discard body, we only care about the status
+     */
+    private function probe(string $url, Application $application): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            [
+                'curl', '--silent', '--show-error',
+                '--max-time', '5',
+                '--location', '--max-redirs', '1',
+                '--write-out', '%{http_code}',
+                '--output', '/dev/null',
+                $url,
+            ],
+            ['feature' => 'application', 'op' => 'verify_deploy', 'application' => $application->id],
         );
     }
 
