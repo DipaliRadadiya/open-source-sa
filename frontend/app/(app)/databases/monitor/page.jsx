@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getEngines } from "@/lib/databases/get-databases";
+import { getConnections, getEngines } from "@/lib/databases/get-databases";
 import {
   getEngineStatus,
   getDatabaseMetrics,
@@ -58,11 +58,14 @@ export default async function DatabaseMonitorPage({ searchParams }) {
     );
   }
 
-  const [status, metrics, processes, facts] = await Promise.all([
+  const [status, metrics, processes, facts, connections] = await Promise.all([
     getEngineStatus(selected.engine),
     getDatabaseMetrics(selected.engine),
     getProcesses(selected.engine),
     getServerFacts(),
+    // Only to recognise the panel's own connection in the process list, so a
+    // failure here must not take the page down with it.
+    getConnections().catch(() => []),
   ]);
 
   return (
@@ -102,6 +105,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
         <ProcessList
           engine={selected.engine}
           processes={processes}
+          connections={connections}
           canManage={canManage}
         />
         <QueryChart metrics={metrics} timeZone={facts?.timezone} />

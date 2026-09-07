@@ -2588,7 +2588,8 @@
       "runningQueries": "Consultas en ejecución",
       "longRunningCount": "{count, plural, one {# de larga duración} other {# de larga duración}}",
       "chartDescription": "Consultas por segundo, conexiones e hilos en ejecución, medidos cada 5 minutos.",
-      "zoomHint": "Arrastra los controles bajo el gráfico, o desplázate sobre él, para acercar un intervalo de tiempo."
+      "zoomHint": "Arrastra los controles bajo el gráfico, o desplázate sobre él, para acercar un intervalo de tiempo.",
+      "cannotStopOwn": "Esta es la propia conexión del panel con la base de datos. Detenerla dejaría esta página sin conexión."
     },
     "tables": {
       "title": "Tablas",

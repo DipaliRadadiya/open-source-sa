@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { useConfirmAction } from "@/hooks/use-confirm-action";
+import { isPanelProcess, panelUsernames } from "@/lib/databases/own-connection";
 
 const POLL_MS = 5000;
 
@@ -108,13 +109,17 @@ function Fact({ label, last, children }) {
  * are counted rather than listed — a table of forty `Sleep` rows buries the one
  * query that is actually stuck.
  */
-export function ProcessList({ engine, processes: initial = [], canManage }) {
+export function ProcessList({ engine, processes: initial = [], canManage, connections = [] }) {
   const t = useTranslations("databases.monitor");
   const router = useRouter();
   const [polled, setPolled] = useState(null);
   // Holds the row, the in-flight flag AND the last failure, so a refused
   // stop explains itself in the dialog instead of in a toast that leaves.
   const stop = useConfirmAction();
+  // The panel's own admin accounts for this engine. On a quiet server its
+  // monitoring connection is the ONLY row here, so without this the single
+  // Stop button on screen kills the thing that drew the screen.
+  const ownUsers = panelUsernames(connections, engine);
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const [slowOnly, setSlowOnly] = useState(false);
@@ -344,10 +349,18 @@ export function ProcessList({ engine, processes: initial = [], canManage }) {
                         which turned it grey mid-gesture — overridden here.
                         It stays a legible outlined button at rest because touch
                         devices never get a hover state at all. */}
-                    <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                    <ReasonTooltip
+                      reason={
+                        !canManage
+                          ? t("noPermission")
+                          : isPanelProcess(process, ownUsers)
+                            ? t("cannotStopOwn")
+                            : null
+                      }
+                    >
                       <Button
                         variant="outline"
-                        disabled={!canManage}
+                        disabled={!canManage || isPanelProcess(process, ownUsers)}
                         className={cn(
                           "shrink-0 font-medium text-foreground/80 transition-colors",
                           "group-hover:border-destructive/40 group-hover:text-destructive",

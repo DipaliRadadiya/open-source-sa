@@ -2588,7 +2588,8 @@
       "runningQueries": "Running queries",
       "longRunningCount": "{count, plural, one {# long-running} other {# long-running}}",
       "chartDescription": "Queries per second, connections, and running threads, sampled every 5 minutes.",
-      "zoomHint": "Drag the handles below the chart, or scroll on it, to zoom into a time range."
+      "zoomHint": "Drag the handles below the chart, or scroll on it, to zoom into a time range.",
+      "cannotStopOwn": "This is the panel's own connection to the database. Stopping it would cut off this page."
     },
     "tables": {
       "title": "Tables",
