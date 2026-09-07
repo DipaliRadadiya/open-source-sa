@@ -28,6 +28,27 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
   const [selected, setSelected] = useState(adoptable);
   const [includeFirewall, setIncludeFirewall] = useState(false);
 
+  /*
+   * Closing throws the selection away.
+   *
+   * `sync-panel` keys this on the scan run, so a NEW scan already gets a fresh
+   * dialog — but within one run the component stays mounted while the dialog
+   * is shut, and `useState` only runs its initialiser once. So untick four of
+   * five resource types, press Cancel, reopen, and the four are still unticked:
+   * the box states a plan the user abandoned, and Cancel is the one button that
+   * must not leave anything behind.
+   *
+   * Done on close rather than on open so the reset happens while nothing is on
+   * screen — resetting on open would visibly repaint the checkboxes.
+   */
+  function handleOpenChange(next) {
+    if (!next) {
+      setSelected(adoptable);
+      setIncludeFirewall(false);
+    }
+    onOpenChange(next);
+  }
+
   const hasFirewall = typesPresent.includes(FIREWALL_RESOURCE_TYPE);
 
   const plan = useMemo(
@@ -46,7 +67,7 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
   return (
     <ConfirmDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       icon={DownloadCloud}
       tone="default"
       title={t("adopt.title")}

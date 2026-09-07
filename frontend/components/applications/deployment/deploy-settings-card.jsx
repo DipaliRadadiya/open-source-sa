@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
@@ -9,11 +9,19 @@ import { toast } from "sonner";
 import { RotateCcw } from "lucide-react";
 import { deploySettingsFormSchema } from "@/lib/schemas/deploy-history";
 import { updateDeploySettings } from "@/lib/api/deployment";
+import { getBranches } from "@/lib/api/applications";
+import { branchesResponseSchema } from "@/lib/schemas/git";
+import {
+  branchFieldMode,
+  branchFieldNotice,
+  branchOptions,
+} from "@/lib/applications/branch-picker";
 import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -38,10 +46,59 @@ import {
  * separates "their script" from "the fallback", and it is the difference
  * between offering Reset and pretending someone else's text is theirs.
  */
-export function DeploySettingsCard({ applicationId, settings, canManage }) {
+export function DeploySettingsCard({ applicationId, application, settings, canManage }) {
   const t = useTranslations("applications.deployment.settings");
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  // Only the resolved outcomes live in state. "loading" and "idle" are facts
+  // about the props, so deriving them keeps the effect free of the synchronous
+  // setState that would otherwise run on every render for a site with no
+  // account — see the react-hooks/set-state-in-effect rule.
+  const [resolved, setResolved] = useState(null);
+
+  /*
+   * Typing a branch name is guessing. The provider knows them, this account can
+   * list them, and the create form has asked for exactly this list since the
+   * day it was written — the edit screen simply never caught up.
+   *
+   * Fetched here rather than on the server: the deployment page renders for
+   * every git site, and most visits never touch this field. One request that a
+   * dead credential can fail is not worth putting in front of the whole screen.
+   */
+  const accountId = application?.git_account_id;
+  const repository = application?.repository;
+  const linked = Boolean(accountId) && Boolean(repository) && !application?.git_account_missing;
+
+  useEffect(() => {
+    if (!linked) return undefined;
+
+    let cancelled = false;
+    getBranches(accountId, repository)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const parsed = branchesResponseSchema.safeParse(data);
+        if (!parsed.success) {
+          setResolved({ state: "error", branches: [] });
+          return;
+        }
+        setResolved({
+          state: parsed.data.branches.length ? "ready" : "empty",
+          branches: parsed.data.branches,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setResolved({ state: "error", branches: [] });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [linked, accountId, repository]);
+
+  const branchesState = linked ? (resolved?.state ?? "loading") : "idle";
+  const branches = resolved?.branches ?? [];
+  const mode = branchFieldMode({ application, state: branchesState, branches });
+  const notice = branchFieldNotice({ application, state: branchesState });
 
   const form = useForm({
     resolver: zodResolver(deploySettingsFormSchema),
@@ -86,14 +143,33 @@ export function DeploySettingsCard({ applicationId, settings, canManage }) {
                   <FormItem className="min-w-0">
                     <FormLabel>{t("branch")}</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder={t("branchPlaceholder")}
-                        disabled={!canManage || saving}
-                        className="font-mono text-sm"
-                      />
+                      {/* The list when we can be sure of it, free text when we
+                          cannot — see lib/applications/branch-picker.js. The
+                          one thing never rendered is an empty disabled picker,
+                          which reads as "your branch is gone". */}
+                      {mode === "picker" ? (
+                        <Combobox
+                          options={branchOptions(branches, field.value)}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          placeholder={t("branchPlaceholder")}
+                          searchPlaceholder={t("branchSearch")}
+                          disabled={!canManage || saving}
+                        />
+                      ) : (
+                        <Input
+                          {...field}
+                          placeholder={t("branchPlaceholder")}
+                          disabled={!canManage || saving}
+                          className="font-mono text-sm"
+                        />
+                      )}
                     </FormControl>
-                    <FormDescription>{t("branchHint")}</FormDescription>
+                    <FormDescription
+                      className={notice === "error" || notice === "unlinked" ? "text-destructive" : undefined}
+                    >
+                      {notice ? t(`branchNotice.${notice}`) : t("branchHint")}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

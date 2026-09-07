@@ -262,14 +262,30 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
                             disabled, with the reason on hover — but it now reads
                             as "this one is fixed on", not as a different kind of
                             thing. */}
-                        <ReasonTooltip reason={reason}>
-                          <Switch
-                            checked={extension.enabled}
-                            onCheckedChange={() => toggle(extension)}
-                            disabled={Boolean(reason) || pending === extension.name}
-                            aria-label={t("extensions.toggle", { name: extension.name })}
-                          />
-                        </ReasonTooltip>
+                        {/* A spinner beside it, not only a disabled switch.
+                            Enabling an extension restarts FPM, so the request
+                            runs for a second or two — and a switch that stops
+                            responding without saying anything reads as broken,
+                            which is exactly when someone clicks it again. */}
+                        <span className="flex items-center justify-end gap-2">
+                          {pending === extension.name ? (
+                            <Loader2
+                              className="size-3.5 shrink-0 animate-spin text-muted-foreground"
+                              aria-hidden
+                            />
+                          ) : null}
+                          <ReasonTooltip reason={reason}>
+                            <Switch
+                              checked={extension.enabled}
+                              onCheckedChange={() => toggle(extension)}
+                              disabled={Boolean(reason) || pending === extension.name}
+                              aria-label={t("extensions.toggle", { name: extension.name })}
+                              // Screen readers get the same news the spinner
+                              // gives everyone else.
+                              aria-busy={pending === extension.name || undefined}
+                            />
+                          </ReasonTooltip>
+                        </span>
 
                         {/* Sits with the switch because it explains the switch:
                             `enabled` is all-or-nothing, so a manual `phpdismod`

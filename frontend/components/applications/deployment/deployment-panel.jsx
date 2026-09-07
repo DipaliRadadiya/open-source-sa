@@ -109,6 +109,7 @@ export function DeploymentPanel({
       {settings ? (
         <DeploySettingsCard
           applicationId={application.id}
+          application={application}
           settings={settings}
           canManage={canManage}
         />

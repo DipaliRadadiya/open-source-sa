@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
+import { FacetSelect } from "@/components/data-table/facet-select";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
@@ -21,7 +22,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { measureApplicationSize } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { RefreshButton } from "@/components/data-table/refresh-button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { ApplicationsCards } from "@/components/applications/applications-cards";
@@ -151,46 +151,39 @@ function StatusCell({ row }) {
 }
 
 
+/*
+ * `FacetSelect`, not a hand-assembled Select.
+ *
+ * This screen built its own pair, and they differed from every other filter in
+ * the panel in one way that mattered: the clear-the-filter option was labelled
+ * with the COLUMN name — "Status", "Type" — which reads as the heading of the
+ * list you are looking at, not as a choice you can make. Backups says "All
+ * statuses", Cron Jobs says "All users"; only this one asked you to work out
+ * that the first item was the way back.
+ *
+ * The shared control also carries a guard this copy never had: a `?status=junk`
+ * URL matched no item and rendered the trigger blank while the filter was still
+ * applied server-side.
+ */
 function Filters({ statusOptions, typeOptions, t }) {
-  const setQuery = useSetQuery();
-  const searchParams = useSearchParams();
-  const status = searchParams.get("status") ?? "all";
-  const siteType = searchParams.get("site_type") ?? "all";
-
   return (
     <div className="flex flex-col gap-2 sm:flex-row">
       {/* Server-side and debounced. The list pages at ten, so a browser-side
           filter answered "which of these ten" while the reader was asking
           "which of my sites" — and found nothing for anything on page two. */}
       <SearchInput placeholder={t("searchPlaceholder")} />
-      <Select
-        value={status}
-        onValueChange={(v) => setQuery({ status: v === "all" ? undefined : v }, { resetPage: true })}
-      >
-        <SelectTrigger className="w-full sm:w-40">
-          <SelectValue placeholder={t("columns.status")} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{t("columns.status")}</SelectItem>
-          {statusOptions.map(([value, label]) => (
-            <SelectItem key={value} value={value}>{label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={siteType}
-        onValueChange={(v) => setQuery({ site_type: v === "all" ? undefined : v }, { resetPage: true })}
-      >
-        <SelectTrigger className="w-full sm:w-44">
-          <SelectValue placeholder={t("columns.type")} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{t("columns.type")}</SelectItem>
-          {typeOptions.map(([value, label]) => (
-            <SelectItem key={value} value={value}>{label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <FacetSelect
+        paramKey="status"
+        allLabel={t("filters.allStatuses")}
+        options={statusOptions.map(([value, label]) => ({ value, label }))}
+        className="w-full sm:w-40"
+      />
+      <FacetSelect
+        paramKey="site_type"
+        allLabel={t("filters.allTypes")}
+        options={typeOptions.map(([value, label]) => ({ value, label }))}
+        className="w-full sm:w-44"
+      />
     </div>
   );
 }

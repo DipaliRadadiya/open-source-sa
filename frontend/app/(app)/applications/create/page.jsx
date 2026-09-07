@@ -8,6 +8,12 @@ import { getGitAccounts } from "@/lib/git/get-git";
 import { getPhp } from "@/lib/php/get-php";
 import { getNode } from "@/lib/node/get-node";
 import { getTimezones } from "@/lib/settings/get-timezones";
+import { getEngines } from "@/lib/databases/get-databases";
+import {
+  engineInstalling,
+  noDatabaseEngine,
+} from "@/lib/applications/database-readiness";
+import { NoDatabaseEngineNotice } from "@/components/applications/no-database-engine-notice";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -20,7 +26,7 @@ export async function generateMetadata() {
 
 export default async function CreateApplicationPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, types, systemUsers, accounts, php, node, capabilities, timezones] = await Promise.all([
+  const [permissions, t, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
     getSiteTypes(),
@@ -32,6 +38,9 @@ export default async function CreateApplicationPage({ searchParams }) {
     // point at and the wildcard-DNS hosts it will answer for.
     getServerCapabilities().catch(() => null),
     getTimezones().catch(() => []),
+    // Cheap and cached, and the only way to answer "will a WordPress install
+    // actually work here" before someone spends a minute filling this in.
+    getEngines().catch(() => ({ engines: [], failed: true })),
   ]);
 
   const phpVersions = (php.data?.versions ?? []).filter((version) => !version.status || version.status === "ready");
@@ -65,6 +74,13 @@ export default async function CreateApplicationPage({ searchParams }) {
         <h1 className="text-2xl font-semibold tracking-tight">{t("createTitle")}</h1>
         <p className="text-sm text-muted-foreground">{t("createSubtitle")}</p>
       </div>
+      {/* A precondition of the server, not a field of the form, so it sits
+          above it rather than in the readiness checklist — that list focuses
+          the input it names, and there is no input for this. */}
+      {noDatabaseEngine(engines) ? (
+        <NoDatabaseEngineNotice installing={engineInstalling(engines)} />
+      ) : null}
+
       <CreateApplicationForm
         // Prefilled from the URL, and only ever with a type the server
         // actually offers — a query parameter is somebody else's input, and a

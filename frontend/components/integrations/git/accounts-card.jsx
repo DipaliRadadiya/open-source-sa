@@ -213,8 +213,13 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
                         {t("onboarding.description")}
                       </p>
                     </div>
+                    {/* Straight to the Git type rather than the empty picker:
+                        this button only exists because an account was just
+                        connected, so the type is already known. The page drops
+                        an unrecognised `type` on the floor, so a renamed site
+                        type degrades to the plain form rather than breaking. */}
                     <Button size="sm" asChild className="shrink-0">
-                      <Link href="/applications/create">
+                      <Link href="/applications/create?type=git">
                         {t("onboarding.action")}
                         <ArrowRight className="size-3.5" />
                       </Link>
