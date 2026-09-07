@@ -1444,7 +1444,7 @@
       "enabled": "Regla activada.",
       "disabled": "Regla desactivada. Se conserva, no se borra.",
       "toggleFailed": "No se pudo cambiar esa regla.",
-      "unreachable": "{count, plural, one {Hay # puerto en uso pero bloqueado} other {Hay # puertos en uso pero bloqueados}}: {ports}. Nada de fuera puede alcanzarlos.",
+      "unreachable": "{count, plural, one {1 puerto está en uso pero bloqueado: {ports}. Nada del exterior puede alcanzarlo.} other {# puertos están en uso pero bloqueados: {ports}. Nada del exterior puede alcanzarlos.}}",
       "edit": "Editar regla",
       "off": "Desactivada",
       "loadFailed": "No se pudieron cargar las reglas. Inténtalo de nuevo en un momento.",
@@ -1519,7 +1519,10 @@
       "tileRisky": "{name} quedaría abierto a todo internet: usa «Regla personalizada» y elige «Solo mi IP».",
       "tileRemoveHint": "Haz clic para eliminar esta regla",
       "tileAddHint": "Haz clic para añadir esta regla",
-      "stackAddHint": "Haz clic para añadir estas reglas"
+      "stackAddHint": "Haz clic para añadir estas reglas",
+      "switchedOn": "Se ha vuelto a activar {names}.",
+      "tileOffBody": "Nada llega al puerto {port}: esta regla está desactivada.",
+      "tileOffHint": "Haz clic para volver a activarla"
     },
     "history": {
       "action": "Historial",
@@ -1883,7 +1886,9 @@
       "already": "PHP {version} ya estaba instalada.",
       "failed": "No se pudo instalar esa versión.",
       "eolWarning": "PHP {version} ya no recibe correcciones de seguridad. Instálala solo si algún sitio la necesita.",
-      "noneAvailable": "Ahora mismo no hay versiones nuevas para instalar."
+      "noneAvailable": "Ahora mismo no hay versiones nuevas para instalar.",
+      "installedTag": "Instalada",
+      "allInstalled": "Todas las versiones que ofrece este servidor ya están instaladas."
     },
     "lifecycle": {
       "active": "Con soporte",
@@ -2012,7 +2017,9 @@
       "already": "Node.js {version} ya estaba instalada.",
       "failed": "No se pudo instalar esa versión.",
       "eolWarning": "Node.js {version} ya no recibe parches de seguridad. Instálala solo si una aplicación la necesita.",
-      "noneAvailable": "Ahora mismo no hay versiones nuevas para instalar."
+      "noneAvailable": "Ahora mismo no hay versiones nuevas para instalar.",
+      "installedTag": "Instalada",
+      "allInstalled": "Todas las versiones que ofrece este servidor ya están instaladas."
     },
     "lifecycle": {
       "current": "Actual",
@@ -3355,7 +3362,14 @@
         "saveFailed": "No se pudieron guardar esos ajustes.",
         "noPermission": "Tu rol no incluye Despliegue de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
         "nothingToSave": "Nada que guardar",
-        "branchPlaceholder": "main"
+        "branchPlaceholder": "main",
+        "branchSearch": "Buscar ramas…",
+        "branchNotice": {
+          "loading": "Cargando ramas del repositorio…",
+          "empty": "El repositorio no informó de ninguna rama: escribe el nombre.",
+          "error": "No se pudieron cargar las ramas del repositorio. Escribe el nombre.",
+          "unlinked": "Este sitio no tiene una cuenta de Git operativa, así que no se pueden listar las ramas. Vuelve a conectarla en la página de la aplicación."
+        }
       },
       "history": {
         "empty": {
@@ -4450,6 +4464,17 @@
       "issueCertificate": "Emitir SSL",
       "reviewSecurity": "Revisar seguridad",
       "protectionsOff": "{count, plural, one {# protección desactivada} other {# protecciones desactivadas}}"
+    },
+    "filters": {
+      "allStatuses": "Todos los estados",
+      "allTypes": "Todos los tipos"
+    },
+    "noDatabase": {
+      "title": "No hay ningún motor de base de datos instalado",
+      "body": "Los tipos de sitio que necesitan una base de datos —WordPress, Joomla y otros— no se pueden instalar hasta que haya uno. Los tipos que no la necesitan no se ven afectados.",
+      "action": "Instalar una base de datos",
+      "installingTitle": "Se está instalando un motor de base de datos",
+      "installingBody": "Espera a que termine antes de crear un sitio que necesite una base de datos. El progreso está en la página Bases de datos."
     }
   },
   "panelUpdate": {

@@ -5,10 +5,25 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
-import { Check, Database, Globe, Layers, Loader2, Trash2, TriangleAlert, Zap } from "lucide-react";
+import {
+  Check,
+  Database,
+  Globe,
+  Layers,
+  Loader2,
+  PowerOff,
+  Trash2,
+  TriangleAlert,
+  Zap,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createFirewallRule, deleteFirewallRule } from "@/lib/api/firewall";
+import {
+  createFirewallRule,
+  deleteFirewallRule,
+  updateFirewallRule,
+} from "@/lib/api/firewall";
 import { riskyExposure } from "@/lib/firewall/exposure";
+import { isPortOpen, matchRule } from "@/lib/firewall/quick-tiles";
 import {
   Card,
   CardContent,
@@ -54,39 +69,28 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
   const quick = QUICK_KEYS.map((k) => byKey.get(k)).filter(Boolean);
   const stack = STACK_KEYS.map((k) => byKey.get(k)).filter(Boolean);
 
-  // "Already there" means an allow rule for that port and protocol, from
-  // anywhere. Protocol has to match: a UDP rule on 443 is not the HTTPS rule,
-  // and without this check the tile claimed "Added" for a rule that lets
-  // nothing through — the worst kind of wrong, since it stops you adding the
-  // real one. A rule restricted to one address is also a different rule.
-  // Returns the rule itself, not just a yes/no — clicking an added tile removes
-  // the rule it stands for, and that needs its id.
-  function match(preset) {
-    const wanted = preset.protocol || "tcp";
-    return rules.find(
-      (r) =>
-        r.action === "allow" &&
-        !r.source_ip &&
-        !r.port_to &&
-        Number(r.port_from) === Number(preset.port) &&
-        // "all" covers both, so it satisfies a tcp or udp tile.
-        ((r.protocol ?? "tcp") === wanted || r.protocol === "all"),
-    );
-  }
-
-  function exists(preset) {
-    return Boolean(match(preset));
-  }
+  const match = (preset) => matchRule(preset, rules);
+  const isOn = (preset) => isPortOpen(preset, rules);
 
   async function add(items, label) {
     setPending(label);
     const created = [];
+    const switchedOn = [];
     const already = [];
     let failed = null;
     try {
       for (const preset of items) {
-        if (exists(preset)) {
-          already.push(preset.label);
+        const existing = match(preset);
+        if (existing) {
+          // The rule is there; the only thing wrong is that it is off. Creating
+          // a second one would 422, and deleting it to re-add would throw away
+          // whatever else the rule carries.
+          if (existing.enabled === false) {
+            await updateFirewallRule(existing.id, { enabled: true });
+            switchedOn.push(preset.label);
+          } else {
+            already.push(preset.label);
+          }
           continue;
         }
         try {
@@ -115,7 +119,10 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
       // Say which of the things happened — including when only some did.
       if (created.length) {
         toast.success(t("quick.added", { names: created.join(", ") }));
-      } else if (already.length && !failed) {
+      }
+      if (switchedOn.length) {
+        toast.success(t("quick.switchedOn", { names: switchedOn.join(", ") }));
+      } else if (!created.length && already.length && !failed) {
         toast.info(t("quick.alreadyThere", { names: already.join(", ") }));
       }
       if (failed) toast.error(failed);
@@ -158,7 +165,12 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {quick.map((preset) => {
             const rule = match(preset);
-            const done = Boolean(rule);
+            // Three states, not two: missing, present-and-open, present-but-off.
+            // Collapsing the last two into "Added" is what let this tile claim a
+            // port was open while the table under it showed the rule switched
+            // off and the warning above listed that port as blocked.
+            const off = Boolean(rule) && rule.enabled === false;
+            const done = Boolean(rule) && !off;
             // A database open to the whole internet is not a one-click decision.
             const risky = riskyExposure({ port: preset.port, riskyPorts });
             // The same lockout guard the rules list applies: SSH and the panel's
@@ -180,18 +192,28 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
                 // "Already allowed" threw away the only explanation on the tile,
                 // exactly when someone new is trying to work out what it means.
                 subtitle={
-                  risky && !done
-                    ? t("quick.tileRisky", { name: risky })
-                    : t("quick.tileBody", {
-                        protocol: (preset.protocol || "tcp").toUpperCase(),
-                        port: preset.port,
-                      })
+                  off
+                    ? // Not "Allows incoming TCP on port 80" — it allows nothing
+                      // at all while it is off, which is the whole bug.
+                      t("quick.tileOffBody", { port: preset.port })
+                    : risky && !done
+                      ? t("quick.tileRisky", { name: risky })
+                      : t("quick.tileBody", {
+                          protocol: (preset.protocol || "tcp").toUpperCase(),
+                          port: preset.port,
+                        })
                 }
                 done={done}
                 doneLabel={t("quick.tileDone")}
+                off={off}
+                offLabel={t("rules.off")}
                 removable={done && !locked && canManage}
                 removeHint={t("quick.tileRemoveHint")}
-                addHint={!done && canManage && !risky ? t("quick.tileAddHint") : null}
+                addHint={
+                  canManage && !locked && (off || (!done && !risky))
+                    ? t(off ? "quick.tileOffHint" : "quick.tileAddHint")
+                    : null
+                }
                 reason={reason}
                 disabled={!canManage || locked || pending !== null}
                 pending={pending === preset.key}
@@ -210,9 +232,13 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
               title={t("quick.stackTitle")}
               subtitle={t("quick.stackBody", { names: stack.map((p) => p.label).join(" + ") })}
               doneLabel={t("quick.tileDone")}
-              done={stack.every(exists)}
-              addHint={!stack.every(exists) && canManage ? t("quick.stackAddHint") : null}
-              disabled={!canManage || stack.every(exists) || pending !== null}
+              // Every port actually open, not merely every rule present: with
+              // `exists` this tile went green and disabled itself while HTTP and
+              // HTTPS were switched off, so the one control that could reopen
+              // them refused to be clicked.
+              done={stack.every(isOn)}
+              addHint={!stack.every(isOn) && canManage ? t("quick.stackAddHint") : null}
+              disabled={!canManage || stack.every(isOn) || pending !== null}
               pending={pending === "stack"}
               onClick={() => add(stack, "stack")}
             />
@@ -254,6 +280,8 @@ function Tile({
   subtitle,
   done,
   doneLabel,
+  off,
+  offLabel,
   risky,
   removable,
   removeHint,
@@ -278,11 +306,15 @@ function Tile({
               removable
               ? "border-success/30 bg-success/5 hover:border-destructive/40 hover:bg-destructive/5"
               : "cursor-default border-success/30 bg-success/5"
-            : disabled
-              ? "opacity-60"
-              : risky
-                ? "border-warning/40 bg-warning/5 hover:border-warning hover:bg-warning/10"
-                : "hover:border-primary/40 hover:bg-accent",
+            : off
+              ? // Muted, not green and not red: the rule is there but shut, and
+                // the click reopens it.
+                "border-muted-foreground/25 bg-muted/40 hover:border-primary/40 hover:bg-accent"
+              : disabled
+                ? "opacity-60"
+                : risky
+                  ? "border-warning/40 bg-warning/5 hover:border-warning hover:bg-warning/10"
+                  : "hover:border-primary/40 hover:bg-accent",
         )}
       >
         <span
@@ -292,13 +324,17 @@ function Tile({
               ? removable
                 ? "bg-success/15 text-success group-hover:bg-destructive/15 group-hover:text-destructive"
                 : "bg-success/15 text-success"
-              : risky
-                ? "bg-warning/15 text-warning"
-                : "bg-muted text-muted-foreground group-hover:bg-primary/15 group-hover:text-primary",
+              : off
+                ? "bg-muted text-muted-foreground group-hover:bg-primary/15 group-hover:text-primary"
+                : risky
+                  ? "bg-warning/15 text-warning"
+                  : "bg-muted text-muted-foreground group-hover:bg-primary/15 group-hover:text-primary",
           )}
         >
           {pending ? (
             <Loader2 className="size-4 animate-spin" />
+          ) : off ? (
+            <PowerOff className="size-4" />
           ) : done ? (
             <>
               <Check className={cn("size-4", removable && "group-hover:hidden")} />
@@ -314,6 +350,10 @@ function Tile({
             {done ? (
               <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-success">
                 {doneLabel}
+              </span>
+            ) : off ? (
+              <span className="shrink-0 rounded bg-muted-foreground/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                {offLabel}
               </span>
             ) : risky ? (
               <TriangleAlert className="size-3.5 shrink-0 text-warning" />

@@ -1444,7 +1444,7 @@
       "enabled": "Rule switched on.",
       "disabled": "Rule switched off. It is kept, not deleted.",
       "toggleFailed": "That rule could not be changed.",
-      "unreachable": "{count, plural, one {Port # is} other {Ports # are}} in use but blocked: {ports}. Nothing outside can reach them.",
+      "unreachable": "{count, plural, one {1 port is in use but blocked: {ports}. Nothing outside can reach it.} other {# ports are in use but blocked: {ports}. Nothing outside can reach them.}}",
       "edit": "Edit rule",
       "off": "Off",
       "loadFailed": "Rules could not be loaded. Try again in a moment.",
@@ -1519,7 +1519,10 @@
       "tileRisky": "{name} would be open to the whole internet — use Custom rule and pick “Only my IP”.",
       "tileRemoveHint": "Click to remove this rule",
       "tileAddHint": "Click to add this rule",
-      "stackAddHint": "Click to add these rules"
+      "stackAddHint": "Click to add these rules",
+      "switchedOn": "Switched {names} back on.",
+      "tileOffBody": "Nothing is reaching port {port} — this rule is switched off.",
+      "tileOffHint": "Click to switch it back on"
     },
     "history": {
       "action": "History",
@@ -1883,7 +1886,9 @@
       "already": "PHP {version} was already installed.",
       "failed": "That version could not be installed.",
       "eolWarning": "PHP {version} no longer gets security fixes. Install it only if a site needs it.",
-      "noneAvailable": "No new versions are available to install right now."
+      "noneAvailable": "No new versions are available to install right now.",
+      "installedTag": "Installed",
+      "allInstalled": "Every version this server offers is already installed."
     },
     "lifecycle": {
       "active": "Supported",
@@ -2012,7 +2017,9 @@
       "already": "Node.js {version} was already installed.",
       "failed": "That version could not be installed.",
       "eolWarning": "Node.js {version} no longer gets security fixes. Install it only if an app needs it.",
-      "noneAvailable": "No new versions are available to install right now."
+      "noneAvailable": "No new versions are available to install right now.",
+      "installedTag": "Installed",
+      "allInstalled": "Every version this server offers is already installed."
     },
     "lifecycle": {
       "current": "Current",
@@ -3355,7 +3362,14 @@
         "saveFailed": "Those settings could not be saved.",
         "noPermission": "Your role does not include Deployment for this site with Manage access. Ask an administrator to grant it.",
         "nothingToSave": "Nothing to save",
-        "branchPlaceholder": "main"
+        "branchPlaceholder": "main",
+        "branchSearch": "Search branches…",
+        "branchNotice": {
+          "loading": "Loading branches from the repository…",
+          "empty": "The repository reported no branches — type the name instead.",
+          "error": "Couldn't load branches from the repository. Type the name instead.",
+          "unlinked": "This site has no working Git account, so branches can't be listed. Reconnect it on the application page."
+        }
       },
       "history": {
         "empty": {
@@ -4450,6 +4464,17 @@
       "issueCertificate": "Issue SSL",
       "reviewSecurity": "Review security",
       "protectionsOff": "{count, plural, one {# protection off} other {# protections off}}"
+    },
+    "filters": {
+      "allStatuses": "All statuses",
+      "allTypes": "All types"
+    },
+    "noDatabase": {
+      "title": "No database engine is installed",
+      "body": "Site types that need a database — WordPress, Joomla and others — can't be installed until one is. Types that don't need one are unaffected.",
+      "action": "Install a database",
+      "installingTitle": "A database engine is installing",
+      "installingBody": "Wait for it to finish before creating a site that needs a database. Progress is on the Databases page."
     }
   },
   "panelUpdate": {
