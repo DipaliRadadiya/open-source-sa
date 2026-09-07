@@ -3708,6 +3708,11 @@
         "siteRoot": "Raíz del sitio",
         "holding": "Ocupa {size} de disco",
         "retention": "{days, plural, one {Se elimina automáticamente después de # día} other {Se elimina automáticamente después de # días}}"
+      },
+      "hidden": {
+        "hide": "Ocultar archivos ocultos",
+        "show": "Mostrar archivos ocultos",
+        "count": "({count} ocultos)"
       }
     },
     "workers": {

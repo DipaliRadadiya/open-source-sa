@@ -36,12 +36,17 @@ export async function generateMetadata({ params }) {
 
 export default async function ApplicationFilesPage({ params, searchParams }) {
   const { application: id } = await params;
-  const { path: rawPath, trash: rawTrash } = await searchParams;
+  const { path: rawPath, trash: rawTrash, hidden: rawHidden } = await searchParams;
   const path = typeof rawPath === "string" ? rawPath : "";
   // The trash is a view of this same screen, not a route of its own — see
   // memory/research-file-trash.md. Every panel that has one reaches it from the
   // file manager's toolbar.
   const showTrash = rawTrash === "1";
+  // In the URL rather than in the browser's storage: the listing is fetched on
+  // the server, so the choice has to reach the server to have any effect. It
+  // also makes the state shareable, survives a reload, and needs no effect
+  // reading localStorage after mount.
+  const showHidden = rawHidden !== "0";
 
   const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
@@ -67,7 +72,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
 
   const filesResult =
     settled && !showTrash
-      ? await getFiles(id, path)
+      ? await getFiles(id, path, showHidden)
       : { path: "", files: [], failed: false, notFound: false };
   const trashResult = settled && showTrash ? await getTrash(id) : null;
 
@@ -121,6 +126,8 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
           appId={id}
           initialPath={filesResult.path}
           initialFiles={filesResult.files}
+          hiddenCount={filesResult.hiddenCount}
+          showHidden={showHidden}
           canManage={canManage}
         />
       )}

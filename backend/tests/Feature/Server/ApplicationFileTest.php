@@ -681,6 +681,73 @@ describe('browsing', function () {
             ->and($response->json('files.2.type'))->toBe('symlink');
     });
 
+    it('lists dotfiles by default, as this screen always has', function () {
+        // The browser has never filtered them: `find -mindepth 1` returns
+        // everything one level deep. A new option must not change what an
+        // existing user sees until they ask it to.
+        FileBrowserFake::$fs['.env'] = ['type' => 'f', 'size' => 10, 'content' => 'APP_ENV=x'];
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)->getJson(filesUrl())->assertOk();
+
+        expect($response->json('files.*.name'))->toContain('.env')
+            ->and($response->json('hidden_count'))->toBe(1);
+    });
+
+    it('leaves dotfiles out when the listing is asked to', function () {
+        FileBrowserFake::$fs['.env'] = ['type' => 'f', 'size' => 10, 'content' => 'APP_ENV=x'];
+        FileBrowserFake::$fs['.git'] = ['type' => 'd'];
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)->getJson(filesUrl('?hidden=0'))->assertOk();
+
+        expect($response->json('files.*.name'))->not->toContain('.env')
+            ->and($response->json('files.*.name'))->not->toContain('.git')
+            ->and($response->json('files.*.name'))->toContain('index.php');
+    });
+
+    it('still says how many it held back', function () {
+        // A screen that hides files without saying how many is
+        // indistinguishable from one that lost them, and this is the screen
+        // where that difference costs the most.
+        FileBrowserFake::$fs['.env'] = ['type' => 'f', 'size' => 10, 'content' => 'APP_ENV=x'];
+        FileBrowserFake::$fs['.git'] = ['type' => 'd'];
+        fakeFileBrowserServer();
+
+        expect($this->actingAs($this->admin)->getJson(filesUrl('?hidden=0'))->json('hidden_count'))
+            ->toBe(2);
+    });
+
+    it('counts hidden entries from the same read that produced the list', function () {
+        // Not a second `find`. Two reads of a directory that changed between
+        // them would report a count that does not match the rows on screen.
+        FileBrowserFake::$fs['.env'] = ['type' => 'f', 'size' => 10, 'content' => 'APP_ENV=x'];
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)->getJson(filesUrl('?hidden=0'))->assertOk();
+
+        $listings = collect(FileBrowserFake::$ran)
+            ->filter(fn (string $c): bool => str_contains($c, '-mindepth') && str_contains($c, '-maxdepth'));
+
+        expect($listings)->toHaveCount(1);
+    });
+
+    it('hides nothing in a folder with no dotfiles', function () {
+        fakeFileBrowserServer();
+
+        expect($this->actingAs($this->admin)->getJson(filesUrl('?hidden=0'))->json('hidden_count'))
+            ->toBe(0);
+    });
+
+    it('refuses a hidden flag that is not the two values it accepts', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->getJson(filesUrl('?hidden=maybe'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('hidden');
+    });
+
     it('returns mode, owner and group for files and directories, but not for symlinks', function () {
         fakeFileBrowserServer();
 

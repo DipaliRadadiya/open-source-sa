@@ -24,6 +24,12 @@ export const fileEntrySchema = z.object({
 export const filesResponseSchema = z.object({
   path: z.string().default(""),
   files: z.array(fileEntrySchema).default([]),
+  // How many dotfiles this directory holds, whether or not they were returned.
+  // Required, not defaulted: Zod strips what it is not told about, so an
+  // optional field that stopped arriving would silently read as "none hidden"
+  // — and the toolbar would then claim a filtered folder was showing
+  // everything. The same shape of bug the settings groups had.
+  hidden_count: z.number().int(),
 });
 
 // One entry per deleted path, newest first. `batch` is the timestamped folder

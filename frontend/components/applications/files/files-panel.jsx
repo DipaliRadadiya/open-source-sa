@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import Link from "next/link";
-import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe, Trash2 } from "lucide-react";
+import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe, Trash2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -30,10 +30,18 @@ import { SelectionBar } from "@/components/applications/files/selection-bar";
 import { BulkDialogs } from "@/components/applications/files/bulk-dialogs";
 import { BulkResultPanel } from "@/components/applications/files/bulk-result-panel";
 import { joinPath } from "@/lib/files/path-helpers";
+import { hiddenToggleHref } from "@/lib/files/hidden-href";
 import { folderSize } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
 
-export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
+export function FilesPanel({
+  appId,
+  initialPath,
+  initialFiles,
+  hiddenCount = 0,
+  showHidden = true,
+  canManage,
+}) {
   const t = useTranslations("applications.files");
   const [action, setAction] = useState(null); // { type, file }
   const [newFolderOpen, setNewFolderOpen] = useState(false);
@@ -124,6 +132,8 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
   }, [files, query]);
   const canWrite = canManage;
   const writeReason = canWrite ? null : t("noPermission");
+
+  const hiddenHref = hiddenToggleHref({ appId, path, showHidden });
 
   // Folder sizes are computed one at a time, on request, and remembered for
   // as long as the listing is on screen — asking twice for the same folder
@@ -287,7 +297,32 @@ export function FilesPanel({ appId, initialPath, initialFiles, canManage }) {
         ) : (
           <div />
         )}
-        {addButtons}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* A link, not a button: the listing is fetched on the server, so
+              the choice has to be in the URL to change what comes back. It
+              also makes the view shareable and survives a reload. */}
+          {files.length > 0 || hiddenCount > 0 ? (
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+              <Link
+                href={hiddenHref}
+                aria-pressed={!showHidden}
+                scroll={false}
+              >
+                {showHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                {showHidden ? t("hidden.hide") : t("hidden.show")}
+                {/* The count comes from the same read that produced the rows.
+                    A screen that hides files without saying how many is
+                    indistinguishable from one that lost them. */}
+                {!showHidden && hiddenCount > 0 ? (
+                  <span className="ms-1 tabular-nums">
+                    {t("hidden.count", { count: hiddenCount })}
+                  </span>
+                ) : null}
+              </Link>
+            </Button>
+          ) : null}
+          {addButtons}
+        </div>
       </div>
 
       <BulkResultPanel result={bulkOutcome} onDismiss={() => setBulkOutcome(null)} />

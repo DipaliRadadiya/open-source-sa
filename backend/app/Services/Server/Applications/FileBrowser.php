@@ -79,7 +79,18 @@ class FileBrowser
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function list(Application $application, string $path): array
+    /**
+     * One directory, one level deep.
+     *
+     * `$includeHidden` filters dotfiles *here* rather than in the browser. The
+     * same `find` runs either way — the cost is identical and the response is
+     * smaller when they are excluded — but the count of what was held back
+     * comes from the same read that produced the list, so the two can never
+     * disagree about a directory that changed between them.
+     *
+     * @return array{entries: array<int, array<string, mixed>>, hidden_count: int}
+     */
+    public function list(Application $application, string $path, bool $includeHidden = true): array
     {
         $this->assertRootExists($application);
         $target = $this->resolve($application, $path);
@@ -101,6 +112,16 @@ class FileBrowser
             $entries[] = $this->buildEntry($name, $type, $size, $mtime, $mode, $owner, $group, $targetType, $linkTarget);
         }
 
+        // Unix's definition, and the only one worth using: a leading dot. Not a
+        // list of known names — a site root holds `.git`, `.well-known`,
+        // `.user.ini` and whatever else a framework leaves behind, and a
+        // curated list would quietly treat the unlisted ones as ordinary.
+        $hidden = array_filter($entries, fn (array $entry): bool => str_starts_with($entry['name'], '.'));
+
+        if (! $includeHidden) {
+            $entries = array_values(array_diff_key($entries, $hidden));
+        }
+
         // Directories first, then alphabetical — how every file manager in
         // the research (and every OS file browser) orders a listing.
         usort($entries, fn (array $a, array $b): int => match (true) {
@@ -109,7 +130,10 @@ class FileBrowser
             default => strcasecmp($a['name'], $b['name']),
         });
 
-        return $entries;
+        // Always the real number, whether or not they were filtered. A screen
+        // that hides files without saying how many is indistinguishable from
+        // one that lost them, and this is the screen where that costs most.
+        return ['entries' => $entries, 'hidden_count' => count($hidden)];
     }
 
     /**

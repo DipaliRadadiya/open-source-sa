@@ -3708,6 +3708,11 @@
         "siteRoot": "Site root",
         "holding": "Using {size} of disk",
         "retention": "{days, plural, one {Removed automatically after # day} other {Removed automatically after # days}}"
+      },
+      "hidden": {
+        "hide": "Hide hidden files",
+        "show": "Show hidden files",
+        "count": "({count} hidden)"
       }
     },
     "workers": {

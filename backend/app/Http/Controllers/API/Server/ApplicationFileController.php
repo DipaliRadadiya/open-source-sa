@@ -42,9 +42,12 @@ class ApplicationFileController extends Controller
 
     public function index(BrowseFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
     {
+        $listing = $files->list($application, $request->targetPath(), $request->includeHidden());
+
         return response()->json([
             'path' => $request->targetPath(),
-            'files' => $files->list($application, $request->targetPath()),
+            'files' => $listing['entries'],
+            'hidden_count' => $listing['hidden_count'],
         ]);
     }
 
