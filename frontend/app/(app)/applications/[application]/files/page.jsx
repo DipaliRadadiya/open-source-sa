@@ -145,7 +145,22 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
             showHidden={showHidden}
             canManage={canManage}
           />
-          <SizeBreakdownCard breakdown={breakdown} />
+          {/* Sticky only where the rail exists — below xl the card is stacked
+              under the listing, and pinning it there would park it over the
+              rows it describes.
+
+              The offset comes from `--app-chrome`, the shell's own measured
+              header height, because the banners above it are conditional: the
+              Create-application summary used a fixed `top-20` and slid under
+              the breadcrumb the moment a banner appeared. Same fallback as
+              that panel, for the render before the measurement lands.
+
+              Capped to the viewport and scrolled internally, so a card taller
+              than the screen does not pin its top and strand its own table
+              somewhere unreachable. */}
+          <aside className="xl:sticky xl:top-[calc(var(--app-chrome,7rem)_+_1.5rem)] xl:max-h-[calc(100vh-var(--app-chrome,7rem)-3rem)] xl:overflow-y-auto">
+            <SizeBreakdownCard breakdown={breakdown} />
+          </aside>
         </div>
       )}
     </div>
