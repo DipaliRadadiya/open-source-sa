@@ -9,6 +9,7 @@ use App\Services\Server\Applications\ApplicationConfigMutator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisioningBudget;
 use App\Services\Server\Applications\ProvisionProgress;
+use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Str;
@@ -34,6 +35,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         protected ProvisionProgress $progress,
         protected ApplicationConfigMutator $configMutator,
         protected ProcessSupervisor $supervisor,
+        protected RuntimeOwnership $ownership,
     ) {}
 
     /**
@@ -368,8 +370,11 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // what made this quiet: the site came up, and only the things running
         // *as the site* — the file manager, the app's own tooling — found a
         // file they could neither read nor write.
-        $runsAsSiteUser = $application->serving_profile !== 'php'
-            || $application->isolated_at !== null;
+        // Through RuntimeOwnership: `isolated_at` records an FPM pool, and on
+        // OpenLiteSpeed it is null for every site — so this handed the group
+        // to www-data there, an account that does not run PHP on that stack,
+        // breaking the very rule this docblock states.
+        $runsAsSiteUser = $this->ownership->runsAsOwnUser($application);
 
         $user = $application->systemUser->username;
 

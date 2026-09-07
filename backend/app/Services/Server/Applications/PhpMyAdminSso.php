@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications;
 
 use App\Models\Application;
+use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\View;
@@ -55,7 +56,10 @@ class PhpMyAdminSso
      */
     public const TOKEN_TTL_SECONDS = 60;
 
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private RuntimeOwnership $ownership,
+    ) {}
 
     /**
      * Where token files are dropped: under the site's `.panel` directory, which
@@ -88,8 +92,12 @@ class PhpMyAdminSso
      */
     public function canIssue(Application $application): bool
     {
-        return $application->serving_profile !== 'php'
-            || $application->isolated_at !== null;
+        // Asked of RuntimeOwnership rather than of `isolated_at`, which
+        // records whether a site has an FPM *pool*. On OpenLiteSpeed that
+        // column is null for every site forever, so this refused every
+        // database on the server with `phpmyadmin_not_isolated` — a whole
+        // feature dead on one stack, reported as one disabled button.
+        return $this->ownership->runsAsOwnUser($application);
     }
 
     /**

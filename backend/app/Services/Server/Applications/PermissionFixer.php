@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Exceptions\Server\Application\FixPermissionsFailedException;
 use App\Models\Application;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 
 /**
@@ -28,6 +29,7 @@ class PermissionFixer
         private ApplicationProvisioner $provisioner,
         private ApplicationEnvironment $environment,
         private PoolManager $pool,
+        private RuntimeOwnership $ownership,
     ) {}
 
     public function fix(Application $application): void
@@ -46,7 +48,11 @@ class PermissionFixer
             $this->run(['chmod', '0600', $this->environment->path($application)], $application, 'chmod_env');
         }
 
-        if ($application->isolated_at !== null) {
+        // Every site that runs as its own user has a session directory of its
+        // own, not just the ones with a pool. Read from `isolated_at`, this
+        // skipped every OpenLiteSpeed site — leaving session files at whatever
+        // the bulk chmod above left them, which is not private.
+        if ($this->ownership->runsAsOwnUser($application)) {
             $this->run(['chmod', '-R', '0700', $this->pool->sessionPath($application)], $application, 'chmod_sessions');
         }
     }

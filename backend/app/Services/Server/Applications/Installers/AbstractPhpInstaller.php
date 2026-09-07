@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Services\Server\Applications\ApplicationConfigMutator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisionProgress;
+use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 
 /**
@@ -25,8 +26,9 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
         protected PhpStack $stack,
         ApplicationConfigMutator $configMutator,
         ProcessSupervisor $supervisor,
+        RuntimeOwnership $ownership,
     ) {
-        parent::__construct($serverOps, $progress, $configMutator, $supervisor);
+        parent::__construct($serverOps, $progress, $configMutator, $supervisor, $ownership);
     }
 
     /**

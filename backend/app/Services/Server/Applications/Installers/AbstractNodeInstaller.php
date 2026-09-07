@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Services\Server\Applications\ApplicationConfigMutator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisionProgress;
+use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -38,8 +39,9 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
         protected NodeRuntime $node,
         ApplicationConfigMutator $configMutator,
         ProcessSupervisor $supervisor,
+        RuntimeOwnership $ownership,
     ) {
-        parent::__construct($serverOps, $progress, $configMutator, $supervisor);
+        parent::__construct($serverOps, $progress, $configMutator, $supervisor, $ownership);
     }
 
     public function needsDatabase(): bool

@@ -69,18 +69,25 @@ function configOwner(): string
     return (string) $chown[1];
 }
 
-it('gives a shared-pool site a group the web server can read through', function () {
-    // No PHP-FPM, so `ApplicationProvisioner` creates no pool and the site
-    // stays on the shared, server-wide one running as www-data.
+it('gives an OpenLiteSpeed site its own user, which is what runs its PHP there', function () {
+    // This test used to assert `ownuser:www-data`, on the premise that "no
+    // PHP-FPM means the site stays on the shared, server-wide pool running as
+    // www-data". That premise is false for LSPHP and the vhost says so: the
+    // OpenLiteSpeed template writes `extUser {{ $user }}` / `extGroup`, so the
+    // site's PHP has always run as the site's own user there. There is no
+    // shared pool on that stack to fall back to.
+    //
+    // The rule this file exists for is unchanged — owner is the site user,
+    // group is whoever runs PHP. On OpenLiteSpeed those are the same account,
+    // so handing the group to www-data let an account that runs nothing on
+    // that stack read every secret file.
     config(['server.web_server_drivers.nginx.php_stack' => 'lsphp']);
 
-    expect(configOwner())->toBe('ownuser:www-data');
+    expect(configOwner())->toBe('ownuser:ownuser');
 
-    // The site user still owns it — this is the half that was missing. The
-    // installer's next command runs as ownuser and reads this file; owned by
-    // www-data at 0640 it could not, which is why every config-file install
-    // (WordPress, Moodle, Mautic, Craft, phpMyAdmin) failed on OpenLiteSpeed
-    // and only there.
+    // And still no pool: `isolated_at` records an FPM pool, which LSPHP never
+    // has. That column staying null is exactly why three separate callers used
+    // to conclude the site did not run as its own user. {@see RuntimeOwnership}
     expect($this->application->fresh()->isolated_at)->toBeNull();
 });
 

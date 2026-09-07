@@ -9,6 +9,7 @@ use App\Models\Database;
 use App\Models\DatabaseUser;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\ServerCapability;
 use App\Models\User;
 use App\Services\Server\Applications\PhpMyAdminSso;
 use Database\Seeders\PermissionSeeder;
@@ -224,6 +225,41 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
             ->assertStatus(422);
 
         expect(ssoCommands())->toBeEmpty();
+    });
+
+    /*
+     * The same site, on the stack where `isolated_at` is null for everything.
+     *
+     * phpMyAdmin could not be opened at all on an OpenLiteSpeed server: the
+     * guard read `isolated_at`, which records an FPM *pool*, and LSPHP has
+     * none — each vhost carries its own `extUser` instead. So every database
+     * on the box was refused with `phpmyadmin_not_isolated`, and it was
+     * reported as one disabled button rather than a dead feature.
+     */
+    it('mints a link on OpenLiteSpeed, where no site ever has a pool', function () {
+        grantDatabasePermission($this->user);
+
+        DatabaseUser::factory()->create(['database_id' => $this->database->id]);
+
+        // A real OpenLiteSpeed server, not a config poke: PhpStackManager
+        // resolves the stack from the *recorded* web server, so setting the
+        // nginx driver's php_stack would not have changed the answer.
+        ServerCapability::query()->delete();
+        ServerCapability::query()->create([
+            'stack' => 'ols',
+            'web_server' => 'openlitespeed',
+            'capabilities' => ['php' => true, 'node' => false],
+            'source' => 'installer',
+            'verified_at' => now(),
+        ]);
+
+        // Exactly the state the refusal above tests — and here it must not
+        // refuse, because on this stack it means the opposite.
+        $this->pmaApp->forceFill(['isolated_at' => null])->save();
+
+        $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")
+            ->assertOk()
+            ->assertJsonStructure(['redirect_url']);
     });
 
     /*
