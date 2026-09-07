@@ -2,6 +2,7 @@
 
 use App\Models\ActivityLog;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -672,6 +673,99 @@ describe('a scheduled restart', function () {
 
         Process::assertRan(fn ($p) => $p->command === ['shutdown', '-c']);
         $this->assertDatabaseHas('activity_logs', ['type' => 'setting', 'action' => 'reboot_cancelled']);
+    });
+
+    it('measures how long is left here, so the browser only has to tick', function () {
+        // The countdown on the maintenance card cannot subtract `at` from its
+        // own clock: the string carries no offset, and the two clocks disagree
+        // by however far they have drifted. So the server says how many
+        // seconds are left, and the browser is trusted only to count them off.
+        // Frozen, or this asserts against how long the request took.
+        $this->freezeTime();
+
+        $at = now()->addMinutes(15)->startOfSecond();
+        $file = $this->dir.'/shutdown-scheduled';
+        File::put($file, 'USEC='.($at->getTimestamp() * 1_000_000)."\nMODE=reboot\n");
+        config(['server.reboot.scheduled_file' => $file]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings/reboot')
+            ->assertOk()
+            ->assertJsonPath('reboot.seconds_remaining', 900);
+    });
+
+    it('opens at the delay that was asked for, not one second under it', function () {
+        // The request lands a fraction of a second after systemd's whole-second
+        // USEC, so a 15-minute restart measures 899.4 seconds away. Truncating
+        // that opens the countdown at 14:59 for a delay the user just set to 15
+        // minutes -- small, and exactly the kind of thing that reads as a bug.
+        $this->travelTo(Carbon::parse('2026-01-01 00:00:00.600'));
+
+        $file = $this->dir.'/shutdown-scheduled';
+        File::put($file, 'USEC='.(Carbon::parse('2026-01-01 00:15:00')->getTimestamp() * 1_000_000)."\n");
+        config(['server.reboot.scheduled_file' => $file]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings/reboot')
+            ->assertOk()
+            ->assertJsonPath('reboot.seconds_remaining', 900);
+    });
+
+    it('never counts down past zero on a deadline already gone', function () {
+        // systemd leaves the file in place between the deadline passing and
+        // the machine going down. A negative number would render as a
+        // countdown running backwards through the last thing anyone sees.
+        $file = $this->dir.'/shutdown-scheduled';
+        File::put($file, 'USEC='.(now()->subMinutes(5)->getTimestamp() * 1_000_000)."\n");
+        config(['server.reboot.scheduled_file' => $file]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings/reboot')
+            ->assertOk()
+            ->assertJsonPath('reboot.scheduled', true)
+            ->assertJsonPath('reboot.seconds_remaining', 0);
+    });
+
+    it('says it cannot measure rather than guessing, when systemd wrote no timestamp', function () {
+        $file = $this->dir.'/shutdown-scheduled';
+        File::put($file, "MODE=reboot\nWARN_WALL=1\n");
+        config(['server.reboot.scheduled_file' => $file]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings/reboot')
+            ->assertOk()
+            ->assertJsonPath('reboot.scheduled', true)
+            ->assertJsonPath('reboot.at', null)
+            ->assertJsonPath('reboot.seconds_remaining', null);
+    });
+
+    it('carries the same measurement on the response that schedules one', function () {
+        // So the card counts down from the moment it is scheduled, without
+        // waiting for the next read of systemd to tell it what it just did.
+        fakeSettings();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/settings/reboot', ['delay_minutes' => 5])
+            ->assertStatus(202)
+            ->assertJsonPath('reboot.seconds_remaining', 300);
+    });
+
+    it('always answers with the field, so a stripped key cannot pass unnoticed', function () {
+        // The frontend schema requires it. Every branch must carry it, or the
+        // countdown vanishes from the screen with nothing failing anywhere.
+        config(['server.reboot.scheduled_file' => $this->dir.'/no-such-file']);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/settings/reboot')
+            ->assertOk()
+            ->assertJsonPath('reboot.seconds_remaining', null);
+
+        fakeSettings();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->deleteJson('/api/settings/reboot')
+            ->assertOk()
+            ->assertJsonPath('reboot.seconds_remaining', null);
     });
 
     it('refuses to cancel for a viewer without manage', function () {

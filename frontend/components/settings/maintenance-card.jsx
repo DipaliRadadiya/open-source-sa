@@ -36,6 +36,7 @@ import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { validationMessage } from "@/lib/settings/validation-message";
 import { apiMessage } from "@/lib/api/error-message";
 import { useServerRestart } from "@/components/sections/server-restart-overlay";
+import { RebootCountdown } from "@/components/settings/reboot-countdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -634,10 +635,27 @@ function ManualSection({ canManage, rebootRequired, pendingReboot, pendingReboot
             <CalendarClock className="mt-0.5 size-4 shrink-0 text-warning" />
             {/* `at` comes from the server's clock. It can be null on a pending
                 shutdown whose systemd record has no timestamp — still pending,
-                just unable to say when. */}
-            {pendingReboot.at
-              ? t("reboot.pendingAt", { at: pendingReboot.at })
-              : t("reboot.pendingUnknownTime")}
+                just unable to say when. The countdown leads and the absolute
+                time follows it: how long you have is the decision, what time it
+                happens is the detail. */}
+            {pendingReboot.at ? (
+              <span className="flex flex-col gap-0.5">
+                {typeof pendingReboot.seconds_remaining === "number" ? (
+                  <RebootCountdown
+                    // Keyed so a refreshed measurement remounts it and
+                    // re-anchors the deadline, rather than leaving it counting
+                    // down from a number the server has since revised.
+                    key={pendingReboot.seconds_remaining}
+                    secondsRemaining={pendingReboot.seconds_remaining}
+                  />
+                ) : null}
+                <span className="text-muted-foreground">
+                  {t("reboot.pendingAt", { at: pendingReboot.at })}
+                </span>
+              </span>
+            ) : (
+              t("reboot.pendingUnknownTime")
+            )}
           </span>
           <Button
             type="button"

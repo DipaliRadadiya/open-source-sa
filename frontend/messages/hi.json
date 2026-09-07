@@ -1741,6 +1741,10 @@
       "reboot": {
         "pendingAt": "{at} पर रीस्टार्ट शेड्यूल है।",
         "pendingUnknownTime": "एक रीस्टार्ट शेड्यूल है।",
+        "countdownHours": "{hours} घं {minutes} मिन में रीस्टार्ट।",
+        "countdownMinutes": "{minutes} मिन {seconds} सेकंड में रीस्टार्ट।",
+        "countdownSeconds": "{seconds} सेकंड में रीस्टार्ट।",
+        "imminent": "अभी रीस्टार्ट हो रहा है…",
         "pendingUnknown": "जाँच नहीं हो सकी कि कोई रीस्टार्ट शेड्यूल है या नहीं।",
         "cancel": "रीस्टार्ट रद्द करें",
         "cancelled": "शेड्यूल किया गया रीस्टार्ट रद्द हो गया।",

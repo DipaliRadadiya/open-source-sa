@@ -1741,6 +1741,10 @@
       "reboot": {
         "pendingAt": "Hay un reinicio programado para {at}.",
         "pendingUnknownTime": "Hay un reinicio programado.",
+        "countdownHours": "Se reinicia en {hours} h {minutes} min.",
+        "countdownMinutes": "Se reinicia en {minutes} min {seconds} s.",
+        "countdownSeconds": "Se reinicia en {seconds} s.",
+        "imminent": "Reiniciando ahora…",
         "pendingUnknown": "No se pudo comprobar si hay un reinicio programado.",
         "cancel": "Cancelar reinicio",
         "cancelled": "Reinicio programado cancelado.",

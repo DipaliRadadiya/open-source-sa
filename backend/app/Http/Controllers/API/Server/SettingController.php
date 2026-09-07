@@ -160,6 +160,13 @@ class SettingController extends Controller
                 // a restart for the wrong hour. `shutdown` obeys this clock,
                 // so this clock is the one that answers.
                 'at' => now()->addMinutes($delay)->format('d-m-Y H:i:s'),
+                // How long is left, measured here rather than derived there.
+                // A client counting down from `at` has to parse a string with
+                // no offset in it and subtract its own clock — the same drift
+                // the field above exists to avoid, reintroduced one line later.
+                // Sending the remaining seconds leaves the browser only the
+                // ticking, where drift costs microseconds instead of minutes.
+                'seconds_remaining' => $delay * 60,
                 'delay_minutes' => $delay,
             ],
         ], 202);
@@ -187,18 +194,31 @@ class SettingController extends Controller
         // any server whose grant was out of date. The cheapest way to not
         // mishandle a permission is not to need one.
         if (! is_file($path)) {
-            return response()->json(['reboot' => ['scheduled' => false, 'at' => null]]);
+            return response()->json(['reboot' => ['scheduled' => false, 'at' => null, 'seconds_remaining' => null]]);
         }
 
         preg_match('/^USEC=(\d+)/m', (string) @file_get_contents($path), $matches);
 
+        // Microseconds since the epoch, per systemd's own format.
+        $at = isset($matches[1])
+            ? Carbon::createFromTimestamp((int) ($matches[1] / 1_000_000))
+            : null;
+
         return response()->json([
             'reboot' => [
                 'scheduled' => true,
-                // Microseconds since the epoch, per systemd's own format.
-                'at' => isset($matches[1])
-                    ? Carbon::createFromTimestamp((int) ($matches[1] / 1_000_000))->format('d-m-Y H:i:s')
-                    : null,
+                'at' => $at?->format('d-m-Y H:i:s'),
+                // Rounded up, not truncated. systemd's USEC is a whole second
+                // and this request lands a fraction after it, so a 15-minute
+                // restart is 899.4 seconds away by the time it is measured --
+                // which truncates to a countdown opening at 14:59 for a delay
+                // the user just asked to be 15 minutes.
+                //
+                // Floored at zero: systemd leaves this file in place for the
+                // moments between the deadline passing and the machine going
+                // down, and a negative number would render as a countdown
+                // running backwards through the last thing anyone sees.
+                'seconds_remaining' => $at ? (int) max(0, ceil(now()->diffInSeconds($at, false))) : null,
             ],
         ]);
     }
@@ -221,7 +241,7 @@ class SettingController extends Controller
 
         $log->log('setting.reboot_cancelled', null, []);
 
-        return response()->json(['reboot' => ['scheduled' => false, 'at' => null]]);
+        return response()->json(['reboot' => ['scheduled' => false, 'at' => null, 'seconds_remaining' => null]]);
     }
 
     private function save(string $key, FormRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse

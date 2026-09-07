@@ -91,6 +91,11 @@ export const rebootScheduleSchema = z.object({
 export const rebootStatusSchema = z.object({
   scheduled: z.boolean().default(false),
   at: z.string().nullable().optional(),
+  // How long is left, measured on the server. Required, not optional: Zod
+  // strips keys it was not told about, so an optional field that stopped
+  // arriving would take the countdown off the screen with nothing failing
+  // anywhere. Nullable because a systemd record without a USEC has no answer.
+  seconds_remaining: z.number().int().nullable(),
   // Only on the POST response — the literal `shutdown` argument, and the delay
   // as asked for. Kept because they explain `at`, never used to compute it.
   when: z.string().nullable().optional(),
