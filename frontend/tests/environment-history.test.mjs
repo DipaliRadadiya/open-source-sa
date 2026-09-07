@@ -106,6 +106,52 @@ test("every path that changes the file refreshes the page that renders its histo
   );
 });
 
+test("the editor takes new file contents that arrive from the server", () => {
+  // Restoring from a history row writes the file and refreshes the page. The
+  // editor holds its text in useState, which reads its initial value once and
+  // ignores the prop forever after — so the refresh worked and the textarea
+  // still showed the pre-restore file until someone reloaded by hand.
+  const editor = fs.readFileSync(
+    path.join(root, "components/applications/environment/environment-editor.jsx"),
+    "utf8",
+  );
+
+  assert.match(
+    editor,
+    /serverRaw/,
+    "the editor must track the last contents it saw from the server",
+  );
+  assert.match(
+    editor,
+    /!==\s*serverRaw/,
+    "…and compare the incoming prop against it",
+  );
+
+  // Adjusted during render. An effect here is the cascading-render pattern the
+  // lint rules refuse, and it would also paint the stale text for one frame.
+  assert.ok(
+    !/useEffect\([^)]*setContents/s.test(editor),
+    "the sync must not run from an effect",
+  );
+});
+
+test("a write this editor made is not re-applied by the refresh it triggers", () => {
+  // Otherwise anything typed between the "Saved" toast and the refresh landing
+  // is wiped by the sync.
+  const editor = fs.readFileSync(
+    path.join(root, "components/applications/environment/environment-editor.jsx"),
+    "utf8",
+  );
+
+  const marks = editor.match(/setServerRaw\(/g) ?? [];
+
+  // Once in the render-phase sync, once after save, once after restore.
+  assert.ok(
+    marks.length >= 3,
+    `save and restore must both mark their own write as seen, found ${marks.length}`,
+  );
+});
+
 test("every history message the card uses exists in all three locales", () => {
   const card = fs.readFileSync(
     path.join(root, "components/applications/environment/environment-history-card.jsx"),

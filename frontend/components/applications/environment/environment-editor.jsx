@@ -46,6 +46,31 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const [syntaxError, setSyntaxError] = useState(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
 
+  // The file changed underneath this component.
+  //
+  // `useState(initialEnv)` reads its argument once and ignores it forever
+  // after, so a restore from the history card below — which writes the file and
+  // calls router.refresh() — re-rendered the page with the restored text and
+  // left this editor showing the old one. The refresh worked; the editor was
+  // not listening. Only a manual reload fixed it.
+  //
+  // Adjusted during render rather than in an effect: this is the sanctioned
+  // React pattern for a prop-driven reset, and an effect here would be the
+  // cascading render the lint rules refuse. `serverRaw` is the last value seen
+  // *from the server*, not the last rendered — comparing against `contents`
+  // would fight every keystroke.
+  const [serverRaw, setServerRaw] = useState(initialEnv.raw ?? "");
+
+  if ((initialEnv.raw ?? "") !== serverRaw) {
+    setServerRaw(initialEnv.raw ?? "");
+    setEnv(initialEnv);
+    // Takes the new text unconditionally. The only thing that moves this value
+    // is a write to the file — a save from here, or a restore — and after
+    // either one the file on disk is the truth this screen should be showing.
+    setContents(initialEnv.raw ?? "");
+    setSyntaxError(null);
+  }
+
   const dirty = contents !== (env.raw ?? "");
 
   // Warn on reload/close with unsaved edits — the only guard the App Router
@@ -82,6 +107,11 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       if (next) {
         setEnv(next);
         setContents(next.raw ?? contents);
+        // Marks this write as already seen, so the refresh below arrives as a
+        // no-op instead of re-applying the same text. Without it, anything
+        // typed between the toast and the refresh landing would be wiped by
+        // the sync above.
+        setServerRaw(next.raw ?? "");
       }
       toast.success(
         data?.restarted
@@ -295,6 +325,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
             if (next) {
               setEnv(next);
               setContents(next.raw ?? "");
+              setServerRaw(next.raw ?? "");
               setSyntaxError(null);
             }
             // A restore is a change to the file like any other and writes its
