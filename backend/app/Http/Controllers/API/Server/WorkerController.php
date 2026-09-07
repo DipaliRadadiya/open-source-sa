@@ -46,6 +46,12 @@ class WorkerController extends Controller
         WorkerSupervisor $supervisor,
         ActivityLogger $activity,
     ): JsonResponse {
+        // Before the row exists, not after. `apply()` checks too, but by then
+        // this method has already written a worker the panel would list and
+        // supervisord has never heard of — and the request that created it
+        // returns an error, so nobody expects it to be there.
+        $supervisor->assertAvailable();
+
         // The slug that names this worker's systemd unit is derived on the
         // model's `creating` hook — it is not fillable, so no request can
         // choose the name of a file the panel writes.

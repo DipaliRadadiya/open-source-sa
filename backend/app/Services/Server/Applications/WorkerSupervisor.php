@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Exceptions\Server\Application\SupervisorMissingException;
 use App\Models\Worker;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
@@ -75,6 +76,46 @@ class WorkerSupervisor
     }
 
     /**
+     * Is supervisord actually on this box?
+     *
+     * It is not a given. Workers moved from systemd template units to
+     * supervisord programs on 2026-09-07, and `install.sh` gained the package
+     * in the same commit — which reaches **new installs only**. A panel
+     * installed before that date has no supervisor and no `conf.d`, and the
+     * updater never runs apt, so nothing gives it one. Writing straight into
+     * that directory answered `tee: /etc/supervisor/conf.d/…: No such file or
+     * directory` from a "Server operation failed" toast: a real cause, buried.
+     *
+     * Same shape as {@see Fail2banManager::installed()}, and the same reason —
+     * a feature that depends on a package somebody may not have needs to say
+     * so in its own words rather than through whatever the shell prints.
+     */
+    public function installed(): bool
+    {
+        return $this->serverOps->run(
+            ['which', 'supervisorctl'],
+            ['feature' => 'application', 'op' => 'worker_detect'],
+        )->ok;
+    }
+
+    /**
+     * Refuse early if this server cannot run workers at all.
+     *
+     * Called before the row is created as well as before the program is
+     * written. A worker the panel lists but never started is the thing
+     * discovered when the queue is already hours behind, and creating one on a
+     * box with no supervisord guarantees exactly that.
+     *
+     * @throws SupervisorMissingException
+     */
+    public function assertAvailable(): void
+    {
+        if (! $this->installed()) {
+            throw new SupervisorMissingException;
+        }
+    }
+
+    /**
      * Write the program and bring the requested number of copies up.
      *
      * Verified with `status` afterwards, for the reason the application
@@ -87,6 +128,12 @@ class WorkerSupervisor
      */
     public function apply(Worker $worker): void
     {
+        // Before the write, not after it fails. A missing package is a fact
+        // about the server that the person can act on; `tee: No such file or
+        // directory` is the same fact with the answer removed. Every caller is
+        // covered here, not just the one that also checks before creating.
+        $this->assertAvailable();
+
         $context = $this->context($worker, 'worker_write');
 
         $written = $this->files->put($this->configPath($worker), $this->render($worker), $context);

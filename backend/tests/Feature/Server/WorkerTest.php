@@ -39,12 +39,23 @@ class WorkerFake
     /** @var array<int, string> Paths that exist on the fake filesystem. */
     public static array $present = [];
 
+    /**
+     * Whether supervisord is on the box.
+     *
+     * Default true, because it is on a fresh install. A panel upgraded from
+     * before 2026-09-07 has none — `install.sh` gained the package in the same
+     * commit that started writing supervisor programs, and that reaches new
+     * installs only.
+     */
+    public static bool $supervisorInstalled = true;
+
     public static function reset(): void
     {
         self::$running = [];
         self::$ran = [];
         self::$env = "APP_ENV=production\nCACHE_STORE=redis\n";
         self::$present = ['/home/workerowner/queued-site/public_html/artisan'];
+        self::$supervisorInstalled = true;
     }
 
     /** The program name out of `sv-worker-shop-queue:*`. */
@@ -108,6 +119,10 @@ function fakeWorkerSupervisor(): void
         [$binary] = $args;
 
         WorkerFake::$ran[] = implode(' ', $args);
+
+        if ($binary === 'which') {
+            return Process::result(exitCode: WorkerFake::$supervisorInstalled ? 0 : 1);
+        }
 
         if ($binary === 'test') {
             $path = $args[2] ?? '';
@@ -640,5 +655,65 @@ describe('the unit name', function () {
 
         expect($first->slug)->toBe('queued-site-my-queue')
             ->and($second->slug)->toBe('queued-site-my-queue-2');
+    });
+});
+
+describe('a server without supervisord', function () {
+    it('refuses to create a worker, and says how to fix it', function () {
+        // The panel writes supervisor programs since 2026-09-07 and
+        // `install.sh` gained the package in the same commit — which reaches
+        // new installs only. An upgraded box has no /etc/supervisor/conf.d,
+        // and the updater ships code, never packages.
+        WorkerFake::$supervisorInstalled = false;
+        fakeWorkerSupervisor();
+
+        $response = $this->actingAs($this->admin)
+            ->postJson(workerUrl(), [
+                'name' => 'Queue worker',
+                'command' => 'php artisan queue:work',
+                'kind' => 'queue',
+                'processes' => 1,
+            ])
+            ->assertStatus(422);
+
+        // Not a 500, and not the shell's words. Nothing is broken: a package
+        // is missing, and the one-line fix belongs in the message.
+        expect($response->json('message'))->toContain('supervisor');
+    });
+
+    it('writes nothing before it refuses', function () {
+        // The whole point of checking first. Half a worker on disk, with a row
+        // in the database and no program to match, is worse than no worker.
+        WorkerFake::$supervisorInstalled = false;
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), [
+                'name' => 'Queue worker',
+                'command' => 'php artisan queue:work',
+                'kind' => 'queue',
+                'processes' => 1,
+            ])
+            ->assertStatus(422);
+
+        expect(collect(WorkerFake::$ran)->filter(fn (string $c): bool => str_contains($c, 'tee')))
+            ->toBeEmpty()
+            ->and(Worker::query()->count())->toBe(0);
+    });
+
+    it('creates normally when supervisord is there', function () {
+        // The guard must not be the thing that breaks a working server.
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), [
+                'name' => 'Queue worker',
+                'command' => 'php artisan queue:work',
+                'kind' => 'queue',
+                'processes' => 1,
+            ])
+            ->assertCreated();
+
+        expect(Worker::query()->count())->toBe(1);
     });
 });

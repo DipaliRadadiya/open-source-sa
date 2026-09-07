@@ -59,4 +59,5 @@ return [
     'bulk_count_mismatch' => 'The number you confirmed does not match how many items are selected.',
     'sources_not_in_one_directory' => 'All the items to compress must be in the same folder.',
     'release_failed' => 'The site directory could not be created on the server.',
+    'supervisor_missing' => 'Workers need supervisord, which is not installed on this server. Install it with `apt-get install supervisor`, then create the worker again.',
 ];
