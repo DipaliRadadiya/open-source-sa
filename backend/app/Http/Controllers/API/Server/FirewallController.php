@@ -167,6 +167,25 @@ class FirewallController extends Controller
         return response()->json([
             'enabled' => $status['enabled'],
             'default_policy' => $status['default_policy'],
+            // The rules as they stand *after* the toggle, because enabling
+            // creates some. `ToggleFirewall::seedDefaults()` writes an allow
+            // rule for SSH and the panel/web ports so the box cannot lock
+            // itself out — four rows that appear as a side effect of this
+            // request and that no client could predict.
+            //
+            // Returning only `enabled` left the screen with nothing to render:
+            // on a freshly set-up server the list stayed empty while the note
+            // said incoming traffic was blocked, and the rules only appeared
+            // after switching the firewall off and on again, which happened to
+            // trigger a refetch. The seeding was never the bug; not saying so
+            // was.
+            //
+            // Unpaginated on purpose: this is the seeded set plus whatever the
+            // operator already had, and a page boundary here would reintroduce
+            // the same silence for anyone past the first page.
+            'rules' => FirewallRuleResource::collection(
+                FirewallRule::query()->orderBy('port_from')->orderBy('id')->get()
+            )->resolve(),
         ]);
     }
 }

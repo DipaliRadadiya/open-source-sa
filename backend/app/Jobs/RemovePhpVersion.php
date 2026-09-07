@@ -8,6 +8,7 @@ use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallProgress;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -43,7 +44,7 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
         return 'php-remove-'.$this->version;
     }
 
-    public function handle(PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): void
+    public function handle(PhpRuntime $php, ActivityLogger $log, InstallTracker $installs, ServerCapabilities $capabilities): void
     {
         $row = $installs->current('php', $this->version);
         $progress = $row ? new InstallProgress($row) : null;
@@ -74,6 +75,12 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
         // The version is off the disk now, so the row has nothing left to say
         // — the same rule an install finishing follows.
         $installs->succeed('php', $this->version);
+
+        // The mirror of the refresh after an install. Removing the last PHP
+        // version left the recorded capability still claiming PHP, so the
+        // create screen kept offering PHP applications that could not run.
+        $capabilities->refresh();
+
         $log->log('php.uninstalled', null, ['version' => $this->version], actor: $this->actor());
     }
 

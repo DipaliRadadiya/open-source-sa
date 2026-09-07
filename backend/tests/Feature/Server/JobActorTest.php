@@ -5,6 +5,7 @@ use App\Jobs\InstallPhpVersion;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Queue;
@@ -52,7 +53,7 @@ it('records the dispatching user on the activity entry the job writes', function
 
     // Run the job the way a worker would — no authenticated user in scope.
     (new InstallPhpVersion('8.3', $this->admin->id))
-        ->handle($php, app(ActivityLogger::class), $installs);
+        ->handle($php, app(ActivityLogger::class), $installs, app(ServerCapabilities::class));
 
     $this->assertDatabaseHas('activity_logs', [
         'type' => 'php',
@@ -79,7 +80,7 @@ it('leaves the actor null when the dispatching user has been deleted', function 
     // The install must still be recorded. Carrying the User model instead of
     // its id would have thrown ModelNotFoundException here and lost the job.
     (new InstallPhpVersion('8.3', $id))
-        ->handle($php, app(ActivityLogger::class), $installs);
+        ->handle($php, app(ActivityLogger::class), $installs, app(ServerCapabilities::class));
 
     $this->assertDatabaseHas('activity_logs', [
         'type' => 'php',

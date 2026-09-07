@@ -2,8 +2,10 @@
 
 use App\Jobs\InstallNodeVersion;
 use App\Models\Application;
+use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Node\NodeOverview;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Database\Seeders\PermissionSeeder;
@@ -384,4 +386,32 @@ it('gives npm a PATH with node on it when updating it', function () {
     // update npm inside one version, and borrowing another version's node to
     // do it is how the wrong thing gets updated.
     expect($path)->toStartWith($binDir.':');
+});
+
+it('records that the server now has Node, so the create screen stops denying it', function () {
+    // `ServerCapabilities::current()` returns the *stored* row and only
+    // detects when there is none. install.sh writes that row once — a `lamp`
+    // server records `'node' => false` — so installing Node afterwards left
+    // the create-application screen insisting Node was not installed on a
+    // server that plainly had it, forever. Nothing self-corrected, because
+    // nothing detects again while a row exists.
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'lamp',
+        'web_server' => 'apache',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer',
+        'verified_at' => now(),
+    ]);
+
+    expect(app(ServerCapabilities::class)->supports('node'))->toBeFalse();
+
+    fakeNode(installed: ['22.11.0']);
+
+    app()->call([new InstallNodeVersion('22.11.0'), 'handle']);
+
+    // A fresh instance: the service memoises the row for the life of a
+    // request, and asserting through the same one would pass on the cache
+    // rather than on what was written.
+    expect(app()->make(ServerCapabilities::class, [])->supports('node'))->toBeTrue();
 });

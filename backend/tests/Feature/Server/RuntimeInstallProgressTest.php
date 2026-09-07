@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Database\Seeders\PermissionSeeder;
@@ -199,7 +200,7 @@ it('keeps the server-operation reference when a removal fails', function () {
     $installs->shouldReceive('current')->once()->andReturnNull();
     $installs->shouldReceive('fail')->once()->with('php', '8.4', null, 'remove_failed', 'ref-remove-actual');
 
-    expect(fn () => (new RemovePhpVersion('8.4'))->handle($php, app(ActivityLogger::class), $installs))
+    expect(fn () => (new RemovePhpVersion('8.4'))->handle($php, app(ActivityLogger::class), $installs, app(ServerCapabilities::class)))
         ->toThrow(SettingOperationException::class);
 });
 

@@ -8,6 +8,7 @@ use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallProgress;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -43,7 +44,7 @@ class InstallNodeVersion implements ShouldBeUnique, ShouldQueue
         return 'node-install-'.$this->version;
     }
 
-    public function handle(NodeRuntime $node, ActivityLogger $log, InstallTracker $installs): void
+    public function handle(NodeRuntime $node, ActivityLogger $log, InstallTracker $installs, ServerCapabilities $capabilities): void
     {
         $row = $installs->current('node', $this->version);
         $progress = $row ? new InstallProgress($row) : null;
@@ -69,6 +70,14 @@ class InstallNodeVersion implements ShouldBeUnique, ShouldQueue
         }
 
         $installs->succeed('node', $this->version);
+        // The runtime is on disk now, so the recorded capability has nothing
+        // left to say. Without this the row keeps whatever install.sh wrote —
+        // a `lamp` server records `'node' => false`, and installing Node never
+        // changed it, so the create-application screen went on insisting Node
+        // was not installed on a server that had it. `current()` only detects
+        // when there is no row at all, which is why nothing self-corrected.
+        // {@see InstallDatabaseEngine}, which has always done this.
+        $capabilities->refresh();
         $log->log('node.installed', null, ['version' => $this->version], actor: $this->actor());
     }
 

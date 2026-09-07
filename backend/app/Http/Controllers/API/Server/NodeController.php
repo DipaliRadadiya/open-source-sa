@@ -9,6 +9,7 @@ use App\Jobs\InstallNodeVersion;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Runtime\PinnedSites;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Node\NodeOverview;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Illuminate\Http\JsonResponse;
@@ -80,7 +81,7 @@ class NodeController extends Controller
      * cause. The message names every site — unlike the list response, which
      * caps them, this is the one place completeness is the point.
      */
-    public function destroy(string $version, NodeRuntime $node, PinnedSites $pinned, ActivityLogger $log): JsonResponse
+    public function destroy(string $version, NodeRuntime $node, PinnedSites $pinned, ActivityLogger $log, ServerCapabilities $capabilities): JsonResponse
     {
         abort_unless($node->installed($version), 404);
 
@@ -97,6 +98,12 @@ class NodeController extends Controller
         }
 
         $node->uninstall($version);
+
+        // The mirror of the refresh after an install. Removing the last Node
+        // version left the recorded capability still claiming Node, so the
+        // create screen kept offering Node applications that could not run.
+        $capabilities->refresh();
+
         $log->log('node.uninstalled', null, ['version' => $version]);
 
         return response()->json(null, 204);

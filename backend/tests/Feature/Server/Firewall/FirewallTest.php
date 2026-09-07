@@ -143,6 +143,22 @@ it('enables the firewall, seeding default rules first', function () {
     Process::assertRan(fn ($p) => $p->command === ['ufw', '--force', 'enable']);
 });
 
+it('returns the rules it just seeded, so the screen has something to show', function () {
+    // The seeding was never the bug; not saying so was. This response used to
+    // carry only `enabled` and `default_policy`, so on a freshly set-up server
+    // the rules list stayed empty while the note said incoming traffic was
+    // blocked — and the four rules only appeared after switching the firewall
+    // off and on again, which happened to trigger a refetch.
+    fakeUfw('active');
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/firewall/toggle', ['enabled' => true])
+        ->assertOk();
+
+    expect(collect($response->json('rules'))->pluck('port_from')->sort()->values()->all())
+        ->toBe([22, 80, 443]);
+});
+
 it('refuses to enable the firewall when a default recovery rule cannot be applied', function () {
     Process::fake(function ($process) {
         return in_array('ufw', $process->command, true)
