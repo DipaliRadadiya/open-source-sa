@@ -69,7 +69,11 @@ export function CronjobsCards({
             <CardFact label={t("columns.schedule")}>
               <CronjobSchedule job={job} presets={schedulePresets} />
             </CardFact>
-            <CardFact label={t("columns.nextRun")}>
+            {/* The cards are this table on a phone, so the label carries the
+                zone for the same reason the column header does. */}
+            <CardFact
+              label={timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun")}
+            >
               <CronjobNextRun job={job} />
             </CardFact>
             <CardFact label={t("columns.runAs")}>

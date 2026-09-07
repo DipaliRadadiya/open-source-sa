@@ -861,7 +861,8 @@
       "runAs": "Runs as",
       "command": "Command",
       "active": "Active",
-      "nextRun": "Next run"
+      "nextRun": "Next run",
+      "nextRunIn": "Next run · {timezone}"
     },
     "filter": {
       "allUsers": "All users",
@@ -943,7 +944,6 @@
       "failed": "Something went wrong"
     },
     "paused": "Paused",
-    "subtitleWithZone": "Scheduled commands that run automatically on this server, in server time ({timezone}).",
     "duplicateName": "{name} (copy)",
     "loadFailed": "Your cron jobs could not be loaded. They have not been changed or removed.",
     "noPermission": "Your role does not include Cronjob with Manage access. Ask an administrator to grant it."

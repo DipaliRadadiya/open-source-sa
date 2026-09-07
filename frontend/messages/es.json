@@ -861,7 +861,8 @@
       "runAs": "Se ejecuta como",
       "command": "Comando",
       "active": "Activa",
-      "nextRun": "Próxima ejecución"
+      "nextRun": "Próxima ejecución",
+      "nextRunIn": "Próxima ejecución · {timezone}"
     },
     "filter": {
       "allUsers": "Todos los usuarios",
@@ -943,7 +944,6 @@
       "failed": "Algo salió mal"
     },
     "paused": "Pausada",
-    "subtitleWithZone": "Comandos programados que se ejecutan automáticamente en este servidor, en hora del servidor ({timezone}).",
     "duplicateName": "{name} (copia)",
     "loadFailed": "No se pudieron cargar tus tareas cron. No se han modificado ni eliminado.",
     "noPermission": "Tu rol no incluye Cron con acceso de gestión. Pide a un administrador que te lo conceda."

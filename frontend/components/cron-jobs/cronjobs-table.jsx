@@ -170,7 +170,21 @@ export function CronjobsTable({
   const columns = [
     { accessorKey: "name", header: t("columns.name"), cell: NameCell },
     { accessorKey: "expression", header: t("columns.schedule"), cell: ScheduleCell },
-    { accessorKey: "next_run_at", header: t("columns.nextRun"), cell: NextRunCell },
+    {
+      accessorKey: "next_run_at",
+      /*
+       * The zone belongs to the column, not to the page.
+       *
+       * It was the last four words of a grey sentence above the filters —
+       * true, and nowhere near the timestamps it governs, so the question
+       * "12:00 where?" was asked while looking at a place that could not
+       * answer it. Every row shares one zone, so repeating it per row would be
+       * noise; a column header is exactly the place a table states the unit of
+       * the values beneath it, once.
+       */
+      header: timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun"),
+      cell: NextRunCell,
+    },
     { accessorKey: "username", header: t("columns.runAs"), cell: RunAsCell },
     { accessorKey: "command", header: t("columns.command"), cell: CommandCell },
     { id: "active", header: t("columns.active"), cell: ActiveCell },

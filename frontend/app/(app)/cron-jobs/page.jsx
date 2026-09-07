@@ -68,9 +68,10 @@ export default async function CronjobsPage({ searchParams }) {
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {timezone ? t("subtitleWithZone", { timezone }) : t("subtitle")}
-        </p>
+        {/* The zone moved to the "Next run" column header, beside the
+            timestamps it applies to. Saying it here as well would state the
+            same fact twice, and the copy that mattered was never this one. */}
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {/* The list failed, so we can't say what jobs exist — but the heading and
