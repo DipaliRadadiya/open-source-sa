@@ -80,10 +80,13 @@ export function SizeBreakdownCard({ breakdown }) {
       </CardHeader>
 
       {unavailable || empty ? null : (
-        <CardContent className="grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+        // One column, always. This card sits in the file manager's side
+        // column now, so the donut goes above its table rather than beside
+        // it — a two-up split inside a 340px rail squeezes both.
+        <CardContent className="space-y-4">
           <EChart
             option={option}
-            height="h-64"
+            height="h-52"
             dataTable={{
               caption: t("title"),
               columns: [t("columnType"), t("columnSize"), t("columnFiles")],

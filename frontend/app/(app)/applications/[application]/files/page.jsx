@@ -131,7 +131,12 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
       ) : filesResult.failed ? (
         <LoadFailed description={t("loadFailed")} />
       ) : (
-        <>
+        // Side by side rather than stacked: the breakdown is context for the
+        // listing, and underneath it was below the fold on any folder with
+        // more than a screenful of rows — read only by someone who already
+        // knew to scroll for it. Splits at xl, not lg: the file table has
+        // seven columns and needs the width until then.
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
           <FilesPanel
             appId={id}
             initialPath={filesResult.path}
@@ -141,7 +146,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
             canManage={canManage}
           />
           <SizeBreakdownCard breakdown={breakdown} />
-        </>
+        </div>
       )}
     </div>
   );
