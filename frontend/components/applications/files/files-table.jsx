@@ -225,13 +225,24 @@ function OwnerCell({ row }) {
   // — the same reason its mode is omitted.
   if (!file.owner) return <span className="text-muted-foreground">—</span>;
 
+  // `min-w-0` on the row and on each name: a flex child defaults to
+  // min-width:auto, so `truncate` never engages and the text runs straight out
+  // of the cell instead. Under `table-fixed` that overflow lands on top of the
+  // next column, which is exactly how `deploy:www-data` ended up sitting over
+  // Permissions.
+  //
+  // `title` because truncation hides characters, and a truncated owner with no
+  // way to read the rest is a worse answer than a wide column.
   return (
-    <span className="flex items-center font-mono text-xs text-muted-foreground">
-      <span className="truncate">{file.owner}</span>
+    <span
+      className="flex min-w-0 items-center font-mono text-xs text-muted-foreground"
+      title={file.group ? `${file.owner}:${file.group}` : file.owner}
+    >
+      <span className="min-w-0 truncate">{file.owner}</span>
       {file.group ? (
         <>
-          <span className="text-muted-foreground/50">:</span>
-          <span className="truncate">{file.group}</span>
+          <span className="shrink-0 text-muted-foreground/50">:</span>
+          <span className="min-w-0 truncate">{file.group}</span>
         </>
       ) : null}
     </span>
@@ -244,7 +255,7 @@ function PermissionsCell({ row }) {
   if (!file.mode) return <span className="text-muted-foreground">—</span>;
   const worldWritable = isWorldWritable(file.mode);
   return (
-    <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+    <span className="flex items-center gap-1.5 whitespace-nowrap font-mono text-xs text-muted-foreground">
       {/* Symbolic, with the octal kept on hover: `drwxr-xr-x` is what anyone
           reads at a glance, but `755` is what the chmod dialog and every
           how-to guide talk in, so throwing it away would cost more than it
@@ -302,9 +313,16 @@ export function FilesTable({
   // Percentages, not px, and they sum to 100 — paired with `fixedLayout`
   // below so the table stays full width but Name's share of it is actually
   // bounded, instead of `auto` layout treating a width as a hint and still
-  // handing Name whatever's left over. Name and Permissions were each wider
-  // than their real content (a filename, or "demo · 777") ever uses, so both
-  // shrank here in favor of Size/Modified/Actions.
+  // handing Name whatever's left over.
+  //
+  // Rebalanced once the breakdown rail took 340px off this table. A percentage
+  // divides whatever is there, so the same split that was comfortable at full
+  // width gave Owner and Permissions less than their own content needs, and
+  // `table-fixed` spills a cell that does not fit onto its neighbour rather
+  // than growing it. Owner and Permissions are the two whose content has a
+  // floor — `deploy:www-data` and `drwxr-xr-x` are as short as they get — so
+  // they take from Actions, which is three icon buttons and was the widest
+  // column in the table for no reason.
   //
   // Every column also gets the same `px-6` (the base cell's default is
   // `px-4`) — a column's percentage width only controls where its own text
@@ -316,7 +334,7 @@ export function FilesTable({
     {
       id: "select",
       header: SelectAllHeader,
-      meta: { className: "w-[4%] pl-6 pr-0" },
+      meta: { className: "w-[5%] pl-6 pr-0" },
       cell: SelectCell,
       enableSorting: false,
     },
@@ -330,14 +348,14 @@ export function FilesTable({
     {
       accessorKey: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
-      meta: { className: "text-right w-[10%] px-6" },
+      meta: { className: "text-right w-[9%] whitespace-nowrap px-6" },
       cell: SizeCell,
       sortingFn: sortBySize,
     },
     {
       accessorKey: "modified_at",
       header: t("columns.modified"),
-      meta: { className: "w-[18%] px-6" },
+      meta: { className: "w-[14%] whitespace-nowrap px-6" },
       cell: ModifiedCell,
       sortingFn: sortByModified,
     },
@@ -347,20 +365,20 @@ export function FilesTable({
       // the one this column exists to answer.
       accessorKey: "owner",
       header: t("columns.owner"),
-      meta: { className: "w-[13%] px-6" },
+      meta: { className: "w-[16%] px-6" },
       cell: OwnerCell,
     },
     {
       id: "permissions",
       header: t("columns.permissions"),
-      meta: { className: "w-[13%] px-6" },
+      meta: { className: "w-[15%] px-6" },
       cell: PermissionsCell,
       enableSorting: false,
     },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
-      meta: { className: "w-[20%] px-6" },
+      meta: { className: "w-[19%] px-6" },
       cell: ActionsCell,
       enableSorting: false,
     },
@@ -393,6 +411,12 @@ export function FilesTable({
       sortable
       defaultSorting={[{ id: "name", desc: false }]}
       fixedLayout
+      // A floor, not a width. Below this the percentages divide into columns
+      // narrower than their own content, and `table-fixed` overflows a cell
+      // onto its neighbour rather than growing it. Past the floor the table
+      // scrolls inside the wrapper's existing overflow-x, with the ScrollFade
+      // already there to show there is more.
+      tableClassName="min-w-[64rem]"
       contextMenu={(file) => (
         <FileActionItems
           file={file}
