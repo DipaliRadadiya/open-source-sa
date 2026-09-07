@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { FormModal } from "@/components/ui/form-modal";
 import { apiMessage } from "@/lib/api/error-message";
-import { allInstalled, firstInstallable, installOptions } from "@/lib/runtime/install-options";
+import { allInstalled, installOptions, resolveVersion } from "@/lib/runtime/install-options";
 
 // The page is a Server Component, so it can't hand us a function — it names
 // the runtime and we pick. Two runtimes, one dialog.
@@ -52,7 +52,10 @@ export function InstallVersionButton({
   // page opened the dialog. See lib/runtime/install-options.js.
   const options = installOptions(installable, installed);
   const everythingInstalled = allInstalled(options);
-  const [version, setVersion] = useState(() => firstInstallable(options));
+  // The raw choice; `version` below is that choice reconciled against what is
+  // still on offer, because the list changes underneath a mounted dialog.
+  const [chosen, setChosen] = useState(null);
+  const version = resolveVersion(chosen, options);
 
   // Never hidden. An empty list means the package index offers nothing new
   // right now, which is a fact worth stating — a button that disappears reads
@@ -68,8 +71,8 @@ export function InstallVersionButton({
 
   // Warn before, not after: a dead version installs perfectly well and gets no
   // security fixes, and that is not something to find out later.
-  const chosen = options.find((option) => option.version === version);
-  const dead = lifecycleAvailable && chosen?.lifecycle?.status === "eol";
+  const selected = options.find((option) => option.version === version);
+  const dead = lifecycleAvailable && selected?.lifecycle?.status === "eol";
 
   async function install() {
     setPending(true);
@@ -140,7 +143,7 @@ export function InstallVersionButton({
       >
         <div className="space-y-2">
           <Label htmlFor={`${runtime}-version`}>{t("install.version")}</Label>
-          <Select value={version} onValueChange={setVersion}>
+          <Select value={version} onValueChange={setChosen}>
             <SelectTrigger id={`${runtime}-version`} className="w-full">
               <SelectValue />
             </SelectTrigger>

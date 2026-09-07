@@ -4,6 +4,7 @@ import {
   allInstalled,
   firstInstallable,
   installOptions,
+  resolveVersion,
 } from "../lib/runtime/install-options.js";
 
 // The real shapes: the picker gets objects, the page has the installed list.
@@ -77,4 +78,46 @@ test("junk in does not throw", () => {
   assert.deepEqual(installOptions([{ lifecycle: {} }, { version: "8.5" }], []).length, 1);
   assert.equal(firstInstallable(), "");
   assert.equal(allInstalled(), false);
+});
+
+test("the picker recovers when its choice leaves the list", () => {
+  /*
+   * The blank Version field. Starting an install moves that version OUT of
+   * `installable` — the API reports it under `versions` as "installing" — while
+   * the dialog stays mounted holding it in state. A <Select> whose value
+   * matches no item renders an EMPTY trigger, so the next person to open the
+   * dialog found a blank field and an Install button that submitted nothing.
+   *
+   * Both the old code and the first version of this file initialised the
+   * selection once and never looked at it again, so neither noticed.
+   */
+  const before = installOptions(OFFERED, INSTALLED);
+  assert.equal(resolveVersion(null, before), "26.8.1");
+
+  // 26.8.1 starts installing and drops out of the offered list. 22.x is still
+  // installable, so the picker must land on THAT rather than going blank.
+  const offeredDuring = [...OFFERED.slice(1), { version: "22.23.2", lifecycle: {} }];
+  const during = installOptions(offeredDuring, INSTALLED);
+  assert.equal(resolveVersion("26.8.1", during), "22.23.2", "must fall back, not blank");
+
+  // ...and once it finishes it comes back as installed, which is also not
+  // selectable — the same fallback has to cover that.
+  const after = installOptions(
+    [...OFFERED, { version: "22.23.2", lifecycle: {} }],
+    [...INSTALLED, { version: "26.8.1" }],
+  );
+  assert.equal(resolveVersion("26.8.1", after), "22.23.2");
+});
+
+test("a choice that is still installable is left alone", () => {
+  // Reconciling must not fight the user: re-deriving unconditionally would
+  // snap the picker back to the first option on every render.
+  const options = installOptions(OFFERED, INSTALLED);
+  assert.equal(resolveVersion("26.8.1", options), "26.8.1");
+});
+
+test("nothing selectable resolves to empty, which disables Install", () => {
+  assert.equal(resolveVersion("8.4", installOptions(OFFERED, OFFERED)), "");
+  assert.equal(resolveVersion(null, []), "");
+  assert.equal(resolveVersion(undefined, undefined), "");
 });

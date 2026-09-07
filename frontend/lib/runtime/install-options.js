@@ -51,3 +51,27 @@ export function allInstalled(options = []) {
   const list = Array.isArray(options) ? options : [];
   return list.length > 0 && list.every((option) => option.installed);
 }
+
+/**
+ * The version the picker should be showing, given what the user chose and what
+ * is still on offer.
+ *
+ * The dialog holds its choice in state, and the list underneath it changes:
+ * starting an install moves that version OUT of `installable` — the API reports
+ * it under `versions` with status "installing" — while this component stays
+ * mounted. A `<Select>` whose value matches no item renders an EMPTY trigger,
+ * so the next person to open the dialog found a blank Version field and an
+ * Install button that would submit nothing.
+ *
+ * Reconciled here rather than in an effect: an effect would paint the blank
+ * frame first, and setting state during render is the cascade the lint rule
+ * refuses. Deriving costs nothing and cannot go stale.
+ *
+ * The stored choice wins while it is still installable — re-deriving on every
+ * render would fight the user's own selection.
+ */
+export function resolveVersion(chosen, options = []) {
+  const list = Array.isArray(options) ? options : [];
+  const stillValid = list.some((option) => option.version === chosen && !option.installed);
+  return stillValid ? chosen : firstInstallable(list);
+}
