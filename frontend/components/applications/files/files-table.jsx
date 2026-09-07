@@ -411,12 +411,6 @@ export function FilesTable({
       sortable
       defaultSorting={[{ id: "name", desc: false }]}
       fixedLayout
-      // A floor, not a width. Below this the percentages divide into columns
-      // narrower than their own content, and `table-fixed` overflows a cell
-      // onto its neighbour rather than growing it. Past the floor the table
-      // scrolls inside the wrapper's existing overflow-x, with the ScrollFade
-      // already there to show there is more.
-      tableClassName="min-w-[64rem]"
       contextMenu={(file) => (
         <FileActionItems
           file={file}

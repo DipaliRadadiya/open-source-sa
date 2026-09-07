@@ -54,13 +54,6 @@ function SortableHeader({ header, label }) {
  * The table stays full width either way — this only changes how that width
  * is divided, not whether the table fills its container. Off by default so
  * every existing table's column sizing is unaffected.
- * `tableClassName` reaches the `<table>` itself, for the one thing a column's
- * percentage cannot express: a floor. With `fixedLayout` a percentage divides
- * whatever width the container has, so a narrow container divides it into
- * columns too small for their own content — and `table-fixed` overflows a cell
- * into its neighbour rather than growing it. A `min-w-*` here makes the table
- * keep a usable width and scroll inside the container it already has, which is
- * the behaviour the wrapper's overflow-x was added for.
  * `contextMenu(row)` opts a row into right-click support — return the menu's
  * `<ContextMenuItem>`s (or a falsy value to skip that row). Undefined by
  * default, so every other table's rows behave exactly as before.
@@ -79,7 +72,6 @@ export function DataTable({
   defaultSorting = [],
   rowClassName,
   fixedLayout = false,
-  tableClassName,
   contextMenu,
   // Opt-in: lets a row collapse a run of columns into one spanning cell.
   // `{ columns: [id, …], render: (rowOriginal) => node | null }` — when
@@ -155,7 +147,7 @@ export function DataTable({
         pending && "pointer-events-none opacity-60",
       )}
     >
-      <Table className={cn(fixedLayout && "table-fixed", tableClassName)}>
+      <Table className={fixedLayout ? "table-fixed" : undefined}>
         <TableHeader className={cn(stickyHeader && "sticky top-0 z-10 shadow-sm")}>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="bg-muted/40 hover:bg-muted/40">

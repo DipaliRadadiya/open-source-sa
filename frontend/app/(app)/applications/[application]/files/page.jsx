@@ -133,10 +133,15 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
       ) : (
         // Side by side rather than stacked: the breakdown is context for the
         // listing, and underneath it was below the fold on any folder with
-        // more than a screenful of rows — read only by someone who already
-        // knew to scroll for it. Splits at xl, not lg: the file table has
-        // seven columns and needs the width until then.
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
+        // more than a screenful of rows.
+        //
+        // Splits at 2xl, not xl. The rail costs 340px and the listing has
+        // seven columns; at xl that left them narrower than their own content,
+        // and widening the table to compensate put Download and Copy behind a
+        // horizontal scroll — the two controls people reach for most. The
+        // breakdown is the secondary thing on this screen, so it is the one
+        // that waits for a screen wide enough to hold both.
+        <div className="grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
           <FilesPanel
             appId={id}
             initialPath={filesResult.path}
@@ -158,7 +163,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
               Capped to the viewport and scrolled internally, so a card taller
               than the screen does not pin its top and strand its own table
               somewhere unreachable. */}
-          <aside className="xl:sticky xl:top-[calc(var(--app-chrome,7rem)_+_1.5rem)] xl:max-h-[calc(100vh-var(--app-chrome,7rem)-3rem)] xl:overflow-y-auto">
+          <aside className="2xl:sticky 2xl:top-[calc(var(--app-chrome,7rem)_+_1.5rem)] 2xl:max-h-[calc(100vh-var(--app-chrome,7rem)-3rem)] 2xl:overflow-y-auto">
             <SizeBreakdownCard breakdown={breakdown} />
           </aside>
         </div>

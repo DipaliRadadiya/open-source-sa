@@ -57,21 +57,28 @@ test("a symbolic mode never wraps", () => {
   assert.match(cell, /whitespace-nowrap/);
 });
 
-test("the table keeps a floor width instead of crushing its columns", () => {
-  // Percentages divide whatever width exists. The breakdown rail took 340px,
-  // and below a floor the columns divide into less than their own content.
-  assert.match(table, /tableClassName="min-w-\[\d+rem\]"/);
-});
+test("the listing never scrolls sideways to reach its own row actions", () => {
+  // Widening the table to fit seven columns put Download and Copy behind a
+  // horizontal scroll — the two controls people reach for most, and a worse
+  // problem than the overlap it was solving. The rail waits for the width
+  // instead.
+  assert.ok(
+    !/min-w-\[\d+rem\]/.test(table),
+    "the file table must not force a width its container cannot hold",
+  );
 
-test("the floor is opt-in, so no other table is resized by it", () => {
-  const dataTable = fs.readFileSync(
-    path.join(root, "components/ui/data-table.jsx"),
+  const page = fs.readFileSync(
+    path.join(root, "app/(app)/applications/[application]/files/page.jsx"),
     "utf8",
   );
 
-  assert.match(dataTable, /tableClassName,/, "DataTable must accept the prop");
+  assert.match(
+    page,
+    /2xl:grid-cols-\[minmax\(0,1fr\)_minmax\(0,340px\)\]/,
+    "the breakdown rail must only take its 340px where there is room for it",
+  );
   assert.ok(
-    !/tableClassName\s*=\s*["']/.test(dataTable),
-    "tableClassName must not have a default that would apply to every table",
+    !/\bxl:grid-cols-\[/.test(page),
+    "the rail must not split at xl, where the columns do not fit",
   );
 });
