@@ -55,6 +55,11 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   // Set when the file can't be opened here at all — too big or looks binary.
   // The API's own message names which; Download is the honest way out.
   const [blocked, setBlocked] = useState(null);
+  // Why the last save was refused. The API rejects a file for reasons the
+  // editor cannot anticipate — permissions, disk full, a path that moved —
+  // and those belong beside the text they are about, not in a toast that
+  // clears itself while the reader is still looking at their unsaved work.
+  const [saveError, setSaveError] = useState(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -104,13 +109,17 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   async function save() {
     if (!dirty || saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await saveFileContent(appId, file.path, contents);
       toast.success(t("editor.saved"));
       onOpenChange?.(false);
       router.refresh();
     } catch (error) {
-      toast.error(apiMessage(error, t("editor.saveFailed")));
+      // Shown in the dialog, not as a toast. The dialog stays open holding
+      // work that is not on disk yet, so the reason has to stay on screen for
+      // as long as the decision does.
+      setSaveError(apiMessage(error, t("editor.saveFailed")));
     } finally {
       setSaving(false);
     }
@@ -211,13 +220,30 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
               <CodeEditor
                 filename={file?.name}
                 value={contents}
-                onChange={setContents}
+                onChange={(next) => {
+                  // Editing is the retry: a message about the previous attempt
+                  // stops describing what is on screen the moment it changes.
+                  if (saveError) setSaveError(null);
+                  setContents(next);
+                }}
                 readOnly={!canEdit}
                 className="h-full"
               />
             </div>
           </div>
         )}
+
+        {/* Between the editor and the buttons — the last thing read before
+            pressing Save again. */}
+        {saveError ? (
+          <div
+            role="alert"
+            className="flex min-w-0 items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span className="min-w-0 break-words">{saveError}</span>
+          </div>
+        ) : null}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
