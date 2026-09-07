@@ -455,8 +455,6 @@ class GitDeployer
      */
     private function seedEnvironment(Application $application, string $codeRoot): void
     {
-        $php = 'php'.($application->php_version ?: '');
-
         $script = implode("\n", [
             'set -e',
             'env='.escapeshellarg($application->envPath()),
@@ -475,8 +473,30 @@ class GitDeployer
             'if grep -q "^APP_URL=" "$env"; then',
             '  sed -i '.escapeshellarg('s|^APP_URL=.*|APP_URL='.$application->url().'|').' "$env"',
             'fi',
-            'if [ -f "$root/artisan" ] && [ "$env" = "$root/.env" ] && ! grep -q "^APP_KEY=base64:." "$env"; then',
-            '  '.$php.' "$root/artisan" key:generate --force --no-interaction',
+            // Not `artisan key:generate`, which is what this used to be and
+            // could not work. `artisan` requires `vendor/autoload.php` on its
+            // tenth line, and `vendor/` is created by `composer install` —
+            // which lives in the *deploy script*, and the deploy script runs
+            // after this step. So the first deploy of any Laravel repository
+            // died here on a fatal require, while the re-run passed because
+            // the `.env` copied a moment ago made the whole step exit early.
+            //
+            // The key is 32 random bytes base64-encoded, which is exactly what
+            // key:generate writes for the default cipher. openssl is on every
+            // box this panel supports and needs no application to boot, so the
+            // one step that must work before dependencies exist no longer
+            // depends on them.
+            'if [ "$env" = "$root/.env" ] && ! grep -q "^APP_KEY=base64:." "$env"; then',
+            '  if key=$(openssl rand -base64 32 2>/dev/null); then',
+            // `|` as the delimiter: base64 is [A-Za-z0-9+/=], so it can carry
+            // a `/` but never a `|`. `&` is sed's "the whole match" and is not
+            // in the alphabet either.
+            '    if grep -q "^APP_KEY=" "$env"; then',
+            '      sed -i "s|^APP_KEY=.*|APP_KEY=base64:$key|" "$env"',
+            '    else',
+            '      printf \'\\nAPP_KEY=base64:%s\\n\' "$key" >> "$env"',
+            '    fi',
+            '  fi',
             'fi',
         ]);
 

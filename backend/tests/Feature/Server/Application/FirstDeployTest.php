@@ -385,7 +385,8 @@ it('seeds a fresh checkout .env from the repository .env.example', function () {
         ->toContain('if [ -s "$env" ]; then exit 0; fi')
         // A repository with no example is left alone rather than guessed at.
         ->toContain('if [ ! -f "$root/.env.example" ]; then exit 0; fi')
-        ->toContain('key:generate')
+        // Deliberately NOT key:generate — see the test below.
+        ->not->toContain('key:generate')
         // The example's APP_URL is the framework's development default. Only
         // replaced, never appended: a repository whose example has no APP_URL
         // is not a Laravel-shaped one, and adding the key would be guessing at
@@ -397,4 +398,43 @@ it('seeds a fresh checkout .env from the repository .env.example', function () {
         ->toContain('[ "$env" = "$root/.env" ]')
         // As the site user — a root-owned .env is one the site cannot write.
         ->and($seed[1] ?? '')->toBe('-u');
+});
+
+it('generates the app key without needing the dependencies it does not have yet', function () {
+    // The bug: seeding ran `php artisan key:generate`, and `artisan` requires
+    // vendor/autoload.php on line 10. `vendor/` is created by `composer
+    // install`, which lives in the deploy script — and the deploy script runs
+    // *after* this step. So the first deploy of any Laravel repository died
+    // here:
+    //
+    //   PHP Fatal error: Failed opening required '…/vendor/autoload.php'
+    //     in …/artisan on line 10
+    //
+    // And the re-run passed, because the `.env` copied moments before the
+    // fatal made the whole step exit at its first line. "Fails once, works on
+    // retry" — with the deploy itself never at fault.
+    $app = firstDeployApp();
+    $ran = fakeFirstDeploy();
+
+    try {
+        app(GitDeployer::class)->deploy($app->load('systemUser'), $app->codePath());
+    } catch (ProvisioningFailedException) {
+        // The faked curl has no status code, so `verify` throws. Not this test.
+    }
+
+    $script = (string) collect($ran)->first(fn (array $args): bool => ($args[0] ?? '') === 'runuser'
+        && str_contains((string) ($args[6] ?? ''), '.env.example'))[6];
+
+    // Nothing in this step may reach for the application it is preparing.
+    expect($script)
+        ->not->toContain('artisan')
+        ->not->toContain('key:generate')
+        // 32 random bytes base64-encoded is exactly what key:generate writes
+        // for the default cipher, and openssl needs nothing to boot.
+        ->toContain('openssl rand -base64 32')
+        // `|` as the sed delimiter: base64 can carry a `/` and never a `|`.
+        ->toContain('sed -i "s|^APP_KEY=.*|APP_KEY=base64:$key|"')
+        // Only when there is no real key already — this runs on every deploy,
+        // and rotating a live app's key would log every session out.
+        ->toContain('! grep -q "^APP_KEY=base64:." "$env"');
 });
