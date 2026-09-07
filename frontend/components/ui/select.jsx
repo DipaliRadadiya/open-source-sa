@@ -51,11 +51,30 @@ function SelectTrigger({
   );
 }
 
+/*
+ * Opens below the field, not on top of it.
+ *
+ * Radix's default is `item-aligned`, which mimics a native <select>: it slides
+ * the list so the CHOSEN item lands over the trigger. On a filter row that
+ * reads as a menu covering the control you just clicked — measured on the
+ * applications list, the trigger occupied y 262-298 and the menu opened at
+ * y 266, hiding it.
+ *
+ * `popper` anchors the list to the edge of the trigger and flips above only
+ * when there is genuinely no room below, which is what every other dropdown in
+ * the panel (Popover, DropdownMenu, Combobox) already does. Changing the
+ * default rather than the one caller, because a filter that behaves unlike its
+ * neighbours is the bug, and eight other screens use this same control.
+ *
+ * `align="start"` with it: item-aligned centred the list on the trigger, and a
+ * popper list centred on a 160px trigger hangs off both edges.
+ */
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
-  align = "center",
+  position = "popper",
+  align = "start",
+  sideOffset = 4,
   ...props
 }) {
   return (
@@ -70,13 +89,17 @@ function SelectContent({
         )}
         position={position}
         align={align}
+        sideOffset={sideOffset}
         {...props}>
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
           data-position={position}
           className={cn(
-            "data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)",
-            position === "popper" && ""
+            // NOT `h-(--radix-select-trigger-height)`: that pins the list to
+            // the height of the trigger, so a ten-option filter scrolls
+            // inside a 36px sliver. The Content already caps itself with
+            // `max-h-(--radix-select-content-available-height)`.
+            "data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)"
           )}>
           {children}
         </SelectPrimitive.Viewport>
