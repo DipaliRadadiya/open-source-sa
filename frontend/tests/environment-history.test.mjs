@@ -75,6 +75,37 @@ test("the history card never renders a value from the file", () => {
   );
 });
 
+test("every path that changes the file refreshes the page that renders its history", () => {
+  // The history card is server-rendered from the page. The editor saves over
+  // the API and updates its own state, so without a refresh the card keeps
+  // showing the file's past as of page load — missing the very edit whose
+  // "Saved" toast is still on screen.
+  const editor = fs.readFileSync(
+    path.join(root, "components/applications/environment/environment-editor.jsx"),
+    "utf8",
+  );
+
+  assert.match(editor, /useRouter\(\)/, "the editor needs the router to refresh");
+
+  // Once after a save, once after a restore from the backup dialog.
+  const refreshes = editor.match(/router\.refresh\(\)/g) ?? [];
+  assert.ok(
+    refreshes.length >= 2,
+    `expected a refresh after both save and restore, found ${refreshes.length}`,
+  );
+
+  const card = fs.readFileSync(
+    path.join(root, "components/applications/environment/environment-history-card.jsx"),
+    "utf8",
+  );
+
+  assert.match(
+    card,
+    /router\.refresh\(\)/,
+    "restoring from a history row must refresh the page too",
+  );
+});
+
 test("every history message the card uses exists in all three locales", () => {
   const card = fs.readFileSync(
     path.join(root, "components/applications/environment/environment-history-card.jsx"),

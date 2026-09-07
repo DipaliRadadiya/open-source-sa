@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -38,6 +39,7 @@ function applySuggestion(text, key, suggested) {
 export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const t = useTranslations("applications.environment");
   const tc = useTranslations("common");
+  const router = useRouter();
   const [env, setEnv] = useState(initialEnv);
   const [contents, setContents] = useState(initialEnv.raw ?? "");
   const [saving, setSaving] = useState(false);
@@ -88,6 +90,13 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
             ? t("savedApplied")
             : t("saved"),
       );
+
+      // The save just wrote a row this page renders from the server — the
+      // change history below. Updating local state alone leaves that card
+      // showing the file's past as of page load, missing the edit the user is
+      // looking at the toast for. Cheap here: the editor keeps the response's
+      // own copy, so the textarea does not flicker or lose the cursor.
+      router.refresh();
     } catch (error) {
       // Syntax errors come back verbatim under errors.raw; nothing was written
       // (the previous file stands), which is what the reader needs to know.
@@ -288,6 +297,9 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
               setContents(next.raw ?? "");
               setSyntaxError(null);
             }
+            // A restore is a change to the file like any other and writes its
+            // own history row. Same reason as the save above.
+            router.refresh();
           }}
         />
       ) : null}
