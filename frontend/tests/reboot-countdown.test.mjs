@@ -93,6 +93,48 @@ test("every countdown message the component can pick exists in all three locales
   }
 });
 
+test("reaching zero hands off instead of resting on a message that cannot update", () => {
+  // The bug this exists for: the countdown reached zero, showed "Restarting
+  // now…", and stayed there long after the machine was back — the page was
+  // rendered by a server that had since rebooted, so nothing on it could
+  // refresh itself back to the truth.
+  const component = fs.readFileSync(
+    path.join(root, "components/settings/reboot-countdown.jsx"),
+    "utf8",
+  );
+
+  assert.match(
+    component,
+    /onElapsed/,
+    "the countdown must be able to tell someone it finished",
+  );
+  assert.match(
+    component,
+    /handedOff\.current/,
+    "the handoff must fire once per mount, not once per render",
+  );
+});
+
+test("the card hands a finished countdown to the restart curtain", () => {
+  // The curtain is the only thing that watches for the machine coming back and
+  // hard-reloads. Without this wire the countdown is a dead end.
+  const card = fs.readFileSync(
+    path.join(root, "components/settings/maintenance-card.jsx"),
+    "utf8",
+  );
+
+  assert.match(
+    card,
+    /onElapsed=\{start\}/,
+    "maintenance-card must pass the curtain's start() to the countdown",
+  );
+  assert.match(
+    card,
+    /useServerRestart\(\)/,
+    "…and that start() must come from the restart curtain",
+  );
+});
+
 test("the status schema demands the field the countdown is built on", () => {
   // Zod strips keys it was not told about. An optional seconds_remaining that
   // stopped arriving would take the countdown off the screen silently.

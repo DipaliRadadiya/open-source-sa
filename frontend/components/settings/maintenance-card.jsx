@@ -647,6 +647,12 @@ function ManualSection({ canManage, rebootRequired, pendingReboot, pendingReboot
                     // down from a number the server has since revised.
                     key={pendingReboot.seconds_remaining}
                     secondsRemaining={pendingReboot.seconds_remaining}
+                    // Zero is where this screen stops being able to tell the
+                    // truth: the page was rendered by a server that is now
+                    // going down, so "Restarting now…" would sit there
+                    // unchanged long after the machine came back. The curtain
+                    // watches for that and hard-reloads.
+                    onElapsed={start}
                   />
                 ) : null}
                 <span className="text-muted-foreground">

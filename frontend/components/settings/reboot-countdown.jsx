@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   deadlineFrom,
@@ -15,8 +15,12 @@ import {
  *
  * `secondsRemaining` is the server's measurement — see lib/settings/
  * reboot-countdown.js for why it is measured there and not computed here.
+ *
+ * Reaching zero is a handoff, not an end state. `onElapsed` fires once, and the
+ * restart curtain takes it from there: this page was rendered by a server that
+ * is now going down, so nothing on it can refresh itself back to the truth.
  */
-export function RebootCountdown({ secondsRemaining }) {
+export function RebootCountdown({ secondsRemaining, onElapsed }) {
   const t = useTranslations("settings.maintenance.reboot");
   // Both anchored in a lazy initializer, which is the only place the current
   // time may be read: `Date.now()` during render is impure, and a re-anchoring
@@ -41,6 +45,18 @@ export function RebootCountdown({ secondsRemaining }) {
 
     return () => clearInterval(timer);
   }, [done]);
+
+  // Handing the restart to the curtain is an external system to notify, which
+  // is what an effect is for. The ref makes it once per mount rather than once
+  // per render — starting the curtain twice would restart its own clock.
+  const handedOff = useRef(false);
+
+  useEffect(() => {
+    if (!done || handedOff.current) return;
+
+    handedOff.current = true;
+    onElapsed?.();
+  }, [done, onElapsed]);
 
   const { hours, minutes, seconds } = splitRemaining(left);
 
