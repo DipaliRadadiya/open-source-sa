@@ -1962,7 +1962,8 @@
     "npm": {
       "action": "Update npm ({version})",
       "updated": "npm updated to {version}.",
-      "failed": "npm could not be updated."
+      "failed": "npm could not be updated.",
+      "alreadyLatest": "npm was already up to date ({version})."
     },
     "versions": {
       "pickerLabel": "Node.js versions",

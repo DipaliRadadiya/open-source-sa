@@ -40,7 +40,11 @@ export function VersionSummary({
   const t = useTranslations("php");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
-  const [pending, setPending] = useState(false);
+  // WHICH action is running. A single boolean made Remove spin the
+  // Make default button — same fault the Node card had. They still disable
+  // together, because both act on one version.
+  const [running, setRunning] = useState(null);
+  const pending = running !== null;
 
   const usedBy = version.in_use_by ?? 0;
   const sites = version.sites ?? [];
@@ -79,7 +83,7 @@ export function VersionSummary({
             : null;
 
   async function makeDefault() {
-    setPending(true);
+    setRunning("default");
     try {
       await setDefaultPhpVersion(version.version);
       toast.success(t("versions.defaultSet", { version: version.version }));
@@ -87,12 +91,12 @@ export function VersionSummary({
     } catch (error) {
       toast.error(apiMessage(error, t("versions.defaultFailed")));
     } finally {
-      setPending(false);
+      setRunning(null);
     }
   }
 
   async function remove() {
-    setPending(true);
+    setRunning("remove");
     try {
       await removePhpVersion(version.version);
       // "Removing", not "removed": this is a 202 now, and apt has minutes of
@@ -106,7 +110,7 @@ export function VersionSummary({
       // anything this page could compose.
       toast.error(apiMessage(error, t("versions.removeFailed")));
     } finally {
-      setPending(false);
+      setRunning(null);
     }
   }
 
@@ -187,7 +191,7 @@ export function VersionSummary({
                   disabled={!canManage || pending || Boolean(notReadyReason)}
                   onClick={makeDefault}
                 >
-                  {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {running === "default" ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("versions.makeDefault")}
                 </Button>
               </ReasonTooltip>
@@ -289,7 +293,7 @@ export function VersionSummary({
         description={t("versions.confirmRemoveBody")}
         cancelLabel={t("versions.confirmCancel")}
         confirmLabel={t("versions.remove")}
-        pending={pending}
+        pending={running === "remove"}
         onConfirm={remove}
       />
     </Card>

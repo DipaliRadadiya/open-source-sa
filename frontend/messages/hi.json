@@ -1962,7 +1962,8 @@
     "npm": {
       "action": "npm अपडेट करें ({version})",
       "updated": "npm {version} पर अपडेट हो गया।",
-      "failed": "npm अपडेट नहीं हो सका।"
+      "failed": "npm अपडेट नहीं हो सका।",
+      "alreadyLatest": "npm पहले से ही अप-टू-डेट था ({version})।"
     },
     "versions": {
       "pickerLabel": "Node.js वर्शन",

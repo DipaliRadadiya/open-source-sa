@@ -31,7 +31,18 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
   const t = useTranslations("node");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
-  const [pending, setPending] = useState(false);
+  /*
+   * WHICH action is running, not merely that one is.
+   *
+   * A single boolean drove the spinner on all three buttons at once, so
+   * pressing Update npm span Make default and Remove too — three things
+   * appearing to happen when one was. The buttons still all DISABLE
+   * together (they act on one version, and letting a second start mid-write
+   * is how you get a remove racing an update), but only the pressed one
+   * says it is working.
+   */
+  const [running, setRunning] = useState(null);
+  const pending = running !== null;
   const [npm, setNpm] = useState(version.npm_version ?? null);
 
   const usedBy = version.in_use_by ?? 0;
@@ -67,7 +78,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           : null;
 
   async function makeDefault() {
-    setPending(true);
+    setRunning("default");
     try {
       await setDefaultNodeVersion(version.version);
       toast.success(t("versions.defaultSet", { version: version.version }));
@@ -75,12 +86,12 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
     } catch (error) {
       toast.error(apiMessage(error, t("versions.defaultFailed")));
     } finally {
-      setPending(false);
+      setRunning(null);
     }
   }
 
   async function remove() {
-    setPending(true);
+    setRunning("remove");
     try {
       await removeNodeVersion(version.version);
       toast.success(t("versions.removed", { version: version.version }));
@@ -91,22 +102,36 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
       // anything this page could compose.
       toast.error(apiMessage(error, t("versions.removeFailed")));
     } finally {
-      setPending(false);
+      setRunning(null);
     }
   }
 
   async function upgradeNpm() {
-    setPending(true);
+    setRunning("npm");
     try {
       // The response carries the new number, so the row updates without
       // re-fetching the whole page for one string.
+      const before = npm;
       const { data } = await updateNodeNpm(version.version);
-      if (data?.npm_version) setNpm(data.npm_version);
-      toast.success(t("npm.updated", { version: data?.npm_version ?? "" }));
+      const after = data?.npm_version ?? null;
+      if (after) setNpm(after);
+      /*
+       * "npm updated to 12.0.2" under a button that still reads
+       * "Update npm (12.0.2)" is the panel claiming it did something it did
+       * not. The API reports the version AFTER the attempt and there is no
+       * "latest npm" field anywhere, so an unchanged number is the only signal
+       * available that it was already current — and it is enough to stop the
+       * message being wrong.
+       */
+      toast.success(
+        after && before && after === before
+          ? t("npm.alreadyLatest", { version: after })
+          : t("npm.updated", { version: after ?? "" }),
+      );
     } catch (error) {
       toast.error(apiMessage(error, t("npm.failed")));
     } finally {
-      setPending(false);
+      setRunning(null);
     }
   }
 
@@ -148,7 +173,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
                   disabled={!canManage || pending || Boolean(notReadyReason)}
                   onClick={upgradeNpm}
                 >
-                  {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {running === "npm" ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("npm.action", { version: npm })}
                 </Button>
               </ReasonTooltip>
@@ -162,7 +187,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
                   disabled={!canManage || pending || Boolean(notReadyReason)}
                   onClick={makeDefault}
                 >
-                  {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {running === "default" ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("versions.makeDefault")}
                 </Button>
               </ReasonTooltip>
@@ -235,7 +260,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
         description={t("versions.confirmRemoveBody")}
         cancelLabel={t("versions.confirmCancel")}
         confirmLabel={t("versions.remove")}
-        pending={pending}
+        pending={running === "remove"}
         onConfirm={remove}
       />
     </Card>
