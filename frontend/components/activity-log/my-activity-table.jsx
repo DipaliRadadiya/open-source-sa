@@ -1,6 +1,9 @@
 "use client";
 
 import { useTranslations, useFormatter } from "next-intl";
+import { SearchX } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
+import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -77,7 +80,7 @@ function DescriptionCell({ row }) {
  * No scope column either — each page fixes its own scope, so a column repeating
  * "Server" on every row would be a constant.
  */
-export function MyActivityTable({ data, emptyMessage }) {
+export function MyActivityTable({ data, emptyMessage, hasFilters = false }) {
   const t = useTranslations("activity");
 
   // Type and Event are shorthand for the description — "Php" + "Install Started"
@@ -108,6 +111,26 @@ export function MyActivityTable({ data, emptyMessage }) {
       meta: { className: "whitespace-normal" },
     },
   ];
+
+  /*
+   * A filtered-empty table needs the way out, not just the news.
+   *
+   * This one printed "Nothing matches those filters." as a bare line inside the
+   * table and left the reader to work out which of a search box and two selects
+   * to undo — while the identical dead end on Applications, Databases and the
+   * ADMIN copy of this very table all offered one button. Same strings as the
+   * admin table, because it is the same situation.
+   */
+  if (data.length === 0 && hasFilters) {
+    return (
+      <EmptyState
+        icon={SearchX}
+        title={t("empty.filteredTitle")}
+        description={t("empty.filteredDesc")}
+        action={<ClearFiltersButton keys={["search", "type", "action"]} label={t("empty.clear")} />}
+      />
+    );
+  }
 
   return <DataTable columns={columns} data={data} emptyMessage={emptyMessage} />;
 }

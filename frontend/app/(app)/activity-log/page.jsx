@@ -61,6 +61,7 @@ export default async function ActivityLogPage({ searchParams }) {
           <MyActivityTable
             data={entries}
             emptyMessage={isFiltered ? t("mine.emptyFiltered") : t("mine.empty")}
+            hasFilters={isFiltered}
           />
           {/* Not behind a row count: the selector hides itself when the list is too
               short to paginate, and gating it on the current page as well is how it

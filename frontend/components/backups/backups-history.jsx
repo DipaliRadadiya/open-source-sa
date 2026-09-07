@@ -21,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BackupsCards } from "@/components/backups/backups-cards";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRestoreWatch } from "@/components/backups/restore-watch";
@@ -256,6 +257,9 @@ export function BackupsHistory({
           icon={Archive}
           title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
           description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
+          // Only when filters are what emptied it. On a genuinely empty list
+          // the button would clear nothing and imply the rows are hiding.
+          action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
         />
       ) : (
         <>

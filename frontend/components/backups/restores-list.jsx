@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RESTORE_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
 
@@ -108,6 +109,9 @@ export function RestoresList({ restores, applications = [], hasFilters = false }
           icon={RotateCcw}
           title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
           description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
+          // Only when filters are what emptied it. On a genuinely empty list
+          // the button would clear nothing and imply the rows are hiding.
+          action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
         />
       ) : (
         <>
