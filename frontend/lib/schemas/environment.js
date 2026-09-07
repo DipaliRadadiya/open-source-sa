@@ -44,3 +44,36 @@ export const environmentSchema = z
 export const environmentResponseSchema = z.object({
   environment: environmentSchema,
 });
+
+/**
+ * One change to the file: who made it, when, which key names, and whether the
+ * version it replaced is still on disk.
+ *
+ * No value from the file appears here and none should ever be added — the whole
+ * reason this screen is permission-gated is that those are secrets, and Zod
+ * strips what it is not told about, so a field added to the API without being
+ * added here would silently never arrive. That is the desired direction for
+ * this particular payload.
+ */
+export const envHistoryEntrySchema = z
+  .object({
+    id: z.number(),
+    action: z.string(),
+    keys: z.string().nullish(),
+    restored_from: z.string().nullish(),
+    user: z
+      .object({ id: z.number(), username: z.string() })
+      .nullish(),
+    is_system: z.boolean().default(false),
+    created_at: z.string().nullish(),
+    created_at_human: z.string().nullish(),
+    backup: z.string().nullish(),
+    // Required, not defaulted: a missing value would default to false and
+    // disable every Restore button with no error anywhere.
+    restorable: z.boolean(),
+  })
+  .passthrough();
+
+export const envHistoryResponseSchema = z.object({
+  history: z.array(envHistoryEntrySchema).default([]),
+});

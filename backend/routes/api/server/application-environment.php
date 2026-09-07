@@ -23,3 +23,15 @@ Route::put('/applications/{application}/environment', [ApplicationEnvironmentCon
 
 Route::post('/applications/{application}/environment/restore', [ApplicationEnvironmentController::class, 'restore'])
     ->middleware(['permission:app_environment,manage', 'throttle:10,1']);
+
+/*
+| Who changed this file, and when.
+|
+| Gated on `app_environment` view rather than `activity_log`: everyone who
+| reaches this route can already read the file's actual secret values, and
+| learning who last edited them reveals strictly less than what is already on
+| their screen. A separate grant would only mean someone reading a password
+| while being told the edit history is none of their business.
+*/
+Route::get('/applications/{application}/environment/history', [ApplicationEnvironmentController::class, 'history'])
+    ->middleware('permission:app_environment');

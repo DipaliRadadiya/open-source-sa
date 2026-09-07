@@ -2805,6 +2805,26 @@
         "restart": "Reiniciar la app después de restaurar",
         "done": "Entorno restaurado.",
         "failed": "No pudimos restaurar la copia."
+      },
+      "history": {
+        "title": "Historial de cambios",
+        "subtitle": "Quién editó este archivo y qué claves cambió. Los valores nunca se registran.",
+        "loadFailed": "No se pudo cargar el historial de cambios.",
+        "empty": "Este archivo aún no se ha cambiado desde el panel.",
+        "actionUpdated": "guardó este archivo",
+        "actionRestored": "restauró una versión anterior",
+        "bySystem": "El panel",
+        "byUnknown": "Una cuenta eliminada",
+        "noKeys": "Ninguna clave cambió: solo comentarios o espaciado.",
+        "restore": "Restaurar",
+        "restored": "Se restauró la versión anterior.",
+        "restoreFailed": "No se pudo restaurar esa versión.",
+        "prunedReason": "El archivo con esta versión se eliminó para respetar el número de copias que se conservan.",
+        "firstSaveReason": "Este fue el primer guardado, así que no hay ninguna versión anterior a la que volver.",
+        "confirmTitle": "¿Restaurar la versión anterior a este cambio?",
+        "confirmBody": "Primero se hace una copia del archivo actual, así que esto también se puede deshacer. La aplicación sigue funcionando con los valores restaurados.",
+        "cancel": "Cancelar",
+        "confirmSubmit": "Restaurar"
       }
     },
     "title": "Aplicaciones",

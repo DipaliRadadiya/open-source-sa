@@ -23,8 +23,16 @@ use RuntimeException;
  */
 class ApplicationEnvironment
 {
-    /** Saves kept per application. Enough to undo a mistake, bounded. */
-    public const KEEP_BACKUPS = 5;
+    /**
+     * Saves kept per application. Enough to undo a mistake, bounded.
+     *
+     * Raised from 5 once the history list existed to show what was being lost:
+     * a `.env` is a few kilobytes, and five was under a day of editing for a
+     * site more than one person touches. The activity log outlives these files
+     * either way — the history says so per row rather than pretending the
+     * record and the file are the same thing.
+     */
+    public const KEEP_BACKUPS = 20;
 
     /** Refuse to read anything larger — a `.env` is kilobytes, not megabytes. */
     private const MAX_BYTES = 262144;
@@ -179,8 +187,14 @@ class ApplicationEnvironment
      * The backup comes first and its failure is fatal: this screen's whole
      * safety story is "you can get the previous version back", and a save that
      * silently skipped the copy would be the one time that promise mattered.
+     *
+     * Returns the name of the backup it took, or null when there was no file
+     * to copy — a first save. The caller records that name on the activity row,
+     * which is what turns a log entry and a file called `.env.bak-20260907-…`
+     * into one thing somebody can act on rather than two they have to match up
+     * by eye.
      */
-    public function write(Application $application, string $contents): void
+    public function write(Application $application, string $contents): ?string
     {
         if (strlen($contents) > self::MAX_BYTES) {
             throw new RuntimeException('the environment file is too large');
@@ -189,9 +203,7 @@ class ApplicationEnvironment
         $path = $this->path($application);
         $user = $application->systemUser?->username;
 
-        if ($this->exists($application)) {
-            $this->backup($application);
-        }
+        $backup = $this->exists($application) ? $this->backup($application) : null;
 
         // Written beside the target and renamed. A half-written `.env` is an
         // application that will not boot at all, which is worse than any value
@@ -224,6 +236,8 @@ class ApplicationEnvironment
 
             throw new RuntimeException('the environment file could not be replaced');
         }
+
+        return $backup;
     }
 
     /**
@@ -259,10 +273,14 @@ class ApplicationEnvironment
     /**
      * Put a previous save back. Taking a backup of the current state first, so
      * restoring the wrong one is itself undoable.
+     *
+     * Returns the name of that safety copy, for the same reason {@see write()}
+     * does: a restore is a change to the file like any other, and its history
+     * row should be able to undo it.
      */
-    public function restore(Application $application, string $name): void
+    public function restore(Application $application, string $name): ?string
     {
-        if (preg_match('/^\.env\.bak-\d{8}-\d{6}$/', $name) !== 1) {
+        if (preg_match('/^\.env\.bak-\d{8}-\d{6}(?:-\d{1,2})?$/', $name) !== 1) {
             // The name reaches a path. Anything not matching exactly what we
             // write is refused rather than sanitised.
             throw new RuntimeException('that is not a known backup');
@@ -277,13 +295,13 @@ class ApplicationEnvironment
             throw new RuntimeException('that backup no longer exists');
         }
 
-        $this->write($application, $this->readFile($application, $source));
+        return $this->write($application, $this->readFile($application, $source));
     }
 
-    private function backup(Application $application): void
+    private function backup(Application $application): string
     {
         $path = $this->path($application);
-        $name = '.env.bak-'.now()->format('Ymd-His');
+        $name = $this->unusedBackupName($application);
 
         $copied = $this->serverOps->run(
             ['cp', '-p', $path, dirname($path).'/'.$name],
@@ -296,6 +314,41 @@ class ApplicationEnvironment
         }
 
         $this->prune($application);
+
+        return $name;
+    }
+
+    /**
+     * A name no existing backup is using.
+     *
+     * The timestamp is second-precision, and two saves inside one second are
+     * reachable — the write endpoint allows twenty a minute, and two people can
+     * hold the same screen. Overwriting mattered little when these files were
+     * an anonymous undo list; now that a history row names the backup holding
+     * the state before *that* change, a collision means a row that restores
+     * somebody else's edit while claiming to restore the one it is labelled
+     * with. Silent and wrong, which is the worst pair.
+     */
+    private function unusedBackupName(Application $application): string
+    {
+        $directory = dirname($this->path($application));
+        $base = '.env.bak-'.now()->format('Ymd-His');
+
+        if (! $this->present($application, $directory.'/'.$base, 'env_backup_name')) {
+            return $base;
+        }
+
+        // Bounded rather than a while(true): if a hundred backups landed in one
+        // second something is wrong that another loop iteration will not fix.
+        for ($suffix = 2; $suffix <= 99; $suffix++) {
+            $candidate = $base.'-'.$suffix;
+
+            if (! $this->present($application, $directory.'/'.$candidate, 'env_backup_name')) {
+                return $candidate;
+            }
+        }
+
+        throw new RuntimeException('a backup name could not be reserved');
     }
 
     private function prune(Application $application): void
@@ -325,7 +378,10 @@ class ApplicationEnvironment
     /** `.env.bak-20260804-132011` → `04-08-2026 13:20:11`, the panel's format. */
     private function timestampFrom(string $name): string
     {
-        if (preg_match('/(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/', $name, $m) !== 1) {
+        // Anchored on the `bak-` prefix rather than the end of the string, so a
+        // collision suffix (`…-132011-2`) still reads its own timestamp instead
+        // of falling through to the empty string and losing its date.
+        if (preg_match('/bak-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/', $name, $m) !== 1) {
             return '';
         }
 

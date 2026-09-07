@@ -8,6 +8,7 @@ use App\Http\Resources\ApplicationEnvironmentResource;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationEnvironment;
+use App\Services\Server\Applications\EnvironmentHistory;
 use App\Services\Server\Applications\EnvironmentInspector;
 use App\Services\Server\Applications\FrameworkDetector;
 use App\Services\Server\Applications\ProcessSupervisor;
@@ -71,7 +72,7 @@ class ApplicationEnvironmentController extends Controller
 
         $before = $files->exists($application) ? $files->read($application) : '';
 
-        $files->write($application, $raw);
+        $backup = $files->write($application, $raw);
 
         $applied = $this->apply($application, $framework, $detector);
         $restarted = $this->restart($application, $request->boolean('restart'));
@@ -81,12 +82,40 @@ class ApplicationEnvironmentController extends Controller
         $activity->log('application.environment_updated', $application, [
             'name' => $application->name,
             'keys' => implode(', ', $this->changedKeys($before, $raw)) ?: '—',
+            // The file holding what this change replaced. Recorded so the
+            // history can offer to undo *this* row rather than leaving someone
+            // to match a log entry against a directory listing by timestamp.
+            // Null on a first save, where there was nothing to keep.
+            'backup' => $backup,
         ]);
 
         return response()->json([
             'environment' => ApplicationEnvironmentResource::make($application->fresh())->resolve(),
             'applied' => $applied,
             'restarted' => $restarted,
+        ]);
+    }
+
+    /**
+     * Who changed this file, and when.
+     *
+     * Its own endpoint rather than a field on {@see show()}: the editor is
+     * loaded to be typed into, and paying for a log query and a directory
+     * listing on every one of those loads to render a panel nobody has scrolled
+     * to yet is the wrong trade.
+     */
+    public function history(Request $request, Application $application, EnvironmentHistory $history): JsonResponse
+    {
+        $paginator = $history->for($application, (int) $request->input('per_page', 20));
+
+        return response()->json([
+            'history' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
         ]);
     }
 
@@ -100,14 +129,18 @@ class ApplicationEnvironmentController extends Controller
     ): JsonResponse {
         $name = (string) $request->string('backup')->trim();
 
-        $files->restore($application, $name);
+        $safety = $files->restore($application, $name);
 
         $this->apply($application, $detector->detect($application), $detector);
         $this->restart($application, $request->boolean('restart'));
 
         $activity->log('application.environment_restored', $application, [
             'name' => $application->name,
-            'backup' => $name,
+            // `restored_from` is which version was put back; `backup` is what
+            // this restore itself replaced. Two different files, and the second
+            // is what makes a restore undoable from its own history row.
+            'restored_from' => $name,
+            'backup' => $safety,
         ]);
 
         return response()->json([

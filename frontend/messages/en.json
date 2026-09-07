@@ -2805,6 +2805,26 @@
         "restart": "Restart the app after restoring",
         "done": "Environment restored.",
         "failed": "We couldn't restore the backup."
+      },
+      "history": {
+        "title": "Change history",
+        "subtitle": "Who edited this file and which keys they changed. Values are never recorded.",
+        "loadFailed": "The change history could not be loaded.",
+        "empty": "This file has not been changed through the panel yet.",
+        "actionUpdated": "saved this file",
+        "actionRestored": "restored an earlier version",
+        "bySystem": "The panel",
+        "byUnknown": "A deleted account",
+        "noKeys": "No key changed — comments or spacing only.",
+        "restore": "Restore",
+        "restored": "The earlier version was restored.",
+        "restoreFailed": "That version could not be restored.",
+        "prunedReason": "The file holding this version has been deleted to stay within the backups kept.",
+        "firstSaveReason": "This was the first save, so there is no earlier version to go back to.",
+        "confirmTitle": "Restore the version from before this change?",
+        "confirmBody": "The current file is backed up first, so this is itself undoable. The application keeps running with the restored values.",
+        "cancel": "Cancel",
+        "confirmSubmit": "Restore"
       }
     },
     "title": "Applications",

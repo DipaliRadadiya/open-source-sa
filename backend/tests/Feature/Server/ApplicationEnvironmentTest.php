@@ -374,3 +374,143 @@ describe('when the panel cannot tell', function () {
             ->and($response->json('environment.raw'))->toBe('');
     });
 });
+
+describe('the history of who changed it', function () {
+    it('names the person, the keys they changed and the version they replaced', function () {
+        $this->backupNames = ['.env.bak-20260907-120000'];
+        fakeSite();
+
+        $editor = User::factory()->create();
+        grantPermission($editor, 'app_environment', view: true, manage: true);
+
+        $this->actingAs($editor)
+            ->putJson(envUrl(), ['raw' => "APP_ENV=production\nDB_PASSWORD=changed\n"])
+            ->assertOk();
+
+        $row = $this->actingAs($this->admin)->getJson(envUrl('/history'))->assertOk()->json('history.0');
+
+        expect($row['user']['username'])->toBe($editor->username)
+            ->and($row['is_system'])->toBeFalse()
+            ->and($row['action'])->toBe('environment_updated')
+            // Names only. APP_KEY was removed, DB_PASSWORD changed.
+            ->and($row['keys'])->toContain('DB_PASSWORD')
+            ->and($row['backup'])->toMatch('/^\.env\.bak-\d{8}-\d{6}/');
+    });
+
+    it('never carries a value out of the file', function () {
+        // The whole premise of the screen is that these are secrets. A history
+        // that stored old values would put every rotated password into the
+        // panel database, readable by anyone who can read a log.
+        $this->backupNames = ['.env.bak-20260907-120000'];
+        fakeSite();
+
+        $this->actingAs($this->admin)
+            ->putJson(envUrl(), ['raw' => "DB_PASSWORD=newsecret\n"])
+            ->assertOk();
+
+        $body = $this->actingAs($this->admin)->getJson(envUrl('/history'))->assertOk()->getContent();
+
+        expect($body)->not->toContain('hunter2')
+            ->and($body)->not->toContain('newsecret');
+    });
+
+    it('offers a restore only while the file is still on disk', function () {
+        fakeSite();
+
+        // Two saves half a minute apart, so they take distinct names, then
+        // only the second's backup survives pruning.
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=1\n"])->assertOk();
+        $first = ActivityLog::query()->latest('id')->first()->properties['backup'];
+
+        $this->travel(30)->seconds();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=2\n"])->assertOk();
+        $second = ActivityLog::query()->latest('id')->first()->properties['backup'];
+
+        expect($second)->not->toBe($first);
+
+        $this->backupNames = [$second];
+
+        $rows = collect($this->actingAs($this->admin)->getJson(envUrl('/history'))->assertOk()->json('history'))
+            ->keyBy('backup');
+
+        expect($rows[$second]['restorable'])->toBeTrue()
+            // Pruned, but still shown: dropping it would rewrite the record of
+            // who touched the file, which is what this screen is for.
+            ->and($rows[$first]['restorable'])->toBeFalse();
+    });
+
+    it('shows a first save as having nothing to go back to', function () {
+        // Different from "the backup was pruned": there was never a file to
+        // keep, and saying "no longer available" would invent a lost version.
+        $this->disk = [];
+        $this->present = [];
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=1\n"])->assertOk();
+
+        $row = $this->actingAs($this->admin)->getJson(envUrl('/history'))->assertOk()->json('history.0');
+
+        expect($row['backup'])->toBeNull()
+            ->and($row['restorable'])->toBeFalse();
+    });
+
+    it('records what a restore replaced, so the restore itself can be undone', function () {
+        $this->backupNames = ['.env.bak-20260907-120000'];
+        // `find` lists it; `test -f` is what the restore actually checks.
+        $this->disk['/home/envowner/deployed-site/.env.bak-20260907-120000'] = "APP_ENV=local\n";
+        fakeSite();
+
+        $this->actingAs($this->admin)
+            ->postJson(envUrl('/restore'), ['backup' => '.env.bak-20260907-120000'])
+            ->assertOk();
+
+        $row = $this->actingAs($this->admin)->getJson(envUrl('/history'))->assertOk()->json('history.0');
+
+        expect($row['action'])->toBe('environment_restored')
+            ->and($row['restored_from'])->toBe('.env.bak-20260907-120000')
+            // The safety copy of what the restore overwrote — a different file
+            // from the one it put back.
+            ->and($row['backup'])->not->toBe('.env.bak-20260907-120000')
+            ->and($row['backup'])->toMatch('/^\.env\.bak-\d{8}-\d{6}/');
+    });
+
+    it('is refused without the environment grant', function () {
+        fakeSite();
+
+        $outsider = User::factory()->create();
+
+        $this->actingAs($outsider)->getJson(envUrl('/history'))->assertForbidden();
+    });
+
+    it('is readable by someone who can view but not edit', function () {
+        // They can already read the secret values on this screen. Who last
+        // touched them reveals strictly less than what is already shown.
+        fakeSite();
+
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_environment', view: true, manage: false);
+
+        $this->actingAs($viewer)->getJson(envUrl('/history'))->assertOk();
+    });
+
+    it('keeps two saves in the same second apart', function () {
+        // Second-precision names collide, and a collision means a history row
+        // that restores somebody else's edit while labelled with this one.
+        $this->freezeTime();
+        $this->backupNames = [];
+        fakeSite();
+
+        // `test -f` answers from $present, so the first backup must appear
+        // there for the second save to see the collision.
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=1\n"])->assertOk();
+        $first = ActivityLog::query()->latest('id')->first()->properties['backup'];
+
+        $this->present[] = '/home/envowner/deployed-site/'.$first;
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "A=2\n"])->assertOk();
+        $second = ActivityLog::query()->latest('id')->first()->properties['backup'];
+
+        expect($second)->not->toBe($first);
+    });
+});

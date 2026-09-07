@@ -5,7 +5,9 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getApplicationEnvironment } from "@/lib/applications/get-application-environment";
+import { getEnvironmentHistory } from "@/lib/applications/get-environment-history";
 import { EnvironmentEditor } from "@/components/applications/environment/environment-editor";
+import { EnvironmentHistoryCard } from "@/components/applications/environment/environment-history-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
 export const dynamic = "force-dynamic";
@@ -49,9 +51,15 @@ export default async function ApplicationEnvironmentPage({ params }) {
   );
   const settled = application.status === "active";
 
-  const envResult = settled
-    ? await getApplicationEnvironment(id)
-    : { environment: null, failed: false };
+  // Together: the history is a log query and one directory listing, and running
+  // it after the environment read would add its latency to a page that already
+  // waits on several shell-outs.
+  const [envResult, historyResult] = settled
+    ? await Promise.all([getApplicationEnvironment(id), getEnvironmentHistory(id)])
+    : [
+        { environment: null, failed: false },
+        { history: null, failed: false },
+      ];
 
   return (
     <div className="space-y-6">
@@ -67,11 +75,21 @@ export default async function ApplicationEnvironmentPage({ params }) {
       ) : envResult.failed || !envResult.environment ? (
         <LoadFailed description={t("loadFailed")} />
       ) : (
-        <EnvironmentEditor
-          appId={id}
-          initialEnv={envResult.environment}
-          canManage={canManage}
-        />
+        <>
+          <EnvironmentEditor
+            appId={id}
+            initialEnv={envResult.environment}
+            canManage={canManage}
+          />
+          {/* Below the editor: the file is what people came for, its history
+              is what they check afterwards. */}
+          <EnvironmentHistoryCard
+            appId={id}
+            entries={historyResult.history}
+            failed={historyResult.failed}
+            canManage={canManage}
+          />
+        </>
       )}
     </div>
   );
