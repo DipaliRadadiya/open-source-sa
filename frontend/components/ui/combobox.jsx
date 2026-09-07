@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,6 +98,27 @@ export function Combobox({
             placeholder={searchPlaceholder ?? t("search")}
             className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
           />
+          {/* The same clear the panel's other two search boxes have. This one
+              is shared by the repository, branch, application and destination
+              pickers, so its absence was felt in several places at once —
+              and a filtered list with no matches gave no way back except
+              selecting the text and deleting it.
+
+              Focus returns to the field: the point of clearing is to type
+              again, and the list underneath has just changed. */}
+          {query ? (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                searchRef.current?.focus();
+              }}
+              aria-label={t("clearSearch")}
+              className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
         </div>
         <div className="max-h-64 min-h-0 flex-1 overflow-y-auto p-1">
           {filtered.length ? (
