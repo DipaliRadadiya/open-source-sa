@@ -21,6 +21,35 @@ export const fileEntrySchema = z.object({
   group: z.string().nullish(),
 });
 
+/**
+ * Bytes by file type for one directory.
+ *
+ * `available` is not the same as an empty `categories`: the first says the walk
+ * could not finish, the second says the folder holds no files. Rendering them
+ * alike would be a confident claim about a disk nobody measured.
+ */
+export const breakdownSchema = z.object({
+  available: z.boolean(),
+  truncated: z.boolean().default(false),
+  total_bytes: z.number().int().default(0),
+  total_bytes_human: z.string().default(""),
+  file_count: z.number().int().default(0),
+  categories: z
+    .array(
+      z.object({
+        key: z.string(),
+        bytes: z.number().int(),
+        bytes_human: z.string(),
+        count: z.number().int(),
+      }),
+    )
+    .default([]),
+});
+
+export const breakdownResponseSchema = z.object({
+  breakdown: breakdownSchema,
+});
+
 export const filesResponseSchema = z.object({
   path: z.string().default(""),
   files: z.array(fileEntrySchema).default([]),

@@ -60,6 +60,21 @@ class FileBrowser
     public const MAX_SEARCH_RESULTS = 200;
 
     /**
+     * How many files the type breakdown will account for before it stops and
+     * says so. A quarter of a million covers a real site with a dependency
+     * tree; past that the chart's shape has long since stopped changing, and
+     * the honest move is to report a partial answer as partial.
+     */
+    public const MAX_BREAKDOWN_FILES = 250_000;
+
+    /**
+     * The breakdown runs on page load, so it cannot be allowed to hold the
+     * screen. A directory that cannot be walked in this long reports itself
+     * unmeasurable rather than making someone wait for a chart.
+     */
+    private const BREAKDOWN_TIMEOUT_SECONDS = 20;
+
+    /**
      * How many paths one bulk request may name.
      *
      * `rm`/`chmod`/`cp` take a list natively, but an argument vector has a
@@ -134,6 +149,77 @@ class FileBrowser
         // that hides files without saying how many is indistinguishable from
         // one that lost them, and this is the screen where that costs most.
         return ['entries' => $entries, 'hidden_count' => count($hidden)];
+    }
+
+    /**
+     * How this directory's bytes divide by file type.
+     *
+     * Recursive, and the expensive thing on this class after `du`: it walks
+     * every file under the target. It is scoped to the directory being looked
+     * at rather than the whole site precisely so that browsing bounds its own
+     * cost — the site root is the worst case and someone three folders down
+     * pays for three folders.
+     *
+     * Bounded twice over. `find` gets a short timeout, and its output is
+     * parsed only up to MAX_BREAKDOWN_FILES; past either, `truncated` says so
+     * rather than letting a partial answer read as a complete one. A tree too
+     * big to walk in the time allowed reports that it could not be measured,
+     * which is a fact somebody can act on, unlike a page that hangs.
+     *
+     * @return array{available: bool, truncated: bool, total_bytes: int, file_count: int, categories: array<int, array<string, mixed>>}
+     */
+    public function breakdown(Application $application, string $path): array
+    {
+        $this->assertRootExists($application);
+        $target = $this->resolve($application, $path);
+        $this->assertType($application, $target, 'd');
+
+        // Not `run()`, which throws: a directory too large to walk inside the
+        // timeout is an ordinary answer for this feature, not a server fault.
+        $result = $this->serverOps->run(
+            $this->asUser($application, ['find', $target, '-type', 'f', '-printf', "%s\t%f\n"]),
+            ['feature' => 'application', 'op' => 'file_breakdown', 'application' => $application->id],
+            timeout: self::BREAKDOWN_TIMEOUT_SECONDS,
+        );
+
+        if (! $result->ok) {
+            return [
+                'available' => false, 'truncated' => false,
+                'total_bytes' => 0, 'file_count' => 0, 'categories' => [],
+            ];
+        }
+
+        $files = [];
+        $truncated = false;
+
+        foreach (explode("\n", $result->output()) as $line) {
+            if ($line === '') {
+                continue;
+            }
+
+            if (count($files) >= self::MAX_BREAKDOWN_FILES) {
+                $truncated = true;
+                break;
+            }
+
+            // Split once from the left: a filename may contain tabs, and the
+            // size never does.
+            [$size, $name] = array_pad(explode("\t", $line, 2), 2, '');
+            $files[] = ['name' => $name, 'size' => (int) $size];
+        }
+
+        $categories = app(FileTypeBreakdown::class)->summarise($files);
+
+        return [
+            'available' => true,
+            'truncated' => $truncated,
+            'total_bytes' => $total = array_sum(array_column($categories, 'bytes')),
+            'total_bytes_human' => Bytes::human($total),
+            'file_count' => count($files),
+            'categories' => array_map(fn (array $c): array => $c + [
+                'bytes_human' => Bytes::human($c['bytes']),
+            ], $categories),
+        ];
     }
 
     /**

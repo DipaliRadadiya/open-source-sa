@@ -219,6 +219,9 @@ class FileBrowserFake
      */
     public static array $archives = [];
 
+    /** Makes the recursive `-type f` walk behind the type breakdown fail. */
+    public static bool $breakdownFails = false;
+
     // The cwd every command ran with, index-aligned with $ran.
     /** @var array<int, string> */
     public static array $cwds = [];
@@ -228,6 +231,7 @@ class FileBrowserFake
         self::$fs = ['' => ['type' => 'd']];
         self::$ran = [];
         self::$archives = [];
+        self::$breakdownFails = false;
         self::$cwds = [];
     }
 }
@@ -322,6 +326,32 @@ function fakeFileBrowserServer(): void
             $entry = FileBrowserFake::$fs[$rel];
 
             return Process::result(output: $entry['type']."\t".($entry['size'] ?? 0));
+        }
+
+        // `find <target> -type f -printf '%s\t%f\n'` — every file underneath,
+        // size and basename, which is what the type breakdown counts.
+        if ($binary === 'find' && in_array('-type', $inner, true) && in_array('f', $inner, true)
+            && str_starts_with((string) ($inner[array_search('-printf', $inner, true) + 1] ?? ''), '%s')) {
+            if (FileBrowserFake::$breakdownFails) {
+                return Process::result(exitCode: 1, errorOutput: 'timed out');
+            }
+
+            $root = $relative($inner[1] ?? '');
+            $lines = [];
+
+            foreach (FileBrowserFake::$fs as $rel => $entry) {
+                if (($entry['type'] ?? '') !== 'f') {
+                    continue;
+                }
+
+                if ($root !== '' && ! str_starts_with($rel, $root.'/')) {
+                    continue;
+                }
+
+                $lines[] = ($entry['size'] ?? 0)."\t".basename($rel);
+            }
+
+            return Process::result(output: $lines === [] ? '' : implode("\n", $lines)."\n");
         }
 
         $statLine = function (string $name, array $entry): string {
@@ -746,6 +776,44 @@ describe('browsing', function () {
             ->getJson(filesUrl('?hidden=maybe'))
             ->assertStatus(422)
             ->assertJsonValidationErrors('hidden');
+    });
+
+    it('breaks a directory down by file type, largest first', function () {
+        FileBrowserFake::$fs['hero.jpg'] = ['type' => 'f', 'size' => 900, 'content' => 'x'];
+        FileBrowserFake::$fs['app.js'] = ['type' => 'f', 'size' => 100, 'content' => 'x'];
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(filesUrl('/breakdown'))
+            ->assertOk();
+
+        expect($response->json('breakdown.available'))->toBeTrue()
+            ->and($response->json('breakdown.categories.0.key'))->toBe('images')
+            ->and($response->json('breakdown.categories.0.bytes'))->toBe(900)
+            ->and($response->json('breakdown.total_bytes'))->toBeGreaterThan(900);
+    });
+
+    it('says it could not measure rather than reporting an empty directory', function () {
+        // A tree too large to walk inside the timeout, or a command that
+        // refused. Zero bytes is not a smaller answer than the truth, it is a
+        // different and false one.
+        FileBrowserFake::$breakdownFails = true;
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)
+            ->getJson(filesUrl('/breakdown'))
+            ->assertOk();
+
+        expect($response->json('breakdown.available'))->toBeFalse()
+            ->and($response->json('breakdown.categories'))->toBe([]);
+    });
+
+    it('needs the file permission to answer', function () {
+        fakeFileBrowserServer();
+
+        $outsider = User::factory()->create();
+
+        $this->actingAs($outsider)->getJson(filesUrl('/breakdown'))->assertForbidden();
     });
 
     it('returns mode, owner and group for files and directories, but not for symlinks', function () {

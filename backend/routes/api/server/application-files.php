@@ -28,6 +28,16 @@ Route::get('/applications/{application}/files', [ApplicationFileController::clas
 Route::get('/applications/{application}/files/search', [ApplicationFileController::class, 'search'])
     ->middleware(['permission:app_file', 'throttle:10,1']);
 
+/*
+| Bytes by file type, for the chart on the file manager.
+|
+| Read-only and permission:app_file like the listing, but throttled harder: it
+| walks every file under the target, so it is the one read on this screen that
+| a refresh loop could turn into real load.
+*/
+Route::get('/applications/{application}/files/breakdown', [ApplicationFileController::class, 'breakdown'])
+    ->middleware(['permission:app_file', 'throttle:30,1']);
+
 Route::get('/applications/{application}/files/size', [ApplicationFileController::class, 'folderSize'])
     ->middleware(['permission:app_file', 'throttle:20,1']);
 

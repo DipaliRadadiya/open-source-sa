@@ -51,6 +51,21 @@ class ApplicationFileController extends Controller
         ]);
     }
 
+    /**
+     * How this directory's bytes divide by file type.
+     *
+     * Its own endpoint rather than a field on the listing: it walks every file
+     * underneath, while a listing reads one level. Folding it in would make
+     * opening a folder pay for a chart nobody asked for.
+     */
+    public function breakdown(BrowseFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
+    {
+        return response()->json([
+            'path' => $request->targetPath(),
+            'breakdown' => $files->breakdown($application, $request->targetPath()),
+        ]);
+    }
+
     public function search(SearchFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
     {
         $result = $files->search($application, $request->targetPath(), $request->searchQuery());

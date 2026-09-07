@@ -3713,6 +3713,28 @@
         "hide": "Hide hidden files",
         "show": "Show hidden files",
         "count": "({count} hidden)"
+      },
+      "breakdown": {
+        "title": "What is using this space",
+        "subtitle": "{total} across {files} files in this folder and everything under it.",
+        "unavailable": "This folder is too large to measure right now.",
+        "empty": "This folder holds no files.",
+        "truncated": "Too many files to count them all — this covers the first 250,000.",
+        "columnType": "Type",
+        "columnSize": "Size",
+        "columnFiles": "Files",
+        "types": {
+          "images": "Images",
+          "video": "Video",
+          "audio": "Audio",
+          "code": "Code",
+          "documents": "Documents",
+          "archives": "Archives",
+          "database": "Databases",
+          "logs": "Logs",
+          "fonts": "Fonts",
+          "other": "Other"
+        }
       }
     },
     "workers": {

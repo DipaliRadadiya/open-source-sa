@@ -8,7 +8,9 @@ import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getFiles } from "@/lib/applications/get-files";
 import { getTrash } from "@/lib/applications/get-trash";
+import { getBreakdown } from "@/lib/applications/get-breakdown";
 import { FilesPanel } from "@/components/applications/files/files-panel";
+import { SizeBreakdownCard } from "@/components/applications/files/size-breakdown-card";
 import { TrashPanel } from "@/components/applications/files/trash-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -70,10 +72,17 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
 
   if (!isSafePath(path)) redirect(`/applications/${id}/files`);
 
-  const filesResult =
+  // Together, not in sequence: the breakdown walks the directory while the
+  // listing reads one level of it, and running them one after the other would
+  // add the slower one's time to a page that already waits on a shell-out.
+  const [filesResult, breakdown] = await Promise.all([
     settled && !showTrash
-      ? await getFiles(id, path, showHidden)
-      : { path: "", files: [], failed: false, notFound: false };
+      ? getFiles(id, path, showHidden)
+      : Promise.resolve({ path: "", files: [], failed: false, notFound: false }),
+    // Never blocks: a folder too large to walk returns null and the card says
+    // so, rather than the file manager waiting on a chart.
+    settled && !showTrash ? getBreakdown(id, path) : Promise.resolve(null),
+  ]);
   const trashResult = settled && showTrash ? await getTrash(id) : null;
 
   return (
@@ -122,14 +131,17 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
       ) : filesResult.failed ? (
         <LoadFailed description={t("loadFailed")} />
       ) : (
-        <FilesPanel
-          appId={id}
-          initialPath={filesResult.path}
-          initialFiles={filesResult.files}
-          hiddenCount={filesResult.hiddenCount}
-          showHidden={showHidden}
-          canManage={canManage}
-        />
+        <>
+          <FilesPanel
+            appId={id}
+            initialPath={filesResult.path}
+            initialFiles={filesResult.files}
+            hiddenCount={filesResult.hiddenCount}
+            showHidden={showHidden}
+            canManage={canManage}
+          />
+          <SizeBreakdownCard breakdown={breakdown} />
+        </>
       )}
     </div>
   );

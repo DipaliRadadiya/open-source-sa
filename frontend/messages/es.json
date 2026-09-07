@@ -3713,6 +3713,28 @@
         "hide": "Ocultar archivos ocultos",
         "show": "Mostrar archivos ocultos",
         "count": "({count} ocultos)"
+      },
+      "breakdown": {
+        "title": "Qué está ocupando el espacio",
+        "subtitle": "{total} en {files} archivos de esta carpeta y todo lo que contiene.",
+        "unavailable": "Esta carpeta es demasiado grande para medirla ahora mismo.",
+        "empty": "Esta carpeta no contiene archivos.",
+        "truncated": "Demasiados archivos para contarlos todos: esto cubre los primeros 250.000.",
+        "columnType": "Tipo",
+        "columnSize": "Tamaño",
+        "columnFiles": "Archivos",
+        "types": {
+          "images": "Imágenes",
+          "video": "Vídeo",
+          "audio": "Audio",
+          "code": "Código",
+          "documents": "Documentos",
+          "archives": "Archivos comprimidos",
+          "database": "Bases de datos",
+          "logs": "Registros",
+          "fonts": "Fuentes",
+          "other": "Otros"
+        }
       }
     },
     "workers": {
