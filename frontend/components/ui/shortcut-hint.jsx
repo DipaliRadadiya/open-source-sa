@@ -31,6 +31,10 @@ export function ShortcutHint({ letter, className }) {
 
   return (
     <kbd
+      // The tooltip surface already styles `data-slot=kbd` — it reserves the
+      // right padding for one and lifts it above the arrow. That hook was
+      // written for this and had no user until now.
+      data-slot="kbd"
       aria-hidden="true"
       className={cn(
         "hidden select-none items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted-foreground sm:inline-flex",

@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { ShortcutHint } from "@/components/ui/shortcut-hint";
 import {
   Tooltip,
   TooltipContent,
@@ -10,6 +11,12 @@ import {
  * The sidebar toggle with a dynamic tooltip (Expand / Collapse) so it clearly
  * reads as a control, not a breadcrumb icon. The span wrapper forwards the
  * hover to the tooltip (SidebarTrigger doesn't forward a ref).
+ *
+ * The tooltip also names the shortcut. Cmd/Ctrl+B has toggled this since the
+ * sidebar was added and nothing anywhere said so — which is worth nothing to
+ * everyone who has not tried it, the same reason the file editors grew a hint
+ * beside their Save buttons. The key shown follows the platform: ⌘ on a Mac,
+ * Ctrl everywhere else.
  */
 export function SidebarToggle() {
   const t = useTranslations("common");
@@ -24,7 +31,10 @@ export function SidebarToggle() {
           <SidebarTrigger className="border bg-background shadow-xs hover:bg-accent" />
         </span>
       </TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
+      <TooltipContent side="right">
+        {label}
+        <ShortcutHint letter="B" className="border-background/25 bg-background/15 text-background" />
+      </TooltipContent>
     </Tooltip>
   );
 }
