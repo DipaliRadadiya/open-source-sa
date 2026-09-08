@@ -2250,7 +2250,7 @@
       "noUsers": "No users",
       "lastExport": "Last export",
       "neverExported": "Never",
-      "application": "Application",
+      "application": "Site",
       "notLinked": "Not linked",
       "applicationUnknown": "Another site",
       "attachFor": "Choose which site uses {name}"

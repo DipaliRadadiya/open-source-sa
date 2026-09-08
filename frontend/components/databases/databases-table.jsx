@@ -289,6 +289,20 @@ function DatabasesList({
       // standing in for a date it could not compare: "2 months ago" is a
       // sentence and created_at arrives as DD-MM-YYYY, which sorts
       // alphabetically into nonsense. The server has the real column.
+      //
+      // Hidden under 1600px of viewport. Eight columns need ~1290px and the
+      // sidebar takes 320 of whatever the screen has, so on a 1440 laptop the
+      // row ran past the edge and put Manage, phpMyAdmin and Delete off-screen
+      // behind a scrollbar nothing pointed at. Age is the one column here that
+      // no operational decision turns on, and it is still on the database's own
+      // page — the actions are not recoverable anywhere else.
+      // Hidden below 1536px. Eight columns need ~1290px and the sidebar takes
+      // 320 of whatever the screen has, so on a 1440 laptop the row ran past
+      // the edge and left Manage, phpMyAdmin and Delete off-screen behind a
+      // scrollbar nothing pointed at. Age is the one column here no operational
+      // decision turns on, and it is still on the database's own page — the
+      // actions are not recoverable anywhere else.
+      meta: { className: "hidden 2xl:table-cell" },
       id: "created",
       header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>,
       cell: CreatedCell,
@@ -386,7 +400,13 @@ function DatabasesList({
            never got a narrow-screen view: at 390px its seven columns are
            1115px wide inside a 356px scroller. */
         <>
-        <div className="lg:hidden">
+        {/* 1440, not a named breakpoint, because that is where it measured:
+            seven columns need 1118px and the sidebar plus padding take 320 of
+            whatever the screen has, so 1440 is the first width the row fits.
+            Below it the actions sat off the right edge behind a scrollbar
+            nothing pointed at. The cards carry every field including the site,
+            so using them wider loses nothing. */}
+        <div className="min-[1440px]:hidden">
           <DatabasesCards
             databases={data}
             canManage={canManage}
@@ -396,9 +416,11 @@ function DatabasesList({
             engineName={(engine) => t(`engines.${engine}`)}
             lastBackup={lastBackup}
             backupsUnknown={backupsUnknown}
+            applications={applications}
+            onAttach={canManage ? setAttaching : null}
           />
         </div>
-        <div className="hidden lg:block">
+        <div className="hidden min-[1440px]:block">
         <DataTable
           columns={columns}
           data={data}

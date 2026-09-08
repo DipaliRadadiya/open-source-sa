@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { applicationById } from "@/lib/backups/database-availability";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
@@ -34,6 +35,12 @@ export function DatabasesCards({
   backupsUnknown = false,
   phpmyadminInstalled = null,
   onDelete,
+  // The site each database belongs to. The table has had a column for this
+  // since it was added; the cards did not, so on a phone the link that decides
+  // what gets backed up was invisible — the exact blind spot the column exists
+  // to remove, just below the `lg` breakpoint.
+  applications = [],
+  onAttach = null,
 }) {
   const t = useTranslations("databases");
 
@@ -44,6 +51,11 @@ export function DatabasesCards({
         // NOT `?? 0`: a missing count means we did not count, and rendering
         // the "no users" warning for it states a fact we do not have.
         const users = userCount(database);
+        // Attached to a site this reader cannot see is its own answer: calling
+        // it "not linked" would invite an attach the API would refuse.
+        const ownedBy = applicationById(applications, database.application_id);
+        const orphanUnknown =
+          !ownedBy && database.application_id !== null && database.application_id !== undefined;
 
         return (
           <CardListItem key={database.id}>
@@ -63,9 +75,30 @@ export function DatabasesCards({
                 <p className="mt-1 text-xs text-muted-foreground">{engineName(database.engine)}</p>
               ) : null}
 
-              {/* The two states, before the two numbers. */}
-              {users === 0 || (!backupsUnknown && !backup) ? (
+              {/* The three states, before the numbers. */}
+              {users === 0 || (!backupsUnknown && !backup) || (!ownedBy && !orphanUnknown) ? (
                 <div className="mt-2 flex flex-wrap gap-1.5">
+                  {/* Same badge the table shows, and the same button: this is
+                      where a phone reader finds out, so it is where the fix
+                      belongs too. */}
+                  {!ownedBy && !orphanUnknown ? (
+                    onAttach ? (
+                      <button
+                        type="button"
+                        onClick={() => onAttach(database)}
+                        className="rounded-full focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                        aria-label={t("columns.attachFor", { name: database.name })}
+                      >
+                        <Badge variant="warning" className="cursor-pointer font-normal underline-offset-2 hover:underline">
+                          {t("columns.notLinked")}
+                        </Badge>
+                      </button>
+                    ) : (
+                      <Badge variant="warning" className="font-normal">
+                        {t("columns.notLinked")}
+                      </Badge>
+                    )
+                  ) : null}
                   {users === 0 ? (
                     <Badge variant="warning" className="font-normal">
                       {t("columns.noUsers")}
@@ -80,6 +113,24 @@ export function DatabasesCards({
               ) : null}
 
               <dl className="mt-2 space-y-1 text-xs">
+                {ownedBy || orphanUnknown ? (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">{t("columns.application")}</dt>
+                    <dd className="min-w-0 truncate">
+                      {ownedBy ? (
+                        <Link
+                          href={`/applications/${ownedBy.id}`}
+                          prefetch={false}
+                          className="underline-offset-4 hover:underline"
+                        >
+                          {ownedBy.name}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">{t("columns.applicationUnknown")}</span>
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between gap-3">
                   <dt className="text-muted-foreground">{t("columns.size")}</dt>
                   <dd className="tabular-nums">{database.size_human ?? "—"}</dd>
