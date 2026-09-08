@@ -9,12 +9,14 @@ import {
   getConnections,
 } from "@/lib/databases/get-databases";
 import { getExports } from "@/lib/databases/get-exports";
-import { getPhpmyadminSite } from "@/lib/applications/get-applications";
+import { getAllApplications, getPhpmyadminSite } from "@/lib/applications/get-applications";
+import { getDatabaseCounts, getUnlinkedCount } from "@/lib/databases/get-databases";
 import { formatBytes } from "@/lib/format/bytes";
 import { parseApiDate } from "@/lib/format/api-date";
 import { EngineBar } from "@/components/databases/engine-bar";
 import { EngineState } from "@/components/databases/engine-state";
 import { UntrackedBanner } from "@/components/databases/untracked-banner";
+import { UnlinkedBanner } from "@/components/databases/unlinked-banner";
 import { DatabasesTable } from "@/components/databases/databases-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
@@ -50,7 +52,7 @@ export default async function DatabasesPage({ searchParams }) {
   // table that then invites you to create a database nothing could store.
   const usable = engines.some((engine) => engine.running);
 
-  const [{ databases, meta: dbMeta, failed: dbFailed, status: dbStatus, failure: dbFailure }, untracked, connections, exportList, phpmyadmin] = await Promise.all([
+  const [{ databases, meta: dbMeta, failed: dbFailed, status: dbStatus, failure: dbFailure }, untracked, connections, exportList, phpmyadmin, appList, dbCounts, unlinkedCount] = await Promise.all([
     usable ? getDatabases(query) : Promise.resolve({ databases: [], failed: false }),
     usable && canManage ? getUntracked(engines) : Promise.resolve([]),
     // Needed most when nothing is reachable — that is when someone has to look
@@ -62,6 +64,12 @@ export default async function DatabasesPage({ searchParams }) {
     // Whether this server has a phpMyAdmin to open at all. Without it the
     // button was offered on every row and refused on click.
     usable ? getPhpmyadminSite() : Promise.resolve(null),
+    // The site picker in the create dialog, and which sites already have a
+    // database. Only fetched for someone who can actually create one.
+    usable && canManage ? getAllApplications() : Promise.resolve({ applications: [] }),
+    usable && canManage ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
+    // Server-wide, so it survives the search and paging the table is under.
+    usable ? getUnlinkedCount() : Promise.resolve(0),
   ]);
 
   if (dbFailed) return <LoadFailed description={t("loadFailed")} status={dbStatus} failure={dbFailure} />;
@@ -116,6 +124,12 @@ export default async function DatabasesPage({ searchParams }) {
             summary={summary}
           />
           <UntrackedBanner untracked={untracked} canManage={canManage} />
+          {/* Under Adopt: an untracked database is not in the panel at all,
+              which has to be fixed before its link can be. */}
+          <UnlinkedBanner
+            count={unlinkedCount}
+            filtered={new URLSearchParams(query).get("attached") === "false"}
+          />
           <DatabasesTable
             data={databases}
             meta={dbMeta}
@@ -127,6 +141,9 @@ export default async function DatabasesPage({ searchParams }) {
             backupsUnknown={exportList.failed}
             // false only when we actually looked and found none.
             phpmyadminInstalled={phpmyadmin.known ? Boolean(phpmyadmin.site) : null}
+            applications={appList.applications}
+            databaseCounts={dbCounts.counts}
+            databasesKnown={dbCounts.known}
           />
         </div>
       ) : (

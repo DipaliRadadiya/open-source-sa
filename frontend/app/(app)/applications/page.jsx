@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplications, getSiteTypes } from "@/lib/applications/get-applications";
+import { getDatabaseCounts } from "@/lib/databases/get-databases";
+import { sitesMissingDatabase } from "@/lib/backups/database-availability";
 import { ApplicationsTable } from "@/components/applications/applications-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
@@ -32,6 +34,12 @@ export default async function ApplicationsPage({ searchParams }) {
   const { siteTypes } = await getSiteTypes();
 
   if (!can(permissions, "application", "view")) redirect("/dashboard");
+
+  // Databases are a server-level permission: a reader without it gets no
+  // marker rather than a marker they could do nothing about.
+  const dbCounts = can(permissions, "database", "view")
+    ? await getDatabaseCounts()
+    : { counts: null, known: false };
   if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
 
 
@@ -61,6 +69,12 @@ export default async function ApplicationsPage({ searchParams }) {
         meta={result.meta}
         siteTypes={siteTypes}
         canManage={can(permissions, "application", "manage")}
+        missingDatabase={sitesMissingDatabase(
+          result.applications,
+          siteTypes,
+          dbCounts.counts,
+          dbCounts.known,
+        )}
       />
     </div>
   );

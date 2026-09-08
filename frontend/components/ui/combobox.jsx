@@ -124,23 +124,38 @@ export function Combobox({
           {filtered.length ? (
             filtered.map((option) => {
               const isSelected = String(option.value) === String(value);
+              // Shown greyed with the reason rather than hidden: an option that
+              // silently is not there reads as a bug in the list, and the
+              // reason is usually the next thing the reader has to act on.
+              const blocked = Boolean(option.disabledReason);
               return (
                 <button
                   key={option.value}
                   type="button"
+                  disabled={blocked}
                   onClick={() => {
+                    if (blocked) return;
                     onChange?.(String(option.value));
                     handleOpenChange(false);
                   }}
                   className={cn(
-                    "flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground",
+                    "flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm",
+                    blocked
+                      ? "cursor-not-allowed opacity-60"
+                      : "hover:bg-accent hover:text-accent-foreground",
                     isSelected && "bg-accent/60",
                   )}
                 >
                   <Check className={cn("mt-0.5 size-4 shrink-0", isSelected ? "opacity-100 text-primary" : "opacity-0")} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{option.label}</span>
-                    {option.hint ? (
+                    {/* The blocker replaces the hint: while the option cannot be
+                        chosen, why is the only thing worth the line. */}
+                    {blocked ? (
+                      <span className="block truncate text-xs font-medium text-warning">
+                        {option.disabledReason}
+                      </span>
+                    ) : option.hint ? (
                       <span className="block truncate text-xs text-muted-foreground">{option.hint}</span>
                     ) : null}
                   </span>

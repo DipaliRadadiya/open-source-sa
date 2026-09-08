@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, DatabasePlus, Loader2 } from "lucide-react";
 import { createDatabaseSchema } from "@/lib/schemas/database";
 import { randomUsername } from "@/lib/databases/random";
+import { applicationOptions } from "@/lib/backups/database-availability";
 import { createDatabase } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ChoiceField } from "@/components/ui/choice-field";
+import { Combobox } from "@/components/ui/combobox";
 import { FormModal } from "@/components/ui/form-modal";
 import {
   Collapsible,
@@ -49,7 +51,16 @@ import { CreatedCredentials } from "@/components/databases/created-credentials";
  * rejects mismatched pairs, and most people creating a database for an app have
  * no reason to think about either.
  */
-export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
+export function CreateDatabaseDialog({
+  engines = [],
+  open,
+  onOpenChange,
+  // The sites this database could belong to, and which of them already have
+  // one. Empty means the picker is not offered at all.
+  applications = [],
+  databaseCounts = null,
+  databasesKnown = false,
+}) {
   const t = useTranslations("databases");
   const router = useRouter();
   const [advanced, setAdvanced] = useState(false);
@@ -66,6 +77,7 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
     engine: defaultEngine,
     charset: "",
     collation: "",
+    application_id: "",
     create_user: true,
     username: "",
     password: "",
@@ -103,6 +115,12 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
       name: submitted.name,
       engine: submitted.engine,
     };
+    // Sent only when a site was chosen. The API takes null for "no site", but
+    // omitting the key entirely is the same thing and keeps the request honest
+    // about what the form actually asked for.
+    if (submitted.application_id) {
+      payload.application_id = Number(submitted.application_id);
+    }
     if (submitted.charset) payload.charset = submitted.charset;
     if (submitted.collation) payload.collation = submitted.collation;
 
@@ -225,6 +243,46 @@ export function CreateDatabaseDialog({ engines = [], open, onOpenChange }) {
                     ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
+
+        {/* Which site this database belongs to.
+            Optional, and the reason it exists: backups dump exactly the
+            databases attached to a site, so one created here with no site is
+            absent from every backup — silently, and with nothing on any screen
+            that would say so. */}
+        {applications.length > 0 ? (
+          <FormField
+            control={form.control}
+            name="application_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("create.application")}</FormLabel>
+                <FormControl>
+                  <Combobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder={t("create.applicationNone")}
+                    searchPlaceholder={t("create.applicationSearch")}
+                    options={[
+                      { value: "", label: t("create.applicationNone") },
+                      ...applicationOptions(
+                        applications,
+                        databaseCounts,
+                        databasesKnown,
+                        t("create.applicationTaken"),
+                      ),
+                    ]}
+                    className="w-full"
+                  />
+                </FormControl>
+                {/* The backend asks for this sentence in as many words: someone
+                    who links a database expecting the site to start using it
+                    has been misled. */}
+                <FormDescription>{t("create.applicationHint")}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

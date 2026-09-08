@@ -2249,7 +2249,11 @@
       "created": "Creada",
       "noUsers": "Sin usuarios",
       "lastExport": "Última exportación",
-      "neverExported": "Nunca"
+      "neverExported": "Nunca",
+      "application": "Aplicación",
+      "notLinked": "Sin vincular",
+      "applicationUnknown": "Otro sitio",
+      "attachFor": "Elige qué sitio usa {name}"
     },
     "empty": {
       "title": "Todavía no hay bases de datos",
@@ -2282,7 +2286,12 @@
       "chooseCharsetFirst": "Elige primero un juego de caracteres",
       "noEngine": "Instala primero un motor de base de datos.",
       "usernamePlaceholder": "usuario_mi_app",
-      "needsCharset": "Elige primero un conjunto de caracteres: sus colaciones se cargan con él."
+      "needsCharset": "Elige primero un conjunto de caracteres: sus colaciones se cargan con él.",
+      "application": "Usada por",
+      "applicationNone": "Sin vincular a ningún sitio",
+      "applicationSearch": "Buscar sitios…",
+      "applicationTaken": "Ya tiene una base de datos",
+      "applicationHint": "Determina qué sitio respalda esta base de datos. No conecta tu sitio con ella: el sitio sigue usando lo que indique su propia configuración."
     },
     "access": {
       "localhost": {
@@ -2342,7 +2351,7 @@
       "clearAll": "Borrar",
       "submit": "Adoptar",
       "adopting": "Adoptando…",
-      "done": "{count, plural, one {# base de datos adoptada.} other {# bases de datos adoptadas.}}",
+      "done": "{count, plural, one {# base de datos adoptada. Aún no está vinculada a ningún sitio, así que ninguna copia la incluye.} other {# bases de datos adoptadas. Aún no están vinculadas a ningún sitio, así que ninguna copia las incluye.}}",
       "failed": "No se pudieron adoptar."
     },
     "engineList": {
@@ -2625,6 +2634,36 @@
       "openAnyway": "Abrir phpMyAdmin",
       "install": "Instalar phpMyAdmin",
       "needsUser": "Añade primero un usuario de la base de datos — phpMyAdmin inicia sesión como uno."
+    },
+    "usedBy": {
+      "title": "Usada por",
+      "included": "Incluida en las copias de seguridad de este sitio.",
+      "noneWarning": "Sin vincular a ningún sitio, por lo que ninguna copia la incluye.",
+      "unknownSite": "Vinculada a un sitio que no puedes ver.",
+      "attach": "Vincular a un sitio",
+      "change": "Cambiar",
+      "noPermission": "No tienes permiso para cambiar esto."
+    },
+    "attach": {
+      "title": "¿Qué sitio usa esta base de datos?",
+      "subtitle": "Elige el sitio al que pertenece {name}.",
+      "label": "Usada por",
+      "none": "Sin vincular a ningún sitio",
+      "search": "Buscar sitios…",
+      "taken": "Ya tiene una base de datos",
+      "hint": "Determina qué sitio respalda esta base de datos. No conecta tu sitio con ella: el sitio sigue usando lo que indique su propia configuración.",
+      "submit": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "attached": "Base de datos vinculada al sitio.",
+      "detached": "La base de datos ya no está vinculada a ningún sitio.",
+      "failed": "No se pudo cambiar qué sitio usa esta base de datos.",
+      "unchanged": "Elige primero otro sitio."
+    },
+    "unlinked": {
+      "title": "{count, plural, one {# base de datos no está vinculada a ningún sitio} other {# bases de datos no están vinculadas a ningún sitio}}",
+      "description": "Las copias de seguridad solo incluyen bases de datos vinculadas a un sitio, así que estas no están en ninguna copia.",
+      "action": "Mostrarlas"
     }
   },
   "git": {
@@ -4502,7 +4541,9 @@
       "noCertificate": "SSL no instalado",
       "issueCertificate": "Emitir SSL",
       "reviewSecurity": "Revisar seguridad",
-      "protectionsOff": "{count, plural, one {# protección desactivada} other {# protecciones desactivadas}}"
+      "protectionsOff": "{count, plural, one {# protección desactivada} other {# protecciones desactivadas}}",
+      "noDatabase": "Este sitio no tiene base de datos, por lo que sus copias no incluirán ninguna",
+      "attachDatabase": "Vincular una base de datos"
     },
     "filters": {
       "allStatuses": "Todos los estados",
@@ -4514,7 +4555,19 @@
       "action": "Instalar una base de datos",
       "installingTitle": "Se está instalando un motor de base de datos",
       "installingBody": "Espera a que termine antes de crear un sitio que necesite una base de datos. El progreso está en la página Bases de datos."
-    }
+    },
+    "databaseCard": {
+      "title": "Base de datos",
+      "description": "Lo que incluirán las copias de seguridad de este sitio. Vincularla no cambia cómo se conecta tu sitio.",
+      "count": "{count, plural, one {# base de datos} other {# bases de datos}}",
+      "notBackedUp": "Sin copia de seguridad",
+      "missingWarning": "No hay ninguna base de datos vinculada, así que las copias de este sitio no incluirán ninguna.",
+      "missingFine": "Este sitio no tiene ninguna base de datos vinculada.",
+      "loadFailed": "No se pudieron comprobar las bases de datos de este sitio.",
+      "attach": "Vincular una base de datos",
+      "manage": "Gestionar"
+    },
+    "noDatabaseBadge": "Sin base de datos"
   },
   "panelUpdate": {
     "title": "Actualización del panel",

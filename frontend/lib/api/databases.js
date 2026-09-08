@@ -19,6 +19,25 @@ export function createDatabase(payload) {
   return api.post("/databases", payload);
 }
 
+/**
+ * Point a database at a site, move it to another, or detach it (null).
+ *
+ * `application_id` is sent even when null: the API treats an ABSENT key as a
+ * 422 rather than a detach, on the grounds that forgetting a field and asking
+ * to unlink are different requests.
+ *
+ * Bookkeeping only. Nothing rewrites `wp-config.php` or an `.env` — what the
+ * link decides is which database backups, staging, cloning and restoring treat
+ * as the site's.
+ */
+export function attachDatabase(databaseId, applicationId) {
+  return api.put(`/databases/${databaseId}/application`, {
+    application_id: applicationId === null || applicationId === undefined || applicationId === ""
+      ? null
+      : Number(applicationId),
+  });
+}
+
 /** Drops the database AND its users — the engine leaves no orphans behind. */
 export function deleteDatabase(id) {
   return api.delete(`/databases/${id}`);

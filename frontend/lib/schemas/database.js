@@ -143,6 +143,10 @@ export const createDatabaseSchema = z
         "databaseNameReserved",
       ),
     engine: z.string().min(1, "required_engine"),
+    // "" is the "not linked to a site" choice, which is a legitimate answer —
+    // a database need not belong to one. Coerced to null at submit rather than
+    // sent as an empty string, which the API would reject.
+    application_id: z.string().optional(),
     charset: z.string().optional(),
     collation: z.string().optional(),
     create_user: z.boolean().default(true),

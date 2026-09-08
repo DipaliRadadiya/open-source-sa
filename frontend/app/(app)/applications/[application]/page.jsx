@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ExternalLink } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
+import { getApplicationDatabases } from "@/lib/databases/get-databases";
+import { getSiteTypes } from "@/lib/applications/get-applications";
+import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
@@ -19,6 +22,7 @@ import { DomainsCard } from "@/components/applications/domains-card";
 import { ProtectionCard } from "@/components/applications/protection-card";
 import { AttentionStrip } from "@/components/applications/attention-strip";
 import { BackupCard } from "@/components/applications/backup-card";
+import { DatabaseCard } from "@/components/applications/database-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,7 +79,11 @@ export default async function ApplicationDetailPage({ params }) {
     ? await getGitAccounts().then((r) => r.data?.git_accounts ?? []).catch(() => [])
     : [];
 
-  const [domainList, certificate, backup, backupRuns] = await Promise.all([
+  // Databases are a SERVER-level permission: a site-level reader may hold none,
+  // and asking would be a 403 on a page that otherwise works.
+  const canSeeDatabases = can(permissions, "database", "view");
+
+  const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes] = await Promise.all([
     settled && canSeeDomains
       ? getApplicationDomains(id)
       : Promise.resolve({ domains: [], failed: false }),
@@ -97,7 +105,21 @@ export default async function ApplicationDetailPage({ params }) {
     settled && canSeeBackups
       ? getBackups({ application: id, per_page: 1 })
       : Promise.resolve({ backups: [] }),
+    settled && canSeeDatabases
+      ? getApplicationDatabases(id)
+      : Promise.resolve({ databases: [], failed: false }),
+    // `needs_database` is on the site TYPE, never on the application, so the
+    // "is a missing database a problem here?" question needs this list.
+    settled && canSeeDatabases
+      ? getSiteTypes().catch(() => ({ siteTypes: [] }))
+      : Promise.resolve({ siteTypes: [] }),
   ]);
+
+  const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
+  // Only when we actually looked and found none, and only for a type that
+  // wanted one. Anything less certain stays quiet.
+  const missingDatabase =
+    canSeeDatabases && !siteDatabases.failed && needsDatabase && siteDatabases.databases.length === 0;
 
   /*
    * Every value here is already on the application payload, so the card costs
@@ -169,6 +191,15 @@ export default async function ApplicationDetailPage({ params }) {
       // tab, so a button saying "Issue SSL" was landing people on a domain list
       // and asking them to find the second tab themselves.
       href: `/applications/${id}/domains?tab=ssl`,
+    },
+    // Above the backup item deliberately: setting up backups on a site whose
+    // database is not attached produces backups without the database, which is
+    // the outcome this whole feature exists to prevent.
+    missingDatabase && {
+      key: "database",
+      label: t("attention.noDatabase"),
+      action: t("attention.attachDatabase"),
+      href: "/databases",
     },
     canSeeBackups && !backup.failed && !backup.target && {
       key: "backups",
@@ -328,6 +359,19 @@ export default async function ApplicationDetailPage({ params }) {
               failed={backup.failed}
               canManage={canRunBackup}
               href={`/applications/${id}/backups`}
+            />
+          ) : null}
+
+          {/* Only where a database is part of the picture at all: a site type
+              that needs one, or a site that already has one. A static site
+              gets no card, because it has nothing to say and an empty card
+              reads as a missing feature. */}
+          {canSeeDatabases && (needsDatabase || siteDatabases.databases.length > 0) ? (
+            <DatabaseCard
+              databases={siteDatabases.databases}
+              failed={siteDatabases.failed}
+              needsDatabase={needsDatabase}
+              canSeeDatabases={canSeeDatabases}
             />
           ) : null}
 

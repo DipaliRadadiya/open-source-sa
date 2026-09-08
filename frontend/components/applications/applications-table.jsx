@@ -136,9 +136,9 @@ function ActionsCell({ row, table }) {
   );
 }
 
-function NameCell({ row }) {
+function NameCell({ row, missingDatabase = false }) {
   const t = useTranslations("applications");
-  return <div className="flex min-w-0 items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Globe2 className="size-4" /></span><div className="min-w-0"><div className="flex min-w-0 items-center gap-2"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate">{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1"><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
+  return <div className="flex min-w-0 items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Globe2 className="size-4" /></span><div className="min-w-0"><div className="flex min-w-0 items-center gap-2"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate">{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1"><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
 }
 
 
@@ -213,7 +213,15 @@ export function ApplicationsTable(props) {
   );
 }
 
-function ApplicationsList({ applications = [], meta, siteTypes = [], canManage = false }) {
+function ApplicationsList({
+  applications = [],
+  meta,
+  siteTypes = [],
+  canManage = false,
+  // Ids of sites whose type needs a database and that have none. Empty when
+  // the reader cannot see databases, or when the count could not be read.
+  missingDatabase = new Set(),
+}) {
   const t = useTranslations("applications");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -249,7 +257,7 @@ function ApplicationsList({ applications = [], meta, siteTypes = [], canManage =
       // handed one page, so sorting here reordered ten rows and presented that
       // as the order of the list. The server has the whole set, and pins
       // never-measured to the small end itself.
-      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, cell: NameCell },
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} /> },
       { accessorKey: "site_type_title", header: () => <SortHeader col="site_type">{t("columns.type")}</SortHeader>, cell: TypeCell },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, cell: StatusCell },
       // Not sortable, and deliberately so on the API's side: the owner lives on
@@ -262,7 +270,10 @@ function ApplicationsList({ applications = [], meta, siteTypes = [], canManage =
       { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, cell: CreatedCell },
       { id: "actions", header: "", cell: ActionsCell },
     ],
-    [t],
+    // `missingDatabase` belongs here: attaching a database refreshes the route,
+    // and without it the columns keep the closure from the previous render and
+    // the badge stays on a site that now has one.
+    [t, missingDatabase],
   );
 
   const filters = <Filters statusOptions={statusOptions} typeOptions={typeOptions} t={t} />;

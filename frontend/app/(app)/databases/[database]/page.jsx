@@ -4,13 +4,15 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getDatabase } from "@/lib/databases/get-database";
 import { getExports } from "@/lib/databases/get-exports";
-import { getPhpmyadminSite } from "@/lib/applications/get-applications";
+import { getDatabaseCounts } from "@/lib/databases/get-databases";
+import { getAllApplications, getPhpmyadminSite } from "@/lib/applications/get-applications";
 import { getTables } from "@/lib/databases/get-monitor";
 import { Badge } from "@/components/ui/badge";
 import { DatabaseUsers } from "@/components/databases/database-users";
 import { DatabaseFacts } from "@/components/databases/database-facts";
 import { ConnectionDetails } from "@/components/databases/connection-details";
 import { DatabaseTabs } from "@/components/databases/database-tabs";
+import { UsedByCard } from "@/components/databases/used-by-card";
 import { DatabaseTables } from "@/components/databases/database-tables";
 import { DatabaseExports } from "@/components/databases/database-exports";
 import { DeleteDatabaseCard } from "@/components/databases/delete-database-card";
@@ -29,7 +31,7 @@ export default async function DatabasePage({ params, searchParams }) {
   const { database: id } = await params;
   const sp = await searchParams;
 
-  const [permissions, t, live, exportList, tables, phpmyadmin] = await Promise.all([
+  const [permissions, t, live, exportList, tables, phpmyadmin, appList, dbCounts] = await Promise.all([
     getPermissions(),
     getTranslations("databases"),
     getDatabase(id),
@@ -38,6 +40,10 @@ export default async function DatabasePage({ params, searchParams }) {
     getExports(),
     getTables(id),
     getPhpmyadminSite(),
+    // `DatabaseResource` carries `application_id` and no name, so the site has
+    // to be joined in here. The counts drive the picker's "already has one".
+    getAllApplications(),
+    getDatabaseCounts(),
   ]);
   const { data, failed, status, failure } = live;
 
@@ -75,6 +81,14 @@ export default async function DatabasePage({ params, searchParams }) {
           database={data}
           canManage={canManage}
           phpmyadminInstalled={phpmyadmin.known ? Boolean(phpmyadmin.site) : null}
+        />
+
+        <UsedByCard
+          database={data}
+          canManage={canManage}
+          applications={appList.applications}
+          databaseCounts={dbCounts.counts}
+          databasesKnown={dbCounts.known}
         />
 
         <DatabaseTabs

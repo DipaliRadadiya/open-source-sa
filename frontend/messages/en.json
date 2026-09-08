@@ -2249,7 +2249,11 @@
       "created": "Created",
       "noUsers": "No users",
       "lastExport": "Last export",
-      "neverExported": "Never"
+      "neverExported": "Never",
+      "application": "Application",
+      "notLinked": "Not linked",
+      "applicationUnknown": "Another site",
+      "attachFor": "Choose which site uses {name}"
     },
     "empty": {
       "title": "No databases yet",
@@ -2282,7 +2286,12 @@
       "chooseCharsetFirst": "Choose a character set first",
       "noEngine": "Install a database engine first.",
       "usernamePlaceholder": "my_app_user",
-      "needsCharset": "Choose a character set first — its collations load with it."
+      "needsCharset": "Choose a character set first — its collations load with it.",
+      "application": "Used by",
+      "applicationNone": "Not linked to a site",
+      "applicationSearch": "Search sites…",
+      "applicationTaken": "Already has a database",
+      "applicationHint": "Decides which site backs this database up. It does not connect your site to it — the site keeps using whatever its own configuration says."
     },
     "access": {
       "localhost": {
@@ -2342,7 +2351,7 @@
       "clearAll": "Clear",
       "submit": "Adopt",
       "adopting": "Adopting…",
-      "done": "{count, plural, one {# database adopted.} other {# databases adopted.}}",
+      "done": "{count, plural, one {# database adopted. It is not linked to a site yet, so no backup includes it.} other {# databases adopted. They are not linked to a site yet, so no backup includes them.}}",
       "failed": "They couldn't be adopted."
     },
     "engineList": {
@@ -2625,6 +2634,36 @@
       "openAnyway": "Open phpMyAdmin",
       "install": "Install phpMyAdmin",
       "needsUser": "Add a database user first — phpMyAdmin signs in as one."
+    },
+    "usedBy": {
+      "title": "Used by",
+      "included": "Included in this site's backups.",
+      "noneWarning": "Not linked to a site, so no backup includes it.",
+      "unknownSite": "Linked to a site you cannot see.",
+      "attach": "Attach to a site",
+      "change": "Change",
+      "noPermission": "You do not have permission to change this."
+    },
+    "attach": {
+      "title": "Which site uses this database?",
+      "subtitle": "Choose the site {name} belongs to.",
+      "label": "Used by",
+      "none": "Not linked to a site",
+      "search": "Search sites…",
+      "taken": "Already has a database",
+      "hint": "Decides which site backs this database up. It does not connect your site to it — the site keeps using whatever its own configuration says.",
+      "submit": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "attached": "Database linked to the site.",
+      "detached": "Database is no longer linked to a site.",
+      "failed": "Could not change which site uses this database.",
+      "unchanged": "Pick a different site first."
+    },
+    "unlinked": {
+      "title": "{count, plural, one {# database is not linked to a site} other {# databases are not linked to a site}}",
+      "description": "Backups only include databases linked to a site, so these are in no backup.",
+      "action": "Show them"
     }
   },
   "git": {
@@ -4502,7 +4541,9 @@
       "noCertificate": "SSL not installed",
       "issueCertificate": "Issue SSL",
       "reviewSecurity": "Review security",
-      "protectionsOff": "{count, plural, one {# protection off} other {# protections off}}"
+      "protectionsOff": "{count, plural, one {# protection off} other {# protections off}}",
+      "noDatabase": "This site has no database, so its backups will not contain one",
+      "attachDatabase": "Attach a database"
     },
     "filters": {
       "allStatuses": "All statuses",
@@ -4514,7 +4555,19 @@
       "action": "Install a database",
       "installingTitle": "A database engine is installing",
       "installingBody": "Wait for it to finish before creating a site that needs a database. Progress is on the Databases page."
-    }
+    },
+    "databaseCard": {
+      "title": "Database",
+      "description": "What this site's backups will contain. Attaching does not change how your site connects.",
+      "count": "{count, plural, one {# database} other {# databases}}",
+      "notBackedUp": "Not backed up",
+      "missingWarning": "No database is attached, so backups of this site will not contain one.",
+      "missingFine": "This site has no database attached.",
+      "loadFailed": "Could not check this site's databases.",
+      "attach": "Attach a database",
+      "manage": "Manage"
+    },
+    "noDatabaseBadge": "No database"
   },
   "panelUpdate": {
     "title": "Panel update",

@@ -17,8 +17,10 @@ import { useSetQuery } from "@/hooks/use-set-query";
 import { SortHeader } from "@/components/data-table/sort-header";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { CreateDatabaseDialog } from "@/components/databases/create-database-dialog";
+import { applicationById } from "@/lib/backups/database-availability";
 import { DatabasesCards } from "@/components/databases/databases-cards";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
+import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
 import { DatabaseRowActions } from "@/components/databases/database-row-actions";
 
 /* Cells are module-level components: flexRender treats a cell function's
@@ -62,6 +64,67 @@ function SizeCell({ row }) {
  * Zero users is the state worth seeing: nothing can connect to that database,
  * so it is doing no work and nobody would otherwise notice.
  */
+/**
+ * Which site this database belongs to.
+ *
+ * "Not linked" is a warning badge and not an empty cell, because the two look
+ * identical and mean opposite things: a blank reads as "nothing to say", while
+ * this one means no backup of any site contains this database.
+ *
+ * Matches the no-users badge beside it — same shape, same severity, same
+ * "something here needs doing".
+ */
+function ApplicationCell({ database, applications, onAttach }) {
+  const t = useTranslations("databases");
+  const application = applicationById(applications, database.application_id);
+
+  if (application) {
+    return (
+      <Link
+        href={`/applications/${application.id}`}
+        prefetch={false}
+        className="underline-offset-4 hover:underline"
+      >
+        {application.name}
+      </Link>
+    );
+  }
+
+  // Attached to a site outside this user's reach: not the same as unattached,
+  // and calling it "not linked" would invite an attach that would be refused.
+  if (database.application_id !== null && database.application_id !== undefined) {
+    return <span className="text-muted-foreground">{t("columns.applicationUnknown")}</span>;
+  }
+
+  // The badge IS the control when there is something to do about it: this is
+  // where the reader finds out, and sending them to the detail page first to
+  // act on it is a detour with no purpose. Plain badge for a reader who cannot
+  // change it, rather than a button that would refuse.
+  if (!onAttach) {
+    return (
+      <Badge variant="warning" className="font-normal">
+        {t("columns.notLinked")}
+      </Badge>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onAttach(database)}
+      className="rounded-full focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+      aria-label={t("columns.attachFor", { name: database.name })}
+    >
+      <Badge
+        variant="warning"
+        className="cursor-pointer font-normal underline-offset-2 hover:underline"
+      >
+        {t("columns.notLinked")}
+      </Badge>
+    </button>
+  );
+}
+
 function UsersCell({ row }) {
   const t = useTranslations("databases");
   const count = row.original.users_count ?? 0;
@@ -151,12 +214,18 @@ function DatabasesList({
   backupsUnknown = false,
   // null when the lookup failed — see getPhpmyadminSite.
   phpmyadminInstalled = null,
+  // For the create dialog's site picker.
+  applications = [],
+  databaseCounts = null,
+  databasesKnown = false,
 }) {
   const t = useTranslations("databases");
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  // The database whose site is being chosen, or null.
+  const [attaching, setAttaching] = useState(null);
 
   // Whether to show the Engine column is a question about the SERVER, not
   // about the ten rows on screen. Counted from the page, the column appeared
@@ -171,6 +240,23 @@ function DatabasesList({
     ...(showEngine
       ? [{ accessorKey: "engine", header: () => <SortHeader col="engine">{t("columns.engine")}</SortHeader>, cell: EngineCell }]
       : []),
+    {
+      // The link that decides what gets backed up, which had no column at all —
+      // so a database missing from its site's backups looked exactly like one
+      // that was in them.
+      id: "application",
+      accessorFn: (row) =>
+        applicationById(applications, row.application_id)?.name ?? "",
+      header: t("columns.application"),
+      cell: ({ row }) => (
+        <ApplicationCell
+          database={row.original}
+          applications={applications}
+          onAttach={canManage ? setAttaching : null}
+        />
+      ),
+      sortingFn: "text",
+    },
     {
       accessorKey: "size_bytes",
       header: t("columns.size"),
@@ -313,6 +399,19 @@ function DatabasesList({
             engines={engines}
             open={createOpen}
             onOpenChange={setCreateOpen}
+            applications={applications}
+            databaseCounts={databaseCounts}
+            databasesKnown={databasesKnown}
+          />
+          {/* Reached from the "Not linked" badge, so the fix is where the
+              problem is announced. */}
+          <AttachApplicationDialog
+            database={attaching}
+            open={attaching !== null}
+            onOpenChange={(next) => !next && setAttaching(null)}
+            applications={applications}
+            databaseCounts={databaseCounts}
+            databasesKnown={databasesKnown}
           />
           <DeleteDatabaseDialog
             database={deleting}
