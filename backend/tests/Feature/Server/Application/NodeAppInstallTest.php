@@ -76,6 +76,24 @@ function ranCommands(): string
         ->implode("\n");
 }
 
+/**
+ * What was piped into the rewrite of `$path`.
+ *
+ * A separate helper from {@see writtenTo()} because an edit of an existing
+ * config is not a write of it: ApplicationConfigMutator tees into
+ * `<path>.panel-tmp-<uuid>` and renames, so that the file is never half-written
+ * under a process that might be reading it. Matching the exact path finds
+ * nothing at all.
+ */
+function rewrittenTo(string $path): ?string
+{
+    return test()->ran
+        ->first(fn ($process) => is_array($process->command)
+            && ($process->command[0] ?? '') === 'tee'
+            && str_starts_with((string) ($process->command[1] ?? ''), $path.'.panel-tmp-'))
+        ?->input;
+}
+
 /** What was piped into the command that wrote `$path`. */
 function writtenTo(string $path): ?string
 {
@@ -186,7 +204,12 @@ it('keeps n8n inside the site, with a key generated before first start', functio
         ->toMatch('/N8N_ENCRYPTION_KEY="[0-9a-f]{64}"/')
         // TLS is optional and is issued only after installation. The
         // certificate lifecycle promotes this once HTTPS is really servable.
-        ->toContain('WEBHOOK_URL="http://n8n.test/"');
+        ->toContain('WEBHOOK_URL="http://n8n.test/"')
+        // Without this n8n refuses to open the editor over the plain-HTTP URL
+        // every site has for its first few minutes — so the very first visit
+        // to a site the panel had just called ready hit a wall telling the
+        // user to go and set an environment variable.
+        ->toContain('N8N_SECURE_COOKIE="false"');
 });
 
 it('restarts n8n when its public URL changes', function () {
@@ -199,6 +222,34 @@ it('restarts n8n when its public URL changes', function () {
     app(N8nInstaller::class)->syncUrl($application, 'https://n8n.test');
 
     expect(ranCommands())->toContain('systemctl restart sv-app-'.$application->id.'.service');
+});
+
+it('secures the n8n cookie once a certificate is really servable', function () {
+    $application = oneClickApp('n8n');
+    $application->forceFill(['status' => 'active'])->save();
+
+    app(N8nInstaller::class)->syncUrl($application, 'https://n8n.test');
+
+    // The insecure default exists only for the window before TLS. Leaving it
+    // behind on an HTTPS site would put the session cookie in clear on every
+    // request — which is what hardcoding it false would have done.
+    expect(rewrittenTo('/home/apps/n8n/public_html/.env'))
+        ->toContain('N8N_SECURE_COOKIE="true"')
+        ->toContain('N8N_PROTOCOL="https"');
+});
+
+it('unsecures it again when the certificate goes away', function () {
+    // The half that is easy to skip, and the one that locks somebody out of
+    // their own editor: n8n answers a secure cookie on an insecure URL by
+    // refusing to load at all, so a removed certificate with no demotion is a
+    // site nobody can open and nothing in the panel to explain it.
+    $application = oneClickApp('n8n');
+    $application->forceFill(['status' => 'active'])->save();
+
+    app(N8nInstaller::class)->syncUrl($application, 'http://n8n.test');
+
+    expect(rewrittenTo('/home/apps/n8n/public_html/.env'))
+        ->toContain('N8N_SECURE_COOKIE="false"');
 });
 
 it('gives Node-RED a password, because it ships without one', function () {

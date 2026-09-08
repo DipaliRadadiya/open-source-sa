@@ -78,6 +78,20 @@ class N8nInstaller extends AbstractNodeInstaller
             // The proxy's public scheme changes only when the vhost gains or
             // loses a certificate. These values are reconciled on that event.
             'N8N_PROTOCOL' => $application->scheme(),
+            // n8n defaults this to true and then refuses to open the editor
+            // over a plain-HTTP URL — "your n8n server is configured to use a
+            // secure cookie, however you are visiting this via an insecure
+            // URL". A site has no certificate until one is issued, minutes
+            // after it is created, so *every* first visit met that wall on a
+            // site the panel had just reported as ready.
+            //
+            // Derived rather than hardcoded false, and that is the whole
+            // point: a session cookie sent in clear on a site that does have
+            // HTTPS is a real exposure, and `syncUrl()` below promotes this
+            // the moment a certificate lands. It also demotes it again if one
+            // is removed — without that, dropping a certificate would lock
+            // somebody out of their own editor with no way back.
+            'N8N_SECURE_COOKIE' => $application->scheme() === 'https' ? 'true' : 'false',
             'N8N_WEBHOOK_URL' => $application->url('/'),
             'N8N_EDITOR_BASE_URL' => $application->url(),
             'N8N_PROXY_HOPS' => '1',
@@ -102,6 +116,11 @@ class N8nInstaller extends AbstractNodeInstaller
         $scheme = (string) parse_url($url, PHP_URL_SCHEME);
         $values = [
             'N8N_PROTOCOL' => $scheme,
+            // Both directions, deliberately. Promoting on a certificate is the
+            // obvious half; demoting when one is removed is the half that
+            // keeps a site reachable, because n8n answers a secure cookie on
+            // an insecure URL by refusing to load the editor at all.
+            'N8N_SECURE_COOKIE' => $scheme === 'https' ? 'true' : 'false',
             'N8N_WEBHOOK_URL' => rtrim($url, '/').'/',
             'N8N_EDITOR_BASE_URL' => rtrim($url, '/'),
         ];
