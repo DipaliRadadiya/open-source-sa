@@ -6,6 +6,7 @@ use App\Contracts\PhpStack;
 use App\Exceptions\Server\Log\LogOperationException;
 use App\Models\Cronjob;
 use App\Models\Worker;
+use App\Services\Server\Applications\WorkerSupervisor;
 use App\Support\ListSort;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -52,6 +53,10 @@ class LogManager
     public function __construct(
         private PhpStack $stack,
         private ServerOps $serverOps,
+        // For the worker log path only. Its own dependencies are ServerOps,
+        // ManagedFile and FrameworkDetector — none of which reach back here,
+        // so this cannot close a container cycle.
+        private WorkerSupervisor $workers,
     ) {}
 
     /**
@@ -431,37 +436,50 @@ class LogManager
     }
 
     /**
-     * One source per worker, read from the journal.
+     * One source per worker, read from the file supervisord writes.
      *
-     * A worker writes no file: its unit sends stdout and stderr to journald
-     * under `sv-worker-{slug}`, which is why nothing has to rotate or clean up
-     * after it. The panel already told the frontend that identifier, and the
-     * worker row already links to `/logs?source=sv-worker-shop-queue` — but no source
-     * by that key existed, so the one button offering a worker's output led
-     * nowhere. Built from the table for the same reason cron jobs are: a
-     * source then always maps to a worker that exists, and the label is the
-     * worker's name rather than an identifier to decode.
+     * 🔴 **This was `kind: journal` and had to change with the worker itself.**
+     * A systemd unit sent stdout and stderr to journald under
+     * `sv-worker-{slug}`, so the source read `journalctl -t` that identifier.
+     * Supervisor does not use journald at all — the program block sets
+     * `stdout_logfile` (with `redirect_stderr`) and everything goes to a file.
+     * Migrating the writer without migrating the reader left every worker's
+     * log source permanently empty: `journalctl -t sv-worker-…` on a box where
+     * nothing writes under that identifier is not an error, it is zero lines.
      *
-     * `identifier` rather than `path`, and the journal read is scoped to it —
-     * the generic System Journal source shows every unit on the box mixed
-     * together, which is not an answer to "what is this worker doing".
+     * The path comes from `WorkerSupervisor::logFile()` rather than being
+     * rebuilt here, because the reader and the writer disagreeing is the bug
+     * this comment exists about.
      *
-     * @return array<int, array{key: string, label: string, group: string, path: string, kind: string, identifier: string}>
+     * `privileged`, like a cron log and unlike the rest of this catalog: the
+     * file sits in `{appRoot}/logs`, which `ApplicationLogDirectory` makes
+     * `root:{site user} 0750` on purpose, and the panel account is neither. So
+     * it is read through sudo `tail`. That costs `follow` and `downloadable`,
+     * which a journal source did not have either.
+     *
+     * Built from the table for the same reason cron jobs are: a source then
+     * always maps to a worker that exists, and the label is the worker's name
+     * rather than an identifier to decode.
+     *
+     * @return array<int, array{key: string, label: string, group: string, path: string, kind: string}>
      */
     private function workerLogs(): array
     {
         return ListSort::caseInsensitive(
-            Worker::query()->with('application:id,name'),
+            // `application.systemUser` because the log path is built from the
+            // site's own directory, which is named for its account.
+            Worker::query()->with('application.systemUser'),
             'name',
         )->get()
+            ->filter(fn (Worker $worker) => $worker->application?->systemUser !== null)
             ->map(fn (Worker $worker) => [
                 'key' => 'sv-worker-'.$worker->slug,
                 'label' => trim(($worker->application?->name ? $worker->application->name.' — ' : '').$worker->name),
                 'group' => 'worker',
-                'path' => '',
-                'kind' => 'journal',
-                'identifier' => 'sv-worker-'.$worker->slug,
+                'path' => $this->workers->logFile($worker),
+                'kind' => 'privileged',
             ])
+            ->values()
             ->all();
     }
 

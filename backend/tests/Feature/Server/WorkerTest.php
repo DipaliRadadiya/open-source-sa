@@ -8,6 +8,7 @@ use App\Models\Worker;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\FrameworkDetector;
 use App\Services\Server\Applications\WorkerSupervisor;
+use App\Services\Server\LogManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -888,5 +889,65 @@ describe('a server whose sudo grant is out of date', function () {
 
         expect($supervisorctl->first())->toBe('supervisorctl reread')
             ->and($supervisorctl)->toHaveCount(1);
+    });
+});
+
+describe('the log source on the Logs screen', function () {
+    /*
+     * 🔴 The regression this exists to stop happening twice.
+     *
+     * Under systemd a worker's output went to journald, and `LogManager`
+     * offered it as `kind: journal` read with `journalctl -t sv-worker-{slug}`.
+     * Supervisor writes `stdout_logfile` instead and never touches journald, so
+     * moving the writer without moving the reader left every worker's log
+     * permanently empty — and empty, not failing, which is the version nobody
+     * reports as a bug.
+     */
+    it('points at the file supervisord is actually told to write', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload(['name' => 'Email Queue']))->assertCreated();
+        $worker = Worker::query()->firstOrFail();
+
+        // Read the path back out of the rendered program block rather than
+        // rebuilding it here: the point is that the reader and the writer agree,
+        // and a test that computes its own expectation cannot show that.
+        preg_match('/^stdout_logfile=(.+)$/m', app(WorkerSupervisor::class)->render($worker), $matches);
+        $written = trim($matches[1] ?? '');
+
+        $source = app(LogManager::class)->find("sv-worker-{$worker->slug}");
+
+        expect($written)->not->toBe('')
+            ->and($source)->not->toBeNull()
+            ->and($source['path'])->toBe($written)
+            ->and($source['kind'])->not->toBe('journal');
+    });
+
+    it('follows a log file the user chose', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload(['log_file' => '/var/log/mine.log']))->assertCreated();
+        $worker = Worker::query()->firstOrFail();
+
+        expect(app(LogManager::class)->find("sv-worker-{$worker->slug}")['path'])
+            ->toBe('/var/log/mine.log');
+    });
+
+    /*
+     * `{appRoot}/logs` is root:{site user} 0750 by `ApplicationLogDirectory`,
+     * deliberately — so the panel account, which is neither, reads it through
+     * sudo like a cron log. Asserted because getting this wrong shows the
+     * source as readable and 500s on click.
+     */
+    it('is read through sudo, because the log directory excludes the panel account', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated();
+        $worker = Worker::query()->firstOrFail();
+
+        expect(app(LogManager::class)->find("sv-worker-{$worker->slug}")['kind'])
+            ->toBe('privileged');
     });
 });

@@ -324,11 +324,26 @@ class WorkerSupervisor
             'autoStart' => $worker->auto_start,
             'autoRestart' => $worker->auto_restart,
             'stopWaitSeconds' => $worker->stop_wait_seconds,
-            'logFile' => $worker->log_file ?: $application->logsPath().'/'.$this->program($worker).'.log',
+            'logFile' => $this->logFile($worker),
             'logLevel' => $worker->log_level,
             'extraConfig' => $worker->extra_config,
             'path' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
         ])->render();
+    }
+
+    /**
+     * The file this worker's output actually lands in.
+     *
+     * Public and used by the Logs screen as well as the template, because the
+     * two must agree: under systemd the output went to journald and the log
+     * source read `journalctl -t sv-worker-{slug}`, and moving to supervisor
+     * turned that into a file without moving the reader. A second copy of this
+     * expression is exactly how they drifted the first time.
+     */
+    public function logFile(Worker $worker): string
+    {
+        return $worker->log_file
+            ?: $worker->application->logsPath().'/'.$this->program($worker).'.log';
     }
 
     private function directory(Worker $worker): string

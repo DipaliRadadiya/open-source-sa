@@ -534,7 +534,12 @@ describe('worker logs', function () {
         expect($logs)->toHaveKey('sv-worker-'.$this->worker->slug)
             ->and($logs['sv-worker-'.$this->worker->slug]['label'])->toBe('Shop — Queue')
             ->and($logs['sv-worker-'.$this->worker->slug]['group'])->toBe('worker')
-            ->and($logs['sv-worker-'.$this->worker->slug]['kind'])->toBe('journal');
+            // `privileged`, not `journal`. This asserted `journal` until
+            // workers moved from systemd to supervisord: a unit sent its output
+            // to journald, a supervisor program writes `stdout_logfile`. The
+            // test was defending a mechanism that no longer exists, and the
+            // template settles which is right — it names the file.
+            ->and($logs['sv-worker-'.$this->worker->slug]['kind'])->toBe('privileged');
     });
 
     it('reads only that worker, not the whole box', function () {
@@ -543,11 +548,13 @@ describe('worker logs', function () {
             ->assertOk()
             ->assertJsonPath('log.lines', ['worker started']);
 
-        // Without `-t` this source would show every unit on the server
-        // interleaved, which is not an answer to "what is this worker doing".
-        Process::assertRan(fn ($p) => in_array('journalctl', $p->command, true)
-            && in_array('-t', $p->command, true)
-            && in_array('sv-worker-'.$this->worker->slug, $p->command, true));
+        // Same intent as when this read the journal with `-t`: one worker's
+        // output, not everything on the box. Now it is that worker's own file,
+        // read through sudo because `{appRoot}/logs` is root-owned.
+        Process::assertRan(fn ($p) => in_array('tail', $p->command, true)
+            && collect($p->command)->contains(
+                fn (string $argument) => str_ends_with($argument, 'sv-worker-'.$this->worker->slug.'.log')
+            ));
     });
 
     it('leaves the system journal showing the whole system', function () {

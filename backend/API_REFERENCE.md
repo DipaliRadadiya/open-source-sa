@@ -2532,7 +2532,7 @@ There is **no cursor and no `?after=`**. This reference described cursor-based t
 ### GET `/applications/{application}/workers`
 **Permission:** `app_worker` (view)
 
-Workers are systemd units. The old supervisor-style field names (`numprocs`, `autostart`, `autorestart`, `startsecs`, `stopwaitsecs`, `status`) **do not exist** — the real shape is:
+Workers are **supervisord programs** — one `[program:sv-worker-{slug}]` block per worker in `/etc/supervisor/conf.d`, with supervisor owning the copies via `numprocs`. (They were systemd units until 2026-09-07; this section described that and was wrong for a day.) The panel's field names are its own, not supervisor's — `processes` is `numprocs`, `auto_start` is `autostart`, `auto_restart` is `autorestart`, `stop_wait_seconds` is `stopwaitsecs`. Send the panel's names:
 
 ```json
 {"workers": [{
@@ -2547,6 +2547,12 @@ Workers are systemd units. The old supervisor-style field names (`numprocs`, `au
   "auto_restart": true,
   "restart_on_deploy": true,
   "enabled": true,
+  "user": null,
+  "effective_user": "shop",
+  "log_file": null,
+  "log_level": null,
+  "extra_config": null,
+  "auto_start": true,
   "running": 3,
   "state": "degraded", "state_title": "Degraded",
   "log_identifier": "sv-worker-shop-email-queue",
@@ -2560,15 +2566,23 @@ Workers are systemd units. The old supervisor-style field names (`numprocs`, `au
 ]}
 ```
 
-**`running` and `state` are read from systemd on every request and never stored.** `state` is `running` (all processes up), `degraded` (some up), or `stopped` (none) — "3 of 4 running" is a real condition that a single green dot would hide, so show `running` against `processes`.
+**`running` and `state` are read from supervisord on every request and never stored.** `state` is `running` (all processes up), `degraded` (some up), or `stopped` (none) — "3 of 4 running" is a real condition that a single green dot would hide, so show `running` against `processes`.
 
-`enabled: false` means the unit is kept but not started — disabling is not deleting.
+`enabled: false` means the program block is kept but not started — disabling is not deleting.
+
+**`enabled` and `auto_start` are different questions and the UI should not merge them.** `enabled` is the panel's: does this worker run at all. `auto_start` is supervisor's `autostart`: when *supervisord itself* starts, does it bring this program up. A worker can be enabled with `auto_start: false` — it exists and you start it by hand.
+
+`user` is the account the processes run as. Null means the panel chose, and `effective_user` says what that resolves to (the site's own system user) — show `effective_user` as the hint, not as the field's value, or saving the form writes a choice nobody made. A non-null `user` is normally an adopted block naming another account, which the panel preserves rather than rewriting.
+
+`log_file` is `stdout_logfile`, with `redirect_stderr` on so one file holds both streams. Null means the panel's default, `{application root}/logs/sv-worker-{slug}.log`. `log_level` is supervisord's own: `critical | error | warn | info | debug | trace | blather`.
+
+`extra_config` is appended to the program block verbatim, so a directive there wins over everything the panel wrote — the same shape as `additional_directives` on PHP settings. It **may not contain `[`**: a section header would define a second program the panel does not know about and would never stop. Max 2000 characters; both are 422s.
 
 `kind` is `queue`, `horizon` or `custom`, and it decides **how** a restart happens: `queue:restart` for a queue worker, `horizon:terminate` for Horizon, a direct unit restart otherwise. It is not cosmetic. A queue worker and Horizon on the same application both consume the same queue and would run every job twice — neither tool can detect the other, so the request layer rejects the combination.
 
 `restart_on_deploy` makes the worker pick up new code after a deploy; without it a deploy leaves the site on new code and the queue on old code, with nothing anywhere connecting the two.
 
-`log_identifier` is the journal identifier, so the logs screen can be linked to without the frontend assembling a unit name.
+`log_identifier` is the key of this worker's source on the Logs screen (`/logs?source=sv-worker-shop-queue`), so a link can be built without the frontend assembling a name. It was the journald identifier when workers were systemd units; the output now goes to `log_file` and the Logs screen reads that file, but the key is unchanged.
 
 It is `sv-worker-{slug}`, where the slug is derived once from the application's
 slug and the worker's name — **not from the id, and not from the name.** Not the
@@ -2600,11 +2614,18 @@ Add a worker.
   "stop_wait_seconds": 10,
   "auto_restart": true,
   "restart_on_deploy": true,
-  "enabled": true
+  "enabled": true,
+  "user": null,
+  "log_file": null,
+  "log_level": null,
+  "extra_config": null,
+  "auto_start": true
 }
 ```
 
-`name` and `command` are required; everything else is optional. `name` is unique per application. `command` rejects shell metacharacters (`; | & \` $ < > ( )` and newlines) — it is executed directly, not through a shell. `directory` is relative to the application root, defaults to it, and may not contain `..`. `processes` is at least 1, `stop_wait_seconds` 1–600.
+`name` and `command` are required; everything else is optional. `name` is unique per application. `command` rejects shell metacharacters (`; | & \` $ < > ( )` and newlines) — it is executed directly, not through a shell. `directory` is relative to the application root, defaults to it, and may not contain `..`. `processes` is 1–16, `stop_wait_seconds` 1–600. `user` is a Linux account name (`^[a-z_][a-z0-9_-]*$`, max 32). `log_file` must be **absolute** and may not contain `..`. `log_level` is one of supervisord's seven levels. `extra_config` is max 2000 characters and may not contain `[`.
+
+⚠️ `stop_wait_seconds` must be **at least** the worker's own `--max-time`, or supervisor SIGKILLs it partway through a job and that job runs twice.
 
 **Response `201`:** `{"worker": {...}}`
 
@@ -2613,7 +2634,7 @@ Add a worker.
 ### PUT `/applications/{application}/workers/{worker}`
 **Permission:** `app_worker` (manage) | **Throttle:** 20/min
 
-Update worker settings. Changes write a new systemd unit and restart the worker.
+Update worker settings. Changes rewrite the program block, then `supervisorctl reread` followed by `update`, and restart the worker.
 
 **Request:** `{"processes": 4, "enabled": false}` — same fields as create, all optional.
 
@@ -2624,7 +2645,7 @@ Update worker settings. Changes write a new systemd unit and restart the worker.
 ### DELETE `/applications/{application}/workers/{worker}`
 **Permission:** `app_worker` (manage) | **Throttle:** 20/min
 
-Remove the worker (stops the process, removes the unit, deletes the record).
+Remove the worker (stops the processes, removes the program block, deletes the record).
 
 **Response `204`:** `null`
 
@@ -2635,7 +2656,7 @@ Remove the worker (stops the process, removes the unit, deletes the record).
 
 Control a running worker. `{action}` = `start | stop | restart`.
 
-**Response `200`:** `{"worker": {"id": 1, "running": 4, "state": "running", "state_title": "Running", …}}` — the full worker object, with `running`/`state` re-read from systemd after the action.
+**Response `200`:** `{"worker": {"id": 1, "running": 4, "state": "running", "state_title": "Running", …}}` — the full worker object, with `running`/`state` re-read from supervisord after the action.
 
 ---
 
@@ -4329,7 +4350,12 @@ All available log sources on the server.
 `kind` — `file` · `privileged` · `journal`. Most sources are files the panel
 reads directly. **`privileged`** is a file it cannot open as its own user and
 reads through the system instead (Let's Encrypt: `/var/log/letsencrypt` is
-`0700 root`). **`journal`** is the systemd journal, which is not a file at all.
+`0700 root`; a cron job's output; and **every worker**, whose log lives in
+`{application root}/logs`, which is `root:{site user} 0750` so that the site's
+owner can read its own logs and cannot replace them). **`journal`** is the
+systemd journal, which is not a file at all — as of 2026-09-08 only the
+server-wide System Journal source uses it, since workers moved from systemd to
+supervisord and now write a file.
 
 Two flags follow from that, and both are worth honouring rather than inferring
 from `kind`:
