@@ -16,13 +16,24 @@ import { useSetQuery } from "@/hooks/use-set-query";
  * so the search box empties with it rather than keeping a term that matches
  * nothing.
  */
-export function ClearFiltersButton({ keys = [], extraQuery, label }) {
+export function ClearFiltersButton({
+  keys = [],
+  extraQuery,
+  label,
+  // Callers that sit inside a chip or a sentence need a lighter control than
+  // the default outline button, which is sized to stand beside a search box.
+  variant = "outline",
+  size,
+  className,
+}) {
   const t = useTranslations("common");
   const setQuery = useSetQuery();
 
   return (
     <Button
-      variant="outline"
+      variant={variant}
+      size={size}
+      className={className}
       onClick={() =>
         setQuery(
           { ...Object.fromEntries(keys.map((key) => [key, undefined])), ...extraQuery },

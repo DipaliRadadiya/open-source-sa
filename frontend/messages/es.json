@@ -2663,7 +2663,9 @@
     "unlinked": {
       "title": "{count, plural, one {# base de datos no está vinculada a ningún sitio} other {# bases de datos no están vinculadas a ningún sitio}}",
       "description": "Las copias de seguridad solo incluyen bases de datos vinculadas a un sitio, así que estas no están en ninguna copia.",
-      "action": "Mostrarlas"
+      "action": "Mostrarlas",
+      "filtered": "Mostrando solo bases de datos sin vincular a un sitio",
+      "showAll": "Mostrar todas"
     }
   },
   "git": {
@@ -4565,9 +4567,24 @@
       "missingFine": "Este sitio no tiene ninguna base de datos vinculada.",
       "loadFailed": "No se pudieron comprobar las bases de datos de este sitio.",
       "attach": "Vincular una base de datos",
-      "manage": "Gestionar"
+      "manage": "Gestionar",
+      "create": "Crear una base de datos"
     },
-    "noDatabaseBadge": "Sin base de datos"
+    "noDatabaseBadge": "Sin base de datos",
+    "attachDatabase": {
+      "title": "Vincular una base de datos",
+      "subtitle": "Elige una base de datos para {name}.",
+      "label": "Base de datos",
+      "placeholder": "Elige una base de datos",
+      "search": "Buscar bases de datos…",
+      "pickOne": "Elige primero una base de datos.",
+      "submit": "Vincular",
+      "saving": "Vinculando…",
+      "cancel": "Cancelar",
+      "done": "{name} ahora la usa este sitio.",
+      "failed": "No se pudo vincular esa base de datos.",
+      "hint": "Determina lo que incluyen las copias de seguridad de este sitio. No cambia cómo se conecta tu sitio: sigue usando lo que indique su propia configuración."
+    }
   },
   "panelUpdate": {
     "title": "Actualización del panel",

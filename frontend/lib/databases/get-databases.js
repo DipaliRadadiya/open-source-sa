@@ -77,6 +77,21 @@ export const getApplicationDatabases = cache(async function getApplicationDataba
 });
 
 /**
+ * The databases on this server that belong to no site.
+ *
+ * What a site's "attach a database" picker can actually offer. One already on
+ * another site is deliberately absent: moving it would take it out from under
+ * that site's backups, and a picker should not do that silently.
+ */
+export const getUnattachedDatabases = cache(async function getUnattachedDatabases() {
+  const { data, failed } = await read("/databases", databasesResponseSchema, {
+    searchParams: { "filter[attached]": 0, per_page: 100 },
+  });
+
+  return { databases: data?.databases ?? [], failed };
+});
+
+/**
  * How many databases each site has, for the backup form's warning.
  *
  * One page of 100 — the largest the API allows — rather than walking every

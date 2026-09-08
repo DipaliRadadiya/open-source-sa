@@ -11,6 +11,8 @@ import { DataTable } from "@/components/ui/data-table";
 import { useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
+import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
+import { FilterX } from "lucide-react";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { useSetQuery } from "@/hooks/use-set-query";
@@ -324,12 +326,34 @@ function DatabasesList({
     </ReasonTooltip>
   );
 
-  const isFiltered = Boolean(searchParams.get("search"));
+  // `attached` counts too. It has no control of its own — the banner's "Show
+  // them" is the only thing that sets it — so without this an empty result read
+  // as "this server has no databases" while a filter was quietly on.
+  const onlyUnlinked = searchParams.get("attached") === "0";
+  const isFiltered = Boolean(searchParams.get("search")) || onlyUnlinked;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <SearchInput placeholder={t("searchPlaceholder")} />
+        <div className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
+          <SearchInput placeholder={t("searchPlaceholder")} />
+          {/* The one filter with no control of its own. Arriving here from the
+              banner used to leave a filtered list with nothing saying so and no
+              way back except navigating away and returning. */}
+          {onlyUnlinked ? (
+            <span className="flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs">
+              <FilterX className="size-3.5 shrink-0 text-warning" />
+              {t("unlinked.filtered")}
+              <ClearFiltersButton
+                keys={["attached"]}
+                label={t("unlinked.showAll")}
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs font-medium underline-offset-2"
+              />
+            </span>
+          ) : null}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
           {createButton}

@@ -60,6 +60,9 @@ export function CreateDatabaseDialog({
   applications = [],
   databaseCounts = null,
   databasesKnown = false,
+  // Opened from a site's own page: the site is already the answer, so the
+  // picker is not a question worth asking. Sent all the same.
+  applicationId = null,
 }) {
   const t = useTranslations("databases");
   const router = useRouter();
@@ -77,7 +80,7 @@ export function CreateDatabaseDialog({
     engine: defaultEngine,
     charset: "",
     collation: "",
-    application_id: "",
+    application_id: applicationId ? String(applicationId) : "",
     create_user: true,
     username: "",
     password: "",
@@ -254,7 +257,7 @@ export function CreateDatabaseDialog({
             databases attached to a site, so one created here with no site is
             absent from every backup — silently, and with nothing on any screen
             that would say so. */}
-        {applications.length > 0 ? (
+        {applications.length > 0 && !applicationId ? (
           <FormField
             control={form.control}
             name="application_id"

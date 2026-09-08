@@ -2663,7 +2663,9 @@
     "unlinked": {
       "title": "{count, plural, one {# database is not linked to a site} other {# databases are not linked to a site}}",
       "description": "Backups only include databases linked to a site, so these are in no backup.",
-      "action": "Show them"
+      "action": "Show them",
+      "filtered": "Showing only databases not linked to a site",
+      "showAll": "Show all"
     }
   },
   "git": {
@@ -4565,9 +4567,24 @@
       "missingFine": "This site has no database attached.",
       "loadFailed": "Could not check this site's databases.",
       "attach": "Attach a database",
-      "manage": "Manage"
+      "manage": "Manage",
+      "create": "Create a database"
     },
-    "noDatabaseBadge": "No database"
+    "noDatabaseBadge": "No database",
+    "attachDatabase": {
+      "title": "Attach a database",
+      "subtitle": "Choose a database for {name}.",
+      "label": "Database",
+      "placeholder": "Choose a database",
+      "search": "Search databases…",
+      "pickOne": "Choose a database first.",
+      "submit": "Attach",
+      "saving": "Attaching…",
+      "cancel": "Cancel",
+      "done": "{name} is now used by this site.",
+      "failed": "Could not attach that database.",
+      "hint": "Decides what this site's backups contain. It does not change how your site connects — the site keeps using whatever its own configuration says."
+    }
   },
   "panelUpdate": {
     "title": "Panel update",

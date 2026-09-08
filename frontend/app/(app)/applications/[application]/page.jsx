@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ExternalLink } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
-import { getApplicationDatabases } from "@/lib/databases/get-databases";
+import { getApplicationDatabases, getEngines, getUnattachedDatabases } from "@/lib/databases/get-databases";
 import { getSiteTypes } from "@/lib/applications/get-applications";
 import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { can } from "@/lib/permissions/can";
@@ -82,8 +82,11 @@ export default async function ApplicationDetailPage({ params }) {
   // Databases are a SERVER-level permission: a site-level reader may hold none,
   // and asking would be a 403 on a page that otherwise works.
   const canSeeDatabases = can(permissions, "database", "view");
+  // Attaching and creating both need manage, so a viewer gets the card without
+  // buttons that would only earn a 403.
+  const canManageDatabases = can(permissions, "database", "manage");
 
-  const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes] = await Promise.all([
+  const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes, spareDatabases, engineList] = await Promise.all([
     settled && canSeeDomains
       ? getApplicationDomains(id)
       : Promise.resolve({ domains: [], failed: false }),
@@ -113,6 +116,12 @@ export default async function ApplicationDetailPage({ params }) {
     settled && canSeeDatabases
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
+    // What the card's Attach picker can offer, and what its Create dialog
+    // needs to know about engines. Only for someone who can manage databases.
+    settled && canManageDatabases
+      ? getUnattachedDatabases()
+      : Promise.resolve({ databases: [] }),
+    settled && canManageDatabases ? getEngines() : Promise.resolve({ engines: [] }),
   ]);
 
   const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
@@ -371,10 +380,13 @@ export default async function ApplicationDetailPage({ params }) {
               needs one, a neutral line for a type that says nothing. */}
           {canSeeDatabases ? (
             <DatabaseCard
+              application={application}
+              unattached={spareDatabases.databases}
+              engines={engineList.engines}
               databases={siteDatabases.databases}
               failed={siteDatabases.failed}
               needsDatabase={needsDatabase}
-              canSeeDatabases={canSeeDatabases}
+              canSeeDatabases={canManageDatabases}
             />
           ) : null}
 

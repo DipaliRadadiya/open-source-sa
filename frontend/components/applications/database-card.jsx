@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { ArrowRight, Database, TriangleAlert } from "lucide-react";
+import { Database, TriangleAlert } from "lucide-react";
+import { DatabaseCardActions } from "@/components/applications/database-card-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
@@ -17,7 +17,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  * warning becomes wallpaper.
  */
 export async function DatabaseCard({
+  application,
   databases = [],
+  // The databases on this server that belong to no site — what "attach" can
+  // actually offer. Empty means the only honest next step is creating one.
+  unattached = [],
+  engines = [],
   failed = false,
   needsDatabase = false,
   canSeeDatabases = false,
@@ -70,7 +75,16 @@ export async function DatabaseCard({
             {databases.map((database) => (
               <li key={database.id} className="flex items-center gap-3 px-6 py-3">
                 <Database className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate font-mono text-xs">{database.name}</span>
+                {/* The name is the way in. Reading it here and then hunting
+                    for it in a server-wide list is the detour this card was
+                    adding to every visit. */}
+                <Link
+                  href={`/databases/${database.id}`}
+                  prefetch={false}
+                  className="min-w-0 flex-1 truncate font-mono text-xs underline-offset-4 hover:underline"
+                >
+                  {database.name}
+                </Link>
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {database.size_human}
                 </span>
@@ -83,17 +97,13 @@ export async function DatabaseCard({
             server-level permission, so a site-level reader may have none. */}
         {canSeeDatabases ? (
           <div className="px-(--card-spacing) pt-(--card-spacing)">
-            {/* The label follows the state, the emphasis follows the urgency.
-                A site with no database needs "Attach" whether or not its type
-                declared it — "Manage" sends someone to a list to work out for
-                themselves what they came to do. Only the declared case is
-                filled, because only that one is a problem. */}
-            <Button asChild variant={warn ? "default" : "outline"} size="sm">
-              <Link href="/databases" prefetch={false}>
-                {missing ? t("attach") : t("manage")}
-                <ArrowRight className="size-3.5" />
-              </Link>
-            </Button>
+            <DatabaseCardActions
+              application={application}
+              databases={databases}
+              unattached={unattached}
+              engines={engines}
+              warn={warn}
+            />
           </div>
         ) : null}
       </CardContent>
