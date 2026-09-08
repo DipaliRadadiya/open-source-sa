@@ -200,4 +200,5 @@ return [
         'bun' => 'Bun',
     ],
 
+    'supervisor_installing' => 'Installing supervisor, which workers run under. This takes a moment — create the worker again once it finishes.',
 ];

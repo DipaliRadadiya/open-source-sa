@@ -184,4 +184,7 @@ return [
     'sync.started' => 'Inició una sincronización del servidor (:mode)',
     'sync.ignored' => 'Descartó :resource_key de la sincronización del servidor',
     'sync.unignored' => 'Restauró :resource_key en la sincronización del servidor',
+    'application.supervisor_install_started' => 'Se inició la instalación de supervisor para :name',
+    'application.supervisor_installed' => 'Se instaló supervisor',
+    'application.supervisor_install_failed' => 'No se pudo instalar supervisor (:reference)',
 ];

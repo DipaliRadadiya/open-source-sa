@@ -184,4 +184,7 @@ return [
     'sync.started' => 'サーバー同期を開始しました (:mode)',
     'sync.ignored' => 'サーバー同期から :resource_key を除外しました',
     'sync.unignored' => 'サーバー同期に :resource_key を戻しました',
+    'application.supervisor_install_started' => ':name のために supervisor のインストールを開始しました',
+    'application.supervisor_installed' => 'supervisor をインストールしました',
+    'application.supervisor_install_failed' => 'supervisor をインストールできませんでした (:reference)',
 ];

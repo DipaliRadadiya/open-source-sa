@@ -195,4 +195,5 @@ return [
         'bun' => 'Bun',
     ],
 
+    'supervisor_installing' => 'Instalando supervisor, que es donde se ejecutan los workers. Tarda un momento: vuelve a crear el worker cuando termine.',
 ];

@@ -60,4 +60,5 @@ return [
     'sources_not_in_one_directory' => '圧縮する項目はすべて同じフォルダー内にある必要があります。',
     'release_failed' => 'サーバー上にサイトのディレクトリを作成できませんでした。',
     'supervisor_missing' => 'ワーカーには supervisord が必要ですが、このサーバーにはインストールされていません。`apt-get install supervisor` でインストールしてから、ワーカーを作成し直してください。',
+    'supervisor_already_installed' => 'この サーバーには supervisor が既にインストールされています。',
 ];

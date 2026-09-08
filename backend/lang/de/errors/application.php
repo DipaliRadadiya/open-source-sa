@@ -60,4 +60,5 @@ return [
     'sources_not_in_one_directory' => 'Alle zu komprimierenden Elemente müssen im selben Ordner liegen.',
     'release_failed' => 'Das Verzeichnis der Website konnte auf dem Server nicht erstellt werden.',
     'supervisor_missing' => 'Worker benötigen supervisord, das auf diesem Server nicht installiert ist. Installieren Sie es mit `apt-get install supervisor` und legen Sie den Worker erneut an.',
+    'supervisor_already_installed' => 'Supervisor ist auf diesem Server bereits installiert.',
 ];

@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Enums\InstallStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\SaveWorkerRequest;
 use App\Http\Resources\WorkerResource;
+use App\Jobs\InstallFail2ban;
+use App\Jobs\InstallSupervisor;
 use App\Models\Application;
 use App\Models\Worker;
 use App\Services\ActivityLogger;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Applications\WorkerPresets;
 use App\Services\Server\Applications\WorkerSupervisor;
 use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * An application's background workers — queue workers, Horizon, or any command
@@ -40,6 +45,54 @@ class WorkerController extends Controller
         ]);
     }
 
+    /**
+     * Install supervisord, which workers run under.
+     *
+     * Dispatched, never inline: apt waits out the dpkg lock for up to ten
+     * minutes and this codebase is explicit that a package install belongs in
+     * a job and never in a request — see {@see InstallFail2ban}
+     * and PhpExtensionManager::install(). A request held open that long dies
+     * at the web server long before apt finishes, leaving a half-done install
+     * nobody can see.
+     *
+     * The tracker row is started here rather than inside the job, for the
+     * reason the fail2ban endpoint documents: between this 202 and a worker
+     * picking the job up there would otherwise be a window where the install
+     * is real and nothing can see it.
+     */
+    public function installSupervisor(
+        Application $application,
+        WorkerSupervisor $supervisor,
+        ActivityLogger $activity,
+        InstallTracker $installs,
+    ): JsonResponse {
+        // Already there: say so rather than spending minutes of apt proving it.
+        if ($supervisor->installed()) {
+            return response()->json([
+                'message' => __('errors/application.supervisor_already_installed'),
+            ], 422);
+        }
+
+        // Already running: a second click must not queue a second apt.
+        if ($installs->current(InstallSupervisor::RUNTIME, InstallSupervisor::VERSION)?->status === InstallStatus::Installing) {
+            return response()->json([
+                'message' => __('application.supervisor_installing'),
+            ], 202);
+        }
+
+        $installs->start(InstallSupervisor::RUNTIME, InstallSupervisor::VERSION);
+
+        InstallSupervisor::dispatch(Auth::id());
+
+        $activity->log('application.supervisor_install_started', $application, [
+            'name' => $application->name,
+        ]);
+
+        return response()->json([
+            'message' => __('application.supervisor_installing'),
+        ], 202);
+    }
+
     public function store(
         SaveWorkerRequest $request,
         Application $application,
@@ -50,7 +103,16 @@ class WorkerController extends Controller
         // this method has already written a worker the panel would list and
         // supervisord has never heard of — and the request that created it
         // returns an error, so nobody expects it to be there.
-        $supervisor->assertAvailable();
+        //
+        // And when it is missing, start installing it rather than handing back
+        // a command to run. The panel has the grant and knows the package; it
+        // installs PHP versions and fail2ban the same way. The install still
+        // cannot happen inside this request — apt is minutes long — so this
+        // answers 202 and the worker is created on the next attempt, which is
+        // one more click and no shell.
+        if (! $supervisor->installed()) {
+            return $this->installSupervisor($application, $supervisor, $activity, app(InstallTracker::class));
+        }
 
         // The slug that names this worker's systemd unit is derived on the
         // model's `creating` hook — it is not fillable, so no request can

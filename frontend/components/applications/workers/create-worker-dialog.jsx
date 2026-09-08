@@ -83,7 +83,19 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
     };
 
     try {
-      await createWorker(appId, payload);
+      const response = await createWorker(appId, payload);
+
+      // 202, not 201: the server had no supervisord and has started installing
+      // it. apt is minutes long and cannot be held inside a request, so no
+      // worker exists yet — saying "Created" here would name a thing that is
+      // not there. The dialog stays open with the form intact, so the same
+      // worker is one more click once the install lands.
+      if (response?.status === 202) {
+        toast.info(response.data?.message ?? t("toast.installingSupervisor"));
+
+        return;
+      }
+
       toast.success(t("toast.created"));
       onOpenChange?.(false);
       router.refresh();

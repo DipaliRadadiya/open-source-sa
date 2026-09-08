@@ -60,4 +60,5 @@ return [
     'sources_not_in_one_directory' => 'Все сжимаемые элементы должны находиться в одной папке.',
     'release_failed' => 'Не удалось создать каталог сайта на сервере.',
     'supervisor_missing' => 'Воркерам нужен supervisord, который не установлен на этом сервере. Установите его командой `apt-get install supervisor` и создайте воркер заново.',
+    'supervisor_already_installed' => 'Supervisor уже установлен на этом сервере.',
 ];

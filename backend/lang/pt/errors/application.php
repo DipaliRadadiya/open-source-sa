@@ -60,4 +60,5 @@ return [
     'sources_not_in_one_directory' => 'Todos os itens a comprimir têm de estar na mesma pasta.',
     'release_failed' => 'Não foi possível criar o diretório do site no servidor.',
     'supervisor_missing' => 'Os workers precisam do supervisord, que não está instalado neste servidor. Instale-o com `apt-get install supervisor` e crie o worker novamente.',
+    'supervisor_already_installed' => 'O supervisor já está instalado neste servidor.',
 ];

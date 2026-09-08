@@ -184,4 +184,7 @@ return [
     'sync.started' => 'Запущена синхронизация сервера (:mode)',
     'sync.ignored' => ':resource_key исключён из синхронизации сервера',
     'sync.unignored' => ':resource_key возвращён в синхронизацию сервера',
+    'application.supervisor_install_started' => 'Начата установка supervisor для :name',
+    'application.supervisor_installed' => 'Supervisor установлен',
+    'application.supervisor_install_failed' => 'Не удалось установить supervisor (:reference)',
 ];

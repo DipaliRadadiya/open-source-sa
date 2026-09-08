@@ -3795,7 +3795,8 @@
         "created": "Worker बनाया गया।",
         "updated": "Worker अपडेट किया गया।",
         "deleted": "Worker हटाया गया।",
-        "deleteFailed": "Worker हटाया नहीं जा सका।"
+        "deleteFailed": "Worker हटाया नहीं जा सका।",
+        "installingSupervisor": "supervisor इंस्टॉल हो रहा है — थोड़ी देर में फिर कोशिश करें।"
       },
       "error": {
         "start": "{name} शुरू नहीं हो सका।",

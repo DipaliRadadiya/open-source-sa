@@ -20,6 +20,22 @@ Route::get('/applications/{application}/workers', [WorkerController::class, 'ind
 Route::post('/applications/{application}/workers', [WorkerController::class, 'store'])
     ->middleware(['permission:app_worker,manage', 'throttle:20,1']);
 
+/*
+| Install supervisord, which workers run under.
+|
+| Declared before the `{worker}` routes so a literal path segment is never
+| mistaken for a worker id. Gated on the same grant as creating a worker: the
+| package is server-wide, but the only reason to want it is the screen the
+| person is already standing on, and inventing a second permission for one
+| button would mean an operator who can make workers still cannot make the
+| first one.
+|
+| Throttled hard. apt is minutes long and the job is not re-entrant; a double
+| click should not queue two installs.
+*/
+Route::post('/applications/{application}/workers/install-supervisor', [WorkerController::class, 'installSupervisor'])
+    ->middleware(['permission:app_worker,manage', 'throttle:6,1']);
+
 Route::put('/applications/{application}/workers/{worker}', [WorkerController::class, 'update'])
     ->middleware(['permission:app_worker,manage', 'throttle:20,1']);
 

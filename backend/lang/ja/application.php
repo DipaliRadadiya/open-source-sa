@@ -195,4 +195,5 @@ return [
         'bun' => 'Bun',
     ],
 
+    'supervisor_installing' => 'ワーカーの実行基盤である supervisor をインストールしています。少し時間がかかります。完了したらワーカーを作成し直してください。',
 ];

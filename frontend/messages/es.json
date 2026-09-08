@@ -3795,7 +3795,8 @@
         "created": "Worker creado.",
         "updated": "Worker actualizado.",
         "deleted": "Worker eliminado.",
-        "deleteFailed": "No se pudo eliminar el worker."
+        "deleteFailed": "No se pudo eliminar el worker.",
+        "installingSupervisor": "Instalando supervisor: inténtalo de nuevo en un momento."
       },
       "error": {
         "start": "No se pudo iniciar {name}.",

@@ -184,4 +184,7 @@ return [
     'sync.started' => 'सर्वर सिंक शुरू किया (:mode)',
     'sync.ignored' => 'सर्वर सिंक से :resource_key हटाया',
     'sync.unignored' => 'सर्वर सिंक में :resource_key वापस जोड़ा',
+    'application.supervisor_install_started' => ':name के लिए supervisor इंस्टॉल करना शुरू किया',
+    'application.supervisor_installed' => 'supervisor इंस्टॉल किया',
+    'application.supervisor_install_failed' => 'supervisor इंस्टॉल नहीं हो सका (:reference)',
 ];

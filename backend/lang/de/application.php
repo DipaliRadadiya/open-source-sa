@@ -195,4 +195,5 @@ return [
         'bun' => 'Bun',
     ],
 
+    'supervisor_installing' => 'Supervisor wird installiert, unter dem Worker laufen. Das dauert einen Moment — legen Sie den Worker danach erneut an.',
 ];

@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\InstallSupervisor;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -9,6 +10,7 @@ use App\Services\Server\Applications\FrameworkDetector;
 use App\Services\Server\Applications\WorkerSupervisor;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 
 /**
  * Fake server state, held statically rather than on the test case.
@@ -659,42 +661,109 @@ describe('the unit name', function () {
 });
 
 describe('a server without supervisord', function () {
-    it('refuses to create a worker, and says how to fix it', function () {
-        // The panel writes supervisor programs since 2026-09-07 and
-        // `install.sh` gained the package in the same commit — which reaches
-        // new installs only. An upgraded box has no /etc/supervisor/conf.d,
-        // and the updater ships code, never packages.
+    it('installs supervisor itself rather than telling someone to run apt', function () {
+        // The panel has the sudo grant and knows the package name; it installs
+        // PHP versions, database engines and fail2ban exactly this way. Being
+        // handed a shell command by software that could have run it is a poor
+        // answer, even when the command is correct.
+        Queue::fake();
+
+        WorkerFake::$supervisorInstalled = false;
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload())
+            ->assertStatus(202);
+
+        Queue::assertPushed(InstallSupervisor::class);
+    });
+
+    it('does not create the worker while supervisor is still arriving', function () {
+        // 202 is "started", not "done". A row here would be a worker the panel
+        // lists and supervisord has never heard of.
+        Queue::fake();
+
+        WorkerFake::$supervisorInstalled = false;
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertStatus(202);
+
+        expect(Worker::query()->count())->toBe(0);
+    });
+
+    it('does not queue a second apt when one is already running', function () {
+        // apt is minutes long and the job is not re-entrant. A double click,
+        // or a second person on the same screen, must not stack installs.
+        Queue::fake();
+
+        WorkerFake::$supervisorInstalled = false;
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertStatus(202);
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertStatus(202);
+
+        Queue::assertPushed(InstallSupervisor::class, 1);
+    });
+
+    it('refuses to install over a supervisor that is already there', function () {
+        // Rather than spending minutes of apt proving what `which` answered.
+        Queue::fake();
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl('/install-supervisor'))
+            ->assertStatus(422);
+
+        Queue::assertNotPushed(InstallSupervisor::class);
+    });
+
+    it('needs the same grant as creating a worker', function () {
+        Queue::fake();
+        fakeWorkerSupervisor();
+
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_worker', view: true, manage: false);
+
+        $this->actingAs($viewer)
+            ->postJson(workerUrl('/install-supervisor'))
+            ->assertForbidden();
+    });
+
+    it('still refuses outright on a path that cannot install for you', function () {
+        // Creating now starts an install, but every other caller of apply() —
+        // editing a worker, a deploy restarting them — has no such option, and
+        // must not write a program file into a directory that is not there.
+        // The 422 and its message survive for exactly those.
+        $worker = Worker::create([
+            'application_id' => $this->application->id,
+            'name' => 'Queue worker',
+            'command' => 'php artisan queue:work',
+            'kind' => 'queue',
+            'processes' => 1,
+        ]);
+
         WorkerFake::$supervisorInstalled = false;
         fakeWorkerSupervisor();
 
         $response = $this->actingAs($this->admin)
-            ->postJson(workerUrl(), [
-                'name' => 'Queue worker',
-                'command' => 'php artisan queue:work',
-                'kind' => 'queue',
-                'processes' => 1,
-            ])
+            ->putJson(workerUrl('/'.$worker->id), workerPayload(['name' => 'Renamed']))
             ->assertStatus(422);
 
-        // Not a 500, and not the shell's words. Nothing is broken: a package
-        // is missing, and the one-line fix belongs in the message.
+        // Not a 500, and not the shell's words.
         expect($response->json('message'))->toContain('supervisor');
     });
 
     it('writes nothing before it refuses', function () {
         // The whole point of checking first. Half a worker on disk, with a row
         // in the database and no program to match, is worse than no worker.
+        Queue::fake();
+
         WorkerFake::$supervisorInstalled = false;
         fakeWorkerSupervisor();
 
         $this->actingAs($this->admin)
-            ->postJson(workerUrl(), [
-                'name' => 'Queue worker',
-                'command' => 'php artisan queue:work',
-                'kind' => 'queue',
-                'processes' => 1,
-            ])
-            ->assertStatus(422);
+            ->postJson(workerUrl(), workerPayload())
+            ->assertStatus(202);
 
         expect(collect(WorkerFake::$ran)->filter(fn (string $c): bool => str_contains($c, 'tee')))
             ->toBeEmpty()
