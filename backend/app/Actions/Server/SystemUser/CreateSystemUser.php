@@ -74,6 +74,7 @@ class CreateSystemUser
                     $result->reference,
                     busy: $result->busy,
                     staleLock: $result->staleLock,
+                    denied: $result->denied,
                 );
             }
 

@@ -61,4 +61,5 @@ return [
     'release_failed' => 'Не удалось создать каталог сайта на сервере.',
     'supervisor_missing' => 'Воркерам нужен supervisord, который не установлен на этом сервере. Установите его командой `apt-get install supervisor` и создайте воркер заново.',
     'supervisor_already_installed' => 'Supervisor уже установлен на этом сервере.',
+    'worker_control_failed' => 'Не удалось управлять воркером на сервере.',
 ];

@@ -390,7 +390,7 @@ class FileBrowser
         $bytes = (int) $bytes;
 
         if ($result->failed() && $bytes <= 0) {
-            throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock);
+            throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock, denied: $result->denied);
         }
 
         return $bytes;
@@ -1525,7 +1525,7 @@ class FileBrowser
         );
 
         if ($result->failed()) {
-            throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock);
+            throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock, denied: $result->denied);
         }
 
         return $result;

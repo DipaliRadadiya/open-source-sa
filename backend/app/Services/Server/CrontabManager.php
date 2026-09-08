@@ -229,6 +229,7 @@ class CrontabManager
                 $result->reference,
                 busy: $result->busy,
                 staleLock: $result->staleLock,
+                denied: $result->denied,
                 step: $step,
             );
         }

@@ -3817,6 +3817,8 @@ There is **no `human` field** (render the expression client-side or use the sche
 
 `503` with `code: server_busy` instead means a lock was held and the write never started — that one is worth retrying.
 
+`500` with `code: server_sudo_denied` is the opposite advice, and it can come back from any endpoint that touches the server, not only this one. sudo refused the command before it ran, because this server's grant in `/etc/sudoers.d` is older than the panel running on it — the file is written by `install.sh` and by the update's `sync_privileges` step, and that step is never fatal. Nothing was changed and retrying cannot help; `sudo php artisan panel:sudoers` on the server rewrites the grant from the panel's own list. `panel:doctor`'s privilege check names the missing binaries.
+
 **Update and delete** report the same way: `cronjob_remove` (the file could not be deleted, so the job is still scheduled), `cronjob_remove_stale` (the old file after a rename), `cronjob_detach_source` (the file an adopted job was imported from). In every one of those the panel restores what it changed, so a failed edit never leaves two schedules running.
 
 ---

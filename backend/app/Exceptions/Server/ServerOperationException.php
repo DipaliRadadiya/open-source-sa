@@ -29,6 +29,15 @@ abstract class ServerOperationException extends Exception
          * to remove a file, and telling them to wait sends them in circles.
          */
         public readonly bool $staleLock = false,
+        /**
+         * sudo refused the command outright. Neither a busy server nor a
+         * broken one: the panel's grant is older than the code running on it,
+         * and the message says which command repairs it. Answered before the
+         * feature's own message, because "changing the web root failed on the
+         * server" describes a fault that does not exist and hides one that
+         * does.
+         */
+        public readonly bool $denied = false,
     ) {
         parent::__construct();
     }
@@ -55,6 +64,7 @@ abstract class ServerOperationException extends Exception
     {
         return response()->json([
             'message' => __(match (true) {
+                $this->denied => 'errors/server.sudo_denied',
                 $this->staleLock => 'errors/server.stale_lock',
                 $this->busy => 'errors/server.busy',
                 default => $this->messageKey(),
@@ -62,13 +72,15 @@ abstract class ServerOperationException extends Exception
             // A stable code so the frontend can offer a retry button for this
             // case without matching on translated prose.
             'code' => match (true) {
+                $this->denied => 'server_sudo_denied',
                 $this->staleLock => 'server_stale_lock',
                 $this->busy => 'server_busy',
                 default => $this->code(),
             },
             'reference' => $this->reference,
-            // 503 for busy (come back later); 500 for a stale lock, because
-            // it is a fault on this server that needs a human, not a retry.
-        ], $this->busy && ! $this->staleLock ? 503 : 500);
+            // 503 for busy (come back later); 500 for a stale lock and for a
+            // refused grant, because both are faults on this server that need
+            // a human rather than a retry.
+        ], $this->busy && ! $this->staleLock && ! $this->denied ? 503 : 500);
     }
 }

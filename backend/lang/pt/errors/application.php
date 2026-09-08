@@ -61,4 +61,5 @@ return [
     'release_failed' => 'Não foi possível criar o diretório do site no servidor.',
     'supervisor_missing' => 'Os workers precisam do supervisord, que não está instalado neste servidor. Instale-o com `apt-get install supervisor` e crie o worker novamente.',
     'supervisor_already_installed' => 'O supervisor já está instalado neste servidor.',
+    'worker_control_failed' => 'Não foi possível controlar o worker no servidor.',
 ];

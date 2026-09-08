@@ -32,6 +32,7 @@ class UfwFirewall implements Firewall
                 $result->reference,
                 busy: $result->busy,
                 staleLock: $result->staleLock,
+                denied: $result->denied,
             );
         }
 

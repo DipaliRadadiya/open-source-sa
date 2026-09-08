@@ -35,13 +35,14 @@ class CronjobOperationException extends ServerOperationException
         string $reference,
         bool $busy = false,
         bool $staleLock = false,
+        bool $denied = false,
         /**
          * Which step failed. Null only where the caller genuinely cannot say —
          * every path that knows should pass it.
          */
         public readonly ?string $step = null,
     ) {
-        parent::__construct($reference, $busy, $staleLock);
+        parent::__construct($reference, $busy, $staleLock, $denied);
     }
 
     protected function messageKey(): string

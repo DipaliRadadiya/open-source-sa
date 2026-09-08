@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Exceptions\Server\Application\SupervisorMissingException;
+use App\Exceptions\Server\Application\WorkerControlException;
 use App\Models\Worker;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
@@ -89,13 +90,31 @@ class WorkerSupervisor
      * Same shape as {@see Fail2banManager::installed()}, and the same reason —
      * a feature that depends on a package somebody may not have needs to say
      * so in its own words rather than through whatever the shell prints.
+     *
+     * **A refused probe is not an answer, and must not be read as "no".** sudo
+     * exits non-zero before running `which` at all when the grant does not
+     * cover it, which is indistinguishable from "supervisorctl is not on this
+     * box" if only `ok` is consulted — the trap {@see ServerOpsResult::$answered}
+     * exists to describe. Reading it that way costs more than a wrong message:
+     * the create endpoint answers a missing probe by installing the package,
+     * so a server with a stale grant would be sent to apt, install a supervisor
+     * it already had, and fail the next create in exactly the same place.
+     * Raised here, once, rather than left to each of the two callers.
+     *
+     * @throws WorkerControlException when sudo refuses the probe
      */
     public function installed(): bool
     {
-        return $this->serverOps->run(
+        $probe = $this->serverOps->run(
             ['which', 'supervisorctl'],
             ['feature' => 'application', 'op' => 'worker_detect'],
-        )->ok;
+        );
+
+        if ($probe->denied) {
+            throw new WorkerControlException($probe->reference, denied: true);
+        }
+
+        return $probe->ok;
     }
 
     /**
@@ -357,11 +376,25 @@ class WorkerSupervisor
      */
     private function supervisorctl(array $arguments, Worker $worker, string $op): ServerOpsResult
     {
-        return $this->serverOps->run(
+        $result = $this->serverOps->run(
             ['supervisorctl', ...$arguments],
             $this->context($worker, $op),
             timeout: 120,
         );
+
+        // Every supervisorctl call, not just the fatal ones. `reload()` is
+        // deliberately non-fatal — a failed `update` leaves the file on disk
+        // and the old program running, which someone can act on — but that
+        // tolerance is for supervisord disagreeing with a config. A refused
+        // grant is not a state to carry on from: nothing ran, nothing will,
+        // and continuing only moves the report to the next command, which is
+        // how this surfaced as a failure to *start* a worker whose config had
+        // in fact never been applied.
+        if ($result->denied) {
+            throw new WorkerControlException($result->reference, denied: true);
+        }
+
+        return $result;
     }
 
     /**

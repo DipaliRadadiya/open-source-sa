@@ -69,7 +69,7 @@ class PermissionFixer
         );
 
         if ($result->failed()) {
-            throw new FixPermissionsFailedException($result->reference, busy: $result->busy, staleLock: $result->staleLock);
+            throw new FixPermissionsFailedException($result->reference, busy: $result->busy, staleLock: $result->staleLock, denied: $result->denied);
         }
     }
 }

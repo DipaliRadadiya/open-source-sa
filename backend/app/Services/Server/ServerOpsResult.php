@@ -30,6 +30,20 @@ class ServerOpsResult
          */
         public readonly bool $staleLock = false,
         /**
+         * sudo refused before the binary ran — the panel's grant does not
+         * cover this command.
+         *
+         * Apart from `busy` and `staleLock` because it is not a fault on the
+         * server at all: nothing is locked, nothing is broken, and nothing ran.
+         * The panel is missing a line in /etc/sudoers.d, which `artisan
+         * panel:sudoers` writes in full.
+         *
+         * A caller that reads only `ok` reports this as the operation failing,
+         * which is how a stale grant gets diagnosed as a broken feature. A
+         * caller that reads it as an answer does worse — see `answered`.
+         */
+        public readonly bool $denied = false,
+        /**
          * The command ran and gave its own answer.
          *
          * `ok` is two questions collapsed into one: `test -f` exits 1 for "the

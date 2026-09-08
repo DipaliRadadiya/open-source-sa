@@ -61,4 +61,5 @@ return [
     'release_failed' => 'The site directory could not be created on the server.',
     'supervisor_missing' => 'Workers need supervisord, which is not installed on this server. Install it with `apt-get install supervisor`, then create the worker again.',
     'supervisor_already_installed' => 'Supervisor is already installed on this server.',
+    'worker_control_failed' => 'Could not control the worker on the server.',
 ];

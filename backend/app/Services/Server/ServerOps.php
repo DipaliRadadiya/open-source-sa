@@ -160,7 +160,17 @@ class ServerOps
         // but do not put an expected answer on the admin error dashboard.
         $expectedExit = ! $ok && $exitCode !== null && in_array($exitCode, $expectedExitCodes, true);
 
+        $denied = ! $ok && $this->isSudoDenied($command, $stderr);
+
         Log::channel('server-ops')->{$ok || $expectedExit ? 'info' : 'error'}('server operation', array_merge($context, [
+            // Named here rather than left to the reader. The admin error
+            // dashboard falls back to "Server operation failed." for an entry
+            // with no message, which is what a stale sudo grant looked like
+            // for every feature it broke: a command, an exit code, and prose
+            // from sudo that only says a password would be needed. The one
+            // fact worth having — the panel may not run this binary, and one
+            // command repairs that — was nowhere on the screen.
+            ...($denied ? ['message' => __('errors/server.sudo_denied')] : []),
             'reference' => $reference,
             'command' => $this->loggableCommand($command),
             'exit_code' => $exitCode,
@@ -200,6 +210,7 @@ class ServerOps
             // means "wait" while someone holds the lock and "this is broken"
             // once nobody does.
             staleLock: ! $ok && $this->isStaleLock($stderr),
+            denied: $denied,
             // Computed here, once, because every caller that worked it out for
             // itself got it wrong the same way. See ServerOpsResult::$answered.
             answered: $ok || ($expectedExit && trim($stderr) === ''),
@@ -402,6 +413,67 @@ class ServerOps
 
         foreach ((array) config('server.transient.stale_lock_patterns', []) as $pattern) {
             if (str_contains($haystack, strtolower((string) $pattern))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Did sudo refuse the command before the binary ever ran?
+     *
+     * This is a different kind of failure from every other one here and it has
+     * been misread as several of them. The command did not fail — it did not
+     * happen. The server is fine, the feature is not broken, and retrying will
+     * never help: the panel's grant in /etc/sudoers.d does not cover this
+     * binary, and one command as root repairs every feature at once.
+     *
+     * It is worth naming because the grant goes stale by design. The list of
+     * binaries lives in `server.privilege.binaries`, and the file is only
+     * rewritten by install.sh and by the update's `sync_privileges` step —
+     * which is deliberately non-fatal. A server that missed that step keeps
+     * running happily on a grant from the day it was installed, and then every
+     * binary added since fails with prose about a password on a feature that
+     * looks configured. `touch`, `certbot` and `mysqldump` each did this in one
+     * week; `supervisorctl` did it to worker creation on 2026-09-08, which is
+     * why this exists.
+     *
+     * **Anchored to sudo's own output, not matched loosely.** Only consulted
+     * for a command this class actually elevated, and the phrases must be on a
+     * line sudo prefixed with its own name — otherwise a tool that merely
+     * prints the words "a password is required" (a log tail, a failing mysql
+     * client) would be reported as a privilege fault, sending the operator to
+     * rewrite a sudoers file that was never the problem. The "not allowed to
+     * execute" and "not in the sudoers file" forms are sudo's other two
+     * refusals and carry no prefix, so they are matched on their own shape.
+     *
+     * Kept in code rather than in `server.transient.*` config alongside its
+     * neighbours: those patterns are a retry knob an operator may want to tune
+     * for their own tooling, while this is sudo's fixed vocabulary. There is
+     * nothing here to tune, and a mistuned copy would misreport privileges.
+     *
+     * @param  array<int, string>  $command  Already elevated.
+     */
+    private function isSudoDenied(array $command, string $stderr): bool
+    {
+        if ($stderr === '' || ($command[0] ?? null) !== 'sudo') {
+            return false;
+        }
+
+        foreach (preg_split('/\R/', $stderr) ?: [] as $line) {
+            $line = strtolower(trim($line));
+
+            if (str_starts_with($line, 'sudo:') && (
+                str_contains($line, 'password is required')
+                || str_contains($line, 'no askpass program')
+                || str_contains($line, 'a terminal is required')
+            )) {
+                return true;
+            }
+
+            if (str_contains($line, 'is not in the sudoers file')
+                || preg_match('/\bis not allowed to execute\b/', $line) === 1) {
                 return true;
             }
         }

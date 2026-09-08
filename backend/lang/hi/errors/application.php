@@ -61,4 +61,5 @@ return [
     'release_failed' => 'सर्वर पर साइट की निर्देशिका नहीं बनाई जा सकी।',
     'supervisor_missing' => 'वर्कर्स को supervisord चाहिए, जो इस सर्वर पर इंस्टॉल नहीं है। इसे `apt-get install supervisor` से इंस्टॉल करें, फिर वर्कर दोबारा बनाएँ।',
     'supervisor_already_installed' => 'इस सर्वर पर supervisor पहले से इंस्टॉल है।',
+    'worker_control_failed' => 'सर्वर पर वर्कर को नियंत्रित नहीं किया जा सका।',
 ];

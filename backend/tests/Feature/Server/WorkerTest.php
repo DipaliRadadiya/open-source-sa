@@ -51,6 +51,18 @@ class WorkerFake
      */
     public static bool $supervisorInstalled = true;
 
+    /**
+     * Binaries this server's sudoers grant does not cover.
+     *
+     * A separate axis from `$supervisorInstalled` on purpose: the two look
+     * identical through `which` and mean opposite things. One is a package to
+     * install, the other a grant to rewrite, and a panel that confuses them
+     * runs apt against a server that already had supervisord.
+     *
+     * @var array<int, string>
+     */
+    public static array $denied = [];
+
     public static function reset(): void
     {
         self::$running = [];
@@ -58,6 +70,7 @@ class WorkerFake
         self::$env = "APP_ENV=production\nCACHE_STORE=redis\n";
         self::$present = ['/home/workerowner/queued-site/public_html/artisan'];
         self::$supervisorInstalled = true;
+        self::$denied = [];
     }
 
     /** The program name out of `sv-worker-shop-queue:*`. */
@@ -121,6 +134,12 @@ function fakeWorkerSupervisor(): void
         [$binary] = $args;
 
         WorkerFake::$ran[] = implode(' ', $args);
+
+        // Before anything else, because this is what sudo does: the binary is
+        // never reached, so no fake behaviour below it may run either.
+        if (in_array($binary, WorkerFake::$denied, true)) {
+            return Process::result(errorOutput: "sudo: a password is required\n", exitCode: 1);
+        }
 
         if ($binary === 'which') {
             return Process::result(exitCode: WorkerFake::$supervisorInstalled ? 0 : 1);
@@ -784,5 +803,90 @@ describe('a server without supervisord', function () {
             ->assertCreated();
 
         expect(Worker::query()->count())->toBe(1);
+    });
+});
+
+describe('a server whose sudo grant is out of date', function () {
+    /*
+     * Reported 2026-09-08, from a panel upgraded past the release that moved
+     * workers to supervisord: `sudo -n supervisorctl update` answered "a
+     * password is required". supervisord was installed and the program file
+     * was written — the grant in /etc/sudoers.d simply predated the binary.
+     *
+     * `supervisorctl` has been in `server.privilege.binaries` since that
+     * release. The file is rewritten by install.sh and by the update's
+     * `sync_privileges` step, and that step is deliberately never fatal, so a
+     * server can run code whose grant it has not got and say nothing.
+     */
+
+    beforeEach(function () {
+        // phpunit.xml disables escalation suite-wide. Nothing here exists
+        // without it: with sudo off no command is elevated, so none can be
+        // refused, and every assertion below would pass against a panel that
+        // still reported the old generic failure.
+        config()->set('server.privilege.sudo', true);
+    });
+
+    it('names the grant rather than the feature', function () {
+        $worker = Worker::create([
+            'application_id' => $this->application->id,
+            'name' => 'Queue worker',
+            'command' => 'php artisan queue:work',
+            'kind' => 'queue',
+            'processes' => 1,
+        ]);
+
+        WorkerFake::$denied = ['supervisorctl'];
+        fakeWorkerSupervisor();
+
+        $response = $this->actingAs($this->admin)
+            ->putJson(workerUrl('/'.$worker->id), workerPayload(['name' => 'Renamed']))
+            ->assertStatus(500);
+
+        expect($response->json('code'))->toBe('server_sudo_denied')
+            ->and($response->json('message'))->toContain('panel:sudoers')
+            // Not "could not control the worker": nothing about the worker is
+            // wrong, and that sentence sends the reader to the wrong screen.
+            ->and($response->json('message'))->not->toBe(__('errors/application.worker_control_failed'));
+    });
+
+    it('does not mistake a refused probe for a missing package', function () {
+        // The expensive version of the same confusion. `which` refused and
+        // `which` finding nothing are the same exit code, so reading only the
+        // status sends a server that already has supervisord to apt — ten
+        // minutes of package install that fixes nothing, and the next create
+        // fails in exactly the same place.
+        Queue::fake();
+
+        WorkerFake::$denied = ['which'];
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload())
+            ->assertStatus(500)
+            ->assertJsonPath('code', 'server_sudo_denied');
+
+        Queue::assertNotPushed(InstallSupervisor::class);
+        expect(Worker::query()->count())->toBe(0);
+    });
+
+    it('stops at the refusal instead of reporting the next command', function () {
+        // `reload()` is deliberately non-fatal, which is right for supervisord
+        // disagreeing with a config and wrong for a grant that will refuse
+        // every command after it too. Carrying on turned "the panel may not
+        // run supervisorctl" into "the worker would not start" — a true
+        // sentence about a worker whose config had never been applied.
+        WorkerFake::$denied = ['supervisorctl'];
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload())
+            ->assertStatus(500);
+
+        $supervisorctl = collect(WorkerFake::$ran)
+            ->filter(fn (string $c): bool => str_starts_with($c, 'supervisorctl'));
+
+        expect($supervisorctl->first())->toBe('supervisorctl reread')
+            ->and($supervisorctl)->toHaveCount(1);
     });
 });

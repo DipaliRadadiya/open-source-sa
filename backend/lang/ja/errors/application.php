@@ -61,4 +61,5 @@ return [
     'release_failed' => 'サーバー上にサイトのディレクトリを作成できませんでした。',
     'supervisor_missing' => 'ワーカーには supervisord が必要ですが、このサーバーにはインストールされていません。`apt-get install supervisor` でインストールしてから、ワーカーを作成し直してください。',
     'supervisor_already_installed' => 'この サーバーには supervisor が既にインストールされています。',
+    'worker_control_failed' => 'サーバー上でワーカーを制御できませんでした。',
 ];

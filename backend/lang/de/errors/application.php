@@ -61,4 +61,5 @@ return [
     'release_failed' => 'Das Verzeichnis der Website konnte auf dem Server nicht erstellt werden.',
     'supervisor_missing' => 'Worker benötigen supervisord, das auf diesem Server nicht installiert ist. Installieren Sie es mit `apt-get install supervisor` und legen Sie den Worker erneut an.',
     'supervisor_already_installed' => 'Supervisor ist auf diesem Server bereits installiert.',
+    'worker_control_failed' => 'Der Worker konnte auf dem Server nicht gesteuert werden.',
 ];
