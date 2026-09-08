@@ -4,6 +4,8 @@ return [
     'operation_failed' => 'A operação de banco de dados falhou no servidor.',
     'export_already_running' => 'Já existe uma exportação desta base de dados em curso. Aguarde que termine antes de iniciar outra.',
     'collation_mismatch' => 'O agrupamento selecionado não pertence ao conjunto de caracteres escolhido.',
+    'application_already_attached' => ':application já tem o banco de dados :database vinculado. Desvincule aquele primeiro ou vincule este banco de dados a outra aplicação.',
+    'engine_not_accepted' => ':application não pode usar um banco de dados :engine. Ele aceita :accepted.',
     'engine_not_installable' => 'O painel ainda não consegue instalar este motor de banco de dados. Instale-o você mesmo e o painel o detectará.',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin não suporta bancos de dados MongoDB.',
     'phpmyadmin_not_deployed' => 'Nenhum site phpMyAdmin está instalado neste servidor.',

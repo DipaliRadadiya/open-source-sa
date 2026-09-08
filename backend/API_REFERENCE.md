@@ -3149,7 +3149,7 @@ Test reachability of the admin connection.
 ### GET `/databases`
 **Permission:** `database` (view)
 
-Paged. `?search=` case-insensitively matches the database name; `?filter[engine]=mariadb` (validated against the configured engines — an unknown one is a **422**, not an empty list); `?sort=created_at|name|engine|users_count`, default `-created_at`, with case-insensitive name ordering; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
+Paged. `?search=` case-insensitively matches the database name; `?filter[engine]=mariadb` (validated against the configured engines — an unknown one is a **422**, not an empty list); `?filter[application_id]=1` for the databases attached to one application; `?filter[attached]=0|1` for the unattached ones (what an attach picker lists) or the attached ones; `?sort=created_at|name|engine|users_count`, default `-created_at`, with case-insensitive name ordering; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
 
 ```json
 {"databases": [{
@@ -3199,6 +3199,27 @@ Size is re-measured on this single-record view (exact figure worth one query).
 **The list and the single record carry different keys, and neither carries both.** `GET /databases` returns `users_count` and no `users`; this endpoint returns `users` and no `users_count` — each is omitted, not null, when the query did not ask for it. Do not write `db.users?.length ?? db.users_count`; branch on which endpoint you called.
 
 Each entry in `users` is the **full** `DatabaseUserResource` documented under `GET /databases/{database}/users` — password and connection string included, not the `{id, username}` stub. `POST /databases/adopt` and the update endpoints return neither key.
+
+---
+
+### PUT `/databases/{database}/application`
+**Permission:** `database` (manage)
+
+Attach this database to an application, move it to another, or detach it.
+
+**Request:** `{"application_id": 1}` — or `{"application_id": null}` to detach.
+
+**Response `200`:** `{"database": {…}}`
+
+`application_id` must be **present**. An absent key is a 422, not a detach: forgetting a field and asking to unlink are different requests and this endpoint does not conflate them.
+
+🔴 **This changes bookkeeping, not connectivity.** No `wp-config.php`, `.env` or other connection string is rewritten — an application keeps talking to whatever its own code says it talks to. What the link decides is what the *panel* treats as part of the application: a backup dumps exactly the attached databases, and staging, cloning and restoring each find "the application's database" this way. An unattached database is absent from every backup of its site. Say this in the UI; a user who attaches a database expecting their site to start using it has been misled.
+
+Two refusals, both **422** on `application_id`:
+- **One database per application.** Backups already handle several, but staging and cloning take the first row and cannot yet say which they mean, so a second attach is refused naming the one already there. Detach that one first.
+- **The engine must suit the site type.** WordPress accepts `mysql`/`mariadb`, NodeBB accepts `mongodb` — the same list provisioning uses when it creates a database for a new site, so attaching cannot produce a pairing that creating would have refused. A type that needs no database of its own (custom PHP, static, a git deploy) declares nothing and accepts anything.
+
+Deleting an application **detaches** its databases rather than dropping them (`nullOnDelete`). Attaching is therefore never destructive and always reversible.
 
 ---
 

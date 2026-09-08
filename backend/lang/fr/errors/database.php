@@ -4,6 +4,8 @@ return [
     'operation_failed' => "L'opération de base de données a échoué sur le serveur.",
     'export_already_running' => "Un export de cette base de données est déjà en cours. Attendez qu'il se termine avant d'en lancer un autre.",
     'collation_mismatch' => "Le classement sélectionné n'appartient pas au jeu de caractères choisi.",
+    'application_already_attached' => "La base de données :database est déjà rattachée à :application. Détachez-la d'abord, ou rattachez cette base de données à une autre application.",
+    'engine_not_accepted' => ":application ne peut pas utiliser une base de données :engine. Elle accepte :accepted.",
     'engine_not_installable' => 'Le panneau ne peut pas encore installer ce moteur de base de données. Installez-le vous-même et le panneau le détectera.',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin ne prend pas en charge les bases de données MongoDB.',
     'phpmyadmin_not_deployed' => 'Aucun site phpMyAdmin n\'est installé sur ce serveur.',

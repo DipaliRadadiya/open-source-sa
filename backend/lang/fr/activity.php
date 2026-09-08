@@ -38,6 +38,8 @@ return [
     'database.user_deleted' => 'A supprimé l\'utilisateur de base de données :username de :database',
     'database.password_reset' => 'A réinitialisé le mot de passe de l\'utilisateur de base de données :username',
     'database.imported' => 'A importé la base de données :name',
+    'database.attached' => 'A rattaché la base de données :name à :application',
+    'database.detached' => 'A détaché la base de données :name de :application',
     'database.connection_updated' => 'A mis à jour les paramètres de connexion :engine',
     'database.user_updated' => 'A mis à jour l\'utilisateur de base de données :username sur :database',
     'database.phpmyadmin_signed_in' => 'A ouvert :name dans phpMyAdmin en tant que :username',

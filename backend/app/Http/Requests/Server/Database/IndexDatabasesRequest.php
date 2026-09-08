@@ -59,6 +59,14 @@ class IndexDatabasesRequest extends FormRequest
             // list, which reads as "you have no databases".
             'filter.engine' => ['sometimes', 'nullable', Rule::in(array_keys((array) config('server.databases.engines', [])))],
 
+            // The two questions an application's own screen asks: "which
+            // database is attached to me?" and "which ones could be?". Both are
+            // this list with a where clause, so they live here rather than in a
+            // second endpoint that would have to re-implement search, sort and
+            // paging to stay usable.
+            'filter.application_id' => ['sometimes', 'nullable', 'integer', Rule::exists('applications', 'id')],
+            'filter.attached' => ['sometimes', 'nullable', 'boolean'],
+
             'sort' => ListSort::rule(self::SORTS),
 
             'per_page' => ['sometimes', Rule::in(self::PAGE_SIZES)],

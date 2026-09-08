@@ -38,6 +38,8 @@ return [
     'database.user_deleted' => 'Удалил пользователя базы данных :username из :database',
     'database.password_reset' => 'Сбросил пароль пользователя базы данных :username',
     'database.imported' => 'Импортировал базу данных :name',
+    'database.attached' => 'Привязал базу данных :name к :application',
+    'database.detached' => 'Отвязал базу данных :name от :application',
     'database.connection_updated' => 'Обновил настройки подключения :engine',
     'database.user_updated' => 'Обновил пользователя базы данных :username в :database',
     'database.phpmyadmin_signed_in' => 'Открыл :name в phpMyAdmin от имени :username',

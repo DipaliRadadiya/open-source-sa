@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Database\AdoptDatabases;
+use App\Actions\Server\Database\AttachDatabaseToApplication;
 use App\Actions\Server\Database\CreateDatabase;
 use App\Actions\Server\Database\DeleteDatabase;
 use App\Enums\ExportStatus;
@@ -10,10 +11,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
 use App\Http\Requests\Server\Database\IndexDatabasesRequest;
 use App\Http\Requests\Server\Database\StoreDatabaseRequest;
+use App\Http\Requests\Server\Database\UpdateDatabaseApplicationRequest;
 use App\Http\Resources\DatabaseExportResource;
 use App\Http\Resources\DatabaseResource;
 use App\Jobs\InstallDatabaseEngine;
 use App\Jobs\RunDatabaseExport;
+use App\Models\Application;
 use App\Models\Database;
 use App\Models\DatabaseExport;
 use App\Services\ActivityLogger;
@@ -124,9 +127,26 @@ class DatabaseController extends Controller
         $search = trim((string) $request->validated('search', ''));
         $filter = (array) $request->validated('filter', []);
 
+        // The rule validates the shape; `boolean()` reads it, because a query
+        // string carries `attached=0` as the string "0" and that is truthy.
+        $attached = ($filter['attached'] ?? null) === null ? null : $request->boolean('filter.attached');
+
         $databases = Database::query()
             ->withCount('users')
             ->when($filter['engine'] ?? null, fn ($query, $engine) => $query->where('engine', $engine))
+            ->when(
+                ($filter['application_id'] ?? null) !== null,
+                fn ($query) => $query->where('application_id', $filter['application_id']),
+            )
+            // Compared against null, not truthiness: `attached=false` is the
+            // whole point of the filter — it is what an application's attach
+            // picker lists — and would fall through a `when($attached)`.
+            ->when(
+                $attached !== null,
+                fn ($query) => $attached
+                    ? $query->whereNotNull('application_id')
+                    : $query->whereNull('application_id'),
+            )
             ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name']));
 
         $databases = ListSort::apply(
@@ -168,6 +188,33 @@ class DatabaseController extends Controller
     {
         return response()->json([
             'database' => DatabaseResource::make($sizes->refresh($database)->load('users'))->resolve(),
+        ]);
+    }
+
+    /**
+     * Attach this database to an application, move it, or detach it (null).
+     *
+     * A database could previously only be linked in the request that created
+     * it, so one created on its own — or adopted from a brownfield server —
+     * was excluded from its site's backups with no way to correct that.
+     *
+     * The link is bookkeeping: see `AttachDatabaseToApplication` for what it
+     * does and does not change.
+     */
+    public function updateApplication(
+        UpdateDatabaseApplicationRequest $request,
+        Database $database,
+        AttachDatabaseToApplication $action,
+    ): JsonResponse {
+        $applicationId = $request->validated('application_id');
+
+        $database = $action->execute(
+            $database,
+            $applicationId === null ? null : Application::findOrFail($applicationId),
+        );
+
+        return response()->json([
+            'database' => DatabaseResource::make($database)->resolve(),
         ]);
     }
 

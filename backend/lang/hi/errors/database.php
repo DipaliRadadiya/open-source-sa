@@ -4,6 +4,8 @@ return [
     'operation_failed' => 'सर्वर पर डेटाबेस ऑपरेशन विफल रहा।',
     'export_already_running' => 'इस डेटाबेस का एक निर्यात पहले से चल रहा है। दूसरा शुरू करने से पहले उसके पूरा होने की प्रतीक्षा करें।',
     'collation_mismatch' => 'चयनित कोलेशन चुने गए वर्ण सेट से संबंधित नहीं है।',
+    'application_already_attached' => ':application से पहले से ही :database डेटाबेस जुड़ा है। पहले उसे अलग करें, या इस डेटाबेस को किसी दूसरे एप्लिकेशन से जोड़ें।',
+    'engine_not_accepted' => ':application :engine डेटाबेस का उपयोग नहीं कर सकता। यह :accepted स्वीकार करता है।',
     'engine_not_installable' => 'पैनल यह डेटाबेस इंजन अभी इंस्टॉल नहीं कर सकता। इसे स्वयं इंस्टॉल करें और पैनल इसे पहचान लेगा।',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin MongoDB डेटाबेस का समर्थन नहीं करता।',
     'phpmyadmin_not_deployed' => 'इस सर्वर पर कोई phpMyAdmin साइट इंस्टॉल नहीं है।',

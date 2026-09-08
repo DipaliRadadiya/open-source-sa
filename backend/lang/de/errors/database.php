@@ -4,6 +4,8 @@ return [
     'operation_failed' => 'Der Datenbankvorgang ist auf dem Server fehlgeschlagen.',
     'export_already_running' => 'Ein Export dieser Datenbank läuft bereits. Warten Sie, bis er fertig ist, bevor Sie einen weiteren starten.',
     'collation_mismatch' => 'Die gewählte Kollation gehört nicht zum gewählten Zeichensatz.',
+    'application_already_attached' => 'Mit :application ist bereits die Datenbank :database verknüpft. Heben Sie diese Verknüpfung zuerst auf, oder verknüpfen Sie diese Datenbank mit einer anderen Anwendung.',
+    'engine_not_accepted' => ':application kann keine :engine-Datenbank verwenden. Akzeptiert wird :accepted.',
     'engine_not_installable' => 'Das Panel kann diese Datenbank-Engine noch nicht installieren. Installieren Sie sie selbst, das Panel erkennt sie dann.',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin unterstützt keine MongoDB-Datenbanken.',
     'phpmyadmin_not_deployed' => 'Keine phpMyAdmin-Site ist auf diesem Server installiert.',

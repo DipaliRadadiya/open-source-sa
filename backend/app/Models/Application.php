@@ -280,6 +280,20 @@ class Application extends Model
         return $this->hasMany(Deployment::class);
     }
 
+    /**
+     * The databases the panel treats as part of this application — what a
+     * backup dumps, and what staging, cloning and restoring copy.
+     *
+     * `hasMany` because the column allows it and backups already dump all of
+     * them; attaching is currently capped at one by
+     * `UpdateDatabaseApplicationRequest`, because staging and cloning take the
+     * first row and cannot yet say which they mean.
+     */
+    public function databases(): HasMany
+    {
+        return $this->hasMany(Database::class);
+    }
+
     public function certificate(): HasOne
     {
         return $this->hasOne(Certificate::class);

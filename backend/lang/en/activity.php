@@ -38,6 +38,8 @@ return [
     'database.user_deleted' => 'Deleted database user :username from :database',
     'database.password_reset' => 'Reset the password for database user :username',
     'database.imported' => 'Imported database :name',
+    'database.attached' => 'Attached database :name to :application',
+    'database.detached' => 'Detached database :name from :application',
     'database.connection_updated' => 'Updated the :engine connection settings',
     'database.user_updated' => 'Updated database user :username on :database',
     'database.phpmyadmin_signed_in' => 'Opened :name in phpMyAdmin as :username',

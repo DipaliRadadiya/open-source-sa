@@ -4,6 +4,8 @@ return [
     'operation_failed' => 'The database operation failed on the server.',
     'export_already_running' => 'An export of this database is already running. Wait for it to finish before starting another.',
     'collation_mismatch' => 'The selected collation does not belong to the chosen character set.',
+    'application_already_attached' => ':application already has the database :database attached. Detach that one first, or attach this database to another application.',
+    'engine_not_accepted' => ':application cannot use a :engine database. It accepts :accepted.',
     'engine_not_installable' => 'The panel cannot install this database engine yet. Install it yourself and the panel will detect it.',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin does not support MongoDB databases.',
     'phpmyadmin_not_deployed' => 'No phpMyAdmin site is installed on this server.',

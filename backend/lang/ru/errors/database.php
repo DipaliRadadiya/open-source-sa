@@ -4,6 +4,8 @@ return [
     'operation_failed' => 'Операция с базой данных не удалась на сервере.',
     'export_already_running' => 'Экспорт этой базы данных уже выполняется. Дождитесь его завершения, прежде чем запускать следующий.',
     'collation_mismatch' => 'Выбранное сравнение не относится к выбранной кодировке.',
+    'application_already_attached' => 'К :application уже привязана база данных :database. Сначала отвяжите её или привяжите эту базу данных к другому приложению.',
+    'engine_not_accepted' => ':application не может использовать базу данных :engine. Поддерживается: :accepted.',
     'engine_not_installable' => 'Панель пока не может установить этот движок базы данных. Установите его сами, и панель его обнаружит.',
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin не поддерживает базы данных MongoDB.',
     'phpmyadmin_not_deployed' => 'На этом сервере не установлен сайт phpMyAdmin.',

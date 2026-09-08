@@ -58,6 +58,20 @@ Route::post('/databases', [DatabaseController::class, 'store'])->middleware('per
 Route::get('/databases/{database}', [DatabaseController::class, 'show'])->middleware('permission:database');
 Route::delete('/databases/{database}', [DatabaseController::class, 'destroy'])->middleware('permission:database,manage');
 
+/*
+| Which application this database belongs to — attach, move, or detach (null).
+|
+| PUT on the sub-resource rather than PATCH on the database: `name`, `engine`
+| and `charset` are DDL and immutable once created, so a general update endpoint
+| would advertise four editable fields and honour one. This replaces the one
+| relationship that can change, idempotently.
+|
+| `database,manage` alone, matching `store` — which has always accepted
+| `application_id` under exactly that permission.
+*/
+Route::put('/databases/{database}/application', [DatabaseController::class, 'updateApplication'])
+    ->middleware('permission:database,manage');
+
 // P2 per-database: table listing + maintenance.
 Route::get('/databases/{database}/tables', [DatabaseController::class, 'tables'])->middleware('permission:database');
 Route::post('/databases/{database}/optimize', [DatabaseController::class, 'optimize'])->middleware('permission:database,manage');

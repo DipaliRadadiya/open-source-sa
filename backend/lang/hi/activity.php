@@ -38,6 +38,8 @@ return [
     'database.user_deleted' => ':database से डेटाबेस उपयोगकर्ता :username हटाया',
     'database.password_reset' => 'डेटाबेस उपयोगकर्ता :username का पासवर्ड रीसेट किया',
     'database.imported' => ':name डेटाबेस आयात किया',
+    'database.attached' => ':name डेटाबेस को :application से जोड़ा',
+    'database.detached' => ':name डेटाबेस को :application से अलग किया',
     'database.connection_updated' => ':engine कनेक्शन सेटिंग्स अपडेट कीं',
     'database.user_updated' => ':database पर डेटाबेस उपयोगकर्ता :username अपडेट किया',
     'database.phpmyadmin_signed_in' => ':name को :username के रूप में phpMyAdmin में खोला',
