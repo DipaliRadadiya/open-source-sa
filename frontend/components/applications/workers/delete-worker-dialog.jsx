@@ -7,7 +7,7 @@ import { deleteWorker } from "@/lib/api/workers";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiMessage } from "@/lib/api/error-message";
 
-// The API stops the systemd unit before deleting the row — the other order
+// The API stops the supervisord program before deleting the row — the other order
 // would leave a process running that nothing in the panel knows about — so a
 // plain confirm is proportionate; there's no orphaned-process risk to spell out.
 export function DeleteWorkerDialog({ worker, appId, open, onOpenChange }) {

@@ -47,9 +47,9 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
   /**
    * What actually happened, in the worker's own words.
    *
-   * The endpoint answers with the worker as systemd reports it after the
+   * The endpoint answers with the worker as supervisord reports it after the
    * action — the controller's "state is never stored: every response asks
-   * systemd what is actually running". So the outcome is knowable, and saying
+   * supervisord what is actually running". So the outcome is knowable, and saying
    * "Starting…" on a green tick and stopping there was throwing that away.
    *
    * The unhappy case is the one worth having: `systemctl start` succeeds for a
@@ -95,7 +95,7 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
       // "Starting…" to the new state instead of flashing the old one back.
       if (next?.id === worker.id) onUpdated?.(next);
       reportOutcome(id, action, next);
-      // Deliberately NOT router.refresh(): that re-reads systemd a second time
+      // Deliberately NOT router.refresh(): that re-reads supervisord a second time
       // and its answer landed *after* this one, overwriting the row — measured
       // as a badge going "Starting…" → "Stopped" → "Running", which is the
       // flicker this was meant to remove. The panel already polls both the

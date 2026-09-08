@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// systemd execs the command directly rather than through a shell, so a pipe or
+// supervisord execs the command directly rather than through a shell, so a pipe or
 // redirect would be passed to the binary as a literal argument instead of doing
 // what it looks like — the API 422s on these, this just catches it before the
 // round-trip.

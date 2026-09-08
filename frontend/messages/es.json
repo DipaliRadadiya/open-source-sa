@@ -3871,7 +3871,7 @@
         "nameHint": "Una etiqueta corta para identificar este worker.",
         "useTemplate": "Usar plantilla",
         "command": "Comando",
-        "commandHint": "Se ejecuta como el propio usuario de este sitio. No se admiten tuberías, redirecciones ni operadores de shell (| ; & $ ` > <): systemd ejecuta este comando directamente, no a través de un shell.",
+        "commandHint": "Se ejecuta como el propio usuario de este sitio. No se admiten tuberías, redirecciones ni operadores de shell (| ; & $ ` > <): supervisord ejecuta este comando directamente, no a través de un shell.",
         "processes": "Procesos",
         "processesHint": "Cuántas copias ejecutar a la vez, para procesar más trabajos en paralelo.",
         "restartOnDeploy": "Reiniciar tras el despliegue",

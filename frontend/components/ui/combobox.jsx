@@ -40,6 +40,22 @@ export function Combobox({
   const [chromeOffset, measureChrome] = useChromeOffset();
   const [query, setQuery] = useState("");
   const searchRef = useRef(null);
+  const triggerRef = useRef(null);
+  /*
+   * Whether this picker lives inside a dialog.
+   *
+   * A Dialog wraps its content in react-remove-scroll, which blocks wheel
+   * events on everything it does not consider inside itself. The popover is
+   * portalled to the body, so it is "outside" — and the list scrolled with the
+   * scrollbar or the keyboard but sat dead under a mouse wheel, which is how
+   * everyone actually scrolls a dropdown.
+   *
+   * `modal` makes the popover manage its own scroll lock, which nests inside
+   * the dialog's and lets its own content scroll. Only inside a dialog: on an
+   * ordinary page a modal popover would block the rest of the screen for a
+   * control that has no business doing that.
+   */
+  const [modal, setModal] = useState(false);
 
   const selected = options.find((option) => String(option.value) === String(value));
   const filtered = useMemo(() => {
@@ -53,15 +69,19 @@ export function Combobox({
   }, [options, query]);
 
   function handleOpenChange(next) {
-    if (next) measureChrome();
+    if (next) {
+      measureChrome();
+      setModal(Boolean(triggerRef.current?.closest('[role="dialog"]')));
+    }
     setOpen(next);
     if (!next) setQuery("");
   }
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={handleOpenChange} modal={modal}>
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           type="button"
           id={id}
           variant="outline"

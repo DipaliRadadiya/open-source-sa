@@ -3871,7 +3871,7 @@
         "nameHint": "A short label to identify this worker.",
         "useTemplate": "Use template",
         "command": "Command",
-        "commandHint": "Runs as this site's own user. Pipes, redirects, and shell operators (| ; & $ ` > <) aren't supported — systemd runs this command directly, not through a shell.",
+        "commandHint": "Runs as this site's own user. Pipes, redirects, and shell operators (| ; & $ ` > <) aren't supported — supervisord runs this command directly, not through a shell.",
         "processes": "Processes",
         "processesHint": "How many copies to run at once, for handling more jobs in parallel.",
         "restartOnDeploy": "Restart after deploy",

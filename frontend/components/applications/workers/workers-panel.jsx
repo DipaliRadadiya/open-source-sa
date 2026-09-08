@@ -14,7 +14,7 @@ import { WorkersTable } from "@/components/applications/workers/workers-table";
 import { WorkersCards } from "@/components/applications/workers/workers-cards";
 import { CreateWorkerDialog } from "@/components/applications/workers/create-worker-dialog";
 
-// Status is read from systemd on every GET — nothing is cached server-side, so
+// Status is read from supervisord on every GET — nothing is cached server-side, so
 // the "refresh" here is just re-fetching, same as the Services page.
 //
 // 15s, not 4s. Services polls fast because `cpu_percent` is a delta between two
@@ -56,7 +56,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
 
   const setRowBusy = (id, action) => setBusy((prev) => ({ ...prev, [id]: action }));
 
-  // start/stop/restart answer with the worker as systemd reports it *after* the
+  // start/stop/restart answer with the worker as supervisord reports it *after* the
   // action, so the row can be corrected from the response itself. Previously
   // the answer was thrown away and the badge fell back to its old value until
   // the next poll — which is what made a start look like nothing had happened.

@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Cog, ChevronDown } from "lucide-react";
+import { Caution } from "@/components/ui/caution";
 import { workerFormSchema, WORKER_FORM_DEFAULTS } from "@/lib/schemas/worker";
 import { createWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
@@ -38,6 +39,9 @@ import { WorkerCommandField } from "@/components/applications/workers/worker-com
 export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], workers = [], seed }) {
   const t = useTranslations("applications.workers");
   const router = useRouter();
+  // The server's own "installing supervisor" message, kept on screen until
+  // the next attempt. Null when there is nothing to say.
+  const [installing, setInstalling] = useState(null);
 
   const form = useForm({
     resolver: zodResolver(workerFormSchema),
@@ -75,6 +79,11 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
   }
 
   async function onSubmit(values) {
+    // Cleared on every attempt: the notice below describes the LAST answer,
+    // and leaving a stale "installing" above a fresh validation error reads as
+    // two contradictory explanations for one press.
+    setInstalling(null);
+
     const payload = {
       ...values,
       name: values.name.trim(),
@@ -91,7 +100,12 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
       // not there. The dialog stays open with the form intact, so the same
       // worker is one more click once the install lands.
       if (response?.status === 202) {
+        // A toast AND a notice, not a toast alone. The toast fades after a few
+        // seconds and leaves a filled-in form that looks like the button did
+        // nothing — the one reading of this screen that is flatly wrong, since
+        // an apt install is running because of that press.
         toast.info(response.data?.message ?? t("toast.installingSupervisor"));
+        setInstalling(response.data?.message ?? t("toast.installingSupervisor"));
 
         return;
       }
@@ -107,7 +121,10 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
   const isSubmitting = form.formState.isSubmitting;
 
   function handleOpenChange(next) {
-    if (!next) form.reset(WORKER_FORM_DEFAULTS);
+    if (!next) {
+      form.reset(WORKER_FORM_DEFAULTS);
+      setInstalling(null);
+    }
     onOpenChange?.(next);
   }
 
@@ -138,6 +155,10 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
           </>
         }
       >
+        {/* Above the fields, because it explains why they are still filled in
+            and still here. */}
+        {installing ? <Caution>{installing}</Caution> : null}
+
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}

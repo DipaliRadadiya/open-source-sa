@@ -362,11 +362,14 @@ export default async function ApplicationDetailPage({ params }) {
             />
           ) : null}
 
-          {/* Only where a database is part of the picture at all: a site type
-              that needs one, or a site that already has one. A static site
-              gets no card, because it has nothing to say and an empty card
-              reads as a missing feature. */}
-          {canSeeDatabases && (needsDatabase || siteDatabases.databases.length > 0) ? (
+          {/* Always, for anyone who can see databases.
+              It used to be hidden unless the site type declared it needed a
+              database — which left a blank PHP or git-deployed site, the two
+              kinds most likely to use one the panel cannot detect, with no
+              route to attach anything from their own page at all. The card
+              handles the difference itself: a warning for a type that says it
+              needs one, a neutral line for a type that says nothing. */}
+          {canSeeDatabases ? (
             <DatabaseCard
               databases={siteDatabases.databases}
               failed={siteDatabases.failed}

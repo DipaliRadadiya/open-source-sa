@@ -83,9 +83,14 @@ export async function DatabaseCard({
             server-level permission, so a site-level reader may have none. */}
         {canSeeDatabases ? (
           <div className="px-(--card-spacing) pt-(--card-spacing)">
+            {/* The label follows the state, the emphasis follows the urgency.
+                A site with no database needs "Attach" whether or not its type
+                declared it — "Manage" sends someone to a list to work out for
+                themselves what they came to do. Only the declared case is
+                filled, because only that one is a problem. */}
             <Button asChild variant={warn ? "default" : "outline"} size="sm">
               <Link href="/databases" prefetch={false}>
-                {warn ? t("attach") : t("manage")}
+                {missing ? t("attach") : t("manage")}
                 <ArrowRight className="size-3.5" />
               </Link>
             </Button>
