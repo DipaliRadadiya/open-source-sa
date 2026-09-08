@@ -193,7 +193,7 @@ abstract class AbstractSiteType implements SiteType
      */
     protected function defaultPhpVersion(): ?string
     {
-        $installed = app(PhpVersionManager::class)->versions();
+        $installed = $this->installedPhpVersionsInRange();
 
         if ($installed === []) {
             return null;
@@ -202,6 +202,44 @@ abstract class AbstractSiteType implements SiteType
         $configured = (string) config('server.default_php_version', '');
 
         return in_array($configured, $installed, true) ? $configured : $installed[0];
+    }
+
+    /**
+     * Installed PHP versions this type can actually run on, newest first.
+     *
+     * The narrowing is the fix for what happened on 2026-09-08: the form
+     * opened on `$installed[0]`, and `FpmPhpStack::versions()` sorts
+     * descending, so on a box with PHP 8.5 the newest version won regardless of
+     * whether the application had ever been run on it. PrestaShop 8.2.1 got
+     * 8.5, and its vendored Symfony died in a cache warmer twenty-one frames
+     * into the install.
+     *
+     * Falling back to the unfiltered list when nothing matches is deliberate.
+     * An empty select is a form nobody can submit, and it would be the answer
+     * on any server whose PHP simply predates the range — where the right
+     * outcome is that the user picks something and the validation rule
+     * explains, rather than that the field silently offers nothing.
+     *
+     * @return array<int, string>
+     */
+    protected function installedPhpVersionsInRange(): array
+    {
+        $installed = app(PhpVersionManager::class)->versions();
+        $range = $this->supportedPhpRange();
+
+        if ($installed === [] || $range === null) {
+            return $installed;
+        }
+
+        $within = array_values(array_filter($installed, function (string $version) use ($range): bool {
+            $min = $range['min'] ?? null;
+            $max = $range['max'] ?? null;
+
+            return ($min === null || version_compare($version, $min, '>='))
+                && ($max === null || version_compare($version, $max, '<='));
+        }));
+
+        return $within === [] ? $installed : $within;
     }
 
     public function defaultWebRoot(): string
@@ -261,6 +299,18 @@ abstract class AbstractSiteType implements SiteType
      * @return array{min: ?string, max: ?string}|null
      */
     public function supportedNodeRange(): ?array
+    {
+        return null;
+    }
+
+    /**
+     * No opinion by default, and that is the honest answer for most types: a
+     * blank PHP site or a git deployment runs whatever the user's code runs.
+     * Only a type whose application publishes a supported range overrides it.
+     *
+     * @return array{min: ?string, max: ?string}|null
+     */
+    public function supportedPhpRange(): ?array
     {
         return null;
     }

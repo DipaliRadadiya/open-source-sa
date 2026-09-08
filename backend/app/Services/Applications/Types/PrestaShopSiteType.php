@@ -41,6 +41,29 @@ class PrestaShopSiteType extends AbstractSiteType
         return true;
     }
 
+    /**
+     * PrestaShop 8 states PHP 8.1 as its recommendation and lists nothing
+     * above it: *"We recommend PHP 8.1. (Although compatible, PHP 7.2.5 to 8.0
+     * are not recommended since they reached their end of support.)"* —
+     * devdocs.prestashop-project.org, PrestaShop 8 system requirements, read
+     * 2026-09-08. The feed's current stable is 8.2.1.
+     *
+     * The ceiling is not pedantry. On 2026-09-08 a shop was installed on a box
+     * whose newest PHP was 8.5, which is what the form pre-selected, and
+     * PrestaShop 8 vendors the monolithic `symfony/symfony` — the install died
+     * in `ProxyCacheWarmer->warmUp()` during kernel boot, after the archive had
+     * been downloaded, unpacked, chowned and given a database.
+     *
+     * The floor is theirs too, and deliberately not raised to something
+     * tidier: 7.2.5 is what the requirements say, and refusing a version
+     * PrestaShop supports because we would not choose it is not this rule's
+     * job.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '7.2', 'max' => '8.1'];
+    }
+
     public function needsDatabase(): bool
     {
         return true;

@@ -2,6 +2,8 @@
 
 namespace App\Contracts;
 
+use App\Rules\SupportedPhpVersion;
+
 /**
  * One installable thing in the application catalog — WordPress, a git repo, a
  * blank PHP site.
@@ -94,6 +96,21 @@ interface SiteType
      * @return array{min: ?string, max: ?string}|null
      */
     public function supportedNodeRange(): ?array;
+
+    /**
+     * The PHP versions this application will actually run on.
+     *
+     * `['min' => '8.3', 'max' => null]` — either end may be null for open, and
+     * null means the type has no opinion. Most do not: a blank PHP site or a
+     * git deployment runs whatever the user's own code runs, and asserting a
+     * range there would refuse a version that works.
+     *
+     * Stated as major.minor, because that is how PHP projects state support
+     * and how {@see SupportedPhpVersion} compares it.
+     *
+     * @return array{min: ?string, max: ?string}|null
+     */
+    public function supportedPhpRange(): ?array;
 
     /**
      * The create-form fields, in display order.

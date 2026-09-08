@@ -7,6 +7,7 @@ use App\Rules\AvailablePort;
 use App\Rules\SingleLine;
 use App\Rules\StartCommand;
 use App\Rules\SupportedNodeVersion;
+use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Runtimes\NodeRuntime;
@@ -166,6 +167,19 @@ class StoreApplicationRequest extends FormRequest
         // this a version string".
         if (($range = $type->supportedNodeRange()) !== null) {
             $rules['node_version'][] = new SupportedNodeVersion(
+                $range['min'] ?? null,
+                $range['max'] ?? null,
+                __("application.types.{$type->name()}.title"),
+            );
+        }
+
+        // And the same for PHP, which had the identical hole one runtime over
+        // until a PrestaShop install was handed the box's newest PHP and died
+        // inside its own vendored Symfony. Appended for the same reason: the
+        // shape and is-it-installed checks above still run first, and this one
+        // answers only "will the application run on it".
+        if (($range = $type->supportedPhpRange()) !== null) {
+            $rules['php_version'][] = new SupportedPhpVersion(
                 $range['min'] ?? null,
                 $range['max'] ?? null,
                 __("application.types.{$type->name()}.title"),

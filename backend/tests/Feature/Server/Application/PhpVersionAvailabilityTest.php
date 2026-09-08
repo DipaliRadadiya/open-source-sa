@@ -171,3 +171,118 @@ it('checks the sites that name no version against the server default', function 
 
     expect(app(PhpIsolationCheck::class)->run()['status'])->toBe('fail');
 });
+
+describe('the version the application itself can run on', function () {
+    /*
+     * Installed is not the same question as supported, and until 2026-09-08
+     * only the first was asked. The PHP field is one shared `phpFields()`
+     * select offering every version on the box, and `defaultPhpVersion()`
+     * opened on the newest — `FpmPhpStack::versions()` sorts descending.
+     *
+     * So a server whose newest PHP was 8.5 pre-selected 8.5 for PrestaShop,
+     * whose 8.2.1 release vendors the monolithic `symfony/symfony`. The
+     * install died inside `ProxyCacheWarmer->warmUp()` during kernel boot,
+     * twenty-one frames into someone else's vendor directory, after the
+     * archive had been downloaded, unpacked, chowned and given a database.
+     */
+
+    beforeEach(function () {
+        // A box carrying the old and the very new, which is the shape that
+        // produced the bug.
+        installLsphpBuild('8.1');
+        installLsphpBuild('8.5');
+    });
+
+    it('refuses a PHP newer than the application supports', function () {
+        createPhpVersionSite([
+            'site_type' => 'prestashop',
+            'domain' => 'shop-new.example.com',
+            'php_version' => '8.5',
+            'admin_email' => 'admin@example.com',
+            'admin_password' => 'a-long-password',
+            'shop_name' => 'Shop',
+            'admin_first_name' => 'Admin',
+            'admin_last_name' => 'User',
+        ])->assertJsonValidationErrors('php_version');
+
+        expect(Application::query()->count())->toBe(0);
+    });
+
+    it('names the range rather than calling the value invalid', function () {
+        $response = createPhpVersionSite([
+            'site_type' => 'prestashop',
+            'domain' => 'shop-msg.example.com',
+            'php_version' => '8.5',
+            'admin_email' => 'admin@example.com',
+            'admin_password' => 'a-long-password',
+            'shop_name' => 'Shop',
+            'admin_first_name' => 'Admin',
+            'admin_last_name' => 'User',
+        ]);
+
+        // The user's next move is to pick a different version, so the message
+        // has to say which ones would work.
+        expect($response->json('errors.php_version.0'))->toContain('7.2 – 8.1');
+    });
+
+    it('accepts a PHP inside the range', function () {
+        createPhpVersionSite([
+            'site_type' => 'prestashop',
+            'domain' => 'shop-ok.example.com',
+            'php_version' => '8.1',
+            'admin_email' => 'admin@example.com',
+            'admin_password' => 'a-long-password',
+            'shop_name' => 'Shop',
+            'admin_first_name' => 'Admin',
+            'admin_last_name' => 'User',
+        ])->assertSuccessful();
+
+        expect(Application::query()->value('php_version'))->toBe('8.1');
+    });
+
+    it('refuses a PHP older than the application supports', function () {
+        // The other direction, and the reason this is a range: Statamic 6
+        // requires 8.3 or above, so for it 8.1 is the wrong answer and 8.5 is
+        // the right one -- the exact inverse of PrestaShop on the same box.
+        createPhpVersionSite([
+            'site_type' => 'statamic',
+            'domain' => 'flat.example.com',
+            'php_version' => '8.1',
+            'admin_email' => 'admin@example.com',
+            'admin_password' => 'a-long-password',
+            'shop_name' => 'Shop',
+            'admin_first_name' => 'Admin',
+            'admin_last_name' => 'User',
+        ])->assertJsonValidationErrors('php_version');
+
+        createPhpVersionSite([
+            'site_type' => 'statamic',
+            'domain' => 'flat2.example.com',
+            'php_version' => '8.5',
+            'admin_email' => 'admin@example.com',
+            'admin_password' => 'a-long-password',
+            'shop_name' => 'Shop',
+            'admin_first_name' => 'Admin',
+            'admin_last_name' => 'User',
+        ])->assertSuccessful();
+    });
+
+    it('opens the form on a version the application can run, not the newest', function () {
+        // The half that stops anyone meeting the rule at all. Left to itself
+        // the select pre-selected 8.5 for everything.
+        $catalog = collect(app(SiteTypeManager::class)->catalog())->keyBy('name');
+
+        $default = fn (string $type) => collect($catalog[$type]['fields'])
+            ->firstWhere('name', 'php_version')['default'] ?? null;
+
+        expect($default('prestashop'))->toBe('8.1')
+            ->and($default('statamic'))->toBe('8.5')
+            // A type with no opinion still gets the newest, unchanged.
+            ->and($default('php'))->toBe('8.5');
+    });
+
+    it('says nothing about a type that has no opinion', function () {
+        createPhpVersionSite(['php_version' => '8.5', 'domain' => 'blank.example.com'])
+            ->assertSuccessful();
+    });
+});

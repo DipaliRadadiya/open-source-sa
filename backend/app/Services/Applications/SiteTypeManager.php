@@ -116,6 +116,7 @@ class SiteTypeManager
                 // going to be rejected, the same rule the card grid follows by
                 // reporting `available` instead of failing at submit.
                 'node_version_range' => $type->supportedNodeRange(),
+                'php_version_range' => $type->supportedPhpRange(),
                 'fields' => $type->fields(),
             ];
         }, $this->all());

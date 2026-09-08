@@ -715,6 +715,10 @@ A site type that needs a database gets one during provisioning, named `{slug}_{6
 
 Take the version list from `GET /site-types` (the `php_version` / `node_version` field's `options`) rather than hardcoding one. The `php_version` field's `default` is now an installed version too — it used to be the literal `8.4` on every server, which on a box without 8.4 pre-selected a value the API now rejects.
 
+**And, as of 2026-09-08, against the version the application itself runs on.** A site type may publish a `php_version_range` (`{"min": "7.2", "max": "8.1"}`, either end nullable), alongside the `node_version_range` that has always been there. Sending a version outside it is a `422` naming the range, and the `php_version` field's `default` is the newest installed version *within* the range rather than the newest on the box.
+
+This closes the counterpart of the hole above: installed is not the same question as supported. A server whose newest PHP was 8.5 pre-selected 8.5 for PrestaShop, whose current release vendors the old monolithic `symfony/symfony` — the install died inside a Symfony cache warmer during kernel boot, after the archive had been downloaded, unpacked, chowned and handed a database. Ranges are published only where upstream states one: PrestaShop (`7.2`–`8.1`) and Statamic (`8.3`+) today. Every other type sends `null` and accepts any installed version, which is the honest answer for a blank PHP site or a git deployment running the user's own code.
+
 Never send the raw field list — `GET /site-types` publishes the fields for each type, including this one, with localized labels and help text.
 
 **No other site type deploys after creation.** The ten marketplace PHP types and four marketplace Node types install during provisioning; `php` and `static` sites start from a placeholder. Only `git` has `app_deployment` in its feature list at all.

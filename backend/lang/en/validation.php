@@ -209,6 +209,7 @@ return [
 
     'port_in_use_by_app' => 'Port :port is already used by another application on this server.',
     'node_version_unsupported' => 'The :type application runs on Node :range. Choose a version in that range — outside it the application refuses to start and the site serves nothing.',
+    'php_version_unsupported' => 'The :type application runs on PHP :range. Choose a version in that range — outside it the install fails part-way through, inside the application\'s own code, leaving a site to clean up.',
     'web_root_fixed' => ':type serves from :web_root and installs itself around that path, so the web root cannot be changed here. Any other value leaves the site unreachable and publishes its source.',
     'port_in_use' => 'Something on this server is already listening on port :port. Pick another, or stop what is using it.',
 

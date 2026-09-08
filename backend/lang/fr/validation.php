@@ -177,6 +177,7 @@ return [
 
     'port_in_use_by_app' => 'Le port :port est déjà utilisé par une autre application sur ce serveur.',
     'node_version_unsupported' => 'L\'application :type fonctionne avec Node :range. Choisissez une version dans cette plage : en dehors, l\'application refuse de démarrer et le site ne sert rien.',
+    'php_version_unsupported' => 'L\'application :type fonctionne avec PHP :range. Choisissez une version dans cette plage : en dehors, l\'installation échoue à mi-parcours, dans le code de l\'application elle-même, et laisse un site à nettoyer.',
     'web_root_fixed' => ':type est servi depuis :web_root et s\'installe autour de ce chemin : la racine web ne peut donc pas être modifiée ici. Toute autre valeur rend le site inaccessible et publie son code source.',
     'port_in_use' => 'Quelque chose écoute déjà sur le port :port de ce serveur. Choisissez-en un autre ou arrêtez ce qui l\'occupe.',
 

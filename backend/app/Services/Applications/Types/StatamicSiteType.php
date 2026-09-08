@@ -38,6 +38,21 @@ class StatamicSiteType extends AbstractSiteType
     }
 
     /**
+     * A floor and no ceiling. Statamic's requirements page says PHP 8.3 or
+     * above (statamic.dev/requirements, read 2026-09-08), and the installer
+     * runs `composer create-project statamic/statamic` unpinned — so a new
+     * site gets whatever is current, which today is Statamic 6.
+     *
+     * No ceiling because nothing upstream states one, and inventing one would
+     * refuse a version that works the day PHP ships it. The opposite direction
+     * from PrestaShop, and the reason this is a range rather than a list.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '8.3', 'max' => null];
+    }
+
+    /**
      * Content is stored in files, so there is nothing for a database to hold.
      */
     public function needsDatabase(): bool
