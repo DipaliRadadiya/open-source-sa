@@ -2610,15 +2610,6 @@
       "empty": "No tables yet.",
       "rowCount": "{rows} rows",
       "rowsEstimated": "Row counts are the engine's own estimate, not an exact count.",
-      "optimize": "Optimize",
-      "repair": "Repair",
-      "working": "Working…",
-      "cancel": "Cancel",
-      "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
-      "optimizeTitle": "Optimize this database?",
-      "optimizeDescription": "Reclaims space left behind by deleted rows. Safe, but tables are briefly locked while it runs.",
-      "repairTitle": "Repair this database?",
-      "repairDescription": "Rebuilds damaged tables. Only needed after a crash or disk problem, and tables are locked while it runs.",
       "charsetLine": "Character set {charset} · collation {collation}"
     },
     "tabs": {

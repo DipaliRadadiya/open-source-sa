@@ -260,22 +260,6 @@ class DatabaseController extends Controller
         ]);
     }
 
-    public function optimize(Database $database, DatabaseManager $manager, ActivityLogger $log): JsonResponse
-    {
-        $manager->engine($database->engine)->optimize($database->name);
-        $log->log('database.optimized', $database, ['name' => $database->name]);
-
-        return response()->json(['database' => DatabaseResource::make($database)->resolve()]);
-    }
-
-    public function repair(Database $database, DatabaseManager $manager, ActivityLogger $log): JsonResponse
-    {
-        $manager->engine($database->engine)->repair($database->name);
-        $log->log('database.repaired', $database, ['name' => $database->name]);
-
-        return response()->json(['database' => DatabaseResource::make($database)->resolve()]);
-    }
-
     /**
      * Export (dump) a database — read-only, non-destructive.
      *

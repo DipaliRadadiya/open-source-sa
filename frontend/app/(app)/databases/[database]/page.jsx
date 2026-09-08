@@ -5,7 +5,10 @@ import { can } from "@/lib/permissions/can";
 import { getDatabase } from "@/lib/databases/get-database";
 import { getExports } from "@/lib/databases/get-exports";
 import { getDatabaseCounts } from "@/lib/databases/get-databases";
-import { getAllApplications, getPhpmyadminSite } from "@/lib/applications/get-applications";
+import {
+  getAllApplications,
+  getPhpmyadminSite,
+} from "@/lib/applications/get-applications";
 import { getTables } from "@/lib/databases/get-monitor";
 import { Badge } from "@/components/ui/badge";
 import { DatabaseUsers } from "@/components/databases/database-users";
@@ -31,7 +34,16 @@ export default async function DatabasePage({ params, searchParams }) {
   const { database: id } = await params;
   const sp = await searchParams;
 
-  const [permissions, t, live, exportList, tables, phpmyadmin, appList, dbCounts] = await Promise.all([
+  const [
+    permissions,
+    t,
+    live,
+    exportList,
+    tables,
+    phpmyadmin,
+    appList,
+    dbCounts,
+  ] = await Promise.all([
     getPermissions(),
     getTranslations("databases"),
     getDatabase(id),
@@ -53,7 +65,14 @@ export default async function DatabasePage({ params, searchParams }) {
   // A database that was dropped in another tab is gone, not broken — the 404
   // page says that better than "we couldn't load this".
   if (status === 404) notFound();
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+  if (failed || !data)
+    return (
+      <LoadFailed
+        description={t("loadFailed")}
+        status={status}
+        failure={failure}
+      />
+    );
 
   return (
     <div className="space-y-6">
@@ -71,7 +90,6 @@ export default async function DatabasePage({ params, searchParams }) {
           </div>
           <DatabaseFacts database={data} />
         </div>
-
       </div>
 
       <div className="max-w-4xl space-y-4">
@@ -80,7 +98,9 @@ export default async function DatabasePage({ params, searchParams }) {
         <ConnectionDetails
           database={data}
           canManage={canManage}
-          phpmyadminInstalled={phpmyadmin.known ? Boolean(phpmyadmin.site) : null}
+          phpmyadminInstalled={
+            phpmyadmin.known ? Boolean(phpmyadmin.site) : null
+          }
         />
 
         <UsedByCard
@@ -101,13 +121,7 @@ export default async function DatabasePage({ params, searchParams }) {
             ).length,
           }}
           users={<DatabaseUsers database={data} canManage={canManage} />}
-          tables={
-            <DatabaseTables
-              database={data}
-              tables={tables}
-              canManage={canManage}
-            />
-          }
+          tables={<DatabaseTables database={data} tables={tables} />}
           exports={
             <DatabaseExports
               database={data}

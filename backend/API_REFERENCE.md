@@ -3354,30 +3354,15 @@ Structure only — no data browsing.
 
 ---
 
-### POST `/databases/{database}/optimize`
-**Permission:** `database` (manage)
-
-Run `OPTIMIZE TABLE` across all tables.
-
-**Response `200`:** `{"database": {…}}`
-
----
-
-### POST `/databases/{database}/repair`
-**Permission:** `database` (manage)
-
-Run `REPAIR TABLE` across all tables.
-
-**Response `200`:** `{"database": {…}}`
-
----
+> **Removed 2026-09-08: `POST /databases/{database}/optimize` and `POST /databases/{database}/repair`.**
+> Both now return `404`. `REPAIR TABLE` is a MyISAM/ARCHIVE/CSV operation — on InnoDB, MariaDB answers "The storage engine for the table doesn't support repair" as a *note* and exits 0, so the endpoint reported success without doing anything on any table this panel manages. `OPTIMIZE TABLE` on InnoDB is a full table rebuild, and it ran synchronously against a 60-second timeout across every table at once. Use phpMyAdmin, where you can pick individual tables and watch the operation.
 
 ### POST `/databases/{database}/export`
 **Permission:** `database` (manage) | **Throttle:** 6/min
 
 Dump a database to a file. Queued.
 
-`manage`, not the read tier: this copies an entire database off the server, which is more revealing than `optimize` or `repair` — and those have always needed `manage`.
+`manage`, not the read tier: this copies an entire database off the server, which is the most data-revealing thing this feature does.
 
 **Response `202`:** `{"export": {"id": 1, "status": "queued", "file": null}}`
 
@@ -5198,7 +5183,7 @@ Activity entries are written for every mutation. `type` and `action` are separat
 | `role` | created, updated, permissions_updated, deleted |
 | `system_user` | created, deleted, sudo_toggled, shell_changed, ssh_access_changed, ssh_key_added, ssh_key_removed |
 | `application` | created, updated, deleted, provisioned, provision_failed, deployed, deploy_failed, disabled, enabled, domain_added, domain_removed, certificate_issued, certificate_uploaded, certificate_deleted, file_edited, file_deleted, directory_created, permissions_fixed, php_isolated, php_unisolated, php_settings_updated, environment_updated, environment_restored, worker_created, worker_updated, worker_deleted, worker_started, worker_stopped, worker_restarted, deploy_script_updated, deploy_settings_updated, staging_created, staging_pushed |
-| `database` | created, deleted, user_created, user_updated, user_deleted, export_queued, export_completed, export_failed, export_deleted, optimized, repaired, imported |
+| `database` | created, deleted, user_created, user_updated, user_deleted, export_queued, export_completed, export_failed, export_deleted, imported |
 | `backup` | configured, run, completed, failed, downloaded |
 | `disk_cleaner` | cleaned, auto_cleaned, clean_failed, auto_clean_failed, schedule_updated |
 | `cronjob` | created, updated, deleted, create_failed |

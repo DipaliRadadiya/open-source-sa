@@ -32,9 +32,12 @@ export function createDatabase(payload) {
  */
 export function attachDatabase(databaseId, applicationId) {
   return api.put(`/databases/${databaseId}/application`, {
-    application_id: applicationId === null || applicationId === undefined || applicationId === ""
-      ? null
-      : Number(applicationId),
+    application_id:
+      applicationId === null ||
+      applicationId === undefined ||
+      applicationId === ""
+        ? null
+        : Number(applicationId),
   });
 }
 
@@ -77,7 +80,6 @@ export function testConnection(engine) {
   return api.post(`/databases/connections/${encodeURIComponent(engine)}/test`);
 }
 
-
 /** Password is optional — omitted means the API generates a strong one. */
 export function createDatabaseUser(databaseId, payload) {
   return api.post(`/databases/${databaseId}/users`, payload);
@@ -85,7 +87,9 @@ export function createDatabaseUser(databaseId, payload) {
 
 /** Runs ALTER USER on the engine, then updates the stored credential. */
 export function updateUserPassword(databaseId, userId, password) {
-  return api.put(`/databases/${databaseId}/users/${userId}/password`, { password });
+  return api.put(`/databases/${databaseId}/users/${userId}/password`, {
+    password,
+  });
 }
 
 /**
@@ -125,9 +129,12 @@ export function getEngineStatus(engine, { signal } = {}) {
 
 /** 24h of query rate, connections and running threads. */
 export function getDatabaseMetrics(engine, { signal } = {}) {
-  return api.get(`/databases/metrics/history?engine=${encodeURIComponent(engine)}`, {
-    signal,
-  });
+  return api.get(
+    `/databases/metrics/history?engine=${encodeURIComponent(engine)}`,
+    {
+      signal,
+    },
+  );
 }
 
 export function getProcesses(engine, { signal } = {}) {
@@ -145,16 +152,6 @@ export function killProcess(id, engine) {
 
 export function getTables(databaseId, { signal } = {}) {
   return api.get(`/databases/${databaseId}/tables`, { signal });
-}
-
-/** Reclaims space left by deleted rows. No-op on Mongo. */
-export function optimizeDatabase(databaseId) {
-  return api.post(`/databases/${databaseId}/optimize`);
-}
-
-/** Rebuilds damaged tables. No-op on Mongo. */
-export function repairDatabase(databaseId) {
-  return api.post(`/databases/${databaseId}/repair`);
 }
 
 /**

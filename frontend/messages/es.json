@@ -2610,15 +2610,6 @@
       "empty": "Todavía no hay tablas.",
       "rowCount": "{rows} filas",
       "rowsEstimated": "Los recuentos de filas son una estimación del propio motor, no un conteo exacto.",
-      "optimize": "Optimizar",
-      "repair": "Reparar",
-      "working": "Trabajando…",
-      "cancel": "Cancelar",
-      "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
-      "optimizeTitle": "¿Optimizar esta base de datos?",
-      "optimizeDescription": "Recupera el espacio que dejaron las filas eliminadas. Es seguro, pero las tablas se bloquean brevemente mientras se ejecuta.",
-      "repairTitle": "¿Reparar esta base de datos?",
-      "repairDescription": "Reconstruye las tablas dañadas. Solo hace falta tras un fallo o un problema de disco, y las tablas se bloquean mientras se ejecuta.",
       "charsetLine": "Juego de caracteres {charset} · colación {collation}"
     },
     "tabs": {

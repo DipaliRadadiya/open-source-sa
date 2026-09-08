@@ -72,17 +72,23 @@ Route::delete('/databases/{database}', [DatabaseController::class, 'destroy'])->
 Route::put('/databases/{database}/application', [DatabaseController::class, 'updateApplication'])
     ->middleware('permission:database,manage');
 
-// P2 per-database: table listing + maintenance.
+// P2 per-database: table listing.
+//
+// `optimize` and `repair` were here until 2026-09-08 and are deliberately gone
+// rather than hidden. Measured against MariaDB 10.11: `REPAIR TABLE` on InnoDB
+// answers "The storage engine for the table doesn't support repair" as a
+// *note* and exits 0, so the endpoint reported success having done nothing on
+// every table this panel has ever managed. `OPTIMIZE TABLE` on InnoDB is a
+// full table rebuild that ran synchronously against a 60-second timeout, so
+// the databases big enough to want it were exactly the ones where the request
+// died while the server kept rebuilding.
 Route::get('/databases/{database}/tables', [DatabaseController::class, 'tables'])->middleware('permission:database');
-Route::post('/databases/{database}/optimize', [DatabaseController::class, 'optimize'])->middleware('permission:database,manage');
-Route::post('/databases/{database}/repair', [DatabaseController::class, 'repair'])->middleware('permission:database,manage');
 /*
 | `manage`, not the `database` read tier, and throttled.
 |
 | An export copies the entire database off the server, so it is the single most
-| data-revealing thing this feature does — more so than `optimize` and `repair`
-| directly above, which merely rearrange data and have always required `manage`.
-| Read access should not be enough to take a full copy of every database.
+| data-revealing thing this feature does. Read access should not be enough to
+| take a full copy of every database.
 |
 | Throttled because a dump is expensive and fills disk: without a limit, a
 | held-down button queues one full copy per click. The job is unique per

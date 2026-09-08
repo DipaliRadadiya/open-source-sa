@@ -479,14 +479,21 @@ it('lists tables in a database with rows and size', function () {
         ->assertJsonPath('tables.0.size_bytes', 8192);
 });
 
-it('optimizes a database and logs it', function () {
+it('no longer offers to optimize or repair', function () {
+    // Removed 2026-09-08 rather than hidden, so the endpoints have to be gone
+    // and not merely unlinked from the interface. `REPAIR TABLE` on InnoDB is
+    // a note and an exit code of 0 -- the endpoint reported success having
+    // done nothing on every table this panel manages -- and `OPTIMIZE TABLE`
+    // on InnoDB is a whole-table rebuild that ran inside the request.
     fakeDb();
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
 
-    test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/optimize")->assertOk();
+    foreach (['optimize', 'repair'] as $action) {
+        test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/{$action}")->assertNotFound();
+    }
 
-    Process::assertRan(fn ($p) => str_contains((string) ($p->input ?? ''), 'OPTIMIZE TABLE'));
-    test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'optimized']);
+    Process::assertNotRan(fn ($p) => str_contains((string) ($p->input ?? ''), 'OPTIMIZE TABLE')
+        || str_contains((string) ($p->input ?? ''), 'REPAIR TABLE'));
 });
 
 it('returns the QPS history from db_metrics', function () {

@@ -52,6 +52,12 @@ return [
     'fail2ban.ip_unbanned' => 'Unbanned :ip from :jail',
     'fail2ban.all_unbanned' => 'Unbanned all IP addresses (:count)',
     'server.process_killed' => 'Stopped process :pid (:command) with SIG:signal',
+    // Nothing writes these two any more — the optimize and repair endpoints
+    // were removed on 2026-09-08. They stay because the activity log is a
+    // record of what happened, and rows written before that date still name
+    // these actions. `ActivityLogResource` translates with `__()`, which
+    // returns the key itself when it is missing, so deleting them would turn
+    // somebody's history into `activity.database.optimized`.
     'database.optimized' => 'Optimized database :name',
     'database.repaired' => 'Repaired database :name',
     'database.exported' => 'Exported database :name',

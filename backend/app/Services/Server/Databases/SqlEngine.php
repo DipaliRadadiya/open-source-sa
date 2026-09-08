@@ -311,16 +311,6 @@ class SqlEngine implements DatabaseEngine
         return $tables;
     }
 
-    public function optimize(string $database): void
-    {
-        $this->maintain($database, 'OPTIMIZE');
-    }
-
-    public function repair(string $database): void
-    {
-        $this->maintain($database, 'REPAIR');
-    }
-
     public function dump(string $database, string $path): void
     {
         $client = (string) config("server.databases.engines.{$this->connection->engine}.dump_client", 'mysqldump');
@@ -368,15 +358,6 @@ class SqlEngine implements DatabaseEngine
         } finally {
             @unlink($authFile);
         }
-    }
-
-    private function maintain(string $database, string $verb): void
-    {
-        $names = array_map(fn (array $t) => $this->ident($t['name']), $this->tables($database));
-        if ($names === []) {
-            return;
-        }
-        $this->must("USE {$this->ident($database)}; {$verb} TABLE ".implode(', ', $names).';');
     }
 
     /**

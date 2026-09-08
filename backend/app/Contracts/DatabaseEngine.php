@@ -94,11 +94,22 @@ interface DatabaseEngine
      */
     public function tables(string $database): array;
 
-    /** Reclaim space / rebuild (SQL OPTIMIZE TABLE). No-op where unsupported. */
-    public function optimize(string $database): void;
-
-    /** Repair tables (SQL REPAIR TABLE). No-op where unsupported. */
-    public function repair(string $database): void;
+    /*
+     * There was an `optimize()` and a `repair()` here, removed 2026-09-08.
+     *
+     * Not because nothing implemented them — both engines did — but because
+     * what they implemented was not what they claimed. `REPAIR TABLE` is a
+     * MyISAM/ARCHIVE/CSV operation; on InnoDB, which is every table this panel
+     * has managed, MariaDB answers with a *note* and exits 0, so "Repaired
+     * database" was logged for an operation that could not run. And `OPTIMIZE
+     * TABLE` on InnoDB is a whole-table rebuild, which this interface's callers
+     * ran inside an HTTP request.
+     *
+     * The lesson worth keeping is about the interface, not the SQL: "no-op
+     * where unsupported" reads as harmless and is not. A method that silently
+     * does nothing on the only storage engine anybody uses is indistinguishable
+     * from one that works, and every layer above it will report success.
+     */
 
     /** Export the database to $path (mysqldump `--result-file` / mongodump `--archive`). Read-only. */
     public function dump(string $database, string $path): void;

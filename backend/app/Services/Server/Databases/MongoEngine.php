@@ -285,16 +285,6 @@ class MongoEngine implements DatabaseEngine
         return $tables;
     }
 
-    public function optimize(string $database): void
-    {
-        // MongoDB has no OPTIMIZE TABLE equivalent — no-op.
-    }
-
-    public function repair(string $database): void
-    {
-        // MongoDB has no REPAIR TABLE equivalent — no-op.
-    }
-
     public function dump(string $database, string $path): void
     {
         $client = (string) config('server.databases.engines.mongodb.dump_client', 'mongodump');
