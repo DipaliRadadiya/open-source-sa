@@ -128,7 +128,7 @@ export default async function DatabasesPage({ searchParams }) {
               which has to be fixed before its link can be. */}
           <UnlinkedBanner
             count={unlinkedCount}
-            filtered={new URLSearchParams(query).get("attached") === "false"}
+            filtered={new URLSearchParams(query).get("attached") === "0"}
           />
           <DatabasesTable
             data={databases}

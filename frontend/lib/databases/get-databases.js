@@ -26,8 +26,10 @@ export const getEngines = cache(async function getEngines() {
  */
 export const getDatabases = cache(async function getDatabases(query = "") {
   const { data, failed, status, failure } = await read("/databases", databasesResponseSchema, {
-    // `attached` rides the same map: "false" reaches the API as
-    // `filter[attached]=false`, which Laravel's boolean() reads correctly.
+    // `attached` rides the same map, and the URL carries 0/1 rather than the
+    // words: Laravel's `boolean` rule 422s the strings "true"/"false", so
+    // `?attached=false` would have made the banner's own link break the page
+    // it links to.
     searchParams: listQuery(query, { filters: { engine: "engine", attached: "attached" } }),
   });
   return { databases: data?.databases ?? [], meta: data?.meta ?? EMPTY_LIST_META, failed, status, failure };
@@ -40,12 +42,16 @@ export const getDatabases = cache(async function getDatabases(query = "") {
  * and searchable, so "3 on this page" is not "3 on this server" — and this
  * number is the whole point of the banner it feeds.
  *
- * `per_page: 1` because only `meta.total` is wanted; the row comes back to
- * satisfy the shape and is thrown away.
+ * Only `meta.total` is wanted; the rows come back to satisfy the shape and are
+ * thrown away. The page size is still the API's smallest allowed one rather
+ * than 1 — `per_page` is validated against a fixed set and 422s anything else.
  */
 export const getUnlinkedCount = cache(async function getUnlinkedCount() {
   const { data, failed } = await read("/databases", databasesResponseSchema, {
-    searchParams: { "filter[attached]": "false", per_page: 1 },
+    // per_page 10, not 1: the API validates it against a fixed set of page
+    // sizes (10/20/30/50/100) and 422s anything else, so asking for one row to
+    // read `meta.total` failed the request and the banner never appeared.
+    searchParams: { "filter[attached]": 0, per_page: 10 },
   });
 
   // A failed count is 0, which renders nothing. Better a missing banner than
@@ -85,7 +91,11 @@ export const getDatabaseCounts = cache(async function getDatabaseCounts() {
     // so letting them fill the page budget is how a server with many orphans
     // tipped past 100, answered `known: false`, and quietly switched off every
     // warning in this feature — on exactly the server that needed them most.
-    searchParams: { "filter[attached]": "true", per_page: 100 },
+    // `1`, not `"true"`: Laravel's `boolean` rule accepts true/false/1/0/"1"/"0"
+    // and rejects the STRINGS "true"/"false" with a 422. Sending the word made
+    // this whole request fail, which returned `known: false`, which silently
+    // switched off every no-database warning in the panel.
+    searchParams: { "filter[attached]": 1, per_page: 100 },
   });
 
   const databases = data?.databases ?? [];

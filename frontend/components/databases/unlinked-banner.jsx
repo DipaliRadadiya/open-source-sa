@@ -38,7 +38,7 @@ export async function UnlinkedBanner({ count = 0, filtered = false }) {
       </div>
 
       <Button asChild variant="outline" size="sm" className="shrink-0">
-        <Link href="/databases?attached=false" prefetch={false}>
+        <Link href="/databases?attached=0" prefetch={false}>
           {t("action")}
         </Link>
       </Button>
