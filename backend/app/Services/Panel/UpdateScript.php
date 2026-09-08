@@ -36,6 +36,7 @@ class UpdateScript
         'seed_permissions',
         'configure_services',
         'resync_site_configs',
+        'record_firewall_defaults',
         'optimize',
         'frontend_build',
         'sync_privileges',
@@ -251,6 +252,15 @@ class UpdateScript
         # re-rendered was rolled back and is still serving.
         note resync_site_configs
         {$asUser}{$php} {$backend}/artisan sites:resync
+
+        # The installer records the ports it allowed, but only from this
+        # release onwards: every server installed before it has a firewall
+        # screen reading its enabled flag live from ufw and its rules from an
+        # empty table. That backfill can only happen here, and it has to,
+        # because otherwise the fix reaches new installs and none of the
+        # servers that already have the problem. Records only; never runs ufw.
+        note record_firewall_defaults
+        {$asUser}{$php} {$backend}/artisan firewall:record-defaults
 
         note optimize
         {$asUser}{$php} {$backend}/artisan optimize:clear

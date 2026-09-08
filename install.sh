@@ -2526,6 +2526,16 @@ configure_firewall() {
     else
         ok "rules added for 22, 80, 443"
     fi
+
+    # Tell the panel what we just allowed. Without this the firewall screen
+    # reads its enabled flag live from ufw and its rule list from the database,
+    # so a server whose ufw was already active showed an enabled firewall over
+    # an empty table — the rules were on the box and the panel had no record of
+    # them. Records only; it never runs ufw, so the "we do not enable someone's
+    # firewall for them" rule above still holds. Idempotent.
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan firewall:record-defaults' \
+        -- "${APP_DIR}/backend" "/usr/bin/php${PHP_VERSION}"
+    ok "rules recorded in the panel"
 }
 
 # ─── TLS ─────────────────────────────────────────────────────────────────────

@@ -4113,6 +4113,8 @@ A rule is `action` (`allow` / `deny`) over a port **range** — `port_from` plus
 
 `enabled: false` means kept but not applied; disabling is not deleting. `protected: true` marks system-seeded rules (`origin` other than `user`) that cannot be deleted — hide the delete action rather than letting it 422.
 
+`enabled: true` with an empty `rules` no longer means "the firewall is on and lets nothing through" — it used to be reachable, because `enabled` is read live from ufw while `rules` comes from the panel's own table, and only a toggle made *through the panel* ever wrote the default rows. The installer now records what it allowed (SSH plus the web ports) and a panel update backfills it, so the two halves agree from the first page load. An empty list on an enabled firewall is now a genuine "no rules", worth saying so rather than rendering a blank table.
+
 `your_ip` is the caller's own address, so "only my IP" is one click; without it people open ports to everyone rather than go and look their address up.
 
 `ssh_port` is read here rather than from Settings on purpose: a user with firewall access but not settings access would get a 403 there and fall back to 22, and being wrong about the SSH port on this screen is how people lock themselves out.

@@ -4,15 +4,14 @@ namespace App\Actions\Server\Firewall;
 
 use App\Contracts\Firewall;
 use App\Exceptions\Server\Firewall\FirewallOperationException;
-use App\Models\FirewallRule;
 use App\Services\ActivityLogger;
-use App\Support\SshPort;
 
 class ToggleFirewall
 {
     public function __construct(
         private Firewall $firewall,
         private ActivityLogger $activityLogger,
+        private RecordDefaultRules $recordDefaults,
     ) {}
 
     /**
@@ -44,25 +43,15 @@ class ToggleFirewall
      * Ensure a default `allow` rule exists (and is applied) for SSH plus the
      * configured panel/web ports. Idempotent — an existing rule for a port is
      * left as-is (a user rule keeps its `user` origin).
+     *
+     * Which ports, and the rows themselves, belong to
+     * {@see RecordDefaultRules}: the installer records the same set without
+     * applying anything, and two copies of that list would eventually
+     * disagree about which port SSH is on.
      */
     private function seedDefaults(): void
     {
-        // The port SSH is *actually* on, not the configured default. Seeding 22
-        // on a server whose SSH was moved to 2222 and then turning on
-        // deny-incoming locks the operator out of their own box — the exact
-        // mistake SshPort exists to prevent, and the firewall was the one
-        // caller still reading the raw config value.
-        $ports = array_values(array_unique(array_merge(
-            [SshPort::current()],
-            config('server.default_firewall_ports', []),
-        )));
-
-        foreach ($ports as $port) {
-            $rule = FirewallRule::firstOrCreate(
-                ['port_from' => $port, 'port_to' => null, 'protocol' => 'tcp', 'action' => 'allow', 'source_ip' => null],
-                ['origin' => 'default'],
-            );
-
+        foreach ($this->recordDefaults->execute() as $rule) {
             $result = $this->firewall->apply($rule);
 
             // Never enable deny-incoming UFW unless every recovery rule was
