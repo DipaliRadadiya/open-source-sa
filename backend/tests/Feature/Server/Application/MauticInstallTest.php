@@ -62,7 +62,7 @@ function installMautic(): ArrayObject
     Process::fake(function ($process) use ($runs) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input, 'path' => $process->path];
 
-        return Process::result(exitCode: 0);
+        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
     });
 
     app(ApplicationProvisioner::class)->provision(test()->application);
@@ -176,7 +176,7 @@ it('rejects Mautic already installed exit zero when the schema is empty', functi
             return Process::result(errorOutput: "Table 'users' does not exist\n", exitCode: 1);
         }
 
-        return Process::result(exitCode: 0);
+        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
     });
 
     try {

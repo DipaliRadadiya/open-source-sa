@@ -5,10 +5,12 @@ namespace App\Services\Server\Applications;
 use App\Actions\Server\Database\CreateDatabase;
 use App\Contracts\SiteInstaller;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Exceptions\Server\ServerOperationException;
 use App\Models\Application;
 use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -127,10 +129,28 @@ class InstallerManager
             throw new ProvisioningFailedException('create_database', 'no-database-engine');
         }
 
-        $name = $this->databaseIdentifiers->generate($application->domain);
         $password = DatabasePassword::generate();
 
         try {
+            // Named from the slug, not the domain. The domain is a hostname:
+            // every dot becomes an underscore, so `shop.example.co.in` produced
+            // `shop_example_co_in_xqolim`, and a nip.io host was truncated
+            // mid-word to fit MySQL's 32-character account limit. The slug is
+            // already the short, unique, normalized name the site's own
+            // directory uses, so `/home/deploy/shop` now pairs with
+            // `shop_xqolim`. Rows predating the slug column fall back to the
+            // old behaviour rather than to the generator's 'app' placeholder.
+            //
+            // `generateAvailable`, not `generate`: this was the only one of the
+            // three callers that never checked the name was free, on either the
+            // panel's rows or the engine. A collision surfaced from the catch
+            // below as an opaque create_database failure with no cause, and a
+            // shorter label makes collisions likelier, not rarer.
+            $name = $this->databaseIdentifiers->generateAvailable(
+                $application->slug ?: $application->domain,
+                $engine,
+            );
+
             $database = $this->createDatabase->execute([
                 'name' => $name,
                 'engine' => $engine,
@@ -142,7 +162,31 @@ class InstallerManager
                 ],
             ]);
         } catch (Throwable $e) {
-            throw new ProvisioningFailedException('create_database', (string) Str::uuid());
+            // Keep the reference the failure already logged under. Minting a
+            // fresh uuid here handed the user an id that appears in no log,
+            // while the one the server-ops entry was written with was thrown
+            // away — the reference is only useful if it points at something.
+            if ($e instanceof ServerOperationException) {
+                throw new ProvisioningFailedException('create_database', $e->reference);
+            }
+
+            // Anything else — a bug rather than a server refusal — has written
+            // nothing, so write the entry before handing out the id for it.
+            // Otherwise the fallback keeps the same defect the branch above
+            // was fixing, only for the failures that are hardest to diagnose.
+            $reference = (string) Str::uuid();
+
+            Log::channel('server-ops')->error('database provisioning failed', [
+                'feature' => 'database',
+                'op' => 'provision_database',
+                'application' => $application->id,
+                'engine' => $engine,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+                'reference' => $reference,
+            ]);
+
+            throw new ProvisioningFailedException('create_database', $reference);
         }
 
         // Read the host and port off the engine's own connection record

@@ -73,7 +73,7 @@ function installPrestaShop(): ArrayObject
     Process::fake(function ($process) use ($runs) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input, 'path' => $process->path];
 
-        return Process::result(exitCode: 0);
+        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
     });
 
     app(ApplicationProvisioner::class)->provision(test()->application);
@@ -232,7 +232,7 @@ it('updates the shop URL and the SSL flags when a certificate is issued', functi
     Process::fake(function ($process) use ($runs) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
 
-        return Process::result(exitCode: 0);
+        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
     });
 
     app(PrestaShopInstaller::class)
@@ -266,7 +266,7 @@ it('turns the SSL flags back off when the certificate goes away', function () {
     Process::fake(function ($process) use ($runs) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input];
 
-        return Process::result(exitCode: 0);
+        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
     });
 
     app(PrestaShopInstaller::class)

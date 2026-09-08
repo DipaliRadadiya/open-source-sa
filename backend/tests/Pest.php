@@ -4,6 +4,8 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Process\FakeProcessResult;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -48,6 +50,25 @@ function userPayload(array $overrides = []): array
         'is_admin' => false,
         'role_ids' => [$role->id],
     ], $overrides);
+}
+
+/**
+ * A database client's answer to a query a fake would otherwise leave silent.
+ *
+ * `null` for anything that is not a database client, so a fake falls through
+ * to its own handling and this only ever adds an answer where there was none.
+ *
+ * Provisioning asks the engine whether a generated name is free before using
+ * it. A bare `Process::result(exitCode: 0)` answers that probe with an empty
+ * string — which reads as "taken", so the allocator walks twenty candidates
+ * and fails the install. No real client answers a SELECT with nothing, so the
+ * fake, not the code, is what was wrong.
+ */
+function fakeDatabaseAnswer(mixed $process): ?FakeProcessResult
+{
+    return in_array($process->command[0] ?? '', ['mysql', 'mariadb'], true)
+        ? Process::result(output: '1')
+        : null;
 }
 
 /**

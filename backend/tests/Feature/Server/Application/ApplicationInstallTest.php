@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Server\Database\CreateDatabase;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\Database;
@@ -9,7 +10,9 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
@@ -63,6 +66,23 @@ function wpApp(array $overrides = []): Application
             'table_prefix' => 'wp_',
         ],
     ], $overrides));
+}
+
+/**
+ * A wordpress application with a slug, the way a real one is created.
+ *
+ * `slug` is deliberately not fillable — {@see CreateApplication} sets it with
+ * `forceCreate` because it names the web-server config file, and a caller
+ * choosing that is a caller choosing which file the panel overwrites. So a
+ * test that passes it to `create()` gets a silent null, which is exactly how
+ * the first version of this file failed.
+ */
+function sluggedApp(string $slug, array $overrides = []): Application
+{
+    $application = wpApp($overrides);
+    $application->forceFill(['slug' => $slug])->save();
+
+    return $application;
 }
 
 /** MySQL present and reachable, every command succeeds. */
@@ -209,10 +229,154 @@ it('hands the extracted files to the site user, not root', function () {
     });
 });
 
+it('names the database after the slug rather than the domain', function () {
+    fakeSaltService();
+    fakeInstallServer();
+
+    // The domain normalizes to `shop_dipali_store_co_in` -- 23 characters of
+    // hostname before the random tail, because every dot becomes an
+    // underscore. The slug is the short, unique name the site's own directory
+    // already uses, so `/home/deploy/shop` and `shop_xxxxxx` read together.
+    $app = sluggedApp('shop', ['name' => 'Shop', 'domain' => 'shop.dipali-store.co.in']);
+
+    runProvision($app);
+
+    $database = Database::where('application_id', $app->id)->with('users')->first();
+
+    expect($database->name)->toMatch('/^shop_[a-z0-9]{6}$/')
+        // The user is the same string; naming them apart would mean two
+        // identifiers to keep unique instead of one.
+        ->and($database->users->first()->username)->toBe($database->name);
+});
+
+it('does not hand out a name the engine already has', function () {
+    fakeSaltService();
+
+    // The engine says the first candidate is taken and the second is free.
+    // Before this the primary path called `generate()`, which asked nobody --
+    // so a collision with an adopted database surfaced from the catch in
+    // provisionDatabase as an opaque create_database failure with no cause.
+    $offered = [];
+
+    Process::fake(function ($process) use (&$offered) {
+        if (($process->command[0] ?? '') === 'test') {
+            return Process::result(exitCode: 0);
+        }
+
+        if (($process->command[0] ?? '') === 'mysql') {
+            $sql = (string) $process->input;
+
+            // The availability probe -- statements go over stdin, never argv.
+            if (str_contains($sql, 'information_schema.schemata')) {
+                preg_match("/schema_name = '([^']+)'/", $sql, $m);
+                $offered[] = $m[1] ?? '';
+
+                return Process::result(output: count($offered) === 1 ? '0' : '1');
+            }
+
+            return Process::result(output: '1');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $app = sluggedApp('shop', ['name' => 'Shop', 'domain' => 'shop.example.com']);
+
+    runProvision($app);
+
+    $app->refresh();
+    $database = Database::where('application_id', $app->id)->first();
+
+    expect($app->status->value)->toBe('active')
+        ->and($offered)->toHaveCount(2)
+        ->and($offered[0])->not->toBe($offered[1])
+        ->and($database->name)->toBe($offered[1]);
+});
+
+it('reports the reference the failure was actually logged under', function () {
+    fakeSaltService();
+
+    // Read the log back rather than trust the value: the claim is that the
+    // reference the user is given points at an entry that exists.
+    $dir = storage_path('logs/install-reference-'.getmypid());
+    File::deleteDirectory($dir);
+    File::makeDirectory($dir, 0755, true);
+    config(['logging.channels.server-ops.path' => $dir.'/server-ops.log']);
+    Log::forgetChannel('server-ops');
+
+    Process::fake(function ($process) {
+        // Both clients, not just mysql: failing every mysql statement takes
+        // the engine out of the running entirely, and the install then fails
+        // somewhere else on mariadb -- passing for the wrong reason.
+        if (! in_array($process->command[0] ?? '', ['mysql', 'mariadb'], true)) {
+            return Process::result(exitCode: 0);
+        }
+
+        // Everything answers, the name is free, and creating it is the one
+        // thing that fails -- a real CREATE DATABASE refusal, which is where
+        // the engine mints the reference this test is about.
+        return str_contains((string) $process->input, 'CREATE DATABASE')
+            ? Process::result(errorOutput: 'ERROR 1044 (42000): Access denied', exitCode: 1)
+            : Process::result(output: '1');
+    });
+
+    $app = sluggedApp('shop', ['name' => 'Shop', 'domain' => 'shop.example.com']);
+
+    runProvision($app);
+
+    $app->refresh();
+    $log = File::get($dir.'/server-ops.log');
+
+    // Before this, the catch minted a fresh uuid and dropped the engine's --
+    // so the id handed to the user appeared in no log at all, and the one the
+    // entry was written under was thrown away.
+    expect($app->status->value)->toBe('failed')
+        ->and($app->failed_step)->toBe('create_database')
+        ->and($app->reference)->not->toBeEmpty()
+        ->and($log)->toContain($app->reference);
+
+    File::deleteDirectory($dir);
+});
+
+it('writes an entry for a failure that had not logged one', function () {
+    fakeSaltService();
+
+    $dir = storage_path('logs/install-unlogged-'.getmypid());
+    File::deleteDirectory($dir);
+    File::makeDirectory($dir, 0755, true);
+    config(['logging.channels.server-ops.path' => $dir.'/server-ops.log']);
+    Log::forgetChannel('server-ops');
+
+    fakeInstallServer();
+
+    // A bug rather than a server refusal: nothing ran, so nothing logged, and
+    // the reference minted for it would otherwise name no entry at all -- the
+    // same defect as the uuid, for the failures hardest to diagnose.
+    $this->mock(CreateDatabase::class)
+        ->shouldReceive('execute')
+        ->andThrow(new RuntimeException('unexpected'));
+
+    $app = sluggedApp('shop', ['name' => 'Shop', 'domain' => 'shop.example.com']);
+
+    runProvision($app);
+
+    $app->refresh();
+
+    expect($app->status->value)->toBe('failed')
+        ->and($app->failed_step)->toBe('create_database')
+        ->and(File::get($dir.'/server-ops.log'))->toContain($app->reference);
+
+    File::deleteDirectory($dir);
+});
+
 it('keeps the database user within the length MySQL will accept', function () {
     fakeSaltService();
     fakeInstallServer();
 
+    // No slug on this row, so the name falls back to the domain -- which is
+    // what every application created before the slug column looks like, and
+    // the case the length cap exists for.
+    //
     // A nip.io host, which is how every IP-addressed test site is reached and
     // is long before anyone has typed a real domain. This one produced
     // `wordpress_139_59_88_213_nip_io_xqolim` (37 chars) and killed the
@@ -256,8 +420,11 @@ it('gives every install its own salts', function () {
             $configs[] = $m[1] ?? '';
         }
 
-        return $process->command[0] === 'test' && in_array('-x', $process->command, true)
-            ? Process::result(exitCode: 0)
+        // The name-availability probe. A bare exitCode-0 answers "" here,
+        // which reads as "taken" and exhausts the allocator, so the install
+        // fails before it writes a config at all.
+        return ($process->command[0] ?? '') === 'mysql'
+            ? Process::result(output: '1')
             : Process::result(exitCode: 0);
     });
 
@@ -292,6 +459,8 @@ it('installs wp-cli only when it is missing', function () {
     fakeSaltService();
     Process::fake(fn ($process) => match (true) {
         $process->command[0] === 'test' && in_array('-x', $process->command, true) => Process::result(exitCode: 1),
+        // The name-availability probe; "" reads as taken and never converges.
+        ($process->command[0] ?? '') === 'mysql' => Process::result(output: '1'),
         default => Process::result(exitCode: 0),
     });
 

@@ -696,6 +696,8 @@ Create + queue provisioning. Poll `GET /applications/{id}` until `status` leaves
 }
 ```
 
+A site type that needs a database gets one during provisioning, named `{slug}_{6 random}` — `shop_a1b2cd` — where the slug is the application's own, the same one naming its directory on disk. Its database user has the identical name. The whole identifier is capped at **32 characters**, which is MySQL's limit for an *account*, not the 64 a database gets; a long slug is truncated, the random tail never is, since that tail is what keeps two similar sites apart. Names are not derived from the domain (a hostname's dots become underscores and consumed most of the budget) and applications created before this change keep the names they were given — nothing is renamed.
+
 `domain` is trimmed, lowercased, and must be globally unique across every application domain — not only other primary domains. A duplicate returns the normal localized `422` validation response on `domain`. Creation is atomic even if two requests race for the same hostname: no partial application row is retained, so the same request can be corrected and retried safely.
 
 **Response `201`:**
@@ -792,6 +794,9 @@ failures `failed_step` says where it broke and `reference` points at the
 server-ops log entry holding the command's own output — together they say more
 than any category invented here would, and a wrong reason sends the user to fix
 something that was never broken.
+
+`reference` always names an entry that exists — including at `create_database`,
+where it previously carried a freshly minted id that appeared in no log at all.
 
 It is set only where the cause is genuinely identified. Render
 `failed_reason_title` when present — it is localized in the viewer's locale —

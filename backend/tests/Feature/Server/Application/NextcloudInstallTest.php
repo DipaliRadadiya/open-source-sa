@@ -55,7 +55,7 @@ function installNextcloud(): ArrayObject
             'path' => $process->path,
         ];
 
-        return Process::result(exitCode: 0);
+        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
     });
 
     app(ApplicationProvisioner::class)->provision(test()->application);

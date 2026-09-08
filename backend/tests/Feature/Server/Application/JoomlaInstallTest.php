@@ -62,7 +62,7 @@ function installJoomla(): ArrayObject
     Process::fake(function ($process) use ($runs) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input, 'path' => $process->path];
 
-        return Process::result(exitCode: 0);
+        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
     });
 
     app(ApplicationProvisioner::class)->provision(test()->application);
