@@ -6,6 +6,7 @@ use App\Contracts\Firewall;
 use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\ActivityLogger;
+use App\Services\Server\Firewall\ProtectedRuleGuard;
 use App\Services\Server\Firewall\SshLockoutGuard;
 use App\Services\Server\ServerOpsResult;
 
@@ -30,6 +31,7 @@ class UpdateFirewallRule
         private Firewall $firewall,
         private ActivityLogger $activityLogger,
         private SshLockoutGuard $sshLockoutGuard,
+        private ProtectedRuleGuard $protectedRuleGuard,
     ) {}
 
     /**
@@ -44,9 +46,14 @@ class UpdateFirewallRule
         $specChanged = (bool) array_intersect(self::SPEC, array_keys($rule->getDirty()));
         $enabled = (bool) $rule->enabled;
 
+        // A seeded rule is the panel's own, and editing one is how you remove
+        // it without meeting the guard on removal: `ufw` has no edit, so this
+        // ends in `ufw delete` either way. Both guards run before the row is
+        // saved, so a refusal changes nothing.
+        $this->protectedRuleGuard->assertEditable($rule);
+
         // Switching off, denying, or moving the last SSH rule off the port
-        // closes the way in just as surely as deleting it — checked before the
-        // row is saved, so a refusal changes nothing.
+        // closes the way in just as surely as deleting it.
         $this->sshLockoutGuard->assertSurvives($original, $rule);
 
         // Kept so the row can be put back if ufw refuses. No transaction: ufw

@@ -4111,7 +4111,11 @@ A rule is `action` (`allow` / `deny`) over a port **range** — `port_from` plus
 
 `summary` is the whole rule as one localised sentence ("Allow 443/tcp from Anywhere") — use it for the row rather than reassembling the parts in the frontend.
 
-`enabled: false` means kept but not applied; disabling is not deleting. `protected: true` marks system-seeded rules (`origin` other than `user`) that cannot be deleted — hide the delete action rather than letting it 422.
+`enabled: false` means kept but not applied; disabling is not deleting.
+
+`protected: true` marks system-seeded rules (`origin` other than `user`). **While the firewall is enabled, such a rule is description-only**: delete, and any `PUT` touching `port_from`, `port_to`, `protocol`, `action`, `source_ip` or `enabled`, answer `422` with a message naming the port and the way out. Disable the firewall and it is fully editable again — that is the escape hatch, and the reason the lock is not permanent.
+
+Treat that as one rule in the UI: **disable the edit control and the enable/disable toggle on a protected row, not just the delete action.** Until now only delete was refused, so hiding delete alone left the toggle as the one control nothing checked — and switching off the seeded port-443 rule is `ufw delete allow 443/tcp`, which on a deny-incoming server takes every site on the box offline. Renaming stays available, so an edit dialog that only submits `description` should still be offered.
 
 `enabled: true` with an empty `rules` no longer means "the firewall is on and lets nothing through" — it used to be reachable, because `enabled` is read live from ufw while `rules` comes from the panel's own table, and only a toggle made *through the panel* ever wrote the default rows. The installer now records what it allowed (SSH plus the web ports) and a panel update backfills it, so the two halves agree from the first page load. An empty list on an enabled firewall is now a genuine "no rules", worth saying so rather than rendering a blank table.
 

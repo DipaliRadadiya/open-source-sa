@@ -2,8 +2,10 @@
 
 use App\Models\FirewallRule;
 use App\Models\User;
+use App\Services\Server\Firewall\ProtectedRuleGuard;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -332,6 +334,144 @@ it('refuses to switch off the last SSH rule', function () {
         ->assertJsonValidationErrors('rule');
 
     expect(FirewallRule::find($rule->id)->enabled)->toBeTrue();
+});
+
+describe('a rule the panel seeded for itself', function () {
+    /** The seeded web rule, plus an SSH rule so SshLockoutGuard is never the refuser. */
+    function seededWebRule(): FirewallRule
+    {
+        FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+        return FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+    }
+
+    // Each of these used to answer 200 and run `ufw delete allow 443/tcp`,
+    // while *deleting* the identical rule answered 422 — same effect on the
+    // running firewall, opposite answers. With deny-incoming that is every
+    // site on the box going dark.
+    it('cannot be switched off while the firewall is on', function () {
+        fakeUfw('active');
+        $rule = seededWebRule();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/firewall/rules/{$rule->id}", ['enabled' => false])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('rule');
+
+        expect(FirewallRule::find($rule->id)->enabled)->toBeTrue();
+        Process::assertDidntRun(fn ($p) => in_array('delete', $p->command, true));
+    });
+
+    it('cannot be turned into a deny rule', function () {
+        fakeUfw('active');
+        $rule = seededWebRule();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/firewall/rules/{$rule->id}", ['action' => 'deny'])
+            ->assertUnprocessable();
+
+        expect(FirewallRule::find($rule->id)->action)->toBe('allow');
+    });
+
+    it('cannot be narrowed to a single source', function () {
+        fakeUfw('active');
+        $rule = seededWebRule();
+
+        // Scoping 443 to one address takes the site off the public internet
+        // just as thoroughly as switching the rule off.
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/firewall/rules/{$rule->id}", ['source_ip' => '10.0.0.5'])
+            ->assertUnprocessable();
+
+        expect(FirewallRule::find($rule->id)->source_ip)->toBeNull();
+    });
+
+    it('cannot be moved to another port', function () {
+        fakeUfw('active');
+        $rule = seededWebRule();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/firewall/rules/{$rule->id}", ['port_from' => 8443])
+            ->assertUnprocessable();
+
+        expect(FirewallRule::find($rule->id)->port_from)->toBe(443);
+    });
+
+    it('names the port it is refusing about, not the one that was typed', function () {
+        fakeUfw('active');
+        $rule = seededWebRule();
+
+        // The model is already filled by the time the guard runs, so reading
+        // the live attribute would report 8443 — and send someone looking for
+        // a row that does not exist.
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/firewall/rules/{$rule->id}", ['port_from' => 8443])
+            ->assertUnprocessable()
+            ->assertJsonFragment(['rule' => [__('errors/firewall.protected_rule_edit', ['ports' => '443'])]]);
+    });
+
+    it('can still be renamed, because a description never reaches ufw', function () {
+        fakeUfw('active');
+        $rule = seededWebRule();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/firewall/rules/{$rule->id}", ['description' => 'HTTPS'])
+            ->assertOk();
+
+        expect(FirewallRule::find($rule->id)->description)->toBe('HTTPS');
+    });
+
+    it('is editable again once the firewall is off', function () {
+        // The escape hatch, and the reason the lock is not permanent: nothing
+        // is being enforced, so nothing can be cut off.
+        fakeUfw('inactive');
+        $rule = seededWebRule();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/firewall/rules/{$rule->id}", ['enabled' => false])
+            ->assertOk();
+
+        expect(FirewallRule::find($rule->id)->enabled)->toBeFalse();
+    });
+
+    it('does not lock a rule the user made on the same port', function () {
+        // The guard asks who owns the rule, not which port it is on.
+        fakeUfw('active');
+        FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+        $mine = FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/firewall/rules/{$mine->id}", ['enabled' => false])
+            ->assertOk();
+    });
+
+    it('ignores an origin sent by the client', function () {
+        // `origin` is fillable but is not in the request's rules, so
+        // `validated()` drops it before the action ever sees it. This is the
+        // outer of the two defences; the guard's own is below.
+        fakeUfw('active');
+        $rule = seededWebRule();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson("/api/firewall/rules/{$rule->id}", ['origin' => 'user', 'description' => 'mine'])
+            ->assertOk();
+
+        expect(FirewallRule::find($rule->id)->origin)->toBe('default');
+    });
+
+    it('reads the stored origin, not a filled one', function () {
+        // Driven at the guard rather than the endpoint on purpose: validation
+        // already strips `origin`, so an HTTP test here passes whether the
+        // guard reads the stored value or the submitted one, and proves
+        // nothing about the guard. If the request rules ever gain `origin`,
+        // this is the test that stays honest.
+        fakeUfw('active');
+        $rule = seededWebRule();
+        $rule->fill(['origin' => 'user', 'enabled' => false]);
+
+        expect(fn () => app(ProtectedRuleGuard::class)->assertEditable($rule))
+            ->toThrow(ValidationException::class);
+    });
 });
 
 it('rejects a partial update that inverts an existing port range', function () {

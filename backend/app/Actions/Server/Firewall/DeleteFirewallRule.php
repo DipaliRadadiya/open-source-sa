@@ -6,8 +6,8 @@ use App\Contracts\Firewall;
 use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\ActivityLogger;
+use App\Services\Server\Firewall\ProtectedRuleGuard;
 use App\Services\Server\Firewall\SshLockoutGuard;
-use Illuminate\Validation\ValidationException;
 
 class DeleteFirewallRule
 {
@@ -15,17 +15,16 @@ class DeleteFirewallRule
         private Firewall $firewall,
         private ActivityLogger $activityLogger,
         private SshLockoutGuard $sshLockoutGuard,
+        private ProtectedRuleGuard $protectedRuleGuard,
     ) {}
 
     public function execute(FirewallRule $rule): void
     {
         // System-seeded rules (SSH + defaults) can't be removed while the
-        // firewall is on — that's the lockout guard.
-        if ($rule->isProtected() && $this->firewall->status()['enabled']) {
-            throw ValidationException::withMessages([
-                'rule' => [__('errors/firewall.protected_rule')],
-            ]);
-        }
+        // firewall is on. Lifted out of here so that editing one meets the
+        // same rule: the two used to disagree, and the unguarded half was the
+        // one the frontend actually showed.
+        $this->protectedRuleGuard->assertRemovable($rule);
 
         // The origin check above asks who made the rule; this asks whether a
         // way in survives without it. A user-made SSH rule passes the first
