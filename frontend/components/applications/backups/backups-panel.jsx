@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
   CircleAlert,
   CircleSlash,
+  Database,
   History,
   Loader2,
   PauseCircle,
@@ -28,6 +29,7 @@ import { BackupsHistoryTable } from "@/components/backups/backups-history-table"
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ActiveRestore } from "@/components/backups/active-restore";
 import { DestinationHealth } from "@/components/backups/destination-health";
+import { DatabaseCardActions } from "@/components/applications/database-card-actions";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -54,6 +56,13 @@ export function BackupsPanel({
   canRestore,
   databaseCounts = null,
   databasesKnown = false,
+  // The site's own databases, and what could be attached to it. Only supplied
+  // when the reader can manage databases at all.
+  siteDatabases = [],
+  unattachedDatabases = [],
+  engines = [],
+  needsDatabase = false,
+  canManageDatabases = false,
 }) {
   const t = useTranslations("backups.application");
   const router = useRouter();
@@ -168,6 +177,33 @@ export function BackupsPanel({
           rejecting writes; this page never did — so a site could show a green
           "This site is backed up" shield while every run it made was being
           refused by the bucket. Scoped to the one destination this site uses. */}
+
+      {/* On the page, not in the settings dialog. The dialog says the same
+          thing while you are filling the form in, which is the right place to
+          say what you are about to save — but an action there would open a
+          second dialog over a half-filled one and refresh the page underneath
+          it. Here there is nothing to lose. */}
+      {canManageDatabases && needsDatabase && siteDatabases.length === 0 ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <Database className="mt-0.5 size-4 shrink-0 text-warning" />
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">{t("noDatabase.title")}</p>
+              <p className="text-xs text-muted-foreground">{t("noDatabase.description")}</p>
+            </div>
+          </div>
+          <div className="shrink-0">
+            <DatabaseCardActions
+              application={application}
+              databases={siteDatabases}
+              unattached={unattachedDatabases}
+              engines={engines}
+              warn
+            />
+          </div>
+        </div>
+      ) : null}
+
       <DestinationHealth
         destinations={destinations}
         inUse={target?.storage_destination_id ? [target.storage_destination_id] : []}

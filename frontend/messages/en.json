@@ -5286,7 +5286,11 @@
       },
       "queuedNote": "Backup queued. It appears here as soon as the server starts writing it.",
       "queuedStalled": "This backup has not started yet. It is still queued — if it stays this way, the background worker may not be running.",
-      "alreadyRunning": "A backup of this site is already running. You can start another once it finishes."
+      "alreadyRunning": "A backup of this site is already running. You can start another once it finishes.",
+      "noDatabase": {
+        "title": "This site has no database",
+        "description": "Backups of this site will not contain one until you attach it."
+      }
     },
     "empty": {
       "title": "Nothing on this server is backed up yet",

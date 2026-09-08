@@ -5286,7 +5286,11 @@
       },
       "queuedNote": "Copia de seguridad en cola. Aparecerá aquí en cuanto el servidor empiece a escribirla.",
       "queuedStalled": "Esta copia de seguridad aún no ha comenzado. Sigue en cola: si continúa así, es posible que el proceso en segundo plano no esté funcionando.",
-      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de este sitio. Podrás iniciar otra cuando termine."
+      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de este sitio. Podrás iniciar otra cuando termine.",
+      "noDatabase": {
+        "title": "Este sitio no tiene base de datos",
+        "description": "Las copias de seguridad de este sitio no incluirán ninguna hasta que la vincules."
+      }
     },
     "empty": {
       "title": "Todavía no hay copias de seguridad en este servidor",

@@ -3,10 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/page-header";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getApplication } from "@/lib/applications/get-applications";
+import { getApplication, getSiteTypes } from "@/lib/applications/get-applications";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
 import { getActiveRestore, getBackupTarget, getBackups } from "@/lib/backups/get-backups";
-import { getDatabaseCounts } from "@/lib/databases/get-databases";
+import { getDatabaseCounts, getApplicationDatabases, getEngines, getUnattachedDatabases } from "@/lib/databases/get-databases";
+import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { BackupsPanel } from "@/components/applications/backups/backups-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -49,13 +50,15 @@ export default async function ApplicationBackupsPage({ params }) {
   // configuring a schedule, so it is checked against the server-level catalog
   // rather than this site's `app_backup` grant.
   const canRestore = can(permissions, "backup", "manage");
+  // Attaching is a server-level database grant, not this site's backup grant.
+  const canManageDatabases = can(permissions, "database", "manage");
   const settled = application.status === "active";
 
   // A site still provisioning has nothing to back up and no directory to point
   // at — offering the form would be offering a save that cannot work.
   // `meta.total` is the whole history, not the five rows below it: the list is
   // capped, and a cap the reader cannot see reads as the complete list.
-  const [{ target }, { destinations }, { backups, meta }, activeRestore, databases] = await Promise.all([
+  const [{ target }, { destinations }, { backups, meta }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes] = await Promise.all([
     settled ? getBackupTarget(id) : Promise.resolve({ target: null }),
     getStorageDestinations(),
     settled
@@ -67,7 +70,18 @@ export default async function ApplicationBackupsPage({ params }) {
     // Only to tell the form whether a database backup of this site would hold
     // anything. A failure here leaves it unknown, and unknown says nothing.
     settled ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
+    // For the "this site has no database" notice and its Attach action.
+    settled && canManageDatabases ? getApplicationDatabases(id) : Promise.resolve({ databases: [] }),
+    settled && canManageDatabases ? getUnattachedDatabases() : Promise.resolve({ databases: [] }),
+    settled && canManageDatabases ? getEngines() : Promise.resolve({ engines: [] }),
+    settled && canManageDatabases
+      ? getSiteTypes().catch(() => ({ siteTypes: [] }))
+      : Promise.resolve({ siteTypes: [] }),
   ]);
+
+  // Only a site type that declares it needs one. A blank PHP or static site
+  // with no database is correct, and a permanent warning on it is noise.
+  const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
 
   return (
     <div className="space-y-6">
@@ -92,6 +106,11 @@ export default async function ApplicationBackupsPage({ params }) {
           activeRestore={activeRestore}
           canManage={canManage}
           canRestore={canRestore}
+          siteDatabases={siteDbs.databases}
+          unattachedDatabases={spareDbs.databases}
+          engines={engineList.engines}
+          needsDatabase={needsDatabase}
+          canManageDatabases={canManageDatabases}
         />
       )}
     </div>
