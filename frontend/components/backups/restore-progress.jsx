@@ -37,12 +37,31 @@ const QUEUED_LIMIT_MS = 2 * 60 * 1000;
  * "Taking a safety copy", which is what turns the promise made in the
  * confirmation dialog into something the user watches happen.
  */
-export function RestoreProgress({ restore: initial, applicationDomain, onDismiss }) {
+export function RestoreProgress({
+  restore: initial,
+  applicationDomain,
+  // True when the run that is on screen restored a safety copy — i.e. it was
+  // itself an undo. Supplied by the page so a reload mid-undo says so too.
+  restoredSafetyCopy = false,
+  onDismiss,
+}) {
   const t = useTranslations("backups.progress");
   const { refresh, pending: refreshing } = useRefresh();
   const router = useRouter();
   const [restore, setRestore] = useState(initial);
   const [undoBackup, setUndoBackup] = useState(null);
+  /*
+   * Whether the run on screen put the safety copy back.
+   *
+   * An undo is itself a restore, and every restore takes its own safety copy —
+   * so once the undo finished, the banner found a `safety_backup_id` and
+   * offered "Undo this restore" again. Pressing it did not undo anything: it
+   * put back what the first restore had installed. Same words, opposite
+   * effect, and repeatable forever.
+   *
+   * Seeded from the prop so a page that loads mid-undo says the same thing.
+   */
+  const [wasUndo, setWasUndo] = useState(Boolean(restoredSafetyCopy));
   const [loadingUndo, setLoadingUndo] = useState(false);
   // Set when polling gives up: the restore is still `pending`/`running` as far
   // as the API is concerned, but nothing has moved for a long time.
@@ -125,11 +144,13 @@ export function RestoreProgress({ restore: initial, applicationDomain, onDismiss
               <CircleCheck className="size-6 text-success" aria-hidden />
             </span>
             <div className="space-y-1">
-              <p className="font-medium">{t("succeeded")}</p>
+              <p className="font-medium">{wasUndo ? t("undone") : t("succeeded")}</p>
               <p className="text-sm text-muted-foreground">
-                {restore.finished_at_human
-                  ? t("succeededBody", { when: restore.finished_at_human })
-                  : t("succeededBodyPlain")}
+                {wasUndo
+                  ? t("undoneBody")
+                  : restore.finished_at_human
+                    ? t("succeededBody", { when: restore.finished_at_human })
+                    : t("succeededBodyPlain")}
               </p>
             </div>
           </div>
@@ -138,7 +159,7 @@ export function RestoreProgress({ restore: initial, applicationDomain, onDismiss
               burying it in a table row would waste the only thing that makes
               a wrong restore survivable. */}
           <div className="ml-14 flex flex-wrap gap-2">
-            {restore.safety_backup_id ? (
+            {restore.safety_backup_id && !wasUndo ? (
               <Button variant="outline" onClick={openUndo} disabled={loadingUndo}>
                 {loadingUndo ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -153,7 +174,7 @@ export function RestoreProgress({ restore: initial, applicationDomain, onDismiss
             </Button>
           </div>
 
-          {restore.safety_backup_id ? (
+          {restore.safety_backup_id && !wasUndo ? (
             <p className="ml-14 text-xs text-muted-foreground">{t("undoHint")}</p>
           ) : null}
         </div>
@@ -165,7 +186,12 @@ export function RestoreProgress({ restore: initial, applicationDomain, onDismiss
           onOpenChange={(next) => (next ? null : setUndoBackup(null))}
           onStarted={(next) => {
             setUndoBackup(null);
-            if (next) setRestore(next);
+            if (!next) return;
+            // The run that follows IS the undo, so the banner it produces must
+            // not offer to undo it — that would just be the first restore
+            // again, under a word that means the opposite.
+            setWasUndo(true);
+            setRestore(next);
           }}
         />
       </>

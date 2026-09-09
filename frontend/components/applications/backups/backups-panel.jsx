@@ -169,6 +169,7 @@ export function BackupsPanel({
           key={restore.id}
           restore={restore}
           applicationDomain={application.domain}
+          restoredSafetyCopy={Boolean(restore.restored_safety_copy)}
           scrollIntoView={restoreStartedHere}
         />
       ) : null}
@@ -327,10 +328,29 @@ function ProtectionCard({ target, lastBackup, canManage, running, blockedReason,
   const state = stateOf(target);
   const { icon: Icon, tone, ring } = STATE[state];
 
+  // "Every day at 02:00", or just the interval when there is no time to name.
+  // Built once: the sentence at the top of the card and the fact row below it
+  // were describing the same schedule in two different amounts of detail.
+  const schedule =
+    target?.schedule_time && target.frequency !== "manual"
+      ? t("summary.howOftenAt", {
+          frequency: target.frequency_title ?? target.frequency,
+          time: target.schedule_time,
+        })
+      : (target?.frequency_title ?? target?.frequency);
+
   const facts = target
     ? [
         { label: t("summary.what"), value: target.type_title ?? target.type },
-        { label: t("summary.howOften"), value: target.frequency_title ?? target.frequency },
+        {
+          label: t("summary.howOften"),
+          // The time, not just the interval. "Every day" left the one question
+          // people actually ask of a schedule — *when* — answered only inside
+          // the settings dialog. Shown raw rather than reformatted: it is a
+          // time on the server's own clock, and converting it to the reader's
+          // timezone would name an hour the scheduler never runs at.
+          value: schedule,
+        },
         {
           label: t("summary.keeps"),
           value: t("summary.keepsValue", { count: target.retention_count }),
@@ -376,7 +396,7 @@ function ProtectionCard({ target, lastBackup, canManage, running, blockedReason,
           <p className="text-sm text-muted-foreground">
             {state === "protected"
               ? t("state.protected.body", {
-                  schedule: target.frequency_title ?? target.frequency,
+                  schedule,
                   destination: target.storage_destination_name ?? t("summary.noStorage"),
                 })
               : state === "unprotected" && !canManage

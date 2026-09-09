@@ -5210,7 +5210,9 @@
       "queued": "Restore queued",
       "queuedBody": "Waiting for the server to pick it up. Nothing on the site has been changed yet.",
       "stalledQueued": "This restore has not started",
-      "stalledQueuedBody": "It has been waiting a couple of minutes for the server to pick it up. Nothing on the site has been changed. The job may not be running — check again, or ask whoever manages this server to look."
+      "stalledQueuedBody": "It has been waiting a couple of minutes for the server to pick it up. Nothing on the site has been changed. The job may not be running — check again, or ask whoever manages this server to look.",
+      "undone": "The restore has been undone",
+      "undoneBody": "The site is back as it was before you restored. Check the site, then dismiss this."
     },
     "application": {
       "pageTitle": "Backups",
@@ -5256,7 +5258,8 @@
         "nextBackup": "Next backup",
         "noNextRun": "Not scheduled",
         "noStorage": "No storage selected",
-        "runsShortly": "Runs shortly"
+        "runsShortly": "Runs shortly",
+        "howOftenAt": "{frequency} at {time}"
       },
       "unknownReason": "The reason was not recorded.",
       "restore": "Restore",

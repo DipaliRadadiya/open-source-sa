@@ -9,6 +9,7 @@ import {
   BACKUP_TYPES,
   RESTORE_IN_FLIGHT,
   RESTORE_STATUSES,
+  backupResponseSchema,
   backupTargetResponseSchema,
   backupTargetsResponseSchema,
   backupsResponseSchema,
@@ -178,8 +179,24 @@ export async function getRestores(searchParams = {}) {
  */
 export async function getActiveRestore(applicationId) {
   const { restores } = await getRestores({ application: applicationId, per_page: 5 });
+  const active = restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
 
-  return restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
+  if (active === null) return null;
+
+  /*
+   * Whether this run is putting a safety copy back — i.e. it is an undo.
+   *
+   * An undo is an ordinary restore of the copy taken before the last one, so
+   * nothing on the restore itself says which it is. The backup does: only a
+   * safety copy carries `is_safety`. Without this a page loaded while an undo
+   * was running finished by offering to undo the undo, which is the first
+   * restore again under a word that means the opposite.
+   *
+   * One extra request, and only while a restore is actually in flight.
+   */
+  const { data } = await read(`/backups/${active.backup_id}`, backupResponseSchema);
+
+  return { ...active, restored_safety_copy: Boolean(data?.backup?.is_safety) };
 }
 
 /**

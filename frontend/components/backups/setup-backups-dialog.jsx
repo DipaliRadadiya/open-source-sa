@@ -334,10 +334,9 @@ function defaults(applicationId, destinations, target) {
       type: target.type,
       retention_count: target.retention_count,
       frequency: automatic ? target.frequency : "manual",
-      // Falls back to the backend's own 02:00 because `BackupTargetResource`
-      // does not return `schedule_time` yet — so a target that HAS a time
-      // saved will still open showing 02:00. Remove the fallback the moment
-      // the API carries the field.
+      // The API carries `schedule_time` now, so an existing target opens on
+      // the time it actually runs at. The fallback stays for a target saved
+      // before the column existed, which has none.
       schedule_time: target.schedule_time ?? BACKUP_DEFAULT_TIME,
       enabled: automatic,
       file_excludes: target.file_excludes ?? [],

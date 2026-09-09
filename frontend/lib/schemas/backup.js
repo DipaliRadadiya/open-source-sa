@@ -106,6 +106,9 @@ const metaSchema = z.object({
     .nullish(),
 });
 
+/** One backup, as `GET /backups/{id}` returns it. */
+export const backupResponseSchema = z.object({ backup: backupSchema });
+
 export const backupsResponseSchema = z.object({
   backups: z.array(backupSchema).default([]),
   meta: metaSchema.default({ current_page: 1, per_page: 20, total: 0, last_page: 1 }),

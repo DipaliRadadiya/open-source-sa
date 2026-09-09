@@ -9,7 +9,9 @@ import { RestoreProgress } from "@/components/backups/restore-progress";
  * state the component keeps showing the outcome (and the undo) until the user
  * dismisses it, rather than vanishing the moment the last poll lands.
  */
-export function ActiveRestore({ restore, applicationDomain, scrollIntoView = false }) {
+export function ActiveRestore({ restore, applicationDomain, scrollIntoView = false,
+  restoredSafetyCopy = false,
+}) {
   const [dismissed, setDismissed] = useState(false);
   const box = useRef(null);
 
@@ -36,6 +38,7 @@ export function ActiveRestore({ restore, applicationDomain, scrollIntoView = fal
       // dialog whose typed-domain check compared against `undefined` and could
       // never be satisfied — the undo was unusable exactly where it mattered.
       applicationDomain={applicationDomain ?? restore?.application_domain}
+      restoredSafetyCopy={restoredSafetyCopy}
       onDismiss={() => setDismissed(true)}
     />
     </div>
