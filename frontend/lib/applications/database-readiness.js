@@ -45,18 +45,28 @@ export function engineInstalling({ engines } = {}) {
 }
 
 /**
- * The engines a site type can be installed on.
+ * The engines a site type can be installed on, or null when nothing constrains
+ * it.
  *
- * `accepted_engines` is asked for first so this upgrades itself the day the
- * catalogue ships it. It does not today, and the fallback is not a guess: the
- * backend has exactly two engine lists — MongoDB alone for NodeBB, MySQL or
- * MariaDB for everything else — and it already reports the MongoDB-only types
- * as unavailable itself. So a type that still says it is available and needs a
- * database is a SQL type, and that is what we assume.
+ * The catalogue ships `accepted_engines` now, so it is the answer whenever it
+ * is present — including when it is EMPTY, which is a real answer and not a
+ * missing one. The backend sends `[]` for a type with no installer, and its
+ * own check treats that as nothing to verify: a custom PHP site brings its own
+ * arrangements and the panel has no list to hold it to. Reading `[]` as "fall
+ * back to SQL" would invent a requirement the backend does not have and grey
+ * out a type it is perfectly happy to create.
+ *
+ * The fallback is only for an API that has not shipped the field yet — the
+ * frontend and backend deploy separately, and a panel pointed at an older one
+ * is the case this whole check exists for. There it is not a guess: that
+ * backend had exactly two engine lists, MongoDB alone for NodeBB and MySQL or
+ * MariaDB for everything else, and it already reported the MongoDB-only types
+ * as unavailable itself.
  */
 export function acceptedEngines(type) {
   const declared = type?.accepted_engines;
-  return Array.isArray(declared) && declared.length > 0 ? declared : SQL_ENGINE_NAMES;
+  if (!Array.isArray(declared)) return SQL_ENGINE_NAMES;
+  return declared.length > 0 ? declared : null;
 }
 
 /**
@@ -86,7 +96,11 @@ export function databaseBlock({ type, engines, failed } = {}) {
   const list = Array.isArray(engines) ? engines : [];
   if (list.length === 0) return null;
 
+  // Null means the catalogue named no engines for this type, which is an
+  // answer: there is nothing to hold it to, so there is nothing to block on.
   const accepted = acceptedEngines(type);
+  if (accepted === null) return null;
+
   const found = accepted.map((name) => list.find((engine) => engine?.engine === name));
 
   // `installed` is "present on the server", `running` is "we can talk to it".

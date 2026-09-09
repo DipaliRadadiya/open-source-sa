@@ -142,8 +142,9 @@ test("a type the backend already blocked keeps the backend's reason", () => {
 });
 
 test("a declared engine list is preferred over the fallback", () => {
+  // Absent field = an API that predates it, and only then does the SQL
+  // fallback apply.
   assert.deepEqual(acceptedEngines({}), ["mysql", "mariadb"]);
-  assert.deepEqual(acceptedEngines({ accepted_engines: [] }), ["mysql", "mariadb"]);
   assert.deepEqual(acceptedEngines({ accepted_engines: ["mongodb"] }), ["mongodb"]);
   // The day the catalogue ships the field, a MongoDB type stops being blocked
   // by the SQL fallback without this file changing.
@@ -177,5 +178,24 @@ test("the picker's install link matches the code the page sets", () => {
     source,
     /unavailable_code === "database"/,
     "the picker no longer branches on the code the API sends for a database block",
+  );
+});
+
+test("an empty engine list is an answer, not a missing one", () => {
+  /*
+   * The catalogue ships `accepted_engines` now and sends `[]` for a type with
+   * no installer — a custom PHP site brings its own arrangements, and the
+   * backend's own check treats that as nothing to verify. Reading `[]` as
+   * "fall back to SQL" would invent a requirement it does not have and grey
+   * out a type the API is perfectly happy to create.
+   */
+  assert.equal(acceptedEngines({ accepted_engines: [] }), null);
+  assert.equal(
+    databaseBlock({
+      type: { name: "php", needs_database: true, available: true, accepted_engines: [] },
+      engines: MONGO_ONLY,
+    }),
+    null,
+    "a type the catalogue names no engines for was blocked anyway",
   );
 });
