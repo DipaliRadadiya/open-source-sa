@@ -16,6 +16,14 @@ const textField = z.object({
   generate: z.boolean().default(false),
 });
 
+// Either end may be absent, meaning unbounded in that direction.
+const versionRange = z
+  .object({
+    min: z.string().nullish(),
+    max: z.string().nullish(),
+  })
+  .nullish();
+
 export const siteTypeSchema = z.object({
   name: z.string(),
   title: z.string(),
@@ -39,6 +47,11 @@ export const siteTypeSchema = z.object({
   accepted_engines: z.array(z.string()).nullish(),
   installable_runtime: z.string().nullish(),
   has_installer: z.boolean().default(false),
+  // The runtime versions this type runs on, both ends inclusive and either
+  // end nullable. Stripped until now, which is why the version pickers offered
+  // Node 20 for a NodeBB that needs 22.
+  php_version_range: versionRange,
+  node_version_range: versionRange,
   fields: z.array(textField).default([]),
 });
 

@@ -67,6 +67,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { timezoneOptions } from "@/lib/settings/timezone-options";
 import { preselectOption, preselectVersion } from "@/lib/runtime/preselect-version";
+import { versionsInRange, versionWithin } from "@/lib/runtime/version-range";
 import {
   Form,
   FormControl,
@@ -78,6 +79,10 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
+import {
+  orphanFieldNames,
+  sharedFieldNames,
+} from "@/lib/applications/form-reset";
 import { CreateReadinessPanel } from "@/components/applications/create-readiness-panel";
 import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
 
@@ -639,8 +644,10 @@ export function CreateApplicationForm({
   const [branches, setBranches] = useState([]);
   const [repositoriesState, setRepositoriesState] = useState("idle");
   const [branchesState, setBranchesState] = useState("idle");
-  // Which site type the declared defaults were last applied for, so a change of
-  // type can be told apart from the first render.
+  // The site type the declared defaults were last applied for, so a change of
+  // type can be told apart from the first render. Holds the type itself, not
+  // just its name: clearing the previous type's answers needs the fields it
+  // declared, and by the time we notice the change `selected` is the new one.
   const lastType = useRef(null);
   // Bumped to re-ask the provider for the same account's repositories. A token
   // added in the other tab does not change `git_account_id`, so without this the
@@ -739,6 +746,17 @@ export function CreateApplicationForm({
   const selected = useMemo(
     () => siteTypes.find((type) => type.name === selectedName),
     [siteTypes, selectedName],
+  );
+  // Only the versions this type runs on. Filtered here rather than in the
+  // field so the pickers, the preselect and the type-change reset below all
+  // read one list and cannot disagree about what is offerable.
+  const typePhpVersions = useMemo(
+    () => versionsInRange(phpVersions, selected?.php_version_range),
+    [phpVersions, selected],
+  );
+  const typeNodeVersions = useMemo(
+    () => versionsInRange(nodeVersions, selected?.node_version_range),
+    [nodeVersions, selected],
   );
   const isGit = selected?.method === "git" || selected?.name === "git";
   const typeFields = (selected?.fields ?? []).filter(
@@ -946,8 +964,43 @@ export function CreateApplicationForm({
     const nodeField = selected.fields?.find(
       (field) => field.source === "node_versions",
     );
+
+    // Read BEFORE the two blocks below, because both fill a field only when it
+    // is empty — and emptying an unsupported version is exactly what makes
+    // them refill it with a supported one on this same pass.
+    const previous = lastType.current;
+    const typeChanged = previous !== null && previous.name !== selected.name;
+    lastType.current = selected;
+
+    if (typeChanged) {
+      // Dropped, not blanked: `unregister` takes the value, the error and the
+      // edited flag together. Blanking would leave the field dirty, which
+      // keeps the whole form "unsaved" over a type the user walked away from.
+      const orphans = orphanFieldNames(previous.fields, selected.fields, COMMON_FIELD_NAMES);
+      if (orphans.length > 0) form.unregister(orphans);
+
+      // Value kept, error cleared. These errors only ever come back from the
+      // server, generated from the old type's rules, so under the new type
+      // they describe a validation that no longer exists.
+      const shared = sharedFieldNames(previous.fields, selected.fields, COMMON_FIELD_NAMES);
+      if (shared.length > 0) form.clearErrors(shared);
+
+      // A runtime version is shared by name but not by meaning: Node 20 is a
+      // valid answer for n8n and not for NodeBB. Clearing it here is what
+      // stops a switch leaving a version the new type will refuse.
+      for (const [field, range] of [
+        [phpField, selected.php_version_range],
+        [nodeField, selected.node_version_range],
+      ]) {
+        if (!field) continue;
+        const current = form.getValues(field.name);
+        if (current && !versionWithin(current, range))
+          form.setValue(field.name, "", { shouldDirty: false });
+      }
+    }
+
     if (phpField && !form.getValues(phpField.name)) {
-      const version = preselectVersion(phpVersions, phpDefaultVersion);
+      const version = preselectVersion(typePhpVersions, phpDefaultVersion);
       if (version)
         form.setValue(phpField.name, version, {
           shouldDirty: true,
@@ -955,7 +1008,7 @@ export function CreateApplicationForm({
         });
     }
     if (nodeField && !form.getValues(nodeField.name)) {
-      const version = preselectVersion(nodeVersions, nodeDefaultVersion);
+      const version = preselectVersion(typeNodeVersions, nodeDefaultVersion);
       if (version)
         form.setValue(nodeField.name, version, {
           shouldDirty: true,
@@ -978,9 +1031,6 @@ export function CreateApplicationForm({
     // A value the user typed is never overwritten — `shouldDirty: false` below
     // is what makes that distinction possible, so a prefilled value stays clean
     // and an edited one does not.
-    const typeChanged = lastType.current !== null && lastType.current !== selected.name;
-    lastType.current = selected.name;
-
     for (const field of selected.fields ?? []) {
       if (
         COMMON_FIELD_NAMES.has(field.name) ||
@@ -1012,10 +1062,10 @@ export function CreateApplicationForm({
   }, [
     form,
     nodeDefaultVersion,
-    nodeVersions,
     phpDefaultVersion,
-    phpVersions,
     selected,
+    typeNodeVersions,
+    typePhpVersions,
   ]);
 
   // A starting point, not a policy: switching package manager fills in the
@@ -1753,9 +1803,9 @@ export function CreateApplicationForm({
                           config={config}
                           form={form}
                           accounts={gitAccounts}
-                          phpVersions={phpVersions}
+                          phpVersions={typePhpVersions}
                           phpVersionsFailed={phpVersionsFailed}
-                          nodeVersions={nodeVersions}
+                          nodeVersions={typeNodeVersions}
                           nodeVersionsFailed={nodeVersionsFailed}
                           timezones={timezones}
                         />
@@ -1798,9 +1848,9 @@ export function CreateApplicationForm({
                             config={config}
                             form={form}
                             accounts={gitAccounts}
-                            phpVersions={phpVersions}
+                            phpVersions={typePhpVersions}
                             phpVersionsFailed={phpVersionsFailed}
-                            nodeVersions={nodeVersions}
+                            nodeVersions={typeNodeVersions}
                             nodeVersionsFailed={nodeVersionsFailed}
                             timezones={timezones}
                           />
