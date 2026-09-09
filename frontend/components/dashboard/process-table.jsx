@@ -227,8 +227,25 @@ export function ProcessTable({
       </div>
       {limit ? null : (
       <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* What this list IS, not what it counts.
+
+            The API sends the heaviest processes by CPU and nothing else — the cap
+            is a server setting, 25 by default. Counting the rows and printing
+            "25 processes" claimed the machine was running 25, when a box with a
+            database and a web server on it runs hundreds. Stopping one then
+            looked broken: it left the list, the 26th took its place, and the
+            number never moved. It never can.
+
+            So the count is labelled as the size of the list, and the two
+            percentages say they are what these rows add up to rather than what
+            the server is doing. "Showing x of y" only appears while a search is
+            narrowing them, where both numbers mean what they say — without one it
+            read "Showing 25 of 25", which is the sentence that started the
+            confusion. */}
         <p className="text-sm text-muted-foreground">
-          {t("processes.showing", { shown: filtered.length, total: data.length })}
+          {query.trim()
+            ? t("processes.showing", { shown: filtered.length, total: data.length })
+            : null}
         </p>
         <p className="text-sm tabular-nums text-muted-foreground">
           {t("processes.summary", {
