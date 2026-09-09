@@ -5292,7 +5292,9 @@
         "noNextRun": "Not scheduled",
         "noStorage": "No storage selected",
         "runsShortly": "Runs shortly",
-        "howOftenAt": "{frequency} at {time}"
+        "howOftenAt": "{frequency} at {time}",
+        "keepsEverything": "Every backup kept",
+        "keepsNotApplicable": "Not applicable"
       },
       "unknownReason": "The reason was not recorded.",
       "restore": "Restore",

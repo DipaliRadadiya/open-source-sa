@@ -5292,7 +5292,9 @@
         "noNextRun": "शेड्यूल नहीं",
         "noStorage": "कोई स्टोरेज नहीं चुना गया",
         "runsShortly": "जल्द ही चलेगा",
-        "howOftenAt": "{frequency}, {time} बजे"
+        "howOftenAt": "{frequency}, {time} बजे",
+        "keepsEverything": "सभी बैकअप रखे जाते हैं",
+        "keepsNotApplicable": "लागू नहीं"
       },
       "unknownReason": "कारण दर्ज नहीं हुआ।",
       "restore": "रीस्टोर",

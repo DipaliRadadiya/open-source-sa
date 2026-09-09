@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { isBackupQueued, newestBackupId, queuedApplications } from "../lib/backups/queued.js";
 
 /**
@@ -76,4 +77,42 @@ test("nothing started means nothing queued", () => {
 
 test("rows without an application are ignored, not counted as newest", () => {
   assert.deepEqual(queuedApplications([{ id: 99 }, row(4, 5)], { 5: 4 }), ["5"]);
+});
+
+test("deleting the newest backup must not re-arm the queued state", () => {
+  /*
+   * Reported: after deleting one of several backups, "Back up now" starts
+   * spinning on its own and a finished backup is drawn as queued.
+   *
+   * `queuedAfter` is the newest id at the moment of the click. Press it with
+   * 5 backups, id 6 appears, the wait ends — then delete id 6 and the newest
+   * falls back to 5, which is <= the mark, so the wait comes back from
+   * nothing.
+   *
+   * The helper is right on its own terms: it answers "has anything newer than
+   * the mark arrived", and after the delete that answer really is no. What was
+   * wrong is that the mark outlived the run it was watching, so the panel now
+   * drops it as soon as the wait is satisfied.
+   */
+  const mark = newestBackupId([backup(5, "verified"), backup(4, "verified")]);
+  assert.equal(mark, 5);
+
+  const arrived = [backup(6, "running"), backup(5, "verified"), backup(4, "verified")];
+  assert.equal(isBackupQueued(arrived, mark), false, "the wait should end when a newer id appears");
+
+  const deleted = [backup(5, "verified"), backup(4, "verified")];
+  assert.equal(isBackupQueued(deleted, mark), true, "the state the panel must no longer be able to reach");
+  assert.equal(isBackupQueued(deleted, null), false, "a dropped mark cannot re-arm");
+});
+
+test("the panel drops the mark as soon as the wait is over", () => {
+  const panel = readFileSync(
+    new URL("../components/applications/backups/backups-panel.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    panel,
+    /if \(queuedAfter !== null && !queued\) setQueuedAfter\(null\);/,
+    "the queued mark is kept after the run appears again",
+  );
 });

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   CircleAlert,
@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
+import { scheduleTimeLabel } from "@/lib/backups/schedule-time";
 import { clearStuckBackup, retryBackup, runBackupNow } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,21 @@ export function BackupsPanel({
   // than the one we started from appears, whatever state that row is in.
   const newestId = newestBackupId(backups);
   const queued = isBackupQueued(backups, queuedAfter);
+
+  /*
+   * Forget the mark the moment the wait is over.
+   *
+   * It was only ever set, never cleared — a high-water mark that outlived the
+   * run it was watching for. Delete the newest backup afterwards and the list's
+   * newest id falls back below the mark, so "still queued" became true again:
+   * the button span, the page started polling, and a finished backup was drawn
+   * as queued, with nothing running anywhere. Reported exactly that way.
+   *
+   * Cleared during render rather than in an effect: this is React's own
+   * "adjust state when the data changes" shape, and it re-renders before
+   * anything is painted instead of flashing the wrong state for a frame.
+   */
+  if (queuedAfter !== null && !queued) setQueuedAfter(null);
 
   // Say so rather than quietly reverting to "nothing happened" — that is the
   // state this whole change exists to remove.
@@ -327,6 +343,10 @@ function ProtectionCard({ target, lastBackup, canManage, running, blockedReason,
   const t = useTranslations("backups.application");
   const state = stateOf(target);
   const { icon: Icon, tone, ring } = STATE[state];
+  // The stored time is 24-hour; the picker that sets it renders in the
+  // browser's locale. Formatting here is what stops the card and the picker
+  // showing one time two ways.
+  const format = useFormatter();
 
   // "Every day at 02:00", or just the interval when there is no time to name.
   // Built once: the sentence at the top of the card and the fact row below it
@@ -335,7 +355,7 @@ function ProtectionCard({ target, lastBackup, canManage, running, blockedReason,
     target?.schedule_time && target.frequency !== "manual"
       ? t("summary.howOftenAt", {
           frequency: target.frequency_title ?? target.frequency,
-          time: target.schedule_time,
+          time: scheduleTimeLabel(target.schedule_time, format),
         })
       : (target?.frequency_title ?? target?.frequency);
 
@@ -346,14 +366,35 @@ function ProtectionCard({ target, lastBackup, canManage, running, blockedReason,
           label: t("summary.howOften"),
           // The time, not just the interval. "Every day" left the one question
           // people actually ask of a schedule — *when* — answered only inside
-          // the settings dialog. Shown raw rather than reformatted: it is a
-          // time on the server's own clock, and converting it to the reader's
-          // timezone would name an hour the scheduler never runs at.
+          // the settings dialog.
+          //
+          // Formatted for the reader's clock convention, NOT their timezone.
+          // The hour and minute are the server's and stay exactly as stored;
+          // only 24-hour versus AM/PM changes. That is what makes this agree
+          // with the picker that sets it, which is a native time input and
+          // renders in the browser's locale whatever we do — `lang` does not
+          // override it. Converting the zone would name an hour the scheduler
+          // never runs at, and this does not.
           value: schedule,
         },
         {
           label: t("summary.keeps"),
-          value: t("summary.keepsValue", { count: target.retention_count }),
+          /*
+           * A number, or what the absence of one means — never a dash.
+           *
+           * Zero is not "no history": `RetentionEnforcer` returns early on
+           * `keep <= 0` with the comment that treating it as "delete
+           * everything" would be an unrecoverable reading, so zero means keep
+           * every backup. And a target with no count at all is not pruned by
+           * anything, which is a different sentence again. Both were drawn as
+           * "—", which says neither.
+           */
+          value:
+            target.retention_count === null || target.retention_count === undefined
+              ? t("summary.keepsNotApplicable")
+              : Number(target.retention_count) <= 0
+                ? t("summary.keepsEverything")
+                : t("summary.keepsValue", { count: target.retention_count }),
         },
         {
           label: t("summary.where"),

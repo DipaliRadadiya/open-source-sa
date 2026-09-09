@@ -5292,7 +5292,9 @@
         "noNextRun": "Sin programar",
         "noStorage": "Sin almacenamiento seleccionado",
         "runsShortly": "Se ejecuta en breve",
-        "howOftenAt": "{frequency} a las {time}"
+        "howOftenAt": "{frequency} a las {time}",
+        "keepsEverything": "Se conservan todas",
+        "keepsNotApplicable": "No aplicable"
       },
       "unknownReason": "El motivo no se registró.",
       "restore": "Restaurar",
