@@ -58,8 +58,14 @@ function onlyEngines(array $engines): void
     });
 }
 
-/** @return array<string, array<string, mixed>> keyed by type name */
-function catalog(): array
+/**
+ * Prefixed because Pest helpers share one global namespace across the whole
+ * suite: a bare catalog() collides with the permissions one and takes the
+ * entire run down with a fatal, not a failed test.
+ *
+ * @return array<string, array<string, mixed>> keyed by type name
+ */
+function siteTypeCatalog(): array
 {
     return collect(
         test()->withHeaders(['Authorization' => 'Bearer '.test()->token])
@@ -72,7 +78,7 @@ function catalog(): array
 it('greys a SQL-backed type on a server with only MongoDB', function () {
     onlyEngines(['mongodb']);
 
-    $types = catalog();
+    $types = siteTypeCatalog();
 
     expect($types['wordpress']['available'])->toBeFalse()
         ->and($types['wordpress']['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_DATABASE)
@@ -86,13 +92,13 @@ it('offers a MongoDB type on that same server', function () {
     // as greying nothing, and this is the type the old check did handle.
     onlyEngines(['mongodb']);
 
-    expect(catalog()['nodebb']['available'])->toBeTrue();
+    expect(siteTypeCatalog()['nodebb']['available'])->toBeTrue();
 });
 
 it('offers SQL-backed types when MySQL answers', function () {
     onlyEngines(['mysql']);
 
-    $types = catalog();
+    $types = siteTypeCatalog();
 
     expect($types['wordpress']['available'])->toBeTrue()
         ->and($types['nodebb']['available'])->toBeFalse();
@@ -103,7 +109,7 @@ it('accepts either of the engines a type lists', function () {
     // not be refused because the first name in its list is absent.
     onlyEngines(['mariadb']);
 
-    expect(catalog()['wordpress']['available'])->toBeTrue();
+    expect(siteTypeCatalog()['wordpress']['available'])->toBeTrue();
 });
 
 it('leaves a type that needs no database alone when nothing is installed', function () {
@@ -112,7 +118,7 @@ it('leaves a type that needs no database alone when nothing is installed', funct
     // reason the old early return worried about.
     onlyEngines([]);
 
-    expect(catalog()['php']['available'])->toBeTrue();
+    expect(siteTypeCatalog()['php']['available'])->toBeTrue();
 });
 
 it('probes each engine once however many types ask about it', function () {
@@ -121,7 +127,7 @@ it('probes each engine once however many types ask about it', function () {
     // that is dozens of subprocesses to render a grid of cards.
     onlyEngines(['mysql']);
 
-    catalog();
+    siteTypeCatalog();
 
     $probes = collect($GLOBALS['engineProbes']);
 
@@ -132,7 +138,7 @@ it('probes each engine once however many types ask about it', function () {
 it('publishes the engines each type accepts', function () {
     onlyEngines(['mysql']);
 
-    $types = catalog();
+    $types = siteTypeCatalog();
 
     expect($types['wordpress']['accepted_engines'])->toContain('mysql')
         ->and($types['nodebb']['accepted_engines'])->toBe(['mongodb'])
@@ -146,7 +152,7 @@ it('never advertises an engine the installer would refuse', function () {
     // cannot offer a pairing that creating would reject.
     onlyEngines(['mysql', 'mariadb', 'mongodb']);
 
-    foreach (catalog() as $name => $type) {
+    foreach (siteTypeCatalog() as $name => $type) {
         if ($type['accepted_engines'] === []) {
             continue;
         }

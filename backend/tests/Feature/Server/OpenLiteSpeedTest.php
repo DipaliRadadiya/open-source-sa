@@ -943,6 +943,12 @@ describe('the lsphp stack', function () {
 });
 
 describe('the site type catalog', function () {
+    // These tests are about what the *web server* restricts. Without a
+    // reachable SQL engine every type that needs one is greyed for a reason
+    // that has nothing to do with OpenLiteSpeed, and the assertion below stops
+    // measuring the thing it names.
+    beforeEach(fn () => fakeUsableSqlEngine());
+
     it('offers every site type, because nothing in them depends on the web server', function () {
         $catalog = collect(app(SiteTypeManager::class)->catalog());
 
@@ -950,8 +956,8 @@ describe('the site type catalog', function () {
         // mod_rewrite or Apache, none declaring extension requirements, and no
         // web-server concept in the SiteType contract. A shorter list here
         // would be a guess about risk dressed as a capability limit.
-        // NodeBB is the one exception, and not because of the web server:
-        // it takes MongoDB alone, and this fixture has no database engine.
+        // NodeBB is the one exception, and not because of the web server: it
+        // takes MongoDB alone, and this fixture answers only for SQL.
         expect($catalog->where('available', false)->pluck('name')->all())->toBe(['nodebb'])
             ->and($catalog->firstWhere('name', 'nodebb')['unavailable_reason'])
             ->toBe('This application needs MongoDB, which this server does not have.')
