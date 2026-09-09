@@ -39,6 +39,21 @@ function isSecret(field) {
 // config actually defines. An unknown field gets no placeholder rather than a
 // missing-key crash.
 const PLACEHOLDER_FIELDS = new Set(["host", "workspace"]);
+
+/**
+ * Our explanation for a field the API describes with a placeholder alone.
+ *
+ * Keyed by provider and field because the same name means different things:
+ * GitLab's `host` is an optional self-hosted address, and nothing on screen
+ * said that leaving it blank is the normal answer.
+ *
+ * Returns undefined for anything unlisted, so a field the backend adds later
+ * renders exactly as it does today rather than with an invented sentence.
+ */
+function fieldHelp(t, providerName, fieldName) {
+  const key = `fieldHelp.${providerName}_${fieldName}`;
+  return t.has(key) ? t(key) : undefined;
+}
 const TOKEN_PROVIDERS = new Set(["github", "gitlab", "bitbucket"]);
 
 function fieldPlaceholder(t, providerName, fieldName) {
@@ -226,11 +241,18 @@ export function ConnectForm({
                     value={field.value}
                     provider={provider}
                   />
-                ) : spec.help ? (
-                  // The backend's own words for this field. Everything else
-                  // here is generated from the field list, so a form control
-                  // that needs explaining had nowhere to say so.
-                  <FormDescription>{spec.help}</FormDescription>
+                ) : spec.help ?? fieldHelp(t, provider.name, spec.name) ? (
+                  /*
+                   * The backend's own words where it has them, ours where it
+                   * does not. The API sends `help` for tokens only, so the
+                   * remaining fields arrived with a placeholder and nothing
+                   * else — and a self-hosted URL box with an example in grey
+                   * does not say that leaving it empty is what most people
+                   * should do.
+                   */
+                  <FormDescription>
+                    {spec.help ?? fieldHelp(t, provider.name, spec.name)}
+                  </FormDescription>
                 ) : null}
                 <FormMessage field={spec.label} />
               </FormItem>

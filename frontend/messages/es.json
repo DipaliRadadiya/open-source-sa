@@ -2758,6 +2758,10 @@
         "token_bitbucket": "Token de API con permisos",
         "host": "https://gitlab.example.com",
         "workspace": "tu-workspace-id"
+      },
+      "fieldHelp": {
+        "gitlab_host": "Solo para un GitLab autoalojado. Déjalo vacío para gitlab.com. Usa la dirección con la que inicias sesión, como https://gitlab.example.com, no la de un proyecto.",
+        "bitbucket_workspace": "El ID del espacio de trabajo de tu dirección de Bitbucket: bitbucket.org/id-del-espacio/repositorio."
       }
     },
     "edit": {

@@ -2758,6 +2758,10 @@
         "token_bitbucket": "स्कोप्स वाला API टोकन",
         "host": "https://gitlab.example.com",
         "workspace": "your-workspace-id"
+      },
+      "fieldHelp": {
+        "gitlab_host": "केवल सेल्फ-होस्टेड GitLab के लिए। gitlab.com के लिए इसे खाली छोड़ें। वही पता डालें जिससे आप साइन इन करते हैं, जैसे https://gitlab.example.com — किसी प्रोजेक्ट का पता नहीं।",
+        "bitbucket_workspace": "आपके Bitbucket पते से वर्कस्पेस आईडी: bitbucket.org/workspace-id/repository।"
       }
     },
     "edit": {
