@@ -6,6 +6,7 @@ use App\Contracts\Runtime;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Runtime\InstallFailureClassifier;
+use App\Services\Runtime\NpmCatalog;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\Log;
@@ -34,6 +35,7 @@ class NodeRuntime implements Runtime
     public function __construct(
         private ServerOps $serverOps,
         private InstallFailureClassifier $classifier,
+        private NpmCatalog $npm,
     ) {}
 
     public function key(): string
@@ -288,10 +290,21 @@ class NodeRuntime implements Runtime
      * global one, which would belong to whichever version happens to be
      * default and update the wrong thing.
      *
+     * Installs the newest npm *this* Node version can run, not `npm@latest`.
+     * npm declares `engines.node` and its newest release routinely excludes
+     * Node lines the panel still installs — npm 12 needs `^22.22.2 ||
+     * ^24.15.0 || >=26.0.0`, so `@latest` on a Node 20 box replaces a working
+     * npm with one that cannot start. With no catalog on record it falls back
+     * to `@latest`, which is exactly the behaviour that shipped before: a box
+     * with no egress is no worse off than it was.
+     *
      * @throws SettingOperationException
      */
     public function updateNpm(string $version): void
     {
+        $target = $this->npm->latestFor($version);
+        $spec = $target !== null ? "npm@{$target}" : 'npm@latest';
+
         // PATH pinned for the same reason {@see npmVersion()} pins it, and it
         // was missing here: npm is a Node script (`#!/usr/bin/env node`), so it
         // needs `node` on PATH even when run by absolute path. Without it this
@@ -305,7 +318,7 @@ class NodeRuntime implements Runtime
         $binDir = dirname($this->binaryPath($version));
 
         $this->must($this->serverOps->run(
-            ["{$binDir}/npm", 'install', '-g', 'npm@latest'],
+            ["{$binDir}/npm", 'install', '-g', $spec],
             ['feature' => 'runtime', 'op' => 'update_npm', 'version' => $version],
             timeout: (int) config('server.runtimes.node.install_timeout', 900),
             env: ['PATH' => "{$binDir}:/usr/local/bin:/usr/bin:/bin"],

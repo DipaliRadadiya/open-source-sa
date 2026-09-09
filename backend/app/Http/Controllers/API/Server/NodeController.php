@@ -8,6 +8,7 @@ use App\Http\Requests\Server\Node\NodeDefaultRequest;
 use App\Jobs\InstallNodeVersion;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Runtime\NpmCatalog;
 use App\Services\Runtime\PinnedSites;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Node\NodeOverview;
@@ -112,16 +113,23 @@ class NodeController extends Controller
     /**
      * Update npm inside one version, using that version's own npm.
      */
-    public function updateNpm(string $version, NodeRuntime $node, ActivityLogger $log): JsonResponse
+    public function updateNpm(string $version, NodeRuntime $node, NpmCatalog $npm, ActivityLogger $log): JsonResponse
     {
         abort_unless($node->installed($version), 404);
 
         $node->updateNpm($version);
         $log->log('node.npm_updated', null, ['version' => $version]);
 
+        $installed = $node->npmVersion($version);
+
         return response()->json([
             'message' => __('node.npm_updated', ['version' => $version]),
-            'npm_version' => $node->npmVersion($version),
+            'npm_version' => $installed,
+            // The same three fields the list sends, so the row can be updated
+            // from this response rather than left claiming an update is still
+            // waiting until the next refetch.
+            'npm_latest' => $npm->latestFor($version),
+            'npm_update_available' => $npm->updateAvailable($version, $installed),
         ]);
     }
 }

@@ -35,6 +35,13 @@ Schedule::command('disk-cleaner:run')->everyMinute()->withoutOverlapping();
 // egress simply keeps an empty cache and shows no badges, which is honest.
 Schedule::command('runtimes:refresh-lifecycle')->daily()->withoutOverlapping();
 
+// The newest npm of each npm major, and the Node versions each one runs on.
+// Same reasoning as the lifecycle refresh, and same failure mode: no egress
+// means no comparison on the Node screen rather than a page that blocks on
+// registry.npmjs.org. Daily because npm ships far less often than that, and
+// the number only has to be right by the time somebody opens the screen.
+Schedule::command('runtimes:refresh-npm')->daily()->withoutOverlapping();
+
 // Renewal happens outside the panel — certbot's own timer swaps the file every
 // sixty days and tells nothing. Without this the SSL screen counts down from
 // the date captured at issuance and eventually reports "expired" on a site

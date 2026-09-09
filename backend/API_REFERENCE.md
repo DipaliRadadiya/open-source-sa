@@ -4808,7 +4808,8 @@ Sequence: back up → write → `php-fpm -t` → reload. On validation failure, 
   "versions": [{
     "version": "20.11.0", "path": "/opt/fnm/node-versions/v20.11.0/installation/bin/node",
     "is_default": true, "source": "fnm",
-    "npm_version": "10.2.4", "in_use_by": 7, "lifecycle": {"status": "lts", "eol_date": "2026-04-30", "lts_name": "Iron"}
+    "npm_version": "10.2.4", "npm_latest": "11.19.1", "npm_update_available": true,
+    "in_use_by": 7, "lifecycle": {"status": "lts", "eol_date": "2026-04-30", "lts_name": "Iron"}
   }],
   "system": {"version": "24.18.0", "path": "/usr/bin/node"},
   "installable": [{"version": "22.11.0", "lifecycle": {"status": "current"}}],
@@ -4817,6 +4818,14 @@ Sequence: back up → write → `php-fpm -t` → reload. On validation failure, 
 ```
 
 Same `status` / `started_at` / `reason` / `message` / `reference` pattern as PHP. `npm_version` is read from *that version's own* npm.
+
+**`npm_latest` is per row, not per registry.** npm declares which Node versions it runs on, and the newest release routinely excludes Node lines the panel still installs — npm 12 requires `^22.22.2 || ^24.15.0 || >=26.0.0`. So this field is the newest npm *that Node version can actually run*: 12.0.2 on Node 24, 11.19.1 on Node 20.17, 10.9.9 on Node 18. Publishing the registry's own `latest` on every row would leave the update control lit forever on every version that can never reach it.
+
+`null` when the panel cannot say — the catalog has never refreshed, or the box has no egress. Show no comparison rather than a number.
+
+**Bind the button to `npm_update_available`, not to `npm_latest !== npm_version`.** It is a semver comparison done server-side; comparing as strings reads `9.8.1` as newer than `10.2.4`. It is `false` whenever `npm_latest` is null.
+
+The catalog is refreshed daily by `runtimes:refresh-npm`; the API never calls the registry inside a request.
 
 ---
 
@@ -4850,9 +4859,11 @@ Same `status` / `started_at` / `reason` / `message` / `reference` pattern as PHP
 ### POST `/node/versions/{version}/npm`
 **Permission:** `node` (manage`
 
-Update npm inside a specific Node version.
+Update npm inside a specific Node version. Installs the newest npm *that* version can run — never `npm@latest`, which on an older Node replaces a working npm with one that cannot start.
 
-**Response `200`:** `{"message": "npm updated to 10.8.0.", "npm_version": "10.8.0"}`
+**Response `200`:** `{"message": "npm updated to 11.19.1.", "npm_version": "11.19.1", "npm_latest": "11.19.1", "npm_update_available": false}`
+
+The last two are the same fields the list sends, so the row can be updated from this response instead of refetching.
 
 ---
 

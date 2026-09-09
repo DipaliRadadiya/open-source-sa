@@ -2,6 +2,7 @@
 
 use App\Jobs\InstallNodeVersion;
 use App\Models\Application;
+use App\Models\NpmRelease;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -386,6 +387,65 @@ it('gives npm a PATH with node on it when updating it', function () {
     // update npm inside one version, and borrowing another version's node to
     // do it is how the wrong thing gets updated.
     expect($path)->toStartWith($binDir.':');
+});
+
+it('installs the newest npm this node version can run, not npm@latest', function () {
+    // npm 12 needs Node `^22.22.2 || ^24.15.0 || >=26.0.0`. On Node 20,
+    // `npm install -g npm@latest` replaces a working npm with one that cannot
+    // start — the button that is meant to keep a version current breaks it.
+    NpmRelease::query()->create(['major' => '11', 'version' => '11.19.1', 'node_range' => '^20.17.0 || >=22.9.0']);
+    NpmRelease::query()->create(['major' => '12', 'version' => '12.0.2', 'node_range' => '^22.22.2 || ^24.15.0 || >=26.0.0']);
+
+    $runs = fakeNode(installed: ['v20.19.0'], default: 'v20.19.0');
+
+    app(NodeRuntime::class)->updateNpm('20.19.0');
+
+    $specs = collect($runs)
+        ->map(fn ($run) => collect($run['command'])->first(fn ($arg) => str_starts_with((string) $arg, 'npm@')))
+        ->filter();
+
+    expect($specs->all())->toContain('npm@11.19.1')
+        ->and($specs->all())->not->toContain('npm@latest');
+});
+
+it('falls back to npm@latest when it has no catalog to consult', function () {
+    // A box with no egress has never refreshed the catalog. Refusing to
+    // update would be a new failure on a machine that worked before; this is
+    // exactly the behaviour that shipped before the catalog existed.
+    $runs = fakeNode(installed: ['v24.19.0'], default: 'v24.19.0');
+
+    app(NodeRuntime::class)->updateNpm('24.19.0');
+
+    expect(collect($runs)->contains(fn ($run) => in_array('npm@latest', $run['command'], true)))->toBeTrue();
+});
+
+it('sends the newest npm each version can run beside the one it has', function () {
+    NpmRelease::query()->create(['major' => '10', 'version' => '10.9.9', 'node_range' => '^18.17.0 || >=20.5.0']);
+    NpmRelease::query()->create(['major' => '12', 'version' => '12.0.2', 'node_range' => '^22.22.2 || ^24.15.0 || >=26.0.0']);
+
+    Process::fake(function ($process) {
+        $command = $process->command;
+
+        return match (true) {
+            str_contains(implode(' ', $command), 'fnm') && in_array('list', $command, true) => Process::result(
+                output: "* v24.19.0 default\n* v18.20.4\n"
+            ),
+            // Both versions carry the same npm; what differs is how far each
+            // one is allowed to go.
+            str_ends_with((string) ($command[0] ?? ''), '/npm') && in_array('-v', $command, true) => Process::result(output: "10.9.9\n"),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    $versions = collect(app(NodeOverview::class)->read()['versions'])->keyBy('version');
+
+    // Node 24 can reach npm 12 and has 10 — an update worth offering. Node 18
+    // already has the newest npm it will ever run, so the button must go away
+    // rather than pointing at a release that cannot start on it.
+    expect($versions['24.19.0']['npm_latest'])->toBe('12.0.2')
+        ->and($versions['24.19.0']['npm_update_available'])->toBeTrue()
+        ->and($versions['18.20.4']['npm_latest'])->toBe('10.9.9')
+        ->and($versions['18.20.4']['npm_update_available'])->toBeFalse();
 });
 
 it('records that the server now has Node, so the create screen stops denying it', function () {

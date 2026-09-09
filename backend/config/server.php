@@ -1634,6 +1634,14 @@ return [
             'install_timeout' => (int) env('SERVER_NODE_INSTALL_TIMEOUT', 900),
         ],
 
+        // Where "the newest npm this Node version can run" comes from. Read
+        // by a scheduled command into `npm_releases`, never inside a request,
+        // for the reason the lifecycle URLs above give.
+        'npm' => [
+            'registry_url' => env('SERVER_NPM_REGISTRY_URL', 'https://registry.npmjs.org/npm'),
+            'timeout' => (int) env('SERVER_NPM_REGISTRY_TIMEOUT', 30),
+        ],
+
         // How many site names a version carries in a list response. Enough
         // to answer "whose site breaks", never enough to bloat a payload the
         // screen loads on every visit. The count is always the true total.
