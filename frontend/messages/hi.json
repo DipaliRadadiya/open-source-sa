@@ -1961,10 +1961,13 @@
       "note": "इस सर्वर पर अपना Node.js {version} भी मौजूद है। पैनल उसे मैनेज नहीं करता, इसलिए वह ऊपर सूची में नहीं है।"
     },
     "npm": {
-      "action": "npm अपडेट करें ({version})",
+      "action": "npm अपडेट करें",
       "updated": "npm {version} पर अपडेट हो गया।",
       "failed": "npm अपडेट नहीं हो सका।",
-      "alreadyLatest": "npm पहले से ही अप-टू-डेट था ({version})।"
+      "alreadyLatest": "npm पहले से ही अप-टू-डेट था ({version})।",
+      "installed": "npm {version}",
+      "upgrade": "npm {current} → {latest}",
+      "currentReason": "npm पहले से ही नवीनतम संस्करण पर है।"
     },
     "versions": {
       "pickerLabel": "Node.js वर्शन",

@@ -44,6 +44,35 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
   const [running, setRunning] = useState(null);
   const pending = running !== null;
   const [npm, setNpm] = useState(version.npm_version ?? null);
+  /*
+   * What npm this Node version can actually run, and whether that beats what
+   * is installed.
+   *
+   * `npm_latest` is per Node version, not the registry's `latest`: npm 12
+   * requires Node ^22.22.2 || ^24.15.0 || >=26, so publishing one global
+   * number would leave the button lit forever on every line that can never
+   * reach it.
+   *
+   * The comparison is the API's, deliberately. Done here it would be a string
+   * compare, and '9.8.1' sorts after '10.2.4' as text — the panel would report
+   * an upgrade as a downgrade and hide a real one.
+   *
+   * But `npm_update_available` is ALSO false when the catalog is empty — a box
+   * with no egress, or one whose daily refresh has not run yet. Trusting the
+   * boolean alone would disable the button permanently there, so nothing could
+   * ever update npm again. "Already current" is claimed only when a latest is
+   * actually known; without one the button stays offered and says nothing.
+   */
+  const npmLatest = version.npm_latest ?? null;
+  const npmKnown = Boolean(npm && npmLatest);
+  const npmBehind = !npmKnown
+    ? false
+    : typeof version.npm_update_available === "boolean"
+      ? version.npm_update_available
+      : // An API that predates the flag. Inequality is weaker than semver but
+        // it cannot invent an update that is not there.
+        npm !== npmLatest;
+  const npmCurrent = npmKnown && !npmBehind;
 
   const usedBy = version.in_use_by ?? 0;
   const sites = version.sites ?? [];
@@ -155,6 +184,18 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
               namespace="node"
               available={lifecycleAvailable}
             />
+            {/* The installed npm belongs here, beside the other facts about
+                this version — it was inside the button's label, which read as
+                the version the button would GIVE you rather than the one you
+                already have. So an update that changed nothing, because npm
+                was already current, looked like an update that failed. */}
+            {npm ? (
+              <Badge variant="outline" className="font-normal">
+                {npmBehind
+                  ? t("npm.upgrade", { current: npm, latest: npmLatest })
+                  : t("npm.installed", { version: npm })}
+              </Badge>
+            ) : null}
           </CardTitle>
 
           {/* Not shrink-0 — same fault the PHP card had. A shrink-0 flex item
@@ -166,15 +207,21 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
                 couldn't be read — no number is better than a wrong one, so the
                 control goes away rather than claiming to update nothing. */}
             {npm ? (
-              <ReasonTooltip reason={canManage ? notReadyReason : t("noPermission")}>
+              <ReasonTooltip
+                reason={
+                  canManage
+                    ? (notReadyReason ?? (npmCurrent ? t("npm.currentReason") : null))
+                    : t("noPermission")
+                }
+              >
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!canManage || pending || Boolean(notReadyReason)}
+                  disabled={!canManage || pending || Boolean(notReadyReason) || npmCurrent}
                   onClick={upgradeNpm}
                 >
                   {running === "npm" ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {t("npm.action", { version: npm })}
+                  {t("npm.action")}
                 </Button>
               </ReasonTooltip>
             ) : null}

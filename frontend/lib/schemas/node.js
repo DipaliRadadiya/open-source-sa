@@ -15,6 +15,12 @@ export const nodeVersionSchema = z.object({
   source: z.string().nullable().optional(),
   // Read from THIS version's own npm. Null when it couldn't be read — show
   // nothing rather than the default version's number next to every row.
+  // What the API says is available. Not sent yet — the card compares
+  // only when it is, and offers the update unconditionally until then.
+  npm_latest: z.string().nullish(),
+  // The API's own semver comparison. False ALSO means "no catalog", so it
+  // is never read without checking that a latest is actually known.
+  npm_update_available: z.boolean().nullish(),
   npm_version: z.string().nullable().optional(),
   // ready | installing | removing | failed. Only ready versions can be selected
   // by an application.

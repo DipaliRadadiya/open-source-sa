@@ -1961,10 +1961,13 @@
       "note": "This server also has Node.js {version} of its own. The panel doesn't manage it, so it isn't listed above."
     },
     "npm": {
-      "action": "Update npm ({version})",
+      "action": "Update npm",
       "updated": "npm updated to {version}.",
       "failed": "npm could not be updated.",
-      "alreadyLatest": "npm was already up to date ({version})."
+      "alreadyLatest": "npm was already up to date ({version}).",
+      "installed": "npm {version}",
+      "upgrade": "npm {current} → {latest}",
+      "currentReason": "npm is already the newest version."
     },
     "versions": {
       "pickerLabel": "Node.js versions",

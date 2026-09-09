@@ -1961,10 +1961,13 @@
       "note": "Este servidor también tiene su propio Node.js {version}. El panel no lo gestiona, por eso no aparece arriba."
     },
     "npm": {
-      "action": "Actualizar npm ({version})",
+      "action": "Actualizar npm",
       "updated": "npm actualizado a {version}.",
       "failed": "No se pudo actualizar npm.",
-      "alreadyLatest": "npm ya estaba actualizado ({version})."
+      "alreadyLatest": "npm ya estaba actualizado ({version}).",
+      "installed": "npm {version}",
+      "upgrade": "npm {current} → {latest}",
+      "currentReason": "npm ya está en la versión más reciente."
     },
     "versions": {
       "pickerLabel": "Versiones de Node.js",
