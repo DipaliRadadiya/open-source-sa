@@ -357,14 +357,18 @@ export function BackupsHistoryTable({
       ? {
           id: "destination",
           header: t("columns.destination"),
-          // Hidden below xl, and the breakpoint is measured rather than
-          // chosen. The table renders from lg up, and at lg its columns
-          // already use every pixel — adding this one forced a 1244px floor,
-          // so the table overflowed its own container by 270px at 1024 and
-          // 142px at 1152. Sideways scrolling to reach Actions is a worse
-          // trade than reading the destination one screen size later; the
-          // phone cards carry it below lg regardless.
-          meta: { className: "hidden max-w-40 xl:table-cell" },
+          /*
+           * Hidden below xl only on the server-wide list, and the breakpoint
+           * is measured rather than chosen.
+           *
+           * That list carries a Site column; adding this one overflows its
+           * container by 156px at 1024 and 28px at 1152, which is sideways
+           * scrolling to reach Restore. A site's own Backups page has no Site
+           * column and 156px more to spend: measured at zero overflow from
+           * 1024 up, so hiding it there was hiding it for nothing — and it is
+           * the page where "where did this go?" is actually asked.
+           */
+          meta: { className: cn("max-w-40", showSite && "hidden xl:table-cell") },
           cell: DestinationCell,
         }
       : null,

@@ -36,20 +36,26 @@ test("an absent destination is not the same as no destination", () => {
   );
 });
 
-test("the destination column flexes instead of pinning the table's width", () => {
+test("the destination column is only hidden where it does not fit", () => {
   /*
-   * Measured, not guessed. The table renders from lg up. A fixed-width
-   * destination column gave it a 1244px floor, so it overflowed its own
-   * container by 270px at 1024 and 142px at 1152 — sideways scrolling to
-   * reach the row actions. Letting it flex brought every width back to zero
-   * overflow.
+   * Measured on both layouts, not chosen.
+   *
+   * The server-wide history carries a Site column; with the destination always
+   * shown it overflows its container by 156px at 1024 and 28px at 1152, which
+   * is sideways scrolling to reach Restore. A site's own Backups page has no
+   * Site column and 156px more to spend — zero overflow from 1024 up — so
+   * hiding it there was hiding it for nothing, and that is the page where
+   * "where is this stored?" is actually asked. It was reported as missing from
+   * exactly that page.
    */
-  assert.match(TABLE, /hidden max-w-40 xl:table-cell/, "the destination column pins a width again");
-  assert.doesNotMatch(
+  assert.match(
     TABLE,
-    /className: "hidden w-\d+ xl:table-cell"/,
-    "the destination column pins a width again",
+    /cn\("max-w-40", showSite && "hidden xl:table-cell"\)/,
+    "the destination column no longer decides its breakpoint by layout",
   );
+  // Flexible, not pinned: a fixed width gave the table a 1244px floor and
+  // overflowed by 270px at 1024 even with the Site column gone.
+  assert.doesNotMatch(TABLE, /className: "hidden w-\d+ xl:table-cell"/, "the column pins a width again");
   // Truncated on a laptop, so the full name has to be reachable somehow.
   assert.match(TABLE, /title=\{name\}/, "a truncated destination name can no longer be read in full");
 });
