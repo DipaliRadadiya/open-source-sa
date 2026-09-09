@@ -1503,7 +1503,8 @@
       "duplicate": "Ya tienes una regla exactamente igual.",
       "onlyMyIp": "Solo mi IP",
       "onlyMyIpSet": "Tu IP",
-      "wouldLockYouOut": "Esa es la dirección desde la que estás conectado. Bloquearla te dejaría fuera de este servidor."
+      "wouldLockYouOut": "Esa es la dirección desde la que estás conectado. Bloquearla te dejaría fuera de este servidor.",
+      "protectedLocked": "Esta regla la creó el panel y está en uso. Su puerto, protocolo, acción y origen no se pueden cambiar mientras el cortafuegos esté activo; solo su nombre."
     },
     "quick": {
       "title": "Añadir rápido",

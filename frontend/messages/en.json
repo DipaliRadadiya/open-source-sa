@@ -1503,7 +1503,8 @@
       "duplicate": "You already have a rule exactly like this one.",
       "onlyMyIp": "Only my IP",
       "onlyMyIpSet": "Your IP",
-      "wouldLockYouOut": "That is the address you are connected from. Blocking it would lock you out of this server."
+      "wouldLockYouOut": "That is the address you are connected from. Blocking it would lock you out of this server.",
+      "protectedLocked": "This rule was set up by the panel and is in use. Its port, protocol, action and source cannot be changed while the firewall is on — only its name."
     },
     "quick": {
       "title": "Quick add",

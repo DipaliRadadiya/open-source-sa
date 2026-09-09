@@ -103,6 +103,20 @@ export function SourceText({ rule, labels }) {
 }
 
 /**
+ * Why a seeded rule cannot be changed right now, or null.
+ *
+ * One helper because the guard is one rule: `ProtectedRuleGuard` locks
+ * port_from, port_to, protocol, action, source_ip AND `enabled` on a
+ * panel-seeded rule, but only while the firewall is enforcing. Delete used to
+ * be the only control that asked — so the toggle, whose effect on a running
+ * ufw is identical to a delete, was offered and then refused with a 422.
+ */
+export function protectedReasonFor({ rule, enabled, canManage, labels }) {
+  if (!canManage) return labels.noPermission;
+  return Boolean(rule.protected) && enabled ? labels.protectedReason : null;
+}
+
+/**
  * Delete, with the reason it's unavailable when it is.
  *
  * A system-seeded rule can't be removed while the firewall is on — that's the
@@ -110,12 +124,8 @@ export function SourceText({ rule, labels }) {
  * explains itself rather than just being grey.
  */
 export function DeleteRuleButton({ rule, enabled, canManage, pending, onDelete, labels }) {
+  const reason = protectedReasonFor({ rule, enabled, canManage, labels });
   const lockedByGuard = Boolean(rule.protected) && enabled;
-  const reason = !canManage
-    ? labels.noPermission
-    : lockedByGuard
-      ? labels.protectedReason
-      : null;
 
   return (
     <ReasonTooltip reason={reason}>

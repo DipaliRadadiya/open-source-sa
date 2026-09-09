@@ -33,6 +33,7 @@ import {
   ProtocolText,
   SourceText,
   DeleteRuleButton,
+  protectedReasonFor,
 } from "@/components/firewall/rule-parts";
 import { apiMessage } from "@/lib/api/error-message";
 
@@ -65,18 +66,21 @@ function ActionsCell({ row, table }) {
     table.options.meta;
   const rule = row.original;
   const busy = pending === rule.id;
+  // Same guard the API applies. Switching a seeded rule off is, to ufw, the
+  // delete this row already refuses — so offering it only bought a 422.
+  const guarded = protectedReasonFor({ rule, enabled, canManage, labels });
 
   return (
     <div className="flex items-center justify-end gap-1">
       {/* Off keeps the rule and stops enforcing it. Testing whether a rule
           matters used to mean deleting it — and for a deny rule, that lets the
           blocked thing through while you work out how to retype it. */}
-      <ReasonTooltip reason={canManage ? null : labels.noPermission}>
+      <ReasonTooltip reason={guarded}>
         <PendingSwitch
           checked={shownEnabled(rule)}
           pending={busy}
           onCheckedChange={() => onToggle(rule)}
-          disabled={!canManage}
+          disabled={Boolean(guarded)}
           aria-label={labels.toggle}
         />
       </ReasonTooltip>
@@ -417,6 +421,7 @@ export function RulesCard({
         <AddRuleDialog
           key={editing.id}
           rule={editing}
+          firewallEnabled={enabled}
           rules={allRules}
           presets={presets}
           canManage={canManage}

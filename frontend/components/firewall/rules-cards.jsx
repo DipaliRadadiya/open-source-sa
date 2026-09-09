@@ -10,6 +10,7 @@ import {
   ProtocolText,
   SourceText,
   DeleteRuleButton,
+  protectedReasonFor,
 } from "@/components/firewall/rule-parts";
 
 /**
@@ -47,12 +48,12 @@ export function RulesCards({
                 compact desktop sizes (a 38x28 icon button). A 44px minimum box
                 on each keeps the look and makes them reliably tappable. */}
             <div className="flex shrink-0 items-center gap-1 max-sm:[&_button:not([role=switch])]:min-h-11 max-sm:[&_button:not([role=switch])]:min-w-11">
-              <ReasonTooltip reason={canManage ? null : labels.noPermission}>
+              <ReasonTooltip reason={protectedReasonFor({ rule, enabled, canManage, labels })}>
                 <PendingSwitch
                   checked={shownEnabled(rule)}
                   pending={pending === rule.id}
                   onCheckedChange={() => onToggle(rule)}
-                  disabled={!canManage}
+                  disabled={Boolean(protectedReasonFor({ rule, enabled, canManage, labels }))}
                   aria-label={labels.toggle}
                 />
               </ReasonTooltip>

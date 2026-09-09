@@ -25,6 +25,7 @@ import {
   CUSTOM_PRESET,
 } from "@/lib/schemas/firewall";
 import { Button } from "@/components/ui/button";
+import { Caution } from "@/components/ui/caution";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RequiredMark } from "@/components/ui/form";
@@ -87,11 +88,21 @@ export function AddRuleDialog({
   // Editing: the caller owns open/closed and passes the rule. Creating: this
   // component owns its own trigger button and state.
   rule = null,
+  // Whether the firewall is enforcing. `ProtectedRuleGuard` only locks a
+  // seeded rule while it is — with ufw off there is nothing to cut off, so the
+  // same edit is allowed.
+  firewallEnabled = false,
   onClose,
 }) {
   const t = useTranslations("firewall");
   const router = useRouter();
   const editing = rule !== null;
+  // What the API will refuse on this rule: port, protocol, action and source
+  // on a panel-seeded rule while the firewall is enforcing. The name is
+  // deliberately NOT in the list — the guard allows a rename, on the grounds
+  // that a label never reaches ufw and blocking a typo fix is pure
+  // obstruction. So the fields lock, not the button.
+  const ruleLocked = editing && Boolean(rule.protected) && firewallEnabled;
   const [selfOpen, setSelfOpen] = useState(false);
   const open = editing ? true : selfOpen;
   const setOpen = (next) => {
@@ -314,6 +325,11 @@ export function AddRuleDialog({
             </p>
           ) : null}
 
+          {/* Said once, above the locked fields, instead of four identical
+              tooltips. The name below stays editable and the sentence says so,
+              because a form where everything looks dead reads as broken. */}
+          {ruleLocked ? <Caution>{t("add.protectedLocked")}</Caution> : null}
+
           {duplicate ? (
             <p className="rounded-lg border bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
               {t("add.duplicate")}
@@ -326,6 +342,7 @@ export function AddRuleDialog({
               value={values.action}
               onValueChange={(next) => next && form.setValue("action", next)}
               variant="outline"
+              disabled={ruleLocked}
               className="flex-wrap justify-start gap-2"
             >
               <ToggleGroupItem value="allow" className="gap-2 px-4">
@@ -356,6 +373,7 @@ export function AddRuleDialog({
                 placeholder={t("add.portsPlaceholder")}
                 className="font-mono"
                 aria-invalid={Boolean(portError)}
+                disabled={ruleLocked}
                 {...form.register("ports")}
               />
               <p className="text-xs leading-relaxed text-muted-foreground">
@@ -374,7 +392,7 @@ export function AddRuleDialog({
                 value={values.protocol}
                 onValueChange={(next) => form.setValue("protocol", next)}
               >
-                <SelectTrigger id="fw-protocol" className="w-full">
+                <SelectTrigger id="fw-protocol" className="w-full" disabled={ruleLocked}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -413,6 +431,7 @@ export function AddRuleDialog({
             <div className="flex flex-wrap items-center gap-2">
               <Input
                 id="fw-source"
+                disabled={ruleLocked}
                 placeholder={t("add.sourcePlaceholder")}
                 className="font-mono sm:max-w-64"
                 autoComplete="off"
@@ -429,8 +448,11 @@ export function AddRuleDialog({
                   variant="secondary"
                   className="gap-1.5"
                   onClick={() => form.setValue("source_ip", yourIp, { shouldDirty: true })}
-                  disabled={values.source_ip === yourIp}
-                  disabledReason={t("add.wouldLockYouOut")}
+                  // Writes straight into the source field, so it has to follow
+                  // the same lock — otherwise one button quietly makes the
+                  // exact edit the greyed input beside it is refusing.
+                  disabled={ruleLocked || values.source_ip === yourIp}
+                  disabledReason={ruleLocked ? t("rules.protectedReason") : t("add.wouldLockYouOut")}
                 >
                   <Crosshair className="size-4" />
                   {values.source_ip === yourIp ? t("add.onlyMyIpSet") : t("add.onlyMyIp")}
