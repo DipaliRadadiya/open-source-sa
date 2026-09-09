@@ -19,6 +19,15 @@ import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
  * Rendered only when something can actually connect. A database with no users
  * has no credentials to show, and the Users tab says so properly.
  */
+/**
+ * Fields that get two grid tracks.
+ *
+ * Measured, not guessed: a generated name is 31 characters, which needs about
+ * 275px at this font and gets 129px in a single track. Host, port and the
+ * masked password all fit in one.
+ */
+const WIDE_FIELDS = new Set(["database", "username"]);
+
 export function ConnectionDetails({ database, canManage = false, phpmyadminInstalled = null }) {
   const t = useTranslations("databases.credentials");
   const user = primaryUser(database);
@@ -84,13 +93,26 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminInsta
           at every size. Four short values and one long one in equal columns
           made the name the only cell that wrapped, which dragged its row
           taller than the rest and left the others floating at the top of it.
-          Six tracks at xl is exactly Host + Port + name(2) + Username +
-          Password — one straight row, nothing wrapped. */}
+          Six tracks at xl is exactly Host + Port + name(2) + Username(2),
+          which fills the first row with nothing wrapped; the password sits on
+          the second. A password is masked, so it is the one value that costs
+          nothing to move. */}
       <CardContent className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-5 py-4 sm:grid-cols-4 xl:grid-cols-6">
         {fields.map((field) => (
           <div
             key={field.key}
-            className={cn("min-w-0", field.key === "database" && "col-span-2")}
+            className={cn(
+              "min-w-0",
+              // The database name and the username are both generated, both the
+              // same shape, and the same length — but only the name was given
+              // two tracks. The username got one, wrapped onto a second line at
+              // every width, and dragged its row taller than the rest.
+              // Two tracks is enough at xl, where a track is ~137px. Between
+              // sm and xl the grid is only four tracks in a narrower container,
+              // so two of them is ~210px and the same string wrapped again —
+              // there, the field takes the whole row instead.
+              WIDE_FIELDS.has(field.key) && "col-span-2 sm:col-span-4 xl:col-span-2",
+            )}
           >
             {/* Label and copy button on one line, value on its own beneath —
                 the same cell as the dialog that created this database, so the

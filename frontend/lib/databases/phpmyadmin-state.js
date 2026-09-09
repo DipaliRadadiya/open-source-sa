@@ -33,9 +33,15 @@ export function phpmyadminState({ engine, installed = null, users = null } = {})
  * The list sends `users_count`; the detail payload sends the `users` array. A
  * component rendered in both places would otherwise read undefined in one of
  * them and quietly decide there are no users.
+ *
+ * The loaded array is asked FIRST, and that order is the whole point: the
+ * detail endpoint loads the users without counting them, so the count is absent
+ * there. Reading the count first meant an absent one — filled in as 0 by the
+ * schema — outranked an array of real users, and every database detail page
+ * disabled phpMyAdmin saying "add a user first" while listing the user above.
  */
 export function userCount(database) {
-  if (typeof database?.users_count === "number") return database.users_count;
   if (Array.isArray(database?.users)) return database.users.length;
+  if (typeof database?.users_count === "number") return database.users_count;
   return null;
 }

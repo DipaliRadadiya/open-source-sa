@@ -107,7 +107,10 @@ export const databaseSchema = z.object({
   size_bytes: z.number().nullable().optional(),
   size_human: z.string().nullable().optional(),
   // Zero means nothing can connect to it — worth surfacing on the row.
-  users_count: z.number().nullable().optional().default(0),
+  // No `.default(0)`: only the list counts users, so on the detail payload a
+  // default would invent a zero the API never sent, which reads as "this
+  // database has no users" — a real answer, from a missing one.
+  users_count: z.number().nullable().optional(),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
   users: z.array(databaseUserSchema).nullable().optional(),

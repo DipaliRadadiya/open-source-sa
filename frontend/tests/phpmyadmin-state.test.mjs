@@ -73,3 +73,40 @@ test("the install link matches the create page's own parameter", () => {
   assert.match(page, /sp\?\.type/, "the create page no longer reads ?type=");
   assert.match(page, /siteTypes\.some/, "the create page no longer validates ?type= against the real list");
 });
+
+test("a loaded users array outranks a missing count", () => {
+  /*
+   * The regression this file exists for. `GET /databases/{id}` loads the users
+   * but does not count them, so `users_count` is absent on every detail
+   * payload while `users` holds the real rows. The schema used to fill that
+   * absence with `.default(0)`, and userCount used to read the count first — so
+   * a database with a user answered 0, and its detail page disabled phpMyAdmin
+   * with "add a database user first" printed directly above the user.
+   */
+  assert.equal(userCount({ users: [{ id: 1 }] }), 1, "a loaded user was not counted");
+  assert.equal(userCount({ users: [{ id: 1 }], users_count: 0 }), 1, "a stale zero outranked the real rows");
+  assert.equal(
+    phpmyadminState({ engine: "mysql", installed: true, users: userCount({ users: [{ id: 1 }], users_count: 0 }) }),
+    "open",
+    "the detail page still refuses a database that has a user",
+  );
+
+  // The list shape keeps working: no array, real count.
+  assert.equal(userCount({ users_count: 4 }), 4);
+  assert.equal(userCount({ users_count: 0 }), 0, "a counted zero must stay zero");
+  // Neither shape present is unknown, never zero.
+  assert.equal(userCount({}), null);
+  // An empty loaded array IS a positive zero.
+  assert.equal(userCount({ users: [] }), 0);
+});
+
+test("the schema never invents a user count the API did not send", () => {
+  const schema = fs.readFileSync(path.join(root, "lib/schemas/database.js"), "utf8");
+  const line = schema.split("\n").find((l) => l.includes("users_count:"));
+  assert.ok(line, "users_count left the schema");
+  assert.doesNotMatch(
+    line,
+    /\.default\(/,
+    "users_count defaults again — an absent count becomes 0 and phpMyAdmin locks on every detail page",
+  );
+});
