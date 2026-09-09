@@ -28,6 +28,15 @@ export const siteTypeSchema = z.object({
   needs_database: z.boolean().default(false),
   available: z.boolean().default(true),
   unavailable_reason: z.string().nullish(),
+  // The sentence above is for reading; this is the thing to branch on:
+  // 'runtime' | 'database' | 'web_server', null when available. The picker
+  // used to infer the database case from `needs_database` plus a null runtime,
+  // which reads a web-server refusal as a missing database.
+  unavailable_code: z.string().nullish(),
+  // Engines this type can be installed on. Not sent today — `acceptedEngines`
+  // in lib/applications/database-readiness.js falls back — and declared here so
+  // it is not silently stripped the day it is.
+  accepted_engines: z.array(z.string()).nullish(),
   installable_runtime: z.string().nullish(),
   has_installer: z.boolean().default(false),
   fields: z.array(textField).default([]),

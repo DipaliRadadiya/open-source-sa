@@ -235,14 +235,11 @@ export function SiteTypePicker({ types = [], value, onChange }) {
             is the one blocker the reader can clear themselves, so it gets the
             way out — a link, not a fourth sentence.
 
-            Detected from `needs_database` plus the absence of an installable
-            runtime, because the API reports a database block as prose with
-            `installable_runtime: null` and gives no code to match on. A web
-            server that refuses a type would look the same, but nginx and Apache
-            restrict nothing, so in practice this only fires for the database. */}
-        {types.some(
-          (type) => !type.available && type.needs_database && !type.installable_runtime,
-        ) ? (
+            Matched on `unavailable_code`, which the API sends precisely so
+            this does not have to be inferred. It used to be read from
+            `needs_database` plus the absence of an installable runtime, which
+            reads a web-server refusal as a missing database. */}
+        {types.some((type) => !type.available && type.unavailable_code === "database") ? (
           <div className="shrink-0 border-t px-3 py-2.5">
             <Link
               href="/databases"

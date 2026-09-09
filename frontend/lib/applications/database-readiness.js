@@ -1,3 +1,5 @@
+import { SQL_ENGINE_NAMES } from "../databases/install-lifecycle.js";
+
 /**
  * Whether this server can back a site that needs a database.
  *
@@ -6,16 +8,11 @@
  * the reader has to go and do. This turns that into a sentence on the form,
  * before anyone fills it in.
  *
- * DELIBERATELY NOT PER SITE TYPE. Nothing in the API says which types need a
- * database: not the site-type catalogue, not the field list, not the type
- * classes. The only honest question the frontend can ask is "does this server
- * have an engine at all", so that is the question it asks — and it stays quiet
- * whenever the answer is yes, which on a normal server is always.
- *
- * The alternative was a hardcoded list of type names in the frontend, which
- * would be wrong the first time a type is added and wrong silently. If the
- * backend ever ships a `needs_database` flag on the catalogue, this becomes a
- * per-type check and the shape here does not have to change.
+ * `noDatabaseEngine` below answers the server-wide question — "is there an
+ * engine at all" — and `databaseBlock` answers the per-type one the catalogue
+ * cannot: whether the engines this server has are engines THIS site type can
+ * actually use. The two are separate because a MongoDB-only server has an
+ * engine and still cannot host WordPress.
  */
 
 /**
@@ -45,4 +42,89 @@ export function engineInstalling({ engines } = {}) {
   return (Array.isArray(engines) ? engines : []).some(
     (engine) => engine?.install_status === "installing",
   );
+}
+
+/**
+ * The engines a site type can be installed on.
+ *
+ * `accepted_engines` is asked for first so this upgrades itself the day the
+ * catalogue ships it. It does not today, and the fallback is not a guess: the
+ * backend has exactly two engine lists — MongoDB alone for NodeBB, MySQL or
+ * MariaDB for everything else — and it already reports the MongoDB-only types
+ * as unavailable itself. So a type that still says it is available and needs a
+ * database is a SQL type, and that is what we assume.
+ */
+export function acceptedEngines(type) {
+  const declared = type?.accepted_engines;
+  return Array.isArray(declared) && declared.length > 0 ? declared : SQL_ENGINE_NAMES;
+}
+
+/**
+ * Why this site type cannot be created here, or null when it can.
+ *
+ * The gap this closes: the backend skips its own engine check for anything
+ * that accepts MySQL or MariaDB, so on a MongoDB-only server WordPress reports
+ * itself available, and the form only fails after it is filled in and the site
+ * is half provisioned. Every type that needs a database is affected, not just
+ * WordPress.
+ *
+ * Three states rather than one, because they need three different actions:
+ * an engine that is missing has to be installed, one that is installing only
+ * has to be waited for, and one that is installed but unreachable is a service
+ * to start — and telling someone to install what they already have is worse
+ * than saying nothing.
+ */
+export function databaseBlock({ type, engines, failed } = {}) {
+  // A failed lookup says nothing about the server. Blocking the catalogue on
+  // one endpoint's wobble is a worse failure than the one this prevents.
+  if (failed) return null;
+  if (!type?.needs_database) return null;
+  // Already blocked, with the backend's own reason. Two answers to the same
+  // question is how they end up disagreeing.
+  if (type.available === false) return null;
+
+  const list = Array.isArray(engines) ? engines : [];
+  if (list.length === 0) return null;
+
+  const accepted = acceptedEngines(type);
+  const found = accepted.map((name) => list.find((engine) => engine?.engine === name));
+
+  // `installed` is "present on the server", `running` is "we can talk to it".
+  // The backend needs both before it will create a database, so both are what
+  // "usable" means here.
+  if (found.some((engine) => engine?.installed === true && engine?.running === true)) return null;
+
+  if (found.some((engine) => engine?.install_status === "installing")) {
+    return { state: "installing", engines: accepted };
+  }
+  if (found.some((engine) => engine?.installed === true)) {
+    return { state: "stopped", engines: accepted };
+  }
+  return { state: "missing", engines: accepted };
+}
+
+/**
+ * The catalogue with the unusable types marked, in the shape the picker
+ * already renders.
+ *
+ * Deliberately reuses `available` / `unavailable_reason` / `unavailable_code`
+ * rather than adding a parallel flag: the grid, the greying, the reason line
+ * and the install link all exist and work, and a second mechanism beside them
+ * is how one gets forgotten.
+ */
+export function withDatabaseAvailability(siteTypes, engines, reasonFor) {
+  return (Array.isArray(siteTypes) ? siteTypes : []).map((type) => {
+    const block = databaseBlock({ type, ...(engines ?? {}) });
+    if (block === null) return type;
+
+    return {
+      ...type,
+      available: false,
+      unavailable_code: "database",
+      unavailable_reason: reasonFor(block),
+      // Nothing about a runtime. The picker reads this to offer a runtime
+      // install, and a database block is not one.
+      installable_runtime: null,
+    };
+  });
 }

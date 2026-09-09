@@ -4580,6 +4580,11 @@
       "done": "{name} is now used by this site.",
       "failed": "Could not attach that database.",
       "hint": "Decides what this site's backups contain. It does not change how your site connects — the site keeps using whatever its own configuration says."
+    },
+    "unavailableDatabase": {
+      "missing": "Needs {engines}. Not installed on this server.",
+      "stopped": "Needs {engines}. It is installed, but the panel cannot connect to it.",
+      "installing": "Needs {engines}. The installation is still running."
     }
   },
   "panelUpdate": {

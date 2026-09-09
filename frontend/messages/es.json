@@ -4580,6 +4580,11 @@
       "done": "{name} ahora la usa este sitio.",
       "failed": "No se pudo vincular esa base de datos.",
       "hint": "Determina lo que incluyen las copias de seguridad de este sitio. No cambia cómo se conecta tu sitio: sigue usando lo que indique su propia configuración."
+    },
+    "unavailableDatabase": {
+      "missing": "Necesita {engines}. No está instalado en este servidor.",
+      "stopped": "Necesita {engines}. Está instalado, pero el panel no puede conectarse.",
+      "installing": "Necesita {engines}. La instalación aún está en curso."
     }
   },
   "panelUpdate": {

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getFormatter } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getSiteTypes, getServerCapabilities } from "@/lib/applications/get-applications";
@@ -12,6 +12,7 @@ import { getEngines } from "@/lib/databases/get-databases";
 import {
   engineInstalling,
   noDatabaseEngine,
+  withDatabaseAvailability,
 } from "@/lib/applications/database-readiness";
 import { NoDatabaseEngineNotice } from "@/components/applications/no-database-engine-notice";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
@@ -26,9 +27,13 @@ export async function generateMetadata() {
 
 export default async function CreateApplicationPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
+  const [permissions, t, tEngines, format, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
+    // The engine labels the databases pages already use, rather than a second
+    // set that can drift from them.
+    getTranslations("databases.engines"),
+    getFormatter(),
     getSiteTypes(),
     getSystemUserOptions(),
     getGitAccounts(),
@@ -61,10 +66,25 @@ export default async function CreateApplicationPage({ searchParams }) {
 
   if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} />;
 
-  // Only a type the server actually offers. A query parameter is somebody
-  // else's input, and a made-up one would seed the form with a site type that
-  // does not exist.
-  const prefillType = types.siteTypes.some((type) => type.name === sp?.type)
+  // Marked here rather than in the picker so the whole form works from one
+  // list: the prefill below reads the same `available` the grid greys on, and
+  // a link to ?type=wordpress on a server that cannot host it lands on an
+  // empty picker instead of a card that is disabled and selected at once.
+  const siteTypes = withDatabaseAvailability(types.siteTypes, engines, (block) =>
+    t(`unavailableDatabase.${block.state}`, {
+      // `t.has`, so an engine the backend adds before we have a label for it
+      // prints its own name rather than throwing on the create page.
+      engines: format.list(
+        block.engines.map((engine) => (tEngines.has(engine) ? tEngines(engine) : engine)),
+        { type: "disjunction" },
+      ),
+    }),
+  );
+
+  // Only a type the server actually offers, and only one it can actually
+  // create. A query parameter is somebody else's input, and a made-up one
+  // would seed the form with a site type that does not exist.
+  const prefillType = siteTypes.some((type) => type.name === sp?.type && type.available)
     ? sp.type
     : "";
 
@@ -90,7 +110,7 @@ export default async function CreateApplicationPage({ searchParams }) {
         // name, and it saves the one field that has to be filled before the
         // temporary domain can be generated from it.
         initialName={prefillType}
-        siteTypes={types.siteTypes}
+        siteTypes={siteTypes}
         systemUsers={systemUsers.users}
         systemUsersFailed={systemUsers.failed}
         canCreateSystemUser={can(permissions, "system_user", "manage")}
