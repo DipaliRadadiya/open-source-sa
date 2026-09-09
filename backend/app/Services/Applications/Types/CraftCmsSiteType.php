@@ -46,6 +46,28 @@ class CraftCmsSiteType extends AbstractSiteType
     }
 
     /**
+     * A floor and no ceiling, the same shape as Statamic's.
+     *
+     * `craftcms/cms` 5.x requires `php ^8.2` and 4.x requires `^8.0.2`
+     * (repo.packagist.org, read 2026-09-09), and the installer runs
+     * `composer create-project craftcms/craft` unpinned.
+     *
+     * That combination is why the missing range was worse than a failed
+     * install: on PHP 8.0 or 8.1 Composer does not stop, it **resolves
+     * backwards** and installs Craft 4 — a different major, with a different
+     * upgrade path, on a site the panel reports as a Craft site. A refusal
+     * naming the version is the better answer than silently getting something
+     * else.
+     *
+     * No ceiling because Craft states none, and inventing one would refuse a
+     * version that works the day PHP ships it.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '8.2', 'max' => null];
+    }
+
+    /**
      * Craft keeps its source beside a small public directory. Serving the root
      * instead would publish that source, `.env` included.
      */

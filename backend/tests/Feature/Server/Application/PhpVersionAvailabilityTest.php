@@ -81,6 +81,24 @@ function createPhpVersionSite(array $overrides = []): TestResponse
         ], $overrides));
 }
 
+/**
+ * Craft's required fields, so a range test fails on the range and nothing else.
+ *
+ * Named for this file rather than `craft()`: Pest helpers share one global
+ * namespace across the whole suite, and a collision is a fatal that takes every
+ * later test down with it rather than failing one.
+ */
+function craftPayload(array $overrides = []): array
+{
+    return array_merge([
+        'site_type' => 'craftcms',
+        'site_name' => 'Craft Site',
+        'admin_user' => 'admin',
+        'admin_email' => 'admin@example.com',
+        'admin_password' => 'a-long-password',
+    ], $overrides);
+}
+
 it('refuses a PHP version the server does not have', function () {
     createPhpVersionSite(['php_version' => '8.4'])
         ->assertJsonValidationErrors('php_version');
@@ -269,6 +287,29 @@ describe('the version the application itself can run on', function () {
             'admin_first_name' => 'Admin',
             'admin_last_name' => 'User',
         ])->assertSuccessful();
+    });
+
+    it('refuses a PHP that would silently install a different Craft major', function () {
+        // Craft declared no range at all, and the consequence was worse than a
+        // failed install: `composer create-project craftcms/craft` is unpinned,
+        // `craftcms/cms` 5.x requires ^8.2 and 4.x requires ^8.0.2, so on 8.1
+        // Composer resolves *backwards* and installs Craft 4 — a different
+        // major, on a site the panel reports as a Craft site. Nothing fails.
+        // Every other required field is supplied, so `php_version` is the only
+        // thing that can fail — otherwise this passes on a missing site_name
+        // and proves nothing about the range.
+        createPhpVersionSite(craftPayload(['domain' => 'craft-old.example.com', 'php_version' => '8.1']))
+            ->assertJsonValidationErrors('php_version');
+
+        expect(Application::query()->where('site_type', 'craftcms')->count())->toBe(0);
+    });
+
+    it('accepts a PHP Craft 5 actually supports', function () {
+        // No ceiling: Craft states none, so the newest on the box is fine.
+        createPhpVersionSite(craftPayload(['domain' => 'craft-ok.example.com', 'php_version' => '8.5']))
+            ->assertSuccessful();
+
+        expect(Application::query()->where('site_type', 'craftcms')->value('php_version'))->toBe('8.5');
     });
 
     it('opens the form on a version the application can run, not the newest', function () {
