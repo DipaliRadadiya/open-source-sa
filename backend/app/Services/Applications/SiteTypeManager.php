@@ -19,6 +19,13 @@ use App\Services\Server\Databases\DatabaseManager;
  */
 class SiteTypeManager
 {
+    /**
+     * Engine name => can this server serve an application from it.
+     *
+     * @var array<string, bool>
+     */
+    private array $usableEngines = [];
+
     public function __construct(
         private ServerCapabilities $capabilities,
         private InstallerManager $installers,
@@ -90,6 +97,18 @@ class SiteTypeManager
                 'method' => $type->method(),
                 'serving_profile' => $profile,
                 'needs_database' => $type->needsDatabase(),
+                // Which engines, not just whether. `needs_database` alone left
+                // the frontend inferring the list from the type's name, which
+                // was right only by coincidence — there happen to be two engine
+                // lists in the whole catalog today, and the first application
+                // accepting both MongoDB and MySQL would have made that
+                // inference silently wrong. An API that makes a client guess
+                // something it already holds is the API's bug.
+                //
+                // Empty when the type needs no database, so "no constraint" and
+                // "no database" are the same value rather than a null to
+                // special-case.
+                'accepted_engines' => $this->acceptedEngines($type),
                 'available' => $available,
                 'unavailable_reason' => $blocked['reason'] ?? null,
                 // The same block as a stable value: 'runtime' | 'database' |
@@ -186,35 +205,33 @@ class SiteTypeManager
      * The engines this type needs and this server hasn't got, as a readable
      * list — or null when it needs none, or has one.
      *
-     * Only asked of applications that need something **other** than the usual
-     * MySQL/MariaDB. NodeBB is why: it takes MongoDB alone, so on a MySQL-only
-     * server it has to be greyed rather than offered and then failed with a
-     * message telling the user to install MySQL.
+     * **Asked of every type that needs a database.** It used to return early
+     * for anything accepting MySQL or MariaDB, which is nearly the whole
+     * catalog, so only NodeBB — MongoDB alone — was ever checked. On a
+     * MongoDB-only server every SQL-backed type reported itself available,
+     * took a filled-in form, and failed at provisioning.
      *
-     * The ordinary case is deliberately left alone. An application that wants
-     * MySQL on a server with no database engine already fails at
-     * `create_database` with an accurate message, before anything is
-     * downloaded — and greying ten cards on a server whose engine simply is
-     * not up yet would hide the catalog rather than explain it.
+     * That early return was argued for, and the argument is worth answering
+     * rather than deleting silently. It said greying ten cards on a server
+     * whose engine "is simply not up yet" would hide the catalog rather than
+     * explain it, and that `create_database` would fail with an accurate
+     * message anyway. Both were reasonable when the alternative was a card
+     * that vanished with no explanation. Neither survives the case that
+     * actually bites: an engine that is up, healthy, and permanently unable to
+     * serve this application. No amount of waiting fixes MongoDB for
+     * WordPress, and an accurate message at `create_database` arrives after
+     * the user has filled in the form.
      */
     private function missingEngines(SiteType $type): ?string
     {
-        $installer = $this->installers->installerForType($type->name());
+        $accepted = $this->acceptedEngines($type);
 
-        if ($installer === null || ! $installer->needsDatabase()) {
+        if ($accepted === []) {
             return null;
         }
-
-        $accepted = $installer->acceptedEngines();
-
-        if (array_intersect($accepted, ['mysql', 'mariadb']) !== []) {
-            return null;
-        }
-
-        $installed = $this->databases->engineNames();
 
         foreach ($accepted as $engine) {
-            if (in_array($engine, $installed, true) && $this->databases->engine($engine)->available()) {
+            if ($this->engineUsable($engine)) {
                 return null;
             }
         }
@@ -223,6 +240,55 @@ class SiteTypeManager
             fn (string $engine) => (string) config("server.databases.engines.{$engine}.label", $engine),
             $accepted,
         ));
+    }
+
+    /**
+     * The database engines this type can be installed against.
+     *
+     * Empty for a type that needs no database and for one with no installer —
+     * a custom PHP site brings its own arrangements, and the panel has no list
+     * to offer for it. Read from the installer rather than the SiteType because
+     * the installer is what provisioning asks, so the catalog cannot advertise
+     * a pairing that creating would refuse.
+     *
+     * @return list<string>
+     */
+    private function acceptedEngines(SiteType $type): array
+    {
+        $installer = $this->installers->installerForType($type->name());
+
+        if ($installer === null || ! $installer->needsDatabase()) {
+            return [];
+        }
+
+        return array_values($installer->acceptedEngines());
+    }
+
+    /**
+     * Can this server actually serve an application from `$engine`?
+     *
+     * Memoized for the life of the request, and that is not an optimisation —
+     * it is what makes the check above affordable. `available()` is a live
+     * `SELECT 1` through `sudo`, and the catalog asks this once per type: the
+     * check that used to run for one type now runs for eleven, which without
+     * this would be dozens of subprocesses on a page that renders a grid of
+     * cards.
+     *
+     * ⚠️ `available()` answers "did the query succeed", so an engine that is
+     * absent, stopped, or one the panel is not permitted to ask are all `false`
+     * here. That is right for this question — none of the three can serve an
+     * application right now — but it means a broken sudo grant greys the whole
+     * catalog. The three states the card grid distinguishes come from
+     * `DatabaseManager::capabilities()`, which separates them properly.
+     */
+    private function engineUsable(string $engine): bool
+    {
+        if (! array_key_exists($engine, $this->usableEngines)) {
+            $this->usableEngines[$engine] = in_array($engine, $this->databases->engineNames(), true)
+                && $this->databases->engine($engine)->available();
+        }
+
+        return $this->usableEngines[$engine];
     }
 
     /**

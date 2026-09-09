@@ -22,6 +22,10 @@ use Illuminate\Support\Facades\Queue;
  * Statamic `storage/` with every page's content in it.
  */
 beforeEach(function () {
+    // An ordinary server: the catalog now refuses a database-backed type
+    // when no engine answers, and these fixtures faked nothing at all.
+    fakeUsableSqlEngine();
+
     $this->seed(PermissionSeeder::class);
     $this->admin = User::factory()->admin()->create();
 

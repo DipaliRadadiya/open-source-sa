@@ -72,6 +72,26 @@ function fakeDatabaseAnswer(mixed $process): ?FakeProcessResult
 }
 
 /**
+ * Answer as a server whose SQL engine is reachable.
+ *
+ * The catalog asks `available()` — a live query — before offering any type
+ * that needs a database, and the create endpoint refuses one that is blocked.
+ * A fixture that fakes nothing is therefore a claim about a server with no
+ * database engine at all, on which creating WordPress is correctly refused.
+ * Most tests do not mean to make that claim; they mean "an ordinary server".
+ *
+ * Everything else *fails*, which is the important half. Falling through to an
+ * empty success turns "this command could not be run" into "it ran and printed
+ * nothing" — two different servers, and the second is one that cannot exist. A
+ * config reader then sees a file that is present and empty rather than absent,
+ * and fails somewhere far away from the fake that caused it.
+ */
+function fakeUsableSqlEngine(): void
+{
+    Process::fake(fn (mixed $process) => fakeDatabaseAnswer($process) ?? Process::result(exitCode: 1));
+}
+
+/**
  * Grant a permission to a user via a one-off role (permissions are role-based
  * only — there are no direct per-user grants). Creates a role holding the
  * given permission with the requested abilities and assigns it to the user.

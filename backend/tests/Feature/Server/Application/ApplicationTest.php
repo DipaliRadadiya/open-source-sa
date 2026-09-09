@@ -26,6 +26,12 @@ beforeEach(function () {
 /** A server that can run everything, so tests aren't at the mercy of the host. */
 function capableServer(bool $php = true, bool $node = true): ServerCapability
 {
+    // A capable server has a database engine too. The catalog now refuses a
+    // type whose engine does not answer, so a fixture that describes the
+    // runtimes and nothing else was claiming a box on which WordPress cannot
+    // be created — which is true, and not what these tests mean.
+    fakeUsableSqlEngine();
+
     return ServerCapability::create([
         'stack' => $php && ! $node ? 'lemp' : 'mern',
         'web_server' => 'nginx',

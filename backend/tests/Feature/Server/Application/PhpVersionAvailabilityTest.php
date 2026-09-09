@@ -26,6 +26,10 @@ use Illuminate\Testing\TestResponse;
  * because its "installed versions" come from a directory this test can build.
  */
 beforeEach(function () {
+    // An ordinary server: the catalog now refuses a database-backed type
+    // when no engine answers, and these fixtures faked nothing at all.
+    fakeUsableSqlEngine();
+
     $this->seed(PermissionSeeder::class);
     $this->admin = User::factory()->admin()->create();
     $this->token = $this->admin->createToken('t')->plainTextToken;
