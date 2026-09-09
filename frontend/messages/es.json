@@ -4878,7 +4878,8 @@
       "testFailed": "Guardado, pero la prueba de conexión falló. Revisa las claves y el bucket.",
       "accessKeyPlaceholder": "Desde la página de claves API de tu proveedor",
       "secretKeyPlaceholder": "Solo se muestra al crear la clave",
-      "permissionsNote": "La clave necesita permiso para subir, descargar y eliminar objetos en este bucket. Eliminar también importa: las copias antiguas se borran cuando superan el límite de retención que definas."
+      "permissionsNote": "La clave necesita permiso para subir, descargar y eliminar objetos en este bucket. Eliminar también importa: las copias antiguas se borran cuando superan el límite de retención que definas.",
+      "keyDocs": "¿Dónde encuentro estas claves?"
     },
     "edit": {
       "title": "Editar destino",

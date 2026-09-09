@@ -3,11 +3,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { HardDrive, Loader2 } from "lucide-react";
+import { ExternalLink, HardDrive, Loader2 } from "lucide-react";
 import { createStorageDestinationSchema } from "@/lib/schemas/storage";
 import { createRequirements } from "@/lib/storage/requirements";
 import { createDestination } from "@/lib/api/storage";
 import { probeDestination } from "@/lib/storage/probe";
+import { keyDocsUrl } from "@/lib/storage/provider-from-endpoint";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
   // The provider is a form field rather than local state so the schema can see
   // it: which of endpoint and region is required depends on it.
   const provider = useWatch({ control: form.control, name: "provider" });
+  const keyDocs = keyDocsUrl(provider);
 
   function handleProviderChange(next) {
     form.setValue("provider", next);
@@ -139,6 +141,22 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
         <div className="rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
           {t("permissionsNote")}
         </div>
+
+        {/* Where these come from, for the provider actually chosen. Every
+            service calls them something else — an API token at Cloudflare, an
+            Application Key at Backblaze — so "paste your access key" sends a
+            first-time user hunting a console for a phrase that is not there. */}
+        {keyDocs ? (
+          <a
+            href={keyDocs}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {t("keyDocs")}
+            <ExternalLink className="size-3" />
+          </a>
+        ) : null}
 
         <div className="space-y-4">
           <FormField

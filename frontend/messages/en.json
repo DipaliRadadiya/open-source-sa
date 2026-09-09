@@ -4878,7 +4878,8 @@
       "testFailed": "Saved, but the connection test failed. Check the keys and bucket.",
       "accessKeyPlaceholder": "From your provider's API keys page",
       "secretKeyPlaceholder": "Shown only when the key was created",
-      "permissionsNote": "The key needs permission to upload, download and delete objects in this bucket. Delete matters too — backups remove old archives once they pass the retention limit you set."
+      "permissionsNote": "The key needs permission to upload, download and delete objects in this bucket. Delete matters too — backups remove old archives once they pass the retention limit you set.",
+      "keyDocs": "Where do I find these keys?"
     },
     "edit": {
       "title": "Edit destination",

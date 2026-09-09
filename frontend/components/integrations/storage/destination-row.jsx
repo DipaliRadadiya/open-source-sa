@@ -13,6 +13,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { providerFromEndpoint } from "@/lib/storage/provider-from-endpoint";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ActionIcon } from "@/components/ui/action-icon";
@@ -71,6 +72,8 @@ export function DestinationRow({
     </>
   );
 
+  const provider = providerFromEndpoint(destination.endpoint);
+
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <div className="flex flex-wrap items-start gap-3 py-3.5">
@@ -81,6 +84,16 @@ export function DestinationRow({
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="min-w-0 font-medium break-all">{destination.name}</span>
+              {/* Which service this actually is, read from the endpoint. The
+                  API only stores `driver: s3` and the name someone typed, so a
+                  Backblaze bucket could sit here labelled nothing but
+                  "S3-compatible". An endpoint we do not recognise says nothing
+                  rather than guessing. */}
+              {provider ? (
+                <Badge variant="outline" className="font-normal">
+                  {t(`providers.${provider}`)}
+                </Badge>
+              ) : null}
               {/* Not "verified" — only that both secret columns are populated.
                   Whether they WORK is what Test answers. */}
               {destination.has_credentials ? (
