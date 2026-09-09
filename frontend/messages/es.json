@@ -1874,7 +1874,9 @@
       "driftPartial": "Activa solo para algunos usos",
       "builtinTitle": "Incluidas en PHP ({count})",
       "builtinBody": "Vienen compiladas y siempre están disponibles. No hay nada que activar, y PHP no puede funcionar sin ellas.",
-      "noMatchesBuiltin": "{name} viene incluida en PHP: siempre está disponible. Mira la lista de abajo."
+      "noMatchesBuiltin": "{name} viene incluida en PHP: siempre está disponible. Mira la lista de abajo.",
+      "enabling": "Activando…",
+      "disabling": "Desactivando…"
     },
     "install": {
       "action": "Instalar versión",

@@ -59,6 +59,10 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  // Which extension is mid-request AND which way it is going, so the row can
+  // say "Enabling…" rather than only spinning. A bare name could not tell the
+  // two apart, and "something is happening here" is the weaker half of the
+  // answer.
   const [pending, setPending] = useState(null);
 
   // Two lists, not one. A real server reports 96 extensions of which 16 are
@@ -102,7 +106,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
 
   async function toggle(extension) {
     const next = !extension.enabled;
-    setPending(extension.name);
+    setPending({ name: extension.name, on: next });
     try {
       const response = await setPhpExtension(version, extension.name, next);
       // 202 means apt is queued — minutes, not milliseconds — so the message
@@ -268,21 +272,29 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
                             responding without saying anything reads as broken,
                             which is exactly when someone clicks it again. */}
                         <span className="flex items-center justify-end gap-2">
-                          {pending === extension.name ? (
-                            <Loader2
-                              className="size-3.5 shrink-0 animate-spin text-muted-foreground"
-                              aria-hidden
-                            />
+                          {pending?.name === extension.name ? (
+                            <span className="flex min-w-0 items-center gap-1.5 text-xs text-foreground">
+                              <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                              {/* The word, not only the glyph. A muted 14px
+                                  spinner tucked against the switch reads as part
+                                  of the switch: it was reported as "no loading
+                                  indicator" while it was on screen. Hidden on a
+                                  phone, where the whole column is 96px and the
+                                  spinner has to carry it alone. */}
+                              <span className="hidden truncate sm:inline">
+                                {pending.on ? t("extensions.enabling") : t("extensions.disabling")}
+                              </span>
+                            </span>
                           ) : null}
                           <ReasonTooltip reason={reason}>
                             <Switch
                               checked={extension.enabled}
                               onCheckedChange={() => toggle(extension)}
-                              disabled={Boolean(reason) || pending === extension.name}
+                              disabled={Boolean(reason) || pending?.name === extension.name}
                               aria-label={t("extensions.toggle", { name: extension.name })}
                               // Screen readers get the same news the spinner
                               // gives everyone else.
-                              aria-busy={pending === extension.name || undefined}
+                              aria-busy={pending?.name === extension.name || undefined}
                             />
                           </ReasonTooltip>
                         </span>

@@ -1874,7 +1874,9 @@
       "driftPartial": "On for some uses only",
       "builtinTitle": "Built into PHP ({count})",
       "builtinBody": "Compiled in and always available. There is nothing to switch, and PHP cannot run without them.",
-      "noMatchesBuiltin": "{name} is built into PHP — it is always available. See the list below."
+      "noMatchesBuiltin": "{name} is built into PHP — it is always available. See the list below.",
+      "enabling": "Enabling…",
+      "disabling": "Disabling…"
     },
     "install": {
       "action": "Install version",
