@@ -21,6 +21,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  * so the card reports the last successful deploy, not "broken".
  */
 export function SourceCard({ application, gitAccounts = [], canDeploy = false, className }) {
+  /*
+   * Which provider this site deploys from.
+   *
+   * The application payload carries `git_account_id` and nothing else, so the
+   * card could only say "From Git Repo" — true of GitHub, GitLab and Bitbucket
+   * alike, and therefore of no use to anyone looking at it. The account knows,
+   * and the accounts list is a cached DB read.
+   *
+   * Nothing is shown when the account is gone: `git_account_missing` already
+   * has its own banner below, and a provider badge over it would be naming a
+   * connection that no longer exists.
+   */
+  const account = gitAccounts.find((a) => a.id === application.git_account_id) ?? null;
+  const providerTitle = application.git_account_missing ? null : account?.provider_title;
   const t = useTranslations("applications.source");
   const router = useRouter();
   const [deploying, setDeploying] = useState(false);
@@ -62,6 +76,13 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
           <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
             <GitBranch className="size-4 text-primary" />
             {t("title")}
+            {/* The provider, where it is known. "From Git Repo" is equally true
+                of GitHub, GitLab and Bitbucket, so it answered nothing. */}
+            {providerTitle ? (
+              <Badge variant="outline" className="font-normal">
+                {providerTitle}
+              </Badge>
+            ) : null}
           </CardTitle>
           <CardDescription>{t("description")}</CardDescription>
           {/* Under the subtitle, with the other cards' badges. It states a fact

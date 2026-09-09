@@ -72,12 +72,18 @@ export default async function ApplicationDetailPage({ params }) {
   // it is still being built, saying anything about them would be invention.
   const settled = application.status === "active";
 
-  // Only when the site has lost its account: this is the list the repair
-  // dialog picks from, and fetching it for every healthy site would be a
-  // request per page view for a dialog nobody opens.
-  const gitAccounts = application.git_account_missing
-    ? await getGitAccounts().then((r) => r.data?.git_accounts ?? []).catch(() => [])
-    : [];
+  // For any git-linked site, not only a broken one. It feeds two things: the
+  // repair dialog's list, and the provider name on the source card — the
+  // application payload carries `git_account_id` and no provider, so this is
+  // the only way to say "GitHub" rather than "From Git Repo". It stays off
+  // non-git sites, and the read is `cache()`d and hits no provider API.
+  const gitAccounts =
+    application.git_account_missing || application.git_account_id
+      // `.accounts`, not `.data.git_accounts`: the fetcher already unwraps the
+      // envelope, so the old path was always undefined and this list was
+      // always empty — the relink dialog has never had an account to offer.
+      ? await getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
+      : [];
 
   // Databases are a SERVER-level permission: a site-level reader may hold none,
   // and asking would be a 403 on a page that otherwise works.
