@@ -5114,6 +5114,7 @@
         "site": "Sitio",
         "status": "Estado",
         "type": "Tipo de copia",
+        "destination": "Destino",
         "when": "Cuándo",
         "size": "Tamaño",
         "actions": "Acciones"

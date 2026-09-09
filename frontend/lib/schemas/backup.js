@@ -78,6 +78,19 @@ export const backupSchema = z
     reason: z.string().nullish(),
     reason_title: z.string().nullish(),
     size_bytes: z.number().nullish(),
+    // Where this archive actually went. A target's destination is editable, so
+    // the site's CURRENT setting does not say where an older archive was
+    // written — which is exactly the question the history screen gets asked,
+    // and pointing someone at the wrong bucket mid-restore is the failure.
+    //
+    // Absent, not null, on an API that predates it: the backend sends it only
+    // when the relation was eager-loaded, deliberately, so a caller can tell
+    // "no destination" from "not asked for". The column reads that difference
+    // rather than rendering a blank that looks like data.
+    storage_destination_name: z.string().nullish(),
+    // Sent on the server-wide history, where a row has to name its own site.
+    application_name: z.string().nullish(),
+    application_domain: z.string().nullish(),
     reference: z.string().nullish(),
     started_at: z.string().nullish(),
     finished_at: z.string().nullish(),

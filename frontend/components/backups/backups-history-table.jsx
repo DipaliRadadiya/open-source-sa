@@ -94,6 +94,31 @@ function TypeCell({ row }) {
   );
 }
 
+/**
+ * Where the archive was written.
+ *
+ * Read from the backup's OWN target, not the site's current one — the setting
+ * is editable, so an archive from last month may well sit somewhere the site
+ * no longer points at. Naming today's destination against an old row would
+ * send someone to the wrong bucket at exactly the wrong moment.
+ */
+function DestinationCell({ row }) {
+  const name = row.original.storage_destination_name;
+  if (!name) return <span className="text-sm text-muted-foreground">—</span>;
+  /*
+   * The column flexes rather than holding a fixed width — pinning it gave the
+   * table a 1244px floor and overflowed its container by 270px at 1024 — so a
+   * long destination name is truncated on a laptop and full on a wide screen.
+   * `title` rather than a Tooltip: this column only renders from xl up, which
+   * is a pointer, and a native title needs no provider around a table cell.
+   */
+  return (
+    <span className="block truncate text-sm" title={name}>
+      {name}
+    </span>
+  );
+}
+
 function WhenCell({ row }) {
   const backup = row.original;
   const duration = apiDuration(backup.started_at, backup.finished_at);
@@ -298,6 +323,12 @@ export function BackupsHistoryTable({
   // than the ones that were ticked.
   const selected = backups.filter((backup) => selection[String(backup.id)]);
   const [confirming, setConfirming] = useState(false);
+  // One row carrying it is enough: the API either loads the relation for the
+  // whole page or for none of it, and a row whose destination is genuinely
+  // null still deserves the column that explains the dash.
+  const showDestination = backups.some(
+    (backup) => backup.storage_destination_name !== undefined,
+  );
 
   const columns = [
     canDelete
@@ -318,6 +349,25 @@ export function BackupsHistoryTable({
       : null,
     { accessorKey: "status", header: t("columns.status"), meta: { className: "w-52" }, cell: StatusCell },
     { id: "type", header: t("columns.type"), meta: { className: showSite ? "w-44" : "min-w-44" }, cell: TypeCell },
+    // Only when the API actually sends it. The field is absent rather than null
+    // on a backend that predates it — the backend distinguishes the two on
+    // purpose — and an always-empty column reads as data we failed to load
+    // rather than a version we are not talking to.
+    showDestination
+      ? {
+          id: "destination",
+          header: t("columns.destination"),
+          // Hidden below xl, and the breakpoint is measured rather than
+          // chosen. The table renders from lg up, and at lg its columns
+          // already use every pixel — adding this one forced a 1244px floor,
+          // so the table overflowed its own container by 270px at 1024 and
+          // 142px at 1152. Sideways scrolling to reach Actions is a worse
+          // trade than reading the destination one screen size later; the
+          // phone cards carry it below lg regardless.
+          meta: { className: "hidden max-w-40 xl:table-cell" },
+          cell: DestinationCell,
+        }
+      : null,
     { id: "when", header: t("columns.when"), meta: { className: "w-36" }, cell: WhenCell },
     {
       id: "size",

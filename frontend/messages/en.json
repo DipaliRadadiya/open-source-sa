@@ -5114,6 +5114,7 @@
         "site": "Site",
         "status": "Status",
         "type": "Backup type",
+        "destination": "Destination",
         "when": "When",
         "size": "Size",
         "actions": "Actions"

@@ -83,6 +83,15 @@ export function BackupsCards({
                 label={t("columns.size")}
                 value={backup.size_bytes ? formatBytes(backup.size_bytes, format) : sizeNote(backup, t)}
               />
+              {/* Only when the API sends it — absent means a backend that does
+                  not report it yet, and an empty fact reads as a failure to
+                  load rather than a version difference. */}
+              {backup.storage_destination_name !== undefined ? (
+                <CardFact
+                  label={t("columns.destination")}
+                  value={backup.storage_destination_name ?? "—"}
+                />
+              ) : null}
             </CardFacts>
 
             {backup.status === "failed" ? (
