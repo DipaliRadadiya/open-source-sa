@@ -16,6 +16,20 @@ class BackupResource extends JsonResource
             'application_id' => $this->application_id,
             'application_name' => $this->resource->application?->name,
             'application_domain' => $this->resource->application?->domain,
+            // Where this archive actually went. Two backups of one site can
+            // sit on different destinations — the target's destination is
+            // editable, so the current setting does not say where an older
+            // archive was written, and the history is the one screen where
+            // that question gets asked.
+            //
+            // `whenLoaded` through the target: absent rather than null when
+            // the relation was not eager-loaded, so a caller can tell "no
+            // destination" from "not asked for" instead of rendering a blank
+            // column that looks like data.
+            'storage_destination_name' => $this->whenLoaded(
+                'target',
+                fn (): ?string => $this->resource->target?->storageDestination?->name,
+            ),
             'type' => $this->type->value,
             // Taken automatically just before a restore overwrote the site.
             // Worth marking in the list: it is the one entry someone scanning

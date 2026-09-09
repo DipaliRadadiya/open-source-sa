@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Server\Backups\Storage\DestinationDisk;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
@@ -45,6 +46,35 @@ beforeEach(function () {
 function backupHeaders(): array
 {
     return ['Authorization' => 'Bearer '.test()->token];
+}
+
+/**
+ * A finished backup on a named destination.
+ *
+ * Reuses the fixture's application and one target per call is impossible —
+ * `backup_targets` is unique on `application_id` — so the target is made once
+ * and every backup hangs off it, which is also how a real history looks.
+ */
+function seedBackupWithDestination(string $destination): Backup
+{
+    $target = BackupTarget::firstOrCreate(
+        ['application_id' => test()->application->id],
+        [
+            'storage_destination_id' => StorageDestination::firstWhere('name', $destination)->id,
+            'type' => 'full',
+            'retention_count' => 7,
+            'frequency' => 'daily',
+            'enabled' => true,
+        ],
+    );
+
+    return Backup::create([
+        'backup_target_id' => $target->id,
+        'application_id' => test()->application->id,
+        'type' => 'full',
+        'status' => BackupStatus::Verified->value,
+        'manifest' => ['key' => 'shop/'.uniqid().'.tar.gz'],
+    ]);
 }
 
 function targetPayload(array $overrides = []): array
@@ -706,5 +736,63 @@ describe('deleting backups in bulk', function () {
             ->assertForbidden();
 
         expect(Backup::find($backup->id))->not->toBeNull();
+    });
+});
+
+describe('the destination on a backup row', function () {
+    it('names where the archive went', function () {
+        $backup = seedBackupWithDestination('Offsite');
+
+        $row = collect($this->withHeaders(backupHeaders())
+            ->getJson('/api/backups')->assertOk()->json('backups'))
+            ->firstWhere('id', $backup->id);
+
+        expect($row['storage_destination_name'])->toBe('Offsite');
+    });
+
+    it('says the same thing when a single backup is polled', function () {
+        // The history row and the polled row are the same row. One dropping
+        // the column on refresh would blank a cell the user is watching.
+        $backup = seedBackupWithDestination('Offsite');
+
+        $this->withHeaders(backupHeaders())
+            ->getJson("/api/backups/{$backup->id}")
+            ->assertOk()
+            ->assertJsonPath('backup.storage_destination_name', 'Offsite');
+    });
+
+    it('does not ask the database once per row for it', function () {
+        // The destination comes through the target, so without the eager load
+        // a page of twenty backups is forty extra queries.
+        seedBackupWithDestination('Offsite');
+
+        $count = function (): int {
+            DB::flushQueryLog();
+            test()->withHeaders(backupHeaders())->getJson('/api/backups?per_page=20')->assertOk();
+
+            return count(DB::getQueryLog());
+        };
+
+        DB::enableQueryLog();
+
+        // Warm-up: the first request of a test pays for things a later one
+        // does not, and measuring it against a later one reads as five rows
+        // being *cheaper* than one.
+        $count();
+
+        $one = $count();
+
+        foreach (range(1, 4) as $i) {
+            seedBackupWithDestination('Offsite');
+        }
+
+        $five = $count();
+        DB::disableQueryLog();
+
+        // One page against five, rather than an absolute number: the total
+        // includes auth and the per-status counts, which is noise that would
+        // make this fail for unrelated reasons. What matters is that a row
+        // costs nothing extra.
+        expect($five)->toBe($one);
     });
 });

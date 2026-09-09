@@ -42,7 +42,12 @@ class BackupController extends Controller
         $filter = $request->validated('filter', []);
 
         $backups = Backup::query()
-            ->with('application:id,name,domain')
+            // The destination comes through the target, and this list is
+            // paginated: without it here every row asks for its own target and
+            // its own destination, which is forty extra queries on a page of
+            // twenty. `whenLoaded` in the resource is what makes the field
+            // appear, so the two have to move together.
+            ->with(['application:id,name,domain', 'target.storageDestination:id,name'])
             ->when($filter['application_id'] ?? null, fn ($query, $id) => $query->where('application_id', $id))
             ->when($filter['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filter['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
@@ -346,8 +351,11 @@ class BackupController extends Controller
     /** Poll one backup while it runs. */
     public function show(Backup $backup): JsonResponse
     {
+        // Loaded so this row carries the same fields as a row from the list.
+        // A polled backup that drops `storage_destination_name` on refresh
+        // would blank a column the user is watching.
         return response()->json([
-            'backup' => BackupResource::make($backup)->resolve(),
+            'backup' => BackupResource::make($backup->load('target.storageDestination:id,name'))->resolve(),
         ]);
     }
 
