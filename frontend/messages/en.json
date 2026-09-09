@@ -4278,7 +4278,8 @@
         "autoPrepend": "A path inside this site. Leave empty unless you were told otherwise.",
         "directives": "One per line, like a php.ini file. Anything here wins over the fields above.",
         "openBasedir": "Stops PHP reading or writing files outside this site's folder.",
-        "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home."
+        "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home.",
+        "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. A site set up earlier picks this up the first time you save."
       },
       "pmTypes": {
         "ondemand": "On demand",

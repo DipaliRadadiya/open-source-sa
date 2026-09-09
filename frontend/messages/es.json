@@ -4278,7 +4278,8 @@
         "autoPrepend": "Una ruta dentro de este sitio. Déjalo vacío salvo que te hayan indicado otra cosa.",
         "directives": "Uno por línea, como un php.ini. Lo de aquí manda sobre los campos de arriba.",
         "openBasedir": "Impide que PHP lea o escriba archivos fuera de la carpeta de este sitio.",
-        "allowUrlFopen": "Permite que PHP descargue URLs remotas. Desactivarlo bloquea una vía habitual del malware para comunicarse."
+        "allowUrlFopen": "Permite que PHP descargue URLs remotas. Desactivarlo bloquea una vía habitual del malware para comunicarse.",
+        "upload": "También sube el límite del propio servidor web, que rechaza las subidas grandes antes de que PHP las vea. Un sitio creado antes lo aplica la primera vez que guardas."
       },
       "pmTypes": {
         "ondemand": "Bajo demanda",

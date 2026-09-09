@@ -621,6 +621,14 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
                   name="upload_max_filesize"
                   directive="upload_max_filesize + post_max_size"
                   error={postTooSmall ? t("hints.postTooSmall") : null}
+                  /* Saving this now rewrites the site's web server config too,
+                     as of the backend change on 2026-09-08 — nginx refuses a
+                     large upload with 413 before PHP ever sees it, so until
+                     then raising these two did nothing at all and every nginx
+                     site was stuck on the built-in 1 MB. Worth saying, because
+                     a site set up before that carries the old limit until its
+                     vhost is next written, and saving here is what writes it. */
+                  hint={t("hints.upload")}
                 >
                   <ValueSelect
                     form={form}
@@ -1130,12 +1138,19 @@ function formatBytes(bytes) {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 }
 
-function Stack({ label, name, directive, error, children }) {
+function Stack({ label, name, directive, error, hint, children }) {
   return (
     <FormItem>
       <Label label={label} name={name} directive={directive} />
       {children}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {/* The error replaces the hint rather than stacking under it: two lines
+          of small grey-and-red text below one control is where people stop
+          reading. */}
+      {error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : hint ? (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      ) : null}
     </FormItem>
   );
 }
