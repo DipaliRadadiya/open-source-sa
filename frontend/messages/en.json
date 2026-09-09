@@ -4585,6 +4585,23 @@
       "missing": "Needs {engines}. Not installed on this server.",
       "stopped": "Needs {engines}. It is installed, but the panel cannot connect to it.",
       "installing": "Needs {engines}. The installation is still running."
+    },
+    "pause": {
+      "action": "Pause site",
+      "resume": "Resume site",
+      "resuming": "Resuming…",
+      "pausing": "Pausing…",
+      "confirm": "Pause site",
+      "cancel": "Cancel",
+      "title": "Pause {name}?",
+      "description": "Visitors will see a short page saying the site is temporarily unavailable, until you resume it.",
+      "keeps": "Nothing is deleted. Files, database, backups, cron jobs and certificates all stay exactly as they are.",
+      "reversible": "You can resume it at any time from this same menu.",
+      "seo": "Search engines see an ordinary page rather than a \"try again later\" response, so a site left paused for a long time can lose ranking. Fine for an hour, worth knowing for a month.",
+      "paused": "{name} is paused.",
+      "resumed": "{name} is back online.",
+      "failed": "We couldn't pause the site.",
+      "resumeFailed": "We couldn't resume the site."
     }
   },
   "panelUpdate": {

@@ -40,6 +40,26 @@ export function measureApplicationSize(id) {
   return api.post(`/applications/${id}/directory-size`);
 }
 
+/**
+ * Turn a site's visitors away without taking anything apart.
+ *
+ * The web server config is pointed at a small holding page and reloaded. Files,
+ * database, backups, cron jobs and certificates are all left alone, and
+ * `enableApplication` puts the real config back. Throttled 10/min server-side,
+ * because each call reloads the web server.
+ *
+ * Both 422 when the site is already in the state being asked for — which is
+ * what happens when someone else did it in another tab, not an error worth a
+ * red toast on its own. Callers show the API's own sentence and re-read.
+ */
+export function disableApplication(id) {
+  return api.post(`/applications/${id}/disable`);
+}
+
+export function enableApplication(id) {
+  return api.post(`/applications/${id}/enable`);
+}
+
 export function retryProvisioning(id) {
   return api.post(`/applications/${id}/provision`);
 }

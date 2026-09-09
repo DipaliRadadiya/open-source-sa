@@ -14,11 +14,14 @@ import {
   LayoutDashboard,
   Loader2,
   MoreHorizontal,
+  PauseCircle,
   Pencil,
+  PlayCircle,
   RotateCw,
   Trash2,
 } from "lucide-react";
-import { retryProvisioning } from "@/lib/api/applications";
+import { enableApplication, retryProvisioning } from "@/lib/api/applications";
+import { pauseControl } from "@/lib/applications/pause-control";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
+import { PauseApplicationDialog } from "@/components/applications/pause-application-dialog";
 import { WebRootDialog } from "@/components/applications/web-root-dialog";
 
 /**
@@ -74,14 +78,34 @@ export function ApplicationRowActions({
   const [retrying, setRetrying] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [webRootOpen, setWebRootOpen] = useState(false);
+  const [pauseOpen, setPauseOpen] = useState(false);
+  const [resuming, setResuming] = useState(false);
 
   const href = `/applications/${application.id}`;
   const canVisit = application.status === "active";
   const canRetry = application.status === "failed";
   const showRetry = canManage && canRetry;
+  const pauseAction = pauseControl(application, { canManage });
 
   // Nothing to offer (view-only, on the detail page) → no empty ⋯ trigger.
   if (!showNavigation && !showRetry && !canManage && shortcuts.length === 0) return null;
+
+  // No dialog: putting a site back is what the reader already decided when
+  // they pressed it, and there is nothing to warn about in restoring service.
+  async function resume() {
+    setResuming(true);
+    try {
+      await enableApplication(application.id);
+      toast.success(t("pause.resumed", { name: application.name }));
+      router.refresh();
+    } catch (error) {
+      // Includes the 422 for a site somebody already resumed elsewhere; the
+      // API's sentence says that better than a generic failure would.
+      toast.error(apiMessage(error, t("pause.resumeFailed")));
+    } finally {
+      setResuming(false);
+    }
+  }
 
   async function retry() {
     setRetrying(true);
@@ -192,6 +216,35 @@ export function ApplicationRowActions({
           {canManage ? (
             <>
               {showNavigation || showRetry ? <DropdownMenuSeparator /> : null}
+              {/* Above Delete and outside the destructive group: pausing is
+                  reversible in one click and must not read like the row that
+                  ends the site. Which control appears is decided in
+                  `pauseControl` — see there for why the paused check comes
+                  first and why a provisioning site is offered neither. */}
+              {pauseAction === "resume" ? (
+                <DropdownMenuItem
+                  disabled={resuming}
+                  onSelect={(event) => {
+                    // Held open so the item can say "Resuming…" itself; Radix
+                    // would otherwise close the menu and leave the trigger as
+                    // the only sign anything is happening.
+                    event.preventDefault();
+                    resume();
+                  }}
+                >
+                  {resuming ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <PlayCircle className="size-4" />
+                  )}
+                  {resuming ? t("pause.resuming") : t("pause.resume")}
+                </DropdownMenuItem>
+              ) : pauseAction === "pause" ? (
+                <DropdownMenuItem onSelect={() => setPauseOpen(true)}>
+                  <PauseCircle className="size-4" />
+                  {t("pause.action")}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
                 <Trash2 className="size-4" />
                 {t("actions.delete")}
@@ -205,6 +258,12 @@ export function ApplicationRowActions({
         application={application}
         open={webRootOpen}
         onOpenChange={setWebRootOpen}
+      />
+
+      <PauseApplicationDialog
+        application={application}
+        open={pauseOpen}
+        onOpenChange={setPauseOpen}
       />
 
       <DeleteApplicationDialog

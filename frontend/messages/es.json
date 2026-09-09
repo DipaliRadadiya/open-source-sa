@@ -4585,6 +4585,23 @@
       "missing": "Necesita {engines}. No está instalado en este servidor.",
       "stopped": "Necesita {engines}. Está instalado, pero el panel no puede conectarse.",
       "installing": "Necesita {engines}. La instalación aún está en curso."
+    },
+    "pause": {
+      "action": "Pausar sitio",
+      "resume": "Reanudar sitio",
+      "resuming": "Reanudando…",
+      "pausing": "Pausando…",
+      "confirm": "Pausar sitio",
+      "cancel": "Cancelar",
+      "title": "¿Pausar {name}?",
+      "description": "Los visitantes verán una página breve que indica que el sitio no está disponible temporalmente, hasta que lo reanudes.",
+      "keeps": "No se elimina nada. Los archivos, la base de datos, las copias de seguridad, las tareas cron y los certificados se mantienen tal cual.",
+      "reversible": "Puedes reanudarlo cuando quieras desde este mismo menú.",
+      "seo": "Los buscadores ven una página normal en lugar de una respuesta de \"inténtalo más tarde\", así que un sitio pausado durante mucho tiempo puede perder posiciones. No pasa nada por una hora; conviene saberlo si va a ser un mes.",
+      "paused": "{name} está en pausa.",
+      "resumed": "{name} vuelve a estar en línea.",
+      "failed": "No pudimos pausar el sitio.",
+      "resumeFailed": "No pudimos reanudar el sitio."
     }
   },
   "panelUpdate": {
