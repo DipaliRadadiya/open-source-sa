@@ -215,6 +215,18 @@ export function ScheduleCard({ schedule, categories, canManage }) {
             <Switch id="cleaner-enabled" checked={enabled} onCheckedChange={setEnabled} />
           </div>
 
+          {/* Said out loud, not only on hover.
+              Every control below this switch is disabled while it is off, and
+              the reason lived in a tooltip — so the dialog looked broken: you
+              click the frequency, the checkboxes, nothing responds, and nothing
+              on screen says why. Radix tooltips never open on touch either, so
+              on a phone that explanation could not be reached at all. */}
+          {!enabled ? (
+            <p className="-mt-3 text-xs text-muted-foreground">
+              {t("schedule.turnOnFirst")}
+            </p>
+          ) : null}
+
           <div className={cn("grid gap-4 sm:grid-cols-2", !enabled && "opacity-50")}>
             <div className="space-y-2">
               <Label htmlFor="cleaner-frequency">{t("schedule.howOften")}</Label>
@@ -265,7 +277,15 @@ export function ScheduleCard({ schedule, categories, canManage }) {
           </div>
 
           <div className={cn("space-y-2", !enabled && "opacity-50")}>
-            <Label>{t("schedule.whatToClean")}</Label>
+            <Label className="flex flex-wrap items-center justify-between gap-2">
+              <span>{t("schedule.whatToClean")}</span>
+              {/* The other hover-only reason. Save is disabled until something
+                  is ticked, and a disabled button with its explanation behind a
+                  tooltip reads as a form silently refusing to submit. */}
+              {enabled && picked.size === 0 ? (
+                <span className="font-normal text-warning">{t("schedule.pickSomething")}</span>
+              ) : null}
+            </Label>
             <ul className="divide-y rounded-lg border">
               {safeCategories.map((category) => (
                 <li key={category.key} className="flex items-center gap-3 px-3 py-2.5">
