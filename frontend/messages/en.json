@@ -3894,8 +3894,32 @@
         "conflict": {
           "queue": "You already have a queue worker — Horizon manages its own.",
           "horizon": "You already have Horizon — it manages its own queue workers."
-        }
-      }
+        },
+        "user": "Run as user",
+        "userPlaceholder": "deploy",
+        "userHint": "Leave empty to run as this site's own user, which is almost always right.",
+        "logFile": "Log file",
+        "logFilePlaceholder": "/var/log/my-worker.log",
+        "logFileHint": "Absolute path. Leave empty and supervisord chooses one.",
+        "logLevel": "Log level",
+        "logLevelDefault": "Server default",
+        "logLevelHint": "How much supervisord itself writes about this worker.",
+        "logLevels": {
+          "critical": "Critical",
+          "error": "Error",
+          "warn": "Warning",
+          "info": "Info",
+          "debug": "Debug",
+          "trace": "Trace",
+          "blather": "Blather"
+        },
+        "autoStart": "Start with the server",
+        "autoStartHint": "Off means it only runs when you start it by hand.",
+        "extraConfig": "Extra supervisord settings",
+        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigHint": "One setting per line, added to this worker only. Section headers in [brackets] are refused."
+      },
+      "runsAsTooltip": "Runs as {user}, not this site's own user."
     },
     "security": {
       "pageTitle": "Password Protection",

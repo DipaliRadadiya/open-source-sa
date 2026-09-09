@@ -10,6 +10,7 @@ import { updateWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
+import { WorkerAdvancedFields } from "@/components/applications/workers/worker-advanced-fields";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { FormModal } from "@/components/ui/form-modal";
@@ -36,6 +37,14 @@ function valuesFrom(worker) {
     processes: worker.processes,
     directory: worker.directory ?? "",
     stop_wait_seconds: worker.stop_wait_seconds ?? 30,
+    // `user`, not `effective_user`: the form edits what was ASKED for, and
+    // showing the resolved fallback here would save the site's own username as
+    // if it had been chosen deliberately.
+    user: worker.user ?? "",
+    log_file: worker.log_file ?? "",
+    log_level: worker.log_level ?? "",
+    extra_config: worker.extra_config ?? "",
+    auto_start: worker.auto_start ?? true,
     auto_restart: worker.auto_restart,
     restart_on_deploy: worker.restart_on_deploy,
     enabled: worker.enabled,
@@ -80,6 +89,14 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
       name: values.name.trim(),
       command: values.command.trim(),
       directory: values.directory?.trim() || undefined,
+      // Blank means "no opinion", and the API treats an absent key that way —
+      // sending "" would ask it to store an empty username and an empty log
+      // path, which is not the same request at all.
+      user: values.user?.trim() || undefined,
+      log_file: values.log_file?.trim() || undefined,
+      log_level: values.log_level || undefined,
+      extra_config: values.extra_config?.trim() || undefined,
+      auto_start: values.auto_start,
     };
 
     try {
@@ -233,40 +250,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-3">
-            <FormField
-              control={form.control}
-              name="directory"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("form.directory")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      className="font-mono"
-                      autoComplete="off"
-                      spellCheck={false}
-                      placeholder={t("form.directoryPlaceholder")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">{t("form.directoryHint")}</p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="stop_wait_seconds"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>{t("form.stopWaitSeconds")}</FormLabel>
-                  <FormControl>
-                    <Input placeholder="10" type="number" inputMode="numeric" min={1} max={300} {...field} />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">{t("form.stopWaitSecondsHint")}</p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <WorkerAdvancedFields form={form} />
           </CollapsibleContent>
         </Collapsible>
       </FormModal>

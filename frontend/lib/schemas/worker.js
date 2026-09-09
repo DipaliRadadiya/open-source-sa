@@ -24,6 +24,16 @@ const nameField = z
 const advancedDefaults = {
   directory: "",
   stop_wait_seconds: 30,
+  // Empty means "let the server decide", which is what the API does with an
+  // absent value — so the form's blank state and the server's default are the
+  // same thing rather than two.
+  user: "",
+  log_file: "",
+  log_level: "",
+  extra_config: "",
+  // supervisord's own default. A worker nobody starts by hand is the usual
+  // case, and this is what makes it come back after a reboot.
+  auto_start: true,
 };
 
 export const workerFormSchema = z.object({
@@ -36,6 +46,29 @@ export const workerFormSchema = z.object({
   auto_restart: z.boolean(),
   restart_on_deploy: z.boolean(),
   enabled: z.boolean(),
+  // Optional throughout, and matched to the API's own rules: a lowercase unix
+  // name, an absolute log path, and one of supervisord's seven levels. Left
+  // empty they are simply not sent, and the server keeps its defaults.
+  user: z
+    .string()
+    .trim()
+    .max(32, "max32")
+    .regex(/^[a-z_][a-z0-9_-]*$/, "invalidUser")
+    .optional()
+    .or(z.literal("")),
+  log_file: z
+    .string()
+    .trim()
+    .max(255, "max255")
+    .startsWith("/", "absolutePath")
+    .optional()
+    .or(z.literal("")),
+  log_level: z
+    .enum(["critical", "error", "warn", "info", "debug", "trace", "blather"])
+    .optional()
+    .or(z.literal("")),
+  extra_config: z.string().trim().max(2000, "max2000").optional().or(z.literal("")),
+  auto_start: z.boolean().optional(),
 });
 
 export const WORKER_FORM_DEFAULTS = {
@@ -76,6 +109,27 @@ export const workerSchema = z.object({
   state: z.enum(["running", "degraded", "stopped"]).catch("stopped"),
   state_title: z.string().nullish(),
   directory: z.string().nullish(),
+  /*
+   * Everything below arrived when workers moved from systemd units to
+   * supervisord programs, and none of it was declared — so Zod dropped the lot
+   * and the panel could neither show nor keep a single one of these settings.
+   *
+   * `user` is what was asked for, `effective_user` is what it resolves to: a
+   * worker with no user of its own runs as the site's system user, and which
+   * one it actually is, is the first thing anybody checks when a worker cannot
+   * read the site's files.
+   */
+  user: z.string().nullish(),
+  effective_user: z.string().nullish(),
+  // Where supervisord writes this program's output. The panel reads the log
+  // from that file now rather than from the journal.
+  log_file: z.string().nullish(),
+  log_level: z.string().nullish(),
+  // Raw supervisord directives appended to the program block, for the settings
+  // the panel does not model.
+  extra_config: z.string().nullish(),
+  // Starts with supervisord, as opposed to only when started by hand.
+  auto_start: z.boolean().nullish(),
   stop_wait_seconds: z.number().nullish(),
   auto_restart: z.boolean(),
   restart_on_deploy: z.boolean(),

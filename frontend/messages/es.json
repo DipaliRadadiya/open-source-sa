@@ -3894,8 +3894,32 @@
         "conflict": {
           "queue": "Ya tienes un worker de cola: Horizon gestiona los suyos propios.",
           "horizon": "Ya tienes Horizon: gestiona sus propios workers de cola."
-        }
-      }
+        },
+        "user": "Ejecutar como usuario",
+        "userPlaceholder": "deploy",
+        "userHint": "Déjalo vacío para usar el usuario propio del sitio, que casi siempre es lo correcto.",
+        "logFile": "Archivo de registro",
+        "logFilePlaceholder": "/var/log/mi-worker.log",
+        "logFileHint": "Ruta absoluta. Si lo dejas vacío, supervisord elige una.",
+        "logLevel": "Nivel de registro",
+        "logLevelDefault": "Predeterminado del servidor",
+        "logLevelHint": "Cuánto escribe supervisord sobre este worker.",
+        "logLevels": {
+          "critical": "Crítico",
+          "error": "Error",
+          "warn": "Advertencia",
+          "info": "Información",
+          "debug": "Depuración",
+          "trace": "Traza",
+          "blather": "Detallado"
+        },
+        "autoStart": "Iniciar con el servidor",
+        "autoStartHint": "Desactivado, solo se ejecuta cuando lo inicias a mano.",
+        "extraConfig": "Ajustes adicionales de supervisord",
+        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigHint": "Un ajuste por línea, solo para este worker. No se admiten encabezados entre [corchetes]."
+      },
+      "runsAsTooltip": "Se ejecuta como {user}, no como el usuario propio del sitio."
     },
     "security": {
       "pageTitle": "Protección con contraseña",

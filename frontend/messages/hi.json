@@ -3894,8 +3894,32 @@
         "conflict": {
           "queue": "आपके पास पहले से ही एक queue worker है — Horizon अपने खुद के worker संभालता है।",
           "horizon": "आपके पास पहले से ही Horizon है — यह अपने खुद के queue worker संभालता है।"
-        }
-      }
+        },
+        "user": "इस उपयोगकर्ता के रूप में चलाएँ",
+        "userPlaceholder": "deploy",
+        "userHint": "खाली छोड़ें तो साइट का अपना उपयोगकर्ता उपयोग होगा — यही आमतौर पर सही है।",
+        "logFile": "लॉग फ़ाइल",
+        "logFilePlaceholder": "/var/log/my-worker.log",
+        "logFileHint": "पूरा पथ दें। खाली छोड़ने पर supervisord खुद चुन लेता है।",
+        "logLevel": "लॉग स्तर",
+        "logLevelDefault": "सर्वर का डिफ़ॉल्ट",
+        "logLevelHint": "supervisord इस worker के बारे में कितना लिखता है।",
+        "logLevels": {
+          "critical": "गंभीर",
+          "error": "त्रुटि",
+          "warn": "चेतावनी",
+          "info": "जानकारी",
+          "debug": "डिबग",
+          "trace": "ट्रेस",
+          "blather": "अत्यधिक विस्तृत"
+        },
+        "autoStart": "सर्वर के साथ शुरू करें",
+        "autoStartHint": "बंद होने पर यह तभी चलेगा जब आप इसे खुद शुरू करें।",
+        "extraConfig": "अतिरिक्त supervisord सेटिंग्स",
+        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigHint": "हर पंक्ति में एक सेटिंग, सिर्फ़ इसी worker के लिए। [कोष्ठक] वाले सेक्शन हेडर स्वीकार नहीं हैं।"
+      },
+      "runsAsTooltip": "यह {user} के रूप में चलता है, साइट के अपने उपयोगकर्ता के रूप में नहीं।"
     },
     "security": {
       "pageTitle": "पासवर्ड सुरक्षा",

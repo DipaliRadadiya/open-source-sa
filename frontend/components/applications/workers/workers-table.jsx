@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { FolderOpen } from "lucide-react";
+import { FolderOpen, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -79,6 +79,27 @@ function CommandCell({ row }) {
           </TooltipTrigger>
           <TooltipContent className="max-w-sm font-mono text-xs break-all">
             {t("customDirectoryTooltip", { path: worker.directory })}
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
+      {/* Only when it is not the site's own user. A worker running as somebody
+          else is the first thing anyone checks when it cannot read the site's
+          files, and it was invisible outside Edit — `effective_user` resolves
+          what `user` left unset, so this says what it will actually run as
+          rather than what was typed. */}
+      {worker.user && worker.effective_user ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              tabIndex={0}
+              className="mt-1 flex max-w-xs items-center gap-1 truncate text-[11px] text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <UserRound className="size-3 shrink-0" />
+              <span className="truncate font-mono">{worker.effective_user}</span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-sm text-xs">
+            {t("runsAsTooltip", { user: worker.effective_user })}
           </TooltipContent>
         </Tooltip>
       ) : null}
