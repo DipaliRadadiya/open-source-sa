@@ -1595,7 +1595,8 @@
       "description": "El nombre y el reloj de este servidor.",
       "clockDrift": "Sin sincronizar",
       "clockDriftHint": "NTP está activo pero el reloj no se ha sincronizado: las tareas programadas pueden ejecutarse tarde y las horas de los registros serán incorrectas.",
-      "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda."
+      "noPermission": "Tu rol no incluye Configuración con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "timezoneSearch": "Buscar zonas horarias…"
     },
     "security": {
       "title": "Acceso por SSH",

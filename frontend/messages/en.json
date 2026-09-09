@@ -1595,7 +1595,8 @@
       "description": "This server’s name and clock.",
       "clockDrift": "Not in sync",
       "clockDriftHint": "NTP is on but the clock has not synced — scheduled jobs may run late and log times will be wrong.",
-      "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it."
+      "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
+      "timezoneSearch": "Search timezones…"
     },
     "security": {
       "title": "Signing in over SSH",
