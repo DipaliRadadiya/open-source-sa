@@ -92,13 +92,7 @@ class ApplicationArtifacts
         // First, while the rows still exist — the controller deprovisions
         // before it deletes the record.
         if ($removeData) {
-            $this->attempt($application, 'backups', function () use ($application) {
-                $deleteBackup = app(DeleteBackup::class);
-
-                foreach (Backup::where('application_id', $application->id)->get() as $backup) {
-                    $deleteBackup->execute($backup);
-                }
-            });
+            $this->removeBackups($application);
         }
 
         $this->attempt($application, 'php_pool', function () use ($application) {
@@ -155,6 +149,55 @@ class ApplicationArtifacts
     /**
      * Run one removal, and never let it stop the others.
      */
+    /**
+     * Delete every archive this site has, one at a time.
+     *
+     * **Per backup, not per site.** This was one `foreach` inside one
+     * `try`/`catch`, so the first archive that would not delete aborted the
+     * loop — and the rows the loop never reached then cascaded away with the
+     * application, leaving their objects in the bucket with nothing pointing
+     * at them. One unreachable object orphaned every archive for the site;
+     * with a retention of seven that is six multi-gigabyte objects lost to a
+     * failure that had nothing to do with them.
+     *
+     * A failure still never stops the deletion — that part was deliberate and
+     * stays. A bucket that will not answer is a cost problem, and letting it
+     * block the certificate revoke below would trade that for a renewal
+     * running forever.
+     *
+     * The keys that survive are logged **by name**, because this is the last
+     * moment anything knows them: the rows are about to cascade, and a warning
+     * saying only "backups could not be removed" leaves nobody able to find
+     * the objects it is warning about.
+     */
+    private function removeBackups(Application $application): void
+    {
+        $deleteBackup = app(DeleteBackup::class);
+        $orphaned = [];
+
+        foreach (Backup::where('application_id', $application->id)->get() as $backup) {
+            try {
+                $deleteBackup->execute($backup);
+            } catch (Throwable $e) {
+                $orphaned[] = [
+                    'backup' => $backup->id,
+                    'key' => $backup->manifest['key'] ?? null,
+                    'detail' => $e->getMessage(),
+                ];
+            }
+        }
+
+        if ($orphaned !== []) {
+            Log::channel('server-ops')->warning('backup archives left on the destination', [
+                'feature' => 'application',
+                'op' => 'deprovision_artifact',
+                'artifact' => 'backups',
+                'application' => $application->id,
+                'orphaned' => $orphaned,
+            ]);
+        }
+    }
+
     private function attempt(Application $application, string $artifact, callable $removal): void
     {
         try {

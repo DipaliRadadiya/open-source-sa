@@ -52,6 +52,17 @@ class DeleteBackup
         $key = $backup->manifest['key'] ?? null;
         $destination = $backup->target?->storageDestination;
 
+        // `$destination === null` would mean a key with nowhere to send it —
+        // the row deletable, the object not — and the archive would be skipped
+        // in silence. Two constraints make it unreachable: `backups` cascades
+        // on its target, so a backup always has one, and that target holds
+        // `storage_destination_id` with `restrictOnDelete`, so the destination
+        // cannot go while it does. Deliberately left unhandled rather than
+        // guarded with a branch nothing can execute.
+        //
+        // Whatever gives an application more than one backup target should
+        // check this again: independently deletable targets are exactly what
+        // would open it.
         if (is_string($key) && $key !== '' && $destination !== null) {
             try {
                 $disk = $this->disks->for($destination);

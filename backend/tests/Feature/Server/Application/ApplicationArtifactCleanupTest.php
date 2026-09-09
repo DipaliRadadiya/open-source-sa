@@ -18,6 +18,8 @@ use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 
@@ -297,6 +299,94 @@ describe('the site\'s backups', function () {
         expect(Backup::find($this->backup->id))->toBeNull();
     });
 
+    /**
+     * A disk that fails for `$failing` and records every other delete.
+     *
+     * Mocked against the Filesystem contract rather than hand-rolled, because
+     * `DestinationDisk::for()` is typed `: Filesystem` — an anonymous class
+     * that does not implement it makes the call raise a TypeError, which
+     * `DeleteBackup` catches like any other Throwable. The delete then appears
+     * to fail for a reason that has nothing to do with the destination.
+     */
+    function failingDisk(string $failing, ArrayObject $deleted): Filesystem
+    {
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('exists')->andReturn(true);
+        $disk->shouldReceive('delete')->with($failing)->andThrow(new RuntimeException('bucket unreachable'));
+        $disk->shouldReceive('delete')->andReturnUsing(function (string $key) use ($deleted): bool {
+            $deleted[] = $key;
+
+            return true;
+        });
+
+        return $disk;
+    }
+
+    it('deletes every other archive when one of them will not go', function () {
+        // This was one foreach inside one try/catch, so the first failure
+        // aborted the loop — and the rows it never reached cascaded away with
+        // the application, leaving their objects behind with nothing pointing
+        // at them. One unreachable object orphaned every archive for the site.
+        $this->disk->put('shop/two.tar.gz', 'archive');
+        $this->disk->put('shop/three.tar.gz', 'archive');
+
+        foreach (['shop/two.tar.gz', 'shop/three.tar.gz'] as $key) {
+            Backup::create([
+                'backup_target_id' => $this->target->id,
+                'application_id' => $this->application->id,
+                'type' => 'full',
+                'status' => BackupStatus::Verified->value,
+                'is_safety' => false,
+                'manifest' => ['key' => $key],
+            ]);
+        }
+
+        // ArrayObject, not an array by reference: a promoted constructor
+        // property cannot be a reference, so the array version recorded
+        // nothing at all.
+        $deleted = new ArrayObject;
+
+        $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+            builder: fn (array $config) => failingDisk('shop/one.tar.gz', $deleted),
+        ));
+
+        teardownCommands();
+
+        app(ApplicationProvisioner::class)
+            ->deprovision($this->application->fresh(['systemUser', 'certificate']), removeFiles: true);
+
+        expect($deleted->getArrayCopy())->toEqualCanonicalizing(['shop/two.tar.gz', 'shop/three.tar.gz'])
+            // And the rows for the two that went are gone, so nothing is left
+            // pointing at an object that is not there.
+            ->and(Backup::where('application_id', $this->application->id)->count())->toBe(1);
+    });
+
+    it('names the archives it had to leave behind', function () {
+        // The rows are about to cascade with the application, so this warning
+        // is the last thing that will ever know these keys. Without them
+        // nobody can find the objects the warning is about.
+        $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+            builder: fn (array $config) => failingDisk('shop/one.tar.gz', new ArrayObject),
+        ));
+
+        // Listened for rather than mocked: deprovisioning logs plenty of other
+        // things, and a Log mock turns every one of them into a failure about
+        // an unexpected call rather than telling you about this one.
+        $logged = new ArrayObject;
+        Log::listen(fn ($event) => $logged[] = $event);
+
+        teardownCommands();
+
+        app(ApplicationProvisioner::class)
+            ->deprovision($this->application->fresh(['systemUser', 'certificate']), removeFiles: true);
+
+        $orphaned = collect($logged->getArrayCopy())
+            ->filter(fn ($event) => ($event->context['artifact'] ?? null) === 'backups')
+            ->flatMap(fn ($event) => $event->context['orphaned'] ?? []);
+
+        expect($orphaned->pluck('key')->all())->toContain('shop/one.tar.gz');
+    });
+
     it('still removes the other artefacts when an archive will not delete', function () {
         Certificate::create([
             'application_id' => $this->application->id,
@@ -306,19 +396,12 @@ describe('the site\'s backups', function () {
             'auto_renew' => true,
         ]);
 
+        // Was an anonymous class not implementing Filesystem, so the failure
+        // this asserted on was a TypeError from `DestinationDisk::for()`'s
+        // return type rather than a destination that would not answer. The
+        // assertion held either way, which is exactly why it went unnoticed.
         $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
-            builder: fn (array $config) => new class
-            {
-                public function exists(string $key): bool
-                {
-                    return true;
-                }
-
-                public function delete(string $key): bool
-                {
-                    throw new RuntimeException('bucket unreachable');
-                }
-            },
+            builder: fn (array $config) => failingDisk('shop/one.tar.gz', new ArrayObject),
         ));
 
         $ran = teardownCommands();
