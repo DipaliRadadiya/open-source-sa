@@ -4,6 +4,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getLatestSyncRun, getSyncIgnores, getSyncRunItems } from "@/lib/server/get-sync";
 import { SyncPanel } from "@/components/sync/sync-panel";
+import { serverSnapshot } from "@/lib/sync/server-snapshot";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
 export const dynamic = "force-dynamic";
@@ -40,14 +41,23 @@ export default async function SyncPage() {
      the first page here keeps the list server-rendered like every other list
      in the panel; the client drains the rest only if there is more. */
   const first = run ? await getSyncRunItems(run.id) : null;
+  const items = first?.data?.sync?.items ?? [];
+  const ignores = ignoreList.data?.ignores ?? [];
 
   return (
     <div className="space-y-6">
       <Header t={t} />
+      {/* Keyed on the data, so Refresh actually shows what it fetched. The
+          panel seeds its state from these props once and then owns them —
+          a scan streams rows in by polling — so without a key it kept the
+          copy it mounted with and the button spun over a real round trip
+          for nothing. An unchanged server render produces the same key and
+          changes nothing. */}
       <SyncPanel
+        key={serverSnapshot(run, items, ignores)}
         run={run}
-        items={first?.data?.sync?.items ?? []}
-        ignores={ignoreList.data?.ignores ?? []}
+        items={items}
+        ignores={ignores}
         canManage={canManage}
       />
     </div>
