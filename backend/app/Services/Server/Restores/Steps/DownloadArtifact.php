@@ -30,9 +30,14 @@ class DownloadArtifact implements RestoreStep
 
     public function run(RestoreContext $context): void
     {
-        $target = $context->backup->target;
+        // The destination recorded on the backup, not the one its target
+        // points at today. Reading it through the target meant repointing a
+        // target sent a restore looking in a bucket the archive was never in —
+        // and a restore is the one operation that has already taken a safety
+        // backup and is about to overwrite a live site.
+        $destination = $context->backup->destination();
 
-        if ($target?->storageDestination === null) {
+        if ($destination === null) {
             throw new RuntimeException('the storage destination for this backup no longer exists');
         }
 
@@ -42,7 +47,7 @@ class DownloadArtifact implements RestoreStep
             throw new RuntimeException('this backup has no artefact key recorded');
         }
 
-        $disk = $this->disks->for($target->storageDestination);
+        $disk = $this->disks->for($destination);
 
         if (! $disk->exists($key)) {
             // The row says the backup exists; the bucket disagrees. Better to

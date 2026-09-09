@@ -57,11 +57,34 @@ class PruneOldBackups implements BackupStep
             ->take(1000)
             ->get();
 
-        $disk = $this->disks->for($context->target->storageDestination);
         $pruned = 0;
+        // Memoised per destination, not per backup: building a disk parses
+        // credentials, and a retention pass is up to a thousand rows that
+        // almost always share one destination.
+        $disks = [];
 
         foreach ($expired as $backup) {
             $key = $backup->manifest['key'] ?? null;
+
+            // Each backup's own destination. One disk built from the target
+            // was the current setting applied to history: after a target was
+            // repointed, `exists()` asked the new bucket about an old key,
+            // answered false, nothing was deleted — and the row was removed
+            // anyway, orphaning the object with nothing left pointing at it.
+            // Unattended, on every scheduled run, and silent.
+            $destination = $backup->destination();
+
+            if ($destination === null) {
+                Log::channel('server-ops')->warning('backup prune skipped a backup with no destination', [
+                    'feature' => 'backup',
+                    'backup' => $backup->id,
+                    'key' => $key,
+                ]);
+
+                continue;
+            }
+
+            $disk = $disks[$destination->id] ??= $this->disks->for($destination);
 
             try {
                 if (is_string($key) && $disk->exists($key)) {

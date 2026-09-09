@@ -47,7 +47,7 @@ class BackupController extends Controller
             // its own destination, which is forty extra queries on a page of
             // twenty. `whenLoaded` in the resource is what makes the field
             // appear, so the two have to move together.
-            ->with(['application:id,name,domain', 'target.storageDestination:id,name'])
+            ->with(['application:id,name,domain', 'storageDestination:id,name'])
             ->when($filter['application_id'] ?? null, fn ($query, $id) => $query->where('application_id', $id))
             ->when($filter['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filter['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
@@ -289,7 +289,7 @@ class BackupController extends Controller
             ]);
         }
 
-        $destination = $backup->target?->storageDestination;
+        $destination = $backup->destination();
 
         if ($destination === null) {
             throw ValidationException::withMessages([
@@ -355,7 +355,7 @@ class BackupController extends Controller
         // A polled backup that drops `storage_destination_name` on refresh
         // would blank a column the user is watching.
         return response()->json([
-            'backup' => BackupResource::make($backup->load('target.storageDestination:id,name'))->resolve(),
+            'backup' => BackupResource::make($backup->load('storageDestination:id,name'))->resolve(),
         ]);
     }
 

@@ -2892,6 +2892,8 @@ Every backup across every application — paginated, filterable.
 
 `storage_destination_name` (added 2026-09-09) is where **this archive** went, which is not always where the target points now — the destination is editable, so an older backup can sit somewhere the current setting no longer names. Present on this list and on `GET /backups/{backup}`; **absent, not null**, on any endpoint that does not load the relation, so an absent key means "not asked for" rather than "no destination".
 
+**Corrected the same day:** it first resolved through the backup's *target*, so it reported the destination configured **now** against every historical row — the opposite of what the field is for. Each backup now records its own destination when it is created, and download, restore, delete and retention all resolve through that. Backups written before this are backfilled from their target, which is right unless that target had already been repointed; for those the recorded destination is the best available answer and the archive may genuinely be unreachable.
+
 ```json
 {"backups": [{
   "id": 15,

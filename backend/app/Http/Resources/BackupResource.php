@@ -22,13 +22,20 @@ class BackupResource extends JsonResource
             // archive was written, and the history is the one screen where
             // that question gets asked.
             //
-            // `whenLoaded` through the target: absent rather than null when
-            // the relation was not eager-loaded, so a caller can tell "no
-            // destination" from "not asked for" instead of rendering a blank
-            // column that looks like data.
+            // Read from the backup's own recorded destination, not through the
+            // target. Through the target this reported the destination
+            // configured *now* against every historical row, so repointing a
+            // target silently relabelled where every past archive lives — a
+            // confident wrong answer on the one screen that exists to answer
+            // exactly that.
+            //
+            // `whenLoaded`: absent rather than null when the relation was not
+            // eager-loaded, so a caller can tell "no destination" from "not
+            // asked for" instead of rendering a blank column that looks like
+            // data.
             'storage_destination_name' => $this->whenLoaded(
-                'target',
-                fn (): ?string => $this->resource->target?->storageDestination?->name,
+                'storageDestination',
+                fn (): ?string => $this->resource->storageDestination?->name,
             ),
             'type' => $this->type->value,
             // Taken automatically just before a restore overwrote the site.

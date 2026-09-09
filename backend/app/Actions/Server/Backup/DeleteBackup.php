@@ -50,7 +50,7 @@ class DeleteBackup
         }
 
         $key = $backup->manifest['key'] ?? null;
-        $destination = $backup->target?->storageDestination;
+        $destination = $backup->destination();
 
         // `$destination === null` would mean a key with nowhere to send it —
         // the row deletable, the object not — and the archive would be skipped
