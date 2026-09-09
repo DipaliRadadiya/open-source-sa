@@ -118,6 +118,12 @@ export const applicationSchema = z.object({
   node_version: z.string().nullish(),
   app_port: z.number().nullish(),
   web_root: z.string().nullish(),
+  // The directory the web server actually serves. `path` below is declared and
+  // this was not, so Zod stripped it — which is why `{path}` in the deploy
+  // script had no value beside it while `{branch}` and `{domain}` did. The
+  // token expands to THIS, not to `path`: GitDeployer's `expand()` substitutes
+  // the document root.
+  document_root: z.string().nullish(),
   // Where the site's code lives — the document root for most types, its parent
   // for the ones with a fixed web root (Laravel's `public`). That is exactly
   // what a cron command needs: `{path}/artisan` and `{path}/wp-cron.php` both
