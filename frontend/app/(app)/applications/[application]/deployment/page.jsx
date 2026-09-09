@@ -5,6 +5,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getWebhookProviders } from "@/lib/applications/get-webhook-providers";
+import { getGitAccounts } from "@/lib/git/get-git";
 import { getDeployments } from "@/lib/applications/get-deployments";
 import { DeploymentPanel } from "@/components/applications/deployment/deployment-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -52,12 +53,42 @@ export default async function ApplicationDeploymentPage({ params }) {
   // back here is worse than offering nothing.
   const canViewLogs = can(appPermissions, "app_log", "view", "application");
   const settled = application.status === "active";
-  const [{ providers }, history] = await Promise.all([
+  const [{ providers }, history, gitAccounts] = await Promise.all([
     getWebhookProviders(),
     // History and settings arrive together; a failure here must not blank the
     // Deploy button, so the panel simply renders without them.
     getDeployments(id),
+    // Only to learn which provider this site's account belongs to. The
+    // application payload carries `git_account_id` and no provider name, and
+    // without it the webhook card offers all three as if the choice were open
+    // — it is not: a GitHub site can only ever be pushed to by GitHub.
+    application.git_account_id
+      ? getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
+      : Promise.resolve([]),
   ]);
+
+  // Null when the site has no linked account, or the account has gone: then
+  // the card keeps its full picker, which is the only honest thing left.
+  const gitProvider =
+    gitAccounts.find((a) => a.id === application.git_account_id)?.provider ?? null;
+
+  /*
+   * Only the provider this site actually deploys from.
+   *
+   * The card offered all three and asked which one — but the answer was never
+   * open: a site connected to a GitHub account can only ever be pushed to by
+   * GitHub, and picking Bitbucket there produces setup instructions for a
+   * webhook nobody will ever send. Narrowing the list is what turns a question
+   * into the answer.
+   *
+   * Falls back to the full list when the provider is unknown — an unlinked
+   * site, or one whose account has gone. Guessing there would be worse than
+   * asking.
+   */
+  const webhookProviders =
+    gitProvider && providers.some((p) => p.name === gitProvider)
+      ? providers.filter((p) => p.name === gitProvider)
+      : providers;
 
   return (
     <div className="space-y-6">
@@ -73,7 +104,7 @@ export default async function ApplicationDeploymentPage({ params }) {
       ) : (
         <DeploymentPanel
           application={application}
-          providers={providers}
+          providers={webhookProviders}
           canManage={canManage}
           canViewLogs={canViewLogs}
           deployments={history.deployments}

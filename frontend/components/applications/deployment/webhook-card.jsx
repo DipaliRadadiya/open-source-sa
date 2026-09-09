@@ -104,7 +104,18 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   // set up stays "configured" — that's what the header switch acts on.
   const configured = Boolean(webhook.url || webhook.provider);
 
-  const [providerName, setProviderName] = useState(webhook.provider ?? "");
+  /*
+   * Preselected when there is nothing to choose.
+   *
+   * The page narrows this list to the provider the site's Git account belongs
+   * to, so it is usually one entry — and a one-item picker asking which
+   * provider you use is a question with a single possible answer. It still
+   * falls back to the stored value first, which matters when a hook was set up
+   * before the account moved.
+   */
+  const [providerName, setProviderName] = useState(
+    webhook.provider ?? (providers.length === 1 ? providers[0].name : ""),
+  );
   const [gitlabToken, setGitlabToken] = useState("");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
