@@ -1038,6 +1038,17 @@ return [
             // noticed. Set this to a tag or branch to hold a version
             // deliberately.
             'branch' => env('SERVER_UPTIME_KUMA_BRANCH', ''),
+            // Asked first, because it distinguishes a release from a tag and
+            // marks drafts and pre-releases explicitly. The *list*, not
+            // `/releases/latest`: GitHub's "latest" is the newest by date, and
+            // this project back-patches its old line — 1.23.17 shipped in
+            // October 2025, well after 2.x — so one more such patch would make
+            // "latest" name a 1.x release. Sorting the list by version cannot.
+            // Empty disables it and leaves `git ls-remote` as the only source.
+            'releases_api' => env(
+                'SERVER_UPTIME_KUMA_RELEASES_API',
+                'https://api.github.com/repos/louislam/uptime-kuma/releases',
+            ),
             // Clone plus a full frontend build.
             'timeout' => (int) env('SERVER_UPTIME_KUMA_TIMEOUT', 1800),
         ],

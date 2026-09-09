@@ -11,6 +11,8 @@ use App\Services\Server\Applications\Installers\N8nInstaller;
 use App\Services\Server\Applications\Installers\NodeBbInstaller;
 use App\Services\Server\Applications\ProcessSupervisor;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -740,7 +742,13 @@ describe('the Uptime Kuma version', function () {
         });
     }
 
-    beforeEach(fn () => config(['server.installers.uptimekuma.branch' => '']));
+    beforeEach(function () {
+        config(['server.installers.uptimekuma.branch' => '']);
+        // The tag-list source on its own. The API is exercised in its own
+        // block below; leaving it on here would mean these tests never reached
+        // the fallback they are about.
+        config(['server.installers.uptimekuma.releases_api' => '']);
+    });
 
     it('clones the newest stable release', function () {
         fakeTags(['1.23.16', '2.0.0', '2.4.0', '2.5.3']);
@@ -795,5 +803,96 @@ describe('the Uptime Kuma version', function () {
             ->toThrow(ProvisioningFailedException::class);
 
         expect(ranCommands())->not->toContain('git clone');
+    });
+});
+
+describe('the Uptime Kuma releases API', function () {
+    /*
+     * Asked before the tag list, because it knows what a release *is*: drafts
+     * and pre-releases carry flags rather than having to be inferred from the
+     * shape of a tag name.
+     */
+
+    beforeEach(function () {
+        config([
+            'server.installers.uptimekuma.branch' => '',
+            'server.installers.uptimekuma.releases_api' => 'https://api.github.test/releases',
+        ]);
+    });
+
+    /** @param array<int, array<string, mixed>> $releases */
+    function fakeReleases(array $releases): void
+    {
+        Http::fake(['api.github.test/*' => Http::response($releases)]);
+    }
+
+    function release(string $tag, bool $prerelease = false, bool $draft = false): array
+    {
+        return ['tag_name' => $tag, 'prerelease' => $prerelease, 'draft' => $draft];
+    }
+
+    it('clones the newest stable release the API reports', function () {
+        fakeReleases([release('2.4.0'), release('2.5.3'), release('1.23.17')]);
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('--branch 2.5.3')
+            // The API answered, so the tag list was never consulted.
+            ->and(ranCommands())->not->toContain('ls-remote');
+    });
+
+    it('sorts by version, not by the order GitHub returns', function () {
+        // The reason this reads the list rather than `/releases/latest`.
+        // GitHub's "latest" is the newest by *date*, and this project
+        // back-patches its old line -- 1.23.17 shipped in October 2025, long
+        // after 2.x. Listed first, as the most recent release, it would win on
+        // date and lose on version. It must lose.
+        fakeReleases([release('1.23.17'), release('2.5.3'), release('2.4.0')]);
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('--branch 2.5.3');
+    });
+
+    it('trusts the flags for pre-releases and drafts', function () {
+        fakeReleases([
+            release('2.6.0', prerelease: true),
+            release('2.7.0', draft: true),
+            release('2.5.3'),
+        ]);
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('--branch 2.5.3');
+    });
+
+    it('falls back to the tag list when the API refuses', function () {
+        // 403 is what a rate-limited panel gets, and it gets it for an hour.
+        // Refusing every install for that hour, with a second source standing
+        // right there, would be the wrong trade.
+        Http::fake(['api.github.test/*' => Http::response('rate limited', 403)]);
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('ls-remote')
+            ->and(ranCommands())->toContain('--branch 2.5.3');
+    });
+
+    it('falls back when the API cannot be reached at all', function () {
+        Http::fake(fn () => throw new ConnectionException('dns'));
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('ls-remote');
+    });
+
+    it('still honours a pin without asking anything', function () {
+        config(['server.installers.uptimekuma.branch' => '1.23.16']);
+        fakeReleases([release('2.5.3')]);
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('--branch 1.23.16')
+            ->and(ranCommands())->not->toContain('ls-remote');
     });
 });
