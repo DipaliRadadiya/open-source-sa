@@ -2767,7 +2767,8 @@
       "fieldHelp": {
         "gitlab_host": "केवल सेल्फ-होस्टेड GitLab के लिए। gitlab.com के लिए इसे खाली छोड़ें। वही पता डालें जिससे आप साइन इन करते हैं, जैसे https://gitlab.example.com — किसी प्रोजेक्ट का पता नहीं।",
         "bitbucket_workspace": "आपके Bitbucket पते से वर्कस्पेस आईडी: bitbucket.org/workspace-id/repository।"
-      }
+      },
+      "gitlabLegacy": "टोकन पेज पर <option>Legacy token</option> चुनें। नया fine-grained प्रकार ऊपर बताए गए scopes नहीं देता।"
     },
     "edit": {
       "title": "खाता संपादित करें",

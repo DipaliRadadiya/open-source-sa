@@ -2767,7 +2767,8 @@
       "fieldHelp": {
         "gitlab_host": "Only for a self-hosted GitLab. Leave this empty for gitlab.com. Use the address you sign in at, like https://gitlab.example.com — not the address of a project.",
         "bitbucket_workspace": "The workspace ID from your Bitbucket address: bitbucket.org/workspace-id/repository."
-      }
+      },
+      "gitlabLegacy": "On the token page, choose <option>Legacy token</option>. The newer fine-grained type does not offer the scopes above."
     },
     "edit": {
       "title": "Edit account",

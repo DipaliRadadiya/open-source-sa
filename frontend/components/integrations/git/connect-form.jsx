@@ -309,6 +309,21 @@ function TokenHelp({ help, url, value, provider }) {
           })}
         </FormDescription>
       ) : null}
+      {/* GitLab's token page now asks which KIND of token to create, and the
+          default is not the one that works here. Fine-grained tokens (beta)
+          replaced the broad scopes with per-resource permissions, so
+          `read_repository` and `read_api` — the two the backend's own help
+          names — do not exist on that form. Someone follows the instruction
+          above, cannot find the scopes, and either gives up or creates a token
+          that connects to nothing. The old kind is now labelled "Legacy", so
+          it has to be named. */}
+      {provider.name === "gitlab" ? (
+        <FormDescription>
+          {t.rich("gitlabLegacy", {
+            option: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+          })}
+        </FormDescription>
+      ) : null}
       {/* Asking someone to paste a credential without saying what will be done
           with it is the whole objection this answers. */}
       <FormDescription>{t("readOnly", { brand })}</FormDescription>

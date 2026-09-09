@@ -2767,7 +2767,8 @@
       "fieldHelp": {
         "gitlab_host": "Solo para un GitLab autoalojado. Déjalo vacío para gitlab.com. Usa la dirección con la que inicias sesión, como https://gitlab.example.com, no la de un proyecto.",
         "bitbucket_workspace": "El ID del espacio de trabajo de tu dirección de Bitbucket: bitbucket.org/id-del-espacio/repositorio."
-      }
+      },
+      "gitlabLegacy": "En la página del token, elige <option>Token heredado</option>. El nuevo tipo granular no ofrece los permisos indicados arriba."
     },
     "edit": {
       "title": "Editar cuenta",
