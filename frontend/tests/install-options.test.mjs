@@ -121,3 +121,39 @@ test("nothing selectable resolves to empty, which disables Install", () => {
   assert.equal(resolveVersion(null, []), "");
   assert.equal(resolveVersion(undefined, undefined), "");
 });
+
+test("a failed install is not installed, so it can be retried", () => {
+  /*
+   * Reported: PHP 8.2 fails, the page says "Install failed", and the Install
+   * Version dropdown still marks 8.2 as Installed — which greys it out and
+   * closes the one obvious way to try again.
+   *
+   * The row exists so the page can report the failure and offer to clear it
+   * up. It does not mean the version is on the server.
+   */
+  const options = installOptions(
+    [{ version: "8.2" }, { version: "8.3" }],
+    [{ version: "8.2", status: "failed" }, { version: "8.3", status: "ready" }],
+  );
+  assert.equal(options.find((o) => o.version === "8.2").installed, false);
+  assert.equal(options.find((o) => o.version === "8.3").installed, true);
+  // And so the picker opens on it rather than on nothing.
+  assert.equal(firstInstallable(options), "8.2");
+});
+
+test("a version mid-install still counts, so apt is not run twice", () => {
+  const options = installOptions(
+    [{ version: "8.4" }, { version: "8.5" }],
+    [{ version: "8.4", status: "installing" }, { version: "8.5", status: "removing" }],
+  );
+  assert.equal(options.find((o) => o.version === "8.4").installed, true);
+  assert.equal(options.find((o) => o.version === "8.5").installed, true);
+});
+
+test("a plain list of version strings still works", () => {
+  // Node passes strings rather than rows in some callers; a string carries no
+  // status and must keep counting as installed.
+  const options = installOptions([{ version: "22" }, { version: "24" }], ["22"]);
+  assert.equal(options.find((o) => o.version === "22").installed, true);
+  assert.equal(options.find((o) => o.version === "24").installed, false);
+});

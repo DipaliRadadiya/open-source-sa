@@ -74,7 +74,14 @@ export function VersionSummary({
       // that made this look broken when it had actually worked.
       installState === "removing"
       ? t("versions.stillRemoving")
-      : version.in_use_by_panel
+      : // And while apt is still PUTTING it there. Removing a half-installed
+        // version races the install that is writing it, and the reason has to
+        // be said: a Remove that simply does nothing reads as broken. A FAILED
+        // install stays removable — clearing that up is the next thing anyone
+        // wants to do, which is why this is not folded into `notReadyReason`.
+        installState === "installing"
+        ? t("versions.stillInstalling")
+        : version.in_use_by_panel
         ? t("versions.panelRuns")
         : version.is_default
           ? t("versions.isDefault")

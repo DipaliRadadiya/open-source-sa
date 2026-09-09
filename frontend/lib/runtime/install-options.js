@@ -18,10 +18,22 @@
  * and must stay selectable.
  */
 
-/** `[{ version, ... }]` → the same, each with `installed: boolean`. */
+/**
+ * `[{ version, ... }]` → the same, each with `installed: boolean`.
+ *
+ * A FAILED install does not count as installed. Its row exists — that is how
+ * the page shows "Install failed" and offers to clear it up — but the version
+ * is not on the server, and marking it installed greyed it out in this picker
+ * so the one obvious way to try again was closed. Reported exactly that way:
+ * PHP 8.2 failed, the page said so, and the dropdown still called it Installed.
+ *
+ * Everything else counts, including a version mid-install or mid-removal:
+ * offering Install there would dispatch a second apt run over the first.
+ */
 export function installOptions(installable = [], installed = []) {
   const have = new Set(
     (Array.isArray(installed) ? installed : [])
+      .filter((item) => (typeof item === "string" ? true : item?.status !== "failed"))
       .map((item) => (typeof item === "string" ? item : item?.version))
       .filter(Boolean)
       .map(String),
