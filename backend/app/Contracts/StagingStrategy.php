@@ -44,4 +44,26 @@ interface StagingStrategy
      * @return array<int, string> rsync `--exclude` patterns
      */
     public function syncExcludes(): array;
+
+    /**
+     * Paths rsync must carry between the two sites *additively* — copied
+     * across, never deleted from the destination.
+     *
+     * These are the paths that are excluded from the main sync above for a
+     * reason that is only half true. Uploaded media is the case that named
+     * this method: it must not ride in a `--delete` pass, because a photo
+     * added on production while somebody worked in staging would be erased by
+     * a push that has no copy of it. But excluding it outright means the file
+     * never crosses at all — so a push carried the `attachment` rows in the
+     * database and left the files behind, and every image 404'd from a Media
+     * Library that listed it. A second pass without `--delete` is what makes
+     * both true at once.
+     *
+     * The consequence, stated where the next person will read it: deleting a
+     * file in staging does not delete it on production. That is the trade this
+     * method exists to make.
+     *
+     * @return array<int, string> paths relative to the document root
+     */
+    public function mergePaths(): array;
 }

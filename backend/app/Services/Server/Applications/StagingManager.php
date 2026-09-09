@@ -107,6 +107,10 @@ class StagingManager
                 $this->provisioner->documentRoot($staging),
                 $staging,
                 $strategy->syncExcludes(),
+                // Media crosses in this direction too, and for the same
+                // reason: without it a staging site cloned from a live shop
+                // starts with every existing image broken.
+                $strategy->mergePaths(),
             );
 
             $strategy->create($production, $staging);
@@ -229,6 +233,7 @@ class StagingManager
                     $this->provisioner->documentRoot($production),
                     $production,
                     $strategy->syncExcludes(),
+                    $strategy->mergePaths(),
                 );
             }
 
@@ -285,8 +290,11 @@ class StagingManager
 
     /**
      * @param  array<int, string>  $patterns
+     * @param  array<int, string>  $mergePaths  Copied in a second, additive
+     *                                          pass — see
+     *                                          `StagingStrategy::mergePaths()`.
      */
-    private function rsync(string $source, string $destination, Application $owner, array $patterns): void
+    private function rsync(string $source, string $destination, Application $owner, array $patterns, array $mergePaths = []): void
     {
         // The list comes from the strategy: which files carry a site's own
         // identity is a question only the site type can answer, and when this
@@ -305,6 +313,13 @@ class StagingManager
             throw new StagingOperationException($result->reference);
         }
 
+        // Before the chown below, deliberately: these passes write files as
+        // root, and a pushed image owned by root is one the site user cannot
+        // replace or delete from the Media Library afterwards.
+        foreach ($mergePaths as $path) {
+            $this->merge($source, $destination, $owner, $path);
+        }
+
         $ownership = $this->serverOps->run(
             ['chown', '-R', "{$owner->systemUser->username}:{$owner->systemUser->username}", $destination],
             ['feature' => 'application', 'op' => 'staging_rsync_chown', 'application' => $owner->id],
@@ -312,6 +327,63 @@ class StagingManager
 
         if ($ownership->failed()) {
             throw new StagingOperationException($ownership->reference, $ownership->busy, $ownership->staleLock);
+        }
+    }
+
+    /**
+     * One additive pass: copy `$path` across, remove nothing.
+     *
+     * No `--delete`, which is the whole point — this runs for the paths that
+     * must cross without a push being able to erase what is already on the
+     * other side.
+     *
+     * The source is probed first because a site that has never had an upload
+     * has no `wp-content/uploads` at all, and rsync exits non-zero on a
+     * missing source — which would fail the push of a site whose only fault is
+     * that nobody has added a photo yet. `probe()` rather than a bare `run()`
+     * so that "the directory is not there" stays distinct from "the panel was
+     * not allowed to ask": a sudo refusal must fail the push, not be read as
+     * an answer and silently skip the media.
+     */
+    private function merge(string $source, string $destination, Application $owner, string $path): void
+    {
+        $from = rtrim($source, '/').'/'.trim($path, '/');
+        $to = rtrim($destination, '/').'/'.trim($path, '/');
+
+        $exists = $this->serverOps->probe(
+            ['test', '-d', $from],
+            ['feature' => 'application', 'op' => 'staging_merge_probe', 'application' => $owner->id],
+        );
+
+        if (! $exists->answered) {
+            throw new StagingOperationException($exists->reference, $exists->busy, $exists->staleLock);
+        }
+
+        if (! $exists->ok) {
+            return;
+        }
+
+        // mkdir -p, because rsync will create the leaf but not the path above
+        // it — `wp-content` exists on any WordPress site, but this contract is
+        // not WordPress-only and a nested merge path on a fresh destination
+        // would otherwise fail.
+        $directory = $this->serverOps->run(
+            ['mkdir', '-p', $to],
+            ['feature' => 'application', 'op' => 'staging_merge_dir', 'application' => $owner->id],
+        );
+
+        if ($directory->failed()) {
+            throw new StagingOperationException($directory->reference, $directory->busy, $directory->staleLock);
+        }
+
+        $merged = $this->serverOps->run(
+            ['rsync', '-a', $from.'/', $to.'/'],
+            ['feature' => 'application', 'op' => 'staging_merge', 'application' => $owner->id],
+            timeout: 300,
+        );
+
+        if ($merged->failed()) {
+            throw new StagingOperationException($merged->reference, $merged->busy, $merged->staleLock);
         }
     }
 

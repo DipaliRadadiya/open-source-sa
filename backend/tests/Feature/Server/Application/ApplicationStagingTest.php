@@ -312,7 +312,10 @@ it('restores the production database as well as files after a full push fails', 
         ->postJson(stagingUrl().'/push', ['mode' => 'full'])
         ->assertStatus(500);
 
-    expect($rsyncCalls)->toHaveCount(3)
+    // Four: production -> snapshot, staging -> production, the additive media
+    // pass, and snapshot -> production on the way back out. This push gets
+    // past the files and fails in the database half, so the media pass runs.
+    expect($rsyncCalls)->toHaveCount(4)
         ->and($databaseRestores)->toHaveCount(2)
         ->and($databaseRestores[1])->toContain('/staging-backups/pre-push-')
         ->and($this->production->fresh()->disabled_at)->toBeNull();
@@ -1060,4 +1063,186 @@ it('gives the staging site a primary domain row, not just the mirror column', fu
 
     expect($staging->fresh()->load('domains')->serverNames())
         ->toContain('staging.domains.test');
+});
+
+/*
+ * Media.
+ *
+ * Reported from a live site: media uploaded in staging appeared in
+ * production's Media Library after a push and every image 404'd. WordPress
+ * stores an upload as two things — a row in `wp_posts` and a file under
+ * `wp-content/uploads` — and the database half crosses in a push whether
+ * anyone asks it to or not. `wp-content/uploads/` was in `syncExcludes()`, so
+ * the file half never crossed at all: the library was reading rows that
+ * described files which did not exist.
+ *
+ * The exclusion was not wrong, only half right. The main sync carries
+ * `--delete`, and a photo added to production while somebody worked in
+ * staging must survive a push. So uploads stay out of *that* pass and get an
+ * additive one of their own.
+ */
+
+/** The additive media pass, if it ran. Distinguished by its destination. */
+function mergeRsyncArgs(array $commands, string $path = 'wp-content/uploads/'): array
+{
+    foreach ($commands as $args) {
+        if (($args[0] ?? '') === 'rsync' && str_ends_with((string) end($args), $path)) {
+            return $args;
+        }
+    }
+
+    return [];
+}
+
+it('carries uploaded media to production, without deleting production media', function () {
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    $merge = mergeRsyncArgs($commands);
+
+    expect($merge)->not->toBeEmpty()
+        // The whole point of the second pass: production keeps media the
+        // staging site has never seen. A push must not be able to destroy
+        // files it has no copy of.
+        ->and($merge)->not->toContain('--delete')
+        ->and(end($merge))->toEndWith('/public_html/wp-content/uploads/')
+        // And the main pass still excludes it, or the --delete would have
+        // wiped them a step earlier.
+        ->and(pushRsyncArgs($commands))->toContain('wp-content/uploads/');
+});
+
+it('carries existing media into a new staging site', function () {
+    // The direction nobody notices until they look: a staging site cloned
+    // from a real shop had no media at all, so every existing image was
+    // broken in staging from the moment it was created.
+    $commands = [];
+
+    Process::fake(function ($process) use (&$commands) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $commands[] = $args;
+
+        if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
+            return Process::result(exitCode: 0);
+        }
+
+        if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+            && str_contains((string) $process->input, 'information_schema.schemata')) {
+            return Process::result(output: '1');
+        }
+
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])
+        ->assertCreated();
+
+    expect(mergeRsyncArgs($commands))->not->toBeEmpty();
+});
+
+it('copies media before the destination is chowned, not after', function () {
+    // The merge pass writes as root. After the recursive chown, a pushed image
+    // stays root-owned — present, served, and impossible to replace or delete
+    // from the Media Library.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+    recordStagingPush($commands);
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    $mergeAt = null;
+    $chownAt = null;
+
+    foreach ($commands as $index => $args) {
+        if ($mergeAt === null && ($args[0] ?? '') === 'rsync' && str_ends_with((string) end($args), 'wp-content/uploads/')) {
+            $mergeAt = $index;
+        }
+
+        if ($mergeAt !== null && $chownAt === null
+            && ($args[0] ?? '') === 'chown' && ($args[1] ?? '') === '-R'
+            && str_ends_with((string) end($args), '/public_html')) {
+            $chownAt = $index;
+        }
+    }
+
+    expect($mergeAt)->not->toBeNull()
+        ->and($chownAt)->not->toBeNull()
+        ->and($mergeAt)->toBeLessThan($chownAt);
+});
+
+it('pushes a site that has never had an upload', function () {
+    // rsync exits non-zero on a missing source, and a site whose only fault is
+    // that nobody has added a photo yet has no uploads directory. Failing the
+    // push for that would be the fix causing a worse bug than the one it fixed.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $commands = [];
+
+    Process::fake(function ($process) use (&$commands) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $commands[] = $args;
+
+        if (($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), 'wp-config.php')) {
+            return Process::result(output: "<?php\ndefine('DB_NAME', 'shop_db');\n");
+        }
+
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
+
+        // No uploads directory. Silent exit 1 — which is what `test` actually
+        // does when the answer is simply no.
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-d') {
+            return Process::result(exitCode: 1);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'full'])->assertOk();
+
+    expect(mergeRsyncArgs($commands))->toBeEmpty();
+});
+
+it('refuses the push when it cannot tell whether media exists', function () {
+    // `test -d` exits 1 for "not there" and sudo exits 1 for "you may not ask".
+    // Reading the second as the first would skip the media silently and report
+    // a clean push — the original bug, with a new hiding place. Anything on
+    // stderr means the question was never answered.
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    Process::fake(function ($process) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), 'wp-config.php')) {
+            return Process::result(output: "<?php\ndefine('DB_NAME', 'shop_db');\n");
+        }
+
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
+
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-d') {
+            return Process::result(exitCode: 1, errorOutput: 'sudo: a password is required');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'files'])
+        ->assertStatus(500);
 });

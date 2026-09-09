@@ -103,8 +103,12 @@ class WordPressStagingStrategy implements StagingStrategy
             // Written by the panel onto staging *because* it is staging.
             'wp-content/mu-plugins/panel-staging-mail-trap.php',
             'wp-content/mu-plugins/panel-staging-noindex.php',
-            // Media: rsync --delete would wipe production uploads added since
-            // the clone, and there is no file-level safety copy to undo it.
+            // Media: kept out of *this* pass because it carries --delete, and
+            // a photo uploaded to production while somebody worked in staging
+            // must survive a push. It is copied by `mergePaths()` instead —
+            // excluding it outright meant the database carried the attachment
+            // rows and the files never crossed, so every pushed image 404'd
+            // from a Media Library that listed it.
             'wp-content/uploads/',
             // Regenerates itself, and is per-site by nature.
             'wp-content/cache/',
@@ -112,6 +116,30 @@ class WordPressStagingStrategy implements StagingStrategy
             // Not part of the site.
             '.git/', 'node_modules/', '*.log', '.panel/',
         ];
+    }
+
+    /**
+     * Media, and only media.
+     *
+     * WordPress stores an upload as two things: a row in `wp_posts` and a file
+     * under `wp-content/uploads`. The database half crosses in a push whether
+     * anyone asks it to or not, so leaving the file half behind does not
+     * produce a site without the image — it produces a site that *lists* the
+     * image and serves a 404 for it.
+     *
+     * Additive, not mirrored: nothing here is ever removed from the
+     * destination. That is the deliberate half of the trade — a push cannot
+     * destroy production media it has no copy of, and the cost is that
+     * deleting a file in staging leaves it in place on production.
+     *
+     * The cache and upgrade directories are *not* here. They regenerate, and
+     * copying them merges two sites' stale artefacts instead of one's.
+     *
+     * @return array<int, string>
+     */
+    public function mergePaths(): array
+    {
+        return ['wp-content/uploads/'];
     }
 
     public function push(Application $production, Application $staging, string $mode): void
