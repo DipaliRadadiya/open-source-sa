@@ -50,7 +50,7 @@ class MongoEngine implements DatabaseEngine
             return [];
         }
 
-        $system = (array) config('server.databases.system_schemas.mongo', []);
+        $system = (array) config("server.databases.drivers.{$this->driver()}.system_schemas", []);
 
         return array_values(array_filter(
             array_map('trim', preg_split('/\r?\n/', trim($result->output())) ?: []),

@@ -38,7 +38,7 @@ class DatabaseUserResource extends JsonResource
     private function connectionString(): string
     {
         $engine = $this->database->engine;
-        $scheme = (string) config("server.databases.engines.{$engine}.driver") === 'mongo' ? 'mongodb' : $engine;
+        $scheme = (string) config("server.databases.engines.{$engine}.uri_scheme");
         $port = (int) config("server.databases.engines.{$engine}.default_port");
         $host = in_array($this->host, ['localhost', '%'], true) ? '127.0.0.1' : $this->host;
 

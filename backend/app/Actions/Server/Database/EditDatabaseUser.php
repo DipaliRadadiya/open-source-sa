@@ -43,7 +43,7 @@ class EditDatabaseUser
         if ($renamed) {
             // SQL RENAME preserves the password; Mongo recreates with $newPassword.
             $engine->renameUser($user->username, $user->host, $newUsername, $newHost, $newPassword, $database->name);
-            if ($passwordChanged && $this->manager->driver($database->engine) !== 'mongo') {
+            if ($passwordChanged && $this->manager->renameKeepsPassword($database->engine)) {
                 $engine->setPassword($newUsername, $newHost, $newPassword, $database->name);
             }
         } elseif ($passwordChanged) {

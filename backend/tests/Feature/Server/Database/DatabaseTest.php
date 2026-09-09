@@ -180,6 +180,30 @@ it('creates a database', function () {
     test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'created']);
 });
 
+it('refuses a charset the chosen engine has never heard of', function () {
+    fakeDb();
+
+    // `utf8mb4` is a MySQL charset. It used to validate against one global
+    // list regardless of engine, so this request was accepted and the value
+    // stored against a MongoDB database that has no such concept — a field
+    // the API confirmed and nothing could ever apply.
+    test()->withHeaders(dbAuth())->postJson('/api/databases', [
+        'name' => 'shop', 'engine' => 'mongodb', 'charset' => 'utf8mb4',
+    ])->assertStatus(422)->assertJsonValidationErrors('charset');
+
+    expect(Database::where('name', 'shop')->exists())->toBeFalse();
+});
+
+it('still accepts that charset on the engine it belongs to', function () {
+    // The other half of the rule above: engine-scoped must not mean nobody
+    // can set a charset at all.
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->postJson('/api/databases', [
+        'name' => 'shop2', 'engine' => 'mysql', 'charset' => 'utf8mb4', 'collation' => 'utf8mb4_bin',
+    ])->assertStatus(201);
+});
+
 it('creates a database with a user and returns its connection string', function () {
     fakeDb();
 

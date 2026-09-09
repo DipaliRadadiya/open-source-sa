@@ -1840,9 +1840,9 @@ return [
             // MongoDB is operable but not installable yet — it needs its own apt
             // repository — so it has none, and the catalog says so rather than
             // showing a button that cannot work.
-            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MySqlInstaller::class],
-            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'installer' => MariaDbInstaller::class],
-            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'installer' => MongoDbInstaller::class],
+            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mysql', 'installer' => MySqlInstaller::class],
+            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mariadb', 'installer' => MariaDbInstaller::class],
+            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'dump_extension' => 'archive.gz', 'uri_scheme' => 'mongodb', 'installer' => MongoDbInstaller::class],
         ],
 
         /*
@@ -1897,20 +1897,48 @@ return [
             'dpkg_broken' => '/dpkg was interrupted|broken packages|Sub-process .* returned an error/i',
         ],
 
-        // Never created/dropped/altered by the panel (deny-by-default guard).
-        'system_schemas' => [
-            'sql' => ['information_schema', 'mysql', 'performance_schema', 'sys'],
-            'mongo' => ['admin', 'config', 'local'],
+        /*
+        | Per-driver facts. One block per `driver` above, and every driver must
+        | appear here — `DatabaseEngineCatalogTest` fails the build otherwise.
+        |
+        | That completeness rule is the point of this block. These values used
+        | to be written inline as `driver === 'mongo' ? x : y`, where the `y`
+        | arm silently meant MySQL. A third driver would have inherited MySQL's
+        | answers at five call sites without a single line changing — including
+        | `system_schemas`, which is a deny-by-default guard, so the failure
+        | would have been an engine whose own system databases were droppable
+        | while it protected four that do not exist on it.
+        |
+        | A missing key is a test failure at build time rather than a wrong
+        | answer at runtime, which is the only version of this that stays true
+        | when somebody adds the fourth engine.
+        */
+        'drivers' => [
+            'sql' => [
+                // Never created/dropped/altered by the panel.
+                'system_schemas' => ['information_schema', 'mysql', 'performance_schema', 'sys'],
+                // Whitelist for validation — charset => allowed collations.
+                // Identifiers cannot be parameterised in DDL, so the whitelist
+                // IS the injection guard.
+                'charsets' => [
+                    'utf8mb4' => ['utf8mb4_unicode_ci', 'utf8mb4_general_ci', 'utf8mb4_0900_ai_ci', 'utf8mb4_bin'],
+                    'utf8mb3' => ['utf8mb3_general_ci', 'utf8mb3_unicode_ci'],
+                    'latin1' => ['latin1_swedish_ci', 'latin1_general_ci'],
+                    'ascii' => ['ascii_general_ci'],
+                ],
+                // `RENAME USER` carries the password across, so changing both
+                // at once needs a second statement. Mongo has no rename: it
+                // drops and recreates, and the new password is applied there.
+                'rename_keeps_password' => true,
+            ],
+            'mongo' => [
+                'system_schemas' => ['admin', 'config', 'local'],
+                'charsets' => [],
+                'rename_keeps_password' => false,
+            ],
         ],
         'system_users' => ['root', 'mysql.sys', 'mysql.session', 'mysql.infoschema', 'debian-sys-maint', 'mariadb.sys'],
 
-        // Whitelist for validation — charset => allowed collations.
-        'charsets' => [
-            'utf8mb4' => ['utf8mb4_unicode_ci', 'utf8mb4_general_ci', 'utf8mb4_0900_ai_ci', 'utf8mb4_bin'],
-            'utf8mb3' => ['utf8mb3_general_ci', 'utf8mb3_unicode_ci'],
-            'latin1' => ['latin1_swedish_ci', 'latin1_general_ci'],
-            'ascii' => ['ascii_general_ci'],
-        ],
         'default_charset' => 'utf8mb4',
         'default_collation' => 'utf8mb4_unicode_ci',
 

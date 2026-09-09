@@ -76,7 +76,7 @@ class DatabaseManager
                 'running' => $version !== null,
                 'version' => $version,
                 'installed' => $this->installed($engine, $version !== null),
-                'charsets' => $this->driver($engine) === 'sql' ? (array) config('server.databases.charsets') : [],
+                'charsets' => $this->charsets($engine),
             ];
         }, $this->engineNames());
     }
@@ -124,11 +124,62 @@ class DatabaseManager
         )->ok;
     }
 
+    /**
+     * Charset => allowed collations for this engine, empty where the concept
+     * does not exist.
+     *
+     * @return array<string, array<int, string>>
+     */
+    public function charsets(string $engine): array
+    {
+        return (array) config("server.databases.drivers.{$this->driver($engine)}.charsets", []);
+    }
+
+    /**
+     * Does `renameUser()` carry the password across?
+     *
+     * False means the driver recreates the account, so the new password is
+     * already applied and a second `setPassword()` would be redundant.
+     */
+    public function renameKeepsPassword(string $engine): bool
+    {
+        return (bool) config("server.databases.drivers.{$this->driver($engine)}.rename_keeps_password", false);
+    }
+
+    /**
+     * The engine's own databases — never created, dropped or altered.
+     *
+     * @return array<int, string>
+     */
+    public function systemSchemas(string $engine): array
+    {
+        return (array) config("server.databases.drivers.{$this->driver($engine)}.system_schemas", []);
+    }
+
+    /**
+     * Every driver's system databases at once.
+     *
+     * For validation, which refuses a reserved name before the engine is
+     * necessarily known — and must keep refusing it if the request later
+     * names a different engine. Wider than one driver's list on purpose: the
+     * cost is refusing `admin` as a MySQL database name, and the cost of the
+     * other mistake is a dropped `template1`.
+     *
+     * @return array<int, string>
+     */
+    public function allSystemSchemas(): array
+    {
+        return array_values(array_unique(array_merge(
+            ...array_map(
+                fn (array $driver): array => (array) ($driver['system_schemas'] ?? []),
+                array_values((array) config('server.databases.drivers', [])),
+            ),
+        )));
+    }
+
     public function isSystemDatabase(string $engine, string $name): bool
     {
-        $key = $this->driver($engine) === 'mongo' ? 'mongo' : 'sql';
-
-        return in_array($name, (array) config("server.databases.system_schemas.{$key}", []), true);
+        return in_array($name, $this->systemSchemas($engine), true);
     }
 
     /**

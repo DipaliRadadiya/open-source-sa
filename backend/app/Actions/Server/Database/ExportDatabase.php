@@ -33,7 +33,7 @@ class ExportDatabase
         $dir = (string) config('server.databases.export_dir');
         File::ensureDirectoryExists($dir, 0700);
 
-        $extension = $this->manager->driver($database->engine) === 'mongo' ? 'archive.gz' : 'sql';
+        $extension = (string) config("server.databases.engines.{$database->engine}.dump_extension");
         $file = Str::slug($database->name).'-'.$database->engine.'-'.now()->format('Ymd-His').'-'.Str::lower(Str::random(6)).'.'.$extension;
         $path = rtrim($dir, '/').'/'.$file;
 
