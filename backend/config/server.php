@@ -1031,7 +1031,13 @@ return [
         'uptimekuma' => [
             'driver' => UptimeKumaInstaller::class,
             'repository' => env('SERVER_UPTIME_KUMA_REPO', 'https://github.com/louislam/uptime-kuma.git'),
-            'branch' => env('SERVER_UPTIME_KUMA_BRANCH', '2.0.0'),
+            // Empty means "the newest stable release", resolved from the
+            // repository's own tags at install time. It held `2.0.0` until
+            // 2026-09-08, by which point upstream was on 2.5.3 — a pin in a
+            // one-click installer does not stay current, it stops being
+            // noticed. Set this to a tag or branch to hold a version
+            // deliberately.
+            'branch' => env('SERVER_UPTIME_KUMA_BRANCH', ''),
             // Clone plus a full frontend build.
             'timeout' => (int) env('SERVER_UPTIME_KUMA_TIMEOUT', 1800),
         ],

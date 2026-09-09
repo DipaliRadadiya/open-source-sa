@@ -42,6 +42,23 @@ class UptimeKumaSiteType extends AbstractSiteType
     }
 
     /**
+     * A floor and no ceiling, from upstream's own `package.json`.
+     *
+     * Added with the move off the pinned `2.0.0`, because the move changes the
+     * answer: 2.0.0 declared `18 || >= 20.4.0`, and 2.5.3 declares `>= 20.4.0`
+     * — Node 18 was still acceptable to the version the panel used to install
+     * and is not acceptable to the version it now installs. Nothing had ever
+     * asserted a range here, so a site would have been created on Node 18 and
+     * built against a package that no longer supports it.
+     *
+     * No ceiling because upstream states none.
+     */
+    public function supportedNodeRange(): ?array
+    {
+        return ['min' => '20.4', 'max' => null];
+    }
+
+    /**
      * SQLite, inside its own directory.
      */
     public function needsDatabase(): bool

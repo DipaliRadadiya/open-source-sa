@@ -46,6 +46,15 @@ beforeEach(function () {
     Process::fake(function ($process) {
         test()->ran->push($process);
 
+        // Uptime Kuma resolves its version from the repository's tags before
+        // it clones, so a fake that answers nothing turns every provision of
+        // it into a failed lookup. A real remote has tags; this one does too.
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'ls-remote') {
+            return Process::result(output: str_repeat('a', 40)."\trefs/tags/2.5.3");
+        }
+
         return Process::result(output: '');
     });
 });
@@ -701,5 +710,90 @@ describe('unit memory ceiling', function () {
             ->first(fn (string $i) => str_contains($i, 'MemoryMax='));
 
         expect($unit)->toContain('MemoryMax=512M');
+    });
+});
+
+describe('the Uptime Kuma version', function () {
+    /*
+     * The config named `2.0.0` outright. Upstream was on 2.5.3 by 2026-09-08,
+     * so every site the panel created was more than a year of releases behind
+     * — a pin in a one-click installer does not stay current, it stops being
+     * noticed. It is now an override, and an empty value means "ask the
+     * repository what the newest release is".
+     */
+
+    /** `git ls-remote --tags --refs` output, in the shape git really prints. */
+    function fakeTags(array $tags): void
+    {
+        Process::fake(function ($process) use ($tags) {
+            test()->ran->push($process);
+
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'ls-remote') {
+                return Process::result(output: collect($tags)
+                    ->map(fn (string $t) => str_repeat('a', 40)."\trefs/tags/{$t}")
+                    ->implode("\n"));
+            }
+
+            return Process::result(output: '');
+        });
+    }
+
+    beforeEach(fn () => config(['server.installers.uptimekuma.branch' => '']));
+
+    it('clones the newest stable release', function () {
+        fakeTags(['1.23.16', '2.0.0', '2.4.0', '2.5.3']);
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('--branch 2.5.3')
+            ->and(ranCommands())->not->toContain('--branch 2.0.0');
+    });
+
+    it('sorts by version rather than by string', function () {
+        // '2.10.0' is lower than '2.9.0' asciibetically and higher by version.
+        // Sorting the list as text is the obvious way to write this and it
+        // would install the wrong release the moment a minor reaches double
+        // digits -- which for this project is a matter of months.
+        fakeTags(['2.9.0', '2.10.0', '2.5.3']);
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('--branch 2.10.0');
+    });
+
+    it('never picks a pre-release', function () {
+        // Not hypothetical: this project published 2.x betas for well over a
+        // year. "Newest tag" without the anchored pattern installs one.
+        fakeTags(['2.5.3', '2.6.0-beta.1', '2.6.0-rc.2']);
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('--branch 2.5.3')
+            ->and(ranCommands())->not->toContain('beta');
+    });
+
+    it('honours an operator who pins a version', function () {
+        // The escape hatch has to actually escape: a pinned value means no
+        // lookup at all, not a lookup whose answer is then ignored.
+        config(['server.installers.uptimekuma.branch' => '1.23.16']);
+        fakeTags(['2.5.3']);
+
+        app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+        expect(ranCommands())->toContain('--branch 1.23.16')
+            ->and(ranCommands())->not->toContain('ls-remote');
+    });
+
+    it('refuses rather than installing something stale when it cannot ask', function () {
+        // Falling back to a pinned version here would restore the exact bug
+        // this removes, in the one place nobody would look for it.
+        fakeTags([]);
+
+        expect(fn () => app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma')))
+            ->toThrow(ProvisioningFailedException::class);
+
+        expect(ranCommands())->not->toContain('git clone');
     });
 });
