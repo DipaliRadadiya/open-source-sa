@@ -25,7 +25,20 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
     [typesPresent],
   );
 
-  const [selected, setSelected] = useState(adoptable);
+  /*
+   * null until the reader ticks something, and everything until then.
+   *
+   * `useState(adoptable)` looked equivalent and was not: the dialog is keyed on
+   * the scan run, which exists long before its items do — they arrive a page at
+   * a time — so it mounted while `adoptable` was still empty and froze that in.
+   * Opening it then showed "0 resources", and the first tick was what made the
+   * number correct, which is exactly backwards.
+   *
+   * Deriving keeps it current while the dialog is shut and stops the moment
+   * there is a real choice to respect.
+   */
+  const [picked, setPicked] = useState(null);
+  const selected = picked ?? adoptable;
   const [includeFirewall, setIncludeFirewall] = useState(false);
 
   /*
@@ -43,7 +56,7 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
    */
   function handleOpenChange(next) {
     if (!next) {
-      setSelected(adoptable);
+      setPicked(null);
       setIncludeFirewall(false);
     }
     onOpenChange(next);
@@ -59,9 +72,11 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
   const unmet = useMemo(() => unmetDependencies(selected), [selected]);
 
   function toggleType(type, checked) {
-    setSelected((current) =>
-      checked ? [...current, type] : current.filter((entry) => entry !== type),
-    );
+    setPicked((current) => {
+      // First tick: start from what is currently shown, not from nothing.
+      const base = current ?? adoptable;
+      return checked ? [...base, type] : base.filter((entry) => entry !== type);
+    });
   }
 
   return (
