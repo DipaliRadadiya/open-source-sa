@@ -196,4 +196,21 @@ return [
     ],
 
     'supervisor_installing' => 'Supervisor wird installiert, unter dem Worker laufen. Das dauert einen Moment — legen Sie den Worker danach erneut an.',
+
+    'placeholder_page' => [
+        'lede' => 'Diese Seite ist bereit und wird ausgeliefert. Ersetzen Sie sie durch Ihre eigene — bis dahin sieht sie jeder Besucher.',
+        'php_running' => 'PHP läuft auf dieser Seite',
+        'step_files_title' => 'Dateien hochladen',
+        'step_files_body' => 'Nutzen Sie den Dateimanager des Panels oder verbinden Sie sich per SFTP mit dem Systembenutzer dieser Seite.',
+        'step_deploy_title' => 'Oder aus Git bereitstellen',
+        'step_deploy_body' => 'Verbinden Sie die Seite mit einem Repository, und das Panel baut sie bei jedem Push neu.',
+        'foot' => 'Platzhalterseite, erstellt vom Control Panel.',
+    ],
+
+    'disabled_page' => [
+        'title' => 'Seite nicht verfügbar',
+        'heading' => 'Diese Seite ist vorübergehend nicht verfügbar',
+        'lede' => 'Sie wurde von ihrem Betreiber offline genommen. Bitte versuchen Sie es später erneut.',
+        'foot' => 'Ausgeliefert vom Control Panel.',
+    ],
 ];

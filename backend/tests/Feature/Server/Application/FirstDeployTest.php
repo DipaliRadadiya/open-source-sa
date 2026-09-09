@@ -438,3 +438,134 @@ it('generates the app key without needing the dependencies it does not have yet'
         // and rotating a live app's key would log every session out.
         ->toContain('! grep -q "^APP_KEY=base64:." "$env"');
 });
+
+describe('the page a new site serves', function () {
+    /*
+     * It used to be `<h1>domain</h1>` and one sentence of unstyled text, which
+     * answered "is it up?" and looked like a broken site while doing it.
+     *
+     * The rules below are not cosmetic. This page is publicly reachable from
+     * the second a site provisions and a blank site can sit for months, so what
+     * it does *not* contain matters more than what it does.
+     */
+
+    /**
+     * Everything piped into a `tee`, keyed by the path written.
+     *
+     * An ArrayObject rather than an array, for the reason the helper above it
+     * already uses one: the fake fills it long after this returns, and a plain
+     * array would be copied empty at the return and every assertion would run
+     * against nothing.
+     */
+    function teedFiles(): ArrayObject
+    {
+        $written = new ArrayObject;
+
+        Process::fake(function ($process) use ($written) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'tee' && isset($args[1])) {
+                $written[$args[1]] = (string) ($process->input ?? '');
+            }
+
+            if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-d') {
+                return Process::result(exitCode: 1);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        return $written;
+    }
+
+    it('serves a styled page rather than a bare heading', function () {
+        $app = firstDeployApp(['site_type' => 'php', 'repository_url' => null, 'branch' => null]);
+        $written = teedFiles();
+
+        app(ApplicationProvisioner::class)->provision($app->load('systemUser'));
+
+        $page = $written['/home/deploy/public_html/index.php'] ?? '';
+
+        expect($page)->toContain('shop.example.com')
+            ->and($page)->toContain('<style>')
+            ->and($page)->toContain('prefers-color-scheme');
+    });
+
+    it('proves PHP is running instead of claiming it', function () {
+        // The actual question behind "is my site working". A static file
+        // served from a misconfigured pool looks exactly like a working one
+        // until the first real request, so the page prints something only PHP
+        // could produce.
+        $app = firstDeployApp(['site_type' => 'php', 'repository_url' => null, 'branch' => null]);
+        $written = teedFiles();
+
+        app(ApplicationProvisioner::class)->provision($app->load('systemUser'));
+
+        $page = $written['/home/deploy/public_html/index.php'] ?? '';
+
+        // Literal PHP in the written file -- Blade *executes* a `<?php` block
+        // it finds in a view rather than emitting one, so this only works
+        // because the fragment is passed in as data.
+        expect($page)->toContain('<?php echo htmlspecialchars(date(')
+            // And the template was rendered, not copied: an unrendered Blade
+            // directive reaching the customer's document root would be text
+            // their visitors read.
+            ->and($page)->not->toContain('{{')
+            ->and($page)->not->toContain('@if')
+            ->and($page)->not->toContain('@endif');
+    });
+
+    it('says nothing a scanner could use', function () {
+        // No version, no path, no server software, no phpinfo. Publicly
+        // reachable for as long as the site stays blank.
+        $app = firstDeployApp(['site_type' => 'php', 'repository_url' => null, 'branch' => null]);
+        $written = teedFiles();
+
+        app(ApplicationProvisioner::class)->provision($app->load('systemUser'));
+
+        $page = $written['/home/deploy/public_html/index.php'] ?? '';
+
+        expect($page)->not->toContain('phpinfo')
+            ->not->toContain('8.4')
+            ->not->toContain('/home/deploy')
+            ->not->toContain('PHP_VERSION')
+            // Indexed, a placeholder outranks the real site that replaces it.
+            ->and($page)->toContain('noindex');
+    });
+
+    it('fetches nothing from anywhere', function () {
+        // A server with no outbound network renders a dead stylesheet, and a
+        // broken layout is worse than the plain text this replaced. It also
+        // means the page cannot report a visitor to a third party.
+        $app = firstDeployApp(['site_type' => 'php', 'repository_url' => null, 'branch' => null]);
+        $written = teedFiles();
+
+        app(ApplicationProvisioner::class)->provision($app->load('systemUser'));
+
+        $page = $written['/home/deploy/public_html/index.php'] ?? '';
+
+        expect($page)->not->toContain('http://')
+            ->not->toContain('https://')
+            ->not->toContain('<link')
+            ->not->toContain('<script');
+    });
+
+    it('leaves the PHP fragment out of a static site', function () {
+        // Nothing to prove there, and a `<?php` block in an `index.html` is
+        // text the visitor reads.
+        $app = firstDeployApp([
+            'site_type' => 'static',
+            'serving_profile' => 'static',
+            'repository_url' => null,
+            'branch' => null,
+        ]);
+        $written = teedFiles();
+
+        app(ApplicationProvisioner::class)->provision($app->load('systemUser'));
+
+        $page = $written['/home/deploy/public_html/index.html'] ?? '';
+
+        expect($page)->toContain('shop.example.com')
+            ->and($page)->not->toContain('<?php');
+    });
+});

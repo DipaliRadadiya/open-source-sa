@@ -196,4 +196,21 @@ return [
     ],
 
     'supervisor_installing' => 'A instalar o supervisor, sob o qual os workers são executados. Demora um momento — crie o worker novamente quando terminar.',
+
+    'placeholder_page' => [
+        'lede' => 'Este site está pronto e a funcionar. Substitua esta página pela sua — até lá, todos os visitantes veem-na.',
+        'php_running' => 'O PHP está a funcionar neste site',
+        'step_files_title' => 'Carregue os seus ficheiros',
+        'step_files_body' => 'Use o Gestor de Ficheiros do painel, ou ligue-se por SFTP com o utilizador de sistema deste site.',
+        'step_deploy_title' => 'Ou faça deploy a partir do git',
+        'step_deploy_body' => 'Ligue o site a um repositório e o painel irá obtê-lo e compilá-lo a cada push.',
+        'foot' => 'Página provisória criada pelo painel de controlo.',
+    ],
+
+    'disabled_page' => [
+        'title' => 'Site indisponível',
+        'heading' => 'Este site está temporariamente indisponível',
+        'lede' => 'Foi colocado offline pelo seu proprietário. Tente novamente mais tarde.',
+        'foot' => 'Servido pelo painel de controlo.',
+    ],
 ];

@@ -12,6 +12,7 @@ use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
+use Illuminate\Support\Facades\View;
 
 /**
  * Puts an application on the server: directory, ownership, site config, and a
@@ -457,9 +458,37 @@ class ApplicationProvisioner
         $this->serverOps->run(
             ['tee', "{$root}/index.html"],
             ['feature' => 'application', 'op' => 'ensure_disabled_page'],
-            input: '<!doctype html><meta charset="utf-8"><title>Unavailable</title>'
-                ."<h1>This site is temporarily unavailable</h1>\n",
+            input: $this->disabledPageContents(),
         );
+    }
+
+    /**
+     * The page a disabled site serves.
+     *
+     * The same markup as the placeholder and deliberately different words,
+     * because the reader is different: a placeholder is read by the operator
+     * who just made the site, this is read by that site's visitors, who did
+     * not choose to be here and cannot do anything about it. So there are no
+     * next steps — instructions aimed at somebody who cannot follow them are
+     * noise — and nothing that says *why*, which is the site owner's business
+     * and not a stranger's.
+     *
+     * Rewritten on every disable rather than only when missing, which is what
+     * lets a change to this page reach servers that already have one. That was
+     * already true of the write and is worth keeping true.
+     */
+    private function disabledPageContents(): string
+    {
+        return View::make('server.pages.page', [
+            'kind' => 'disabled',
+            'locale' => str_replace('_', '-', app()->getLocale()),
+            'title' => __('application.disabled_page.title'),
+            'heading' => __('application.disabled_page.heading'),
+            'lede' => __('application.disabled_page.lede'),
+            'dynamic' => null,
+            'steps' => [],
+            'foot' => __('application.disabled_page.foot'),
+        ])->render()."\n";
     }
 
     /**
@@ -484,15 +513,54 @@ class ApplicationProvisioner
         return $documentRoot.'/'.($application->serving_profile === 'php' ? 'index.php' : 'index.html');
     }
 
+    /**
+     * The page a brand-new site serves until its owner puts something there.
+     *
+     * It used to be an unstyled `<h1>` and one sentence, which answered the
+     * question ("is it up?") and looked like a broken site while doing it.
+     *
+     * **For a PHP site it also proves PHP is running**, by printing a value
+     * only PHP could produce. That is the actual question behind "is my site
+     * working": a static file served from a misconfigured pool looks exactly
+     * like a working one until the first real request. Static profiles get the
+     * same page without that line, because for them there is nothing to prove.
+     *
+     * The PHP fragment is passed in rather than written in the template. Blade
+     * *executes* a `<?php` block it finds in a view; it does not emit one. And
+     * it uses `date()` alone — no Laravel helpers, because this file runs on
+     * the customer's site with no framework under it.
+     */
     private function placeholderContents(Application $application): string
     {
-        $domain = e($application->domain);
+        $isPhp = $application->serving_profile === 'php';
 
-        $body = "<!doctype html><meta charset=\"utf-8\"><title>{$domain}</title>"
-            ."<h1>{$domain}</h1><p>This site is ready. Upload your files or deploy your code.</p>";
+        $body = View::make('server.pages.page', [
+            'kind' => 'placeholder',
+            'locale' => str_replace('_', '-', app()->getLocale()),
+            'title' => $application->domain,
+            'heading' => $application->domain,
+            'lede' => __('application.placeholder_page.lede'),
+            'dynamic' => $isPhp
+                ? '<?php echo htmlspecialchars(date("Y-m-d H:i:s T")); ?>'.' — '.e(__('application.placeholder_page.php_running'))
+                : null,
+            'steps' => [
+                [
+                    'title' => __('application.placeholder_page.step_files_title'),
+                    'body' => __('application.placeholder_page.step_files_body'),
+                ],
+                [
+                    'title' => __('application.placeholder_page.step_deploy_title'),
+                    'body' => __('application.placeholder_page.step_deploy_body'),
+                ],
+            ],
+            'foot' => __('application.placeholder_page.foot'),
+        ])->render();
 
-        return $application->serving_profile === 'php'
-            ? "<?php // Placeholder written by the panel — replace with your app.\n?>\n".$body."\n"
+        // The comment is for whoever opens the file next, and it has to be the
+        // first thing in it: a PHP site's placeholder is `index.php`, and a
+        // byte before `<?php` is output the browser receives.
+        return $isPhp
+            ? "<?php // Placeholder written by the panel — replace it with your application.\n?>\n".$body."\n"
             : $body."\n";
     }
 

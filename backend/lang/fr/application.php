@@ -196,4 +196,21 @@ return [
     ],
 
     'supervisor_installing' => 'Installation de supervisor, sous lequel tournent les workers. Cela prend un instant : recréez le worker une fois terminé.',
+
+    'placeholder_page' => [
+        'lede' => 'Ce site est prêt et en ligne. Remplacez cette page par la vôtre — d\'ici là, chaque visiteur la voit.',
+        'php_running' => 'PHP fonctionne sur ce site',
+        'step_files_title' => 'Envoyez vos fichiers',
+        'step_files_body' => 'Utilisez le gestionnaire de fichiers du panneau, ou connectez-vous en SFTP avec l\'utilisateur système du site.',
+        'step_deploy_title' => 'Ou déployez depuis git',
+        'step_deploy_body' => 'Reliez le site à un dépôt et le panneau le récupérera et le construira à chaque push.',
+        'foot' => 'Page provisoire créée par le panneau de contrôle.',
+    ],
+
+    'disabled_page' => [
+        'title' => 'Site indisponible',
+        'heading' => 'Ce site est temporairement indisponible',
+        'lede' => 'Il a été mis hors ligne par son propriétaire. Merci de réessayer plus tard.',
+        'foot' => 'Servi par le panneau de contrôle.',
+    ],
 ];

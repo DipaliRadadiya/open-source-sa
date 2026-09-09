@@ -201,4 +201,21 @@ return [
     ],
 
     'supervisor_installing' => 'Installing supervisor, which workers run under. This takes a moment — create the worker again once it finishes.',
+
+    'placeholder_page' => [
+        'lede' => 'This site is ready and serving. Replace this page with your own — until you do, every visitor sees it.',
+        'php_running' => 'PHP is running on this site',
+        'step_files_title' => 'Upload your files',
+        'step_files_body' => 'Use the panel\'s File Manager, or connect over SFTP with this site\'s system user.',
+        'step_deploy_title' => 'Or deploy from git',
+        'step_deploy_body' => 'Point the site at a repository and the panel will pull and build it on every push.',
+        'foot' => 'Placeholder page created by the control panel.',
+    ],
+
+    'disabled_page' => [
+        'title' => 'Site unavailable',
+        'heading' => 'This site is temporarily unavailable',
+        'lede' => 'It has been taken offline by its owner. Please try again later.',
+        'foot' => 'Served by the control panel.',
+    ],
 ];

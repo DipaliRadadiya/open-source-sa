@@ -196,4 +196,21 @@ return [
     ],
 
     'supervisor_installing' => 'Instalando supervisor, que es donde se ejecutan los workers. Tarda un momento: vuelve a crear el worker cuando termine.',
+
+    'placeholder_page' => [
+        'lede' => 'Este sitio está listo y funcionando. Sustituye esta página por la tuya: hasta entonces, la ve cada visitante.',
+        'php_running' => 'PHP está funcionando en este sitio',
+        'step_files_title' => 'Sube tus archivos',
+        'step_files_body' => 'Usa el Administrador de archivos del panel o conéctate por SFTP con el usuario del sistema de este sitio.',
+        'step_deploy_title' => 'O despliega desde git',
+        'step_deploy_body' => 'Conecta el sitio a un repositorio y el panel lo descargará y compilará en cada push.',
+        'foot' => 'Página de marcador creada por el panel de control.',
+    ],
+
+    'disabled_page' => [
+        'title' => 'Sitio no disponible',
+        'heading' => 'Este sitio no está disponible temporalmente',
+        'lede' => 'Su propietario lo ha puesto fuera de línea. Vuelve a intentarlo más tarde.',
+        'foot' => 'Servido por el panel de control.',
+    ],
 ];
