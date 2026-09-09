@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Server\Backup\DeleteBackup;
 use App\Enums\BackupStatus;
 use App\Models\Application;
 use App\Models\Backup;
@@ -10,6 +11,7 @@ use App\Services\Server\Backups\BackupContext;
 use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\Steps\VerifyArtifact;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
@@ -222,5 +224,97 @@ describe('retention', function () {
         // good backup would have been pruned — quietly eroding the retention
         // the user asked for.
         expect(Backup::find($first->id))->not->toBeNull();
+    });
+});
+
+describe('the archive name', function () {
+    it('does not reuse a key when the id counter starts again', function () {
+        // The regression. The key used to be
+        // `backups/{domain}/{date}/{backup_id}.tar.gz`, and an id only means
+        // something inside one panel's database — reinstall the panel and the
+        // counting restarts over a bucket that still holds the old archives.
+        // Simulated by giving a second backup the id the first one had, which
+        // is exactly the state a reinstall produces.
+        fakeTar();
+
+        $target = backupTarget();
+
+        $first = app(BackupRunner::class)->run($target);
+        $firstKey = $first->manifest['key'];
+        $firstId = $first->id;
+
+        expect($this->fakeDisk->get($firstKey))->toHaveLength(2048);
+
+        // The panel is reinstalled: its history is gone, the bucket is not.
+        Backup::query()->delete();
+        DB::table('sqlite_sequence')->where('name', 'backups')->update(['seq' => $firstId - 1]);
+
+        $second = app(BackupRunner::class)->run($target);
+
+        expect($second->id)->toBe($firstId)
+            ->and($second->manifest['key'])->not->toBe($firstKey);
+
+        // Both archives are still there. Under the old scheme the second
+        // upload landed on the first one's key and destroyed it.
+        $this->fakeDisk->assertExists($firstKey);
+        $this->fakeDisk->assertExists($second->manifest['key']);
+    });
+
+    it('gives every backup a uid without anyone having to ask', function () {
+        $target = backupTarget();
+
+        $one = Backup::create([
+            'backup_target_id' => $target->id,
+            'application_id' => $this->application->id,
+            'type' => 'filesystem',
+            'status' => BackupStatus::Running,
+        ]);
+        $two = Backup::create([
+            'backup_target_id' => $target->id,
+            'application_id' => $this->application->id,
+            'type' => 'filesystem',
+            'status' => BackupStatus::Running,
+        ]);
+
+        expect($one->uid)->not->toBeEmpty()
+            ->and($two->uid)->not->toBeEmpty()
+            ->and($one->uid)->not->toBe($two->uid);
+    });
+
+    it('cannot be chosen by the caller', function () {
+        // Not fillable on purpose: this is the field that stops one archive
+        // overwriting another, so nothing outside the model picks it.
+        $target = backupTarget();
+
+        $backup = Backup::create([
+            'backup_target_id' => $target->id,
+            'application_id' => $this->application->id,
+            'type' => 'filesystem',
+            'status' => BackupStatus::Running,
+            'uid' => 'chosen-by-the-caller',
+        ]);
+
+        expect($backup->uid)->not->toBe('chosen-by-the-caller');
+    });
+
+    it('still finds an archive written under the old id-based scheme', function () {
+        // Nothing recomputes the key — every reader takes it off the row — so
+        // a backup from before this change resolves exactly as it always did.
+        $target = backupTarget();
+        $legacyKey = 'backups/backed-up.example.com/2026-01-01/7.tar.gz';
+        $this->fakeDisk->put($legacyKey, str_repeat('x', 2048));
+
+        $backup = Backup::create([
+            'backup_target_id' => $target->id,
+            'application_id' => $this->application->id,
+            'type' => 'filesystem',
+            'status' => BackupStatus::Verified,
+            'manifest' => ['key' => $legacyKey],
+        ]);
+
+        app(DeleteBackup::class)->execute($backup);
+
+        $this->fakeDisk->assertMissing($legacyKey);
+        expect(Backup::find($backup->id))->toBeNull();
     });
 });

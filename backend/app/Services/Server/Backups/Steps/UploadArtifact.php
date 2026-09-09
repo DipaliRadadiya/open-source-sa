@@ -65,13 +65,28 @@ class UploadArtifact implements BackupStep
      * application's backups in a bucket shared by several, and the id keeps
      * two runs in the same second from colliding.
      */
+    /**
+     * Where this archive lives on the destination.
+     *
+     * Named by the backup's `uid`, never its `id`. An id is an autoincrement
+     * that only means anything inside one panel's database: reinstall the
+     * panel, or restore its database from an older dump, and the counter
+     * starts again — the next backup then writes to the key an existing
+     * archive already holds, and `writeStream` is a PUT, so the old one is
+     * gone with no error anywhere. Two panels sharing a destination and a
+     * prefix collide the same way.
+     *
+     * Nothing recomputes this: the key is stored on the row and every reader
+     * (delete, prune, download, restore) reads it back from there. So archives
+     * written under the old scheme keep resolving without a branch anywhere.
+     */
     private function objectKey(BackupContext $context): string
     {
         return sprintf(
-            'backups/%s/%s/%d.tar.gz',
+            'backups/%s/%s/%s.tar.gz',
             $context->application()->domain ?: 'application-'.$context->application()->id,
             $context->backup->created_at?->format('Y-m-d') ?? date('Y-m-d'),
-            $context->backup->id,
+            $context->backup->uid,
         );
     }
 
