@@ -88,8 +88,9 @@ DRY_RUN=0          # --dry-run
 #     httpd_config.conf — see configure_ols() for why that is load-bearing.
 #
 # Two capability differences remain, and the installer says both at selection:
-# the bot blocker cannot be enforced on OLS, and there is no per-site PHP
-# isolation. Neither is a defect in this script.
+# the WAF cannot be enforced on OLS (OlsDriver::supportsWaf() returns false),
+# and there is no per-site PHP isolation. Neither is a defect in this script.
+# The bot blocker is NOT one of them — both OLS templates render its rules.
 STACK=""           # --stack=lemp|lamp|mern|ols  (prompted, or lemp)
 WEB_SERVER=""      # derived from STACK
 
@@ -351,8 +352,9 @@ resolve_stack() {
             # only to whoever reads the source. Not a warning about the stack
             # any more — a capability difference they would otherwise find out
             # about from a control that refuses to switch on.
-            say "     note: the bot blocker is not available on OpenLiteSpeed, and"
-            say "     there is no per-site PHP isolation (no per-site pools)"
+            say "     note: the WAF (8G firewall) is not available on OpenLiteSpeed,"
+            say "     and there is no per-site PHP isolation (no per-site pools)."
+            say "     The bot blocker does work."
             ;;
         *) die "unknown stack: ${STACK}  (expected lemp, lamp, mern or ols)" ;;
     esac

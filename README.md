@@ -65,17 +65,24 @@ sudo bash install.sh --stack=ols      # OpenLiteSpeed + PHP
 Run it without `--stack` from a terminal and it asks. Under `curl | bash` there is
 no terminal to ask on, so pass the flag.
 
-**On `--stack=ols`:** supported, with two differences worth knowing before you
+**On `--stack=ols`:** supported, with three differences worth knowing before you
 pick it rather than after.
 
-**The bot blocker is not available.** OpenLiteSpeed needs those rules as rewrite
-directives inside each site's `vhconf.conf`, and the templates do not carry them
-yet. The panel refuses to enable it rather than storing a setting it cannot
-enforce, and the control is hidden — but if a site needs that protection, it
-needs a different stack.
+**The WAF (8G firewall) is not available.** OpenLiteSpeed needs those rules as
+rewrite directives inside each site's `vhconf.conf`, and the templates do not
+carry them yet. The panel refuses to enable it rather than storing a setting it
+cannot enforce — but if a site needs that protection, it needs a different
+stack. The **bot blocker does work** on OpenLiteSpeed.
 
 **There is no per-site PHP isolation.** OpenLiteSpeed starts PHP itself and has
 no per-site pools. Per-site `php.ini` settings do work, through `lsphp`.
+
+**Only WordPress reads its own `.htaccess`.** OpenLiteSpeed needs a restart to
+pick up a change to one, so it is enabled for WordPress alone — LiteSpeed Cache
+talks to the cache module through that file and has no other way in. Every site
+gets the standard front-controller rewrite from its vhost either way, so normal
+routing and permalinks work; what does not apply is any *additional* rule an
+application ships in its own `.htaccess`.
 
 Everything else is the same: vhosts, certificates (OLS binds them to a listener
 rather than a vhost, which the panel handles), per-site logs, staging, clone and
