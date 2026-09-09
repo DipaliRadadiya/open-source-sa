@@ -4574,7 +4574,15 @@
       "reviewSecurity": "सुरक्षा देखें",
       "protectionsOff": "{count, plural, one {# सुरक्षा बंद} other {# सुरक्षाएँ बंद}}",
       "noDatabase": "इस साइट पर कोई डेटाबेस नहीं है, इसलिए इसके बैकअप में डेटाबेस शामिल नहीं होगा",
-      "attachDatabase": "डेटाबेस जोड़ें"
+      "attachDatabase": "डेटाबेस जोड़ें",
+      "issueAction": {
+        "certificate": "SSL देखें",
+        "dns": "डोमेन जाँचें",
+        "worker": "वर्कर देखें",
+        "php_eol": "PHP वर्शन बदलें",
+        "deploy_failed": "डिप्लॉयमेंट देखें",
+        "disk": "जगह खाली करें"
+      }
     },
     "filters": {
       "allStatuses": "सभी स्थितियाँ",

@@ -4574,7 +4574,15 @@
       "reviewSecurity": "Revisar seguridad",
       "protectionsOff": "{count, plural, one {# protección desactivada} other {# protecciones desactivadas}}",
       "noDatabase": "Este sitio no tiene base de datos, por lo que sus copias no incluirán ninguna",
-      "attachDatabase": "Vincular una base de datos"
+      "attachDatabase": "Vincular una base de datos",
+      "issueAction": {
+        "certificate": "Revisar SSL",
+        "dns": "Comprobar dominios",
+        "worker": "Ver workers",
+        "php_eol": "Cambiar la versión de PHP",
+        "deploy_failed": "Ver el despliegue",
+        "disk": "Liberar espacio"
+      }
     },
     "filters": {
       "allStatuses": "Todos los estados",

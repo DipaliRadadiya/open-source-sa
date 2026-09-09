@@ -4574,7 +4574,15 @@
       "reviewSecurity": "Review security",
       "protectionsOff": "{count, plural, one {# protection off} other {# protections off}}",
       "noDatabase": "This site has no database, so its backups will not contain one",
-      "attachDatabase": "Attach a database"
+      "attachDatabase": "Attach a database",
+      "issueAction": {
+        "certificate": "Review SSL",
+        "dns": "Check domains",
+        "worker": "View workers",
+        "php_eol": "Change PHP version",
+        "deploy_failed": "View deployment",
+        "disk": "Free up space"
+      }
     },
     "filters": {
       "allStatuses": "All statuses",

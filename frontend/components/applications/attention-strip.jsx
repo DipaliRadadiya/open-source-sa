@@ -36,47 +36,51 @@ export async function AttentionStrip({ items }) {
 
   return (
     /*
-     * A named heading with the findings beneath it, not one long sentence
-     * stretched between the two edges of a 1100px band. Justified across that
-     * width the strip had a title at the far left, three buttons at the far
-     * right and roughly 500px of nothing in the middle — which reads as an
-     * empty box even though every pixel of it is doing something.
+     * One finding per row, each beside its own button.
      *
-     * `max-w-xl` on the text is what actually fixes it: the message stops
-     * growing with the viewport, so the block stays a paragraph beside its
-     * actions instead of a thin line spanning the screen.
+     * The findings used to be joined into a single sentence with the buttons
+     * gathered at the right, which worked while every label was three words
+     * this page had written itself. The server's own checks send whole
+     * sentences — "SSL certificate expires in 0 days." — and five of those run
+     * together above five unattached buttons leaves no way to tell which button
+     * belongs to which sentence.
+     *
+     * Rows are dense enough that one finding still reads as a band rather than
+     * a list of one.
      */
-    <div className="flex flex-col gap-2 rounded-xl border border-warning/30 bg-warning/5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-4 sm:py-3">
-      <div className="flex min-w-0 items-start gap-2.5">
-        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-        <div className="min-w-0 max-w-xl space-y-0.5">
-          <p className="text-sm font-semibold leading-tight max-sm:sr-only">{t("title")}</p>
-          {/* The findings themselves, not a count that sends the reader hunting
-              for which of the cards below is the unhappy one. */}
-          <p className="text-sm leading-snug wrap-anywhere text-muted-foreground">
-            {items.map((item) => item.label).join(" · ")}
-          </p>
-        </div>
+    <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-2.5 sm:py-3">
+      <div className="flex items-center gap-2.5">
+        <AlertTriangle className="size-4 shrink-0 text-warning" />
+        <p className="text-sm font-semibold leading-tight">{t("title")}</p>
       </div>
 
-      {/* shrink-0 so the buttons never compress into stacked single words, and
-          wrap so a narrow screen puts them on one line rather than three full
-          width rows — that stacking is what made this 166px tall on a phone. */}
-      <div className="flex shrink-0 flex-wrap gap-1.5 sm:gap-2">
-        {items.map((item) =>
-          item.href.startsWith("#") ? (
-            <SectionJumpLink key={item.key} href={item.href}>
-              {item.action}
-            </SectionJumpLink>
-          ) : (
-            <Button key={item.key} asChild variant="outline" size="sm">
-              <Link href={item.href} prefetch={false}>
-                {item.action}
-              </Link>
-            </Button>
-          ),
-        )}
-      </div>
+      <ul className="mt-1.5 space-y-1.5 sm:ml-[26px] sm:mt-1">
+        {items.map((item) => (
+          <li
+            key={item.key}
+            className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+          >
+            {/* min-w-48 rather than min-w-0: beside a shrink-0 button, a plain
+                min-w-0 lets the sentence squeeze to one word per line. */}
+            <span className="min-w-48 text-sm leading-snug wrap-anywhere text-muted-foreground">
+              {item.label}
+            </span>
+            {item.action && item.href ? (
+              <span className="shrink-0">
+                {item.href.startsWith("#") ? (
+                  <SectionJumpLink href={item.href}>{item.action}</SectionJumpLink>
+                ) : (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={item.href} prefetch={false}>
+                      {item.action}
+                    </Link>
+                  </Button>
+                )}
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

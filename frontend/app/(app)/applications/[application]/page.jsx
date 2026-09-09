@@ -6,7 +6,7 @@ import { getApplicationDatabases, getEngines, getUnattachedDatabases } from "@/l
 import { getSiteTypes } from "@/lib/applications/get-applications";
 import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { can } from "@/lib/permissions/can";
-import { getApplication } from "@/lib/applications/get-applications";
+import { getApplication, getApplicationIssues } from "@/lib/applications/get-applications";
 import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
 import { getGitAccounts } from "@/lib/git/get-git";
 import {
@@ -21,6 +21,7 @@ import { ProcessCard } from "@/components/applications/process-card";
 import { DomainsCard } from "@/components/applications/domains-card";
 import { ProtectionCard } from "@/components/applications/protection-card";
 import { AttentionStrip } from "@/components/applications/attention-strip";
+import { issueItems, localKeysSupersededBy } from "@/lib/applications/issue-items";
 import { BackupCard } from "@/components/applications/backup-card";
 import { DatabaseCard } from "@/components/applications/database-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -197,7 +198,23 @@ export default async function ApplicationDetailPage({ params }) {
    */
   const protectionsOff = protectionItems.filter((item) => !item.on);
 
+  /*
+   * The server's own findings, ahead of the ones this page works out.
+   *
+   * It checks six things — an expiring certificate, DNS not pointing here, a
+   * worker that has stopped, a PHP version past end of life, the disk filling
+   * up, and a failed deploy. Four of those are invisible to this page, which
+   * can only reason about what it happened to fetch.
+   */
+  // Live checks, so not cached with the rest: a certificate's remaining days
+  // and the disk's percentage both move without anything on this page acting.
+  const issues = settled
+    ? await getApplicationIssues(id).catch(() => ({ issues: [], healthy: true }))
+    : { issues: [], healthy: true };
+  const superseded = localKeysSupersededBy(issues.issues);
+
   const attentionItems = [
+    ...issueItems(issues.issues, id, (type) => t(`attention.issueAction.${type}`)),
     canSeeDomains && !domainList.failed && !certificate.failed && !secured && {
       key: "ssl",
       label: t("attention.noCertificate"),
@@ -239,7 +256,12 @@ export default async function ApplicationDetailPage({ params }) {
        */
       href: "#security",
     },
-  ].filter(Boolean);
+  ]
+    .filter(Boolean)
+    // The server can see the certificate; this page is inferring from what a
+    // fetch happened to return. Two rows about one certificate makes the strip
+    // argue with itself.
+    .filter((item) => !superseded.has(item.key));
 
   return (
     // 4, not 6, between the header, the strip and the grid. Those three are one

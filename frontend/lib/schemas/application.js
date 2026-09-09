@@ -89,6 +89,25 @@ const webhookSchema = z.object({
   last_delivered_at_human: z.string().nullish(),
 }).passthrough();
 
+/**
+ * One thing the server thinks is wrong with a site.
+ *
+ * `message` arrives translated and is shown as sent — it carries numbers this
+ * side does not have (days remaining, percent used), and re-wording it here is
+ * how two screens start disagreeing about the same fact.
+ */
+export const applicationIssueSchema = z.object({
+  type: z.string(),
+  severity: z.enum(["warning", "critical"]).catch("warning"),
+  message: z.string(),
+  meta: z.record(z.string(), z.unknown()).default({}),
+});
+
+export const applicationIssuesResponseSchema = z.object({
+  issues: z.array(applicationIssueSchema).default([]),
+  healthy: z.boolean().default(true),
+});
+
 export const applicationSchema = z.object({
   id: z.number(),
   name: z.string(),

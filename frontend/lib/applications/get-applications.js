@@ -2,6 +2,7 @@ import { cache } from "react";
 import { read } from "@/lib/api/read";
 import {
   aiBotPoliciesResponseSchema,
+  applicationIssuesResponseSchema,
   applicationResponseSchema,
   botTrafficResponseSchema,
   applicationsResponseSchema,
@@ -79,6 +80,25 @@ export const getApplication = cache(async function getApplication(id) {
   const result = await read(`/applications/${id}`, applicationResponseSchema);
   return { application: result.data?.application ?? null, failed: result.failed, status: result.status, failure: result.failure };
 });
+
+/**
+ * What the server thinks is wrong with this site.
+ *
+ * Not cached: the page's own warnings are derived from data it already holds,
+ * but these are live checks — a certificate's remaining days and the disk's
+ * percentage both move on their own.
+ *
+ * A failure returns nothing rather than an error. The strip is a summary; a
+ * site whose issue check had a wobble should show the rows the page worked out
+ * for itself, not an error banner over a page that otherwise loaded.
+ */
+export async function getApplicationIssues(id) {
+  const { data, failed } = await read(
+    `/applications/${id}/issues`,
+    applicationIssuesResponseSchema,
+  );
+  return { issues: data?.issues ?? [], healthy: data?.healthy ?? true, failed };
+}
 
 // The firewall's own read. Same ApplicationResource, but with `wafRules`
 // loaded — the exceptions and custom rules are absent from every other
