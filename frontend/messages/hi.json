@@ -5089,7 +5089,7 @@
       "allApplications": "सभी साइटें",
       "allStatuses": "कोई भी स्थिति",
       "statuses": {
-        "verified": "सत्यापित",
+        "verified": "पूरा हुआ",
         "verifying": "सत्यापित हो रहा है",
         "running": "चल रहा है",
         "pending": "कतार में",

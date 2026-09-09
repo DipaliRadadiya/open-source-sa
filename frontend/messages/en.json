@@ -5089,7 +5089,7 @@
       "allApplications": "All sites",
       "allStatuses": "Any status",
       "statuses": {
-        "verified": "Verified",
+        "verified": "Complete",
         "verifying": "Verifying",
         "running": "Running",
         "pending": "Queued",
