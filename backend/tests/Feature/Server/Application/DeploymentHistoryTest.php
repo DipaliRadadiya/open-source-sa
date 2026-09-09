@@ -107,6 +107,56 @@ it('keeps the record of a deploy that failed, and says where', function () {
         ->and($deployment->output)->toContain('repository not found');
 });
 
+it('records the commit on a deploy that failed after checking it out', function () {
+    // The commit was written only on success, so every deploy that failed at
+    // the script, a restart or the verify showed "No commit message" for code
+    // that had definitely been pulled — at the exact moment somebody needs to
+    // know which revision they are looking at.
+    Process::fake(function ($process) {
+        return match (true) {
+            in_array('rev-parse', $process->command, true) => Process::result(output: 'a1b2c3d4e5f6'),
+            in_array('log', $process->command, true) => Process::result(output: "Fix the checkout bug\nAda Lovelace"),
+            // Fails after the working tree is already at the new revision.
+            ($process->command[0] ?? '') === 'chown' => Process::result(errorOutput: 'operation not permitted', exitCode: 1),
+            ($process->command[0] ?? '') === 'curl' => Process::result(output: '200'),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    $deployment = app(DeploymentRecorder::class)
+        ->open($this->application, DeploymentTrigger::Manual, $this->admin->id);
+
+    runRecordedDeploy($deployment->id);
+
+    $deployment->refresh();
+
+    expect($deployment->status)->toBe(DeploymentStatus::Failed)
+        ->and($deployment->commit_hash)->toBe('a1b2c3d4e5f6')
+        ->and($deployment->commit_message)->toBe('Fix the checkout bug')
+        ->and($deployment->commit_author)->toBe('Ada Lovelace');
+});
+
+it('records no commit when the deploy failed before checking one out', function () {
+    // The other half, and it is not a gap. A deploy that could not fetch has
+    // no revision to name, and inventing one — the previous release, say —
+    // would point somebody at code that was never the problem.
+    Process::fake(function ($process) {
+        return in_array('fetch', $process->command, true) || in_array('clone', $process->command, true)
+            ? Process::result(errorOutput: 'fatal: repository not found', exitCode: 128)
+            : Process::result(exitCode: 0);
+    });
+
+    $deployment = app(DeploymentRecorder::class)
+        ->open($this->application, DeploymentTrigger::Manual, $this->admin->id);
+
+    runRecordedDeploy($deployment->id);
+
+    $deployment->refresh();
+
+    expect($deployment->status)->toBe(DeploymentStatus::Failed)
+        ->and($deployment->commit_hash)->toBeNull();
+});
+
 it('never stores a credential that leaked into the output', function () {
     $recorder = app(DeploymentRecorder::class);
 

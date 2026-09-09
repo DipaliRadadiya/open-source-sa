@@ -129,6 +129,14 @@ class GitDeployer
             ]);
 
             $commit = $this->currentCommit($documentRoot);
+            $details = $this->commitDetails($documentRoot);
+
+            // Recorded here rather than only on success. Everything below this
+            // line can fail — ownership, the deploy script, the restarts, the
+            // verify — and all of it fails with this revision already checked
+            // out. A failed deploy that cannot say which commit it was running
+            // is missing the one fact somebody debugging it needs.
+            $this->recorder->commit($commit, $details['message'], $details['author']);
 
             // Site is owned by its Linux user. Without this git operations as root
             // inside a non-root-owned directory fail with "dubious ownership".
@@ -185,7 +193,7 @@ class GitDeployer
             return [
                 'steps' => $this->progress->steps(),
                 'commit' => $commit,
-                ...$this->commitDetails($documentRoot),
+                ...$details,
             ];
         } finally {
             // Always — a failed deploy must not leave a credential on disk.

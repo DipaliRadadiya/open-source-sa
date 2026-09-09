@@ -84,6 +84,26 @@ class DeploymentRecorder
         ]);
     }
 
+    /**
+     * Record which commit is now checked out, as soon as that is known.
+     *
+     * Called from the deploy the moment the working tree is at the new
+     * revision — before ownership, the deploy script, the restarts and the
+     * verify. Those are exactly the steps that fail, and a deploy that failed
+     * at one of them has the commit sitting on disk. Writing it only on
+     * success meant every failed deploy showed "No commit message" for code
+     * that had definitely been pulled, which is the moment somebody most needs
+     * to know which revision they are looking at.
+     */
+    public function commit(?string $commit, ?string $message, ?string $author): void
+    {
+        $this->deployment?->update([
+            'commit_hash' => $commit,
+            'commit_message' => $message,
+            'commit_author' => $author,
+        ]);
+    }
+
     public function succeed(?string $commit, ?string $message, ?string $author): void
     {
         $this->deployment?->update([
@@ -95,6 +115,15 @@ class DeploymentRecorder
         ]);
     }
 
+    /**
+     * The commit is deliberately not touched here.
+     *
+     * Whatever {@see commit()} recorded stands: a failure after checkout keeps
+     * the revision it was working on, and a failure *before* checkout — bad
+     * credentials, an unreachable remote, a branch that does not exist — has
+     * no commit to name and correctly shows none. Clearing it here would throw
+     * away the more useful of the two answers to make them look alike.
+     */
     public function fail(string $step, ?string $reference): void
     {
         $this->deployment?->update([
