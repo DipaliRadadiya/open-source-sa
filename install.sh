@@ -78,20 +78,18 @@ DRY_RUN=0          # --dry-run
 # server — and the web server serves the panel itself, so it cannot be changed
 # from inside the panel later without the panel going down with it.
 #
-# `ols` was deliberately absent until 2026-09-01: the panel's OpenLiteSpeed
-# support had never run on real hardware, and offering it made it both the first
-# thing a new user can pick *and* the thing serving the panel they would use to
-# recover. It is offered now by operator decision, before that proof exists, so
-# the risk is managed instead of avoided:
+# `ols` was absent until 2026-09-01 and labelled experimental until 2026-09-09.
+# Two decisions from that period are still load-bearing and should not be
+# undone casually:
 #
-#   * It is labelled experimental at the prompt. A user picking it is told.
 #   * The panel's own PHP stays on PHP-FPM, the same as every other stack, so
 #     the panel does not also depend on the lsphp packages it has never used.
 #   * The panel's own vhost is written OUTSIDE the panel-managed markers in
 #     httpd_config.conf — see configure_ols() for why that is load-bearing.
 #
-# What is still unproven is listed at the top of configure_ols(). Read it before
-# assuming a failure here is the user's fault.
+# Two capability differences remain, and the installer says both at selection:
+# the bot blocker cannot be enforced on OLS, and there is no per-site PHP
+# isolation. Neither is a defect in this script.
 STACK=""           # --stack=lemp|lamp|mern|ols  (prompted, or lemp)
 WEB_SERVER=""      # derived from STACK
 
@@ -324,7 +322,7 @@ resolve_stack() {
             printf '       1) lemp   nginx + PHP     %s(default)%s\n' "$DIM" "$RESET"
             printf '       2) lamp   Apache + PHP\n'
             printf '       3) mern   nginx + Node\n'
-            printf '       4) ols    OpenLiteSpeed + PHP   %sexperimental%s\n\n' "$YELLOW" "$RESET"
+            printf '       4) ols    OpenLiteSpeed + PHP\n\n'
             printf '     Choice [1]: '
 
             local answer=""
@@ -350,10 +348,11 @@ resolve_stack() {
         ols)
             WEB_SERVER="openlitespeed"
             # Said once, plainly, to whoever is watching the install rather than
-            # only to whoever reads the source. This stack has not been proven on
-            # real hardware; the other three have.
-            warn "the openlitespeed stack is experimental and has not been verified on a real server"
-            warn "if the panel does not come up, re-run with --stack=lemp"
+            # only to whoever reads the source. Not a warning about the stack
+            # any more — a capability difference they would otherwise find out
+            # about from a control that refuses to switch on.
+            say "     note: the bot blocker is not available on OpenLiteSpeed, and"
+            say "     there is no per-site PHP isolation (no per-site pools)"
             ;;
         *) die "unknown stack: ${STACK}  (expected lemp, lamp, mern or ols)" ;;
     esac

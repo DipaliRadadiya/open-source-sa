@@ -59,19 +59,32 @@ language rather than the language of whoever caused them.
 sudo bash install.sh --stack=lemp     # nginx + PHP          (default)
 sudo bash install.sh --stack=lamp     # Apache + PHP
 sudo bash install.sh --stack=mern     # nginx + Node
-sudo bash install.sh --stack=ols      # OpenLiteSpeed + PHP  (experimental)
+sudo bash install.sh --stack=ols      # OpenLiteSpeed + PHP
 ```
 
 Run it without `--stack` from a terminal and it asks. Under `curl | bash` there is
 no terminal to ask on, so pass the flag.
 
-**On `--stack=ols`:** the web server the installer picks is the one serving the
-panel itself, so if it misbehaves there is no working panel left to fix it from.
-A `--stack=ols` install has now come up and run on real hardware, but only once,
-and no site has yet been created on one — so it stays labelled experimental until
-that has been done too. The other three stacks are the safe choice if you have no
-preference. The panel's own PHP runs on PHP-FPM on every stack including this one;
-hosted sites on OLS get LSAPI (`lsphp`) as usual.
+**On `--stack=ols`:** supported, with two differences worth knowing before you
+pick it rather than after.
+
+**The bot blocker is not available.** OpenLiteSpeed needs those rules as rewrite
+directives inside each site's `vhconf.conf`, and the templates do not carry them
+yet. The panel refuses to enable it rather than storing a setting it cannot
+enforce, and the control is hidden — but if a site needs that protection, it
+needs a different stack.
+
+**There is no per-site PHP isolation.** OpenLiteSpeed starts PHP itself and has
+no per-site pools. Per-site `php.ini` settings do work, through `lsphp`.
+
+Everything else is the same: vhosts, certificates (OLS binds them to a listener
+rather than a vhost, which the panel handles), per-site logs, staging, clone and
+Sync. The panel's own PHP runs on PHP-FPM on every stack including this one;
+hosted sites on OLS get LSAPI (`lsphp`).
+
+One thing to keep in mind whichever stack you choose: the web server the
+installer picks is the one serving the panel itself, so if it misbehaves there is
+no working panel left to fix it from.
 
 | Option | |
 |---|---|
