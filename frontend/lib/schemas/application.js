@@ -155,6 +155,14 @@ export const applicationSchema = z.object({
   // which Basic Auth would consume. Defaults true so a backend that predates
   // the flag keeps the control enabled rather than hiding a working feature.
   basic_auth_supported: z.boolean().default(true),
+  /*
+   * Whether the Web Firewall can run on this server at all.
+   *
+   * OpenLiteSpeed has no equivalent of the nginx rule set the WAF is built
+   * from, so the screen was offering a protection that server can never apply.
+   * Undeclared until now, which is why it was offered anyway.
+   */
+  waf_supported: z.boolean().default(true),
   is_disabled: z.boolean().default(false),
   disabled_at: z.string().nullish(),
   // "This site has a jail configured" — NOT "fail2ban is protecting this site".

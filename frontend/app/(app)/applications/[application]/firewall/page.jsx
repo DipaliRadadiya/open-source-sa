@@ -70,7 +70,23 @@ export default async function ApplicationFirewallPage({ params }) {
   const detectFailed = detect?.status === "failed" || detect?.status === "locked";
   const detectRows = detect?.log?.lines?.length ? parseDetectLog(detect.log.lines) : [];
 
-  const unsupported = webServer === "openlitespeed";
+  /*
+   * The API's own answer, where it gives one.
+   *
+   * This was inferred from the web server's name — true today, and a guess
+   * about somebody else's capability the moment OpenLiteSpeed grows the rule
+   * set, or another web server lacks it. `waf_supported` is per application
+   * and comes from the driver itself, so it cannot disagree with what the save
+   * would do.
+   *
+   * The name check stays as the fallback for an API that predates the field:
+   * a panel deployed ahead of its backend must not start offering a firewall
+   * that server cannot apply.
+   */
+  const unsupported =
+    typeof application.waf_supported === "boolean"
+      ? !application.waf_supported
+      : webServer === "openlitespeed";
 
   return (
     <div className="space-y-6">
