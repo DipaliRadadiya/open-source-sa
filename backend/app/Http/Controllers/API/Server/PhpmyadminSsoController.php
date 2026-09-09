@@ -19,6 +19,7 @@ class PhpmyadminSsoController extends Controller
             $database,
             $request->validated('database_user_id'),
             $request->user()->id,
+            $request->validated('application_id'),
         );
 
         return response()->json([

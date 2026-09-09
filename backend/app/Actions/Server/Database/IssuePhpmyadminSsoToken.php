@@ -36,10 +36,10 @@ class IssuePhpmyadminSsoToken
         private ActivityLogger $activityLogger,
     ) {}
 
-    public function execute(Database $database, ?int $databaseUserId, int $userId): string
+    public function execute(Database $database, ?int $databaseUserId, int $userId, ?int $applicationId = null): string
     {
         $this->assertSqlEngine($database);
-        $pmaApp = $this->resolvePhpmyadminApp();
+        $pmaApp = $this->resolvePhpmyadminApp($applicationId);
         $dbUser = $this->resolveDatabaseUser($database, $databaseUserId);
 
         if (! $this->sso->canIssue($pmaApp)) {
@@ -102,15 +102,50 @@ class IssuePhpmyadminSsoToken
         }
     }
 
-    private function resolvePhpmyadminApp(): Application
+    /**
+     * The phpMyAdmin to sign into: the one asked for, or a stable default.
+     *
+     * `$applicationId` used to not exist, and this took `->first()` with no
+     * ordering — so on a server with more than one installation the panel
+     * picked, the user could not, and which one they got could change between
+     * requests. A client could not correct it afterwards either: the token is
+     * written into the chosen site's own directory, so the choice has to be
+     * made here or not at all.
+     *
+     * The same query answers both cases, which is the point — a named site and
+     * the default cannot disagree about what counts as usable.
+     *
+     * `Active`, not `Running`: there is no Running case — a site is Pending,
+     * Provisioning, Active or Failed. Referencing a case that does not exist is
+     * a fatal, so this path could only ever 500.
+     */
+    private function resolvePhpmyadminApp(?int $applicationId): Application
     {
-        // `Active`, not `Running`: there is no Running case — a site is
-        // Pending, Provisioning, Active or Failed. Referencing a case that
-        // does not exist is a fatal, so this path could only ever 500.
-        $pma = Application::query()
+        $query = Application::query()
             ->where('site_type', 'phpmyadmin')
-            ->where('status', ApplicationStatus::Active)
-            ->first();
+            ->where('status', ApplicationStatus::Active);
+
+        if ($applicationId !== null) {
+            $pma = (clone $query)->whereKey($applicationId)->first();
+
+            if (! $pma) {
+                // Distinct from "none deployed": naming a site that is not an
+                // Active phpMyAdmin is a different mistake from having none,
+                // and telling the user the second when they made the first
+                // sends them to install something they already have.
+                throw new PhpmyadminSsoException(
+                    message: __('errors/database.phpmyadmin_not_selectable'),
+                    feature: 'database',
+                );
+            }
+
+            return $pma;
+        }
+
+        // Oldest first, so an unnamed choice is at least the *same* one every
+        // time. `first()` on an unordered query is whatever the engine
+        // returns, which can differ between two identical requests.
+        $pma = $query->orderBy('id')->first();
 
         if (! $pma) {
             throw new PhpmyadminSsoException(

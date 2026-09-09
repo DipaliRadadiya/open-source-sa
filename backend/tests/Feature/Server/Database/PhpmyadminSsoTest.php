@@ -432,3 +432,63 @@ describe('the generated files', function () {
             ->and($code)->toContain(PhpMyAdminSso::SIGNON_SESSION);
     });
 });
+
+it('opens the phpMyAdmin the caller asked for, not whichever came first', function () {
+    grantDatabasePermission($this->user);
+    DatabaseUser::factory()->create(['database_id' => $this->database->id]);
+    // A second installation, created after the first. Before `application_id`
+    // existed the endpoint took `->first()` on an unordered query, so this one
+    // was unreachable — and a client could not correct it afterwards, because
+    // the token is written into the chosen site's own directory.
+    $second = Application::factory()->create([
+        'site_type' => 'phpmyadmin',
+        'domain' => 'pma-two.example.com',
+        'status' => ApplicationStatus::Active,
+        'isolated_at' => now(),
+    ]);
+
+    $response = $this->postJson(
+        "/api/databases/{$this->database->id}/phpmyadmin-sso?application_id={$second->id}"
+    )->assertOk();
+
+    expect($response->json('redirect_url'))->toContain('pma-two.example.com')
+        ->and($response->json('redirect_url'))->not->toContain('pma.example.com');
+});
+
+it('refuses a site that is not an active phpMyAdmin', function () {
+    grantDatabasePermission($this->user);
+    DatabaseUser::factory()->create(['database_id' => $this->database->id]);
+    // A different mistake from "none installed", and it gets a different
+    // message: telling someone to install phpMyAdmin when they named the wrong
+    // site sends them to install what they already have.
+    $wordpress = Application::factory()->create([
+        'site_type' => 'wordpress',
+        'domain' => 'blog.example.com',
+        'status' => ApplicationStatus::Active,
+    ]);
+
+    $this->postJson(
+        "/api/databases/{$this->database->id}/phpmyadmin-sso?application_id={$wordpress->id}"
+    )->assertStatus(422)
+        ->assertJsonFragment(['message' => 'The selected site is not an active phpMyAdmin installation.']);
+});
+
+it('falls back to the same installation every time when none is named', function () {
+    grantDatabasePermission($this->user);
+    DatabaseUser::factory()->create(['database_id' => $this->database->id]);
+    Application::factory()->create([
+        'site_type' => 'phpmyadmin',
+        'domain' => 'pma-two.example.com',
+        'status' => ApplicationStatus::Active,
+        'isolated_at' => now(),
+    ]);
+
+    // Ordered, so an unnamed choice is stable. `first()` on an unordered query
+    // is whatever the engine returns, which can differ between two identical
+    // requests.
+    $first = $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")->assertOk();
+    $again = $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")->assertOk();
+
+    expect($first->json('redirect_url'))->toContain('pma.example.com')
+        ->and($again->json('redirect_url'))->toContain('pma.example.com');
+});

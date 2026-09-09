@@ -3519,6 +3519,12 @@ The frontend receives a `redirect_url` and should immediately redirect the brows
 
 **Query (optional):** `?database_user_id=1` — log in as a specific database user. Without this the first available user is used.
 
+**Query (optional):** `?application_id=7` (added 2026-09-09) — **which phpMyAdmin to open**, when the server has more than one. Omit it and the oldest Active phpMyAdmin site is used, which is stable between requests.
+
+This has to be chosen here: the one-time token is written **into the chosen site's own directory**, so a client cannot pick a different installation by redirecting afterwards. Before this parameter existed the endpoint took the first row an unordered query returned, so a second installation was unreachable and the choice could change between two identical requests.
+
+To build a picker, list `GET /applications?filter[site_type]=phpmyadmin` and pass the chosen id here.
+
 **Response `200`:**
 ```json
 {"redirect_url": "http://pma.example.com/sso.php?token=***"}
@@ -3532,6 +3538,11 @@ The frontend receives a `redirect_url` and should immediately redirect the brows
 **Response `422`** — no phpMyAdmin site deployed:
 ```json
 {"message": "No phpMyAdmin site is installed on this server."}
+```
+
+**Response `422`** — `application_id` names something that is not an Active phpMyAdmin site. Deliberately distinct from the message above: telling someone to install phpMyAdmin when they named the wrong site sends them to install what they already have.
+```json
+{"message": "The selected site is not an active phpMyAdmin installation."}
 ```
 
 **Response `422`** — no database user exists for this database:
