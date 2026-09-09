@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { deployApplication } from "@/lib/api/applications";
 import { readApplication } from "@/lib/api/deployment";
@@ -30,6 +31,7 @@ export function DeploymentPanel({
   // Step labels live under `details` — the namespace of the first screen that
   // needed them — and a raw `verify` in a toast is as unreadable as in a card.
   const ts = useTranslations("applications.details");
+  const router = useRouter();
   const [application, setApplication] = useState(initial);
   const [deploying, setDeploying] = useState(false);
   const pollRef = useRef(null);
@@ -80,6 +82,11 @@ export function DeploymentPanel({
         if (next.status === "active" || next.status === "failed") {
           stopPoll();
           setDeploying(false);
+          // The history is a server-component prop, and polling only ever
+          // re-read the application — so the run that just finished never
+          // appeared, and its commit never appeared, until someone reloaded
+          // the page by hand. Re-run the server component instead.
+          router.refresh();
           if (next.failed_step) {
             toast.error(
               t("deploy.failedAt", { step: provisionStepLabel(next.failed_step, ts) }),
@@ -93,7 +100,29 @@ export function DeploymentPanel({
       setDeploying(false);
       toast.error(apiMessage(error, t("deploy.failed")));
     }
-  }, [application.id, application.last_deployed_at, refresh, stopPoll, t, ts]);
+  }, [application.id, application.last_deployed_at, refresh, stopPoll, router, t, ts]);
+
+  /*
+   * A deploy this page did not start.
+   *
+   * Auto-deploy fires from a push, and the panel only ever polled after its own
+   * button was pressed — so an open page sat on a stale history while a deploy
+   * ran and finished behind it. Provisioning is the same signal either way, so
+   * watching for it covers both without polling a page where nothing is
+   * happening.
+   */
+  useEffect(() => {
+    if (deploying || application.status !== "provisioning" || pollRef.current) return undefined;
+
+    pollRef.current = setInterval(async () => {
+      const next = await refresh();
+      if (!next || next.status === "provisioning") return;
+      stopPoll();
+      router.refresh();
+    }, POLL_MS);
+
+    return stopPoll;
+  }, [deploying, application.status, refresh, stopPoll, router]);
 
   return (
     <div className="space-y-6">

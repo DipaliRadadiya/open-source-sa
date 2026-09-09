@@ -115,6 +115,27 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
   const script = useWatch({ control: form.control, name: "deploy_script" });
   const isDefault = script === (settings.default_deploy_script ?? "");
 
+  // The branch as typed, not as saved: the placeholder list is read while
+  // writing the script, and naming the old branch there is worse than naming
+  // none — it describes a deploy that is about to stop being true.
+  const branchNow = useWatch({ control: form.control, name: "branch" });
+
+  /*
+   * What each token expands to on THIS site.
+   *
+   * The list of tokens alone answered "what may I write" and left "what will
+   * it become" to be guessed — and `{path}` is the one people get wrong,
+   * because a site's document root is not its directory.
+   *
+   * Only tokens whose value is actually known get one. A token the backend
+   * adds later still lists, without an invented value beside it.
+   */
+  const placeholderValues = {
+    "{path}": application?.document_root,
+    "{branch}": branchNow || "main",
+    "{domain}": application?.domain,
+  };
+
   async function save(values) {
     setSaving(true);
     try {
@@ -213,15 +234,25 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
                     <FormDescription>
                       {settings.deploy_script_customised ? t("scriptHint") : t("scriptFallbackHint")}
                       {settings.placeholders?.length ? (
-                        <span className="mt-1 block">
-                          {t("placeholders")}{" "}
+                        <span className="mt-1.5 block space-y-0.5">
+                          <span className="block">{t("placeholders")}</span>
                           {settings.placeholders.map((token) => (
-                            <code
-                              key={token}
-                              className="mr-1 rounded bg-muted px-1 py-0.5 font-mono text-[11px]"
-                            >
-                              {token}
-                            </code>
+                            <span key={token} className="flex flex-wrap items-baseline gap-1.5">
+                              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+                                {token}
+                              </code>
+                              {placeholderValues[token] ? (
+                                <>
+                                  <span aria-hidden>→</span>
+                                  {/* Breaks anywhere: a document root is long
+                                      and unbroken, and letting it push the card
+                                      wide is worse than letting it wrap. */}
+                                  <span className="min-w-0 font-mono text-[11px] break-all text-foreground">
+                                    {placeholderValues[token]}
+                                  </span>
+                                </>
+                              ) : null}
+                            </span>
                           ))}
                         </span>
                       ) : null}
