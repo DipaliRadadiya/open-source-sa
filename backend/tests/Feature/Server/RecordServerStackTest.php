@@ -76,7 +76,7 @@ describe('detecting the web server', function () {
         // The real failure: apache purged, its /etc directory still there, and
         // apache is listed before openlitespeed. A directory is not a web
         // server, and the box was plainly running OpenLiteSpeed.
-        fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/etc/apache2', '/usr/local/lsws']);
+        fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/etc/apache2/sites-available', '/usr/local/lsws/conf/vhosts']);
 
         expect(app(ServerCapabilities::class)->webServer())
             ->toBe('openlitespeed');
@@ -85,10 +85,66 @@ describe('detecting the web server', function () {
     it('still answers when nothing is running', function () {
         // Installed but stopped is still the web server this box uses, and the
         // setup screen has to be able to say what it found.
-        fakeDetectedWebServer(running: [], dirs: ['/usr/local/lsws']);
+        fakeDetectedWebServer(running: [], dirs: ['/usr/local/lsws/conf/vhosts']);
 
         expect(app(ServerCapabilities::class)->webServer())
             ->toBe('openlitespeed');
+    });
+
+    /*
+     * The phantom /etc/apache2.
+     *
+     * `phpX.Y-fpm` ships one file — `conf-available/phpX.Y-fpm.conf`, the
+     * snippet Apache would enable if it were installed — and shipping it
+     * creates /etc/apache2 and /etc/apache2/conf-available. Every stack
+     * installs php-fpm, because the panel's own API runs on it. So an
+     * OpenLiteSpeed box has /etc/apache2 from before OpenLiteSpeed is
+     * unpacked, on a machine that has never had Apache, and `apt purge`
+     * cannot remove it: the directory belongs to a package the panel needs.
+     *
+     * The code used to blame `apt remove apache2` for this. That is a real
+     * cause but the rare one; the common one is a clean install, which is why
+     * it reproduced on every OLS server rather than only on recycled ones.
+     *
+     * Detecting on `sites-available` instead settles it: that directory is
+     * shipped by `apache2` and by nothing else.
+     */
+    it('is not fooled by the /etc/apache2 that php-fpm ships', function () {
+        // A clean OLS box: no Apache, but php-fpm's directory is there.
+        fakeDetectedWebServer(
+            running: ['lshttpd'],
+            dirs: ['/etc/apache2', '/etc/apache2/conf-available', '/usr/local/lsws/conf/vhosts'],
+        );
+
+        expect(app(ServerCapabilities::class)->webServer())
+            ->toBe('openlitespeed');
+    });
+
+    it('is not fooled by it while OpenLiteSpeed is stopped either', function () {
+        // The systemd tiebreak cannot save this one — nothing is running, so
+        // the answer comes from the directory list alone. That is the window
+        // the installer runs in: php-fpm is installed before OpenLiteSpeed
+        // starts, and a box detected during it was recorded as Apache.
+        fakeDetectedWebServer(
+            running: [],
+            dirs: ['/etc/apache2', '/etc/apache2/conf-available', '/usr/local/lsws/conf/vhosts'],
+        );
+
+        expect(app(ServerCapabilities::class)->webServer())
+            ->toBe('openlitespeed');
+    });
+
+    it('still detects a real Apache install', function () {
+        // The other half, and the one that keeps this honest: tightening the
+        // probe must not make the panel blind to the web server it is named
+        // for. `sites-available` is what an actual apache2 package ships.
+        fakeDetectedWebServer(
+            running: ['apache2'],
+            dirs: ['/etc/apache2', '/etc/apache2/conf-available', '/etc/apache2/sites-available'],
+        );
+
+        expect(app(ServerCapabilities::class)->webServer())
+            ->toBe('apache');
     });
 });
 
@@ -110,7 +166,7 @@ describe('reconciling a wrong record', function () {
         ]);
 
         // Apache purged — /etc/apache2 gone — and OpenLiteSpeed running.
-        fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/usr/local/lsws']);
+        fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/usr/local/lsws/conf/vhosts']);
 
         $capabilities = app(ServerCapabilities::class);
 
@@ -132,11 +188,38 @@ describe('reconciling a wrong record', function () {
         // Apache installed but stopped, OpenLiteSpeed running alongside it.
         // Stopping a web server is not the panel's cue to decide the box runs
         // something else — that is a judgement call, and this must not make it.
-        fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/etc/apache2', '/usr/local/lsws']);
+        fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/etc/apache2/sites-available', '/usr/local/lsws/conf/vhosts']);
 
         expect(app(ServerCapabilities::class)->reconcileWebServer())
             ->toBeNull()
             ->and(ServerCapability::query()->value('web_server'))->toBe('apache');
+    });
+
+    it('repairs an OLS box recorded as apache by the phantom directory', function () {
+        // Both halves of the bug in one place. Detection ran before the
+        // installer's record — during the install, or on a box the panel did
+        // not build — and picked apache off php-fpm's /etc/apache2. Then the
+        // self-repair could not undo it: its "is the recorded server even
+        // installed?" test was that same phantom directory, so on any OLS
+        // server it always answered yes and reconciliation never fired.
+        //
+        // The only way out was an operator running `server:record-stack ols`,
+        // which is exactly what the repair exists to avoid.
+        ServerCapability::query()->create([
+            'stack' => null,
+            'web_server' => 'apache',
+            'capabilities' => ['php' => true, 'node' => false],
+            'source' => 'detected',
+            'verified_at' => now(),
+        ]);
+
+        fakeDetectedWebServer(
+            running: ['lshttpd'],
+            dirs: ['/etc/apache2', '/etc/apache2/conf-available', '/usr/local/lsws/conf/vhosts'],
+        );
+
+        expect(app(ServerCapabilities::class)->reconcileWebServer())->toBe('openlitespeed')
+            ->and(ServerCapability::query()->value('web_server'))->toBe('openlitespeed');
     });
 
     it('never overrules the installer', function () {
@@ -152,7 +235,7 @@ describe('reconciling a wrong record', function () {
             'verified_at' => now(),
         ]);
 
-        fakeDetectedWebServer(running: ['nginx'], dirs: ['/etc/nginx']);
+        fakeDetectedWebServer(running: ['nginx'], dirs: ['/etc/nginx/sites-available']);
 
         expect(app(ServerCapabilities::class)->reconcileWebServer())
             ->toBeNull()
@@ -168,7 +251,7 @@ describe('reconciling a wrong record', function () {
             'verified_at' => now(),
         ]);
 
-        fakeDetectedWebServer(running: ['nginx', 'lshttpd'], dirs: ['/etc/nginx', '/usr/local/lsws']);
+        fakeDetectedWebServer(running: ['nginx', 'lshttpd'], dirs: ['/etc/nginx/sites-available', '/usr/local/lsws/conf/vhosts']);
 
         // Two candidates is a judgement call. panel:doctor reports it instead.
         expect(app(ServerCapabilities::class)->reconcileWebServer())
@@ -191,7 +274,7 @@ it('repairs the record at the moment a feature asks for the driver', function ()
         'verified_at' => now(),
     ]);
 
-    fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/usr/local/lsws']);
+    fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/usr/local/lsws/conf/vhosts']);
 
     expect(app(WebServerManager::class)->driver()->name())
         ->toBe('openlitespeed');
@@ -206,7 +289,7 @@ it('does not re-probe once it has looked', function () {
         'verified_at' => now(),
     ]);
 
-    fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/usr/local/lsws']);
+    fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/usr/local/lsws/conf/vhosts']);
 
     $manager = app(WebServerManager::class);
     $manager->driver();

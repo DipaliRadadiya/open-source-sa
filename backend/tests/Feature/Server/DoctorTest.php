@@ -16,8 +16,10 @@ use App\Services\Server\Doctor\Checks\WebServerCheck;
 use App\Services\Server\Doctor\Checks\WritablePathsCheck;
 use App\Services\Server\Doctor\Doctor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 
 /*
  * The doctor exists because a green suite cannot tell you the panel works: the
@@ -595,4 +597,105 @@ it('fails when the panel is configured for a different web server than the box r
         ->and($report['healthy'])->toBeFalse()
         ->and($report['checks'][0]['detail'])->toContain('apache')
         ->and($report['checks'][0]['detail'])->toContain('nginx');
+});
+
+it('does not report a stack mismatch on a healthy OpenLiteSpeed box', function () {
+    // Reported from a real OLS server, and it fires on every one of them:
+    //
+    //   ✗ Web server  the panel is configured for openlitespeed but this
+    //     server runs apache — every site the panel writes goes to
+    //     openlitespeed's directories
+    //
+    // The box was fine. `/etc/apache2` is shipped by php-fpm, which every
+    // stack installs, and this check had its own private copy of detection —
+    // a plain directory walk in config order, apache before openlitespeed,
+    // with none of the systemd tiebreak `ServerCapabilities` was fixed to use.
+    //
+    // Worse than a wrong verdict: the fix it offered was `server:record-stack
+    // ols`, which re-records the value that was already correct. Running it
+    // produced the identical failure, so there was no way out of the message
+    // at all.
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'ols',
+        'web_server' => 'openlitespeed',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer',
+        'verified_at' => now(),
+    ]);
+
+    Process::fake(fn () => Process::result(output: ''));
+
+    // A fixture tree rooted in a temp directory, with the real config's paths
+    // rebased onto it — so this asks the shipped values, not a copy of them.
+    // Revert `web_servers` to `/etc/apache2` and the phantom below satisfies
+    // it, detection answers apache, and this test fails. That is the point.
+    $root = sys_get_temp_dir().'/ols-phantom-'.Str::random(8);
+
+    // What php-fpm ships, and all it ships. No sites-available: Apache is not
+    // installed on this box and never has been.
+    mkdir($root.'/etc/apache2/conf-available', 0755, true);
+    mkdir($root.'/usr/local/lsws/conf/vhosts', 0755, true);
+
+    config()->set('server.web_servers', collect(config('server.web_servers'))
+        ->map(fn (array $paths) => array_map(fn (string $path) => $root.$path, $paths))
+        ->all());
+
+    config()->set('server.doctor.checks', [WebServerCheck::class]);
+
+    $report = app(Doctor::class)->run();
+
+    File::deleteDirectory($root);
+
+    expect($report['checks'][0]['detail'])->not->toContain('apache')
+        ->and($report['checks'][0]['status'])->not->toBe('fail');
+});
+
+it('asks systemd which web server is running rather than trusting config order', function () {
+    // The other half of the same fix, and the one the phantom directory alone
+    // does not prove: a box with two web servers genuinely installed. This
+    // check kept its own directory walk long after `ServerCapabilities` was
+    // fixed to prefer the running unit, so a server running OpenLiteSpeed
+    // alongside a leftover nginx was reported as a stack mismatch.
+    //
+    // One detector, or the check disagrees with the code it is checking.
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'ols',
+        'web_server' => 'openlitespeed',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer',
+        'verified_at' => now(),
+    ]);
+
+    // OpenLiteSpeed is up; nginx is installed and stopped.
+    Process::fake(function ($process) {
+        $args = ($process->command[0] ?? '') === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'systemctl' && in_array('is-active', $args, true)) {
+            return Process::result(exitCode: in_array('lshttpd', $args, true) ? 0 : 1);
+        }
+
+        return Process::result(output: '');
+    });
+
+    $root = sys_get_temp_dir().'/ols-both-'.Str::random(8);
+
+    mkdir($root.'/etc/nginx/sites-available', 0755, true);
+    mkdir($root.'/usr/local/lsws/conf/vhosts', 0755, true);
+
+    config()->set('server.web_servers', collect(config('server.web_servers'))
+        ->map(fn (array $paths) => array_map(fn (string $path) => $root.$path, $paths))
+        ->all());
+
+    config()->set('server.doctor.checks', [WebServerCheck::class]);
+
+    $report = app(Doctor::class)->run();
+
+    File::deleteDirectory($root);
+
+    // nginx is listed first, so config order alone would answer nginx and
+    // report a mismatch against a record that is entirely correct.
+    expect($report['checks'][0]['status'])->not->toBe('fail')
+        ->and($report['checks'][0]['detail'])->not->toContain('nginx');
 });

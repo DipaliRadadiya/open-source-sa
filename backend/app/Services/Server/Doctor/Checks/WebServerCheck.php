@@ -222,19 +222,21 @@ class WebServerCheck implements DoctorCheck
     }
 
     /**
-     * By the directories install.sh looks for, so the panel and the installer
-     * agree on what "nginx is installed" means.
+     * The same detection the panel itself uses — not a second copy of it.
+     *
+     * This was a private directory walk returning the first config directory
+     * that existed, which is the version `ServerCapabilities` was fixed away
+     * from: a directory is not a web server, and a running unit beats a
+     * leftover one. Left unfixed here, it made this check report a stack
+     * mismatch on every healthy OpenLiteSpeed box, because `/etc/apache2` is
+     * shipped by `phpX.Y-fpm` and apache is listed before openlitespeed.
+     *
+     * Worse than a wrong verdict: the fix it offered — `server:record-stack
+     * ols` — re-records the value that was already correct, so the check failed
+     * again identically and there was no way out of it.
      */
     private function detect(): ?string
     {
-        foreach ((array) config('server.web_servers') as $name => $paths) {
-            foreach ((array) $paths as $path) {
-                if (is_dir($path)) {
-                    return $name;
-                }
-            }
-        }
-
-        return null;
+        return $this->capabilities->detectWebServer();
     }
 }

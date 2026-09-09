@@ -501,12 +501,27 @@ return [
     | first directory that exists wins. Overridable so tests can point at
     | temp fixtures.
     |
+    | Each entry is the directory the panel writes that web server's vhosts
+    | into, NOT the top of its config tree — and the difference is the whole
+    | point. `/etc/apache2` is shipped by `phpX.Y-fpm`, which every stack
+    | installs, so it is present on a box that has never had Apache: it holds
+    | one file, `conf-available/phpX.Y-fpm.conf`. Detecting on it meant every
+    | OpenLiteSpeed server answered "apache" (apache is listed first), which
+    | `panel:doctor` then reported as a stack mismatch on a perfectly healthy
+    | box — with a fix instruction that could never clear it.
+    |
+    | `sites-available`, `conf.d` and `conf/vhosts` are shipped by the web
+    | server's own package and by nothing else, so they mean what this list is
+    | asking. They are also the exact directories whose absence produced the
+    | original symptom, `tee: /etc/apache2/sites-available/…: No such file or
+    | directory`.
+    |
     */
 
     'web_servers' => [
-        'nginx' => ['/etc/nginx'],
-        'apache' => ['/etc/apache2', '/etc/httpd'],
-        'openlitespeed' => ['/usr/local/lsws'],
+        'nginx' => ['/etc/nginx/sites-available'],
+        'apache' => ['/etc/apache2/sites-available', '/etc/httpd/conf.d'],
+        'openlitespeed' => ['/usr/local/lsws/conf/vhosts'],
     ],
 
     'node_binary' => env('SERVER_NODE_BINARY', 'node'),

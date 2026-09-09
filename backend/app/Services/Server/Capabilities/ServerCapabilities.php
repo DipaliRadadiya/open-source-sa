@@ -251,8 +251,14 @@ class ServerCapabilities
      * directory pass stays as the fallback — a web server that is installed but
      * stopped is still the one this box uses, and detection has to answer
      * something for the setup screen to be able to say what it found.
+     *
+     * Public because `WebServerCheck` had grown its own copy of this — a plain
+     * directory walk with no systemd tiebreak, which is how doctor came to
+     * report "configured for openlitespeed but this server runs apache" on
+     * every healthy OLS box. A check that answers the question differently from
+     * the code it is checking is not checking that code.
      */
-    private function detectWebServer(): ?string
+    public function detectWebServer(): ?string
     {
         $candidates = [];
 
