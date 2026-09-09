@@ -150,12 +150,19 @@ export function ProvisioningCard({ application, canManage = false }) {
           label={stepLabel}
         />
 
-        {/* No percentage and no elapsed timer: the step count varies by site
-            type, and the only timestamp available is created_at, which is
-            stale after a retry. A duration people can plan around beats a
-            number that is wrong. */}
+        {/* Still no percentage: the step count varies by site type, so a
+            fraction of an unknown total is a number nobody can act on.
+            Elapsed time is different now — `provisioning_started_at` arrived
+            (asked for 2026-08-11), and it is the START OF THIS RUN, so unlike
+            `created_at` it is not stale after a retry. Shown as the API's own
+            phrase rather than computed here, so a browser clock that disagrees
+            with the server cannot invent a duration. */}
         {working && !stalled ? (
-          <p className="border-t pt-3 text-xs text-muted-foreground">{t("takesMinutes")}</p>
+          <p className="border-t pt-3 text-xs text-muted-foreground">
+            {application.provisioning_started_at_human
+              ? t("startedAgo", { ago: application.provisioning_started_at_human })
+              : t("takesMinutes")}
+          </p>
         ) : null}
 
         {stalled ? (

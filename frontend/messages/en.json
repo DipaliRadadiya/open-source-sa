@@ -3026,7 +3026,8 @@
       },
       "stalledTitle": "This is taking longer than expected",
       "stalledBody": "Setup has not reported progress for a while. It may still be running — check again, or contact support if it stays like this.",
-      "checkAgain": "Check again"
+      "checkAgain": "Check again",
+      "startedAgo": "Started {ago}. Most sites are ready within a few minutes; a one-click installer takes longer."
     },
     "port": {
       "label": "Application port",

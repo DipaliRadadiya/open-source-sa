@@ -3026,7 +3026,8 @@
       },
       "stalledTitle": "Esto está tardando más de lo esperado",
       "stalledBody": "La configuración no ha informado avances desde hace un rato. Puede que siga en marcha: vuelve a comprobarlo o contacta con soporte si sigue así.",
-      "checkAgain": "Comprobar de nuevo"
+      "checkAgain": "Comprobar de nuevo",
+      "startedAgo": "Comenzó {ago}. La mayoría de los sitios están listos en unos minutos; un instalador de un clic tarda más."
     },
     "port": {
       "label": "Puerto de aplicación",

@@ -163,6 +163,14 @@ export const applicationSchema = z.object({
    * Undeclared until now, which is why it was offered anyway.
    */
   waf_supported: z.boolean().default(true),
+  /*
+   * When the CURRENT provisioning run started — not `created_at`, which is
+   * wrong after a retry and would have shown "42 minutes elapsed" for a job
+   * that restarted twenty seconds ago. Asked for on 2026-08-11 and shipped
+   * since; until it existed the card could only say "usually a few minutes".
+   */
+  provisioning_started_at: z.string().nullish(),
+  provisioning_started_at_human: z.string().nullish(),
   is_disabled: z.boolean().default(false),
   disabled_at: z.string().nullish(),
   // "This site has a jail configured" — NOT "fail2ban is protecting this site".
