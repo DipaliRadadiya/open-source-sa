@@ -552,6 +552,7 @@ One entry per installable site type. Each carries its own field schema — the f
   "popular": true,
   "serving_profile": "php",
   "needs_database": true,
+  "accepted_engines": ["mysql", "mariadb"],
   "available": true,
   "unavailable_reason": null,
   "unavailable_code": null,
@@ -566,6 +567,10 @@ One entry per installable site type. Each carries its own field schema — the f
   ]
 }]}
 ```
+
+`accepted_engines` is which engines this type can be installed against — `[]` when it needs no database, so "no constraint" and "no database" are the same value rather than a null to special-case. Do not infer this list from the type's name: it is right today only because there happen to be two engine lists in the catalog, and the first application accepting both MongoDB and MySQL breaks the inference silently.
+
+**`available: false` with `unavailable_code: "database"` now covers every database-backed type, not just NodeBB.** Until 2026-09-09 the check returned early for anything accepting MySQL or MariaDB — nearly the whole catalog — so on a MongoDB-only server WordPress and the rest reported themselves available, took a filled-in form and failed at provisioning. `unavailable_reason` names the engines, so the card can say what to install.
 
 Field `type` values: `text`, `password`, `select`, `domain`, `email`, `textarea`, `toggle`, `repository`.
 
@@ -1274,6 +1279,8 @@ Newest first.
 **`output` is not in the list.** It appears only on the single-deployment endpoint below; fifty deploys each carrying a full build log is a response nobody asked for.
 
 `commit_hash` is the full 40 characters, `commit_short` the one people recognise — the old `commit` key does not exist. `commit_author` is the commit's own author, which is not the `user` who pressed deploy.
+
+**A failed deploy carries its commit too**, as of 2026-09-09. The revision is recorded as soon as it is checked out, several steps before the ones that actually fail — ownership, the deploy script, the restarts, the verify — so a failure names the code it was running rather than showing "No commit message" for code that had definitely been pulled. A deploy that failed *before* checkout (bad credentials, unreachable remote, a branch that does not exist) has no revision to name and correctly reports `commit_hash: null`; that is the one case where the field is empty on a failure.
 
 `user` is **null for a webhook deploy** — nobody pressed anything, and inventing an actor would be a lie. Render it as "System". On `POST …/deployments` and `…/redeploy` the key is **absent entirely** (the relation is not loaded there); it is present on this list and on the single-deployment view.
 
@@ -2883,11 +2890,14 @@ Every backup across every application — paginated, filterable.
 
 **Query:** `?filter[application_id]=1&filter[status]=verified&filter[type]=full&filter[from]=2026-07-01&filter[to]=2026-07-31&page=1&per_page=20`
 
+`storage_destination_name` (added 2026-09-09) is where **this archive** went, which is not always where the target points now — the destination is editable, so an older backup can sit somewhere the current setting no longer names. Present on this list and on `GET /backups/{backup}`; **absent, not null**, on any endpoint that does not load the relation, so an absent key means "not asked for" rather than "no destination".
+
 ```json
 {"backups": [{
   "id": 15,
   "application_id": 1,
   "application_name": "shop", "application_domain": "shop.example.com",
+  "storage_destination_name": "S3 Backup",
   "type": "full", "type_title": "Files and database",
   "is_safety": false,
   "status": "verified", "status_title": "Complete",
