@@ -150,6 +150,12 @@ server {
 
     index index.php index.html;
 
+    {{-- The site's own `post_max_size`, so the web server and PHP agree.
+         nginx defaults this to 1 MB and nothing here used to set it, so a site
+         whose pool said 512M still answered 413 at one megabyte — the request
+         never reached PHP for its settings to matter. --}}
+    client_max_body_size {{ $maxBodySize }};
+
     access_log {{ $logDir }}/access.log;
     error_log  {{ $logDir }}/error.log;
 

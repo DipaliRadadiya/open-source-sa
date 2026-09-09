@@ -22,6 +22,12 @@
 @endif
     DocumentRoot {{ $documentRoot }}
 
+    {{-- The site's own `post_max_size`, in bytes. Apache's default is
+         unlimited, so this was never the source of a 413 here — it is set so
+         that a site behaves the same on all three web servers rather than
+         depending on which one the box happens to run. --}}
+    LimitRequestBody {{ $maxBodySize }}
+
 @if ($waf)
     {{-- The six category env vars (`waf_query`/`waf_uri`/`waf_agent`/
          `waf_referer`/`waf_cookie`/`waf_method`) are declared once,

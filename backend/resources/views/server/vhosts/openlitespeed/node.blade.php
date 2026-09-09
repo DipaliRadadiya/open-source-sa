@@ -10,6 +10,11 @@ vhAliases                 {{ implode(', ', array_merge(array_slice($serverNames,
 @endif
 enableGzip                1
 
+{{-- The site's own `post_max_size`, in bytes. OpenLiteSpeed's default is
+     effectively unlimited, so this was never a 413 here either — it is set so
+     one site behaves the same whichever web server the box runs. --}}
+maxReqBodySize            {{ $maxBodySize }}
+
 @if ($certificate)
 {{-- OpenLiteSpeed keeps TLS on the vhost as well as the listener: the listener
      decides that 443 is answered, this decides which certificate is presented

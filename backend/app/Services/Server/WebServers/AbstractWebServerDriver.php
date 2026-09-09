@@ -7,6 +7,7 @@ use App\Enums\AiBotPolicy;
 use App\Enums\DomainType;
 use App\Enums\WafMode;
 use App\Models\Application;
+use App\Models\ApplicationPhpSettings;
 use App\Services\Server\Applications\ApplicationLogDirectory;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
@@ -220,6 +221,30 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
+     * The site's `post_max_size` in bytes, as the web server should enforce it.
+     *
+     * Reads the site's own settings where it has them and the shared defaults
+     * where it does not — the same `effective()` the pool file is rendered
+     * from, so the two numbers come from one source and a site cannot end up
+     * with a web server and a PHP that disagree.
+     *
+     * A floor of 1 MB, because `post_max_size = 0` is legal PHP and means
+     * "no limit": handing 0 to nginx means the same thing there, but handing it
+     * to Apache's `LimitRequestBody` also means unlimited while OpenLiteSpeed
+     * reads 0 as *reject every body*. One value that means three things is how
+     * a site ends up rejecting all uploads on one web server and none on
+     * another, so a real number goes to all three.
+     */
+    protected function maxBodySizeBytes(Application $application): int
+    {
+        $settings = $application->phpSettings ?? new ApplicationPhpSettings;
+
+        $bytes = ApplicationPhpSettings::toBytes((string) $settings->effective()['post_max_size']);
+
+        return max($bytes, 1024 * 1024);
+    }
+
+    /**
      * What a vhost template is given. A driver whose syntax needs more than
      * this adds to it.
      *
@@ -271,6 +296,29 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // challenge token.
             'challengeRoot' => rtrim((string) config('server.certificates.challenge_root'), '/'),
             'documentRoot' => $documentRoot,
+            // The largest request body this site accepts, in bytes.
+            //
+            // Every web server has its own default for this and nothing here
+            // used to set any of them, which on nginx means 1 MB — its
+            // built-in default — no matter what the site's PHP said. So the
+            // panel wrote `upload_max_filesize = 64M` into the pool, the PHP
+            // Settings screen showed 64 MB, and WordPress answered "413
+            // Request Entity Too Large" at one megabyte. Raising the PHP
+            // values changed nothing, because nginx rejects the request before
+            // PHP is reached: reported on 2026-09-08 by a user who had already
+            // set both to 512M.
+            //
+            // Derived from `post_max_size` rather than `upload_max_filesize`,
+            // because that is the same measurement the web servers make — the
+            // whole request body, including the multipart boundaries and the
+            // other fields, not the one file inside it.
+            //
+            // Resolved here so all three templates read one number and cannot
+            // disagree. Apache and OpenLiteSpeed were never broken by this
+            // (their defaults are effectively unlimited), but a limit that
+            // exists on one server and not the others is the same site
+            // behaving differently on different boxes.
+            'maxBodySize' => $this->maxBodySizeBytes($application),
             'phpVersion' => $application->php_version ?: config('server.default_php_version'),
             // Where PHP actually is for this site. An isolated site has its own
             // pool running as its own user; everything else still shares the

@@ -25,6 +25,12 @@
     ErrorLog  {{ $logDir }}/error.log
     CustomLog {{ $logDir }}/access.log combined
 
+    {{-- The site's own `post_max_size`, in bytes. Apache's default is
+         unlimited, so this was never the source of a 413 here — it is set so
+         that a site behaves the same on all three web servers rather than
+         depending on which one the box happens to run. --}}
+    LimitRequestBody {{ $maxBodySize }}
+
     {{-- Off would rewrite the Host header to 127.0.0.1, so the app builds
          redirects and absolute URLs pointing at the loopback address. --}}
     ProxyPreserveHost On

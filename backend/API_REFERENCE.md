@@ -2107,6 +2107,18 @@ Update PHP version and/or pool settings.
 
 **Response `200`:** `{"php": {...updated...}}`
 
+**`post_max_size` also sets the web server's request-body limit**, as of
+2026-09-08 — `client_max_body_size` on nginx, `LimitRequestBody` on Apache,
+`maxReqBodySize` on OpenLiteSpeed — and changing it rewrites the vhost as well
+as the pool.
+
+Until then no vhost set one at all, so every nginx site ran on nginx's built-in
+1 MB default while the panel wrote `upload_max_filesize = 64M` into its pool.
+A WordPress media upload answered `413 Request Entity Too Large` at one
+megabyte, and raising the PHP values did nothing, because a 413 is refused by
+the web server before PHP is reached. Sites created or reconfigured before that
+date carry the limit from their next vhost write.
+
 **Send `null` to clear an override and fall back to the server default.** Every
 field that can be overridden accepts it — including `pm_type`,
 `pm_max_children`, `pm_max_requests` and `allow_url_fopen`, which until

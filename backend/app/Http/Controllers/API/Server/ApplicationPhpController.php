@@ -164,7 +164,17 @@ class ApplicationPhpController extends Controller
         // renders the vhost, so re-applying is the whole mechanism. On FPM the
         // pool above already did the work and this republishes the vhost for a
         // version change exactly as before.
-        if ($version !== null || ($appliedWithoutPool && $data !== [])) {
+        //
+        // `post_max_size` joins that list, because the vhost now carries it
+        // too: the web server enforces the request-body limit and PHP enforces
+        // the same number one layer down. Without this, raising the limit on an
+        // FPM site would rewrite the pool and leave the web server on the old
+        // value — the site would report the new setting and go on refusing
+        // uploads at the old one, which is a quieter version of the bug this
+        // whole change exists to fix.
+        $bodyLimitChanged = array_key_exists('post_max_size', $data);
+
+        if ($version !== null || $bodyLimitChanged || ($appliedWithoutPool && $data !== [])) {
             $isolator->republish($application);
         }
 
