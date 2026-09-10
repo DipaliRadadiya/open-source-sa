@@ -71,7 +71,7 @@ class ServerOps
      */
     public function run(array $command, array $context = [], int $timeout = 60, mixed $input = null, ?string $cwd = null, array $env = [], ?callable $onOutput = null, array $expectedExitCodes = [], ?int $retryAttempts = null, ?int $retryDelayMs = null, ?callable $onRetry = null): ServerOpsResult
     {
-        $command = $this->elevate($command);
+        $command = $this->elevate($command, $env);
 
         $reference = (string) Str::uuid();
         $startedAt = microtime(true);
@@ -501,7 +501,33 @@ class ServerOps
      * @param  array<int, string>  $command
      * @return array<int, string>
      */
-    private function elevate(array $command): array
+    /**
+     * Prefix with sudo when the binary is one the panel may elevate.
+     *
+     * `$env` is threaded through because **sudo resets the environment**.
+     * `env_reset` is the default, so variables set on the Process object are
+     * gone by the time the real binary starts, and nothing says so — the
+     * command runs, it just runs without them.
+     *
+     * That stayed invisible because the two things relying on it degrade
+     * quietly: `DEBIAN_FRONTEND=noninteractive` only matters when a package
+     * actually prompts, and the `PATH` pinned for npm only matters when `node`
+     * is not already on the default path. PostgreSQL is where it finally bit —
+     * libpq reads its password file from `PGPASSFILE` and nowhere else, so
+     * every query failed with `fe_sendauth: no password supplied` against a
+     * role that had been created perfectly well.
+     *
+     * `sudo -n env VAR=value <command>` rather than `sudo -E`: it carries
+     * exactly the variables asked for instead of the caller's whole
+     * environment, and `env` is already in the privilege allowlist, so no
+     * sudoers change is needed. Each assignment is its own argv entry, so a
+     * space in a value cannot become a second argument.
+     *
+     * @param  array<int, string>  $command
+     * @param  array<string, string>  $env
+     * @return array<int, string>
+     */
+    private function elevate(array $command, array $env = []): array
     {
         if ($command === [] || ! config('server.privilege.sudo', true)) {
             return $command;
@@ -528,6 +554,16 @@ class ServerOps
             return $command;
         }
 
-        return array_merge(['sudo', '-n'], $command);
+        if ($env === []) {
+            return array_merge(['sudo', '-n'], $command);
+        }
+
+        $assignments = [];
+
+        foreach ($env as $name => $value) {
+            $assignments[] = $name.'='.$value;
+        }
+
+        return array_merge(['sudo', '-n', 'env'], $assignments, $command);
     }
 }

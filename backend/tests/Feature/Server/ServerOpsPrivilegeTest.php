@@ -338,3 +338,82 @@ it('keeps stdout on success when the caller asks, for tools that lie about exit 
     expect($logged['stdout'] ?? null)->toBeString()
         ->and($logged['stdout'])->toContain('Nothing to do');
 });
+
+/*
+ * sudo resets the environment.
+ *
+ * `env_reset` is the default in sudoers, so a variable set on the Process
+ * object is gone by the time the elevated binary starts — and nothing reports
+ * it. The command runs; it just runs without them.
+ *
+ * This went unnoticed because the two things that relied on it fail quietly.
+ * `DEBIAN_FRONTEND=noninteractive` only matters when a package actually
+ * prompts, and the `PATH` pinned for npm only matters when `node` is not
+ * already on the default path. PostgreSQL is where it surfaced: libpq reads
+ * its password file from `PGPASSFILE` and nowhere else, so every query failed
+ * with `fe_sendauth: no password supplied` against a role that had been
+ * created correctly — reported by a user on the first real install,
+ * 2026-09-10.
+ */
+it('carries environment variables through sudo', function () {
+    $runs = [];
+    Process::fake(function ($process) use (&$runs) {
+        $runs[] = $process->command;
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->ops->run(['psql', '--dbname=postgres'], [], env: ['PGPASSFILE' => '/tmp/pg.pgpass']);
+
+    // `sudo -n env VAR=value psql …`, not `sudo -n psql …` with the variable
+    // set on a process sudo is about to discard.
+    expect($runs[0])->toBe(['sudo', '-n', 'env', 'PGPASSFILE=/tmp/pg.pgpass', 'psql', '--dbname=postgres']);
+});
+
+it('keeps apt unattended, which is the case that was quietly failing', function () {
+    $runs = [];
+    Process::fake(function ($process) use (&$runs) {
+        $runs[] = $process->command;
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->ops->apt(['apt-get', 'install', '-y', 'postgresql']);
+
+    // Without this, a package with a debconf prompt waits for an answer
+    // nobody can give until the timeout kills it.
+    expect($runs[0])->toContain('DEBIAN_FRONTEND=noninteractive')
+        ->and(array_slice($runs[0], 0, 3))->toBe(['sudo', '-n', 'env']);
+});
+
+it('adds no env wrapper when there is nothing to carry', function () {
+    $runs = [];
+    Process::fake(function ($process) use (&$runs) {
+        $runs[] = $process->command;
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->ops->run(['systemctl', 'restart', 'nginx']);
+
+    // The common case stays exactly as it was — `env` appears only when a
+    // caller actually asked for a variable.
+    expect($runs[0])->toBe(['sudo', '-n', 'systemctl', 'restart', 'nginx']);
+});
+
+it('elevates on the real binary, not on the env wrapper', function () {
+    $runs = [];
+    Process::fake(function ($process) use (&$runs) {
+        $runs[] = $process->command;
+
+        return Process::result(exitCode: 0);
+    });
+
+    // `git` is not in the privilege allowlist... but if the decision were made
+    // on `env` instead of the command itself, everything would become
+    // privileged the moment it carried a variable.
+    $this->ops->run(['echo', 'hello'], [], env: ['FOO' => 'bar']);
+
+    expect($runs[0])->toBe(['echo', 'hello'])
+        ->and($runs[0])->not->toContain('sudo');
+});
